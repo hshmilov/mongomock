@@ -7,7 +7,7 @@ import re
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException, CredentialErrorException, AdapterException
-from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
+from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState, DeviceAdapterContainer
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
@@ -72,11 +72,26 @@ class AWSTagKeyValue(SmartJsonClass):
 
 class AwsAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
+        # EC2-specific fields
         aws_tags = ListField(AWSTagKeyValue, "AWS EC2 Tags")
         instance_type = Field(str, "AWS EC2 Instance Type")
         key_name = Field(str, "AWS EC2 Key Name")
         vpc_id = Field(str, "AWS EC2 VPC Id")
         vpc_name = Field(str, "AWS EC2 VPC Name")
+        # ECS-specific fields
+        subnet_id = Field(str, "AWS ECS SubnetId")
+        cluster_arn = Field(str, "AWS ECS Cluster Arn")
+        cluster_name = Field(str, "AWS ECS Cluster Name")
+        task_arn = Field(str, "AWS ECS Task Arn")
+        task_definition_arn = Field(str, "AWS ECS Task Definition Arn")
+        last_status = Field(str, "AWS ECS Task: Last Status")
+        desired_status = Field(str, "AWS ECS Task: Desired Status")
+        launch_type = Field(str, "AWS ECS Launch Type")
+        cpu_units = Field(str, "AWS ECS CPU Units")
+        connectivity = Field(str, "AWS ECS Connectivity")
+        ecs_group = Field(str, "AWS ECS Group")
+        hs_memory = Field(str, "AWS ECS Hard/Soft Memory")
+        ecs_platform_version = Field(str, "AWS ECS Platform Version")
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -100,20 +115,64 @@ class AwsAdapter(AdapterBase):
                 proxies['https'] = client_config[PROXY]
 
             config = Config(proxies=proxies)
-            boto3_client = boto3.client('ec2', **params, config=config)
+            try:
+                boto3_client_ec2 = boto3.client('ec2', **params, config=config)
+            except botocore.exceptions.BotoCoreError as e:
+                message = "Could not create EC2 client for account {0}, reason: {1}".format(
+                    client_config[AWS_ACCESS_KEY_ID], str(e))
+                logger.warning(message)
+            except botocore.exceptions.ClientError as e:
+                message = "Error connecting to EC2 client with account {0}, reason: {1}".format(
+                    client_config[AWS_ACCESS_KEY_ID], str(e))
+                logger.warning(message)
+            try:
+                boto3_client_ecs = boto3.client('ecs', **params, config=config)
+            except botocore.exceptions.BotoCoreError as e:
+                message = "Could not create ECS client for account {0}, reason: {1}".format(
+                    client_config[AWS_ACCESS_KEY_ID], str(e))
+                logger.warning(message)
+            except botocore.exceptions.ClientError as e:
+                message = "Error connecting to ECS client with account {0}, reason: {1}".format(
+                    client_config[AWS_ACCESS_KEY_ID], str(e))
+                logger.warning(message)
 
             # Try to get all the instances. if we have the wrong privileges, it will throw an exception.
-            # The only way of knowing if the connection works is to try something. we use DryRun=True,
+            # The only way of knowing if the connection works is to try something. we use DryRun=True (for Ec2),
             # and if it all works then we should get:
             # botocore.exceptions.ClientError: An error occurred (DryRunOperation) when calling the DescribeInstances operation: Request would have succeeded, but DryRun flag is set.
+            errors = {}
             try:
-                boto3_client.describe_instances(DryRun=True)
-            except botocore.exceptions.ClientError as e:
+                boto3_client_ec2.describe_instances(DryRun=True)
+            except Exception as e:
                 if e.response['Error'].get('Code') != 'DryRunOperation':
-                    raise
-            return boto3_client
+                    message = "Error creating EC2 client for account {0}, reason: {1}".format(
+                        client_config[AWS_ACCESS_KEY_ID], str(e))
+                    logger.warning(message)
+                    errors['ec2'] = e
+                pass
+            try:
+                boto3_client_ecs.list_clusters()
+            except Exception as e:
+                message = "Error creating ECS client for account {0}, reason: {1}".format(
+                    client_config[AWS_ACCESS_KEY_ID], str(e))
+                logger.warning(message)
+                errors['ecs'] = e
+                pass
+            boto3_clients = {}
+
+            # Tests whether both clients fail the connection test and therefore whether the credentials must be incorrect
+            if len(errors) is 2:
+                # I save the errors but not sure how to display them.
+                raise ClientConnectionException("Could not connect to AWS EC2 or ECS services.")
+            else:
+                # Stores both EC2 and EKS clients in a dict
+                if errors.get('ec2') is None:
+                    boto3_clients['ec2'] = boto3_client_ec2
+                if errors.get('ecs') is None:
+                    boto3_clients['ecs'] = boto3_client_ecs
+            return boto3_clients
         except botocore.exceptions.BotoCoreError as e:
-            message = "Error creating EC2 client for account {0}, reason: {1}".format(
+            message = "Error creating AWS client for account {0}, reason: {1}".format(
                 client_config[AWS_ACCESS_KEY_ID], str(e))
             logger.exception(message)
         except botocore.exceptions.ClientError as e:
@@ -124,46 +183,78 @@ class AwsAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         """
-        Get all EC2 instances from a specific client
+        Get all AWS (EC2 & EKS) instances from a specific client
 
         :param str client_name: the name of the client as returned from _get_clients
         :param client_data: The data of the client, as returned from the _parse_clients_data function
+            if there is EC2 data, client_data['ec2'] will contain that data
+            if there is EKS data, client_data['eks'] will contain that data
         :return: http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.Client.describe_instances
         """
-        try:
-            amis = set()
-            # all devices are returned at once so no progress is logged
-            instances = client_data.describe_instances()
-
-            # get all image-ids
-            for reservation in instances['Reservations']:
-                for instance in reservation['Instances']:
-                    amis.add(instance['ImageId'])
-
+        raw_data = {}
+        # Checks whether client_data contains EC2 data
+        if client_data.get('ec2') is not None:
             try:
-                described_images = _describe_images_from_client_by_id(client_data, amis)
-            except Exception:
-                described_images = {}
-                logger.exception("Couldn't describe aws images")
+                ec2_client_data = client_data.get('ec2')
+                amis = set()
+                # all devices are returned at once so no progress is logged
+                instances = ec2_client_data.describe_instances()
 
+                # get all image-ids
+                for reservation in instances['Reservations']:
+                    for instance in reservation['Instances']:
+                        amis.add(instance['ImageId'])
+
+                try:
+                    described_images = _describe_images_from_client_by_id(ec2_client_data, amis)
+                except Exception:
+                    described_images = {}
+                    logger.exception("Couldn't describe aws images")
+
+                try:
+                    described_vpcs = _describe_vpcs_from_client(ec2_client_data)
+                except Exception:
+                    described_vpcs = {}
+                    logger.exception("Couldn't describe aws vpcs")
+
+                # add image and vpc information to each instance
+                for reservation in instances['Reservations']:
+                    for instance in reservation['Instances']:
+                        instance['DescribedImage'] = described_images.get(instance['ImageId'])
+                        instance['VPC'] = described_vpcs.get(instance.get('VpcId'))
+
+                raw_data['ec2'] = instances
+            except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
+                    botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
+                raise CredentialErrorException(repr(e))
+            except botocore.exceptions.BotoCoreError as e:
+                raise AdapterException(repr(e))
+        # Checks whether client_data contains ECS data
+        if client_data.get('ecs') is not None:
             try:
-                described_vpcs = _describe_vpcs_from_client(client_data)
-            except Exception:
-                described_vpcs = {}
-                logger.exception("Couldn't describe aws vpcs")
+                ecs_client_data = client_data.get('ecs')
+                clusters = ecs_client_data.list_clusters()
+                clusters = clusters.get('clusterArns')
 
-            # add image and vpc information to each instance
-            for reservation in instances['Reservations']:
-                for instance in reservation['Instances']:
-                    instance['DescribedImage'] = described_images.get(instance['ImageId'])
-                    instance['VPC'] = described_vpcs.get(instance.get('VpcId'))
+                tasks_data = []
+                for cluster in clusters:
+                    try:
+                        tasks = ecs_client_data.list_tasks(cluster=cluster)
+                        task_arns = tasks.get('taskArns')
+                        if task_arns:
+                            cluster_tasks_data = ecs_client_data.describe_tasks(cluster=cluster, tasks=task_arns)
+                            cluster_tasks_data = cluster_tasks_data.get('tasks')
+                            tasks_data.extend(cluster_tasks_data)
+                    except Exception:
+                        logger.exception(f"Couldn't get tasks in cluster {cluster}")
 
-            return instances
-        except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
-                botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
-            raise CredentialErrorException(repr(e))
-        except botocore.exceptions.BotoCoreError as e:
-            raise AdapterException(repr(e))
+                raw_data['ecs'] = tasks_data
+            except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
+                    botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
+                raise CredentialErrorException(repr(e))
+            except botocore.exceptions.BotoCoreError as e:
+                raise AdapterException(repr(e))
+        return raw_data
 
     def _clients_schema(self):
         """
@@ -204,37 +295,100 @@ class AwsAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for reservation in devices_raw_data.get('Reservations', []):
-            for device_raw in reservation.get('Instances', []):
-                device = self._new_device_adapter()
-                tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
-                for key, value in tags_dict.items():
-                    device.add_aws_ec2_tag(key=key, value=value)
-                device.instance_type = device_raw['InstanceType']
-                device.key_name = device_raw['KeyName']
-                if device_raw.get('VpcId') is not None:
-                    device.vpc_id = device_raw['VpcId']
-                if device_raw.get("VPC") is not None:
-                    vpc_tags_dict = {i['Key']: i['Value'] for i in device_raw['VPC'].get('Tags', {})}
-                    if vpc_tags_dict.get('Name') is not None:
-                        device.vpc_name = vpc_tags_dict.get('Name')
-                device.name = tags_dict.get('Name', '')
-                device.figure_os(device_raw['DescribedImage'].get('Description', '')
-                                 if device_raw['DescribedImage'] is not None
-                                 else device_raw.get('Platform'))
-                device.id = device_raw['InstanceId']
-                for iface in device_raw.get('NetworkInterfaces', []):
-                    assoc = iface.get("Association")
-                    if assoc is not None:
-                        public_ip = assoc.get('PublicIp')
-                        if public_ip is not None:
-                            device.add_nic(iface.get("MacAddress"), [public_ip])
-                    device.add_nic(iface.get("MacAddress"), [addr.get('PrivateIpAddress')
-                                                             for addr in iface.get("PrivateIpAddresses", [])])
-                device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
-                                                         DeviceRunningState.Unknown)
-                device.set_raw(device_raw)
-                yield device
+        # Checks whether devices_raw_data contains EC2 data
+        if devices_raw_data.get('ec2') is not None:
+            ec2_devices_raw_data = devices_raw_data.get('ec2')
+            for reservation in ec2_devices_raw_data.get('Reservations', []):
+                for device_raw in reservation.get('Instances', []):
+                    device = self._new_device_adapter()
+                    tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
+                    for key, value in tags_dict.items():
+                        device.add_aws_ec2_tag(key=key, value=value)
+                    device.instance_type = device_raw['InstanceType']
+                    device.key_name = device_raw['KeyName']
+                    if device_raw.get('VpcId') is not None:
+                        device.vpc_id = device_raw['VpcId']
+                    if device_raw.get("VPC") is not None:
+                        vpc_tags_dict = {i['Key']: i['Value'] for i in device_raw['VPC'].get('Tags', {})}
+                        if vpc_tags_dict.get('Name') is not None:
+                            device.vpc_name = vpc_tags_dict.get('Name')
+                    device.name = tags_dict.get('Name', '')
+                    device.figure_os(device_raw['DescribedImage'].get('Description', '')
+                                     if device_raw['DescribedImage'] is not None
+                                     else device_raw.get('Platform'))
+                    device.id = device_raw['InstanceId']
+                    for iface in device_raw.get('NetworkInterfaces', []):
+                        assoc = iface.get("Association")
+                        if assoc is not None:
+                            public_ip = assoc.get('PublicIp')
+                            if public_ip is not None:
+                                device.add_nic(iface.get("MacAddress"), [public_ip])
+                        device.add_nic(iface.get("MacAddress"), [addr.get('PrivateIpAddress')
+                                                                 for addr in iface.get("PrivateIpAddresses", [])])
+                    device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
+                                                             DeviceRunningState.Unknown)
+                    device.set_raw(device_raw)
+                    yield device
+        # Checks whether devices_raw_data contains ECS data
+        if devices_raw_data.get('ecs') is not None:
+            ecs_devices_raw_data = devices_raw_data.get('ecs')
+            for device_raw in ecs_devices_raw_data:
+                try:
+                    device = self._new_device_adapter()
+                    attachments = device_raw.get('attachments')
+                    if attachments:
+                        try:
+                            # There should only be one set of attachments, so attachments is really a list of length 1
+                            attachment = attachments[0]
+                            if attachment:
+                                device.id = attachment['id']  # We want to fail if we don't have an ID
+                                device.subnet_id = attachment.get('details')[0]['value']
+                                network_interface_id = attachment.get('details')[1]['value']
+                                mac_address = attachment.get('details')[2]['value']
+                                private_ip = attachment.get('details')[3]['value']
+                                device.add_nic(mac=mac_address, ips=[private_ip], name=network_interface_id)
+                        except Exception:
+                            logger.exception(f'Failed to get attachment data for {device_raw}')
+                            continue
+                    try:
+                        cluster_arn = device_raw.get('clusterArn')
+                        if cluster_arn is not None:
+                            device.cluster_arn = cluster_arn
+                            cluster_name = cluster_arn.split('/')[1]
+                            device.cluster_name = cluster_name
+                        task_arn = device_raw.get('taskArn')
+                    except Exception:
+                        logger.exception(f'Failed to get cluster data for {device_raw}')
+                    if task_arn is not None:
+                        device.task_arn = task_arn
+                        device.name = task_arn.split('/')[1]
+                    device.task_definition_arn = device_raw.get('taskDefinitionArn')
+                    device.last_status = device_raw.get('lastStatus')
+                    device.desired_status = device_raw.get('desiredStatus')
+                    device.cpu_units = device_raw.get('cpu')
+                    device.launch_type = device_raw.get('launchType')
+                    device.connectivity = device_raw.get('connectivity')
+                    device.ecs_group = device_raw.get('group')
+                    device.hs_memory = device_raw.get('memory')
+                    device.ecs_platform_version = device_raw.get('platformVersion')
+                    try:
+                        containers = device_raw.get('containers')
+                        if containers is not None:
+                            for container in containers:
+                                network_interfaces = []
+                                for network_interface in container.get("networkInterfaces"):
+                                    nic = {}
+                                    nic['name'] = network_interface.get("attachmentId")
+                                    nic['ip'] = network_interface.get("privateIpv4Address")
+                                    network_interfaces.append(nic)
+                                device.add_container(name=container.get('name'),
+                                                     last_status=container.get('lastStatus'), network_interfaces=network_interfaces, containerArn=container.get('containerArn'))
+                    except Exception:
+                        logger.exception('Failed to load containers.')
+                    device.set_raw(device_raw)
+                    yield device
+                except Exception as e:
+                    logger.exception(f'ERROR: problem loading {device_raw}. Reason: {e}')
 
     def _correlation_cmds(self):
         """

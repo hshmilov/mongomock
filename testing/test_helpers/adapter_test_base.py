@@ -95,7 +95,8 @@ class AdapterTestBase(object):
 
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
-        self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])
+        self.axonius_system.assert_device_aggregated(
+            self.adapter_service, [(self.some_client_id, self.some_device_id)])
 
     def test_fetch_users(self):
         try:
