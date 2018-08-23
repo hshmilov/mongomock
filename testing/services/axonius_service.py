@@ -84,22 +84,43 @@ class AxoniusService():
 
     def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True,
                        expose_db=False):
+
+        def _start_service(service_to_start):
+            if skip and service_to_start.get_is_container_up():
+                return
+            if expose_db and service_to_start is self.db:
+                service_to_start.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild,
+                                       hard=hard, show_print=show_print, expose_port=True)
+                return
+            service_to_start.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard,
+                                   show_print=show_print)
+
         if allow_restart:
             for service in self.axonius_services:
                 service.remove_container()
 
         # Start in parallel
-        for service in self.axonius_services:
-            if skip and service.get_is_container_up():
-                continue
-            if expose_db and service is self.db:
-                service.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild,
-                              hard=hard, show_print=show_print, expose_port=True)
-                continue
-            service.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
+        services_to_start = list(self.axonius_services)
+
+        mongo_service = next((x for x in services_to_start if x.container_name == 'mongo'), None)
+        if mongo_service:
+            # if mongo is also restarted, we can't restart anything else before it finishes
+            _start_service(mongo_service)
+            mongo_service.wait_for_service()
+            services_to_start.remove(mongo_service)
+
+        core_service = next((x for x in services_to_start if x.container_name == 'core'), None)
+        if core_service:
+            # if core is also restarted, we can't restart anything else before it finishes
+            _start_service(core_service)
+            core_service.wait_for_service()
+            services_to_start.remove(core_service)
+
+        for service in services_to_start:
+            _start_service(service)
 
         # wait for all
-        for service in self.axonius_services:
+        for service in services_to_start:
             service.wait_for_service()
 
     def get_devices_db(self):
