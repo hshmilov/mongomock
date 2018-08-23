@@ -77,12 +77,18 @@ class TaniumAdapter(AdapterBase):
                     'title': 'Password',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
                 }
             ],
             'required': [
                 'domain',
                 'username',
                 'password',
+                'verify_ssl'
             ],
             'type': 'array'
         }

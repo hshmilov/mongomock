@@ -182,7 +182,9 @@ class TenableIoAdapter(AdapterBase):
                 uuid = get_csv_value_filtered(device_raw, "Asset UUID")
                 host = get_csv_value_filtered(device_raw, "Host")
 
-                if uuid is None or host is None:
+                # This chars are false, we get bad csv sometimes
+                false_uuid = ['=', '|', ':']
+                if uuid is None or host is None or any(elem in uuid for elem in false_uuid):
                     logger.warning(f"Bad asset {device_raw}, continuing")
                     continue
                 assets_dict[uuid].append(device_raw)
@@ -210,7 +212,17 @@ class TenableIoAdapter(AdapterBase):
 
                 else:
                     for mac_address in mac_addresses:
-                        device.add_nic(mac_address, ip_addresses)
+                        while len(mac_address) > 17:
+                            try:
+                                mac_address_to_use = mac_address[:17]
+                                mac_address = mac_address[17:]
+                                device.add_nic(mac_address_to_use, ip_addresses)
+                            except Exception:
+                                logger.exception(f'Problem adding mac with {mac_address}')
+                        try:
+                            device.add_nic(mac_address, ip_addresses)
+                        except Exception:
+                            logger.exception(f'Problem adding mac with {mac_address}')
 
                 fqdn = get_csv_value_filtered(first_asset, "FQDN")
                 netbios = get_csv_value_filtered(first_asset, "NetBios")

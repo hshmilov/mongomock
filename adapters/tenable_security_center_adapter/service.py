@@ -83,7 +83,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
                 {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
-                    'type': 'string'
+                    'type': 'bool'
                 }
             ],
             "required": [
