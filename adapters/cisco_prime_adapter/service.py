@@ -3,6 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco import snmp
+from axonius.clients.cisco.snmp import CiscoSnmpClient
 from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
 from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
 from axonius.utils import json
@@ -42,8 +43,8 @@ class CiscoPrimeAdapter(AdapterBase):
 
         community = creds['snmp_read_cs']
         ip, port = creds['MANAGEMENT_ADDRESS'], creds['snmp_port']
-        client = CiscoSnmpClient(community, ip, port)
-        if not client.is_valid():
+        client = CiscoSnmpClient(community=community, host=ip, port=port)
+        if not client.is_valid(should_log_exception=False):
             return None
 
         return client
@@ -62,12 +63,12 @@ class CiscoPrimeAdapter(AdapterBase):
         transport = creds['cli_transport']
 
         if transport == 'telnet':
-            client = CiscoTelnetClient(username, password, ip, port)
+            client = CiscoTelnetClient(username=username, password=password, host=ip, port=port)
         else:
             # ssh
-            client = CiscoSshClient(username, password, ip, port)
+            client = CiscoSshClient(username=username, password=password, host=ip, port=port)
 
-        if not client.is_valid():
+        if not client.is_valid(should_log_exception=False):
             return None
 
         return client
@@ -99,10 +100,19 @@ class CiscoPrimeAdapter(AdapterBase):
 
             for raw_device in raw_devices:
                 try:
-                    client = self._get_client()
+                    creds = session.get_credentials(raw_device)
+                    if not creds:
+                        logger.warning(f'empty creds for {raw_device}')
+                        continue
+                    client = self._get_client(creds)
+
+                    if not client:
+                        logger.warning(f'unable to get client - skipping')
+                        continue
+
                     with client:
                         if isinstance(client, CiscoSnmpClient):
-                            tasks.append(client.get_tasks())
+                            tasks += client.get_tasks()
                             continue
                         else:
                             generators.append(client.query_all())

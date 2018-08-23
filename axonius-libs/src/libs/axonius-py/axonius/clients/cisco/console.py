@@ -9,6 +9,9 @@ from axonius.utils.parsing import format_mac
 from axonius.clients.cisco.abstract import *
 from axonius.adapter_exceptions import ClientConnectionException
 
+DEFAULT_VALIDATE_TIMEOUT = 6
+DEFAULT_TIMEOUT = 60
+
 
 class CiscoConsoleClient(AbstractCiscoClient):
     def __init__(self, **kwargs):
@@ -28,13 +31,13 @@ class CiscoConsoleClient(AbstractCiscoClient):
 
     def validate_connection(self):
         sess = ConnectHandler(device_type=self.get_device_type(), ip=self.host, username=self.username,
-                              password=self.password, port=self.port)
+                              password=self.password, port=self.port, timeout=DEFAULT_VALIDATE_TIMEOUT)
         sess.disconnect()
 
     def __enter__(self):
         super().__enter__()
         self._sess = ConnectHandler(device_type=self.get_device_type(), ip=self.host, username=self.username,
-                                    password=self.password, port=self.port)
+                                    password=self.password, port=self.port, timeout=DEFAULT_TIMEOUT)
         return self
 
     def __exit__(self, *args):
@@ -86,7 +89,7 @@ class ConsoleCdpCiscoData(CdpCiscoData):
     def _parse_cdp_table(text):
         '''-------------------------
     Device ID: dhcp-slave
-    Entry address(es): 
+    Entry address(es):
       IP address: 10.0.0.3
     Platform: Cisco 2691,  Capabilities: Switch IGMP 
     Interface: FastEthernet0/1,  Port ID (outgoing port): FastEthernet0/0

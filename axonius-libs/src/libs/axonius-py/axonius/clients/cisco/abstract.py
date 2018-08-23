@@ -34,7 +34,7 @@ class AbstractCiscoClient:
         """ exit that to the cisco device. """
         self._in_context = False
 
-    def is_valid(self):
+    def is_valid(self, should_log_exception=True):
         """
              wrapper for validate_connection, return bool instead of exception.
         """
@@ -42,7 +42,15 @@ class AbstractCiscoClient:
         try:
             self.validate_connection()
         except Exception as e:
-            logger.exception(e)
+            if should_log_exception:
+                logger.exception(e)
+            else:
+                host = ''
+                if hasattr(self, '_ip'):
+                    host = self._ip
+                if hasattr(self, 'host'):
+                    host = self.host
+                logger.info(f'unable to connect {host}: error: {str(e)}')
             return False
         return True
 
@@ -355,7 +363,7 @@ class InstanceParser:
                 if not (cdp.get('connected_devices') and other.get('connected_devices')):
                     continue
 
-                if cdp.get('connected_devices')[0].name != other.get('connected_devices')[0].name:
+                if cdp.get('connected_devices')[0].get('name') != other.get('connected_devices')[0].get('name'):
                     continue
 
                 if cdp.get('mac') or not other.get('mac'):
