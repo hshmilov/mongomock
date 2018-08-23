@@ -45,6 +45,17 @@ def test_fractions():
     assert str(list(escape_dict(d).keys())[0]) != "1.5"
 
 
+def test_lists():
+    d = {
+        "a": [
+            {
+                "a.a": 5
+            }
+        ]
+    }
+    assert list(escape_dict(d)['a'][0].keys()) == ['a_DOT__DOT_a']
+
+
 if __name__ == '__main__':
     import pytest
 

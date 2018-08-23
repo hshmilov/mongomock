@@ -32,7 +32,8 @@ def escape_dict(to_escape: object):
     :param to_escape: escape this object. if it's not a dict, returned as-s
     :return escaped dict
     """
-    if not isinstance(to_escape, dict):
-        return to_escape
-
-    return {escape_key(str(k)): escape_dict(v) for k, v in to_escape.items()}
+    if isinstance(to_escape, dict):
+        return {escape_key(str(k)): escape_dict(v) for k, v in to_escape.items()}
+    if isinstance(to_escape, list):
+        return [escape_dict(x) for x in to_escape]
+    return to_escape
