@@ -1,10 +1,12 @@
 import logging
 import itertools
+from functools import reduce
 
 from collections import defaultdict
 
 from axonius.devices.device_adapter import (DeviceAdapter, Field,
                                             DeviceAdapterNeighbor, DeviceAdapterNetworkInterface)
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -289,17 +291,13 @@ class CdpCiscoData(AbstractCiscoData):
         raise NotImplementedError()
 
     def _get_id(self, instance):
-        mac = instance.get('mac')
-        iface = instance.get('iface')
+        hostname = instance.get('hostname')
         id_ = 'cdp'
 
-        if not mac:
+        if not hostname:
             return None
 
-        id_ += '_' + mac
-
-        if iface:
-            id_ += '_' + iface
+        id_ += '_' + hostname
 
         return id_
 
@@ -319,67 +317,141 @@ class InstanceParser:
         and cdp table """
 
     def __init__(self, instances):
-        self._instances = list(filter(lambda x: x is not None, instances))
+        self._instances = [x for x in instances if x is not None]
+
+    @staticmethod
+    def _sort_instance_by_key(instances: list, key: str) -> dict:
+        """ Sort by key, if we dont have key put in unique number (using counter) """
+        result = defaultdict(list)
+        counter = itertools.count()
+
+        for instance in instances:
+            for parsed_data in instance.get_parsed_data():
+                if parsed_data.get(key):
+                    result[parsed_data.get(key)].append(parsed_data)
+                else:
+                    result[next(counter)].append(parsed_data)
+        return result
+
+    @staticmethod
+    def _correlate_cdp_arp(instances):
+        """ for each cdp and other device that came from the same machine and has the same ip,
+            we want to copy the mac address from the other device to cdp """
+
+        cdp_instances = set((x for x in instances if isinstance(x, CdpCiscoData)))
+        other_instances = set(instances) - cdp_instances
+
+        # try to find correlation in ip
+        # and connected_device name (we only have now connected_device in this phase for sure)
+
+        cdp_jsons = itertools.chain.from_iterable(map(lambda instance: instance.get_parsed_data(), cdp_instances))
+        other_jsons = itertools.chain.from_iterable(map(lambda instance: instance.get_parsed_data(), other_instances))
+
+        for cdp, other in itertools.product(cdp_jsons, other_jsons):
+            try:
+                if cdp.get('ip') != other.get('ip'):
+                    continue
+
+                if not (cdp.get('connected_devices') and other.get('connected_devices')):
+                    continue
+
+                if cdp.get('connected_devices')[0].name != other.get('connected_devices')[0].name:
+                    continue
+
+                if cdp.get('mac') or not other.get('mac'):
+                    continue
+
+                # found correlation
+                cdp['mac'] = other['mac']
+
+            except Exception:
+                logger.exception(f'Error while tring to correlate cdp: {cdp}, {other}')
+        return instances
+
+    @staticmethod
+    def _merge_cdps(cdps: list):
+        assert len(cdps) >= 1, f'cdps must have at least one instance in list, got {cdps}'
+
+        result = CdpCiscoData(raw_data='')
+        counter = itertools.count()
+
+        first_cdp = cdps[0]
+
+        parsed_data = {}
+        parsed_data['hostname'] = first_cdp.get('hostname')
+        parsed_data['version'] = first_cdp.get('version')
+        parsed_data['device_model'] = first_cdp.get('device_model')
+        parsed_data['ifaces'] = {}
+        parsed_data['connected_devices'] = []
+
+        for cdp in cdps:
+            try:
+                if 'iface' in cdp:
+                    interface = {'description': cdp['iface']}
+                    interface['mac'] = cdp.get('mac')
+                    if 'ip' in cdp:
+                        interface['ips'] = [{'address': cdp['ip']}]
+                    parsed_data['ifaces'][next(counter)] = interface
+
+                if 'connected_devices' in cdp:
+                    parsed_data['connected_devices'] += cdp['connected_devices']
+            except Exception:
+                logger.exception(f'Error while merging cdps {cdp}')
+
+        result.parsed_data = [parsed_data]
+        return result
+
+    def _correlate_cdp_cdp(self, instances):
+        """ we want to find all cdps with the same name and merge them """
+        cdp_instances = set((x for x in instances if isinstance(x, CdpCiscoData)))
+        other_instances = set(instances) - cdp_instances
+
+        cdp_dict = self._sort_instance_by_key(cdp_instances, 'hostname')
+
+        correlated_cdp_instances = [self._merge_cdps(correlate_list) for correlate_list in cdp_dict.values()]
+        return list(other_instances) + correlated_cdp_instances
+
+    @staticmethod
+    def _merge_arps(arps: list):
+        assert len(arps) >= 1, f'arps must have at least one instance in list, got {arps}'
+
+        result = ArpCiscoData(raw_data='')
+        parsed_data = {}
+
+        parsed_data['mac'] = arps[0].get('mac')
+        parsed_data['related_ips'] = []
+        parsed_data['connected_devices'] = []
+
+        for arp in arps:
+            if arp.get('ip'):
+                parsed_data['related_ips'].append(arp.get('ip'))
+
+            if 'connected_devices' in arp:
+                parsed_data['connected_devices'] += arp['connected_devices']
+
+        result.parsed_data = [parsed_data]
+        return result
+
+    def _correlate_arp_arp(self, instances):
+        """ find arp with the same macs and correlate then """
+        arp_instances = set((x for x in instances if isinstance(x, ArpCiscoData)))
+        other_instances = set(instances) - arp_instances
+
+        arp_dict = self._sort_instance_by_key(arp_instances, 'mac')
+
+        correlated_arp_instances = [self._merge_arps(correlate_list) for correlate_list in arp_dict.values()]
+        return list(other_instances) + correlated_arp_instances
 
     def get_devices(self, create_device_callback):
-        cdp_instance = list(filter(lambda x: isinstance(x, CdpCiscoData), self._instances))
-        arp_instance = list(filter(lambda x: isinstance(x, ArpCiscoData), self._instances))
+        # first we want to fix cdp, then merge cdp, then merge arps
+        funcs = (
+            self._correlate_cdp_arp,
+            self._correlate_cdp_cdp,
+            self._correlate_arp_arp,
+        )
 
-        # For each cdp device - check if we also see it in any other table (arp and dhcp)
-        # if we do - copy mac for correlation
-        if cdp_instance:
-            cdp_instance = cdp_instance[0]
+        # apply each function on instances
+        self._instances = reduce(lambda instances, func: func(instances), funcs, self._instances)
 
-            # XXX: arp throws iface
-            # XXX: cdp neighbors doesn't correlate when one have empty ip
-            for cdp_data in cdp_instance.get_parsed_data():
-                try:
-                    if cdp_data.get('mac'):
-                        continue
-
-                    filtered = filter(lambda x: not isinstance(x, CdpCiscoData), self._instances)
-                    for other_data in sum(list(map(lambda x: x.get_parsed_data(), filtered)), []):
-                        if cdp_data.get('ip') == other_data.get('ip'):
-                            cdp_data['mac'] = other_data.get('mac')
-                            break
-                except Exception:
-                    logger.exception('Error while tring to correlate cdp')
-
-        # For each arp device - we want to set ip as realted_ip if we haven't seen it in any other protocol
-        if arp_instance:
-            arp_instance = arp_instance[0]
-
-            try:
-                mac_ip_correlation = defaultdict(set)
-                for data in arp_instance.get_parsed_data():
-                    mac = data.get('mac')
-                    ip = data.get('ip')
-                    if mac and ip:
-                        mac_ip_correlation[mac].add(ip)
-
-                new_arp_data = list(
-                    map(lambda x: dict([('mac', x[0]), ('related_ips', list(x[1]))]), mac_ip_correlation.items()))
-
-                arp_instance.parsed_data = new_arp_data
-
-                for arp_data in new_arp_data:
-                    if len(arp_data['related_ips']) != 1:
-                        continue
-
-                    ip = arp_data['related_ips'][0]
-
-                    sum_ = sum(map(lambda x: x.get_parsed_data(),
-                                   filter(lambda x: not isinstance(x, ArpCiscoData),
-                                          self._instances)), [])
-                    if not ip in map(lambda x: x.get('ip'), sum_):
-                        continue
-
-                    # found colrreation
-                    arp_data['ip'] = ip
-                    del arp_data['related_ips']
-
-                arp_instance.parsed_data = new_arp_data
-            except Exception:
-                logger.exception('Error while tring to correlate cdp')
-
-        return itertools.chain.from_iterable(map(lambda x: x.get_devices(create_device_callback), self._instances))
+        # run .get_devices() for each instance and chain the results to one iterable
+        return itertools.chain.from_iterable((x.get_devices(create_device_callback) for x in self._instances))

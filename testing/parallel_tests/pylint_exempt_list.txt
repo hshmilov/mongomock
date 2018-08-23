@@ -308,7 +308,6 @@ axonius-libs/src/libs/axonius-py/axonius/scanner_adapter_base.py
 axonius-libs/src/libs/axonius-py/axonius/smart_json_class.py
 axonius-libs/src/libs/axonius-py/axonius/thread_pool_executor.py
 axonius-libs/src/libs/axonius-py/axonius/thread_stopper.py
-axonius-libs/src/libs/axonius-py/axonius/clients/cisco/abstract.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/console.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/snmp_parser.py
 axonius-libs/src/libs/axonius-py/axonius/clients/juniper/rpc.py
