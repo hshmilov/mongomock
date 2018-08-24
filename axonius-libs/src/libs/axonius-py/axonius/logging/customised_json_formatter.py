@@ -17,7 +17,10 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
             extra['thread'] = record.thread
             extra['message'] = message
             if record.exc_info:
-                extra['exc_info'] = self.formatException(record.exc_info)
+                # split to stack trace and the specific message
+                formatted = self.formatException(record.exc_info).split('\n')
+                extra['exc_info'] = "\n".join(formatted[:-1])
+                extra['exception_message'] = formatted[-1]
             extra[PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
             current_time = datetime.utcfromtimestamp(record.created)
             extra['@timestamp'] = current_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
@@ -44,6 +47,8 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                         extra['funcName'] = current_frame.function
                         extra['lineNumber'] = current_frame.lineno
                         extra['filename'] = current_frame.filename
+                        extra['location'] = f"{extra['filename']}:{extra['funcName']}:{extra['lineNumber']}"
+
                         break
             except Exception:
                 pass
