@@ -128,6 +128,7 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_report_generated)
 
+    @pytest.mark.skip("AX-1902")
     def test_dns_conflicts(self):
         @retry(wait_fixed=5000,
                stop_max_delay=125000)  # it can take up to 2 minutes for the tag to appear
