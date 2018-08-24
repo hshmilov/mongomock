@@ -82,3 +82,4 @@ selenium==3.13.0
 bandit==1.4.0
 aliyun-python-sdk-core-v3==2.9.0
 aliyun-python-sdk-ecs==4.9.5
+func_timeout==4.3.0
