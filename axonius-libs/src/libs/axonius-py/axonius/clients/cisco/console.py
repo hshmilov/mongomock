@@ -243,7 +243,11 @@ class ConsoleArpCiscoData(ArpCiscoData):
         for entry in self._raw_data:
             try:
                 entry = entry.split()
-                mac, ip = format_mac(entry[3]), entry[1]
+                mac, ip = entry[3], entry[1]
+                # incomplete means that the cisco sent arp and didn't get reply.
+                if mac == 'incomplete':
+                    continue
+                mac = format_mac(mac)
                 iface = entry[5] if len(entry) > 5 else ''
                 yield {'mac': mac, 'ip': ip, 'remote_iface': iface}
             except Exception:
