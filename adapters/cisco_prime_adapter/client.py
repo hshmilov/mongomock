@@ -50,6 +50,8 @@ class CiscoPrimeClient:
             raise CiscoPrimeException(f'Got unexpected status code {resp.status_code}')
         return resp
 
+# XXX: for some reason pylint thinks that the following triple qoute should be ''' - AX-1897
+#pylint: disable=C4002
     def connect(self):
         """
         Open session using the given creds.
@@ -234,6 +236,8 @@ if __name__ == '__main__':
         creds = client.get_credentials(devices[2])
         if creds:
             pprint(creds)
-            a = snmp.CiscoSnmpClient(creds['snmp_read_cs'], creds['MANAGEMENT_ADDRESS'], creds['snmp_port'])
+            a = snmp.CiscoSnmpClient(community=creds['snmp_read_cs'],
+                                     host=creds['MANAGEMENT_ADDRESS'],
+                                     port=creds['snmp_port'])
             pprint(list(a.query_arp_table()))
     main()

@@ -1,13 +1,15 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-from netmiko import ConnectHandler
 import re
 
-from axonius.adapter_exceptions import AdapterException
+from netmiko import ConnectHandler
+
+from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.cisco.abstract import (AbstractCiscoClient, ArpCiscoData,
+                                            CdpCiscoData, DhcpCiscoData)
 from axonius.utils.parsing import format_mac
 
-from axonius.clients.cisco.abstract import *
-from axonius.adapter_exceptions import ClientConnectionException
+logger = logging.getLogger(f'axonius.{__name__}')
+
 
 DEFAULT_VALIDATE_TIMEOUT = 6
 DEFAULT_TIMEOUT = 60
@@ -40,37 +42,37 @@ class CiscoConsoleClient(AbstractCiscoClient):
                                     password=self.password, port=self.port, timeout=DEFAULT_TIMEOUT)
         return self
 
-    def __exit__(self, *args):
-        super().__exit__(*args)
+    def __exit__(self, exc_type, exc_value, traceback):
+        super().__exit__(exc_type, exc_value, traceback)
         self._sess.disconnect()
 
     def _query_arp_table(self):
         try:
-            lines = self._sess.send_command("show arp")
+            lines = self._sess.send_command('show arp')
             lines = lines.split('\n')
             lines = list(filter(lambda x: x.startswith('internet'),
                                 map(lambda x: x.lower().expandtabs(tabsize=8).strip(), lines)))
             return ConsoleArpCiscoData(lines, received_from=self.host)
         except Exception:
-            logger.exception("Running shell arp command failed")
+            logger.exception('Running shell arp command failed')
 
     def _query_dhcp_leases(self):
         try:
-            lines = self._sess.send_command("show ip dhcp binding")
+            lines = self._sess.send_command('show ip dhcp binding')
             return ConsoleDhcpCiscoData(lines, received_from=self.host)
         except Exception:
-            logger.exception("Exception in query dhcp Leases")
+            logger.exception('Exception in query dhcp Leases')
 
     def _query_cdp_table(self):
         try:
-            lines = self._sess.send_command("show cdp neighbors detail")
+            lines = self._sess.send_command('show cdp neighbors detail')
             return ConsoleCdpCiscoData(lines, received_from=self.host)
         except Exception:
-            logger.exception("Exception in query dhcp Leases")
+            logger.exception('Exception in query dhcp Leases')
 
-    def _query_basic_info(self):
+    @staticmethod
+    def _query_basic_info():
         logger.warning('basic info isn\'t implemented yet - skipping')
-        return None
 
 
 class CiscoSshClient(CiscoConsoleClient):
@@ -87,11 +89,11 @@ class ConsoleCdpCiscoData(CdpCiscoData):
 
     @staticmethod
     def _parse_cdp_table(text):
-        '''-------------------------
+        """-------------------------
     Device ID: dhcp-slave
     Entry address(es):
       IP address: 10.0.0.3
-    Platform: Cisco 2691,  Capabilities: Switch IGMP 
+    Platform: Cisco 2691,  Capabilities: Switch IGMP
     Interface: FastEthernet0/1,  Port ID (outgoing port): FastEthernet0/0
     Holdtime : 136 sec
 
@@ -104,7 +106,7 @@ class ConsoleCdpCiscoData(CdpCiscoData):
     advertisement version: 2
     VTP Management Domain: ''
     Duplex: half
-        '''
+        """
         text = text.expandtabs(tabsize=8)
 
         # Split to entries, skip the header
@@ -135,7 +137,7 @@ class ConsoleCdpCiscoData(CdpCiscoData):
     @staticmethod
     def parse_entry(entry):
         entry = entry.strip()
-        # TODO: We are converting the data to dict, but it may appear more then once,
+        # XXX: We are converting the data to dict, but it may appear more then once,
         # (For example IP address) . I wasn't able to achive this state so for now
         # we'll throw anything that appear more then once.
         data = dict(sum(map(ConsoleCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
@@ -155,13 +157,16 @@ class ConsoleCdpCiscoData(CdpCiscoData):
             except Exception:
                 logger.exception('Exception while paring cdp line')
 
+# XXX: pylint thinks that iterator table_row is not iterable - AX-1898
+# pylint: disable=E1133
+
 
 class ConsoleDhcpCiscoData(DhcpCiscoData):
 
     @staticmethod
     def _parse_dhcp_table(text):
-        ''' Data Example:
-            CiscoEmuRouter# show ip dhcp binding 
+        """ Data Example:
+            CiscoEmuRouter# show ip dhcp binding
             Bindings from all pools not associated with VRF:
             IP address          Client-ID/              Lease expiration        Type
                                 Hardware address/
@@ -174,7 +179,7 @@ class ConsoleDhcpCiscoData(DhcpCiscoData):
                                 3133.332e.3333.3737.
                                 2e64.6561.642d.4661.
                                 302f.30
-        '''
+        """
 
         text = text[text.index('IP address'):]
         text = text.expandtabs(tabsize=8)
@@ -184,12 +189,12 @@ class ConsoleDhcpCiscoData(DhcpCiscoData):
         lines = text.split('\n')
         headers = header.findall(lines[0])
 
-        def split_line(l):
+        def split_line(line):
             splitted = []
             for h in headers:
-                splitted.append(l[:len(h)].strip())
-                l = l[len(h):]
-            splitted.append(l)
+                splitted.append(line[:len(h)].strip())
+                line = line[len(h):]
+            splitted.append(line)
             return splitted
 
         table_row = None
@@ -239,7 +244,7 @@ class ConsoleArpCiscoData(ArpCiscoData):
             try:
                 entry = entry.split()
                 mac, ip = format_mac(entry[3]), entry[1]
-                iface = entry[5] if len(entry) > 5 else ""
+                iface = entry[5] if len(entry) > 5 else ''
                 yield {'mac': mac, 'ip': ip, 'remote_iface': iface}
             except Exception:
                 logger.exception('Exception while paring arp line')

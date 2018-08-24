@@ -1,14 +1,14 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
+
+from axonius.clients.cisco import console
+from axonius.clients.cisco import snmp
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 
-import axonius.clients.cisco.console as console
-import axonius.clients.cisco.snmp as snmp
-from axonius.clients.cisco.abstract import InstanceParser, CiscoDevice
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 PROTOCOLS = {
@@ -32,7 +32,7 @@ class CiscoAdapter(AdapterBase):
             client.validate_connection()
             return client
         except Exception as e:
-            message = "Error connecting to client with {0}: {1}".format(
+            message = 'Error connecting to client with {0}: {1}'.format(
                 self._get_client_id(client_config), get_exception_string())
             logger.exception(message)
             raise ClientConnectionException(str(e))
@@ -44,58 +44,58 @@ class CiscoAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "items": [
+            'items': [
                 {
-                    "name": 'host',
-                    "title": 'Host Name',
-                    "type": 'string'
+                    'name': 'host',
+                    'title': 'Host Name',
+                    'type': 'string'
                 },
                 {
-                    "name": 'protocol',
-                    "title": 'Protocol to use',
-                    "type": 'string',
-                    "enum": list(PROTOCOLS.keys()),
-                    "default": 'snmp',
+                    'name': 'protocol',
+                    'title': 'Protocol to use',
+                    'type': 'string',
+                    'enum': list(PROTOCOLS.keys()),
+                    'default': 'snmp',
                 },
                 {
-                    "name": 'username',
-                    "title": 'User Name',
-                    "type": 'string',
-                    "description": "Console username for telnet/ssh"
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string',
+                    'description': 'Console username for telnet/ssh'
                 },
                 {
-                    "name": 'password',
-                    "title": "Password",
-                    "type": 'string',
-                    "format": 'password',
-                    "description": "Console password for telnet/ssh"
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password',
+                    'description': 'Console password for telnet/ssh'
                 },
                 {
-                    "name": 'community',
-                    "title": 'Snmp read community',
-                    "type": 'string',
-                    "format": 'password',
+                    'name': 'community',
+                    'title': 'Snmp read community',
+                    'type': 'string',
+                    'format': 'password',
                 },
                 {
-                    "name": 'port',
-                    "title": 'Protocol port',
-                    "type": 'integer',
-                    "description": "Protocol Port (Default: standart port)"
+                    'name': 'port',
+                    'title': 'Protocol port',
+                    'type': 'integer',
+                    'description': 'Protocol Port (Default: standart port)'
                 },
 
             ],
-            "required": [
-                "host",
-                "protocol"
+            'required': [
+                'host',
+                'protocol'
             ],
-            "type": "array"
+            'type': 'array'
         }
 
-    def _parse_raw_data(self, instances):
-        yield from InstanceParser(instances).get_devices(self._new_device_adapter)
+    def _parse_raw_data(self, devices_raw_data):
+        yield from InstanceParser(devices_raw_data).get_devices(self._new_device_adapter)
 
     def _get_client_id(self, client_config):
-        # TODO: is there a better place to set default values for client_config?
+        # XXX: is there a better place to set default values for client_config?
         # XXX: require and default doesn't so we must hack the protocol here
         if client_config.get('protocol') not in PROTOCOLS:
             client_config['protocol'] = 'snmp'

@@ -8,8 +8,11 @@ class JuniperService(AdapterService):
     def __init__(self):
         super().__init__('juniper')
 
+    def action(self, action_type):
+        raise NotImplementedError('TBD!')
 
-@pytest.fixture(scope="module", autouse=True)
+
+@pytest.fixture(scope='module', autouse=True)
 def juniper_fixture(request):
     service = JuniperService()
     initialize_fixture(request, service)

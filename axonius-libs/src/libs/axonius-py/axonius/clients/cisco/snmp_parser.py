@@ -1,12 +1,13 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-
 import socket
+
 from axonius.devices.device_adapter import DeviceAdapterNetworkInterface
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def unpack_mac(value):
-    return ("%02X:" * 6)[:-1] % tuple(map(ord, str(value)))
+    return ('%02X:' * 6)[:-1] % tuple(map(ord, str(value)))
 
 
 def extract_ip_from_mib(mib):
@@ -58,8 +59,8 @@ def parse_str(oid, value):
     return str(value)
 
 
-class SnmpTable(object):
-    ''' Abstract class for oid, value parsing given table and index '''
+class SnmpTable:
+    """ Abstract class for oid, value parsing given table and index """
     table = {}
     index = 0
 

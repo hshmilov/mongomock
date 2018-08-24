@@ -3,9 +3,9 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco import snmp
-from axonius.clients.cisco.snmp import CiscoSnmpClient
-from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
 from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
+from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
+from axonius.clients.cisco.snmp import CiscoSnmpClient
 from axonius.utils import json
 from axonius.utils.files import get_local_config_file
 from cisco_prime_adapter.client import CiscoPrimeClient
@@ -30,8 +30,9 @@ class CiscoPrimeAdapter(AdapterBase):
             client.disconnect()
             return client
         except ClientConnectionException as err:
-            logger.error('Failed to connect to client {0} using config: {1}'.format(
-                self._get_client_id(client_config), client_config))
+            error_message = 'Failed to connect to client {0} using config: {1}'.format(
+                self._get_client_id(client_config), client_config)
+            logger.error(error_message)
             raise
 
     @staticmethod
@@ -85,20 +86,18 @@ class CiscoPrimeAdapter(AdapterBase):
         logger.error(f'Unable to generate client {creds}')
         return None
 
-    def _query_devices_by_client(self, client_name, session):
-        raw_devices = []
+    def _query_devices_by_client(self, client_name, client_data):
         arp_table = []
         tasks = []
         generators = []
 
+        session = client_data
         session.connect()
         try:
             for device in session.get_devices():
                 type_, raw_device = ('cisco', device)
                 yield (type_, raw_device)
-                raw_devices.append(raw_device)
 
-            for raw_device in raw_devices:
                 try:
                     creds = session.get_credentials(raw_device)
                     if not creds:
@@ -125,7 +124,7 @@ class CiscoPrimeAdapter(AdapterBase):
                     yield ('neighbor', entry)
 
                 for generator in generators:
-                    for entry in entries:
+                    for entry in generator:
                         yield ('neighbor', entry)
 
             except Exception as e:
@@ -207,9 +206,9 @@ class CiscoPrimeAdapter(AdapterBase):
 
         return device
 
-    def _parse_raw_data(self, raw_data):
+    def _parse_raw_data(self, devices_raw_data):
         instances = []
-        for raw_device in raw_data:
+        for raw_device in devices_raw_data:
             try:
                 type_, raw_device = raw_device
                 if type_ == 'cisco':

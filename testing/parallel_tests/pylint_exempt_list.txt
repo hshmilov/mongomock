@@ -26,13 +26,9 @@ adapters/carbonblack_response_adapter/service.py
 adapters/chef_adapter/connection.py
 adapters/chef_adapter/exceptions.py
 adapters/chef_adapter/service.py
-adapters/cisco_adapter/service.py
 adapters/cisco_meraki_adapter/connection.py
 adapters/cisco_meraki_adapter/exceptions.py
 adapters/cisco_meraki_adapter/service.py
-adapters/cisco_prime_adapter/client.py
-adapters/cisco_prime_adapter/service.py
-adapters/cisco_prime_adapter/snmp.py
 adapters/csv_adapter/service.py
 adapters/cylance_adapter/connection.py
 adapters/cylance_adapter/service.py
@@ -69,7 +65,6 @@ adapters/jamf_adapter/connection.py
 adapters/jamf_adapter/exceptions.py
 adapters/jamf_adapter/service.py
 adapters/json_file_adapter/service.py
-adapters/juniper_adapter/service.py
 adapters/juniper_adapter/py-space-platform/setup.py
 adapters/juniper_adapter/py-space-platform/apidocs/source/conf.py
 adapters/juniper_adapter/py-space-platform/examples/collect_config_files.py
@@ -120,7 +115,6 @@ adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_tag_1.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_user_management.py
 adapters/junos_adapter/service.py
 adapters/kaseya_adapter/connection.py
-adapters/kaseya_adapter/exceptions.py
 adapters/kaseya_adapter/service.py
 adapters/minerva_adapter/connection.py
 adapters/minerva_adapter/service.py
@@ -308,9 +302,6 @@ axonius-libs/src/libs/axonius-py/axonius/scanner_adapter_base.py
 axonius-libs/src/libs/axonius-py/axonius/smart_json_class.py
 axonius-libs/src/libs/axonius-py/axonius/thread_pool_executor.py
 axonius-libs/src/libs/axonius-py/axonius/thread_stopper.py
-axonius-libs/src/libs/axonius-py/axonius/clients/cisco/console.py
-axonius-libs/src/libs/axonius-py/axonius/clients/cisco/snmp_parser.py
-axonius-libs/src/libs/axonius-py/axonius/clients/juniper/rpc.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/exceptions.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/ldap.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/ldap_connection.py
@@ -350,11 +341,8 @@ axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/utils/com_helper.p
 axonius-libs/tests/mongo_escaping_test.py
 axonius-libs/tests/test_triggerable.py
 axonius-libs/tests/test_wmi_smb_runner.py
-deployment/create.py
 deployment/install.py
 deployment/make.py
-deployment/post_install.py
-deployment/pre_install.py
 deployment/run_tests.py
 deployment/set_logrotate.py
 deployment/utils.py
@@ -432,7 +420,6 @@ testing/parallel_tests/test_hyper_v.py
 testing/parallel_tests/test_infoblox.py
 testing/parallel_tests/test_jamf.py
 testing/parallel_tests/test_json_file.py
-testing/parallel_tests/test_juniper.py
 testing/parallel_tests/test_junos.py
 testing/parallel_tests/test_kaseya.py
 testing/parallel_tests/test_minerva.py
@@ -504,7 +491,6 @@ testing/services/adapters/infinite_sleep_service.py
 testing/services/adapters/infoblox_service.py
 testing/services/adapters/jamf_service.py
 testing/services/adapters/json_file_service.py
-testing/services/adapters/juniper_service.py
 testing/services/adapters/junos_service.py
 testing/services/adapters/kaseya_service.py
 testing/services/adapters/minerva_service.py
@@ -578,7 +564,6 @@ testing/test_credentials/test_hyper_v_credentials.py
 testing/test_credentials/test_infinite_sleep_credentials.py
 testing/test_credentials/test_infoblox_credentials.py
 testing/test_credentials/test_jamf_credentials.py
-testing/test_credentials/test_juniper_credentials.py
 testing/test_credentials/test_kaseya_credentials.py
 testing/test_credentials/test_minerva_credentials.py
 testing/test_credentials/test_mobileiron_credentials.py
