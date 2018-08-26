@@ -590,7 +590,6 @@ testing/test_credentials/test_symantec_credentials.py
 testing/test_credentials/test_tenable_io_credentials.py
 testing/test_credentials/test_tenable_security_center_credentials.py
 testing/test_credentials/test_traiana_lab_machines_credentials.py
-testing/test_helpers/adapter_test_base.py
 testing/test_helpers/device_helper.py
 testing/test_helpers/parallel_runner.py
 testing/test_helpers/qcore_fake_pump.py

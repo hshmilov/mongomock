@@ -1,26 +1,26 @@
 import os
 import sys
+import uuid
+from datetime import datetime, timedelta, timezone
 
-from test_credentials.test_gui_credentials import DEFAULT_USER
-from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
+import pytest
+from flaky import flaky
 
+# pylint: disable=unused-import
 try:
     import axonius
 except (ModuleNotFoundError, ImportError):
     # if not in path...
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs',
                                                  'src', 'libs', 'axonius-py')))
-import uuid
-from datetime import datetime, timezone, timedelta
-
 from axonius.plugin_base import EntityType
-import pytest
-
 from services.axonius_service import get_service
+from test_credentials.test_gui_credentials import DEFAULT_USER
+from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from test_helpers.utils import check_conf
 
 
-class AdapterTestBase(object):
+class AdapterTestBase:
     """
     Basic tests for adapter are defined here.
     If one wants to skip or modify a test he can do that by overriding the corresponding method.
@@ -57,7 +57,7 @@ class AdapterTestBase(object):
         return self.adapter_service.get_configurable_config('AdapterBase')['last_seen_threshold_hours']
 
     @property
-    def device_alive_thresh_last_fetched(self):
+    def device_thresh_last_fetched(self):
         return self.adapter_service.get_configurable_config('AdapterBase')['last_fetched_threshold_hours']
 
     @property
@@ -73,9 +73,10 @@ class AdapterTestBase(object):
 
     def get_last_threshold(self, entity_type: EntityType):
         if entity_type == EntityType.Devices:
-            return self.device_alive_thresh_last_seen, self.device_alive_thresh_last_fetched
+            return self.device_alive_thresh_last_seen, self.device_thresh_last_fetched
         if entity_type == EntityType.Users:
             return self.user_alive_thresh_last_seen, self.user_alive_thresh_last_fetched
+        return None
 
     def drop_clients(self):
         self.axonius_system.db.client[self.adapter_service.unique_name].drop_collection('clients')
@@ -83,7 +84,7 @@ class AdapterTestBase(object):
     def test_adapter_is_up(self):
         assert self.adapter_service.is_up()
 
-    @pytest.mark.skip("Not all plugins have schemas - TODO: Figure out how to test this properly or delete")
+    @pytest.mark.skip('Not all plugins have schemas - TODO: Figure out how to test this properly or delete')
     def test_adapter_responds_to_schema(self):
         assert self.adapter_service.schema().status_code == 200
 
@@ -93,6 +94,7 @@ class AdapterTestBase(object):
     def test_check_registration(self):
         assert self.adapter_service.is_plugin_registered(self.axonius_system.core)
 
+    @flaky(max_runs=2)
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
         self.axonius_system.assert_device_aggregated(
@@ -127,88 +129,88 @@ class AdapterTestBase(object):
 
         entity_db = self.axonius_system.db.get_entity_db(entity_type)
 
-        # this is a fake entity that is "new" on all forms
+        # this is a fake entity that is 'new' on all forms
         entity_db.insert_one({
-            "internal_axon_id": "1-" + uuid.uuid4().hex,
-            "accurate_for_datetime": now,
-            "adapters": [
+            'internal_axon_id': '1-' + uuid.uuid4().hex,
+            'accurate_for_datetime': now,
+            'adapters': [
                 {
-                    "client_used": "SomeClient",
-                    "plugin_type": "Adapter",
-                    "plugin_name": self.adapter_service.plugin_name,
-                    "plugin_unique_name": self.adapter_service.unique_name,
-                    "accurate_for_datetime": now,
-                    "data": {
-                        "id": "2-" + uuid.uuid4().hex,
-                        "raw": {
+                    'client_used': 'SomeClient',
+                    'plugin_type': 'Adapter',
+                    'plugin_name': self.adapter_service.plugin_name,
+                    'plugin_unique_name': self.adapter_service.unique_name,
+                    'accurate_for_datetime': now,
+                    'data': {
+                        'id': '2-' + uuid.uuid4().hex,
+                        'raw': {
                         },
                     }
                 }
             ],
-            "tags": []
+            'tags': []
         })
         cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
         assert cleaned_count == 0  # the entity added shouldn't be removed
 
         if last_fetched:
-            # this is a fake entity from a "long time ago" by last_fetched
-            deleted_entity_id = "3-" + uuid.uuid4().hex
+            # this is a fake entity from a 'long time ago' by last_fetched
+            deleted_entity_id = '3-' + uuid.uuid4().hex
             entity_db.insert_one({
-                "internal_axon_id": deleted_entity_id,
-                "accurate_for_datetime": now,
-                "adapters": [
+                'internal_axon_id': deleted_entity_id,
+                'accurate_for_datetime': now,
+                'adapters': [
                     {
-                        "client_used": "SomeClient",
-                        "plugin_type": "Adapter",
-                        "plugin_name": self.adapter_service.plugin_name,
-                        "plugin_unique_name": self.adapter_service.unique_name,
-                        "accurate_for_datetime": last_fetched_long_time_ago,
-                        "data": {
-                            "id": "4-" + uuid.uuid4().hex,
-                            "raw": {
+                        'client_used': 'SomeClient',
+                        'plugin_type': 'Adapter',
+                        'plugin_name': self.adapter_service.plugin_name,
+                        'plugin_unique_name': self.adapter_service.unique_name,
+                        'accurate_for_datetime': last_fetched_long_time_ago,
+                        'data': {
+                            'id': '4-' + uuid.uuid4().hex,
+                            'raw': {
                             },
                         }
                     }
                 ],
-                "tags": []
+                'tags': []
             })
             cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
             assert cleaned_count == 1  # the entity added is old and should be deleted
             assert entity_db.count_documents({'internal_axon_id': deleted_entity_id}) == 0
 
-            deleted_entity_id = "5-" + uuid.uuid4().hex
-            deleted_adapter_entity_id = "6-" + uuid.uuid4().hex
-            not_deleted_adapter_entity_id = "7-" + uuid.uuid4().hex
+            deleted_entity_id = '5-' + uuid.uuid4().hex
+            deleted_adapter_entity_id = '6-' + uuid.uuid4().hex
+            not_deleted_adapter_entity_id = '7-' + uuid.uuid4().hex
             entity_db.insert_one({
-                "internal_axon_id": deleted_entity_id,
-                "accurate_for_datetime": now,
-                "adapters": [
+                'internal_axon_id': deleted_entity_id,
+                'accurate_for_datetime': now,
+                'adapters': [
                     {
-                        "client_used": "SomeClient",
-                        "plugin_type": "Adapter",
-                        "plugin_name": self.adapter_service.plugin_name,
-                        "plugin_unique_name": self.adapter_service.unique_name,
-                        "accurate_for_datetime": last_fetched_long_time_ago,
-                        "data": {
-                            "id": deleted_adapter_entity_id,
-                            "raw": {
+                        'client_used': 'SomeClient',
+                        'plugin_type': 'Adapter',
+                        'plugin_name': self.adapter_service.plugin_name,
+                        'plugin_unique_name': self.adapter_service.unique_name,
+                        'accurate_for_datetime': last_fetched_long_time_ago,
+                        'data': {
+                            'id': deleted_adapter_entity_id,
+                            'raw': {
                             },
                         }
                     },
                     {
-                        "client_used": "SomeClientFromAnotherAdapter",
-                        "plugin_type": "Adapter",
-                        "plugin_name": "high_capacity_carburetor_adapter",
-                        "plugin_unique_name": "high_capacity_carburetor_adapter_1337",
-                        "accurate_for_datetime": now,
-                        "data": {
-                            "raw": {
+                        'client_used': 'SomeClientFromAnotherAdapter',
+                        'plugin_type': 'Adapter',
+                        'plugin_name': 'high_capacity_carburetor_adapter',
+                        'plugin_unique_name': 'high_capacity_carburetor_adapter_1337',
+                        'accurate_for_datetime': now,
+                        'data': {
+                            'raw': {
                             },
-                            "id": not_deleted_adapter_entity_id,
+                            'id': not_deleted_adapter_entity_id,
                         }
                     }
                 ],
-                "tags": []
+                'tags': []
             })
 
             cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
@@ -219,27 +221,27 @@ class AdapterTestBase(object):
             assert entity_db.count_documents({'adapters.data.id': deleted_adapter_entity_id}) == 0
 
         if last_seen:
-            # this is a fake entity from a "long time ago" according to `last_seen`
-            deleted_entity_id = "8-" + uuid.uuid4().hex
+            # this is a fake entity from a 'long time ago' according to `last_seen`
+            deleted_entity_id = '8-' + uuid.uuid4().hex
             entity_db.insert_one({
-                "internal_axon_id": deleted_entity_id,
-                "accurate_for_datetime": now,
-                "adapters": [
+                'internal_axon_id': deleted_entity_id,
+                'accurate_for_datetime': now,
+                'adapters': [
                     {
-                        "client_used": "SomeClient",
-                        "plugin_type": "Adapter",
-                        "plugin_name": self.adapter_service.plugin_name,
-                        "plugin_unique_name": self.adapter_service.unique_name,
-                        "accurate_for_datetime": now,
-                        "data": {
-                            "id": "9-" + uuid.uuid4().hex,
-                            "last_seen": last_seen_long_time_ago,
-                            "raw": {
+                        'client_used': 'SomeClient',
+                        'plugin_type': 'Adapter',
+                        'plugin_name': self.adapter_service.plugin_name,
+                        'plugin_unique_name': self.adapter_service.unique_name,
+                        'accurate_for_datetime': now,
+                        'data': {
+                            'id': '9-' + uuid.uuid4().hex,
+                            'last_seen': last_seen_long_time_ago,
+                            'raw': {
                             },
                         }
                     }
                 ],
-                "tags": []
+                'tags': []
             })
             cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
             assert cleaned_count == 1
@@ -275,8 +277,7 @@ class AdapterTestBase(object):
         def get_devices_by_id(adapter_name, data_id):
             res = gui_service.get_devices(params={
                 'filter':
-                    f'adapters_data.{adapter_name}.id == "{data_id}"'}
-            ).json()
+                    f'adapters_data.{adapter_name}.id == \'{data_id}\''}).json()
             return res
 
         devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)[0]
@@ -294,7 +295,7 @@ class AdapterTestBase(object):
 
         assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
                                          params={
-                                             "deleteEntities": 'True'
+                                             'deleteEntities': 'True'
                                          }).status_code == 200
         our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
         out_client_id = self.some_client_id
@@ -322,7 +323,7 @@ class AdapterTestBase(object):
 
         assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
                                          params={
-                                             "deleteEntities": 'True'
+                                             'deleteEntities': 'True'
                                          }).status_code == 200
         assert len(get_devices_by_id(self.adapter_service.plugin_name, out_id)) == 0
         self.adapter_service.trigger_clean_db()
@@ -352,8 +353,7 @@ class AdapterTestBase(object):
         def get_users_by_id(adapter_name, data_id):
             res = gui_service.get_users(params={
                 'filter':
-                    f'adapters_data.{adapter_name}.id == "{data_id}"'}
-            ).json()
+                    f'adapters_data.{adapter_name}.id == \'{data_id}\''}).json()
             return res
 
         devices_response = get_users_by_id(self.adapter_service.plugin_name, out_id)[0]
@@ -371,7 +371,7 @@ class AdapterTestBase(object):
 
         assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
                                          params={
-                                             "deleteEntities": 'True'
+                                             'deleteEntities': 'True'
                                          }).status_code == 200
         our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
         out_client_id = self.some_client_id
@@ -399,7 +399,7 @@ class AdapterTestBase(object):
 
         assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
                                          params={
-                                             "deleteEntities": 'True'
+                                             'deleteEntities': 'True'
                                          }).status_code == 200
         assert len(get_users_by_id(self.adapter_service.plugin_name, out_id)) == 0
         self.adapter_service.trigger_clean_db()
