@@ -1665,7 +1665,7 @@ class PluginBase(Configurable, Feature):
                 "syslogPort": logging.handlers.SYSLOG_UDP_PORT
             },
             MAINTENANCE_SETTINGS: {
-                ANALYTICS_SETTING: False,
-                TROUBLESHOOTING_SETTING: False
+                ANALYTICS_SETTING: True,
+                TROUBLESHOOTING_SETTING: True
             }
         }
