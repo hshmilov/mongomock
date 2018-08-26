@@ -14,6 +14,7 @@ from axonius.mixins.triggerable import Triggerable
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.files import get_local_config_file
 from axonius.utils.db import find_and_sort_by_first_element_of_list
+from axonius.profiling.memory import asizeof
 from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
 from general_info.subplugins.installed_softwares import GetInstalledSoftwares
 from general_info.subplugins.user_logons import GetUserLogons
@@ -193,20 +194,40 @@ class GeneralInfoService(PluginBase, Triggerable):
                     }
             },
             {
+                '_id': False,
                 'internal_axon_id': True,
-                'adapters.data.id': True,
-                'adapters.plugin_unique_name': True,
-                'adapters.client_used': True,
-                'adapters.data.hostname': True,
-                'adapters.data.name': True,
-                'tags': True
+                "tags.data.general_info_last_success_execution": True
             },
             "tags.data.general_info_last_success_execution"
         )
         logger.info(f"Found {windows_devices_count} Windows devices to run queries on.")
 
-        # AX-1592 Temp Fix until we fix it generically
-        windows_devices = list(windows_devices)
+        # Performance issue (AX-1592):
+        # We are querying for all devices of a certain type. This could result in a huge amount of memory if we
+        # have too much results.
+        #
+        # Using the generator of mongodb, on the other side, is bad as well. Since we are not sending
+        # execution requests to all devices immediately, but send them in chunks, it takes a while
+        # until we reach the end of the generator.
+        # But, Mongodb works in the following way in default: for every generator, it fetches the first 100
+        # results. when we reach the 101'st object, it connects to the db again and fetches it.
+        # If we don't do that within 10 minutes, MongoDB assumes the cursor was deleted.
+        #
+        # So the following code wouldn't work on the 101'st device since it takes more than 10 minutes for us
+        # to finish code execution.
+        #
+        # We decided to query only the internal_axon_ids and store all of them in memory.
+        # Regarding memory consumption: Profiling shows that a list of 100,000 axon id's takes about 10 mb.
+        # This can be shown by seeing
+        # axonius.profiling.memory.asizeof([d['internal_axon_id'] for d in self.devices_db.find({})])/(1024**2)
+        #
+        # Cons:
+        # internal_axon_id's are not consistent. If we have correlation, it will be incorrect.
+        # Currently execution occurs only after correlation, and it takes less than a cycle (execution over 1 cycle
+        # is not supported) so that's ok.
+
+        windows_devices = [d['internal_axon_id'] for d in windows_devices]
+        logger.info(f"Approximate devices internal_axon_ids size in memory: {asizeof(windows_devices)/(1024**2)} mb")
 
         # Lets make some better logging
         if windows_devices_count > 10000:
@@ -228,7 +249,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             max_number_of_execution_requests = MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS
 
         device_i = 0
-        for device in windows_devices:
+        for internal_axon_id in windows_devices:
             # a number that increases if we don't shoot any new requests. If we are stuck too much time,
             # we might have an error in the execution. in such a case we bail out.
             device_i += 1
@@ -254,7 +275,6 @@ class GeneralInfoService(PluginBase, Triggerable):
             # shoot another one!
             self.number_of_active_execution_requests = self.number_of_active_execution_requests + 1
             # Caution! If we had correlation up to this point, we will have serious problems.
-            internal_axon_id = device["internal_axon_id"]
 
             logger.debug(f"Going to request action on {internal_axon_id}")
 
@@ -282,8 +302,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                     }
                 )
 
-            p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
-                   did_reject=functools.partial(self._handle_wmi_execution_failure, device))
+            p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, internal_axon_id),
+                   did_reject=functools.partial(self._handle_wmi_execution_failure, internal_axon_id))
 
         # At this moment we have some execution threads which are running (should finish almost immediately since
         # they aren't doing any complex logic) and threads that haven't come back already. we wait for them.
@@ -404,9 +424,18 @@ class GeneralInfoService(PluginBase, Triggerable):
         self._save_field_names_to_db(EntityType.Users)
         logger.info("Finished associating users with devices")
 
-    def _handle_wmi_execution_success(self, device, data):
+    def _handle_wmi_execution_success(self, internal_axon_id, data):
+        self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
+
+        # This has to be outside of the try, since the except and finally assume we have a device.
+        # We need to get the device first.
+        device = self.devices_db.find_one({"internal_axon_id": internal_axon_id})
+        if device is None:
+            logger.critical(f"Did not find document containing internal_axon_id {internal_axon_id}. "
+                            f"Did we have correlation in place?")
+            return
+
         try:
-            self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
             is_execution_exception = False
             last_execution_debug = None
 
@@ -507,8 +536,13 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             logger.info(f"Finished with device {device['internal_axon_id']}.")
 
-    def _handle_wmi_execution_failure(self, device, exc):
+    def _handle_wmi_execution_failure(self, internal_axon_id, exc):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
+        device = self.devices_db.find_one({"internal_axon_id": internal_axon_id})
+        if device is None:
+            logger.critical(f"Did not find document containing internal_axon_id {internal_axon_id}. "
+                            f"Did we have correlation in place?")
+            return
 
         try:
             # Avidor: Someone decided that on failure we get an exception object, and not a real object.

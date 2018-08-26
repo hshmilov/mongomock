@@ -15,6 +15,7 @@ from axonius.utils.parsing import get_exception_string
 from axonius.utils.files import get_local_config_file
 from axonius.utils.db import find_and_sort_by_first_element_of_list
 from axonius.fields import Field
+from axonius.profiling.memory import asizeof
 from datetime import datetime
 
 
@@ -176,21 +177,19 @@ class PmStatusService(PluginBase, Triggerable):
                     }
             },
             {
+                '_id': False,
                 'internal_axon_id': True,
-                'adapters.data.id': True,
-                'adapters.plugin_unique_name': True,
-                'adapters.client_used': True,
-                'adapters.data.hostname': True,
-                'adapters.data.name': True,
-                'tags': True
+                'tags.data.pm_last_execution_success': True
             },
             "tags.data.pm_last_execution_success"
         )
 
         logger.info(f"Found {windows_devices_count} Windows devices to run queries on.")
 
-        # AX-1592 Temp Fix until we fix it generically
-        windows_devices = list(windows_devices)
+        # Performance issue (AX-1592): Take a look at the huge comment at general_info/service.py
+
+        windows_devices = [d['internal_axon_id'] for d in windows_devices]
+        logger.info(f"Approximate devices internal_axon_ids size in memory: {asizeof(windows_devices)/(1024**2)} mb")
 
         # Lets make some better logging
         if windows_devices_count > 10000:
@@ -218,7 +217,7 @@ class PmStatusService(PluginBase, Triggerable):
         self.number_of_active_execution_requests = 0
 
         device_i = 0
-        for device in windows_devices:
+        for internal_axon_id in windows_devices:
             # a number that increases if we don't shoot any new requests. If we are stuck too much time,
             # we might have an error in the execution. in such a case we bail out.
             device_i += 1
@@ -244,7 +243,6 @@ class PmStatusService(PluginBase, Triggerable):
             # shoot another one!
             self.number_of_active_execution_requests = self.number_of_active_execution_requests + 1
             # Caution! If we had correlation up to this point, we will have serious problems.
-            internal_axon_id = device["internal_axon_id"]
 
             logger.debug(f"Going to request action on {internal_axon_id}")
             wmi_smb_commands = [{"type": "pmonline", "args": [pm_online_type]}]
@@ -258,8 +256,8 @@ class PmStatusService(PluginBase, Triggerable):
                 }
             )
 
-            p.then(did_fulfill=functools.partial(self._handle_pm_success, device),
-                   did_reject=functools.partial(self._handle_pm_failure, device))
+            p.then(did_fulfill=functools.partial(self._handle_pm_success, internal_axon_id),
+                   did_reject=functools.partial(self._handle_pm_failure, internal_axon_id))
 
         # execution answer threads should finish immediately because they don't do anything
         # that takes time except tagging that should be extra fast. but in the future we might
@@ -276,9 +274,17 @@ class PmStatusService(PluginBase, Triggerable):
 
         return True
 
-    def _handle_pm_success(self, device, data):
+    def _handle_pm_success(self, internal_axon_id, data):
+        self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
+        # This has to be outside of the try, since the except and finally assume we have a device.
+        # We need to get the device first.
+        device = self.devices_db.find_one({"internal_axon_id": internal_axon_id})
+        if device is None:
+            logger.critical(f"Did not find document containing internal_axon_id {internal_axon_id}. "
+                            f"Did we have correlation in place?")
+            return
+
         try:
-            self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
             is_execution_exception = False
             last_pm_status_debug = None
 
@@ -401,8 +407,13 @@ class PmStatusService(PluginBase, Triggerable):
 
             logger.info(f"Finished with device {device['internal_axon_id']}.")
 
-    def _handle_pm_failure(self, device, exc):
+    def _handle_pm_failure(self, internal_axon_id, exc):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
+        device = self.devices_db.find_one({"internal_axon_id": internal_axon_id})
+        if device is None:
+            logger.critical(f"Did not find document containing internal_axon_id {internal_axon_id}. "
+                            f"Did we have correlation in place?")
+            return
 
         try:
             # Avidor: Someone decided that on failure we get an exception object, and not a real object.

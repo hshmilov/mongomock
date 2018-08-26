@@ -323,6 +323,7 @@ axonius-libs/src/libs/axonius-py/axonius/mixins/configurable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/devicedisabelable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/triggerable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/userdisabelable.py
+axonius-libs/src/libs/axonius-py/axonius/profiling/memory.py
 axonius-libs/src/libs/axonius-py/axonius/users/user_adapter.py
 axonius-libs/src/libs/axonius-py/axonius/utils/debug.py
 axonius-libs/src/libs/axonius-py/axonius/utils/dns.py
