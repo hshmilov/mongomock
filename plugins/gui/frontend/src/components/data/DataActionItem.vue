@@ -1,5 +1,5 @@
 <template>
-    <feedback-modal v-model="isActive" :handle-save="handleSave" :message="message">
+    <feedback-modal v-model="isActive" :handle-save="handleSave" :message="message" :approve-text="actionText">
         <slot></slot>
     </feedback-modal>
 </template>
@@ -9,7 +9,7 @@
 	export default {
 		name: 'x-data-action-modal',
         components: { FeedbackModal },
-        props: {title: {required: true}, handleSave: {required: true}, message: {default: ''}},
+        props: {title: {required: true}, handleSave: {required: true}, message: {default: ''}, actionText: {}},
         data() {
 			return {
 				isActive: false

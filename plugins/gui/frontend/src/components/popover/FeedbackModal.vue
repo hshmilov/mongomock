@@ -21,7 +21,7 @@
         <div slot="footer">
             <template v-if="!status.success && !status.processing">
                 <button class="x-btn link" @click="handleClose">Cancel</button>
-                <button class="x-btn" :class="{disabled}" @click="handleConfirm" :id="approveId">Save</button>
+                <button class="x-btn" :class="{disabled}" @click="handleConfirm" :id="approveId">{{ approveText }}</button>
             </template>
         </div>
     </modal>
@@ -33,13 +33,13 @@
 
 	export default {
 		name: 'feedback-modal',
-		components: {Modal, PulseLoader},
+		components: { Modal, PulseLoader },
 		model: {
 			prop: 'launch',
 			event: 'change'
 		},
-		props: { handleSave: {required: true}, message: {default: 'Save complete'},
-            launch: {default: false}, disabled: {default: false}, approveId: {}},
+		props: { handleSave: { required: true }, message: { default: 'Save complete' }, launch: { default: false },
+            disabled: { default: false }, approveId: {}, approveText: { default: 'Save' } },
 		data () {
 			return {
 				status: {

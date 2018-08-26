@@ -7,15 +7,16 @@
                                   :title="item.title" @click="activate(item)"/>
             </nested-menu>
         </triggerable-dropdown>
-        <x-tag-modal title="Tag..." :module="module" :entities="selected" :tags="currentTags" ref="tag" />
-        <x-data-action-item title="Disable..." :handle-save="disableEntities" :message="`Disabled ${module}`" ref="disable" >
+        <x-tag-modal title="Tag..." :module="module" :entities="selected" :tags="currentTags" />
+        <x-data-action-item title="Disable..." :handle-save="disableEntities" :message="`Disabled ${module}`"
+                            action-text="Disable">
             <div>Out of {{selected.length}} {{module}}, {{disableable.length}} could be disabled.</div>
             <div>These {{module}} will not appear in further scans.</div>
             <div>Are you sure you want to continue?</div>
         </x-data-action-item>
-            <x-data-action-item title="Delete..." :handle-save="deleteEntities" :message="`Deleted ${module}`" ref="disable" >
-            <div>You are about to delete {{selected.length}} {{module}}, {{selectedAdaptersCount}} total adapter
-                {{module}}.</div>
+        <x-data-action-item title="Delete..." :handle-save="deleteEntities" :message="`Deleted ${module}`"
+                            action-text="Delete">
+            <div>You are about to delete {{selected.length}} {{module}}, {{selectedAdaptersCount}} total adapter {{module}}.</div>
             <div>These {{module}} could reappear in further scans if they're not removed or detached.</div>
             <div>Are you sure you want to delete these {{module}}?</div>
         </x-data-action-item>

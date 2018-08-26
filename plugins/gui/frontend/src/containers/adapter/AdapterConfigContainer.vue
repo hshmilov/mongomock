@@ -46,10 +46,8 @@
                 <button id="save_server" @click="saveServer" class="x-btn" :class="{disabled: !serverModal.valid}">Save</button>
             </template>
         </modal>
-        <modal v-if="deleting"
-                @close="closeConfirmDelete" @confirm="doRemoveServers">
-            <div slot="body">
-                Are you sure you want to delete this server? <br/><br/>
+        <modal v-if="deleting" @close="closeConfirmDelete" @confirm="doRemoveServers" approve-text="Delete">
+            <div slot="body">Are you sure you want to delete this server? <br/><br/>
                 <input type="checkbox" id="deleteEntitiesCheckbox" v-model="deleteEntities">
                 <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
             </div>

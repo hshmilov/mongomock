@@ -1,15 +1,15 @@
 <template>
     <x-data-action-menu module="devices" :selected="devices" @done="$emit('done')">
-        <x-data-action-item :handle-save="saveDeploy" message="Deployment initiated" title="Deploy...">
+        <x-data-action-item :handle-save="saveDeploy" message="Deployment initiated" title="Deploy..." action-text="Deploy">
             <h3 class="mb-2">Deploy Executable</h3>
             <x-schema-form :schema="deployFormSchema" v-model="deploy.data" api-upload="actions"
                            @validate="deploy.valid = $event" />
         </x-data-action-item>
-        <x-data-action-item :handle-save="saveRun" message="Started running" title="Run...">
+        <x-data-action-item :handle-save="saveRun" message="Started running" title="Run..." action-text="Run">
             <h3 class="mb-2">Run Command</h3>
             <x-schema-form :schema="shellFormSchema" v-model="run.data" class="expand" @validate="run.valid = $event"/>
         </x-data-action-item>
-        <x-data-action-item :handle-save="saveBlacklist" message="Blacklist saved" title="Blacklist...">
+        <x-data-action-item :handle-save="saveBlacklist" message="Blacklist saved" title="Blacklist..." action-text="Blacklist">
             <div>Add {{devices.length}} devices to Blacklist?</div>
             <div>These devices will be prevented from executing code on.</div>
         </x-data-action-item>
