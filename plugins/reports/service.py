@@ -374,9 +374,9 @@ class ReportsService(PluginBase, Triggerable):
                                                               report_data['view_entity'],
                                                               report_data['view'])).replace('\n', ' ')
         # Check if send device data is checked.
-        self.send_syslog_message(log_message, report_data['severity'])
-
-        if action_data:
+        if not action_data:
+            self.send_syslog_message(log_message, report_data['severity'])
+        else:
             query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
                 'name': report_data['view']})
             parsed_query_filter = parse_filter(query['view']['query']['filter'])
@@ -392,6 +392,7 @@ class ReportsService(PluginBase, Triggerable):
                                                         default_sort=True)
 
             for entity in all_gui_entities:
+                entity['alert_name'] = report_data['name']
                 self.send_syslog_message(to_json(entity), report_data['severity'])
 
     def _handle_action_send_emails(self, report_data, triggered, trigger_data, current_num_of_devices,
