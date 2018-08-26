@@ -560,8 +560,9 @@ def get_id(adapter_device):
 def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
 
+
 def get_normalized_hostname(adapter_device):
-    return adapter_device['data'].get(NORMALIZED_HOSTNAME)
+    return adapter_device.get(NORMALIZED_HOSTNAME)
 
 
 def get_bios_serial_or_serial(adapter_device):

@@ -104,8 +104,11 @@ class CylanceAdapter(AdapterBase):
                 device.id = device_id
                 device.figure_os((device_raw.get("operatingSystem") or "") + " " + (device_raw.get("os_version") or ""))
                 hostname = device_raw.get("host_name")
-                if str(hostname).lower().endswith('.local') and device.get('os', {}).get('type', "") == 'OS X':
-                    hostname = str(hostname)[:-len('.local')]
+                # Special condition to OS X
+                device_os = device.os
+                if device_os:
+                    if str(device_os.type) == 'OS X' and str(hostname).lower().endswith('.local'):
+                        hostname = str(hostname)[:-len('.local')]
                 if len(hostname) > 0:
                     device.hostname = hostname
 
