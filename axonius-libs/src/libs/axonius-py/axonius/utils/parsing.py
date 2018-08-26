@@ -35,6 +35,7 @@ mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 # Currently (28/01/2018) this means removing LOCAL and WORKGROUP.
 # Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
 NORMALIZED_HOSTNAME = 'normalized_hostname'
+OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks']
 # In some cases we don't want to use compare_hostnames because indexing using it is complicated
 # and in some cases indexsing is performance critical
 NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
@@ -191,7 +192,8 @@ def figure_out_os(s):
                     assert isinstance(found_values[0], str)
                     distribution = found_values[0]
                     break
-    elif ('os x' in s) or ('osx' in s) or ('macos' in s):
+    elif ('os x' in s) or ('osx' in s) or ('macos' in s) \
+            or any(elem in s for elem in OSX_NAMES):
         os_type = 'OS X'
         version = osx_version_full.findall(s)
         if len(version) > 0:

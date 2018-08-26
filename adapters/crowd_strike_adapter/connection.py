@@ -30,14 +30,15 @@ class CrowdStrikeConnection(RESTConnection):
         ids_list = []
         offset = 0
         response = self._get('devices/queries/devices/v1',
-                             url_params={'limit': consts.DEVICES_PER_PAGE, 'offset': offset})
+                             url_params={'limit': consts.DEVICES_PER_PAGE, 'offset': offset},
+                             do_basic_auth=True)
         try:
             ids_list.extend(response['resources'])
         except Exception:
             logger.exception(f'Problem getting resource')
             raise RESTException('Cant get resources')
         try:
-            total_count = response['pagination']['total']
+            total_count = response['meta']['pagination']['total']
         except Exception:
             logger.exception(f'Cant get total count')
             raise RESTException('Cant get total count')
@@ -46,7 +47,8 @@ class CrowdStrikeConnection(RESTConnection):
             try:
                 ids_list.extend(self._get('devices/queries/devices/v1',
                                           url_params={'limit': consts.DEVICES_PER_PAGE,
-                                                      'offset': offset})['resources'])
+                                                      'offset': offset},
+                                          do_basic_auth=True)['resources'])
             except Exception:
                 logger.exception(f'Problem getting offset {offset}')
             offset += consts.DEVICES_PER_PAGE
@@ -58,7 +60,8 @@ class CrowdStrikeConnection(RESTConnection):
                 if device_id is None or device_id == '':
                     logger.warning(f'Bad device {device_id}')
                     continue
-                async_requests.append({'name': f'devices/entities/devices/v1?ids={device_id}'})
+                async_requests.append({'name': f'devices/entities/devices/v1?ids={device_id}',
+                                       'do_basic_auth': True})
             except Exception:
                 logger.exception(f'Got problem with id {device_id}')
 

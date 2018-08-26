@@ -249,7 +249,8 @@ class JamfAdapter(AdapterBase):
                         except Exception:
                             logger.exception(f"couldn't parse drive: {drive}")
                     active_directory_status = hardware.get("active_directory_status", "Not Bound")
-                    if active_directory_status == "Not Bound":
+                    if active_directory_status == 'Not Bound' or ':' in active_directory_status or \
+                            ' ' in active_directory_status:
                         device.part_of_domain = False
                     else:
                         device.part_of_domain = True

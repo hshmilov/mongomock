@@ -122,7 +122,7 @@ class CrowdStrikeAdapter(AdapterBase):
                         domain = device_raw.get('machine_domain')
                         if domain:
                             device.domain = domain
-                            device.hostname = hostname + domain
+                            device.hostname = hostname + '.' + domain
                         else:
                             device.hostname = hostname
                     else:
@@ -130,7 +130,8 @@ class CrowdStrikeAdapter(AdapterBase):
                             device.hostname = hostname[:-len('.local')]
                 except Exception:
                     logger.exception(f'Problem getting hostname for {device_raw}')
-                device.figure_os(device_raw.get('os_version'))
+                device.figure_os((device_raw.get('platform_name') or '') +
+                                 (device_raw.get('os_version') or ''))
                 try:
                     device.last_seen = parse_date(device_raw.get('last_seen'))
                 except Exception:

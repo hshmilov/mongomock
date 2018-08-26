@@ -101,8 +101,14 @@ class CarbonblackProtectionAdapter(AdapterBase):
                     continue
                 else:
                     device.id = str(device.id)
-                device.hostname = device_raw.get("name")
-                device.hostname = ".".join(device.hostname.split('\\')[::-1])
+                hostname = device_raw.get("name")
+                if hostname and '\\' in hostname:
+                    split_hostname = hostname.split('\\')[1]
+                    device.hostname = split_hostname[1]
+                    device.domain = split_hostname[0]
+                    device.part_of_domain = True
+                else:
+                    device.hostname = hostname
                 device.description = device_raw.get("description")
                 device.figure_os((device_raw.get("osShortName") or "") + " " + (device_raw.get("osName") or ""))
                 try:

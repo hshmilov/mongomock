@@ -1,9 +1,9 @@
 
 client_details = {
     'domain': 'falconapi.crowdstrike.com',
-    'username': 'ofri@axonius.com',
-    'apikey': '3ac0c07b-07bb-4f56-90d9-3b84e97152a4',
+    'username': 'TY66X1GXR9THY7HWXG4N',
+    'apikey': 'MaxcBoguaRzLlTLYGHrAfcUXS0r2HJ',
     'verify_ssl': True
 }
 
-SOME_DEVICE_ID = '342'
+SOME_DEVICE_ID = '9c922b85705c41337f87d8a53d20840d'
