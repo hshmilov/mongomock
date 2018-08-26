@@ -126,7 +126,7 @@ class EpoAdapter(AdapterBase):
             hostname = device_raw.get('EPOComputerProperties.IPHostName')
             if hostname is None or hostname == '':
                 hostname = device_raw.get('EPOComputerProperties.ComputerName')
-            if str(hostname).endswith('.local') and \
+            if str(hostname).lower().endswith('.local') and \
                     ('dc=local' not in ((device_raw.get('EPOComputerLdapProperties.LdapOrgUnit') or '').lower())):
                 hostname = str(hostname)[:-len('.local')]
             if "Mac OS X" in str(device_raw.get('EPOLeafNode.os', '')) and str(hostname).strip().lower() == 'localhost':

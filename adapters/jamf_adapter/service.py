@@ -259,7 +259,7 @@ class JamfAdapter(AdapterBase):
                         try:
                             # This could raise an exception if hostname was not set or was set to ''.
                             if hostname is not None and len(hostname) > 0 and asset_is_host:
-                                device.hostname = hostname + "." + active_directory_status
+                                device.hostname = hostname
                         except Exception:
                             logger.exception(f"Problem adding active directory status to device")
 
