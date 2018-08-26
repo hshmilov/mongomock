@@ -7,7 +7,7 @@ from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_device_normalized_hostname,
                                    compare_hostname, compare_macs,
-                                   get_hostname, get_normalized_ip, get_normalized_hostname,
+                                   get_hostname, get_normalized_ip, get_normalized_hostname_str,
                                    get_serial, hostnames_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection, is_from_ad,
                                    get_asset_name, compare_asset_name, is_from_juniper_and_asset_name,
@@ -114,10 +114,10 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
     def _correlate_hostname_ip(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname-IP')
-        filtered_adapters_list = filter(get_normalized_hostname,
+        filtered_adapters_list = filter(get_normalized_hostname_str,
                                         filter(get_normalized_ip, adapters_to_correlate))
         return self._bucket_correlate(list(filtered_adapters_list),
-                                      [get_normalized_hostname],
+                                      [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection],

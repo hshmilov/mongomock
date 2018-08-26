@@ -565,6 +565,10 @@ def get_normalized_hostname(adapter_device):
     return adapter_device.get(NORMALIZED_HOSTNAME)
 
 
+def get_normalized_hostname_str(adapter_device):
+    return adapter_device.get(NORMALIZED_HOSTNAME_STRING)
+
+
 def get_bios_serial_or_serial(adapter_device):
     serial = adapter_device['data'].get('bios_serial') or adapter_device['data'].get('device_serial')
     if serial is not None:
@@ -616,7 +620,7 @@ def normalize_hostname(adapter_data):
         return final_hostname.split('.')
 
 
-def compare_normalized_hostnames(host1, host2) -> bool:
+def compare_normalized_hostnames(host1, host2, first_element_only=False) -> bool:
     """
     As mentioned above in the documentation near the definition of NORMALIZED_HOSTNAME we want to compare hostnames not
     based on the domain as some adapters don't return one or return a default one even when one exists. After we
@@ -628,8 +632,14 @@ def compare_normalized_hostnames(host1, host2) -> bool:
     3. ubuntuLolol.local.axonius != ubuntulolol.9 as when normalizing they'd become
         ['ubuntuLolol', 'local', 'axonius'], ['ubuntulolol', '9'] and no list is the beginning of the other.
     """
-    return host1 and host2 and (does_list_startswith(host1, host2) or
-                                does_list_startswith(host2, host1))
+    if first_element_only:
+        if len(host1) > 0 and len(host2) > 0 and host1[0] != '' and host2[0] != '':
+            return host1[0].startswith(host2[0]) or host2[0].startswith(host1[0])
+        else:
+            return False
+    else:
+        return host1 and host2 and (does_list_startswith(host1, host2) or
+                                    does_list_startswith(host2, host1))
 
 
 def have_mac_intersection(adapter_device1, adapter_device2) -> bool:
@@ -702,8 +712,15 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
     :param adapter_device2: second device
     :return:
     """
+    def is_os_x(adapter_device):
+        return ((adapter_device.get("data") or {}).get("os") or {}).get("type", '') == "OS X"
+    first_element_only = False
+    if is_os_x(adapter_device1) and is_os_x(adapter_device2):
+        # Special case for OS-X, in this case we check only the first part of the name list
+        first_element_only = True
     return compare_normalized_hostnames(adapter_device1.get(NORMALIZED_HOSTNAME),
-                                        adapter_device2.get(NORMALIZED_HOSTNAME))
+                                        adapter_device2.get(NORMALIZED_HOSTNAME),
+                                        first_element_only)
 
 
 def get_normalized_ip(adapter_device):

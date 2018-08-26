@@ -146,6 +146,49 @@ def test_rule_ip_hostname_os_correlation():
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
 
 
+def test_rule_ip_hostname_special_osx():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os. We should use only the hostname before the '.' because of special correlation rule for OS X
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLololwithextra.con",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'OS X'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntulolol.co.il.local",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'OS X'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+
+
+def test_no_correlation_special_osx():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os. We should use only the hostname before the '.' because of special correlation rule for OS X
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLololwithextra.con",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntulolol.co.il.local",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'OS X'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    results = correlate([device1, device2])
+    assert len(results) == 0
+
+
 def test_rule_ip_no_hostame_yes_mac_correlation():
     """
     Test a very simple correlation that should happen
