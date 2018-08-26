@@ -1,4 +1,5 @@
 import requests
+
 from services.adapters.qualys_scans_service import QualysScansService, qualys_scans_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_qualys_scans_credentials import *

@@ -1,4 +1,3 @@
-import pytest
 from flaky import flaky
 from services.adapters.secdo_service import SecdoService, secdo_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
