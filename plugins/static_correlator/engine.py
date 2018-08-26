@@ -9,7 +9,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_hostname, compare_macs,
                                    get_hostname, get_normalized_ip, get_serial,
                                    hostnames_do_not_contradict,
-                                   ips_do_not_contradict, is_from_ad,
+                                   ips_do_not_contradict_or_mac_intersection, is_from_ad,
                                    get_asset_name, compare_asset_name, is_from_juniper_and_asset_name,
                                    is_junos_space_device,
                                    normalize_adapter_devices, normalize_mac,
@@ -78,6 +78,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on MAC')
         mac_indexed = {}
         for adapter in adapters_to_correlate:
+            # Don't add to the MAC comparisons devices that haven't seen for more than 30 days
+            if is_old_device(adapter, number_of_days=30):
+                continue
             macs = adapter.get(NORMALIZED_MACS)
             if macs:
                 for mac in macs:
@@ -117,7 +120,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname],
                                       [compare_device_normalized_hostname],
                                       [],
-                                      [ips_do_not_contradict],
+                                      [ips_do_not_contradict_or_mac_intersection],
                                       {'Reason': 'They have the same hostname and IPs'},
                                       CorrelationReason.StaticAnalysis)
 

@@ -146,6 +146,28 @@ def test_rule_ip_hostname_os_correlation():
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
 
 
+def test_rule_ip_no_hostame_yes_mac_correlation():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: '11111111',
+                                                  IPS_FIELD: ['1.1.1.2']}],
+                             last_seen=datetime.datetime.now().replace(tzinfo=None) - datetime.timedelta(days=40))
+    device2 = get_raw_device(hostname="ubuntulolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: '11111111',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and IPs', 1)
+
+
 def test_rule_ip_host_os_no_correlation_due_to_ip():
     """
     Test a very simple correlation that should happen
@@ -227,6 +249,28 @@ def test_rule_ip_mac_os_correlation():
                                                   IPS_FIELD: ['1.1.1.1']}])
     assert_success(correlate([device1, device2]), [device1, device2],
                    'They have the same MAC', 1)
+
+
+def test_rule_ip_mac_os_correlation_old():
+    """
+    Test a very simple correlation that should happen
+    because IP+MAC+os
+    :return:
+    """
+    # hostname must be different otherwise we'll have 2 correlations for the same devices which is filtered
+    device1 = get_raw_device(os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'AA-BB-CC-11-22-33',
+                                                  IPS_FIELD: ['1.1.1.1']}],
+                             last_seen=datetime.datetime.now().replace(tzinfo=None) - datetime.timedelta(days=40))
+    device2 = get_raw_device(os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'AA:bb-CC-11-22-33',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2],
+                   'They have the same MAC', 0)
 
 
 def test_rule_ip_hostname_os_succeeds_even_with_domain():

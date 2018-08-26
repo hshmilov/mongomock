@@ -628,6 +628,24 @@ def compare_normalized_hostnames(host1, host2) -> bool:
                                 does_list_startswith(host2, host1))
 
 
+def have_mac_intersection(adapter_device1, adapter_device2) -> bool:
+    """
+    In these case we are looking for mac intersections. We do that in cases where hostname are equals,
+    but IPs contradict. This can happens for various reasons at agents. If we have some mac which is equals,
+    this is enough for correlation
+    :param adapter_device1:
+    :param adapter_device2:
+    :return Whether there is at least one mac in both adapter_devices:
+    """
+    device1_macs = set(adapter_device1.get(NORMALIZED_MACS) or [])
+    device2_macs = set(adapter_device2.get(NORMALIZED_MACS) or [])
+    return bool(device1_macs.intersection(device2_macs))
+
+
+def ips_do_not_contradict_or_mac_intersection(adapter_device1, adapter_device2):
+    return ips_do_not_contradict(adapter_device1, adapter_device2) or have_mac_intersection(adapter_device1, adapter_device2)
+
+
 def ips_do_not_contradict(adapter_device1, adapter_device2):
     device1_ips = adapter_device1.get(NORMALIZED_IPS)
     device2_ips = adapter_device2.get(NORMALIZED_IPS)
