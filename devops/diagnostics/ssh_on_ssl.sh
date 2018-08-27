@@ -8,18 +8,23 @@ pid = /var/run/stunnel.pid
 [ssh]
 client = yes
 accept = 127.0.0.1:${LOCAL_STUNNEL_LINK_PORT}
-protocolHost = ${PUBLIC_SSL_HOST_ADDR}:443
-
 EOF
 
 # if there is proxy data - set it in conf
 if [[ -n "${PROXY_CONNECT}" ]]; then
 
     cat >> ./stunnel_autogen.conf << EOF
+protocolHost = ${PUBLIC_SSL_HOST_ADDR}:443
 protocol = connect
 connect = ${PROXY_CONNECT}
 protocolPassword = ${PROXY_PASSWORD}
 protocolUsername = ${PROXY_USERNAME}
+EOF
+
+else
+
+cat >> ./stunnel_autogen.conf << EOF
+    connect = ${PUBLIC_SSL_HOST_ADDR}:443
 EOF
 
 fi
