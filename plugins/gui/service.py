@@ -1876,7 +1876,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     if ChartFuncs[func] == ChartFuncs.average:
                         sigma += field_values
         if not count:
-            return [{'name': view, 'value': 0}]
+            return [{'name': view, 'value': 0, 'view': base_view, 'module': entity.value}]
         name = f'{func} of {field["title"]} on {view or "ALL"} results'
         if ChartFuncs[func] == ChartFuncs.average:
             return [{'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]

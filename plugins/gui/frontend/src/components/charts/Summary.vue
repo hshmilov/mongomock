@@ -2,7 +2,7 @@
     <div class="x-summary-chart" :class="{updating: enumerating}">
         <template v-for="item, index in displayData">
             <component v-if="item.schema" :is="processType(item.schema)" :schema="item.schema" :value="item.value"
-                       class="summary" @click="$emit('click-one', index)" />
+                       class="summary" @click.native="$emit('click-one', index)" />
             <div v-else class="summary" @click="$emit('click-one', index)">{{ item.value }}</div>
             <div class="title">{{ item.name }}</div>
         </template>
