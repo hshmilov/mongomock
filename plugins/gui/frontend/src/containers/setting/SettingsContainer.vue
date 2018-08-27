@@ -32,10 +32,10 @@
                             <label for="support_access">Temporary Remote Support (hours):</label>
                             <input type="number" v-model="supportAccess.duration" id="support_access" />
                             <button @click="startSupportAccess" class="x-btn right">Start</button>
-                            <template v-if="supportAccess.endTime">
+                            <template v-if="supportAccessEndTime">
                                 <div>Will stop at:</div>
-                                <div class="">{{ supportAccess.endTime.toLocaleDateString()}} {{ supportAccess.endTime.toLocaleTimeString() }}</div>
-                                <button @click="stopSupportAccess" class="x-btn link">Stop Now</button>
+                                <div class="">{{ supportAccessEndTime.toLocaleDateString()}} {{ supportAccessEndTime.toLocaleTimeString() }}</div>
+                                <!--button @click="stopSupportAccess" class="x-btn link">Stop Now</button-->
                             </template>
                             <div v-else class="grid-span3" />
                         </div>
@@ -144,6 +144,12 @@
             },
 			validResearchRate() {
 				return this.validNumber(this.scheduleConfig.system_research_rate)
+            },
+            supportAccessEndTime() {
+                if (!this.configurable.core.CoreService.config.maintenance_settings.analytics) {
+                    return null
+                }
+                return this.supportAccess.endTime
             }
         },
         data() {
@@ -203,6 +209,7 @@
                     config: this.configurable.core.CoreService.config
                 }).then(response => {
                     this.createToast(response)
+                    this.getSupportAccess()
                 }).catch(error => {
                 	if (error.response.status === 400) {
                 		this.message = error.response.data.message
@@ -338,9 +345,8 @@
                     this.system_info = response.data
                 }
             })
-
-            this.changeState({ name: 'research-settings-tab' })
             this.getSupportAccess()
+            this.changeState({ name: 'research-settings-tab' })
         },
         mounted() {
             if (this.$route.hash) {
