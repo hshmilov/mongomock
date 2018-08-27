@@ -14,7 +14,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class CiscoDevice(DeviceAdapter):
     # Fetch protocol refers to the way we discover new devices
     # (by querying arp, cdp, dhcp tables, or by adding the client itself).
-    fetch_proto = Field(str, 'Fetch Protocol', enum=['ARP', 'CDP', 'DHCP', 'CLIENT'])
+    fetch_proto = Field(str, 'Fetch Protocol', enum=['ARP', 'CDP', 'DHCP', 'CLIENT', 'PRIME_CLIENT'])
     reachability = Field(str, 'Reachability')
 
 

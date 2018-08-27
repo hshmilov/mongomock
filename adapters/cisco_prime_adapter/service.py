@@ -39,7 +39,7 @@ class CiscoPrimeAdapter(AdapterBase):
     def _get_snmp_client(creds):
         # XXX: we aren't handling snmpv3
         if not json.is_valid(creds, 'snmp_read_cs', 'MANAGEMENT_ADDRESS', 'snmp_port'):
-            logger.info(f'No snmp creds in {creds}')
+            logger.debug(f'No snmp creds in {creds}')
             return None
 
         community = creds['snmp_read_cs']
@@ -54,7 +54,7 @@ class CiscoPrimeAdapter(AdapterBase):
     def _get_console_client(creds):
         if not json.is_valid(creds, 'cli_port',
                              'MANAGEMENT_ADDRESS', 'cli_login_password', 'cli_login_username', 'cli_transport'):
-            logger.info(f'No console creds in {creds}')
+            logger.debug(f'No console creds in {creds}')
             return None
 
         password = creds['cli_login_password']
@@ -83,52 +83,55 @@ class CiscoPrimeAdapter(AdapterBase):
         if client:
             return client
 
-        logger.error(f'Unable to generate client {creds}')
+        logger.warning(f'Unable to generate client {creds}')
         return None
 
-    def _query_devices_by_client(self, client_name, client_data):
+    def __query_devices_by_client(self, session):
         arp_table = []
         tasks = []
-        generators = []
-
-        session = client_data
-        session.connect()
-        try:
-            for device in session.get_devices():
-                type_, raw_device = ('cisco', device)
-                yield (type_, raw_device)
-
-                try:
-                    creds = session.get_credentials(raw_device)
-                    if not creds:
-                        logger.warning(f'empty creds for {raw_device}')
-                        continue
-                    client = self._get_client(creds)
-
-                    if not client:
-                        logger.warning(f'unable to get client - skipping')
-                        continue
-
-                    with client:
-                        if isinstance(client, CiscoSnmpClient):
-                            tasks += client.get_tasks()
-                            continue
-                        else:
-                            generators.append(client.query_all())
-                except Exception as e:
-                    logger.exception(f'Got exception while creating device: {raw_device}')
+        for device in session.get_devices():
+            type_, raw_device = ('cisco', device)
+            yield (type_, raw_device)
 
             try:
-                # XXX: We can improve this code by using threadpool for each generator.
+                creds = session.get_credentials(raw_device)
+                if not creds:
+                    logger.warning(f'empty creds for {raw_device}')
+                    continue
+                client = self._get_client(creds)
+
+                if not client:
+                    error_message = 'unable to get client - skipping {}'.format(creds.get('MANAGEMENT_ADDRESS', ''))
+                    logger.warning(error_message)
+                    continue
+
+                info_message = 'Got client for {} : {}'.format(creds.get('MANAGEMENT_ADDRESS', ''), client)
+                logger.info(info_message)
+
+                with client:
+                    if isinstance(client, CiscoSnmpClient):
+                        tasks += client.get_tasks()
+                        continue
+                    else:
+                        # XXX: We can improve this code by using threadpool for each generator.
+                        for entry in client.query_all():
+                            yield ('neighbor', entry)
+            except Exception as e:
+                logger.exception(f'Got exception while creating device: {raw_device}')
+
+        try:
+            if tasks:
                 for entry in snmp.run_event_loop(tasks):
                     yield ('neighbor', entry)
 
-                for generator in generators:
-                    for entry in generator:
-                        yield ('neighbor', entry)
+        except Exception as e:
+            logger.exception(f'Got exception while getting async data from: {raw_device}')
 
-            except Exception as e:
-                logger.exception(f'Got exception while getting data from: {raw_device}')
+    def _query_devices_by_client(self, client_name, client_data):
+        session = client_data
+        session.connect()
+        try:
+            yield from self.__query_devices_by_client(session)
         finally:
             session.disconnect()
 
@@ -181,6 +184,7 @@ class CiscoPrimeAdapter(AdapterBase):
         device.device_model = raw_device['summary'].get('deviceType', '')
         device.device_model_family = raw_device['summary'].get('ProductFamily', '')
         device.reachability = raw_device['summary'].get('reachability', '')
+        device.fetch_proto = 'PRIME_CLIENT'
 
         ip_address = raw_device['summary'].get('ipAddress', '')
         try:
