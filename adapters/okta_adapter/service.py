@@ -67,7 +67,7 @@ class OktaAdapter(AdapterBase):
                 user = self._new_user_adapter()
                 profile = user_raw['profile']
                 user.id = user_raw['id']
-                user.account_disabled = user_raw.get('status') in ('PROVISIONED', 'ACTIVE')
+                user.account_disabled = user_raw.get('status') not in ('PROVISIONED', 'ACTIVE')
                 user.last_seen = parse_date(user_raw.get('last_login'))
                 user.last_password_change = parse_date(user_raw.get('passwordChanged'))
                 user.user_created = parse_date(user_raw.get('created'))
