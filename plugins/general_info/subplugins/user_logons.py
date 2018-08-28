@@ -32,17 +32,19 @@ class GetUserLogons(GeneralInfoSubplugin):
                     datetime.timedelta(hours=USERS_QUERY_TRESHOLD_HOURS) < datetime.datetime.now():
 
                 # If we haven't queried users_to_sids, or if too much time has passed, Lets query and enrich.
+                # This could be only from adapters.data, as it comes from active directory. Once we have
+                # this information coming from tags we should change this.
                 GetUserLogons.users_to_sids = {}
-                list_of_users_from_users_db = self.plugin_base.users_db_view.find(
-                    filter={"specific_data.data.ad_sid": {"$exists": True}},
-                    projection={"specific_data.data.ad_sid": 1, "specific_data.data.username": 1,
-                                "specific_data.data.domain": 1}
+                list_of_users_from_users_db = self.plugin_base.users_db.find(
+                    filter={"adapters.data.ad_sid": {"$exists": True}},
+                    projection={"adapters.data.ad_sid": 1, "adapters.data.username": 1,
+                                "adapters.data.domain": 1}
                 )
 
                 for user in list_of_users_from_users_db:
                     # we always take the first one. if that device has more than one adapter that reports sid, the name
                     # is going to be the same - its the correlation rule for users_to_sids (its their id!)
-                    data = user["specific_data"][0]["data"]
+                    data = user["adapters"][0]["data"]
                     sid = data.get("ad_sid")    # there because that is our filter.
                     username = data.get("username")  # should always be there
                     domain = data.get("domain")  # not necessarily there...
@@ -68,7 +70,7 @@ class GetUserLogons(GeneralInfoSubplugin):
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
         if not all(is_wmi_answer_ok(a) for a in result):
-            self.logger.error("Not handling result, result has exception")
+            self.logger.error(f"Not handling result, It has an exception: {result}")
             return False
 
         user_profiles_data = result[0]["data"]

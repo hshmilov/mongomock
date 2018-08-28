@@ -90,6 +90,10 @@ class DeviceControlService(PluginBase, Triggerable):
         # Getting an AxoniusDevice object is also an advantage since we are getting a representation
         # Of this device as adapter identities and not internal axon id which can change during correlation.
         for internal_axon_id in internal_axon_ids:
+            # Note that we are using the devices view which might not be updated. If a remote plugin tries
+            # to run code we might not have this internal_axon_id in the devices view. But since right now
+            # we are only using it from the gui (which shows the devices from the view that is okay until we
+            # fix that bug).
             device = list(self.devices.get(internal_axon_id=internal_axon_id))
             assert len(device) == 1, f"Internal axon id {internal_axon_id} was not found"
             devices.append(device[0])

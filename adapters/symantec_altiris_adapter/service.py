@@ -121,7 +121,12 @@ class SymantecAltirisAdapter(AdapterBase):
                     pass
                 username = device_raw.get('User')
                 if username is not None:
-                    device.add_users(username=str(username), is_local=True if domain is not None else False)
+                    hostname_to_use = server_full_name or name or device_id
+                    device.add_users(username=f"{str(username)}@{hostname_to_use}",
+                                     is_local=domain is not None,
+                                     origin_unique_adapter_name=self.plugin_unique_name,
+                                     origin_unique_adapter_data_id=device.id
+                                     )
                 device.set_raw(device_raw)
                 yield device
             except Exception:

@@ -161,6 +161,7 @@ class DeviceAdapterUser(SmartJsonClass):
     last_use_date = Field(datetime.datetime, 'Last Use Time')
     is_local = Field(bool, "Is Local")
     is_disabled = Field(bool, "Is Disabled")
+    is_admin = Field(bool, "Is Admin")
 
     # Where did this user really come from?
     origin_unique_adapter_name = Field(str)

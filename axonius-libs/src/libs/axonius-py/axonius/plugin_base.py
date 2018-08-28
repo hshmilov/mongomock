@@ -1139,6 +1139,8 @@ class PluginBase(Configurable, Feature):
         logger.info(f"Finished inserting {entity_type} of client {client_name}")
         if should_log_info is True:
             logger.info(f"Finished inserting {entity_type} of client {client_name}")
+
+        self._request_db_rebuild(sync=False)
         return inserted_data_count
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
@@ -1286,7 +1288,8 @@ class PluginBase(Configurable, Feature):
         :param tag_type: the type of the tag. "label" for a regular tag, "data" for a data tag.
         :param entity: "devices" or "users" -> what is the entity we are tagging.
         :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
-        :param client_used: an optional parameter to indicate client_used
+        :param client_used: an optional parameter to indicate client_used. This is important since we show this in
+                            the gui (we can know where the data came from)
         :return:
         """
 

@@ -182,10 +182,26 @@ class JamfAdapter(AdapterBase):
                     device.device_model_family = hardware.get('model')
 
                     try:
-                        users_raw = (((device_raw.get('groups_accounts') or {}).get(
-                            'local_accounts') or {}).get('user') or [])
+                        users_raw = (device_raw.get('groups_accounts') or {}).get('local_accounts', [])
+                        # This can come in a few formats
+                        if users_raw is not None and isinstance(users_raw, dict) and users_raw.get("user"):
+                            users_raw_user_object = users_raw["user"]
+                            if isinstance(users_raw_user_object, dict):
+                                users_raw = [users_raw_user_object]
+                            elif isinstance(users_raw_user_object, list):
+                                users_raw = users_raw_user_object
+                            else:
+                                users_raw = []
+
                         for user_raw in users_raw:
-                            device.add_users(username=user_raw.get('realname'), user_sid=user_raw.get('uid'))
+                            logger.info(f"Adding user {user_raw.get('realname')}")
+                            device.add_users(username=user_raw.get('realname') + "@" + str(hostname),
+                                             user_sid=user_raw.get('uid'),
+                                             is_local=True,
+                                             is_admin=str(user_raw.get('administrator')).lower() == "true",
+                                             origin_unique_adapter_name=self.plugin_unique_name,
+                                             origin_unique_adapter_data_id=device.id
+                                             )
                     except Exception:
                         logger.exception(f'Problem getting users at {device_raw}')
 

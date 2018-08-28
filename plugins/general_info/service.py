@@ -327,11 +327,17 @@ class GeneralInfoService(PluginBase, Triggerable):
         logger.info("Associating users with devices")
 
         # 1. Get all devices which have users associations, and map all these devices to one global users object.
-        devices_with_users_association = self.devices.get(data={"users": {"$exists": True}})
+        devices_with_users_association = self.devices_db.find({
+            "$or": [
+                {"adapters.data.users": {"$exists": True}},
+                {"tags.data.users": {"$exists": True}}
+            ]
+        })
         users = {}
         for device in devices_with_users_association:
             # Get a list of all users associated for this device.
-            for sd_users in [d['data']['users'] for d in device.specific_data if d['data'].get('users') is not None]:
+            all_device_data = device.get('adapters', []) + device.get('tags', [])
+            for sd_users in [d['data']['users'] for d in all_device_data if isinstance(d['data'], dict) and d['data'].get('users') is not None]:
                 # for each user associated, add a (device, user) tuple.
                 for user in sd_users:
                     if 'username' not in user:
@@ -347,22 +353,11 @@ class GeneralInfoService(PluginBase, Triggerable):
                     # different.
                     users[user['username']].append((user, device))
 
-        # 2. Go over all users. for each user, associate all known devices.
-        for username, linked_devices_and_users_list in users.items():
-            # Create the new adapterdata for that user
-            adapterdata_user = self._new_user_adapter()
-
-            # Find that user
+        # 2. Go over all users. whatever we don't have, we must create first.
+        for username in users.keys():
             user = list(self.users.get(data={"id": username}))
-
-            # Do we have it? or do we need to create it?
-            if len(user) > 1:
-                # Can't be! how can we have a user with the same id? should have been correlated.
-                logger.error(f"Found a couple of users (expected one) with same id: {username} -> {user}")
-                continue
-            elif len(user) == 0:
+            if len(user) == 0:
                 # user does not exists, create it.
-                logger.debug(f"username {username} needs to be created, this is a todo task. continuing")
                 user_dict = self._new_user_adapter()
                 user_dict.id = username  # Should be the unique identifier of that user.
                 try:
@@ -375,20 +370,56 @@ class GeneralInfoService(PluginBase, Triggerable):
                     self.plugin_unique_name,
                     {"raw": [], "parsed": [user_dict.to_dict()]},
                     EntityType.Users, False)
-                # At this point we must have it.
-                user = list(self.users.get(data={"id": username}))
-                if len(user) != 1:
-                    logger.error(f"We just created the user {username} but the length is reported as {len(user)}.")
-                    continue
+
+        # 3. We have to rebuild the views db. But we don't have the internal axon id's.
+        # We need to refactor self._save_data_from_plugin to return the internal_axon_id's. Until we do that,
+        # We collect their internal axon id's .
+        # list(users.keys()) is not redundant, we need convert dict_keys to list or else pymongo will throw a
+        # can not decode object error
+        new_users = self.users_db.find({"adapters.data.id": {"$in": list(users.keys())}},
+                                       projection={"_id": False, "internal_axon_id": True})
+        new_internal_axon_ids = [nu['internal_axon_id'] for nu in new_users]
+
+        try:
+            self._request_db_rebuild(sync=True, internal_axon_ids=new_internal_axon_ids).raise_for_status()
+        except Exception:
+            logger.exception(f"Error in rebuilding, continuing without it. This means we won't have some of the local"
+                             f"users until the next rebuild occurs, and these won't have associated devices until"
+                             f"next cycle of general_info occurs")
+
+        # 4. Now go over all users again. for each user, associate all known devices.
+        for username, linked_devices_and_users_list in users.items():
+            # Create the new adapterdata for that user
+            adapterdata_user = self._new_user_adapter()
+
+            # Find that user. It should be in the view new.
+            user = list(self.users.get(data={"id": username}))
+
+            # Do we have it? or do we need to create it?
+            if len(user) > 1:
+                # Can't be! how can we have a user with the same id? should have been correlated.
+                logger.critical(f"Found a couple of users (expected one) with same id: {username} -> {user}")
+                continue
+            elif len(user) == 0:
+                logger.error(f"User {username} should have been created in the view but is not there! Continuing")
+                continue
 
             # at this point the user exists, go over all associated devices and add them.
             user = user[0]
             client_used = None
             for linked_user, linked_device in linked_devices_and_users_list:
                 try:
-                    device_caption = linked_device.get_first_data("hostname") or \
-                        linked_device.get_first_data("name") or \
-                        linked_device.get_first_data("id")
+                    def get_first_data(fd_d, fd_attr):
+                        # Gets the first "hostname", for example, from a device object.
+                        for sd in fd_d.get('adapters', []) + fd_d.get('tags', []):
+                            if isinstance(sd.get('data'), dict):
+                                value = sd['data'].get(fd_attr)
+                                if value is not None:
+                                    return value
+                        return None
+
+                    device_caption = get_first_data(linked_device, "hostname") or \
+                        get_first_data(linked_device, "name") or get_first_data(linked_device, "id")
 
                     logger.debug(f"Associating {device_caption} with user {username}")
                     try:
@@ -404,13 +435,17 @@ class GeneralInfoService(PluginBase, Triggerable):
                     if linked_user.get('is_disabled') is not None:
                         adapterdata_user.account_disabled = linked_user.get('is_disabled')
 
-                    client_used = linked_user['origin_unique_adapter_client']
+                    is_admin_status = linked_user.get("is_admin")
+                    if isinstance(is_admin_status, bool):
+                        adapterdata_user.is_admin = is_admin_status
+
+                    client_used = linked_user.get('origin_unique_adapter_client')
 
                     adapterdata_user.add_associated_device(
                         device_caption=device_caption,
                         last_use_date=linked_user.get('last_use_date'),
-                        adapter_unique_name=linked_user['origin_unique_adapter_name'],
-                        adapter_data_id=linked_user['origin_unique_adapter_data_id'],
+                        adapter_unique_name=linked_user.get('origin_unique_adapter_name'),
+                        adapter_data_id=linked_user.get('origin_unique_adapter_data_id'),
                         adapter_client_used=client_used
                     )
                 except Exception:
@@ -419,7 +454,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # we have a new adapterdata_user, lets add it. we do not give any specific identity
             # since this tag isn't associated to a specific adapter.
             adapterdata_user.id = username
-            user.add_adapterdata(adapterdata_user.to_dict(), client_used=client_used)
+            user.add_adapterdata(adapterdata_user.to_dict(), client_used=client_used or "")
 
         self._save_field_names_to_db(EntityType.Users)
         logger.info("Finished associating users with devices")
