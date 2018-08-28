@@ -42,9 +42,18 @@ class GetUserLogons(GeneralInfoSubplugin):
                 )
 
                 for user in list_of_users_from_users_db:
-                    # we always take the first one. if that device has more than one adapter that reports sid, the name
-                    # is going to be the same - its the correlation rule for users_to_sids (its their id!)
-                    data = user["adapters"][0]["data"]
+                    # if the user has more than one adapter then we have to take the one that has ad_sid,
+                    # which is the most important thing we look after in this module
+                    data = None
+                    for adap in user.get("adapters", []):
+                        if adap.get("data", {}).get("ad_sid") is not None:
+                            data = adap["data"]
+                            break
+
+                    if data is None:
+                        self.logger.error("Did not find ad_sid even though the query mentioned ad_sid")
+                        continue
+
                     sid = data.get("ad_sid")    # there because that is our filter.
                     username = data.get("username")  # should always be there
                     domain = data.get("domain")  # not necessarily there...
