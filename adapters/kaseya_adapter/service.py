@@ -96,7 +96,7 @@ class KaseyaAdapter(AdapterBase):
                 device.name = asset_raw.get("AssetName")
                 agent_raw = agents_id_dict.get(asset_raw.get("AgentId", "-1")) or {}
                 device.figure_os(asset_raw.get("OSName", ""))
-                device.hostname = agent_raw.get("ComputerName", asset_raw.get("HostName"))
+                device.hostname = asset_raw.get("HostName", agent_raw.get("ComputerName"))
                 try:
                     last_used_users = agent_raw.get("LastLoggedInUser")
                     if last_used_users is not None:
@@ -118,8 +118,9 @@ class KaseyaAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f"Problem  adding time zone to {agent_raw}")
                 device.device_manufacturer = asset_raw.get("DeviceManufacturer")
-                ip_addresses = asset_raw.get("IPAddresses", "").split(",")
-                mac_addresses = asset_raw.get("MACAddresses", "").split(",")
+                ip_addresses = [ip_address.strip() for ip_address in asset_raw.get("IPAddresses", "").split(",")]
+                mac_addresses = [mac_address_raw.strip() for mac_address_raw in
+                                 asset_raw.get("MACAddresses", "").split(",")]
                 if mac_addresses != []:
                     for mac_address in mac_addresses:
                         device.add_nic(mac_address, ip_addresses)
