@@ -79,7 +79,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         mac_indexed = {}
         for adapter in adapters_to_correlate:
             # Don't add to the MAC comparisons devices that haven't seen for more than 30 days
-            if is_old_device(adapter, number_of_days=30):
+            if is_old_device(adapter, number_of_days=5):
                 continue
             macs = adapter.get(NORMALIZED_MACS)
             if macs:
@@ -93,8 +93,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         mac_blacklist = mac_blacklist.union(map(normalize_mac, JUNIPER_NON_UNIQUE_MACS))
         for mac, matches in mac_indexed.items():
             for x, y in combinations(matches, 2):
-                if (not hostnames_do_not_contradict(x, y)) and (not is_old_device(x)) and (not is_old_device(y)) and \
-                        (not is_different_plugin(x, y)):
+                if (not hostnames_do_not_contradict(x, y)) and (not is_different_plugin(x, y)):
                     mac_blacklist.add(mac)
                     break
 
