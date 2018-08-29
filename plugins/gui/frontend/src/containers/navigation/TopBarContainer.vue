@@ -10,7 +10,7 @@
             <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
         </div>
         <ul class="bar-nav">
-            <li class="nav-item" v-if="runningResearch">
+            <li class="nav-item" id="research_running" v-if="runningResearch">
                 <svg-icon name="symbol/running" :original="true" height="20" class="rotating"/>
             </li>
             <li class="nav-item" id="research_run">

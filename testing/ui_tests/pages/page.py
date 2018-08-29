@@ -90,6 +90,7 @@ class Page:
     def clear_element(element):
         element.send_keys(Keys.LEFT_CONTROL, 'a')
         element.send_keys(Keys.BACKSPACE)
+        element.send_keys(Keys.LEFT_ALT, Keys.BACKSPACE)
 
     def fill_text_field_by_element_id(self, element_id, value, context=None, last_field=False):
         return self.fill_text_field_by(By.ID, element_id, value, context, last_field=last_field)
@@ -209,6 +210,28 @@ class Page:
                 pass
         raise TimeoutException(f'Timeout while waiting for {value}')
 
+    def wait_for_element_absent_by_id(self, element_id, *vargs, **kwargs):
+        return self.wait_for_element_absent(By.ID, element_id, *vargs, **kwargs)
+
+    def wait_for_element_absent_by_css(self, css_selector, *vargs, **kwargs):
+        return self.wait_for_element_absent(By.CSS_SELECTOR, css_selector, *vargs, **kwargs)
+
+    def wait_for_element_absent(self,
+                                by,
+                                value,
+                                element=None,
+                                retries=RETRY_WAIT_FOR_ELEMENT,
+                                interval=SLEEP_INTERVAL):
+        for _ in range(retries):
+            try:
+                element = self.find_element(by, value, element)
+                if not element:
+                    return True
+                time.sleep(interval)
+            except NoSuchElementException:
+                return True
+        raise TimeoutException(f'Timeout while waiting for {value} to disappear')
+
     def find_element(self, how, what, element=None):
         if element is None:
             return self.driver.find_element(by=how, value=what)
@@ -306,3 +329,7 @@ class Page:
                 option.click()
                 return option
         return None
+
+    @staticmethod
+    def key_down_enter(element):
+        element.send_keys(Keys.ENTER)

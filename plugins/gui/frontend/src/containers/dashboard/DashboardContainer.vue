@@ -123,12 +123,12 @@
                 return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
             },
             isEmptySystem() {
-				if (this.deviceDiscovery.seen === undefined) return null
+				      if (this.deviceDiscovery.seen === undefined) return null
 
-				if (this.seenDevices || this.adapterList.some(item => item.status !== '')) {
-					return false
-				}
-				return true
+              if (this.seenDevices || this.adapterList.some(item => item.status !== '')) {
+                return false
+              }
+				      return true
             }
         },
         data() {

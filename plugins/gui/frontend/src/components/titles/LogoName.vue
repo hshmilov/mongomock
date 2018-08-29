@@ -1,7 +1,7 @@
 <template>
     <div class="x-logo-name" :id="name">
         <img :src="`/src/assets/images/logos/${name}.png`" height="24">
-        <div class="title">{{prettyName}}</div>
+        <div class="title">{{ prettyName }}</div>
     </div>
 </template>
 
@@ -10,9 +10,10 @@
 
 	export default {
 		name: 'x-logo-name',
-        props: { name: {required: true } },
+        props: { name: { required: true }, title: { } },
         computed: {
 			prettyName() {
+			    if (this.title) return this.title
 				if (pluginMeta[this.name]) {
 					return pluginMeta[this.name].title
                 }

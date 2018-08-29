@@ -21,7 +21,7 @@
                             <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
                         </td>
                         <td class="row-data" :id="item.plugin_name">
-                            <x-logo-name :name="item.plugin_name"/>
+                            <x-logo-name :name="item.plugin_name" :title="item.title"/>
                         </td>
                         <td class="row-data">
                             <div class="content">{{ item.description }}</div>

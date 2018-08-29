@@ -192,6 +192,7 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(15, 5, check_execute_wmi_results)
 
+    @pytest.mark.skip("AX-1838")
     def test_ad_execute_shell(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
@@ -248,6 +249,7 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(15, 5, check_execute_binary_results)
 
+    @pytest.mark.skip("AX-1838")
     def test_ad_execute_shell_by_device_control(self, device_control_fixture):
         # TODO: We should have a parallel test for device control but this is complicated now.
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]

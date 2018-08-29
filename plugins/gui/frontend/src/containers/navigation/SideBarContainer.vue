@@ -18,7 +18,7 @@
                     <x-nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved"/>
                 </x-nested-nav>
             </x-nested-nav-item>
-            <x-nested-nav-item route-name="Users" icon-name="users">
+            <x-nested-nav-item route-name="Users" icon-name="users" id="users">
                 <x-nested-nav nest-level="1" class="collapse">
                     <x-nested-nav-item route-name="Saved Queries" router-path="/users/query/saved"/>
                 </x-nested-nav>

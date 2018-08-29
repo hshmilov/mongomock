@@ -33,7 +33,7 @@
                @close="toggleServerModal" @confirm="saveServer" @enter="promptSaveServer">
             <div slot="body">
                 <!-- Container for configuration of a single selected / added server -->
-                <x-logo-name :name="adapterPluginName" />
+                <x-logo-name :name="adapterPluginName" :title="adapterName" />
                 <div class="server-error" v-if="serverModal.error">
                     <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
                     <div class="error-text">{{serverModal.error}}</div>

@@ -156,7 +156,7 @@ d<template>
 
 <style lang="scss">
     .login-container {
-        background: url('/src/assets/images/general/login_bg.png') center;
+        background: url('/src/assets/images/general/login_bg.png');
         height: 100vh;
         padding-top: 20vh;
         .login {

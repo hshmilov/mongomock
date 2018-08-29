@@ -9,12 +9,14 @@ from services.axonius_service import get_service
 from services.ports import DOCKER_PORTS
 # from services.standalone_services.selenium_service import SeleniumService
 from services.adapters.ad_service import AdService
+from services.adapters.json_file_service import JsonFileService
 from devops.scripts.automate_dev import credentials_inputer
 
 
 def main():
     axonius_system = get_service()
     ad_service = AdService()
+    json_service = JsonFileService()
 
     # selenium_service = SeleniumService()
     cmd = 'docker run -d --name=grid ' \
@@ -38,6 +40,9 @@ def main():
         ad_service.take_process_ownership()
         ad_service.start_and_wait()
 
+        json_service.take_process_ownership()
+        json_service.start_and_wait()
+
         credentials_inputer.main()
 
         print('Running UI tests')
@@ -52,6 +57,7 @@ def main():
         subprocess.Popen(shlex.split(cmd)).communicate()
 
         ad_service.stop(should_delete=True)
+        json_service.stop(should_delete=True)
 
 
 if __name__ == '__main__':

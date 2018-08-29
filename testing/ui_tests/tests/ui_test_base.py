@@ -4,12 +4,16 @@ from selenium import webdriver
 
 from services.ports import DOCKER_PORTS
 from ui_tests.pages.login_page import LoginPage
+from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.devices_page import DevicesPage
+from ui_tests.pages.users_page import UsersPage
 from test_credentials.test_gui_credentials import DEFAULT_USER
 
 
 class TestBase:
+    LOADING_SPINNER_CSS = '.v-spinner'
+
     def _initialize_driver(self):
         if pytest.config.option.local_browser:
             self.driver = webdriver.Chrome()
@@ -27,7 +31,7 @@ class TestBase:
         self.password = DEFAULT_USER['password']
 
         self.register_pages()
-        self.log_in()
+        self.login()
 
     def teardown_method(self, method):
         if self.driver:
@@ -35,10 +39,12 @@ class TestBase:
 
     def register_pages(self):
         params = dict(driver=self.driver, base_url=self.base_url)
+        self.base_page = BasePage(**params)
         self.login_page = LoginPage(**params)
         self.settings_page = SettingsPage(**params)
         self.devices_page = DevicesPage(**params)
+        self.users_page = UsersPage(**params)
 
-    def log_in(self):
+    def login(self):
         self.driver.get(self.base_url)
         self.login_page.login(username=self.username, password=self.password)
