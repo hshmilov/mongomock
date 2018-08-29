@@ -1964,14 +1964,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         for res in entity_collection.aggregate([
             {
                 "$group": {
-                    "_id": "$specific_data.plugin_name",
+                    "_id": "$adapters",
                     "count": {
                         "$sum": 1
                     }
                 }
             }
         ]):
-            for plugin_name in res['_id']:
+            for plugin_name in set(res['_id']):
                 entities_per_adapters[plugin_name] = entities_per_adapters.get(plugin_name, 0) + res['count']
                 adapter_entities['seen'] += res['count']
 
