@@ -11,6 +11,10 @@ export const pluginMeta = {
         title: 'Solarwinds Network Performance Manager',
         description: 'Solarwinds is a unified IT system management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hyrbid environment, or in the cloud.'
     },
+    pingidentity_adapter: {
+        title: 'Ping Identity',
+        description: 'Ping Identity is a standards-based platform that connects customers, employees and partners to their cloud, mobile, SaaS and on-premises applications and APIs.'
+    },
     crowd_strike_adapter: {
         title: 'CrowdStrike Falcon',
         description: 'The CrowdStrike Falcon platform is delivers next-generation antivirus, endpoint detection and response (EDR), managed threat hunting, and threat intelligence.'
