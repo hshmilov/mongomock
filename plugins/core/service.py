@@ -8,12 +8,12 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 import configparser
 from datetime import datetime
 from flask import jsonify, request, Response
-import random
 import requests
 from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 import threading
 import uritools
 import uuid
+from multiprocessing.pool import ThreadPool
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -434,11 +434,17 @@ class CoreService(PluginBase, Configurable):
 
     def _on_config_update(self, config):
         logger.info(f"Loading core config: {config}")
-        for plugin_name in self.online_plugins.keys():
+
+        def update_plugin(plugin_name):
             try:
                 self._request_plugin('update_config', plugin_name, method='post')
             except Exception:
                 logger.exception(f"Failed to update config on {plugin_name}")
+
+        online_plugins = self.online_plugins.keys()
+        if online_plugins:
+            pool = ThreadPool(len(online_plugins))
+            pool.map_async(update_plugin, online_plugins)
 
     @classmethod
     def _db_config_schema(cls) -> dict:
