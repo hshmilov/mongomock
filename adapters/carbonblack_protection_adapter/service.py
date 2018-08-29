@@ -103,7 +103,7 @@ class CarbonblackProtectionAdapter(AdapterBase):
                     device.id = str(device.id)
                 hostname = device_raw.get("name")
                 if hostname and '\\' in hostname:
-                    split_hostname = hostname.split('\\')[1]
+                    split_hostname = hostname.split('\\')
                     device.hostname = split_hostname[1]
                     device.domain = split_hostname[0]
                     device.part_of_domain = True
