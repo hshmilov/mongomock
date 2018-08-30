@@ -1,14 +1,21 @@
-import pytest
+import logging
+import os
+from datetime import datetime
 
+import pytest
 from selenium import webdriver
 
+from axonius.plugin_base import EntityType
 from services.ports import DOCKER_PORTS
-from ui_tests.pages.login_page import LoginPage
-from ui_tests.pages.base_page import BasePage
-from ui_tests.pages.settings_page import SettingsPage
-from ui_tests.pages.devices_page import DevicesPage
-from ui_tests.pages.users_page import UsersPage
+from services.axonius_service import get_service
 from test_credentials.test_gui_credentials import DEFAULT_USER
+from ui_tests.pages.base_page import BasePage
+from ui_tests.pages.devices_page import DevicesPage
+from ui_tests.pages.login_page import LoginPage
+from ui_tests.pages.settings_page import SettingsPage
+from ui_tests.pages.users_page import UsersPage
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class TestBase:
@@ -23,17 +30,43 @@ class TestBase:
                                            desired_capabilities=webdriver.DesiredCapabilities.CHROME)
             self.base_url = 'https://gui'
 
+    def _save_screenshot(self, method, text=''):
+        if not self.driver:
+            return
+        try:
+            folder = os.path.join('screenshots', method.__name__)
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            current_time = datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')
+            file_path = os.path.join(
+                folder,
+                f'_{self.driver.name}_{current_time}_{text}.png')
+            self.driver.save_screenshot(file_path)
+        except Exception:
+            logger.exception('Error while saving screenshot')
+
+    def _clean_db(self):
+        if not self.axonius_system:
+            return
+        self.axonius_system.get_devices_db().remove()
+        self.axonius_system.get_users_db().remove()
+        self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
+        self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
+
     def setup_method(self, method):
         self._initialize_driver()
         self.driver.maximize_window()
         self.driver.implicitly_wait(0.3)
         self.username = DEFAULT_USER['user_name']
         self.password = DEFAULT_USER['password']
+        self.axonius_system = get_service()
 
         self.register_pages()
         self.login()
 
     def teardown_method(self, method):
+        self._save_screenshot(method, text='before_teardown')
+        self._clean_db()
         if self.driver:
             self.driver.quit()
 

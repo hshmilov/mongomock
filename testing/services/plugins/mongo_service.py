@@ -100,8 +100,11 @@ class MongoService(DockerService):
         if entity_type == EntityType.Devices:
             return self.client[AGGREGATOR_PLUGIN_NAME]['devices_db']
 
-    def get_devices(self, aggregator_unique_name):
-        return self.get_devices_db(aggregator_unique_name).find({})
+    def get_entity_db_view(self, entity_type: EntityType):
+        if entity_type == EntityType.Users:
+            return self.client[AGGREGATOR_PLUGIN_NAME]['users_db_view']
+        if entity_type == EntityType.Devices:
+            return self.client[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
 
     def gui_users_collection(self):
         return self.client['gui']['users']
