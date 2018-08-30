@@ -1,29 +1,26 @@
-import requests
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-from axonius.clients.rest.exception import RESTException
+
 from axonius.clients.rest.connection import RESTConnection
+from carbonblack_defense_adapter import consts
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CarbonblackDefenseConnection(RESTConnection):
 
     def _connect(self):
-        self._get("device")
+        self._get('device')
 
     def get_device_list(self):
         row_number = 1
-        raw_results = self._get('device', url_params={"rows": str(100), "start": str(row_number)})
-        total_count = raw_results["totalResults"]
-        logger.debug(f"Carbonblack Defense API returned a count of {total_count} devices")
-        devices_list = raw_results["results"]
-        for device_raw in devices_list:
-            yield device_raw
+        raw_results = self._get('device', url_params={'rows': str(consts.DEVICES_PER_PAGE), 'start': str(row_number)})
+        total_count = raw_results['totalResults']
+        logger.info(f'Carbonblack Defense API returned a count of {total_count} devices')
+        yield from raw_results['results']
         try:
-            while row_number + 100 <= total_count:
-                row_number += 100
-                logger.debug(f"Getting {row_number} row number")
-                devices_list = self._get('device', url_params={"rows": str(100), "start": str(row_number)})["results"]
-                for device_raw in devices_list:
-                    yield device_raw
+            while row_number + consts.DEVICES_PER_PAGE <= total_count and row_number <= consts.MAX_NUMBER_OF_DEVICES:
+                row_number += consts.DEVICES_PER_PAGE
+                yield from self._get('device', url_params={'rows': str(consts.DEVICES_PER_PAGE),
+                                                           'start': str(row_number)})['results']
         except Exception:
-            logger.exception(f"Problem getting device in row number: {row_number}")
+            logger.exception(f'Problem getting device in row number: {row_number}')

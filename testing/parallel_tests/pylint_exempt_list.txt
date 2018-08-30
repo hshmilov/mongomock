@@ -16,8 +16,6 @@ adapters/bomgar_adapter/client.py
 adapters/bomgar_adapter/exceptions.py
 adapters/bomgar_adapter/json_utils.py
 adapters/bomgar_adapter/service.py
-adapters/carbonblack_defense_adapter/connection.py
-adapters/carbonblack_defense_adapter/service.py
 adapters/carbonblack_protection_adapter/connection.py
 adapters/carbonblack_protection_adapter/exceptions.py
 adapters/carbonblack_protection_adapter/service.py
