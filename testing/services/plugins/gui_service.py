@@ -154,6 +154,9 @@ RUN cd ./gui/frontend/ && npm run {dev}build
     def deactivate_plugin_job(self, plugin_id, *vargs, **kwargs):
         return self.post(f'plugins/{plugin_id}/stop', *vargs, **kwargs)
 
+    def get_api_key(self):
+        return self.get('get_api_key', session=self._session).json()
+
     def get_queries(self):
         self.get('trigger_watches', api_key=self.api_key, session=self._session)
 
@@ -170,7 +173,7 @@ RUN cd ./gui/frontend/ && npm run {dev}build
         return self.get('troubleshooting').content
 
     def get_api_version(self, *vargs, **kwargs):
-        return self.get(f'api', *vargs, **kwargs)
+        return self.get(f'api', *vargs, **kwargs).json()
 
     def get_api_devices(self, *vargs, **kwargs):
         return self.get(f'V{self.get_api_version()}/devices', *vargs, **kwargs)
@@ -179,19 +182,19 @@ RUN cd ./gui/frontend/ && npm run {dev}build
         return self.get(f'V{self.get_api_version()}/devices/{device_id}', *vargs, **kwargs)
 
     def get_api_users(self, *vargs, **kwargs):
-        return self.get(f'V{self.get_api_version().json()}/users', *vargs, **kwargs)
+        return self.get(f'V{self.get_api_version()}/users', *vargs, **kwargs)
 
     def get_api_user_by_id(self, user_id, *vargs, **kwargs):
-        return self.get(f'V{self.get_api_version().json()}/users/{user_id}', *vargs, **kwargs)
+        return self.get(f'V{self.get_api_version()}/users/{user_id}', *vargs, **kwargs)
 
     def get_api_reports(self, *vargs, **kwargs):
-        return self.get(f'V{self.get_api_version().json()}/reports', *vargs, **kwargs)
+        return self.get(f'V{self.get_api_version()}/reports', *vargs, **kwargs)
 
     def get_api_report_by_id(self, report_id, *vargs, **kwargs):
-        return self.get(f'V{self.get_api_version().json()}/reports/{report_id}', *vargs, **kwargs)
+        return self.get(f'V{self.get_api_version()}/reports/{report_id}', *vargs, **kwargs)
 
     def delete_api_report_by_id(self, report_id, *vargs, **kwargs):
-        return self.delete(f'V{self.get_api_version().json()}/reports/{report_id}', *vargs, **kwargs)
+        return self.delete(f'V{self.get_api_version()}/reports/{report_id}', *vargs, **kwargs)
 
     def put_api_report(self, report_data, *vargs, **kwargs):
-        return self.put(f'V{self.get_api_version().json()}/reports', report_data, *vargs, **kwargs)
+        return self.put(f'V{self.get_api_version()}/reports', report_data, *vargs, **kwargs)

@@ -338,7 +338,7 @@ def test_api_users():
 
         assert users_count_response.json() == len(
             users_response.json()['assets']), f"Error in device count. Got: {str(len(users_response.json()))}, " \
-            f"{users_count_response.json()}"
+                                              f"{users_count_response.json()}"
 
     def test_get_specific_user():
         axonius_system = get_service()
@@ -416,6 +416,21 @@ def test_api_alerts():
         test_get_specific_alert()
         test_create_alert()
         test_delete_alert()
+
+
+def test_api_key_auth():
+    """
+    Test the API using API-Key auth instead of username and password
+    """
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
+    gui_service.login_user(DEFAULT_USER)
+    api_data = gui_service.get_api_key()
+    gui_service.logout_user()
+    gui_service.get_api_devices(headers={
+        'api-key': api_data['api_key'],
+        'api-secret': api_data['api_secret']
+    }).raise_for_status()
 
 
 if __name__ == '__main__':

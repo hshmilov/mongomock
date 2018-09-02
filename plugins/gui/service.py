@@ -1,5 +1,7 @@
 import logging
+import secrets
 import threading
+from collections import namedtuple
 from typing import Iterable
 
 import gridfs
@@ -20,10 +22,11 @@ from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
-    METADATA_PATH, SYSTEM_SETTINGS, MAINTENANCE_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME
+    METADATA_PATH, SYSTEM_SETTINGS, MAINTENANCE_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, \
+    CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartMetrics, ChartViews, ChartFuncs, \
-    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT,\
+    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT, \
     SUPPORT_ACCESS_THREAD_ID
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -139,6 +142,9 @@ def filter_archived(additional_filter=None):
     return base_non_archived
 
 
+ApiAuth = namedtuple("ApiAuth", ['api_key', 'api_secret'])
+
+
 class GuiService(PluginBase, Triggerable, Configurable, API):
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
 
@@ -149,15 +155,27 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
-        current_user = self._get_collection('users').find_one({'user_name': 'admin'})
+        self.__users_collection = self._get_collection('users')
+        self._api_keys_collection = self._get_collection('api_keys')
+        current_user = self.__users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
             # User doesn't exist, this must be the installation process
-            self._get_collection('users').update({'user_name': 'admin'},
-                                                 {'user_name': 'admin',
-                                                  'password':
-                                                      '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
-                                                  'first_name': 'administrator', 'last_name': '',
-                                                  'pic_name': self.DEFAULT_AVATAR_PIC}, upsert=True)
+            self.__users_collection.update({'user_name': 'admin'},
+                                           {'user_name': 'admin',
+                                            'password':
+                                                '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
+                                            'first_name': 'administrator', 'last_name': '',
+                                            'pic_name': self.DEFAULT_AVATAR_PIC
+                                            }, upsert=True)
+        api_data = self._api_keys_collection.find_one({})
+        if not api_data:
+            api_data = {
+                'api_key': secrets.token_urlsafe(),
+                'api_secret': secrets.token_urlsafe()
+            }
+            self._api_keys_collection.insert_one(api_data)
+
+        self._api_data = ApiAuth(api_data['api_key'], api_data['api_secret'])
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
@@ -402,7 +420,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             fielded_plugins = []
             for plugin in requests.get(self.core_address + '/register').json().values():
                 # From registered plugins, saving those that have a 'fields' DB for given entity_type
-                if self._get_collection(f'{entity_type.value}_fields', plugin[PLUGIN_UNIQUE_NAME]).\
+                if self._get_collection(f'{entity_type.value}_fields', plugin[PLUGIN_UNIQUE_NAME]). \
                         count_documents({}, limit=1):
                     fielded_plugins.append(plugin[PLUGIN_NAME])
 
@@ -1178,12 +1196,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if user is None:
                 return return_error('', 401)
             if 'password' in user:
-                user = {k: v for k, v in user.items() if k != 'password'}
+                user = {k: v for k, v in user.items() if k not in ['password']}
             if 'pic_name' not in user:
                 user['pic_name'] = self.DEFAULT_AVATAR_PIC
             return jsonify(user), 200
 
-        users_collection = self._get_collection('users')
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
             return return_error("No login data provided", 400)
@@ -1192,7 +1209,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
             return return_error("remember_me isn't boolean", 401)
-        user_from_db = users_collection.find_one({'user_name': user_name})
+        user_from_db = self.__users_collection.find_one({'user_name': user_name})
         if user_from_db is None:
             logger.info(f"Unknown user {user_name} tried logging in")
             return return_error("Wrong user name or password", 401)
@@ -1350,10 +1367,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param skip: start index for pagination
         :return:
         """
-        users_collection = self._get_collection('users')
         if request.method == 'GET':
             return jsonify(gui_helpers.beautify_db_entry(n) for n in
-                           users_collection.find(projection={
+                           self.__users_collection.find(projection={
                                "_id": 1,
                                "user_name": 1,
                                "first_name": 1,
@@ -1367,15 +1383,30 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return return_error("Login to your user first")
             if not bcrypt.verify(post_data['old_password'], user['password']):
                 return return_error("Given password is wrong")
-            users_collection.update({'user_name': user['user_name']},
-                                    {
-                                        "$set": {
-                                            'password': bcrypt.hash(post_data['new_password'])
-                                        }
+            self.__users_collection.update({'user_name': user['user_name']},
+                                           {
+                                               "$set": {
+                                                   'password': bcrypt.hash(post_data['new_password'])
+                                               }
             })
-            user_from_db = users_collection.find_one({'user_name': user['user_name']})
+            user_from_db = self.__users_collection.find_one({'user_name': user['user_name']})
             session['user'] = user_from_db
             return "", 200
+
+    @gui_helpers.add_rule_unauthenticated("get_api_key", methods=['GET', 'POST'])
+    def get_api_key(self):
+        if request.method == 'POST':
+            new_token = secrets.token_urlsafe()
+            new_api_key = secrets.token_urlsafe()
+            self._api_keys_collection.update({'api_key': self._api_data.api_key},
+                                             {
+                "$set": {
+                    'api_key': new_api_key,
+                    'api_secret': new_token
+                }
+            })
+            self._api_data = ApiAuth(self._api_data.api_key, new_token)
+        return jsonify(self._api_data._asdict())
 
     @gui_helpers.paginated()
     @gui_helpers.add_rule_unauthenticated("logs")
@@ -1724,13 +1755,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }) / total, 'module': entity.value, 'view': child1_view})
 
             # Intersection
-            data.append({'name': ' + '.join(intersecting), 'intersection': True, 'value': data_collection.count_documents({
-                '$and': base_queries + [
-                    child1_query, child2_query
-                ]
-            }) / total, 'view': {**base_view,
-                                 'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
-                'module': entity.value})
+            data.append(
+                {'name': ' + '.join(intersecting), 'intersection': True, 'value': data_collection.count_documents({
+                    '$and': base_queries + [
+                        child1_query, child2_query
+                    ]
+                }) / total, 'view': {**base_view,
+                                     'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
+                    'module': entity.value})
 
             # Child2 + Parent - Intersection
             child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and NOT [{child1_filter}]'
@@ -1882,7 +1914,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return [{'name': view, 'value': 0, 'view': base_view, 'module': entity.value}]
         name = f'{func} of {field["title"]} on {view or "ALL"} results'
         if ChartFuncs[func] == ChartFuncs.average:
-            return [{'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
+            return [
+                {'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
         return [{'name': name, 'value': count, 'view': base_view, 'module': entity.value}]
 
     @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
@@ -2159,10 +2192,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             'data': list(gui_helpers.get_entities(view.get('pageSize', 20), 0,
                                                                   parse_filter(view.get('query', {}).get('filter', '')),
                                                                   gui_helpers.get_sort(
-                                view), {field: 1 for field in field_list},
-                                self.gui_dbs.entity_query_views_db_map[entity],
-                                self._entity_views_db_map[entity], entity,
-                                default_sort=self._system_settings['defaultSort']))
+                                                                      view), {field: 1 for field in field_list},
+                                                                  self.gui_dbs.entity_query_views_db_map[entity],
+                                                                  self._entity_views_db_map[entity], entity,
+                                                                  default_sort=self._system_settings['defaultSort']))
                         })
                 except Exception:
                     logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")

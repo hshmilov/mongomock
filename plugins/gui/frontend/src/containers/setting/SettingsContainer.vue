@@ -84,12 +84,37 @@
                     </div>
                 </div>
             </tab>
+            <tab title="API Key" id="apikey-settings-tab">
+                <div class="tab-settings">
+                    <div class="grid grid-col-2">
+                        <label for="api_key" class="label">API Key:</label>
+                        <div id="api_key">
+                            {{apiKey['api_key']}}
+                        </div>
+                    </div>
+                    <div class="grid grid-col-2">
+                        <label for="api_secret" class="label">API secret:</label>
+                        <div id="api_secret">
+                            {{apiKey['api_secret']}}
+                        </div>
+                    </div>
+                    <button class="x-btn" @click="openRenewKeyModal">
+                        Revoke and renew
+                    </button>
+                </div>
+            </tab>
             <tab title="About" id="about-settings-tab">
                 <div class="tab-settings">
                     <x-custom-data :data="system_info" :vertical="true"/>
                 </div>
             </tab>
         </tabs>
+        <modal v-if="renewingKey" @close="closeRenewKeyModal" @confirm="revokeRenew" approve-text="Revoke and renew">
+            <div slot="body">
+                Are you sure you want to revoke the current key and generate a new one?<br/>
+                This means that all applications using this key will stop working.
+            </div>
+        </modal>
         <x-toast v-if="message" :message="message" @done="removeToast" />
     </x-page>
 </template>
@@ -103,6 +128,7 @@
     import xDateEdit from '../../components/controls/string/DateEdit.vue'
     import xCheckbox from '../../components/inputs/Checkbox.vue'
     import xToast from '../../components/popover/Toast.vue'
+	import Modal from '../../components/popover/Modal.vue'
 
     import { mapState, mapActions, mapMutations } from 'vuex'
     import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from "../../store/modules/configurable";
@@ -112,7 +138,7 @@
 
 	export default {
         name: 'settings-container',
-        components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast, xCustomData },
+        components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast, xCustomData, Modal },
         computed: {
             ...mapState({
                 nextResearchStart(state) {
@@ -167,7 +193,9 @@
                 supportAccess: {
                 	duration: 24,
                     endTime: null
-				}
+				},
+                apiKey: {},
+                renewingKey: false
             }
         },
         methods: {
@@ -331,6 +359,33 @@
 						this.supportAccess.endTime = null
                     }
                 })
+            },
+            getApiKey() {
+                this.fetchData({
+                    rule: `get_api_key`
+                }).then(response => {
+                    if (response.status === 200 && response.data) {
+                        this.apiKey = response.data
+                    }
+                })
+            },
+            openRenewKeyModal() {
+                this.renewingKey = true
+            },
+            closeRenewKeyModal() {
+                this.renewingKey = false
+            },
+            revokeRenew(){
+                this.closeRenewKeyModal()
+                this.fetchData({
+                    rule: `get_api_key`,
+                    method: 'POST'
+                }).then(response => {
+                    if (response.status === 200 && response.data) {
+                        this.apiKey = response.data
+                        this.message = "a new secret key has been generated, the old one is no longer valid"
+                    }
+                })
             }
         },
         created() {
@@ -347,6 +402,7 @@
             })
             this.getSupportAccess()
             this.changeState({ name: 'research-settings-tab' })
+            this.getApiKey()
         },
         mounted() {
             if (this.$route.hash) {

@@ -1,8 +1,8 @@
 import logging
 import math
 
-from flask import jsonify, request
 from passlib.hash import bcrypt
+from flask import jsonify, request
 
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils import gui_helpers
@@ -19,8 +19,9 @@ def basic_authentication(func):
     """
 
     def wrapper(self, *args, **kwargs):
-        def check_auth(username, password):
-            """This function is called to check if a username /
+        def check_auth_user(username, password):
+            """
+            This function is called to check if a username /
             password combination is valid.
             """
             users_collection = self._get_collection("users")
@@ -30,10 +31,19 @@ def basic_authentication(func):
                 return False
             return bcrypt.verify(password, user_from_db["password"])
 
+        def check_auth_api_key(api_key, api_secret):
+            """
+            This function is called to check if an api key and secret match
+            """
+            api_data = self._api_data
+            return api_data.api_key == api_key and api_data.api_secret == api_secret
+
+        api_auth = request.headers.get('api-key'), request.headers.get('api-secret')
         auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return return_error("Unauthorized", 401)
-        return func(self, *args, **kwargs)
+        if check_auth_api_key(*api_auth) or (auth and check_auth_user(auth.username, auth.password)):
+            return func(self, *args, **kwargs)
+
+        return return_error("Unauthorized", 401)
 
     return wrapper
 
@@ -67,7 +77,8 @@ class API:
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         devices_collection = self._entity_views_db_map[EntityType.Devices]
         return_doc = {
-            "page": get_page_metadata(skip, limit, int(gui_helpers.get_entities_count(mongo_filter, devices_collection))),
+            "page": get_page_metadata(skip, limit,
+                                      int(gui_helpers.get_entities_count(mongo_filter, devices_collection))),
             "assets": list(gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                                     self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
                                                     devices_collection, EntityType.Devices, True,
