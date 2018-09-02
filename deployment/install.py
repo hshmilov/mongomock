@@ -205,6 +205,10 @@ def start_axonius():
     main('system up --all --prod --exclude diagnostics'.split())
     print_state('System is up')
 
+    print_state('Starting discovery')
+    from devops.scripts import discover_now
+    discover_now.main(should_wait=False)
+
 
 if __name__ == '__main__':
     with AutoOutputFlush():

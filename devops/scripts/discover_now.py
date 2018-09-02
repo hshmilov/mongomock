@@ -9,7 +9,7 @@ from axonius.consts.scheduler_consts import Phases
 from services.plugins.system_scheduler_service import SystemSchedulerService
 
 
-def main(should_wait, seconds):
+def main(should_wait=False, seconds=600):
     system_scheduler = SystemSchedulerService()
     system_scheduler.start_research()
 
