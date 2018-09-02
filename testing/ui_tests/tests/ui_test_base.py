@@ -66,7 +66,8 @@ class TestBase:
 
     def teardown_method(self, method):
         self._save_screenshot(method, text='before_teardown')
-        self._clean_db()
+        if not pytest.config.option.teardown_keep_db:
+            self._clean_db()
         if self.driver:
             self.driver.quit()
 
