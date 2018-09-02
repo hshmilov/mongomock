@@ -175,6 +175,9 @@ class CoreService(PluginBase, Configurable):
             logger.fatal("Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
+    def _check_registered_thread(self, *args, **kwargs):
+        return  # No need to check on core itself
+
     @add_rule("register", methods=['POST', 'GET'], should_authenticate=False)
     def register(self):
         """Calling this function from the REST API will start the registration process.

@@ -503,8 +503,6 @@ class PluginBase(Configurable, Feature):
         :param int retries: Number of retries before exiting the plugin.
         """
         try:
-            if self.plugin_name == "core":
-                return  # No need to check on core itself
             response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name), timeout=5)
             if response.status_code in [404, 499, 502]:  # Fault values
                 logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
