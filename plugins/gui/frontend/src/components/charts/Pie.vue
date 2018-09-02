@@ -18,7 +18,7 @@
                       :x="slice.middle.x" :y="slice.middle.y">{{Math.round(slice.value * 100)}}%</text>
             </g>
         </svg>
-        <div v-show="hoverDetails.title" ref="tooltip" class="pie-tooltip">
+        <div v-show="hoverDetails.title" ref="tooltip" class="tooltip">
             <div class="tooltip-title">{{ hoverDetails.parentTitle }}</div>
             <div class="tooltip-content">
                 <div class="tooltip-legend">
@@ -145,19 +145,8 @@
         }
     }
 
-    .pie-tooltip {
-        background-color: $theme-white;
-        border: 1px solid $grey-2;
-        border-radius: 2px;
-        position: fixed;
-        padding: 12px;
-        z-index: 1000;
-        max-width: 300px;
-        .tooltip-title {
-            color: $grey-3;
-        }
+    .tooltip {
         .tooltip-content {
-            display: flex;
             .tooltip-legend {
                 margin-right: 12px;
                 flex: 1 0 auto;

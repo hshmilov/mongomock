@@ -50,21 +50,22 @@
     import Modal from '../../components/popover/Modal.vue'
     import xDateEdit from '../../components/controls/string/DateEdit.vue'
     import xToast from '../../components/popover/Toast.vue'
+    import xLine from '../../components/charts/Line.vue'
 
     import {
         FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
         FETCH_HISTORICAL_SAVED_CARD, FETCH_HISTORICAL_SAVED_CARD_MIN
     } from '../../store/modules/dashboard'
-    import {FETCH_ADAPTERS} from '../../store/modules/adapter'
-    import {CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW} from '../../store/mutations'
-    import {SAVE_VIEW} from '../../store/actions'
-    import {CHANGE_TOUR_STATE, NEXT_TOUR_STATE} from '../../store/modules/onboarding'
-    import {mapState, mapMutations, mapActions} from 'vuex'
+    import { FETCH_ADAPTERS } from '../../store/modules/adapter'
+    import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
+    import { SAVE_VIEW } from '../../store/actions'
+    import { CHANGE_TOUR_STATE, NEXT_TOUR_STATE } from '../../store/modules/onboarding'
+    import { mapState, mapMutations, mapActions } from 'vuex'
 
     export default {
         name: 'x-dashboard',
         components: {
-            xPage, xCard, xCoverageCard, xDataDiscoveryCard, xHistogram, xPie, xSummary,
+            xPage, xCard, xCoverageCard, xDataDiscoveryCard, xHistogram, xPie, xSummary, xLine,
             xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xDateEdit, xToast
         },
         computed: {
@@ -123,12 +124,12 @@
                 return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
             },
             isEmptySystem() {
-				      if (this.deviceDiscovery.seen === undefined) return null
+                if (this.deviceDiscovery.seen === undefined) return null
 
-              if (this.seenDevices || this.adapterList.some(item => item.status !== '')) {
-                return false
-              }
-				      return true
+                if (this.seenDevices || this.adapterList.some(item => item.status !== '')) {
+                    return false
+                }
+                return true
             }
         },
         data() {

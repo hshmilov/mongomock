@@ -159,6 +159,9 @@ ul {
     fill: nth($extra-colours, $i);
     background-color: nth($extra-colours, $i);
   }
+  .extra-stroke-#{$i} {
+    stroke: nth($extra-colours, $i);
+  }
   .extra-stop-#{$i} {
     stop-color: nth($extra-colours, $i);
   }
@@ -367,6 +370,22 @@ table {
   right: -8px;
   font-size: 10px;
   line-height: 10px;
+}
+
+.tooltip {
+  background-color: $theme-white;
+  border: 1px solid $grey-2;
+  border-radius: 2px;
+  position: fixed;
+  padding: 12px;
+  z-index: 1000;
+  max-width: 300px;
+  .tooltip-title {
+    color: $grey-3;
+  }
+  .tooltip-content {
+    display: flex;
+  }
 }
 
 /* Common Animations */
