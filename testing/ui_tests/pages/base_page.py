@@ -1,11 +1,9 @@
-import time
-
 from ui_tests.pages.page import Page
 
 
 class BasePage(Page):
-    DISCOVERY_RUN_ID = 'research_run'
-    DISCOVERY_RUNNING_ID = 'discovery_running'
+    DISCOVERY_RUN_ID = 'run_research'
+    DISCOVERY_STOP_ID = 'stop_research'
 
     @property
     def root_page_css(self):
@@ -17,6 +15,5 @@ class BasePage(Page):
 
     def run_discovery(self):
         self.driver.find_element_by_id(self.DISCOVERY_RUN_ID).click()
-        # Need to wait due to bug AX-1952
-        time.sleep(60)
-        self.wait_for_element_absent_by_id(self.DISCOVERY_RUNNING_ID, interval=60)
+        self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=600, interval=1)
+        self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=600, interval=1)

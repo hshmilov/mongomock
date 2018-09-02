@@ -10,15 +10,22 @@
             <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
         </div>
         <ul class="bar-nav">
-            <li class="nav-item" id="research_running" v-if="runningResearch">
-                <svg-icon name="symbol/running" :original="true" height="20" class="rotating"/>
-            </li>
-            <li class="nav-item" id="research_run">
-                <a v-if="!runningResearch" v-tooltip.bottom="'Discover Now'" @click="startResearchNow" class="item-link">
-                    <svg-icon name="action/run" :original="true" height="20"/>
+            <li class="nav-item">
+                <a v-if="research.starting" class="item-link research-link disabled">
+                    <svg-icon name="symbol/running" class="rotating" :original="true" height="20" />
+                    <div>Initiating...</div>
                 </a>
-                <a v-if="runningResearch" v-tooltip.bottom="'Stop Discovery'" @click="stopResearchNow" class="item-link">
-                    <svg-icon name="action/stop" :original="true" height="20"/>
+                <a v-else-if="research.stopping" @click="stopResearchNow" class="item-link research-link disabled">
+                    <svg-icon name="symbol/running" class="rotating" :original="true" height="20" />
+                    <div>Stopping...</div>
+                </a>
+                <a v-else-if="!research.running" @click="startResearchNow" class="item-link research-link" id="run_research">
+                    <svg-icon name="action/start" :original="true" height="20" />
+                    <div>Discover Now</div>
+                </a>
+                <a v-else-if="research.running" @click="stopResearchNow" class="item-link research-link" id="stop_research">
+                    <svg-icon name="action/stop" :original="true" height="20" />
+                    <div>Stop Discovery</div>
                 </a>
             </li>
             <li class="nav-item">
@@ -67,8 +74,11 @@
                 emptyStates(state) {
                 	return state.onboarding.emptyStates
                 },
-                lifecycle(state) {
+                phasesStatus(state) {
                     return state.dashboard.lifecycle.data.subPhases || []
+                },
+                researchStatus(state) {
+                    return state.dashboard.lifecycle.data.status || {}
                 },
 				emptyStates(state) {
 					return state.onboarding.emptyStates
@@ -92,12 +102,19 @@
 				set(value) {
 					this.updateEmptyState({ syslogSettings: value })
 				}
-			}
+			},
+            enableResearchStart() {
+                return (!this.research.running && !this.research.starting) || this.research.stopping
+            }
         },
         data() {
 			return {
                 isDown: false,
-                runningResearch: false,
+                research: {
+                    running: false,
+                    stopping: false,
+                    starting: false
+                },
                 activateTourTip: false
 			}
         },
@@ -118,12 +135,12 @@
 
 			}),
             startResearchNow() {
-                this.runningResearch = true
-                this.startResearch()
+                this.research.starting = true
+                this.startResearch().catch(() => this.research.starting = false )
             },
             stopResearchNow() {
-                this.runningResearch = false
-                this.stopResearch()
+                this.research.stopping = true
+                this.stopResearch().catch(() => this.research.stopping = false )
             },
             navigateSettings() {
 				if (this.mailSettingsTip || this.syslogSettingsTip) {
@@ -139,8 +156,10 @@
 			const updateLifecycle = () => {
 				this.fetchLifecycle().then(() => {
 					if (this._isDestroyed) return
-					this.runningResearch = this.lifecycle.reduce(
-						(sum, item) => sum + item.status, 0) !== this.lifecycle.length
+					this.research.running = this.phasesStatus.reduce(
+						(sum, item) => sum + item.status, 0) !== this.phasesStatus.length
+                    this.research.stopping = this.researchStatus.stopping
+                    this.research.starting = this.researchStatus.starting
                     this.timer = setTimeout(updateLifecycle, 3000)
 				})
             }
@@ -196,7 +215,7 @@
             list-style: none;
             margin-right: 12px;
             > .nav-item {
-                margin: 0 12px;
+                margin: auto 12px;
                 line-height: 60px;
                 position: relative;
                 .svg-stroke {
@@ -212,9 +231,6 @@
                     .svg-stroke {
                         stroke: $theme-black;
                     }
-                    .svg-bg {
-                        fill: $grey-1;
-                    }
                     &:hover {
                         .svg-stroke {
                             stroke: $theme-orange;
@@ -222,6 +238,29 @@
                         .svg-fill {
                             fill: $theme-orange;
                         }
+                    }
+                    &.research-link {
+                        background: $theme-black;
+                        color: $grey-1;
+                        border-radius: 16px;
+                        display: flex;
+                        align-items: center;
+                        padding: 0 12px;
+                        line-height: 32px;
+                        width: 136px;
+                        .svg-fill {
+                            fill: $grey-1;
+                            margin-right: 8px;
+                        }
+                        &:hover .svg-fill, .rotating .svg-fill {
+                            fill: $theme-orange;
+                        }
+                        .svg-stroke {
+                            stroke: $theme-orange;
+                        }
+                    }
+                    &.disabled {
+                        cursor: default;
                     }
                 }
             }
@@ -232,55 +271,6 @@
         .bar-toggle {
             width: 60px;
         }
-    }
-
-    .tooltip {
-        display: block !important;
-        z-index: 10000;
-    }
-
-    .tooltip .tooltip-inner {
-        background: $theme-black;
-        color: $theme-orange;
-        border-radius: 16px;
-        padding: 5px 10px 4px;
-    }
-
-    .tooltip .tooltip-arrow {
-        width: 0;
-        height: 0;
-        border-style: solid;
-        position: absolute;
-        margin: 5px;
-        border-color: $theme-black;
-    }
-
-    .tooltip[x-placement^="bottom"] {
-        margin-top: 5px;
-    }
-
-    .tooltip[x-placement^="bottom"] .tooltip-arrow {
-        border-width: 0 5px 5px 5px;
-        border-left-color: transparent !important;
-        border-right-color: transparent !important;
-        border-top-color: transparent !important;
-        top: -5px;
-        left: calc(50% - 5px);
-        margin-top: 0;
-        margin-bottom: 0;
-    }
-
-
-    .tooltip[aria-hidden='true'] {
-        visibility: hidden;
-        opacity: 0;
-        transition: opacity .15s, visibility .15s;
-    }
-
-    .tooltip[aria-hidden='false'] {
-        visibility: visible;
-        opacity: 1;
-        transition: opacity .15s;
     }
 
 </style>

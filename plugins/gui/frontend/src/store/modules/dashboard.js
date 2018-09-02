@@ -38,7 +38,8 @@ export const dashboard = {
 			if (payload.data && payload.data.sub_phases) {
 				state.lifecycle.data = {
 					subPhases: payload.data.sub_phases,
-					nextRunTime: payload.data.next_run_time
+					nextRunTime: payload.data.next_run_time,
+					status: payload.data.status
 				}
 			}
 		},

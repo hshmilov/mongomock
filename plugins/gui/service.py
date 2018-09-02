@@ -179,6 +179,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         self.metadata = self.load_metadata()
         self._activate('execute')
+        self._research_status = {
+            'starting': False, 'stopping': False
+        }
 
     def load_metadata(self):
         try:
@@ -1913,6 +1916,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         state = state_response.json()
         is_research = state[StateLevels.Phase.name] == Phases.Research.name
+        if not is_research:
+            self._research_status['stopping'] = False
+        else:
+            self._research_status['starting'] = False
 
         # Map each sub-phase to a dict containing its name and status, which is determined by:
         # - Sub-phase prior to current sub-phase - 1
@@ -1933,7 +1940,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if run_time_response.status_code != 200:
             return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
 
-        return jsonify({'sub_phases': sub_phases, 'next_run_time': run_time_response.text})
+        return jsonify({
+            'sub_phases': sub_phases, 'next_run_time': run_time_response.text, 'status': self._research_status
+        })
 
     @gui_helpers.add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
     def system_lifecycle_rate(self):
@@ -2046,8 +2055,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         data = self.get_request_data_as_object()
         logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
+        self._research_status['starting'] = True
         response = self.request_remote_plugin(
-            'trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
+            'trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
         if response.status_code != 200:
             logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
@@ -2062,6 +2072,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Stops currently running research phase.
         """
         logger.info("stopping research phase")
+        self._research_status['stopping'] = True
         response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
         if response.status_code != 204:

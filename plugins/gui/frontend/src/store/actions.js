@@ -209,7 +209,7 @@ export const fetchDataFields = ({state, dispatch}, payload) => {
 
 export const START_RESEARCH_PHASE = 'START_RESEARCH_PHASE'
 export const startResearch = ({dispatch}) => {
-    dispatch(REQUEST_API, {
+    return dispatch(REQUEST_API, {
         rule: `research_phase`,
         method: 'POST'
     })
@@ -303,8 +303,8 @@ export const runAction = ({dispatch}, payload) => {
 }
 
 export const STOP_RESEARCH_PHASE = 'STOP_RESEARCH_PHASE'
-export const stopResearch= ({dispatch}) => {
-    dispatch(REQUEST_API, {
+export const stopResearch = ({dispatch}) => {
+    return dispatch(REQUEST_API, {
         rule: `stop_research_phase`,
         method: 'POST'
     })}
