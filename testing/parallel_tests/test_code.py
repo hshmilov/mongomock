@@ -68,12 +68,16 @@ def _get_file_content(file_name):
         return file_handler.read()
 
 
+def _is_file_empty(path):
+    return os.stat(path).st_size == 0
+
+
 def _get_all_pylint_files():
     return [
         file_name
         for file_name
         in _get_all_files()
-        if not file_name.startswith('/usr/lib') and 'splunklib' not in file_name
+        if not file_name.startswith('/usr/lib') and 'splunklib' not in file_name and not _is_file_empty(file_name)
     ]
 
 
