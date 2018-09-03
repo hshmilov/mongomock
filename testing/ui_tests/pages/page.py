@@ -172,7 +172,7 @@ class Page:
         try:
             self.scroll_into_view_no_retry(element, window)
         except StaleElementReferenceException:
-            logger.info(f'Failed to scroll down into element {element}. retrying...')
+            logger.info(f'Failed to scroll down into element {element}')
             raise
 
     def scroll_into_view_no_retry(self, element, window=None):
@@ -277,7 +277,15 @@ class Page:
                 return element.find_element_by_xpath(f'//*[contains(text(), \'{text}\')]')
             return element.find_element_by_xpath(f'//*[contains(text(), "{text}")]')
         except ElementNotVisibleException:
-            logger.info(f'Failed to find element with text {text}. retrying...')
+            logger.info(f'Failed to find element with text {text}')
+
+    def find_elements_by_xpath(self, xpath, element=None):
+        if not element:
+            element = self.driver
+        try:
+            return element.find_elements(by=By.XPATH, value=xpath)
+        except ElementNotVisibleException:
+            logger.info(f'Failed to find element by xpath {xpath}')
 
     # this is currently a bit duplicated, will fix later
     def wait_for_element_present_by_text(self,
@@ -319,8 +327,11 @@ class Page:
                       dropdown_css_selector,
                       text_box_css_selector,
                       selected_option_css_selector,
-                      choice):
-        self.driver.find_element_by_css_selector(dropdown_css_selector).click()
+                      choice,
+                      parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_element_by_css_selector(dropdown_css_selector).click()
         text_box = self.driver.find_element_by_css_selector(text_box_css_selector)
         self.send_keys(text_box, choice)
         self.driver.find_element_by_css_selector(selected_option_css_selector).click()

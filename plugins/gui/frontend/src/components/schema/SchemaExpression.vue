@@ -1,7 +1,7 @@
 <template>
     <div class="expression">
         <!-- Choice of logical operator, available from second expression --->
-        <x-select v-if="!first" :options="logicOps" placeholder="op..." v-model="expression.logicOp"/>
+        <x-select v-if="!first" :options="logicOps" placeholder="op..." v-model="expression.logicOp" class="x-select-logic"/>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
         <label class="x-btn light checkbox-label" :class="{'active': expression.leftBracket}">

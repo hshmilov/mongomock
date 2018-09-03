@@ -27,8 +27,20 @@ class ChartFuncs(Enum):
     average = auto()
     count = auto()
 
-# Exec report consts
 
+class ResearchStatus(Enum):
+    """
+    Possible status for research usability - could take time to start / stop so we want to keep the user posted
+    """
+    starting = auto()
+    running = auto()
+    stopping = auto()
+    done = auto()
+
+
+######################
+# Exec report consts #
+######################
 
 EXEC_REPORT_THREAD_ID = 'exec_report_thread'
 

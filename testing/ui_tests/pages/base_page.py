@@ -15,5 +15,5 @@ class BasePage(Page):
 
     def run_discovery(self):
         self.driver.find_element_by_id(self.DISCOVERY_RUN_ID).click()
-        self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=600, interval=1)
-        self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=600, interval=1)
+        self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=600)
+        self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=600)

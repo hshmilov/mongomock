@@ -11,19 +11,22 @@
         </div>
         <ul class="bar-nav">
             <li class="nav-item">
-                <a v-if="research.starting" class="item-link research-link disabled">
+                <a v-if="researchStatusLocal === 'starting'" class="item-link research-link disabled">
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20" />
                     <div>Initiating...</div>
                 </a>
-                <a v-else-if="research.stopping" @click="stopResearchNow" class="item-link research-link disabled">
+                <a v-else-if="researchStatusLocal === 'stopping'" @click="stopResearchNow"
+                   class="item-link research-link disabled">
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20" />
                     <div>Stopping...</div>
                 </a>
-                <a v-else-if="!research.running" @click="startResearchNow" class="item-link research-link" id="run_research">
+                <a v-else-if="researchStatusLocal !== 'running'" @click="startResearchNow"
+                   class="item-link research-link" id="run_research">
                     <svg-icon name="action/start" :original="true" height="20" />
                     <div>Discover Now</div>
                 </a>
-                <a v-else-if="research.running" @click="stopResearchNow" class="item-link research-link" id="stop_research">
+                <a v-else-if="researchStatusLocal === 'running'" @click="stopResearchNow"
+                   class="item-link research-link" id="stop_research">
                     <svg-icon name="action/stop" :original="true" height="20" />
                     <div>Stop Discovery</div>
                 </a>
@@ -74,15 +77,9 @@
                 emptyStates(state) {
                 	return state.onboarding.emptyStates
                 },
-                phasesStatus(state) {
-                    return state.dashboard.lifecycle.data.subPhases || []
-                },
                 researchStatus(state) {
-                    return state.dashboard.lifecycle.data.status || {}
+                    return state.dashboard.lifecycle.data.status
                 },
-				emptyStates(state) {
-					return state.onboarding.emptyStates
-				},
 				tourActive(state) {
                 	return state.onboarding.tourStates.active
 				}
@@ -102,20 +99,13 @@
 				set(value) {
 					this.updateEmptyState({ syslogSettings: value })
 				}
-			},
-            enableResearchStart() {
-                return (!this.research.running && !this.research.starting) || this.research.stopping
-            }
+			}
         },
         data() {
 			return {
                 isDown: false,
-                research: {
-                    running: false,
-                    stopping: false,
-                    starting: false
-                },
-                activateTourTip: false
+                activateTourTip: false,
+                researchStatusLocal: ''
 			}
         },
         watch: {
@@ -135,12 +125,12 @@
 
 			}),
             startResearchNow() {
-                this.research.starting = true
-                this.startResearch().catch(() => this.research.starting = false )
+                this.researchStatusLocal = 'starting'
+                this.startResearch().catch(() => this.researchStatusLocal = '' )
             },
             stopResearchNow() {
-                this.research.stopping = true
-                this.stopResearch().catch(() => this.research.stopping = false )
+                this.researchStatusLocal = 'stopping'
+                this.stopResearch().catch(() => this.researchStatusLocal = 'running' )
             },
             navigateSettings() {
 				if (this.mailSettingsTip || this.syslogSettingsTip) {
@@ -156,10 +146,7 @@
 			const updateLifecycle = () => {
 				this.fetchLifecycle().then(() => {
 					if (this._isDestroyed) return
-					this.research.running = this.phasesStatus.reduce(
-						(sum, item) => sum + item.status, 0) !== this.phasesStatus.length
-                    this.research.stopping = this.researchStatus.stopping
-                    this.research.starting = this.researchStatus.starting
+                    this.researchStatusLocal = this.researchStatus
                     this.timer = setTimeout(updateLifecycle, 3000)
 				})
             }

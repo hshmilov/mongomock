@@ -25,8 +25,8 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUG
     METADATA_PATH, SYSTEM_SETTINGS, MAINTENANCE_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, \
     CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
-from gui.consts import ChartMetrics, ChartViews, ChartFuncs, \
-    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT, \
+from gui.consts import ChartMetrics, ChartViews, ChartFuncs, ResearchStatus, \
+    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT,\
     SUPPORT_ACCESS_THREAD_ID
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -197,9 +197,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         self.metadata = self.load_metadata()
         self._activate('execute')
-        self._research_status = {
-            'starting': False, 'stopping': False
-        }
+        self._research_status = ResearchStatus.done
 
     def load_metadata(self):
         try:
@@ -1949,10 +1947,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         state = state_response.json()
         is_research = state[StateLevels.Phase.name] == Phases.Research.name
-        if not is_research:
-            self._research_status['stopping'] = False
-        else:
-            self._research_status['starting'] = False
+        if self._research_status != ResearchStatus.stopping and is_research:
+            self._research_status = ResearchStatus.running
+        elif self._research_status != ResearchStatus.starting and not is_research:
+            self._research_status = ResearchStatus.done
 
         # Map each sub-phase to a dict containing its name and status, which is determined by:
         # - Sub-phase prior to current sub-phase - 1
@@ -1974,7 +1972,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
 
         return jsonify({
-            'sub_phases': sub_phases, 'next_run_time': run_time_response.text, 'status': self._research_status
+            'sub_phases': sub_phases, 'next_run_time': run_time_response.text, 'status': self._research_status.name
         })
 
     @gui_helpers.add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
@@ -2088,7 +2086,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         data = self.get_request_data_as_object()
         logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
-        self._research_status['starting'] = True
+        self._research_status = ResearchStatus.starting
         response = self.request_remote_plugin(
             'trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
@@ -2104,8 +2102,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         Stops currently running research phase.
         """
-        logger.info("stopping research phase")
-        self._research_status['stopping'] = True
+        logger.info("Stopping research phase")
+        self._research_status = ResearchStatus.stopping
         response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
         if response.status_code != 204:
