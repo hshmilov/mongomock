@@ -14,7 +14,7 @@ class SettingsPage(Page):
     DEFAULT_SCHEDULE_RATE = '12'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
-    SEND_EMAILS_CHECKBOX_XPATH = '//div[child::label[text()=\'Send emails\']]/div[@class=\'x-checkbox\']'
+    SEND_EMAILS_CHECKBOX_XPATH = '//div[child::label[text()=\'Send emails\']]/div[contains(@class, \'x-checkbox\')]'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
 

@@ -47,6 +47,7 @@ return (function(el, container){
 BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-btn'
 BUTTON_TYPE_A = 'a'
+TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
 RETRY_WAIT_FOR_ELEMENT = 150
@@ -303,12 +304,16 @@ class Page:
                 pass
         raise TimeoutException(f'Timeout while waiting for {text}')
 
+    @staticmethod
+    def is_toggle_selected(toggle):
+        return toggle.get_attribute('class') == TOGGLE_CHECKED_CLASS
+
     def click_toggle_button(self,
                             toggle,
                             make_yes=True,
                             ignore_exc=False,
                             scroll_to_toggle=True):
-        is_selected = toggle.is_selected()
+        is_selected = self.is_toggle_selected(toggle)
 
         if (make_yes and not is_selected) or (not make_yes and is_selected):
             try:
@@ -320,7 +325,7 @@ class Page:
                 if not ignore_exc:
                     raise
 
-        assert toggle.is_selected() == make_yes
+        assert self.is_toggle_selected(toggle) == make_yes
         return False
 
     def select_option(self,
