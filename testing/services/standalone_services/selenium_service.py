@@ -1,6 +1,9 @@
 import subprocess
+import shlex
+import time
 
 from services.docker_service import DockerService
+from services.ports import DOCKER_PORTS
 
 
 class SeleniumService(DockerService):
@@ -27,6 +30,9 @@ class SeleniumService(DockerService):
                       show_print=show_print,
                       expose_port=expose_port,
                       extra_flags=extra_flags)
+        cmd = 'docker exec grid wait_all_done 30s'
+        subprocess.Popen(shlex.split(cmd)).communicate()
+        time.sleep(15)  # bug in selenium time causes tests to fail on servers the first time after docker cleanup
 
     def get_dockerfile(self, mode=''):
         return ''
@@ -48,7 +54,7 @@ class SeleniumService(DockerService):
 
     @property
     def exposed_ports(self):
-        return [(4444, 24444), (5900, 25900)]
+        return [(DOCKER_PORTS['selenium-hub'], 24444), (DOCKER_PORTS['selenium-vnc'], 25900)]
 
     @property
     def image(self):

@@ -88,6 +88,7 @@ def test_pm_online_smb():
     _test_pm_online("smb")
 
 
+@pytest.mark.skip("AX-2014")
 def test_pm_online_rpc_and_fallback_smb():
     _test_pm_online("rpc_and_fallback_smb")
 

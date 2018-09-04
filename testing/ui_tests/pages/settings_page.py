@@ -72,6 +72,10 @@ class SettingsPage(Page):
     def find_send_emails_toggle(self):
         return self.driver.find_element_by_xpath(self.SEND_EMAILS_CHECKBOX_XPATH)
 
+    def set_send_emails_toggle(self):
+        toggle = self.find_send_emails_toggle()
+        self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
+
     def fill_email_port(self, port):
         self.fill_text_field_by_element_id(self.EMAIL_PORT_ID, port)
 
@@ -80,3 +84,9 @@ class SettingsPage(Page):
 
     def find_email_port_error(self):
         return self.find_element_by_text('\'Port\' has an illegal value')
+
+    def get_email_port(self):
+        return self.driver.find_element_by_id(self.EMAIL_PORT_ID).get_attribute('value')
+
+    def get_email_host(self):
+        return self.driver.find_element_by_id(self.EMAIL_HOST_ID).get_attribute('value')
