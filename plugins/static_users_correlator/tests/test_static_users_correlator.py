@@ -39,7 +39,7 @@ def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associa
     }
 
 
-def get_raw_device(mail=None, tag_data=None):
+def get_raw_device(mail=None, tag_data=None, principle_name=None):
     generated_unique_name = str(uuid.uuid1())
     generate_name = str(uuid.uuid1())
     generated_id = str(uuid.uuid1())
@@ -52,6 +52,7 @@ def get_raw_device(mail=None, tag_data=None):
                 'data': {
                     'id': generated_id,
                     'mail': mail,
+                    'ad_user_principal_name': principle_name
                 }
             }
         ],
@@ -112,6 +113,17 @@ def test_rule_mail_correlation():
     """
     device1 = get_raw_device(mail='test@test.com')
     device2 = get_raw_device(mail='test@test.com')
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same mail', 1)
+
+
+def test_rule_principle_name_instead_of_mail():
+    """
+    Test a very simple correlation that should happen
+    because mail
+    :return:
+    """
+    device1 = get_raw_device(mail='test@test.com')
+    device2 = get_raw_device(principle_name='test@test.com')
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same mail', 1)
 
 

@@ -19,10 +19,17 @@ def has_email(adapters):
     return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('mail'))  # not none
 
 
+def has_principle_name(adapters):
+    return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('ad_user_principal_name'))  # not none
+
+
 def normalize_mail(adapter_data):
     mail = adapter_data.get('mail')
     if not mail:
-        return None
+        # Check if we have Active Directory principle name instead
+        mail = adapter_data.get('ad_user_principal_name')
+        if not mail:
+            return None
     # Checking mail format validity
     if not re.match(r'[^@]+@[^@]+\.[^@]+', mail):
         logger.warning(f'Unrecognized email format found: {mail}')
@@ -57,7 +64,7 @@ def normalize_adapter_users(users):
 class StaticUserCorrelatorEngine(CorrelatorEngineBase):
     @property
     def _correlation_preconditions(self):
-        return [has_email]
+        return [has_email, has_principle_name]
 
     def _correlate_mail(self, entities):
         logger.info('Starting to correlate on mail')
