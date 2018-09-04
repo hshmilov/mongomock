@@ -7,7 +7,7 @@
 
     export default {
         name: 'x-date-edit',
-        components: {'date-picker': DatePicker},
+        components: { 'date-picker': DatePicker },
         props: {
             value: {
                 required: false

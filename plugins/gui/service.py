@@ -2083,17 +2083,19 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
-
-        data = self.get_request_data_as_object()
-        logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
-        self._research_status = ResearchStatus.starting
-        response = self.request_remote_plugin(
-            'trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
+        scheduled_time = request.get_json(silent=True) or {}
+        logger.info(f'Scheduling Research Phase to: {scheduled_time.get("timestamp", "Now!")}')
+        if scheduled_time.get('timestamp'):
+            response = self.request_remote_plugin(
+                'trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=scheduled_time)
+        else:
+            self._research_status = ResearchStatus.starting
+            response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
         if response.status_code != 200:
-            logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
-            return return_error(f"Could not schedule research phase to: {data if data else 'Now'}",
-                                response.status_code)
+            message = f'Could not schedule research phase to: {scheduled_time.get("timestamp", "Now!")}'
+            logger.error(message)
+            return return_error(message, response.status_code)
 
         return ''
 

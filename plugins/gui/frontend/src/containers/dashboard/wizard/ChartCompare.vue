@@ -4,7 +4,7 @@
         <template v-for="view, index in config.views">
             <x-select-symbol :options="entities" v-model="view.entity" type="icon" placeholder="module..."/>
             <x-select :options="views[view.entity] || []" :searchable="true" v-model="view.name" placeholder="query..." />
-            <div @click="removeView(index)" class="link" v-if="index > 1">x</div><div v-else></div>
+            <div @click="removeView(index)" class="x-btn link" v-if="index > 1">x</div><div v-else></div>
         </template>
         <a @click="addView" class="x-btn light grid-span3" :class="{disabled: hasMaxViews}" :title="addBtnTitle">+</a>
     </div>
@@ -21,12 +21,6 @@
         components: { xSelect, xSelectSymbol },
 		mixins: [ ChartMixin ],
         props: { value: {}, views: { required: true }, entities: { required: true } },
-        computed: {
-			hasMaxViews() {
-				if (!this.max) return false
-				return this.config.views.length === this.max
-			}
-        },
         data() {
 			return {
 				config: { views: [ { ...dashboardView }, { ...dashboardView } ] },
@@ -49,4 +43,5 @@
 </script>
 
 <style lang="scss">
+
 </style>

@@ -12,7 +12,7 @@
                                  :data="item" @click-one="runCoverageFilter(item.properties, $event)"/>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
-                    <div class="timeline">Showing for
+                    <div class="card-history">Showing for
                         <x-date-edit @input="confirmPickDate(chart.uuid, chart.name)"
                                      placeholder="latest" v-model="chartsCurrentlyShowing[chart.uuid]" :show-time="false"
                                      :limit="[{ type: 'fromto', from: cardHistoricalMin, to: new Date()}]"/>
@@ -131,6 +131,7 @@
                 }
                 return true
             }
+
         },
         data() {
             return {
@@ -285,7 +286,7 @@
         width: 100%;
         .x-card {
             min-height: 300px;
-            .timeline {
+            .card-history {
                 font-size: 12px;
                 color: $grey-4;
                 text-align: right;

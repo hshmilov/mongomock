@@ -5,7 +5,11 @@ export default {
 	computed: {
 		addBtnTitle() {
 			return this.hasMaxViews? `Limited to ${this.max} queries` : ''
-		}
+		},
+        hasMaxViews() {
+            if (!this.max || !this.config.views) return false
+            return this.config.views.length === this.max
+        }
 	},
 	watch: {
 		config: {

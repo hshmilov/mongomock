@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development webpack-dev-server --hot --host 0.0.0.0",
     "build": "cross-env NODE_ENV=production webpack --hide-modules",
-    "dev-build": "cross-env NODE_ENV=test webpack"
+    "dev-build": "cross-env NODE_ENV=test webpack",
+    "svg": "vsvg -s src/assets/icons -t src/components/icons/"
   },
   "dependencies": {
     "@okta/okta-auth-js": "^1.17.0",

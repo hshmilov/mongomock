@@ -39,6 +39,7 @@
     import compare from './ChartCompare.vue'
     import segment from './ChartSegment.vue'
     import abstract from './ChartAbstract.vue'
+    import timeline from './ChartTimeline.vue'
     import { entities } from '../../../constants/entities'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
@@ -52,7 +53,7 @@
 	}
 	export default {
 		name: 'dashboard-wizard-container',
-        components: { FeedbackModal, xSelect, intersect, compare, segment, abstract },
+        components: { FeedbackModal, xSelect, intersect, compare, segment, abstract, timeline },
         props: {},
         computed: {
 			...mapState({
@@ -74,7 +75,8 @@
 					{ name: 'intersect', title: 'Query Intersection' },
                     { name: 'compare', title: 'Query Comparison' },
 					{ name: 'segment', title: 'Field Segmentation'},
-                    { name: 'abstract', title: 'Field Summary' }
+                    { name: 'abstract', title: 'Field Summary' },
+                    { name: 'timeline', title: 'Query Timeline' }
                 ]
             },
 			entityOptions() {
@@ -94,6 +96,9 @@
 				}
 				if (this.dashboard.metric === 'intersect') {
 					return ['pie']
+                }
+                if (this.dashboard.metric === 'timeline') {
+				    return ['line']
                 }
                 return ['summary']
             },
@@ -169,7 +174,7 @@
 <style lang="scss">
     .dashboard-wizard {
         display: grid;
-        grid-template-columns: 160px 500px;
+        grid-template-columns: 160px auto;
         grid-gap: 16px 8px;
         .dashboard-view {
             display: flex;
@@ -199,7 +204,7 @@
         }
         .x-chart-metric {
             display: grid;
-            grid-template-columns: 160px 480px 20px;
+            grid-template-columns: 160px auto 20px;
             grid-gap: 16px 8px;
         }
         .x-select {
