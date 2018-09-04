@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, List
 
+import func_timeout
 import pymongo
 import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -33,7 +34,7 @@ from pymongo import MongoClient
 from retrying import retry
 
 import axonius.entities
-from axonius import plugin_exceptions
+from axonius import plugin_exceptions, adapter_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.service_now.connection import ServiceNowConnection
@@ -968,7 +969,18 @@ class PluginBase(Configurable, Feature):
         # TODO: and make it not do anything.
         return "Pre-Correlation"
 
-    def _save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType, should_log_info=True) -> int:
+    def _save_data_from_plugin(self, client_name, *args, **kwargs) -> int:
+        """
+        Timeout supporting facade for __do_save_data_from_plugin
+        Everything is the same as there
+        """
+        try:
+            return self.__do_save_data_from_plugin(client_name, *args, **kwargs)
+        except func_timeout.exceptions.FunctionTimedOut:
+            logger.exception(f"Timeout for {client_name} on {self.plugin_unique_name}")
+            raise adapter_exceptions.AdapterException(f"Fetching has timed out")
+
+    def __do_save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType, should_log_info=True) -> int:
         """
         Saves all given data from adapter (devices, users) into the DB for the given client name
         :return: Device count saved
@@ -1134,7 +1146,6 @@ class PluginBase(Configurable, Feature):
             # go full slow path
             self.__first_time_inserter = None
 
-        logger.info(f"Finished inserting {entity_type} of client {client_name}")
         if should_log_info is True:
             logger.info(f"Finished inserting {entity_type} of client {client_name}")
 

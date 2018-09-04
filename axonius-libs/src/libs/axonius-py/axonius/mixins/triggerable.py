@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from threading import RLock
 
+from axonius.thread_stopper import stoppable, StopThreadException
+
 from axonius.mixins.feature import Feature
 from axonius.plugin_base import add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -88,6 +90,14 @@ class Triggerable(Feature, ABC):
         :return: ignored
         """
         pass
+
+    @stoppable
+    def _triggered_facade(self, *args, **kwargs):
+        try:
+            return self._triggered(*args, **kwargs)
+        except StopThreadException:
+            # promises can't accept a StopThreadException
+            raise Exception("Stopped")
 
     @add_rule('trigger_state/<job_name>')
     def get_trigger_activatable_state(self, job_name: str):
@@ -192,7 +202,7 @@ class Triggerable(Feature, ABC):
 
     def _trigger(self, job_name, blocking=True, priority=False):
         if priority:
-            self._triggered(job_name, request.get_json(silent=True))
+            self._triggered_facade(job_name, request.get_json(silent=True))
             return ''
 
         with self.__trigger_lock:
@@ -245,7 +255,7 @@ class Triggerable(Feature, ABC):
                 job_state['scheduled'] = False
                 return err
 
-        to_run = functools.partial(self._triggered, job_name, request.get_json(silent=True))
+        to_run = functools.partial(self._triggered_facade, job_name, request.get_json(silent=True))
         if job_state['triggered']:
             job_state['scheduled'] = True
             job_state['promise'] = job_state['promise'].then(to_run)

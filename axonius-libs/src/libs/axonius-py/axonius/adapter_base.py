@@ -11,6 +11,7 @@ from enum import Enum, auto
 from threading import Event, RLock, Thread
 from typing import Any, Dict, Iterable, List, Tuple
 
+import func_timeout
 from bson import ObjectId
 from flask import jsonify, request
 
@@ -24,10 +25,11 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.thread_stopper import stoppable
+from axonius.thread_stopper import stoppable, StopThreadException, call_with_stoppable
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
 from axonius.utils.parsing import get_exception_string
+from axonius.utils.threading import timeout_iterator
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -77,12 +79,15 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     DEFAULT_USER_LAST_SEEN = None
     DEFAULT_USER_LAST_FETCHED = None
     DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH = None
+    DEFAULT_CONNECT_CLIENT_TIMEOUT = 300
+    DEFAULT_FETCHING_TIMEOUT = 5400
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._clients_lock = RLock()
         self._clients = {}
+        self._clients_collection = self._get_collection('clients')
 
         self._send_reset_to_ec()
 
@@ -115,6 +120,12 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
         self.__next_fetch_timedelta = timedelta(hours=config['minimum_time_until_next_fetch']) if \
             config['minimum_time_until_next_fetch'] else None
+
+        connect_client_timeout = config.get('connect_client_timeout')
+        self.__connect_client_timeout = timedelta(seconds=connect_client_timeout) if connect_client_timeout else None
+
+        fetching_timeout = config.get('fetching_timeout')
+        self.__fetching_timeout = timedelta(seconds=fetching_timeout) if fetching_timeout else None
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -476,6 +487,9 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             logger.exception(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             raise adapter_exceptions.AdapterException(
                 f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+        except func_timeout.exceptions.FunctionTimedOut:
+            logger.exception(f"Timeout for {client_name} on {self.plugin_unique_name}")
+            raise adapter_exceptions.AdapterException(f"Fetching has timed out")
         except Exception as e:
             logger.exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
             raise Exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
@@ -501,7 +515,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 if not client_config:
                     return return_error("Invalid client")
                 add_client_result = self._add_client(client_config)
-                if len(add_client_result) == 0:
+                if not add_client_result:
                     return return_error("Could not save client with given config", 400)
                 self.__last_fetch_time = None
                 return jsonify(add_client_result), 200
@@ -520,7 +534,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :return:
         """
         with self._clients_lock:
-            client = self._get_collection('clients').find_one_and_delete({'_id': ObjectId(client_unique_id)})
+            client = self._clients_collection.find_one_and_delete({'_id': ObjectId(client_unique_id)})
             if client is None:
                 return '', 204
             client_id = ''
@@ -537,12 +551,12 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     def _write_client_to_db(self, client_id, client_config, status, error_msg):
         if client_id is not None:
             logger.info(f"Setting {client_id} status to {status}")
-            return self._get_collection('clients').replace_one({'client_id': client_id},
-                                                               {'client_id': client_id,
-                                                                'client_config': client_config,
-                                                                'status': status,
-                                                                'error': error_msg},
-                                                               upsert=True)
+            return self._clients_collection.replace_one({'client_id': client_id},
+                                                        {'client_id': client_id,
+                                                         'client_config': client_config,
+                                                         'status': status,
+                                                         'error': error_msg},
+                                                        upsert=True)
         else:
             return None
 
@@ -565,7 +579,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             client_id = self._get_client_id(client_config)
             self._write_client_to_db(client_id, client_config, status, error_msg)  # Writing initial client to db
             status = "error"  # Default is error
-            self._clients[client_id] = self._connect_client(client_config)
+            self._clients[client_id] = self.__connect_client_facade(client_config)
             # Got here only if connection succeeded
             status = "success"
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
@@ -579,19 +593,19 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         if result is None and object_id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
-            result = self._get_collection('clients').update_one(
+            result = self._clients_collection.update_one(
                 {'_id': ObjectId(object_id)}, {'$set': {'status': status}})
         elif result is None:
             # No way of updating other than logs and no return value
             logger.error("Not updating client since no DB id and no client id exist")
-            return {}
+            return None
 
         # Verifying update succeeded and returning the matched id and final status
         if result.modified_count:
-            object_id = self._get_collection('clients').find_one({'client_id': client_id}, projection={'_id': 1})['_id']
+            object_id = self._clients_collection.find_one({'client_id': client_id}, projection={'_id': 1})['_id']
             return {"id": str(object_id), "client_id": client_id, "status": status, "error": error_msg}
 
-        return {}
+        return None
 
     @add_rule('correlation_cmds', methods=['GET'])
     def correlation_cmds(self):
@@ -752,6 +766,40 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         """
         pass
 
+    def __connect_client_facade(self, client_config):
+        """
+        This calls _connect_client in safe, timeout based way.
+        Parameters and return type are the same as _connect_client
+        """
+        timeout = self.__connect_client_timeout
+        timeout = timeout.total_seconds() if timeout else None
+
+        @stoppable
+        def call_connect_as_stoppable(*args, **kwargs):
+            try:
+                return self._connect_client(*args, **kwargs)
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                logger.error(f"Timeout for {client_name} on {self.plugin_unique_name}")
+
+                self.create_notification(f"Timeout connection after {timeout} seconds for '{client_name}'"
+                                         f" client on {self.plugin_unique_name}", repr(e))
+            except StopThreadException:
+                logger.info("Stopped fetching")
+            except BaseException:
+                logger.exception("Unexpected exception")
+
+        try:
+            return call_with_stoppable(func_timeout.func_timeout,
+                                       kwargs=dict(timeout=timeout,
+                                                   func=call_connect_as_stoppable,
+                                                   args=[client_config]))
+        except func_timeout.exceptions.FunctionTimedOut:
+            logger.info(f"Timeout on connection for {client_config} with {timeout} time")
+            raise adapter_exceptions.ClientConnectionException(f"Connecting has timed out ({timeout} seconds)")
+        except StopThreadException:
+            logger.info(f"Stopped connecting for {client_config}")
+            raise adapter_exceptions.ClientConnectionException(f"Connecting has been stopped")
+
     def _query_devices_by_client(self, client_name, client_data):
         """
         Returns all devices from a specific client.
@@ -893,35 +941,62 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             """
             with self._clients_lock:
                 if error_msg:
-                    result = clients_collection.update_one({'client_id': client_id},
-                                                           {'$set': {'status': status, 'error': error_msg}})
+                    result = self._clients_collection.update_one({'client_id': client_id},
+                                                                 {'$set': {'status': status, 'error': error_msg}})
                 else:
-                    result = clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
+                    result = self._clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
 
                 if not result or result.matched_count != 1:
                     raise adapter_exceptions.CredentialErrorException(
                         f"Could not update client {client_id} with status {status}")
 
-        clients_collection = self._get_collection('clients')
+        @stoppable
+        def _get_raw_and_parsed_data():
+            mapping = {
+                EntityType.Devices: (self._query_devices_by_client, self._parse_devices_raw_data_hook),
+                EntityType.Users: (self._query_users_by_client, self._parse_users_raw_data_hook)
+            }
+            raw, parse = mapping[entity_type]
+
+            @stoppable
+            def call_raw_as_stoppable(*args, **kwargs):
+                try:
+                    return raw(*args, **kwargs)
+                except func_timeout.exceptions.FunctionTimedOut as e:
+                    logger.error(f"Timeout for {client_name} on {self.plugin_unique_name}")
+
+                    self.create_notification(f"Timeout after {timeout} seconds for '{client_name}'"
+                                             f" client on {self.plugin_unique_name}"
+                                             f" while fetching {entity_type.value}", repr(e))
+                except StopThreadException:
+                    logger.info("Stopped fetching")
+                except BaseException:
+                    logger.exception("Unexpected exception")
+
+            timeout = self.__fetching_timeout
+            timeout = timeout.total_seconds() if timeout else None
+
+            _raw_data = call_with_stoppable(func_timeout.func_timeout,
+                                            kwargs=dict(timeout=timeout,
+                                                        func=call_raw_as_stoppable,
+                                                        args=(client_id, self._clients[client_id])))
+            logger.info("Got raw")
+            _parsed_data = timeout_iterator(parse(_raw_data), timeout=timeout)
+            logger.info("Got parsed")
+            return _raw_data, _parsed_data
+
         try:
-            if entity_type == EntityType.Devices:
-                raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
-                parsed_data = self._parse_devices_raw_data_hook(raw_data)
-            elif entity_type == EntityType.Users:
-                raw_data = self._query_users_by_client(client_id, self._clients[client_id])
-                parsed_data = self._parse_users_raw_data_hook(raw_data)
-            else:
-                raise ValueError(f"expected {entity_type} to be devices/users.")
+            raw_data, parsed_data = _get_raw_and_parsed_data()
         except Exception as e:
             with self._clients_lock:
-                current_client = clients_collection.find_one({'client_id': client_id})
+                current_client = self._clients_collection.find_one({'client_id': client_id})
                 if not current_client or not current_client.get("client_config"):
                     # No credentials to attempt reconnection
                     raise adapter_exceptions.CredentialErrorException(
                         "No credentials found for client {0}. Reason: {1}".format(client_id, str(e)))
             try:
                 with self._clients_lock:
-                    self._clients[client_id] = self._connect_client(current_client["client_config"])
+                    self._clients[client_id] = self.__connect_client_facade(current_client["client_config"])
             except Exception as e2:
                 # No connection to attempt querying
                 self.create_notification("Connection error to client {0}.".format(client_id), str(e2))
@@ -931,14 +1006,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 raise
             else:
                 try:
-                    if entity_type == EntityType.Devices:
-                        raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
-                        parsed_data = self._parse_devices_raw_data_hook(raw_data)
-                    elif entity_type == EntityType.Users:
-                        raw_data = self._query_users_by_client(client_id, self._clients[client_id])
-                        parsed_data = self._parse_users_raw_data_hook(raw_data)
-                    else:
-                        raise ValueError(f"expected {entity_type} to be devices/users.")
+                    raw_data, parsed_data = _get_raw_and_parsed_data()
                 except Exception as e3:
                     # No devices despite a working connection
                     logger.exception(f"Problem querying {entity_type} for client {client_id}")
@@ -947,6 +1015,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         _update_client_status("success", '')
         return [], parsed_data  # AD-HOC: Not returning any raw values
 
+    @stoppable
     def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[Any, Dict[str, Any]]]:
         """
         Synchronously returns all available data types (devices/users) from all clients.
@@ -969,6 +1038,11 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 logger.exception(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
                 raise
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                logger.error(f"Timeout on {client_name}")
+                self.create_notification(f"Timeout for '{client_name}' client on {self.plugin_unique_name}"
+                                         f" while fetching {entity_type.value}", repr(e))
+                raise adapter_exceptions.AdapterException(f"Fetching has timed out")
             except Exception as e:
                 logger.exception(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 raise
@@ -1024,7 +1098,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     def _get_clients_config(self):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
-        return self._get_collection('clients').find()
+        return self._clients_collection.find()
 
     def _update_clients_schema_in_db(self, schema):
         """
@@ -1116,6 +1190,16 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                     "name": "minimum_time_until_next_fetch",
                     "title": "Minimum time until next fetch entities",
                     "type": "number",
+                },
+                {
+                    "name": "connect_client_timeout",
+                    "title": "Amount of seconds to allow before connection failure",
+                    "type": "number",
+                },
+                {
+                    "name": "fetching_timeout",
+                    "title": "Timeout for fetching in seconds, on a per entity basis",
+                    "type": "number",
                 }
             ],
             "required": [
@@ -1131,5 +1215,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             "last_fetched_threshold_hours": cls.DEFAULT_LAST_FETCHED_THRESHOLD_HOURS,
             "user_last_seen_threshold_hours": cls.DEFAULT_USER_LAST_SEEN,
             "user_last_fetched_threshold_hours": cls.DEFAULT_USER_LAST_FETCHED,
-            "minimum_time_until_next_fetch": cls.DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH
+            "minimum_time_until_next_fetch": cls.DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH,
+            "connect_client_timeout": cls.DEFAULT_CONNECT_CLIENT_TIMEOUT,
+            "fetching_timeout": cls.DEFAULT_FETCHING_TIMEOUT
         }

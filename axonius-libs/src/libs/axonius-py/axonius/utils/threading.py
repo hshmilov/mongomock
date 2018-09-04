@@ -1,10 +1,16 @@
 import concurrent.futures
 import multiprocessing
+import queue
+import threading
+from datetime import datetime
 from threading import RLock
 import logging
 
+import func_timeout
+
+
 logger = logging.getLogger(f'axonius.{__name__}')
-from axonius.thread_stopper import StopThreadException
+from axonius.thread_stopper import StopThreadException, ThreadStopper, stoppable
 
 
 def run_in_executor_helper(executor, method_to_call, resolve, reject, *_, args=[], kwargs={}, **__):
@@ -24,7 +30,7 @@ def run_in_executor_helper(executor, method_to_call, resolve, reject, *_, args=[
             resolve(method_to_call(*args, **kwargs))
         except Exception as e:
             reject(e)
-        except StopThreadException as e:
+        except (StopThreadException, func_timeout.exceptions.FunctionTimedOut) as e:
             reject(e)
 
     executor.submit(resolver)
@@ -38,6 +44,49 @@ def run_and_forget(call_this):
     Run a method on a remote worker without caring about the result, if it ever comes
     """
     GLOBAL_RUN_AND_FORGET.submit(call_this)
+
+
+@stoppable
+def timeout_iterator(iterable, timeout):
+    """
+    Iterates over an iterator, and counting time between yields of the given iterator.
+    If the iterator stalls for too long since the last yield - this function raises StopThreadException.
+    This has been benchmarked to run at about 100k yields per second, which is a latency of 0.01ms per yield.
+    :param iterable: iterator to iterate
+    :param timeout: timeout, in seconds
+    :raises: func_timeout.exceptions.FunctionTimedOut
+    :return: Whatever the iterator is supposed to return, or exception
+    """
+    q = queue.Queue()
+    # this is a dummy object to represent the end of the iterator
+    finished_queue = object()
+
+    # iterate the iterator into a queue
+    @stoppable
+    def iterate_into_queue():
+        for x in iterable:
+            q.put(x)
+        q.put(finished_queue)
+
+    t = threading.Thread(target=iterate_into_queue, daemon=True)
+    t.start()
+
+    def checker():
+        started = datetime.now()
+        while True:
+            try:
+                item = q.get(block=True, timeout=timeout)
+                if item is finished_queue:
+                    return
+                yield item
+            except queue.Empty:
+                ThreadStopper.async_raise([t.ident])
+                raise func_timeout.exceptions.FunctionTimedOut(timedOutAfter=(datetime.now() - started).total_seconds(),
+                                                               timedOutFunction=iterate_into_queue,
+                                                               timedOutArgs=[],
+                                                               timedOutKwargs={})
+
+    return checker()
 
 
 class MultiLocker(object):

@@ -63,7 +63,7 @@ class QcoreAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
         # add one client ...
-        if self._get_collection('clients').count_documents({}) == 0:
+        if self._clients_collection.count_documents({}) == 0:
             self._add_client({'mediator': '1'})
 
         self.thread = Thread(target=run_mediator_server)

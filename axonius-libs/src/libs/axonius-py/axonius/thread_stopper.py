@@ -9,25 +9,28 @@ class StopThreadException(BaseException):
     pass
 
 
+def call_with_stoppable(func, args=(), kwargs={}):
+    if ThreadStopper.stopped.isSet():
+        return
+    with ThreadStopper.stoppable_threads_lock:
+        tid = threading.get_ident()
+        logger.debug(f'Adding {tid} to stoppable threads on function {func}')
+        ThreadStopper.stoppable_threads.append(tid)
+    try:
+        r = func(*args, **kwargs)
+    finally:
+        with ThreadStopper.stoppable_threads_lock:
+            ThreadStopper.stoppable_threads.remove(tid)
+        logger.debug(f'removing {tid}')
+    return r
+
 # see documentation at https://axonius.atlassian.net/wiki/x/CgCZJg
+
+
 def stoppable(f):
     @functools.wraps(f)
     def wrapped(*args, **kwargs):
-        if ThreadStopper.stopped.isSet():
-            return
-        with ThreadStopper.stoppable_threads_lock:
-            tid = threading.get_ident()
-            logger.debug(f'Adding {tid} to stoppable threads on function {f}')
-            ThreadStopper.stoppable_threads.append(tid)
-        try:
-            r = f(*args, **kwargs)
-        except StopThreadException:
-            r = None
-        finally:
-            with ThreadStopper.stoppable_threads_lock:
-                ThreadStopper.stoppable_threads.remove(tid)
-            logger.debug(f'removing {tid}')
-        return r
+        return call_with_stoppable(f, args=args, kwargs=kwargs)
     return wrapped
 
 
@@ -37,7 +40,7 @@ class ThreadStopper(object):
     stoppable_threads_lock = threading.Lock()
 
     @classmethod
-    def _async_raise(cls, tids):
+    def async_raise(cls, tids):
         """
         Raises a stop in the threads with id tid
         """
@@ -68,4 +71,4 @@ class ThreadStopper(object):
                 """
         logger.debug(f'stopping {cls.stoppable_threads}')
         tids = list(reversed(cls.stoppable_threads))  # stopping each thread only once
-        cls._async_raise(tids)
+        cls.async_raise(tids)

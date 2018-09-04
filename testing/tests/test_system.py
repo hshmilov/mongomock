@@ -1,4 +1,5 @@
 import random
+import time
 
 import pytest
 from retrying import retry
@@ -67,5 +68,6 @@ def test_stop_research(axonius_fixture, infinite_sleep_fixture):
     assert len(infinite_sleep_fixture.clients()) > 0
     scheduler.start_research()
     _wait_for_state(scheduler, False)
+    time.sleep(5)  # otherwise the adapter might not even start fetching
     scheduler.stop_research()
     _wait_for_state(scheduler, True)
