@@ -24,3 +24,11 @@ class TestBlackberryUemAdapter(AdapterTestBase):
     @pytest.mark.skip("doesn't work")
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip('doesn\'t work')
+    def test_removing_adapter_creds_with_users(self):
+        pass
+
+    @pytest.mark.skip('doesn\'t work')
+    def test_removing_adapter_creds_with_devices(self):
+        pass

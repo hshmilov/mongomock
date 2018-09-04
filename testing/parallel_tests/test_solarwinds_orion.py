@@ -1,8 +1,10 @@
-from services.adapters.solarwinds_orion_service import SolarwindsOrionService, solarwinds_orion_fixture
-from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_solarwinds_orion_credentials import *
-from solarwinds_orion_adapter.service import SolarwindsOrionAdapter
 import pytest
+
+from services.adapters.solarwinds_orion_service import (SolarwindsOrionService,
+                                                        solarwinds_orion_fixture)
+from solarwinds_orion_adapter.service import SolarwindsOrionAdapter
+from test_credentials.test_solarwinds_orion_credentials import *
+from test_helpers.adapter_test_base import AdapterTestBase
 
 
 class TestSolarwindsOrionAdapter(AdapterTestBase):
@@ -21,3 +23,7 @@ class TestSolarwindsOrionAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('AX-2009')
+    def test_fetch_devices(self):
+        pass

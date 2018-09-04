@@ -1,8 +1,9 @@
-from services.adapters.junos_service import JunosService, junos_fixture
-from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_junos_credentials import *
-from junos_adapter.client_id import get_client_id
 import pytest
+
+from junos_adapter.client_id import get_client_id
+from services.adapters.junos_service import JunosService, junos_fixture
+from test_credentials.test_junos_credentials import *
+from test_helpers.adapter_test_base import AdapterTestBase
 
 
 class TestJunosAdapter(AdapterTestBase):
@@ -21,3 +22,7 @@ class TestJunosAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('AX-2008')
+    def test_fetch_devices(self):
+        pass

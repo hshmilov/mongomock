@@ -16,7 +16,7 @@ class TestEsxAdapter(AdapterTestBase):
 
     @property
     def some_client_details(self):
-        return client_details[0]
+        return client_details
 
     @property
     def some_device_id(self):

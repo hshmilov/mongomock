@@ -2145,11 +2145,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         'count': self._entity_views_db_map[entity].count_documents(view_parsed)
                     })
             adapter_clients_report = {}
+            adapter_unique_name = ''
             try:
                 # Exception thrown if adapter is down or report missing, and section will appear with views only
                 adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
                 adapter_reports_db = self._get_db_connection()[adapter_unique_name]
-                adapter_clients_report = adapter_reports_db['report'].find_one({"name": "report"}).get('data', {})
+                found_report = adapter_reports_db['report'].find_one({"name": "report"}) or {}
+                adapter_clients_report = found_report.get('data', {})
             except Exception:
                 logger.exception(f"Error contacting the report db for adapter {adapter_unique_name}")
 
