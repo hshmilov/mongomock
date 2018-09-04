@@ -275,7 +275,6 @@ adapters/stresstest_scanner_adapter/service.py
 adapters/symantec_adapter/connection.py
 adapters/symantec_adapter/service.py
 adapters/symantec_altiris_adapter/service.py
-adapters/tenable_io_adapter/connection.py
 adapters/tenable_io_adapter/service.py
 adapters/tenable_security_center_adapter/connection.py
 adapters/tenable_security_center_adapter/service.py

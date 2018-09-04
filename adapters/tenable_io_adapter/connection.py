@@ -1,31 +1,33 @@
-from axonius.clients.rest.connection import RESTConnection
-from tenable_io_adapter import consts
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-from axonius.clients.rest.exception import RESTException
 import time
+
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import make_dict_from_csv
+from tenable_io_adapter import consts
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class TenableIoConnection(RESTConnection):
 
-    def __init__(self, *args, access_key: str = "",  secret_key: str = "", **kwargs):
+    def __init__(self, *args, access_key: str = '',  secret_key: str = '', **kwargs):
         super().__init__(*args, **kwargs)
         self._access_key = access_key
         self._secret_key = secret_key
         self._epoch_last_run_time = 0
         self._assets_list_dict = None
         self._vulns_list = None
-        if self._username is not None and self._username != "" and self._password is not None and self._password != "":
+        if self._username is not None and self._username != '' and self._password is not None and self._password != '':
             # We should use the user and password
             self._should_use_token = True
-        elif self._access_key is not None and self._access_key != "" and \
-                self._secret_key is not None and self._secret_key != "":
+        elif self._access_key is not None and self._access_key != '' and \
+                self._secret_key is not None and self._secret_key != '':
             # We should just use the given api keys
             self._should_use_token = False
             self._set_api_headers()
         else:
-            raise RESTException("Missing user/password or api keys")
+            raise RESTException('Missing user/password or api keys')
 
     def _set_token_headers(self, token):
         """ Sets the API token, in the appropriate header, for valid requests
@@ -36,8 +38,6 @@ class TenableIoConnection(RESTConnection):
         self._session_headers['X-Cookie'] = 'token={0}'.format(token)
 
     def _set_api_headers(self):
-        """ Setting headers to include the given api key
-        """
         self._permanent_headers['X-ApiKeys'] = f'accessKey={self._access_key}; secretKey={self._secret_key}'
 
     def _connect(self):
@@ -56,72 +56,72 @@ class TenableIoConnection(RESTConnection):
     def _get_export_data(self, export_type, action=None, epoch=None):
         if epoch is None:
             epoch = self._epoch_last_run_time
-        export_body_params = {"chunk_size": consts.DEVICES_PER_PAGE[export_type]}
+        export_body_params = {'chunk_size': consts.DEVICES_PER_PAGE[export_type]}
         if action is not None:
             export_body_params[action] = epoch
-        export_uuid = self._post(f"{export_type}/export",
-                                 body_params=export_body_params)["export_uuid"]
+        export_uuid = self._post(f'{export_type}/export',
+                                 body_params=export_body_params)['export_uuid']
         available_chunks = set()
-        response = self._get(f"{export_type}/export/{export_uuid}/status")
-        available_chunks.update(response.get("chunks_available", []))
+        response = self._get(f'{export_type}/export/{export_uuid}/status')
+        available_chunks.update(response.get('chunks_available', []))
         number_of_sleeps = 0
-        while response.get("status") != "FINISHED" and number_of_sleeps < consts.NUMBER_OF_SLEEPS:
+        while response.get('status') != 'FINISHED' and number_of_sleeps < consts.NUMBER_OF_SLEEPS:
             try:
-                response = self._get(f"{export_type}/export/{export_uuid}/status")
-                available_chunks.update(response.get("chunks_available"))
+                response = self._get(f'{export_type}/export/{export_uuid}/status')
+                available_chunks.update(response.get('chunks_available'))
             except Exception:
-                logger.exception(f"Problem with getting chunks for {export_uuid}")
+                logger.exception(f'Problem with getting chunks for {export_uuid}')
             time.sleep(consts.TIME_TO_SLEEP)
             number_of_sleeps += 1
         export_list = []
         for chunk_id in available_chunks:
             try:
-                export_list.extend(self._get(f"{export_type}/export/{export_uuid}/chunks/{chunk_id}"))
+                export_list.extend(self._get(f'{export_type}/export/{export_uuid}/chunks/{chunk_id}'))
             except Exception:
-                logger.exception(f"Problem in getting specific chunk {chunk_id} from {export_uuid} type {export_type}")
+                logger.exception(f'Problem in getting specific chunk {chunk_id} from {export_uuid} type {export_type}')
         return export_list
 
     def _get_assets(self):
         if self._epoch_last_run_time + consts.SECONDS_IN_DAY * consts.DAYS_UNTIL_FETCH_AGAIN > int(time.time()):
-            return self._assets_list_dict
+            return
         if self._assets_list_dict is None:
-            new_assets = self._get_export_data("assets")
+            new_assets = self._get_export_data('assets')
             updated_assets = []
             deleted_assets = []
             self._assets_list_dict = dict()
         else:
-            new_assets = self._get_export_data("assets", action="created_at")
-            updated_assets = self._get_export_data("assets", action="updated_at")
-            deleted_assets = self._get_export_data("assets", action="deleted_at")
+            new_assets = self._get_export_data('assets', action='created_at')
+            updated_assets = self._get_export_data('assets', action='updated_at')
+            deleted_assets = self._get_export_data('assets', action='deleted_at')
 
         # Creating dict out of assets_list
         for asset in new_assets:
             try:
-                asset_id = asset.get("id", "")
-                if asset_id is None or asset_id == "":
-                    logger.warning(f"Got asset with no id. Asset raw data: {asset}")
+                asset_id = asset.get('id', '')
+                if asset_id is None or asset_id == '':
+                    logger.warning(f'Got asset with no id. Asset raw data: {asset}')
                     continue
                 self._assets_list_dict[asset_id] = asset
-                self._assets_list_dict[asset_id]["vulns_info"] = []
+                self._assets_list_dict[asset_id]['vulns_info'] = []
             except Exception:
-                logger.exception(f"Problem with asset {asset}")
+                logger.exception(f'Problem with asset {asset}')
         for deleted_asset in deleted_assets:
             try:
-                del self._assets_list_dict[deleted_asset.get("id")]
+                del self._assets_list_dict[deleted_asset.get('id')]
             except Exception:
-                logger.exception(f"Problem deleting asset: {deleted_asset}")
+                logger.exception(f'Problem deleting asset: {deleted_asset}')
         for updated_asset in updated_assets:
             try:
-                updated_id = updated_asset.get("id")
-                if updated_id is not None and updated_id != "":
+                updated_id = updated_asset.get('id')
+                if updated_id is not None and updated_id != '':
                     self._assets_list_dict[updated_id] = updated_asset
             except Exception:
-                logger.exception(f"Problem updating asset {updated_asset}")
+                logger.exception(f'Problem updating asset {updated_asset}')
 
     def _get_vulns(self):
-        vulns_list = self._get_export_data("vulns", action="updated_at",
+        vulns_list = self._get_export_data('vulns', action='updated_at',
                                            epoch=int(time.time()) - (consts.SECONDS_IN_DAY * consts.DAYS_VULNS_FETCH))
-        vulns_list += self._get_export_data("vulns", action="created_at",
+        vulns_list += self._get_export_data('vulns', action='created_at',
                                             epoch=int(time.time()) - (consts.SECONDS_IN_DAY * consts.DAYS_VULNS_FETCH))
         return vulns_list
 
@@ -129,33 +129,36 @@ class TenableIoConnection(RESTConnection):
         try:
             self._get_assets()
         except Exception:
-            logger.exception("Couldn't get export trying to do benchmark")
+            logger.exception('Couldnt get export trying to do benchmark')
             return self._get_device_list_csv(), 'csv'
         try:
             vulns_list = self._get_vulns()
         except Exception:
             vulns_list = []
-            logger.exception("General error while getting vulnerabilities")
+            logger.exception('General error while getting vulnerabilities')
         for vuln_raw in vulns_list:
             try:
                 # Trying to find the correct asset for all vulnerability line in the array
-                asset_id_for_vuln = vuln_raw.get("asset", {}).get("uuid", "")
-                if asset_id_for_vuln is None or asset_id_for_vuln == "":
-                    logger.warning(f"No id for vuln {vuln_raw}")
+                asset_id_for_vuln = vuln_raw.get('asset', {}).get('uuid', '')
+                if asset_id_for_vuln is None or asset_id_for_vuln == '':
+                    logger.warning(f'No id for vuln {vuln_raw}')
                     continue
-                self._assets_list_dict[asset_id_for_vuln]["vulns_info"].append(vuln_raw)
+                self._assets_list_dict[asset_id_for_vuln]['vulns_info'].append(vuln_raw)
             except Exception:
-                logger.exception(f"Problem with vuln raw {vuln_raw}")
+                logger.exception(f'Problem with vuln raw {vuln_raw}')
         self._epoch_last_run_time = int(time.time())
-        return self._assets_list_dict.item(), 'export'
+        return self._assets_list_dict.items(), 'export'
 
     def _get_device_list_csv(self):
-        file_id = self._get("workbenches/export", url_params={'format': 'csv', 'report': 'vulnerabilities', 'chapter': 'vuln_by_asset',
-                                                              'date_range': consts.DAYS_FOR_VULNS_IN_CSV})["file"]
-        status = self._get(f"workbenches/export/{file_id}/status")["status"]
+        file_id = self._get('workbenches/export', url_params={'format': 'csv',
+                                                              'report': 'vulnerabilities',
+                                                              'chapter': 'vuln_by_asset',
+                                                              'date_range': consts.DAYS_FOR_VULNS_IN_CSV})['file']
+        status = self._get(f'workbenches/export/{file_id}/status')['status']
         sleep_times = 0
         while status != 'ready' and sleep_times < consts.NUMBER_OF_SLEEPS:
             time.sleep(consts.TIME_TO_SLEEP)
-            status = self._get(f"workbenches/export/{file_id}/status")["status"]
+            status = self._get(f'workbenches/export/{file_id}/status')['status']
             sleep_times += 1
-        return make_dict_from_csv(self._get(f"workbenches/export/{file_id}/download", use_json_in_response=False).decode('utf-8'))
+        return make_dict_from_csv(self._get(f'workbenches/export/{file_id}/download',
+                                            use_json_in_response=False).decode('utf-8'))
