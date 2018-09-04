@@ -26,7 +26,7 @@ class RESTConnection(ABC):
                  verify_ssl: bool = False,
                  http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = "/",
                  session_timeout: Tuple[int, int] = consts.DEFAULT_TIMEOUT,
-                 port: int = None, headers: dict = {}):
+                 port: int = None, headers: dict = {}, use_domain_path: bool = False):
         """
         An abstract class that implements backbone logic for accessing RESTful APIs in the manner
         needed by adapters to facilitate device acquiring logic
@@ -41,6 +41,7 @@ class RESTConnection(ABC):
         :param session_timeout: passed to `requests` as is
         :param port: port to be used with the API
         :param headers: passed to `requests1 as is
+        :param use_domain_path: If this is true we take the path from the url and not from url_base_prefix
         """
         self._domain = domain
         self._username = username
@@ -65,8 +66,14 @@ class RESTConnection(ABC):
         url_parsed = parse_url(domain)
         url_scheme = url_parsed.scheme or "https"
         url_port = url_parsed.port or self._port
+        # We assumes that path starts with / and ends with /
+        # Later in the code we will concat url to, and we will check that they don't start with /
+        if use_domain_path:
+            path = url_parsed.path + '/'
+        else:
+            path = self._url_base_prefix
         self._url = uritools.compose.uricompose(
-            scheme=url_scheme, authority=url_parsed.host, port=url_port, path=self._url_base_prefix)
+            scheme=url_scheme, authority=url_parsed.host, port=url_port, path=path)
         self._permanent_headers = headers
         self._session_headers = {}
         self._session = None

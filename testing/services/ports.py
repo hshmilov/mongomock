@@ -18,6 +18,7 @@ DOCKER_PORTS = {
     'careful-execution-correlator':     5039,
     'core':                             5050,
     'softlayer-adapter':                5090,
+    'sophos-adapter':                   5092,
     'blackberry-uem-adapter':           5101,
     'fireeye-hx-adapter':               5102,
     'esx-adapter':                      5111,

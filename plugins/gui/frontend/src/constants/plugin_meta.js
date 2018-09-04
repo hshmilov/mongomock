@@ -15,13 +15,17 @@ export const pluginMeta = {
         title: 'Ping Identity',
         description: 'Ping Identity is a standards-based platform that connects customers, employees and partners to their cloud, mobile, SaaS and on-premises applications and APIs.'
     },
+    sophos_adapter: {
+        title: 'Sophos Endpoint Protection',
+        description: 'Sophos Endpoint Protection helps secure workstations by adding prevention, detection, and response technology on top of the operating system.'
+    },
     crowd_strike_adapter: {
         title: 'CrowdStrike Falcon',
         description: 'The CrowdStrike Falcon platform is delivers next-generation antivirus, endpoint detection and response (EDR), managed threat hunting, and threat intelligence.'
     },
     gce_adapter: {
-        title: 'Google Compute Engine',
-        description: 'Google Compute Engine delivers virtual machines running in Google\'s data centers and worldwide fiber network.'
+        title: 'Google Compute/Kubernetes Engine',
+        description: 'The Google Compute/Kubernetes Engine adapter supports both GCE\'s virtual machines as well as the GKE environment for deploying containerized applications.'
     },
     duo_adapter: {
         title: 'Duo Beyond',
@@ -57,7 +61,7 @@ export const pluginMeta = {
     },
     aws_adapter: {
         title: 'Amazon Elastic',
-        description: 'Amazon Elastic Compute Cloud (EC2) provides scalable computing capacity in the Amazon Web Services (AWS) cloud.'
+        description: 'The ECS/EC2 adapter includes both the high-performance container orchestration service that supports Docker containers and containerized applications on AWS as well as the EC2 instances themselves.'
     },
     jamf_adapter: {
         title: 'Jamf Pro',
