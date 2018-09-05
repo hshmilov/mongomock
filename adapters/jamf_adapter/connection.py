@@ -12,6 +12,9 @@ from jamf_adapter import consts
 from axonius.utils.xml2json_parser import Xml2Json
 from axonius.smart_json_class import SmartJsonClass
 from axonius.thread_stopper import stoppable
+from axonius.utils import gui_helpers
+from axonius.plugin_base import EntityType
+import re
 
 
 class JamfPolicy(SmartJsonClass):
@@ -24,13 +27,14 @@ class JamfPolicy(SmartJsonClass):
 
 
 class JamfConnection(object):
-    def __init__(self, domain, num_of_simultaneous_devices,
+    def __init__(self, domain, num_of_simultaneous_devices, users_db,
                  http_proxy=None, https_proxy=None):
         """ Initializes a connection to Jamf using its rest API
 
         :param str domain: domain address for Jamf
         """
         url = domain
+        self.users_db = users_db
         if not url.lower().startswith('https://') and not url.lower().startswith("http://"):
             url = 'https://' + url
         if not url.endswith('/'):
@@ -136,12 +140,101 @@ class JamfConnection(object):
 
         logger.info("Finished getting all device data.")
 
-    def threaded_get_devices(self, url, device_list_name, device_type):
+    def get_users_department(self, device_details):
+        """ A function for getting the department of local users.
+
+        For each local user associated to this device this function will try to find a matching user in Axonius
+        users table, if found, this function will try to add the department of the user (if applied in the user data)
+        to the local associated user for this device.
+        This function uses logics that might seem unreasonable, but the purpose is to avoid mistakes as much as we can.
+        This is not trivial since we don't have a real connection between the local user and the users from our users
+        table.
+
+        :param device_details: Raw device details as returned from the Jamf server. This object is changed inside the
+                               function (Adding the department details to it)
+        :return:
+        """
+        try:
+            # Just getting all users
+            users_raw = (device_details.get('groups_accounts') or {}).get('local_accounts', [])
+            if users_raw is not None and isinstance(users_raw, dict) and users_raw.get("user"):
+                users_raw_user_object = users_raw["user"]
+                if isinstance(users_raw_user_object, dict):
+                    users_raw = [users_raw_user_object]
+                elif isinstance(users_raw_user_object, list):
+                    users_raw = users_raw_user_object
+                else:
+                    users_raw = []
+        except Exception:
+            logger.error("Got Exception while fetching users department")
+        for user_raw in users_raw:
+            try:
+                # Taking only "real" users, and not services users like "mcafee user" and such..
+                if not ((user_raw.get("home") or "").lower().startswith("/users")):
+                    continue
+
+                # Get a list of words for the real name
+                user_real_name = re.findall(r"[\w']+", user_raw.get("realname") or '')
+                if len(user_real_name) == 0:
+                    continue
+
+                # Checking if the some of the user name is part of the hostname. This will help us to determine that
+                # this user is the owner of this device
+                is_part_of_hostname = False
+                for one_word in user_real_name:
+                    general_info = device_details['general']
+                    if len(one_word) > 2 and one_word in general_info.get('name', ''):
+                        is_part_of_hostname = True
+
+                # If the last condition is true, than we should fill this user with department
+                if is_part_of_hostname:
+                    conditions_list = []
+                    for one_word in user_real_name:
+                        # We expect each word of the user real name field from Jamf. For example, if the real name is
+                        # "Ofir Yefet", we expect to find a user that has the word "ofir", and the word "yefet" in
+                        # one of the following fields: first_name, last_name, username
+                        conditions_list.append({"$or": [{"adapters.data.first_name":
+                                                         {"$regex": f"(?i){one_word}"}},
+                                                        {"adapters.data.last_name":
+                                                         {"$regex": f"(?i){one_word}"}},
+                                                        {"adapters.data.username":
+                                                         {"$regex": f"(?i){one_word}"}}]})
+                    # We only want users that have the "user_department" field
+                    conditions_list.append({"adapters.data.user_department": {"$exists": True}})
+                    mongo_filter = {"$and": conditions_list}
+                    project_fields = ["adapters.data.first_name", "adapters.data.last_name", "adapters.data.username",
+                                      "adapters.data.user_department"]
+
+                    relevant_users = list(self.users_db.find(mongo_filter, project_fields))
+                    if len(relevant_users) == 0:
+                        # Couldn't find user
+                        continue
+                    else:
+                        # Great!! we found one relevant user (just need to get the department from this user
+                        if len(relevant_users) > 1:
+                            # Found more then one relevant user
+                            logger.warning(f"Found more than one user for {user_real_name} when fetching department. "
+                                           f"Taking only first")
+                        for relevant_user in relevant_users:
+                            for one_adapter in relevant_user.get("adapters", []):
+                                if one_adapter.get("data", {}).get("user_department", "") != "":
+                                    user_raw["user_department"] = one_adapter["data"]["user_department"]
+                                    break
+                            if "user_department" in user_raw:
+                                break
+                        pass
+            except Exception:
+                logger.exception(f"Error getting users department data for user {user_raw}")
+
+    def threaded_get_devices(self, url, device_list_name, device_type, should_fetch_department=False):
         @stoppable
         def get_device(device, device_number):
             try:
                 device_id = device['id']
                 device_details = self.get(url + '/id/' + device_id).get(device_type)
+                if should_fetch_department:
+                    # Trying to add the department of local users
+                    self.get_users_department(device_details)
                 if device_number % print_modulo == 0:
                     logger.info(f"Got {device_number} devices out of {num_of_devices}.")
                 device_list.append(device_details)
@@ -207,7 +300,7 @@ class JamfConnection(object):
 
         return devices
 
-    def get_devices(self):
+    def get_devices(self, should_fetch_department=False):
         """ Returns a list of all agents
         :return: the response
         :rtype: list of computers and phones
@@ -217,7 +310,8 @@ class JamfConnection(object):
         computers = self.threaded_get_devices(
             url=consts.COMPUTERS_URL,
             device_list_name=consts.COMPUTERS_DEVICE_LIST_NAME,
-            device_type=consts.COMPUTER_DEVICE_TYPE)
+            device_type=consts.COMPUTER_DEVICE_TYPE,
+            should_fetch_department=should_fetch_department)
 
         self.threaded_get_policy_history(computers)
 

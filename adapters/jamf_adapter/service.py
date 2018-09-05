@@ -7,6 +7,7 @@ from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_ip, parse_date
+from axonius.mixins.configurable import Configurable
 from jamf_adapter import consts
 from jamf_adapter.connection import JamfConnection, JamfPolicy
 from jamf_adapter.exceptions import JamfException
@@ -28,7 +29,7 @@ class JamfProfile(SmartJsonClass):
     uuid = Field(str, "Profile UUID")
 
 
-class JamfAdapter(AdapterBase):
+class JamfAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         public_ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
@@ -50,6 +51,7 @@ class JamfAdapter(AdapterBase):
         try:
             connection = JamfConnection(domain=client_config[consts.JAMF_DOMAIN],
                                         num_of_simultaneous_devices=self.num_of_simultaneous_devices,
+                                        users_db=self.users_db,
                                         http_proxy=client_config.get(consts.HTTP_PROXY),
                                         https_proxy=client_config.get(consts.HTTPS_PROXY))
             connection.set_credentials(username=client_config[consts.USERNAME],
@@ -71,7 +73,7 @@ class JamfAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Jamf Server
         """
-        return client_data.get_devices()
+        return client_data.get_devices(self.__fetch_department)
 
     def _clients_schema(self):
         """
@@ -200,7 +202,8 @@ class JamfAdapter(AdapterBase):
                                              is_local=True,
                                              is_admin=str(user_raw.get('administrator')).lower() == "true",
                                              origin_unique_adapter_name=self.plugin_unique_name,
-                                             origin_unique_adapter_data_id=device.id
+                                             origin_unique_adapter_data_id=device.id,
+                                             user_department=user_raw.get("user_department")
                                              )
                     except Exception:
                         logger.exception(f'Problem getting users at {device_raw}')
@@ -374,3 +377,30 @@ class JamfAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    "name": "fetch_department",
+                    "title": "Should Find Department Of Users",
+                    "type": "bool"
+                }
+            ],
+            "required": [
+                "fetch_department",
+            ],
+            "pretty_name": "Jamf Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            "fetch_department": False,
+        }
+
+    def _on_config_update(self, config):
+        logger.info(f"Loading Jamf config: {config}")
+        self.__fetch_department = config['fetch_department']
