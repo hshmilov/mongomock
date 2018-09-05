@@ -50,6 +50,7 @@ BUTTON_TYPE_A = 'a'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
+LOADING_SPINNER_CSS = '.v-spinner'
 RETRY_WAIT_FOR_ELEMENT = 150
 SLEEP_INTERVAL = 0.2
 
@@ -356,3 +357,6 @@ class Page:
     @staticmethod
     def key_down_enter(element):
         element.send_keys(Keys.ENTER)
+
+    def wait_for_spinner_to_end(self):
+        return self.wait_for_element_absent_by_css(LOADING_SPINNER_CSS)

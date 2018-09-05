@@ -1,6 +1,7 @@
 import subprocess
 import os
 from abc import abstractmethod
+from contextlib import contextmanager
 
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
@@ -311,3 +312,11 @@ else:
         This is a good place to put any DB upgrades.
         """
         pass
+
+    @contextmanager
+    def contextmanager(self):
+        try:
+            self.start_and_wait()
+            yield self
+        finally:
+            self.stop(should_delete=True)

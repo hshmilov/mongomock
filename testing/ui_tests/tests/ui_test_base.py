@@ -14,13 +14,15 @@ from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
+from ui_tests.pages.report_page import ReportPage
+from ui_tests.pages.alert_page import AlertPage
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+# pylint: disable=too-many-instance-attributes
+
 
 class TestBase:
-    LOADING_SPINNER_CSS = '.v-spinner'
-
     def _initialize_driver(self):
         if pytest.config.option.local_browser:
             self.driver = webdriver.Chrome()
@@ -78,6 +80,8 @@ class TestBase:
         self.settings_page = SettingsPage(**params)
         self.devices_page = DevicesPage(**params)
         self.users_page = UsersPage(**params)
+        self.report_page = ReportPage(**params)
+        self.alert_page = AlertPage(**params)
 
     def login(self):
         self.driver.get(self.base_url)

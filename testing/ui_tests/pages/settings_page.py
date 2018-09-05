@@ -90,3 +90,9 @@ class SettingsPage(Page):
 
     def get_email_host(self):
         return self.driver.find_element_by_id(self.EMAIL_HOST_ID).get_attribute('value')
+
+    def find_email_connection_failure_toaster(self, host):
+        return self.find_toaster(f'Could not connect to mail server "{host}"')
+
+    def find_saved_successfully_toaster(self):
+        return self.find_toaster('Saved Successfully.')

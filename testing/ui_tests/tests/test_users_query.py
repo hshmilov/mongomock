@@ -12,10 +12,10 @@ class TestUsersQuery(TestBase):
         expressions = self.users_page.find_expressions()
         assert len(expressions) == 2
         self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
-        self.users_page.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
+        self.users_page.wait_for_spinner_to_end()
         self.users_page.select_query_logic_op('and')
         self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
-        self.users_page.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
+        self.users_page.wait_for_spinner_to_end()
         assert self.users_page.count_entities() == 1
 
     def test_over_20_query(self):
@@ -26,7 +26,7 @@ class TestUsersQuery(TestBase):
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
         # Wait for search to return (working so long as there is a spinner)
-        self.users_page.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
+        self.users_page.wait_for_spinner_to_end()
         real_count = self.axonius_system.get_users_db().count()
         assert len(self.users_page.find_rows_with_data()) == min(20, real_count)
         self.users_page.select_page_size(50)

@@ -9,7 +9,7 @@ class TestUsersTable(TestBase):
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
         # Wait for search to return (working so long as there is a spinner)
-        self.users_page.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
+        self.users_page.wait_for_spinner_to_end()
         assert self.users_page.count_entities() == self.axonius_system.get_users_db().count()
 
     def test_user_selection(self):
