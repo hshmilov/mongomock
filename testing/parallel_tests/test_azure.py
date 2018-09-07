@@ -1,3 +1,4 @@
+import pytest
 from services.adapters.azure_service import AzureService, azure_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_azure_credentials import *
@@ -20,3 +21,7 @@ class TestAzureAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('No reachability test')
+    def test_check_reachability(self):
+        pass

@@ -9,6 +9,7 @@ from axonius.fields import Field
 from airwatch_adapter.connection import AirwatchConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import parse_date
+from axonius.clients.rest.connection import RESTConnection
 
 
 class AirwatchAdapter(AdapterBase):
@@ -24,6 +25,9 @@ class AirwatchAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("domain"))
 
     def _connect_client(self, client_config):
         try:

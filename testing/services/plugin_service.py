@@ -230,8 +230,15 @@ class AdapterService(PluginService):
         assert response.status_code == 200, str(response)
         return response.json()
 
+    def is_client_reachable(self, client_data):
+        client_data = self._process_clients_for_adapter(client_data)
+        response = requests.post(self.req_url + "/client_test", headers={API_KEY_HEADER: self.api_key},
+                                 json=client_data)
+
+        return response.status_code == 200
+
     def action(self, action_type):
-        raise NotImplementedError("TBD!")
+        pass
 
     def schema(self, schema_type="general", api_key=None):
         return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)

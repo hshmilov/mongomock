@@ -9,6 +9,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 
 
 class DuoAdapter(AdapterBase):
@@ -20,6 +21,9 @@ class DuoAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['host']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get('host'))
 
     def _connect_client(self, client_config):
         try:

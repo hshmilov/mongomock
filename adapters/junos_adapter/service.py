@@ -23,6 +23,9 @@ class JunosAdapter(AdapterBase):
     def _get_client_id(self, client_config):
         return get_client_id(client_config)
 
+    def _test_reachability(self, client_config):
+        return True
+
     def _connect_client(self, client_config):
         try:
             with JunOSClient(**client_config) as client:

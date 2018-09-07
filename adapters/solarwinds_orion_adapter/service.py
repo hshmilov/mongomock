@@ -7,6 +7,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from solarwinds_orion_adapter.connection import SolarwindsConnection
 from axonius.fields import Field
+from axonius.clients.rest.connection import RESTConnection
 # AX-969
 
 
@@ -26,6 +27,10 @@ class SolarwindsOrionAdapter(AdapterBase):
         :return: the domain, or patrolling ip address
         """
         return client_config['domain']
+
+    def _test_reachability(self, client_config):
+        # TODO: the port isn't documented anywhere but inside the connection class...
+        return RESTConnection.test_reachability(client_config.get("domain"), 17778)
 
     def _connect_client(self, client_config):
         """

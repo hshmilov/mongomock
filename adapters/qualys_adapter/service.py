@@ -10,6 +10,7 @@ from axonius.utils.files import get_local_config_file
 from qualys_adapter.exceptions import QualysException
 from qualys_adapter.connection import QualysConnection
 from axonius.fields import Field
+from axonius.clients.rest.connection import RESTConnection
 
 
 QUALYS_ITERATOR_FORMAT = """
@@ -39,6 +40,9 @@ class QualysAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config[QUALYS_DOMAIN]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(QUALYS_DOMAIN))
 
     def _connect_client(self, client_config):
         try:

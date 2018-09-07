@@ -2,6 +2,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
@@ -29,6 +30,9 @@ class CiscoAmpAdapter(AdapterBase):
         :return: Client ID
         """
         return client_config[consts.CLIENT_ID]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(consts.DOMAIN))
 
     def _connect_client(self, client_config):
         """

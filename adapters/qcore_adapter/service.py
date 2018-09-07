@@ -73,6 +73,9 @@ class QcoreAdapter(AdapterBase):
     def _connect_client(self, client_config):
         return {'mediator': '1'}
 
+    def _test_reachability(self, client_config):
+        return True
+
     def populate_nic(self, device, pump_document):
         try:
             connectivity = pump_document[CLINICAL_STATUS]['Connectivity']

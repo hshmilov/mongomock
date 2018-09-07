@@ -1,3 +1,4 @@
+import http.client
 import logging
 from typing import Tuple
 
@@ -86,6 +87,18 @@ class RESTConnection(ABC):
         self._validate_no_connection()
         self._session = requests.Session()
         return self._connect()
+
+    @staticmethod
+    def test_reachability(host, port=None, path='/', ssl=True):
+        try:
+            url = f'{"https" if ssl else "http"}://{host}:{port if port else 443 if ssl else 80}{path}' if '://' not in host else host
+            response = requests.get(url, verify=False)
+            return True
+        except requests.exceptions.ConnectionError as conn_err:
+            # if 'Remote end closed connection without response' in conn_err:
+            if isinstance(conn_err.args[0].args[-1], http.client.RemoteDisconnected):
+                return True
+            return False
 
     @abstractmethod
     def _connect(self):

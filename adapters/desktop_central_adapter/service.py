@@ -3,6 +3,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
@@ -24,6 +25,9 @@ class DesktopCentralAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get('domain'))
 
     def _connect_client(self, client_config):
         try:

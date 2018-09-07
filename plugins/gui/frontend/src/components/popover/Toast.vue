@@ -43,7 +43,7 @@
 <style lang="scss">
     .x-toast {
         position: fixed;
-        z-index: 500;
+        z-index: 10000000000;
         top: 24px;
         padding: 0 12px;
         background: $theme-black;

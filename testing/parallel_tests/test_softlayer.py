@@ -24,3 +24,6 @@ class TestSoftlayerAdapter(AdapterTestBase):
     @pytest.mark.skip("Skipped by Avidor")
     def test_fetch_devices(self):
         pass
+
+    def test_check_reachability(self):
+        assert self.adapter_service.is_client_reachable(self.some_client_details)

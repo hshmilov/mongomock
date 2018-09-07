@@ -13,7 +13,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 import func_timeout
 from bson import ObjectId
-from flask import jsonify, request
+from flask import jsonify, request, make_response
 
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
@@ -498,6 +498,34 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                          'parsed': parsed_data}
 
             return data_list
+
+    @abstractmethod
+    def _test_reachability(self, client_config):
+        """
+        Given all details of a client belonging to the adapter, return consistent key representing it.
+        This key must be "unclassified" - not contain any sensitive information as it is disclosed to the user.
+
+        :param client_config: A dictionary with connection credentials for adapter's client, according to stated in
+        the appropriate schema (all required and any of optional)
+
+        :type client_config: dict of objects, following structure stated by client schema
+
+        :return: unique key for the client, composed by given field values, according to adapter's definition
+        """
+        pass
+
+    @add_rule('client_test', methods=['POST'])
+    def client_reachability_test(self):
+        """ /client_test Returns all available clients, e.g. all DC servers.
+
+        Accepts:
+           POST - Triggers a refresh on all available clients from the DB and returns them
+        """
+        client_config = request.get_json(silent=True)
+        if not client_config:
+            return return_error("Invalid client")
+
+        return '' if self._test_reachability(client_config) else return_error("Client is not reachable.")
 
     @add_rule('clients', methods=['GET', 'POST', 'PUT'])
     def clients(self):

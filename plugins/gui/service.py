@@ -701,6 +701,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
             return jsonify(adapters_to_return)
 
+    def _test_client_connectivity(self, adapter_unique_name, data_from_db_for_unchanged=None):
+        client_to_test = request.get_json(silent=True)
+        if client_to_test is None:
+            return return_error("Invalid client", 400)
+        if data_from_db_for_unchanged:
+            client_to_test = refill_passwords_fields(client_to_test, data_from_db_for_unchanged['client_config'])
+        # adding client to specific adapter
+        response = self.request_remote_plugin("client_test", adapter_unique_name, method='post', json=client_to_test)
+        return response.text, response.status_code
+
     def _query_client_for_devices(self, adapter_unique_name, data_from_db_for_unchanged=None):
         client_to_add = request.get_json(silent=True)
         if client_to_add is None:
@@ -752,7 +762,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT'])
+    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'POST'])
     def adapters_clients(self, adapter_unique_name):
         """
         Gets or creates clients in the adapter
@@ -760,7 +770,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         with self._get_db_connection() as db_connection:
-            return self._query_client_for_devices(adapter_unique_name)
+            if request.method == 'PUT':
+                return self._query_client_for_devices(adapter_unique_name)
+            else:
+                return self._test_client_connectivity(adapter_unique_name)
 
     @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>",
                                           methods=['PUT', 'DELETE'])

@@ -117,7 +117,6 @@ adapters/kaseya_adapter/service.py
 adapters/minerva_adapter/connection.py
 adapters/minerva_adapter/service.py
 adapters/mobileiron_adapter/connection.py
-adapters/mobileiron_adapter/service.py
 adapters/nessus_adapter/connection.py
 adapters/nessus_adapter/exceptions.py
 adapters/nessus_adapter/service.py
@@ -455,7 +454,6 @@ testing/services/ports.py
 testing/services/adapters/ad_service.py
 testing/services/adapters/airwatch_service.py
 testing/services/adapters/aws_service.py
-testing/services/adapters/aruba_service.py
 testing/services/adapters/azure_service.py
 testing/services/adapters/bigfix_service.py
 testing/services/adapters/blackberry_uem_service.py
@@ -464,11 +462,9 @@ testing/services/adapters/carbonblack_defense_service.py
 testing/services/adapters/carbonblack_protection_service.py
 testing/services/adapters/carbonblack_response_service.py
 testing/services/adapters/chef_service.py
-testing/services/adapters/cisco_amp_service.py
 testing/services/adapters/cisco_meraki_service.py
 testing/services/adapters/cisco_prime_service.py
 testing/services/adapters/cisco_service.py
-testing/services/adapters/claroty_service.py
 testing/services/adapters/tanium_service.py
 testing/services/adapters/csv_service.py
 testing/services/adapters/cylance_service.py

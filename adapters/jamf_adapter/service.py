@@ -2,6 +2,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
@@ -46,6 +47,10 @@ class JamfAdapter(AdapterBase, Configurable):
 
     def _get_client_id(self, client_config):
         return client_config['Jamf_Domain']
+
+    @staticmethod
+    def _test_reachability(client_config):
+        return RESTConnection.test_reachability(client_config.get(consts.JAMF_DOMAIN))
 
     def _connect_client(self, client_config):
         try:

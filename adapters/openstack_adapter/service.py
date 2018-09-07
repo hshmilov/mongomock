@@ -6,6 +6,7 @@ from axonius.utils.files import get_local_config_file
 from openstack_adapter.client import OpenStackClient
 from urllib3.util.url import parse_url
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 
 
 class OpenstackAdapter(AdapterBase):
@@ -21,6 +22,9 @@ class OpenstackAdapter(AdapterBase):
         client_config.setdefault('domain', 'default')
 
         return '{}/{}'.format(parse_url(client_config['auth_url']).hostname, client_config['project'])
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("auth_url"))
 
     def _connect_client(self, client_config):
         try:
@@ -70,7 +74,7 @@ class OpenstackAdapter(AdapterBase):
                     "description": "Project Name"
                 },
                 {
-                    "name": "domain",
+                    "name": "url",
                     "title": "Domain",
                     "type": "string",
                     "description": 'Default domain name (default: "Default")'

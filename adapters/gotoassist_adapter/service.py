@@ -22,6 +22,9 @@ class GotoassistAdapter(AdapterBase):
     def _get_client_id(self, client_config):
         return client_config['user_name']
 
+    def _test_reachability(self, client_config):
+        return GotoassistConnection.test_reachability()
+
     def _connect_client(self, client_config):
         try:
             connection = GotoassistConnection()

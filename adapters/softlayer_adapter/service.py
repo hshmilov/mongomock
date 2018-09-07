@@ -16,6 +16,7 @@ from axonius.utils.files import get_local_config_file
 from softlayer_adapter.exceptions import SoftlayerException
 from softlayer_adapter.connection import SoftlayerConnection
 from axonius.fields import Field, ListField
+from axonius.clients.rest.connection import RESTConnection
 
 USERNAME = 'username'
 API_KEY = 'api_key'
@@ -49,6 +50,9 @@ class SoftlayerAdapter(AdapterBase, Configurable):
 
     def _get_client_id(self, client_config):
         return client_config[USERNAME]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability('https://api.softlayer.com/xmlrpc/v3/')
 
     def _connect_client(self, client_config):
         try:

@@ -23,3 +23,7 @@ class TestObserveitAdapter(AdapterTestBase):
 
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip("No reachability test")
+    def test_check_reachability(self):
+        pass

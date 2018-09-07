@@ -10,6 +10,7 @@ from axonius.utils.files import get_local_config_file
 from fortigate_adapter import consts
 from fortigate_adapter.client import FortigateClient
 from axonius.fields import Field
+from axonius.clients.rest.connection import RESTConnection
 
 
 class FortigateAdapter(AdapterBase):
@@ -104,6 +105,10 @@ class FortigateAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return f"{client_config[consts.FORTIGATE_HOST]}:{client_config.get(consts.FORTIGATE_PORT, consts.DEFAULT_FORTIGATE_PORT)}"
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(consts.FORTIGATE_HOST),
+                                                client_config.get(consts.FORTIGATE_PORT, consts.DEFAULT_FORTIGATE_PORT))
 
     def _connect_client(self, client_config):
         try:

@@ -11,6 +11,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.xml2json_parser import Xml2Json
 from qualys_scans_adapter.connection import QualysScansConnection
 from qualys_scans_adapter.exceptions import QualysScansAPILimitException, QualysScansException
+from axonius.clients.rest.connection import RESTConnection
 
 QUALYS_SCANS_ITERATOR_FORMAT = """
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -45,6 +46,9 @@ class QualysScansAdapter(ScannerAdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config[QUALYS_SCANS_DOMAIN]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(QUALYS_SCANS_DOMAIN))
 
     def _connect_client(self, client_config):
         try:

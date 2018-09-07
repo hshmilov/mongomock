@@ -10,6 +10,7 @@ from tenable_security_center_adapter.connection import TenableSecurityScannerCon
 from axonius.fields import Field, ListField
 from datetime import datetime
 import ipaddress
+from axonius.clients.rest.connection import RESTConnection
 
 
 class TenableSecurityCenterAdapter(ScannerAdapterBase):
@@ -35,6 +36,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['url']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("url"))
 
     def _connect_client(self, client_config):
         try:

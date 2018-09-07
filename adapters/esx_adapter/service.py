@@ -1,15 +1,19 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
 from enum import Enum, auto
+
 from pyVmomi import vim
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field
-from axonius.utils.parsing import parse_date
 from axonius.utils.files import get_local_config_file
-from esx_adapter.vcenter_api import vCenterApi, rawify_vcenter_data
+from axonius.utils.parsing import parse_date
+from esx_adapter.vcenter_api import rawify_vcenter_data, vCenterApi
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
 
 # translation table between ESX values to parsed values
 POWER_STATE_MAP = {
@@ -41,6 +45,9 @@ class EsxAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return '{}/{}'.format(client_config['host'], client_config['user'])
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("host"))
 
     def _connect_client(self, client_config):
         client_id = self._get_client_id(client_config)

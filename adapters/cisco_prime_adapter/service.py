@@ -6,6 +6,7 @@ from axonius.clients.cisco import snmp
 from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
 from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
 from axonius.clients.cisco.snmp import CiscoSnmpClient
+from axonius.clients.rest.connection import RESTConnection
 from axonius.utils import json
 from axonius.utils.files import get_local_config_file
 from cisco_prime_adapter.client import CiscoPrimeClient
@@ -23,11 +24,13 @@ class CiscoPrimeAdapter(AdapterBase):
     def _get_client_id(self, client_config):
         return client_config['url']
 
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get('url'))
+
     def _connect_client(self, client_config):
         try:
             client = CiscoPrimeClient(**client_config)
             client.connect()
-            client.disconnect()
             return client
         except ClientConnectionException as err:
             error_message = 'Failed to connect to client {0} using config: {1}'.format(

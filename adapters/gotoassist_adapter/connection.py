@@ -1,9 +1,12 @@
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 import requests
+from axonius.clients.rest.connection import RESTConnection
 
 from gotoassist_adapter.exceptions import GotoassistAlreadyConnected, GotoassistConnectionError, GotoassistNotConnected, \
     GotoassistRequestException
+
+GETGO_URL = "https://api.getgo.com"
 
 
 class GotoassistConnection(object):
@@ -12,7 +15,7 @@ class GotoassistConnection(object):
 
         :param obj logger: Logger object of the system
         """
-        self.url = "https://api.getgo.com"
+        self.url = GETGO_URL
         self.session = None
         self.username = None
         self.password = None
@@ -20,6 +23,10 @@ class GotoassistConnection(object):
         self.client_secret = None
         self.gotoassist_code = None
         self.headers = {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json'}
+
+    @staticmethod
+    def test_reachability():
+        return RESTConnection.test_reachability(GETGO_URL)
 
     def set_credentials(self, client_id, client_secret, username, password):
         """ Set the connection credentials

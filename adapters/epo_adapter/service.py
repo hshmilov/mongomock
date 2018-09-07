@@ -1,15 +1,18 @@
-import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-import json
 import ipaddress
+import json
+import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import ListField, Field
-from axonius.utils.parsing import format_mac, parse_date, is_valid_ip
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import format_mac, is_valid_ip, parse_date
 from epo_adapter.mcafee import client
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
 
 EPO_HOST = 'host'
 EPO_PORT = 'port'
@@ -219,6 +222,9 @@ class EpoAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config[EPO_HOST]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(EPO_HOST), client_config.get(EPO_PORT))
 
     def _connect_client(self, client_config):
         try:

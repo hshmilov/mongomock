@@ -12,6 +12,7 @@ from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBa
 from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
 import nexpose_adapter.clients as nexpose_clients
+from axonius.clients.rest.connection import RESTConnection
 
 PASSWORD = 'password'
 USER = 'username'
@@ -135,6 +136,9 @@ class NexposeAdapter(ScannerAdapterBase):
             return nexpose_clients.NexposeV3Client(self.num_of_simultaneous_devices, **client_config)
         except ClientConnectionException:
             return nexpose_clients.NexposeV2Client(self.num_of_simultaneous_devices, **client_config)
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(NEXPOSE_HOST), client_config.get(NEXPOSE_PORT))
 
     @property
     def _get_scanner_correlator(self):

@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
+from axonius.clients.rest.connection import RESTConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -20,10 +21,16 @@ class ArubaAdapter(AdapterBase):
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config['domain']
 
-    def _connect_client(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
+        return RESTConnection.test_reachability(client_config.get('domain'), client_config.get('port'))
+
+    @staticmethod
+    def _connect_client(client_config):
         port = client_config.get('port')
         if port == '':
             port = None
@@ -40,7 +47,8 @@ class ArubaAdapter(AdapterBase):
                 client_config['domain'], str(e))
             raise ClientConnectionException(message)
 
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         with client_data:
             return client_data.cli('show arp')
 
@@ -79,7 +87,8 @@ class ArubaAdapter(AdapterBase):
     def adapter_properties(cls):
         return [AdapterProperty.Network]
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         """
         The schema ArubaAdapter expects from configs
 

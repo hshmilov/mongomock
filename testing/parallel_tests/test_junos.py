@@ -26,3 +26,7 @@ class TestJunosAdapter(AdapterTestBase):
     @pytest.mark.skip('AX-2008')
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip("No reachability test")
+    def test_check_reachability(self):
+        pass

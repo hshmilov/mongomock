@@ -10,6 +10,7 @@ from axonius.smart_json_class import SmartJsonClass
 
 from redseal_adapter.client import RedSealClient
 from redseal_adapter.client_id import get_client_id
+from axonius.clients.rest.connection import RESTConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -50,6 +51,9 @@ class RedsealAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return get_client_id(client_config)
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("url"))
 
     def _connect_client(self, client_config):
         try:

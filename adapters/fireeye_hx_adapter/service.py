@@ -9,6 +9,7 @@ from axonius.clients.rest.exception import RESTException
 from fireeye_hx_adapter.connection import FireeyeHxConnection
 from fireeye_hx_adapter import consts
 from axonius.utils.parsing import parse_date
+from axonius.clients.rest.connection import RESTConnection
 
 
 class FireeyeHxAdapter(AdapterBase):
@@ -20,6 +21,9 @@ class FireeyeHxAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("domain"), client_config.get("port"))
 
     def _connect_client(self, client_config):
         try:

@@ -8,6 +8,7 @@ from axonius.fields import Field
 from cylance_adapter.connection import CylanceConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import parse_date
+from axonius.clients.rest.connection import RESTConnection
 
 
 class CylanceAdapter(AdapterBase):
@@ -22,6 +23,9 @@ class CylanceAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get('domain'))
 
     def _connect_client(self, client_config):
         try:

@@ -215,6 +215,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _get_client_id(self, dc_details):
         return dc_details['dc_name']
 
+    def _test_reachability(self, client_config):
+        return True
+
     def _connect_client(self, dc_details):
         try:
             return LdapConnection(dc_details['dc_name'],

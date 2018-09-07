@@ -9,6 +9,7 @@ from collections import defaultdict
 from cisco_meraki_adapter.connection import CiscoMerakiConnection
 from cisco_meraki_adapter.exceptions import CiscoMerakiException
 from axonius.utils.parsing import parse_date
+from axonius.clients.rest.connection import RESTConnection
 
 
 class AssociatedDeviceAdapter(SmartJsonClass):
@@ -35,6 +36,9 @@ class CiscoMerakiAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['CiscoMeraki_Domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get('CiscoMeraki_Domain'))
 
     def _connect_client(self, client_config):
         try:

@@ -24,6 +24,9 @@ class SccmAdapter(AdapterBase):
     def _get_client_id(self, client_config):
         return client_config[consts.SCCM_HOST]
 
+    def _test_reachability(self, client_config):
+        return True
+
     def _connect_client(self, client_config):
         try:
             connection = MSSQLConnection(database=client_config[consts.SCCM_DATABASE],

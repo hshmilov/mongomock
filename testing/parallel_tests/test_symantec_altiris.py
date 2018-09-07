@@ -21,3 +21,7 @@ class TestSymantecAltirisAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('No reachability test')
+    def test_check_reachability(self):
+        pass

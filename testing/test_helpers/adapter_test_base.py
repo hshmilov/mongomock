@@ -1,3 +1,4 @@
+# pylint: disable=unused-import,no-name-in-module,ungrouped-imports
 import os
 import sys
 import uuid
@@ -6,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from flaky import flaky
 
-# pylint: disable=unused-import
 try:
     import axonius
 except (ModuleNotFoundError, ImportError):
@@ -15,6 +15,7 @@ except (ModuleNotFoundError, ImportError):
                                                  'src', 'libs', 'axonius-py')))
 from axonius.plugin_base import EntityType
 from services.axonius_service import get_service
+from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from test_helpers.utils import check_conf
@@ -93,6 +94,10 @@ class AdapterTestBase:
 
     def test_check_registration(self):
         assert self.adapter_service.is_plugin_registered(self.axonius_system.core)
+
+    def test_check_reachability(self):
+        assert self.adapter_service.is_client_reachable(self.some_client_details)
+        assert not self.adapter_service.is_client_reachable(FAKE_CLIENT_DETAILS)
 
     @flaky(max_runs=2)
     def test_fetch_devices(self):

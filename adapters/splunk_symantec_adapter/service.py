@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, IPS_FIELD, MAC_FIELD
 from axonius.utils.files import get_local_config_file
 from splunk_symantec_adapter.connection import SplunkConnection
+from axonius.clients.rest.connection import RESTConnection
 
 
 SPLUNK_HOST = 'host'
@@ -26,6 +27,9 @@ class SplunkSymantecAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return '{0}:{1}'.format(client_config[SPLUNK_HOST], client_config[SPLUNK_PORT])
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(SPLUNK_HOST), client_config.get(SPLUNK_PORT))
 
     def _connect_client(self, client_config):
         has_token = bool(client_config.get(SPLUNK_TOKEN))

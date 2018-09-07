@@ -8,9 +8,6 @@ class CrowdStrikeService(AdapterService):
     def __init__(self):
         super().__init__('crowd-strike')
 
-    def action(self, action_type):
-        raise NotImplementedError()
-
 
 @pytest.fixture(scope='module', autouse=True)
 def crowd_strike_fixture(request):

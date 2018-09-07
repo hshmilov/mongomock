@@ -3,8 +3,9 @@ import pytest
 # we need juniper_fixture while it unused
 # pylint: disable=W0611
 from services.adapters.juniper_service import JuniperService, juniper_fixture
+from test_credentials.test_juniper_credentials import (SOME_DEVICE_ID,
+                                                       client_details)
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_juniper_credentials import client_details, SOME_DEVICE_ID
 
 
 class TestJuniperAdapter(AdapterTestBase):
@@ -30,4 +31,8 @@ class TestJuniperAdapter(AdapterTestBase):
 
     @pytest.mark.skip('Juniper is failing, AX-1569')
     def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('No reachability test')
+    def test_check_reachability(self):
         pass

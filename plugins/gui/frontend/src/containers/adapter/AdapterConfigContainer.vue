@@ -40,9 +40,10 @@
                 </div>
                 <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" @submit="saveServer"
                                @validate="validateServer" :api-upload="`adapters/${adapterId}`" />
-            </div>
+            </div>import aiohttp
             <template slot="footer">
                 <button @click="toggleServerModal" class="x-btn link">Cancel</button>
+                <button id="test_reachability" @click="testServer" class="x-btn" :class="{disabled: !serverModal.valid}">Test Connectivity</button>
                 <button id="save_server" @click="saveServer" class="x-btn" :class="{disabled: !serverModal.valid}">Save</button>
             </template>
         </modal>
@@ -69,7 +70,7 @@
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import {
-		FETCH_ADAPTERS, UPDATE_CURRENT_ADAPTER, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
+		FETCH_ADAPTERS, UPDATE_CURRENT_ADAPTER, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER, TEST_ADAPTER_SERVER
 	} from '../../store/modules/adapter'
     import { pluginMeta } from '../../constants/plugin_meta.js'
     import { SAVE_PLUGIN_CONFIG } from "../../store/modules/configurable"
@@ -140,7 +141,7 @@
 		methods: {
             ...mapMutations({ updateAdapter: UPDATE_CURRENT_ADAPTER, changeState: CHANGE_TOUR_STATE }),
 			...mapActions({
-                fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER,
+                fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER, testAdapter: TEST_ADAPTER_SERVER,
                 archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG
 			}),
 			configServer (serverId) {
@@ -202,6 +203,25 @@
 				})
 				this.toggleServerModal()
 			},
+            testServer () {
+                if (!this.serverModal.valid) {
+                    return
+                }
+                this.message = 'Testing server Connection...'
+                this.testAdapter({
+                    adapterId: this.adapterId,
+                    serverData: this.serverModal.serverData,
+                    uuid: this.serverModal.uuid
+                }).then((updateRes) => {
+                    this.fetchAdapters().then(() => {
+                        if (updateRes.data.status === 'error') {
+                            this.message = 'Problem connecting to server.'
+                        } else {
+                            this.message = 'Connection is valid.'
+                        }
+                    })
+                })
+            },
 			toggleServerModal () {
 				this.serverModal.open = !this.serverModal.open
 			},
@@ -241,6 +261,10 @@
 </script>
 
 <style lang="scss">
+    #test_reachability {
+        width: auto;
+        margin-right: 5px;
+    }
     .adapter-config {
         .x-table-actionable {
             height: auto;

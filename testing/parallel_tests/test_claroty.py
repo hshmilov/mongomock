@@ -29,3 +29,7 @@ class TestClarotyAdapter(AdapterTestBase):
     @pytest.mark.skip("Problem with claroty.")
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip('Not responding')
+    def test_check_reachability(self):
+        pass

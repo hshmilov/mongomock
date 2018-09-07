@@ -6,6 +6,7 @@ from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException, CredentialErrorException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.clients.rest.connection import RESTConnection
 
 
 class TraianaLabMachinesAdapter(AdapterBase):
@@ -22,6 +23,9 @@ class TraianaLabMachinesAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config["api_url"]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("api_url"))
 
     def _connect_client(self, client_config):
         api_url = client_config['api_url']

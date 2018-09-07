@@ -9,6 +9,7 @@ from symantec_adapter.connection import SymantecConnection
 from axonius.clients.rest.exception import RESTException
 import datetime
 from symantec_adapter import consts
+from axonius.clients.rest.connection import RESTConnection
 
 
 class SymantecAdapter(AdapterBase):
@@ -22,6 +23,9 @@ class SymantecAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("domain"), client_config.get("port"))
 
     def _connect_client(self, client_config):
         try:

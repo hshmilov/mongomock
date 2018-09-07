@@ -33,6 +33,10 @@ class TestAwsAdapter(AdapterTestBase):
     def get_some_device_id(self, client_count=0):
         return SOME_DEVICE_ID[client_count]
 
+    @pytest.mark.skip('No reachability test')
+    def test_check_reachability(self):
+        pass
+
     def test_proxy(self):
         self.drop_clients()
         self.adapter_service.add_client(client_ec2_with_proxy)  # set client to use proxy

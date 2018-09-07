@@ -13,6 +13,7 @@ from chef_adapter.exceptions import ChefException
 from chef_adapter.connection import ChefConnection
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.utils.parsing import format_ip
+from axonius.clients.rest.connection import RESTConnection
 
 CHEF_DOMAIN = 'domain'
 ORGANIZATION = 'organization'
@@ -33,6 +34,9 @@ class ChefAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config[CHEF_DOMAIN]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(CHEF_DOMAIN))
 
     def _connect_client(self, client_config):
         try:

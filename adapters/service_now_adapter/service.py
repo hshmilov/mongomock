@@ -9,6 +9,7 @@ from axonius.clients.service_now.consts import *
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.plugin_base import add_rule, return_error
+from axonius.clients.rest.connection import RESTConnection
 
 
 class ServiceNowAdapter(AdapterBase):
@@ -21,6 +22,9 @@ class ServiceNowAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("domain"))
 
     def _connect_client(self, client_config):
         try:

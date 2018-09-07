@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from splunk_nexpose_adapter.connection import SplunkConnection
+from axonius.clients.rest.connection import RESTConnection
 
 
 class SplunkNexposeAdapter(AdapterBase):
@@ -18,6 +19,9 @@ class SplunkNexposeAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return '{}:{}'.format(client_config['host'], client_config['port'])
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("host"), client_config.get("port"))
 
     def _connect_client(self, client_config):
         has_token = bool(client_config.get('token'))

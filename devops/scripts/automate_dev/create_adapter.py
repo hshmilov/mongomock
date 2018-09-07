@@ -187,6 +187,10 @@ class %sAdapter(AdapterBase):
     def _get_client_id(self, client_config):
         return 'AUTOADAPTER - you should return the id (for example: client_config["hostname"])'
 
+    def _test_reachability(self, client_config):
+        'AUTOADAPTER - add code that tests client reachability'
+        return True
+
     def _connect_client(self, client_config):
         try:
             'AUTOADAPTER - add code that returns client'

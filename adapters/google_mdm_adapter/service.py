@@ -40,6 +40,9 @@ class GoogleMdmAdapter(AdapterBase):
         auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
         return auth_file['client_id']
 
+    def _test_reachability(self, client_config):
+        return True
+
     def _connect_client(self, client_config) -> GSuiteAdminConnection:
         try:
             auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))

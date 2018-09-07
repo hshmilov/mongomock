@@ -1,16 +1,20 @@
+import datetime
+import json
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
-from carbonblack_protection_adapter.connection import CarbonblackProtectionConnection
-from carbonblack_protection_adapter.exceptions import CarbonblackProtectionException
-import json
+from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
-import datetime
+from carbonblack_protection_adapter.connection import \
+    CarbonblackProtectionConnection
+from carbonblack_protection_adapter.exceptions import \
+    CarbonblackProtectionException
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CarbonblackProtectionAdapter(AdapterBase):
@@ -25,6 +29,9 @@ class CarbonblackProtectionAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['CarbonblackProtection_Domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("CarbonblackProtection_Domain"))
 
     def _connect_client(self, client_config):
         try:

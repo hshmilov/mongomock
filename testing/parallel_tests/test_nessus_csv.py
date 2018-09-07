@@ -52,6 +52,10 @@ class TestNessusCsvAdapter(AdapterTestBase):
     def test_removing_adapter_creds_with_users(self):
         pass
 
+    @pytest.mark.skip("No reachability test")
+    def test_check_reachability(self):
+        pass
+
 
 if __name__ == '__main__':
     import pytest

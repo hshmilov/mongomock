@@ -6,6 +6,7 @@ export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
 export const UPDATE_CURRENT_ADAPTER = 'UPDATE_CURRENT_ADAPTER'
 
 export const SAVE_ADAPTER_SERVER = 'SAVE_ADAPTER_SERVER'
+export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER'
 export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
 export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
 export const REMOVE_SERVER = 'REMOVE_SERVER'
@@ -129,6 +130,20 @@ export const adapter = {
 				data: payload.serverData
 			})
 		},
+        [ TEST_ADAPTER_SERVER ] ({dispatch}, payload) {
+            /*
+                Call API to test connectivity to given server controls to adapter by the given adapter id,
+                either adding a new server or updating and existing one, if id is provided with the controls
+             */
+            if (!payload || !payload.adapterId || !payload.serverData) { return }
+            let rule = `adapters/${payload.adapterId}/clients`
+
+            return dispatch(REQUEST_API, {
+                rule: rule,
+                method: 'post',
+                data: payload.serverData
+            })
+        },
 		[ ARCHIVE_SERVER ] ({dispatch, commit}, payload) {
 			if (!payload.adapterId || !payload.serverId) { return }
             let param = ''

@@ -2,6 +2,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
@@ -23,10 +24,16 @@ class ClarotyAdapter(AdapterBase):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config['domain']
 
-    def _connect_client(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
+        return RESTConnection.test_reachability(client_config.get('domain'))
+
+    @staticmethod
+    def _connect_client(client_config):
         try:
             connection = ClarotyConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
                                            username=client_config['username'], password=client_config['password'],
@@ -40,7 +47,8 @@ class ClarotyAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -55,7 +63,8 @@ class ClarotyAdapter(AdapterBase):
         finally:
             client_data.close()
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         """
         The schema ClarotyAdapter expects from configs
 

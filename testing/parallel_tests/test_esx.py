@@ -3,6 +3,7 @@ import pytest
 from esx_adapter.service import EsxAdapter
 from services.adapters.esx_service import EsxService, esx_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
+from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
 from test_credentials.test_esx_credentials import *
 
 
@@ -49,3 +50,7 @@ class TestEsxAdapter(AdapterTestBase):
     @pytest.mark.skip("Not known reason, mark should fix it")
     def test_removing_adapter_creds_with_users(self):
         pass
+
+    def test_check_reachability(self):
+        assert self.adapter_service.is_client_reachable(client_details[0][0])
+        assert not self.adapter_service.is_client_reachable(FAKE_CLIENT_DETAILS)

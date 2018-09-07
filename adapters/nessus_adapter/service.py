@@ -11,7 +11,7 @@ from axonius.utils.parsing import parse_date
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 import requests
-
+from axonius.clients.rest.connection import RESTConnection
 
 HOST = 'host'
 PORT = 'port'
@@ -46,6 +46,9 @@ class NessusAdapter(ScannerAdapterBase):
         :return: str unique id for the client
         """
         return client_config[HOST]
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get(HOST), client_config.get(PORT))
 
     def _connect_client(self, client_config):
         """

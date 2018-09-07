@@ -25,3 +25,7 @@ class TestCiscoAdapter(AdapterTestBase):
     @flaky(max_runs=2)
     def test_fetch_devices(self):
         super().test_fetch_devices()
+
+    @pytest.mark.skip("No reachability test")
+    def test_check_reachability(self):
+        pass

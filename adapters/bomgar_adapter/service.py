@@ -1,15 +1,17 @@
-import logging
-logger = logging.getLogger(f'axonius.{__name__}')
 import datetime
+import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, JsonStringFormat
-from axonius.utils.parsing import format_ip
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import format_ip
 from bomgar_adapter.client import BomgarConnection
 from bomgar_adapter.exceptions import BomgarException
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class BomgarAdapter(AdapterBase):
@@ -30,6 +32,9 @@ class BomgarAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return f"{client_config['domain']}:{client_config['client_id']}"
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("domain"))
 
     def _connect_client(self, client_config):
         try:

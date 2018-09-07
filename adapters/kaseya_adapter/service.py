@@ -1,12 +1,15 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-from kaseya_adapter.connection import KaseyaConnection
+from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
+from kaseya_adapter.connection import KaseyaConnection
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class KaseyaAdapter(AdapterBase):
@@ -20,6 +23,9 @@ class KaseyaAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['Kaseya_Domain']
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("Kaseya_Domain"))
 
     def _connect_client(self, client_config):
         try:

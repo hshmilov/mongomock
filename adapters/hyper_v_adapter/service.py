@@ -44,6 +44,9 @@ class HyperVAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
+    def _test_reachability(self, client_config):
+        return True
+
     def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific Hyper-V server

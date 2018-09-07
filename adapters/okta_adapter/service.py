@@ -3,6 +3,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.users.user_adapter import UserAdapter
@@ -26,6 +27,9 @@ class OktaAdapter(AdapterBase):
     def _get_client_id(self, client_config):
         api_declassified = hashlib.md5(client_config['api_key'].encode('utf-8')).hexdigest()
         return f"{client_config['url']}_{api_declassified}"
+
+    def _test_reachability(self, client_config):
+        return RESTConnection.test_reachability(client_config.get("url"))
 
     def _connect_client(self, client_config):
         connection = OktaConnection(**client_config)

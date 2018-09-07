@@ -24,3 +24,7 @@ class TestTaniumAdapter(AdapterTestBase):
     @pytest.mark.skip("No test environment.")
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip('No test environment')
+    def test_check_reachability(self):
+        pass
