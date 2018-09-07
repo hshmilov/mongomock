@@ -22,7 +22,6 @@ class TestEpoAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip('AX-2019')
     def test_client_status_change(self):
         """
         This tests that client status changes if some change occurred in the credentials given for a client.

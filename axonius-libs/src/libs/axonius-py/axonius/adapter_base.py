@@ -806,21 +806,19 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         def call_connect_as_stoppable(*args, **kwargs):
             try:
                 return self._connect_client(*args, **kwargs)
-            except func_timeout.exceptions.FunctionTimedOut as e:
-                logger.error(f"Timeout for {client_name} on {self.plugin_unique_name}")
-
-                self.create_notification(f"Timeout connection after {timeout} seconds for '{client_name}'"
-                                         f" client on {self.plugin_unique_name}", repr(e))
-            except StopThreadException:
-                logger.info("Stopped fetching")
-            except BaseException:
-                logger.exception("Unexpected exception")
+            except BaseException as e:
+                # this is called from an external thread so if it raises the exception is lost,
+                # this allows forwarding exceptions back to the caller
+                return e
 
         try:
-            return call_with_stoppable(func_timeout.func_timeout,
-                                       kwargs=dict(timeout=timeout,
-                                                   func=call_connect_as_stoppable,
-                                                   args=[client_config]))
+            res = call_with_stoppable(func_timeout.func_timeout,
+                                      kwargs=dict(timeout=timeout,
+                                                  func=call_connect_as_stoppable,
+                                                  args=[client_config]))
+            if isinstance(res, BaseException):
+                raise res
+            return res
         except func_timeout.exceptions.FunctionTimedOut:
             logger.info(f"Timeout on connection for {client_config} with {timeout} time")
             raise adapter_exceptions.ClientConnectionException(f"Connecting has timed out ({timeout} seconds)")
