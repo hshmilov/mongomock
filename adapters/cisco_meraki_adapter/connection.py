@@ -96,17 +96,23 @@ class CiscoMerakiConnection(object):
 
         networks_raw = []
         for organization in organizations:
-            networks_organization_raw = self._get("organizations/" + str(organization) + "/networks")
-            for network_raw in networks_organization_raw:
-                networks_raw.append(network_raw)
+            try:
+                networks_organization_raw = self._get("organizations/" + str(organization) + "/networks")
+                for network_raw in networks_organization_raw:
+                    networks_raw.append(network_raw)
+            except Exception:
+                logger.exception(f'Got problem getting networks from org: {organization}')
         logger.info(f"Got networks: {str(networks_raw)}")
 
         devices = []
         for network_raw in networks_raw:
-            devices_network_raw = self._get("networks/" + str(network_raw.get("id")) + "/devices")
-            for device_raw in devices_network_raw:
-                device_raw["network_name"] = network_raw.get("name")
-            devices.extend(devices_network_raw)
+            try:
+                devices_network_raw = self._get("networks/" + str(network_raw.get("id")) + "/devices")
+                for device_raw in devices_network_raw:
+                    device_raw["network_name"] = network_raw.get("name")
+                devices.extend(devices_network_raw)
+            except Exception:
+                logger.exception(f'Problem getting devices in network {network_raw}')
         logger.info(f"Got number of devices: {len(devices)}")
         # Clients are the devices under the Cisco devices. PAY ATTENTION that we couldn't connect clients in our trial model. We must find a way to check this.
         clients = []
