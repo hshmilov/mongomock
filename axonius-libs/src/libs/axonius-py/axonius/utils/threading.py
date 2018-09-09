@@ -61,12 +61,18 @@ def timeout_iterator(iterable, timeout):
     # this is a dummy object to represent the end of the iterator
     finished_queue = object()
 
+    out_exception = [None]
+
     # iterate the iterator into a queue
     @stoppable
     def iterate_into_queue():
-        for x in iterable:
-            q.put(x)
-        q.put(finished_queue)
+        try:
+            for x in iterable:
+                q.put(x)
+        except BaseException as e:
+            out_exception[0] = e
+        finally:
+            q.put(finished_queue)
 
     t = threading.Thread(target=iterate_into_queue, daemon=True)
     t.start()
@@ -77,6 +83,8 @@ def timeout_iterator(iterable, timeout):
             try:
                 item = q.get(block=True, timeout=timeout)
                 if item is finished_queue:
+                    if out_exception[0]:
+                        raise out_exception[0]
                     return
                 yield item
             except queue.Empty:
