@@ -17,7 +17,7 @@ from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.thread_stopper import stoppable
+from axonius.thread_stopper import stoppable, StopThreadException
 from axonius.utils.files import get_local_config_file
 from flask import jsonify
 from retrying import retry
@@ -173,7 +173,9 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 self.current_phase = scheduler_consts.Phases.Research.name
                 try:
                     yield
-                except Exception:
+                except StopThreadException:
+                    logger.info("Stopped execution")
+                except BaseException:
                     logger.exception(f"Failed {scheduler_consts.Phases.Research.name} Phase.")
                 finally:
                     self.current_phase = scheduler_consts.Phases.Stable.name
@@ -202,35 +204,20 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         :return:
         """
 
-        should_rebuild_db = True
-
-        def _rebuild_view_constantly():
-            while should_rebuild_db:
-                self._request_db_rebuild(sync=True)
-
-        thread = threading.Thread(target=_rebuild_view_constantly)
-        thread.start()
-
         def _change_subphase(subphase: scheduler_consts.ResearchPhases):
             self.state[scheduler_consts.StateLevels.SubPhase.name] = subphase.name
             logger.info(f'Started Subphase {subphase}')
 
         with self._start_research():
-            try:
-                self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
+            self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
 
-                # Fetch Devices Data.
-                _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
-                self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
+            # Fetch Devices Data.
+            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
+            self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
 
-                # Fetch Scanners Data.
-                _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
-                self._run_aggregator_phase(adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE)
-            finally:
-                should_rebuild_db = False
-                logger.info("Waiting for rebuilding thread to stop")
-                thread.join()
-                logger.info("Finished waiting for rebuilding thread to stop")
+            # Fetch Scanners Data.
+            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
+            self._run_aggregator_phase(adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE)
 
             # Clean old devices.
             _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
@@ -340,8 +327,9 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             try:
                 _wait_for_stable()
             except Exception:
-                logger.exception("Couldn't stop plugins for more than a 100 seconds")
-                raise axonius.plugin_exceptions.PluginException("Couldn't stop plugins for more than a 100 seconds")
+                logger.exception("Couldn't stop plugins for more than a 100 seconds - forcing stop")
+                self.current_phase = scheduler_consts.Phases.Stable.name
+                # raise axonius.plugin_exceptions.PluginException("Couldn't stop plugins for more than a 100 seconds")
 
     @add_rule('stop_all', should_authenticate=False, methods=['POST'])
     def stop_all(self):
