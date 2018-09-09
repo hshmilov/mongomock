@@ -437,12 +437,14 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         if self.__last_fetch_time is not None and self.__next_fetch_timedelta is not None \
                 and current_time - self.__last_fetch_time < self.__next_fetch_timedelta:
             logger.info(f"{self.plugin_unique_name}: The minimum time between fetches hasn't been reached yet.")
-            if self.__user_last_fetched_timedelta < self.__next_fetch_timedelta:
+            if self.__user_last_fetched_timedelta is not None and \
+                    self.__user_last_fetched_timedelta < self.__next_fetch_timedelta:
                 self.create_notification("Bad Adapter Configuration (\"Old user last fetched threshold hours\")",
                                          f"Please note that \"Old user last fetched threshold hours\" is smaller than \"Minimum time until next fetch entities\" for {self.plugin_name} adapter.",
                                          "warning")
 
-            if self._last_fetched_timedelta < self.__next_fetch_timedelta:
+            if self._last_fetched_timedelta is not None and \
+                    self._last_fetched_timedelta < self.__next_fetch_timedelta:
                 self.create_notification("Bad Adapter Configuration (\"Old device last fetched threshold hours\")",
                                          f"Please note that \"Old device last fetched threshold hours\" is smaller than \"Minimum time until next fetch entities\" for {self.plugin_name} adapter.",
                                          "warning")
