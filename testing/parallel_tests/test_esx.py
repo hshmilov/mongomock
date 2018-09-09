@@ -12,12 +12,13 @@ class TestEsxAdapter(AdapterTestBase):
     def adapter_service(self):
         return EsxService()
 
+    @property
     def some_client_id(self):
-        return EsxAdapter._get_client_id(None, client_details)
+        return EsxAdapter._get_client_id(None, self.some_client_details)
 
     @property
     def some_client_details(self):
-        return client_details
+        return dict(client_details[0][0])
 
     @property
     def some_device_id(self):
@@ -26,6 +27,7 @@ class TestEsxAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         client_details_to_send = []
         for client, some_device_id in client_details:
+            client = dict(client)
             self.adapter_service.add_client(client)
 
             client_id = "{}/{}".format(client['host'], client['user'])
@@ -37,20 +39,13 @@ class TestEsxAdapter(AdapterTestBase):
         self.drop_clients()
 
         client, _ = client_details[0]
+        client = dict(client)
 
         client_id = "{}/{}".format(client['host'], client['user'])
         self.adapter_service.add_client(client)
 
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id, AGGREGATED_DEVICE_ID)])
 
-    @pytest.mark.skip("Not known reason, mark should fix it")
-    def test_removing_adapter_creds_with_devices(self):
-        pass
-
-    @pytest.mark.skip("Not known reason, mark should fix it")
-    def test_removing_adapter_creds_with_users(self):
-        pass
-
     def test_check_reachability(self):
-        assert self.adapter_service.is_client_reachable(client_details[0][0])
+        assert self.adapter_service.is_client_reachable(self.some_client_details)
         assert not self.adapter_service.is_client_reachable(FAKE_CLIENT_DETAILS)
