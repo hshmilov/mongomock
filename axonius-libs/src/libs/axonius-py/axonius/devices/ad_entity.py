@@ -154,7 +154,7 @@ class ADEntity(object):
     def figure_out_delegation_policy(self, user_account_control, msds_allowed_to_delegate_to):
         if msds_allowed_to_delegate_to is not None:
             self.ad_delegation_policy = AD_DELEGATION_POLICY[2]
-        else:
+        elif user_account_control is not None and type(user_account_control) == int:
             if user_account_control & TRUSTED_FOR_DELEGATION > 0:
                 self.ad_delegation_policy = AD_DELEGATION_POLICY[1]
             else:
