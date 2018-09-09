@@ -33,6 +33,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
         self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
         self.research_phase_lock = threading.RLock()
+        # This lock is held while the system is trying to stop
+        self.__stopping_lock = threading.Lock()
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
         self._research_phase_scheduler.add_job(func=self._restart_research,
@@ -326,23 +328,30 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         return "Core"
 
     def stop_research_phase(self):
-        @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
-        def _wait_for_stable():
-            return self.current_phase == scheduler_consts.Phases.Stable.name
-        logger.info(f"received stop request for plugin: {self.plugin_unique_name}")
-        try:
-            self._stop_plugins()
-        except Exception:
-            logger.exception('An exception was raised while stopping all plugins')
-        try:
-            _wait_for_stable()
-        except Exception:
-            logger.exception("Couldn't stop plugins for more than a 100 seconds")
-            raise axonius.plugin_exceptions.PluginException("Couldn't stop plugins for more than a 100 seconds")
+        with self.__stopping_lock:
+            @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
+            def _wait_for_stable():
+                return self.current_phase == scheduler_consts.Phases.Stable.name
+            logger.info(f"received stop request for plugin: {self.plugin_unique_name}")
+            try:
+                self._stop_plugins()
+            except Exception:
+                logger.exception('An exception was raised while stopping all plugins')
+            try:
+                _wait_for_stable()
+            except Exception:
+                logger.exception("Couldn't stop plugins for more than a 100 seconds")
+                raise axonius.plugin_exceptions.PluginException("Couldn't stop plugins for more than a 100 seconds")
 
     @add_rule('stop_all', should_authenticate=False, methods=['POST'])
     def stop_all(self):
-        self.stop_research_phase()
+        logger.info("Received stop_all - starting to stop")
+        try:
+            self.stop_research_phase()
+        except Exception:
+            logger.exception("Exception while stopping")
+        finally:
+            logger.info("FInished stopping all")
         return '', 204
 
     def get_all_plugins(self):
