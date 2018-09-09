@@ -43,7 +43,7 @@ def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associa
 
 
 def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=None, serial=None,
-                   tag_data=None, last_seen=None):
+                   tag_data=None, last_seen=None, domain=None):
     if last_seen is None:
         last_seen = datetime.datetime.now()
     last_seen = last_seen.replace(tzinfo=None)
@@ -62,7 +62,8 @@ def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=
                     'hostname': hostname,
                     NETWORK_INTERFACES_FIELD: network_interfaces,
                     'device_serial': serial,
-                    'last_seen': last_seen
+                    'last_seen': last_seen,
+                    'domain': 'domain'
                 }
             }
         ],
@@ -123,6 +124,28 @@ def assert_success(results, device_list, reason, intended):
                     pass
             assert correlation_success
     assert intended_correlations == intended
+
+
+def test_rule_domain_hostname_correlation():
+    """
+    Checking domain + host name
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             domain='TEST',
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.2']}])
+    device2 = get_raw_device(hostname="ubuntulolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             domain='Test',
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and domain', 1)
 
 
 def test_rule_ip_hostname_os_correlation():

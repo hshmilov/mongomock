@@ -259,6 +259,8 @@ class JamfAdapter(AdapterBase, Configurable):
                     for drive in drives:
                         try:
                             partitions = drive.get('partition')
+                            if not partitions:
+                                continue
                             if not isinstance(partitions, list):
                                 partitions = [partitions]
                             for partition in partitions:
@@ -272,20 +274,14 @@ class JamfAdapter(AdapterBase, Configurable):
                                     device.add_hd(total_size=total_size, free_size=free_size)
                         except Exception:
                             logger.exception(f"couldn't parse drive: {drive}")
-                    active_directory_status = hardware.get("active_directory_status", "Not Bound")
-                    if active_directory_status == 'Not Bound' or ':' in active_directory_status or \
-                            ' ' in active_directory_status:
+                    active_directory_status = hardware.get('active_directory_status') or 'Not Bound'
+                    if active_directory_status == 'Not Bound':
                         device.part_of_domain = False
                     else:
                         device.part_of_domain = True
-                        device.domain = str(active_directory_status)
-                        # hostname can be none or empty. if it is this could crash or make unwanted results
-                        try:
-                            # This could raise an exception if hostname was not set or was set to ''.
-                            if hostname is not None and len(hostname) > 0 and asset_is_host:
-                                device.hostname = hostname
-                        except Exception:
-                            logger.exception(f"Problem adding active directory status to device")
+                        if active_directory_status.lower().startswith('centrify: '):
+                            active_directory_status = active_directory_status[len('centrify: '):]
+                        device.domain = active_directory_status
 
                     applications = ((device_raw.get('software') or {}).get('applications') or {}).get('application', [])
                 else:

@@ -18,6 +18,9 @@ class AssociatedDeviceAdapter(SmartJsonClass):
     address = Field(str, "Address")
     network_name = Field(str, "Network Name")
     vlan = Field(str, "Vlan")
+    name = Field(str, 'Name')
+    notes = Field(str, 'Notes')
+    tags = Field(str, 'Tags')
 
 
 class CiscoMerakiAdapter(AdapterBase):
@@ -27,6 +30,8 @@ class CiscoMerakiAdapter(AdapterBase):
         network_id = Field(str, "Network Name")
         lng = Field(str, "Lng")
         lat = Field(str, "Lat")
+        notes = Field(str, 'Notes')
+        tags = Field(str, 'Tags')
         address = Field(str, "Address")
         dns_name = Field(str, "DNS Name")
         associated_devices = ListField(AssociatedDeviceAdapter, "Associated Devices")
@@ -130,6 +135,8 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.lng = device_raw.get("lng")
                 device.address = device_raw.get("address")
                 device.network_id = device_raw.get("network_name")
+                device.notes = device_raw.get('notes')
+                device.tags = device_raw.get('tags')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
@@ -159,7 +166,8 @@ class CiscoMerakiAdapter(AdapterBase):
                 clients_id_dict[device_id]['associated_devices'].add(
                     (client_raw.get('associated_device'), client_raw.get('switchport'),
                      client_raw.get('address'), client_raw.get('network_name'),
-                     client_raw.get('vlan')))
+                     client_raw.get('vlan'), client_raw.get('name'),
+                     client_raw.get('notes'), client_raw.get('tags')))
 
             except Exception:
                 logger.exception(f"Problem with fetching CiscoMeraki Client {client_raw}")
@@ -181,7 +189,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.description = client_raw.get("description")
                 device.dns_name = client_raw.get("mdnsName")
                 device.associated_devices = []
-                for associated_device, switch_port, address, network_name, vlan in client_raw["associated_devices"]:
+                for associated_device, switch_port, address, network_name, vlan, name, notes, tags in client_raw["associated_devices"]:
                     try:
                         associated_device_object = AssociatedDeviceAdapter()
                         associated_device_object.switch_port = switch_port
@@ -189,6 +197,9 @@ class CiscoMerakiAdapter(AdapterBase):
                         associated_device_object.address = address
                         associated_device_object.network_name = network_name
                         associated_device_object.vlan = vlan
+                        associated_device_object.name = name
+                        associated_device_object.notes = notes
+                        associated_device_object.tags = tags
                         device.associated_devices.append(associated_device_object)
                     except Exception:
                         logger.exception(f"Problem adding associated device"

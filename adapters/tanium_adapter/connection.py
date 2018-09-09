@@ -33,7 +33,7 @@ class TaniumConnection(RESTConnection):
         if not xml_second_block.tag.endswith('Body'):
             raise RESTException(f'Bad xml second tag is {xml_second_block.tag}')
         xml_third_block = xml_second_block[0]
-        if not xml_third_block.tag.endswith('Return'):
+        if not xml_third_block.tag.endswith('return'):
             raise RESTException(f'Bad xml third tag is {xml_third_block.tag}')
         clients_xml = []
         for inner_xml in xml_third_block:

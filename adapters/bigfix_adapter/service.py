@@ -19,8 +19,8 @@ class BigfixAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
-        bigfix_device_type = Field(str, "Device type")
-        bigfix_computer_type = Field(str, "Computer type")
+        bigfix_device_type = Field(str, 'Device type')
+        bigfix_computer_type = Field(str, 'Computer type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -29,21 +29,22 @@ class BigfixAdapter(AdapterBase):
         return client_config['domain']
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get("domain"), client_config.get("port") or consts.DEFAULT_PORT)
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                client_config.get('port') or consts.DEFAULT_PORT)
 
     def _connect_client(self, client_config):
         try:
-            connection = BigfixConnection(domain=client_config["domain"],
-                                          verify_ssl=client_config["verify_ssl"],
-                                          username=client_config["username"],
-                                          password=client_config["password"],
-                                          url_base_prefix="/api/",
-                                          port=(client_config.get("port") or consts.DEFAULT_PORT))
+            connection = BigfixConnection(domain=client_config['domain'],
+                                          verify_ssl=client_config['verify_ssl'],
+                                          username=client_config['username'],
+                                          password=client_config['password'],
+                                          url_base_prefix='/api/',
+                                          port=(client_config.get('port') or consts.DEFAULT_PORT))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
         except RESTException as e:
-            message = "Error connecting to client with domain {0}, reason: {1}".format(
+            message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             raise ClientConnectionException(message)
 
@@ -69,42 +70,42 @@ class BigfixAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "items": [
+            'items': [
                 {
-                    "name": "domain",
-                    "title": "Bigfix Domain",
-                    "type": "string"
+                    'name': 'domain',
+                    'title': 'Bigfix Domain',
+                    'type': 'string'
                 },
                 {
-                    "name": "port",
-                    "title": "Port",
-                    "type": "integer",
-                    "format": "port"
+                    'name': 'port',
+                    'title': 'Port',
+                    'type': 'integer',
+                    'format': 'port'
                 },
                 {
-                    "name": "username",
-                    "title": "User Name",
-                    "type": "string"
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string'
                 },
                 {
-                    "name": "password",
-                    "title": "Password",
-                    "type": "string",
-                    "format": "password"
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
-                    "name": "verify_ssl",
-                    "title": "Verify SSL",
-                    "type": "bool"
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
                 }
             ],
-            "required": [
-                "domain",
-                "username",
-                "password",
-                "verify_ssl"
+            'required': [
+                'domain',
+                'username',
+                'password',
+                'verify_ssl'
             ],
-            "type": "array"
+            'type': 'array'
         }
 
     def _parse_raw_data(self, devices_raw_data):
@@ -114,19 +115,19 @@ class BigfixAdapter(AdapterBase):
                 for xml_property in ET.fromstring(device_raw_xml)[0]:
                     try:
                         if xml_property.tag == 'Property':
-                            if xml_property.attrib["Name"] in device_raw:
-                                device_raw[xml_property.attrib["Name"]] += "," + str(xml_property.text)
+                            if xml_property.attrib['Name'] in device_raw:
+                                device_raw[xml_property.attrib['Name']] += ',' + str(xml_property.text)
                             else:
-                                device_raw[xml_property.attrib["Name"]] = str(xml_property.text)
+                                device_raw[xml_property.attrib['Name']] = str(xml_property.text)
                     except Exception:
-                        logger.exception("Can't parse some xml properties")
+                        logger.exception('Cant parse some xml properties')
                 device = self._new_device_adapter()
-                if not device_raw.get("ID"):
+                if not device_raw.get('ID'):
                     continue
                 else:
-                    device.id = str(device_raw.get("ID"))
-                dns_name = device_raw.get("DNS Name")
-                computer_name = device_raw.get("Computer Name")
+                    device.id = str(device_raw.get('ID'))
+                dns_name = device_raw.get('DNS Name')
+                computer_name = device_raw.get('Computer Name')
 
                 try:
                     if computer_name is not None and dns_name is not None:
@@ -137,46 +138,50 @@ class BigfixAdapter(AdapterBase):
                     else:
                         device.hostname = computer_name or dns_name
                 except Exception:
-                    logger.exception(f"Failed to parse hostname: "
-                                     f"dns name is {str(dns_name)} and computer name is {str(computer_name)}")
+                    logger.exception(f'Failed to parse hostname: '
+                                     f'dns name is {str(dns_name)} and computer name is {str(computer_name)}')
 
-                device.figure_os(device_raw.get("OS", ""))
+                device.figure_os(device_raw.get('OS'))
                 try:
                     try:
                         mac_key = None
-                        for key_raw in device_raw.keys():
-                            if "mac addresses" in key_raw.lower():
+                        for key_raw in device_raw:
+                            if 'mac addresses' in key_raw.lower():
                                 mac_key = key_raw
                                 break
-                        if mac_key is not None:
-                            mac_addresses = device_raw[mac_key].split(",")
-                        else:
-                            mac_addresses = []
+                        mac_addresses = []
+                        if mac_key:
+                            if ',' in device_raw[mac_key]:
+                                mac_addresses = device_raw[mac_key].split(',')
+                            elif ';' in device_raw[mac_key]:
+                                mac_addresses = device_raw[mac_key].split(';')
+                        mac_addresses = [mac_address.strip() for mac_address in mac_addresses]
                     except Exception:
                         mac_addresses = []
-                        logger.exception(f"Problem getting mac for {device_raw}")
-                    if not mac_addresses:
-                        device.add_nic(None, device_raw.get("IP Address", "").split(",") +
-                                       device_raw.get("IPv6 Address", "").split(","))
+                        logger.exception(f'Problem getting mac for {device_raw}')
+                    ips = (device_raw.get('IP Address') or '').split(',') + \
+                          (device_raw.get('IPv6 Address') or '').split(',')
+                    ips = [ip.strip() for ip in ips]
+                    if not mac_addresses and ips:
+                        device.add_nic(None, ips)
                     else:
                         for mac_address in mac_addresses:
-                            device.add_nic(mac_address, device_raw.get("IP Address", "").split(",") +
-                                           device_raw.get("IPv6 Address", "").split(","))
+                            device.add_nic(mac_address, ips)
                 except Exception:
-                    logger.exception("Problem adding nic to Bigfix")
-                device.agent_version = device_raw.get("Agent Version", "")
-                device.last_used_users = device_raw.get("User Name", "").split(",")
-                last_report_time = device_raw.get("Last Report Time", "")
+                    logger.exception('Problem adding nic to Bigfix')
+                device.agent_version = device_raw.get('Agent Version')
+                device.last_used_users = (device_raw.get('User Name') or '').split(',')
+                last_report_time = device_raw.get('Last Report Time')
                 try:
                     device.last_seen = parse_date(last_report_time)
                 except Exception:
-                    logger.exception(f"Failure parsing last seen date: {last_report_time}")
-                device.bigfix_device_type = device_raw.get("Device Type", "")
-                device.bigfix_computer_type = device_raw.get("Computer Type", "")
+                    logger.exception(f'Failure parsing last seen date: {last_report_time}')
+                device.bigfix_device_type = device_raw.get('Device Type')
+                device.bigfix_computer_type = device_raw.get('Computer Type')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception(f"Problem with fetching Bigfix Device {device_raw}")
+                logger.exception(f'Problem with fetching Bigfix Device {device_raw}')
 
     @classmethod
     def adapter_properties(cls):

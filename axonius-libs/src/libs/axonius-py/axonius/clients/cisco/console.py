@@ -48,7 +48,7 @@ class CiscoConsoleClient(AbstractCiscoClient):
 
     def _query_arp_table(self):
         try:
-            lines = self._sess.send_command('show arp')
+            lines = self._sess.send_command_timing('show arp')
             lines = lines.split('\n')
             lines = list(filter(lambda x: x.startswith('internet'),
                                 map(lambda x: x.lower().expandtabs(tabsize=8).strip(), lines)))
@@ -58,14 +58,14 @@ class CiscoConsoleClient(AbstractCiscoClient):
 
     def _query_dhcp_leases(self):
         try:
-            lines = self._sess.send_command('show ip dhcp binding')
+            lines = self._sess.send_command_timing('show ip dhcp binding')
             return ConsoleDhcpCiscoData(lines, received_from=self.host)
         except Exception:
             logger.exception('Exception in query dhcp Leases')
 
     def _query_cdp_table(self):
         try:
-            lines = self._sess.send_command('show cdp neighbors detail')
+            lines = self._sess.send_command_timing('show cdp neighbors detail')
             return ConsoleCdpCiscoData(lines, received_from=self.host)
         except Exception:
             logger.exception('Exception in query dhcp Leases')

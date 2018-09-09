@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
+from axonius.fields import Field
 from tanium_adapter import consts
 from tanium_adapter.connection import TaniumConnection
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class TaniumAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        agent_version = Field(str, 'Agent Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -51,7 +52,8 @@ class TaniumAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Tanium Server
         """
-        return client_data.get_device_list()
+        with client_data:
+            yield from client_data.get_device_list()
 
     def _clients_schema(self):
         """
@@ -107,7 +109,11 @@ class TaniumAdapter(AdapterBase):
                 if not device_id:
                     logger.warning(f'Bad device with no ID {device_raw}')
                 device.id = device_id
-                device.hostname = device_raw.get('host_name').split('.')[0]
+                hostname = device_raw.get('host_name')
+                if hostname and hostname.endswith('(none)'):
+                    hostname = hostname[:-len('(none)')]
+                device.hostname = hostname
+                device.agent_version = device_raw.get('full_version')
                 device.last_seen = parse_date(device_raw.get('last_registration'))
                 ip_address = device_raw.get('ipaddress_client')
                 if ip_address:

@@ -45,7 +45,8 @@ class CiscoMerakiConnection(object):
             raise CiscoMerakiAlreadyConnected()
         session = requests.Session()
         if self.apikey is not None:
-            response = session.get(self._get_url_request('organizations'), headers=self.headers, verify=self.verify_ssl)
+            response = session.get(self._get_url_request('organizations'), headers=self.headers,
+                                   verify=self.verify_ssl, timeout=(5, 30))
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
@@ -75,7 +76,7 @@ class CiscoMerakiConnection(object):
             raise CiscoMerakiNotConnected()
         params = params or {}
         response = self.session.get(self._get_url_request(name), params=params,
-                                    headers=self.headers, verify=self.verify_ssl)
+                                    headers=self.headers, verify=self.verify_ssl, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -125,8 +126,11 @@ class CiscoMerakiConnection(object):
                 clients_device_raw = self._get("devices/" + str(serial) + "/clients?timespan=" + str(86400 * 2))
                 for client_raw in clients_device_raw:
                     client_raw["associated_device"] = serial
+                    client_raw['name'] = device.get('name')
                     client_raw["address"] = device.get("address")
                     client_raw["network_name"] = device.get("network_name")
+                    client_raw['notes'] = device.get('notes')
+                    client_raw['tags'] = device.get('tags')
                 clients.extend(clients_device_raw)
             except Exception:
                 logger.exception(f"Problem getting clients for device {str(device)}")

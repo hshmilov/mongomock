@@ -1,22 +1,23 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
-from axonius.adapter_exceptions import GetDevicesError
+from axonius.utils.parsing import (get_exception_string, is_domain_valid,
+                                   parse_date)
 from observeit_adapter import consts
-from axonius.clients.mssql.connection import MSSQLConnection
-from axonius.adapter_exceptions import ClientConnectionException
-from axonius.utils.parsing import get_organizational_units_from_dn, get_exception_string
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ObserveitAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         client_version = Field(str, 'Client Version')
         client_status = Field(str, 'Client Status')
-        client_type = Field(str, "Clietn Type")
+        client_type = Field(str, 'Client Type')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -30,7 +31,8 @@ class ObserveitAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = MSSQLConnection(database=client_config.get(consts.OBSERVEIT_DATABASE, consts.DEFAULT_OBSERVEIT_DATABASE),
+            connection = MSSQLConnection(database=client_config.get(consts.OBSERVEIT_DATABASE,
+                                                                    consts.DEFAULT_OBSERVEIT_DATABASE),
                                          server=client_config[consts.OBSERVEIT_HOST],
                                          port=client_config.get(consts.OBSERVEIT_PORT, consts.DEFAULT_OBSERVEIT_PORT),
                                          devices_paging=self.devices_fetched_at_a_time)
@@ -40,8 +42,9 @@ class ObserveitAdapter(AdapterBase):
                 pass  # check that the connection credentials are valid
             return connection
         except Exception as err:
-            message = f"Error connecting to client host: {str(client_config[consts.OBSERVEIT_HOST])}  " \
-                      f"database: {str(client_config.get(consts.OBSERVEIT_DATABASE, consts.DEFAULT_OBSERVEIT_DATABASE))}"
+            message = f'Error connecting to client host: {client_config[consts.OBSERVEIT_HOST]}  ' \
+                      f'database: ' \
+                      f'{client_config.get(consts.OBSERVEIT_DATABASE, consts.DEFAULT_OBSERVEIT_DATABASE)}'
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
@@ -54,101 +57,99 @@ class ObserveitAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "items": [
+            'items': [
                 {
-                    "name": consts.OBSERVEIT_HOST,
-                    "title": "MSSQL Server",
-                    "type": "string"
+                    'name': consts.OBSERVEIT_HOST,
+                    'title': 'MSSQL Server',
+                    'type': 'string'
                 },
                 {
-                    "name": consts.OBSERVEIT_PORT,
-                    "title": "Port",
-                    "type": "integer",
-                    "default": consts.DEFAULT_OBSERVEIT_PORT,
-                    "format": "port"
+                    'name': consts.OBSERVEIT_PORT,
+                    'title': 'Port',
+                    'type': 'integer',
+                    'default': consts.DEFAULT_OBSERVEIT_PORT,
+                    'format': 'port'
                 },
                 {
-                    "name": consts.OBSERVEIT_DATABASE,
-                    "title": "Database",
-                    "type": "string",
-                    "default": consts.DEFAULT_OBSERVEIT_DATABASE
+                    'name': consts.OBSERVEIT_DATABASE,
+                    'title': 'Database',
+                    'type': 'string',
+                    'default': consts.DEFAULT_OBSERVEIT_DATABASE
                 },
                 {
-                    "name": consts.USER,
-                    "title": "User Name",
-                    "type": "string"
+                    'name': consts.USER,
+                    'title': 'User Name',
+                    'type': 'string'
                 },
                 {
-                    "name": consts.PASSWORD,
-                    "title": "Password",
-                    "type": "string",
-                    "format": "password"
+                    'name': consts.PASSWORD,
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
                 }
             ],
-            "required": [
+            'required': [
                 consts.OBSERVEIT_HOST,
                 consts.USER,
                 consts.PASSWORD,
                 consts.OBSERVEIT_DATABASE
             ],
-            "type": "array"
+            'type': 'array'
         }
 
-    def _parse_raw_data(self, raw_data):
-        for device_raw in raw_data:
+    def _parse_raw_data(self, devices_raw_data):
+        for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device_id = device_raw.get("SrvID")
-                if device_id is None or device_id == "":
-                    logger.error(f"Found a device with no id: {device_raw}, skipping")
+                device_id = device_raw.get('SrvID')
+                if device_id is None or device_id == '':
+                    logger.error(f'Found a device with no id: {device_raw}, skipping')
                     continue
                 os_type = None
                 try:
-                    os_type = int(device_raw.get("OSType"))
+                    os_type = int(device_raw.get('OSType'))
                     device.figure_os(consts.OS_TYPES_DICT[os_type])
                 except Exception:
-                    logger.exception(f"Problem getting os of {device_raw}")
-                domain = device_raw.get("SrvCurrentDomainName")
-                device.domain = domain
-                hostname = device_raw.get("SrvName")
+                    logger.exception(f'Problem getting os of {device_raw}')
+                domain = device_raw.get('SrvCurrentDomainName')
+                if not is_domain_valid(domain):
+                    domain = None
+                hostname = device_raw.get('SrvName')
                 if os_type is not None and consts.OS_TYPES_DICT[os_type] == 'Mac OS X':
-                    if (hostname is not None) and (hostname != "") and (domain is not None) and (domain != ""):
+                    if domain and hostname:
                         # That is the weird case of OS X
-                        if str(domain).lower() != 'localhost' and '.' not in str(domain):
+                        if '.' not in domain:
                             device.hostname = domain
-                        elif str(hostname).lower != 'localhost':
+                        elif hostname.lower() != 'localhost':
                             device.hostname = hostname
                         else:
                             logger.warning(f'Got an Observeit id with only localhost in the names, '
                                            f'it is a bad device {device_raw}')
                             continue
-                elif (hostname is not None) and (hostname != ""):
-                    if (domain is not None) and (domain.strip() != "") and (domain.strip().lower() != "local") and\
-                            (domain.strip().lower() != "workgroup") and (domain.strip().lower() != "n/a") and \
-                            (domain.strip().lower() != hostname.strip().lower()) and \
-                            (domain.strip().lower() != "localhost") and \
-                            (not hostname.strip().lower().startswith(domain.strip().lower())):
-                        device.hostname = f"{hostname}.{domain}"
+                elif hostname:
+                    if domain and not hostname.strip().lower().startswith(domain.strip().lower()):
+                        device.hostname = f'{hostname}.{domain}'
+                        device.domain = domain
                     else:
                         device.hostname = hostname
-                device.id = device_id + (hostname or '')
-                ip_list = device_raw.get("PrimaryIPAddress")
+                device.id = device_id + (hostname or '') + (domain or '')
+                ip_list = device_raw.get('PrimaryIPAddress')
                 try:
                     if ip_list is not None:
-                        device.add_nic(None, ip_list.split(","))
+                        device.add_nic(None, ip_list.split(','))
                 except Exception:
-                    logger.exception(f"Problem adding nic to {device_raw}")
-                device.client_version = device_raw.get("SrvVersion")
-                device.client_status = device_raw.get("SrvMonitorStatus")
+                    logger.exception(f'Problem adding nic to {device_raw}')
+                device.client_version = device_raw.get('SrvVersion')
+                device.client_status = device_raw.get('SrvMonitorStatus')
                 try:
-                    device.last_seen = parse_date(str(device_raw.get("ScreenshotLastActivityDate")))
+                    device.last_seen = parse_date(str(device_raw.get('ScreenshotLastActivityDate')))
                 except Exception:
-                    logger.exception(f"Problem adding last seen to {device_raw}")
-                device.client_type = device_raw.get("AgentType")
+                    logger.exception(f'Problem adding last seen to {device_raw}')
+                device.client_type = device_raw.get('AgentType')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception(f"Problem adding device: {str(device_raw)}")
+                logger.exception(f'Problem adding device: {str(device_raw)}')
 
     @classmethod
     def adapter_properties(cls):

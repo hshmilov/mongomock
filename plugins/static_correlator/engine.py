@@ -14,7 +14,8 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_junos_space_device,
                                    normalize_adapter_devices, normalize_mac,
                                    compare_id, is_old_device, is_sccm_or_ad, get_id, is_from_epo_with_empty_mac,
-                                   is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial)
+                                   is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial,
+                                   compare_domain, get_domain)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -121,6 +122,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection],
                                       {'Reason': 'They have the same hostname and IPs'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_hostname_domain(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Hostname-Domain')
+        filtered_adapters_list = filter(get_normalized_hostname_str, filter(get_domain, adapters_to_correlate))
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_normalized_hostname_str],
+                                      [compare_device_normalized_hostname],
+                                      [],
+                                      [compare_domain],
+                                      {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_serial(self, adapters_to_correlate):
@@ -240,6 +252,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_with_juniper(adapters_to_correlate)
 
         yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
+
+        yield from self._correlate_hostname_domain(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

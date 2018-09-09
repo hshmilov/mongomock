@@ -42,8 +42,11 @@ NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
 DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP', '.LOCALHOST']
 # In MacOs hostname of the same computer can return in different shapes,
 # that's why we would like to compare them without these strings
-DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MACBOOK-AIR', 'MACBOOK-AIR']\
-    + [f"-MBP-{index}" for index in range(20)] + [f"-MBP-0{index}" for index in range(10)] + ['-AIR', 'AIR']
+DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MACBOOK-AIR', 'MACBOOK-AIR'] + \
+                         [f"-MBP-{index}" for index in range(20)] + [f"-MBP-0{index}" for index in range(10)] + ['-AIR', 'AIR'] + \
+                         [f"-MACBOOK-PRO-{index}" for index in range(20)] + \
+                         [f"-MACBOOK-PRO-0{index}" for index in range(10)] + \
+                         [f"MACBOOKPRO{index}" for index in range(20)] + [f"MACBOOKPRO0{index}" for index in range(10)]
 # NORMALIZED_IPS/MACS fields will hold the set of IPs and MACs an adapter devices has extracted.
 # Without it, in order to compare IPs and MACs we would have to go through the list of network interfaces and extract
 # them each time.
@@ -267,6 +270,18 @@ def get_organizational_units_from_dn(distinguished_name):
         return [ou[3:] for ou in distinguished_name.split(",") if ou.startswith("OU=")]
     except Exception:
         return None
+
+
+def is_domain_valid(domain):
+    """
+    :param doomain: e.g. TestDomain
+    :return: e.g. Whether domain exist and has a valid value which is not a local value
+    """
+    domain = (domain or '').strip().lower()
+    if domain and not 'workgroup' in domain and not 'local' in domain and \
+            not 'n/a' in domain:
+        return True
+    return False
 
 
 def get_first_object_from_dn(dn):
@@ -561,6 +576,22 @@ def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
 
 
+def get_domain(adapter_device):
+    domain = adapter_device['data'].get('domain')
+    if domain:
+        return domain.upper()
+    return None
+
+
+def compare_domain(adapter_device1, adapter_device2):
+    domain1 = get_domain(adapter_device1)
+    domain2 = get_domain(adapter_device2)
+    if domain1 and domain2:
+        if domain1 in domain2 or domain2 in domain1:
+            return True
+    return False
+
+
 def get_normalized_hostname(adapter_device):
     return adapter_device.get(NORMALIZED_HOSTNAME)
 
@@ -615,12 +646,15 @@ def normalize_hostname(adapter_data):
         final_hostname = final_hostname.replace('\'', '')
         for extension in DEFAULT_DOMAIN_EXTENSIONS:
             final_hostname = remove_trailing(final_hostname, extension)
+        split_hostname = final_hostname.split('.')
         for extension in DEFAULT_MAC_EXTENSIONS:
-            final_hostname = remove_trailing(final_hostname, extension)
-        return final_hostname.split('.')
+            split_hostname[0] = remove_trailing(split_hostname[0], extension)
+        return split_hostname
 
 
-def compare_normalized_hostnames(host1, host2, first_element_only=False) -> bool:
+def compare_normalized_hostnames(host1, host2, first_element_only=False,
+                                 test_on_first_param_and_first_element=False,
+                                 test_on_second_param_and_first_element=False) -> bool:
     """
     As mentioned above in the documentation near the definition of NORMALIZED_HOSTNAME we want to compare hostnames not
     based on the domain as some adapters don't return one or return a default one even when one exists. After we
@@ -634,7 +668,8 @@ def compare_normalized_hostnames(host1, host2, first_element_only=False) -> bool
     """
     if first_element_only:
         if len(host1) > 0 and len(host2) > 0 and host1[0] != '' and host2[0] != '':
-            return host1[0].startswith(host2[0]) or host2[0].startswith(host1[0])
+            return (host1[0].startswith(host2[0]) and not test_on_second_param_and_first_element) or \
+                   (host2[0].startswith(host1[0]) and not test_on_first_param_and_first_element)
         else:
             return False
     else:
@@ -715,12 +750,23 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
     def is_os_x(adapter_device):
         return ((adapter_device.get("data") or {}).get("os") or {}).get("type", '') == "OS X"
     first_element_only = False
+    test_on_first_param_and_first_element = False
+    test_on_second_param_and_first_element = False
     if is_os_x(adapter_device1) and is_os_x(adapter_device2):
         # Special case for OS-X, in this case we check only the first part of the name list
         first_element_only = True
+    if adapter_device2.get('plugin_name') == 'carbonblack_protection_adapter' \
+            and len(get_hostname(adapter_device2)) >= 15:
+        first_element_only = True
+        test_on_first_param_and_first_element = True
+    if adapter_device1.get('plugin_name') == 'carbonblack_protection_adapter' \
+            and len(get_hostname(adapter_device1)) >= 15:
+        first_element_only = True
+        test_on_second_param_and_first_element = True
     return compare_normalized_hostnames(adapter_device1.get(NORMALIZED_HOSTNAME),
                                         adapter_device2.get(NORMALIZED_HOSTNAME),
-                                        first_element_only)
+                                        first_element_only, test_on_first_param_and_first_element,
+                                        test_on_second_param_and_first_element)
 
 
 def get_normalized_ip(adapter_device):
@@ -762,7 +808,7 @@ def normalize_adapter_device(adapter_device):
     # See further doc near definition of NORMALIZED_HOSTNAME.
     adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_data)
     if adapter_device[NORMALIZED_HOSTNAME]:
-        adapter_device[NORMALIZED_HOSTNAME_STRING] = '.'.join(adapter_device[NORMALIZED_HOSTNAME])
+        adapter_device[NORMALIZED_HOSTNAME_STRING] = '.'.join(adapter_device[NORMALIZED_HOSTNAME]) + '.'
     if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
         adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
     return adapter_device

@@ -61,7 +61,8 @@ class StaticCorrelatorService(CorrelatorBase):
                                 NETWORK_INTERFACES_FIELD: '$$adapter.data.network_interfaces',
                                 'device_serial': '$$adapter.data.device_serial',
                                 'last_seen': '$$adapter.data.last_seen',
-                                'bios_serial': '$$adapter.data.bios_serial'
+                                'bios_serial': '$$adapter.data.bios_serial',
+                                'domain': '$$adapter.data.domain'
                             }
                         }
                     }

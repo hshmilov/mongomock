@@ -212,7 +212,7 @@ export const pluginMeta = {
         description: 'OpenStack is an open source software solution for creating private and public clouds.'
     },
     tanium_adapter: {
-        title: 'Tanium - BETA',
+        title: 'Tanium',
         description: 'Tanium for IT Asset Visibility discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
     },
     aruba_adapter: {

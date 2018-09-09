@@ -161,7 +161,7 @@ class TenableIoAdapter(AdapterBase):
         if connection_type == 'export':
             for device_id, device_raw in devices_raw_data:
                 try:
-                    yield self._parse_export_device(device_raw)
+                    yield self._parse_export_device(device_id, device_raw)
                 except Exception:
                     logger.exception(f'Problem with parsing device {device_raw}')
         elif connection_type == 'csv':
