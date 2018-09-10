@@ -1416,7 +1416,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     'api_secret': new_token
                 }
             })
-            self._api_data = ApiAuth(self._api_data.api_key, new_token)
+            self._api_data = ApiAuth(new_api_key, new_token)
         return jsonify(self._api_data._asdict())
 
     @gui_helpers.paginated()

@@ -2,6 +2,7 @@ import random
 import uuid
 
 import pytest
+from requests import HTTPError
 
 from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from services.axonius_service import get_service
@@ -430,6 +431,37 @@ def test_api_key_auth():
     gui_service.get_api_devices(headers={
         'api-key': api_data['api_key'],
         'api-secret': api_data['api_secret']
+    }).raise_for_status()
+
+
+def test_api_key_change():
+    """
+    Test the API using API-Key auth instead of username and password
+    """
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
+    gui_service.login_user(DEFAULT_USER)
+    first_api_key = gui_service.get_api_key()
+    gui_service.get_api_devices(headers={
+        'api-key': first_api_key['api_key'],
+        'api-secret': first_api_key['api_secret']
+    }).raise_for_status()
+
+    second_api_key = gui_service.renew_api_key()
+    assert second_api_key['api_key'] != first_api_key['api_key']
+    assert second_api_key['api_secret'] != first_api_key['api_secret']
+
+    # test that previous api key doesn't work
+    with pytest.raises(HTTPError):
+        gui_service.get_api_devices(headers={
+            'api-key': first_api_key['api_key'],
+            'api-secret': first_api_key['api_secret']
+        }).raise_for_status()
+
+    # and that the new api key does work
+    gui_service.get_api_devices(headers={
+        'api-key': second_api_key['api_key'],
+        'api-secret': second_api_key['api_secret']
     }).raise_for_status()
 
 

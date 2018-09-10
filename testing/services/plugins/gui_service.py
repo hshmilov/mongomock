@@ -157,6 +157,9 @@ RUN cd ./gui/frontend/ && npm run {dev}build
     def get_api_key(self):
         return self.get('get_api_key', session=self._session).json()
 
+    def renew_api_key(self):
+        return self.post('get_api_key', session=self._session).json()
+
     def get_queries(self):
         self.get('trigger_watches', api_key=self.api_key, session=self._session)
 
