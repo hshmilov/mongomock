@@ -12,7 +12,7 @@ from axonius.utils.parsing import figure_out_cloud
 
 class NexposeV3Client(NexposeClient):
     def get_all_devices(self):
-
+        logger.info(f'Stating to fetch devices on V3 for nexpose')
         try:
             num_of_asset_pages = 1
             current_page_num = -1
@@ -56,7 +56,8 @@ class NexposeV3Client(NexposeClient):
 
         try:
             response = requests.get(_parse_dedicated_url(resource), params=params,
-                                    auth=(self.username, self.password), verify=self.verify_ssl)
+                                    auth=(self.username, self.password), verify=self.verify_ssl,
+                                    timeout=(5, 30))
             response.raise_for_status()
             response = response.json()
         except requests.HTTPError as e:
@@ -70,6 +71,7 @@ class NexposeV3Client(NexposeClient):
         :param client_config: The configure of the client to test.
         :return: bool that signifies if this api version exists on the client.
         """
+        logger.info(f'Checking API for nexpose V3')
         self._send_get_request('')
 
         # The get request would have raised exception if status_code wasn't 200 on response.raise_for_status().

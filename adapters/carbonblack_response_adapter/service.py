@@ -69,7 +69,7 @@ class CarbonblackResponseAdapter(AdapterBase):
         :return: A json with all the attributes returned from the CarbonblackResponse Server
         """
         with client_data[0]:
-            yield from client_data.get_device_list()
+            yield from client_data[0].get_device_list()
 
     def _clients_schema(self):
         """
