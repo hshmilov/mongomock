@@ -42,7 +42,7 @@ class SoftlayerAdapter(AdapterBase, Configurable):
         provision_date = Field(datetime, "Provision Date")
         # this could have included the password but we decided not to save them
         remote_management_accounts = ListField(str, "Remote Management Users")
-        tags = ListField(str, "Tags")
+        softlayer_tags = ListField(str, "Tags")
         notes = Field(str, "Notes")
 
     def __init__(self):
@@ -138,6 +138,8 @@ class SoftlayerAdapter(AdapterBase, Configurable):
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
             device.id = device_raw.get('id')
+            device.cloud_id = device_raw.get('id')
+            device.cloud_provider = 'Softlayer'
             if device.id is None:
                 logger.error(f"Softlayer device without an id {device_raw}")
                 continue
@@ -203,7 +205,7 @@ class SoftlayerAdapter(AdapterBase, Configurable):
 
             device.provision_date = parse_date(device_raw.get('provisionDate'))
             for tag in (device_raw.get('tagReferences') or []):
-                device.tags.append((tag.get('tag') or {}).get('name'))
+                device.softlayer_tags.append((tag.get('tag') or {}).get('name'))
             device.notes = device_raw.get('notes')
 
             device.set_raw(device_raw)

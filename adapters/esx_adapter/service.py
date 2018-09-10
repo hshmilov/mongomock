@@ -120,9 +120,11 @@ class EsxAdapter(AdapterBase):
         device.figure_os(config.get('guestFullName', ''))
         try:
             device.id = details['config']['instanceUuid']
+            device.cloud_id = details['config']['instanceUuid']
         except KeyError:
             device.id = device.name  # default to name
 
+        device.cloud_provider = 'VMWare'
         added_macs = []
         device.network_interfaces = []
         for iface in details.get('networking', []):

@@ -222,6 +222,12 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     cve_severity = Field(str, "CVE Severity (Metric V3)")
 
 
+class DeviceTagKeyValue(SmartJsonClass):
+    """ A Definition for a key-value tag """
+    tag_key = Field(str, "Tag Key")
+    tag_value = Field(str, "Tag Value")
+
+
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
@@ -278,6 +284,9 @@ class DeviceAdapter(SmartJsonClass):
     security_patch_level = Field(datetime.datetime, "Security Patch Level")
     scanner = Field(bool, 'Scanner')
     containers = ListField(DeviceAdapterContainer, "Containers")
+    tags = ListField(DeviceTagKeyValue, "Tags")
+    cloud_provider = Field(str, "Cloud Provider")
+    cloud_id = Field(str, "Cloud ID")
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
@@ -490,6 +499,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_vulnerable_software(self, **kwargs):
         self.software_cves.append(DeviceAdapterSoftwareCVE(**kwargs))
+
+    def add_key_value_tag(self, key, value):
+        self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
 
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name

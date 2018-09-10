@@ -104,6 +104,8 @@ class AzureAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
             device.id = device_raw['id']
+            device.cloud_id = device_raw['id']
+            device.cloud_provider = "Azure"
             device.name = device_raw['name']
             device.location = device_raw.get('location')
             device.instance_type = device_raw.get('hardware_profile', {}).get('vm_size')

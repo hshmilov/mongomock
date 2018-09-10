@@ -23,6 +23,7 @@ adapters/csv_adapter/service.py
 adapters/cylance_adapter/service.py
 adapters/desktop_central_adapter/connection.py
 adapters/desktop_central_adapter/service.py
+adapters/divvycloud_adapter/service.py
 adapters/duo_adapter/service.py
 adapters/ensilo_adapter/connection.py
 adapters/ensilo_adapter/service.py
@@ -392,6 +393,7 @@ testing/parallel_tests/test_tanium.py
 testing/parallel_tests/test_csv.py
 testing/parallel_tests/test_cylance.py
 testing/parallel_tests/test_desktop_central.py
+testing/parallel_tests/test_divvycloud.py
 testing/parallel_tests/test_duo.py
 testing/parallel_tests/test_ensilo.py
 testing/parallel_tests/test_epo.py

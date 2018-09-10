@@ -307,6 +307,7 @@ class AwsAdapter(AdapterBase):
                     tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
                     for key, value in tags_dict.items():
                         device.add_aws_ec2_tag(key=key, value=value)
+                        device.add_key_value_tag(key, value)
                     device.instance_type = device_raw['InstanceType']
                     device.key_name = device_raw['KeyName']
                     if device_raw.get('VpcId') is not None:
@@ -320,6 +321,8 @@ class AwsAdapter(AdapterBase):
                                      if device_raw['DescribedImage'] is not None
                                      else device_raw.get('Platform'))
                     device.id = device_raw['InstanceId']
+                    device.cloud_id = device_raw['InstanceId']
+                    device.cloud_provider = "AWS"
                     for iface in device_raw.get('NetworkInterfaces', []):
                         assoc = iface.get("Association")
                         if assoc is not None:

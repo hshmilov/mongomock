@@ -7,6 +7,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from axonius.adapter_exceptions import GetDevicesError, ClientConnectionException
 from nexpose_adapter.clients.nexpose_base_client import NexposeClient
+from axonius.utils.parsing import figure_out_cloud
 
 
 class NexposeV3Client(NexposeClient):
@@ -104,5 +105,16 @@ class NexposeV3Client(NexposeClient):
             device.vulnerabilities_total = vulnerabilities_raw.get("total")
         except Exception:
             logger.exception(f"Problem getting vulns for {device_raw}")
+
+        try:
+            for id_element in device_raw.get('ids', []):
+                cloud_type = figure_out_cloud(id_element.get("source"))
+                if cloud_type is not None:
+                    device.cloud_provider = cloud_type
+                    device.cloud_id = id_element.get("id")
+                    break
+
+        except Exception:
+            logger.exception(f"Error getting id's array from Rapid7 Nexpose: {device_raw.get('ids')}")
         device.set_raw(device_raw)
         return device

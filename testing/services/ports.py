@@ -88,6 +88,7 @@ DOCKER_PORTS = {
     'solarwinds-orion-adapter':         6032,
     'cisco-amp-adapter':                6033,
     'static-users-correlator':          6034,
+    'divvycloud-adapter':               6035,
     'mongo':                            27017,
 }
 

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    divvycloud_adapter: {
+        title: 'DivvyCloud Adapter - BETA',
+        description: 'DivvyCloud is a cloud management platform (CMP) that specializes in managing multi/hybrid cloud footprints and event-driven infrastructure.'
+    },
     cisco_amp_adapter: {
         title: 'Cisco Advanced Malware Protection - BETA',
         description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'

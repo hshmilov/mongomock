@@ -120,6 +120,36 @@ def get_exception_string():
     return ex_str
 
 
+def figure_out_cloud(s):
+    """
+    Figures out a cloud provider. If we can't find it, returns None.
+    :param s: the cloud provider, e.g. "amazon-web-services"
+    :return: a generic value representing the cloud provider, which you can use for device.cloud_provider
+    """
+    if not s:
+        return None
+
+    cloud_provider = s.lower()
+
+    if "aws" in cloud_provider or "amazon" in cloud_provider:
+        return "AWS"
+    elif "azure" in cloud_provider or "microsoft" in cloud_provider:
+        return "Azure"
+    elif "google" in cloud_provider or "gcp" in cloud_provider:
+        return "GCP"
+    elif "softlayer" in cloud_provider or "ibm" in cloud_provider:
+        return "Softlayer"
+    elif "vmware" in cloud_provider or "vcenter" in cloud_provider \
+            or "vsphere" in cloud_provider or "esx" in cloud_provider:
+        return "VMWare"
+    elif "alibaba" in cloud_provider or "aliyun" in cloud_provider:
+        return "Alibaba"
+    elif "oracle" in cloud_provider:
+        return "Oracle"
+    else:
+        return None
+
+
 def figure_out_os(s):
     """
     Gives something like this
@@ -625,6 +655,28 @@ def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
     if serial and serial.upper().strip() != 'INVALID':
         return serial
+
+
+def get_cloud_data(adapter_device):
+    adapter_device_data = adapter_device.get('data') or {}
+
+    cloud_provider = adapter_device_data.get('cloud_provider')
+    cloud_id = adapter_device_data.get('cloud_id')
+
+    if isinstance(cloud_provider, str) and isinstance(cloud_id, str) and len(cloud_provider) > 0 and len(cloud_id) > 0:
+        return cloud_provider.upper().strip() + "-" + cloud_id.upper().strip()
+
+    return None
+
+
+def compare_clouds(adapter_device1, adapter_device2):
+    cloud1 = get_cloud_data(adapter_device1)
+    cloud2 = get_cloud_data(adapter_device2)
+
+    if cloud1 is not None and cloud2 is not None:
+        return cloud1 == cloud2
+
+    return False
 
 
 def has_mac_or_ip(adapter_data):

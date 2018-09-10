@@ -2,7 +2,7 @@ import logging
 from itertools import combinations
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 from axonius.correlator_base import (CorrelationReason, has_hostname, has_mac,
-                                     has_serial)
+                                     has_serial, has_cloud_id)
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_device_normalized_hostname,
@@ -15,7 +15,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    normalize_adapter_devices, normalize_mac,
                                    compare_id, is_old_device, is_sccm_or_ad, get_id, is_from_epo_with_empty_mac,
                                    is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial,
-                                   compare_domain, get_domain)
+                                   compare_domain, get_domain, get_cloud_data, compare_clouds)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -50,7 +50,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        return [has_hostname, has_mac, has_serial]
+        return [has_hostname, has_mac, has_serial, has_cloud_id]
 
     def _correlate_mac(self, adapters_to_correlate):
         """
@@ -147,6 +147,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same serial'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_cloud_instances(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Cloud Instances')
+        filtered_adapters_list = filter(get_cloud_data, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_cloud_data],
+                                      [compare_clouds],
+                                      [],
+                                      [],
+                                      {'Reason': 'They are the same cloud instance'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_serial_with_bios_serial(self, adapters_to_correlate):
         logger.info('Starting to correlate on Bios Serial')
         filtered_adapters_list = filter(get_bios_serial_or_serial, adapters_to_correlate)
@@ -240,6 +251,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # Find adapters with the same serial
         yield from self._correlate_serial(adapters_to_correlate)
+
+        # Find adapters that share the same cloud type and cloud id
+        yield from self._correlate_cloud_instances(adapters_to_correlate)
 
         # Find SCCM or Ad adapters with the same ID
         yield from self._correlate_ad_sccm_id(adapters_to_correlate)
