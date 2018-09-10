@@ -1,5 +1,4 @@
 import pytest
-from flaky import flaky
 from retrying import retry
 
 # pylint: disable=redefined-outer-name,unused-import
@@ -21,7 +20,7 @@ def test_registered(axonius_fixture):
     assert axonius_fixture.aggregator.is_plugin_registered(axonius_fixture.core)
 
 
-@flaky(max_runs=2)
+@pytest.mark.skip('AX-1977')
 def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
     utils.populate_test_devices(axonius_fixture, ad_fixture)
     utils.populate_test_devices_esx(axonius_fixture, esx_fixture)
@@ -107,6 +106,7 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
          x['tags'][0]['name'] == 'esx_taggy') for x in devices_response)
 
 
+@pytest.mark.skip('AX-1977')
 def test_minimum_fetch_wait_time(axonius_fixture, esx_fixture):
     @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
     def _wait_for_state(scheduler_instance, cond):
