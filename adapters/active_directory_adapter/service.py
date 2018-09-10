@@ -187,6 +187,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _on_config_update(self, config):
         logger.info(f"Loading AD config: {config}")
         self.__sync_resolving = config['sync_resolving']
+        self.__resolving_enabled = config['resolving_enabled']
         self.__report_generation_interval = config['report_generation_interval']
 
         # Change interval of report generation thread
@@ -574,6 +575,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         """ Thread for ip resolving of devices.
         This thread will try to resolve IP's of known devices.
         """
+        if self.__resolving_enabled is False:
+            logger.debug("Resolve Hosts Addr Thread: Resolving is disabled, not continuing")
+            return
+
         with self._resolving_thread_lock:
             pending_filter = {DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name}
             hosts_count = self.__devices_data_db.count_documents(pending_filter)
@@ -608,6 +613,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _resolve_change_status_thread(self):
         """ This thread is responsible for restarting the name resolving process
         """
+        if self.__resolving_enabled is False:
+            logger.debug("Resolve Change Status Thread: Resolving is disabled, not continuing")
+            return
+
         with self._resolving_thread_lock:
             hosts_count = self.__devices_data_db.count_documents({DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name},
                                                                  limit=2)
@@ -902,7 +911,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         "dns_resolve_status": device_as_dict['dns_resolve_status']
                     }
 
-                    if self.__sync_resolving and not self._is_adapter_old_by_last_seen(device_as_dict):
+                    if self.__sync_resolving and self.__resolving_enabled is True \
+                            and not self._is_adapter_old_by_last_seen(device_as_dict):
                         device.network_interfaces = []
                         for resolved_device in self._resolve_hosts_addresses([device_as_dict_for_resolving]):
                             if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
@@ -1393,6 +1403,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         return {
             "items": [
                 {
+                    'name': 'resolving_enabled',
+                    'title': 'Enable IP Resolving',
+                    'type': 'bool'
+                },
+                {
                     "name": "sync_resolving",
                     "title": "Wait for DNS resolving",
                     "type": "bool"
@@ -1404,6 +1419,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 }
             ],
             "required": [
+                'resolving_enabled',
                 "sync_resolving",
                 "report_generation_interval"
             ],
@@ -1414,6 +1430,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     @classmethod
     def _db_config_default(cls):
         return {
+            'resolving_enabled': True,
             "sync_resolving": False,
             "report_generation_interval": 30
         }
