@@ -53,7 +53,7 @@
                 <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
             </div>
         </modal>
-        <x-toast v-if="message" :message="message" @done="removeToast" :timed="false" />
+        <x-toast v-if="message" :message="message" @done="removeToast" :timeout="toastTimeout" />
     </x-page>
 </template>
 
@@ -131,10 +131,11 @@
 				},
                 selectedServers: [],
                 message: '',
+                toastTimeout: 60000,
                 advancedSettings: false,
                 configValid: true,
                 deleting: false,        // whether or not the modal for deleting confirmation is displayed
-                deleteEntities: false,  // if 'deleting = true' and deleting was confirmed this means that
+                deleteEntities: false  // if 'deleting = true' and deleting was confirmed this means that
                                         // also the entities of the associated users should be deleted
 			}
 		},
@@ -207,19 +208,21 @@
                 if (!this.serverModal.valid) {
                     return
                 }
-                this.message = 'Testing server Connection...'
+                this.message = 'Testing server connection...'
                 this.testAdapter({
                     adapterId: this.adapterId,
                     serverData: this.serverModal.serverData,
                     uuid: this.serverModal.uuid
                 }).then((updateRes) => {
-                    this.fetchAdapters().then(() => {
-                        if (updateRes.data.status === 'error') {
-                            this.message = 'Problem connecting to server.'
-                        } else {
-                            this.message = 'Connection is valid.'
-                        }
-                    })
+                    if (updateRes.data.status === 'error') {
+                        this.message = 'Problem connecting to server.'
+                    } else {
+                        this.message = 'Connection is valid.'
+                    }
+                    setTimeout(() => {this.message = ''}, 60000)
+                }).catch((error) => {
+                    this.message = 'Problem connecting to server.'
+                    setTimeout(() => {this.message = ''}, 60000)
                 })
             },
 			toggleServerModal () {

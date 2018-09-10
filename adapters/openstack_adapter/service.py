@@ -24,7 +24,7 @@ class OpenstackAdapter(AdapterBase):
         return '{}/{}'.format(parse_url(client_config['auth_url']).hostname, client_config['project'])
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get("auth_url"))
+        return RESTConnection.test_reachability(client_config.get("auth_url"), ssl=False)
 
     def _connect_client(self, client_config):
         try:

@@ -10,7 +10,7 @@
 <script>
 	export default {
 		name: 'x-toast',
-        props: { message: { required: true }, timed: { default: true } },
+        props: { message: { required: true }, timed: { default: true }, timeout: { default: 4000 }},
         data() {
 			return {
 				left: ''
@@ -28,7 +28,7 @@
         },
         mounted() {
 			if (this.timed) {
-			    setTimeout(() => this.$emit('done'), 4000)
+			    setTimeout(() => this.$emit('done'), this.timeout)
             }
             this.left = this.getLeftPos()
         },

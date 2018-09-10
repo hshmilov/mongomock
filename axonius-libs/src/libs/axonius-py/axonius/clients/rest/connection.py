@@ -64,20 +64,32 @@ class RESTConnection(ABC):
         if https_proxy is not None:
             self._proxies['https'] = https_proxy
         logger.debug(f"Proxies: {self._proxies}")
-        url_parsed = parse_url(domain)
-        url_scheme = url_parsed.scheme or "https"
-        url_port = url_parsed.port or self._port
+
         # We assumes that path starts with / and ends with /
         # Later in the code we will concat url to, and we will check that they don't start with /
-        if use_domain_path:
-            path = url_parsed.path + '/'
-        else:
-            path = self._url_base_prefix
-        self._url = uritools.compose.uricompose(
-            scheme=url_scheme, authority=url_parsed.host, port=url_port, path=path)
+        self._url = self.build_url(domain, port, self._url_base_prefix, use_domain_path)
         self._permanent_headers = headers
         self._session_headers = {}
         self._session = None
+
+    @staticmethod
+    def build_url(domain: str, port: int = None, url_base_prefix: str = "/", use_domain_path: bool = False):
+        """
+        Parses the domain and composes the uri.
+        :param domain: The hostname of the api, e.g. "https://facebook.com"
+        :param port: port to be used with the API
+        :param url_base_prefix: base path for API, e.g. "/api/devices"
+        :param use_domain_path: If this is true we take the path from the url and not from url_base_prefix
+        """
+        url_parsed = parse_url(domain)
+        url_scheme = url_parsed.scheme or "https"
+        url_port = url_parsed.port or port
+        if use_domain_path:
+            path = url_parsed.path + '/'
+        else:
+            path = url_base_prefix
+        return uritools.compose.uricompose(
+            scheme=url_scheme, authority=url_parsed.host, port=url_port, path=path)
 
     def __del__(self):
         if hasattr(self, 'session') and self._is_connected:
@@ -89,10 +101,20 @@ class RESTConnection(ABC):
         return self._connect()
 
     @staticmethod
-    def test_reachability(host, port=None, path='/', ssl=True):
+    def test_reachability(host, port=None, path='/', ssl=True, use_domain_path=False):
+        """
+        Runs a basic http check to see if the host is reachable.
+        :param host: The hostname of the api, e.g. "https://facebook.com"
+        :param port: port to be used with the API.
+        :param path:
+        :param ssl: Should be used with ssl.
+        :param use_domain_path:
+        :return:
+        """
         try:
-            url = f'{"https" if ssl else "http"}://{host}:{port if port else 443 if ssl else 80}{path}' if '://' not in host else host
-            response = requests.get(url, verify=False)
+            parsed_url = RESTConnection.build_url(host, port if port else 443 if ssl else 80, url_base_prefix=path,
+                                                  use_domain_path=use_domain_path)
+            requests.get(parsed_url, verify=False, timeout=consts.DEFAULT_TIMEOUT)
             return True
         except requests.exceptions.ConnectionError as conn_err:
             # if 'Remote end closed connection without response' in conn_err:

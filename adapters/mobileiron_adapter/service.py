@@ -38,7 +38,8 @@ class MobileironAdapter(AdapterBase):
     @staticmethod
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(
-            urllib.parse.urljoin(client_config.get('domain'), client_config.get('url_base_path'), '/rest/api/v2/'))
+            urllib.parse.urljoin(client_config.get('domain'), client_config.get('url_base_path'), '/rest/api/v2/'),
+            use_domain_path=True)
 
     @staticmethod
     def _connect_client(client_config):
