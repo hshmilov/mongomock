@@ -1,5 +1,8 @@
 import logging
 
+from cbapi.response import CbResponseAPI, Sensor
+
+from axonius.plugin_base import add_rule, return_error
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.exception import RESTException
@@ -9,8 +12,9 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
 from carbonblack_response_adapter.connection import \
     CarbonblackResponseConnection
-logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.clients.rest.connection import RESTConnection
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CarbonblackResponseAdapter(AdapterBase):
@@ -41,7 +45,14 @@ class CarbonblackResponseAdapter(AdapterBase):
                                                        https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass  # check that the connection credentials are valid
-            return connection
+            try:
+                cb_obj = CbResponseAPI(url=client_config['domain'],
+                                       ssl_verify=client_config.get('verify_ssl', False),
+                                       token=client_config.get('apikey'))
+            except Exception:
+                logger.exception('Problem with CBAPI')
+                cb_obj = None
+            return [connection, cb_obj]
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -57,7 +68,7 @@ class CarbonblackResponseAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the CarbonblackResponse Server
         """
-        with client_data:
+        with client_data[0]:
             yield from client_data.get_device_list()
 
     def _clients_schema(self):
@@ -141,3 +152,37 @@ class CarbonblackResponseAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]
+
+    @add_rule('isolate_device', methods=['POST'])
+    def isolate_device(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            cb_response_dict = self.get_request_data_as_object()
+            device_id = cb_response_dict.get('device_id')
+            client_id = cb_response_dict.get('client_id')
+            cb_obj = self.clients[client_id][1]
+            if cb_obj:
+                sensor_object = cb_obj.select(Sensor, int(device_id))
+                sensor_object.isolate()
+        except Exception as e:
+            logger.exception(f'Problemg during isolating')
+            return_error(str(e), 500)
+        return '', 200
+
+    @add_rule('unisolate_device', methods=['POST'])
+    def unisolate_device(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            cb_response_dict = self.get_request_data_as_object()
+            device_id = cb_response_dict.get('device_id')
+            client_id = cb_response_dict.get('client_id')
+            cb_obj = self.clients[client_id][1]
+            if cb_obj:
+                sensor_object = cb_obj.select(Sensor, int(device_id))
+                sensor_object.unisolate()
+        except Exception as e:
+            logger.exception(f'Problemg during unisolating')
+            return_error(str(e), 500)
+        return '', 200

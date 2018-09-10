@@ -1,5 +1,7 @@
 import json
 import logging
+import cbapi.response as cbr
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 # Standard modules
@@ -170,20 +172,22 @@ class ReportsService(PluginBase, Triggerable):
         logger.info('Removed query from reports.')
         return '', 200
 
-    def get_view_results(self, view_name: str, view_entity: EntityType) -> list:
+    def get_view_results(self, view_name: str, view_entity: EntityType, projection=None) -> list:
         """Gets a query's results from the aggregator devices_db.
 
         :param view_name: The query name.
         :param view_entity: The query entity type name.
         :return: The results of the query.
         """
+        if projection is None:
+            projection = {'specific_data.data.id': 1}
         query = self.gui_dbs.entity_query_views_db_map[view_entity].find_one({'name': view_name})
         if query is None:
             raise ValueError(f'Missing query "{view_name}"')
         parsed_query_filter = parse_filter(query['view']['query']['filter'])
 
         # Projection to get only the needed data to differentiate between results.
-        return list(self._entity_views_db_map[view_entity].find(parsed_query_filter, {'specific_data.data.id': 1}))
+        return list(self._entity_views_db_map[view_entity].find(parsed_query_filter, projection))
 
     def update_report(self, report_data):
         """update a report data.
@@ -287,7 +291,16 @@ class ReportsService(PluginBase, Triggerable):
 
     def _handle_action_create_service_now_computer(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):
-        current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))
+        service_now_projection = {'adapters': 1,
+                                  'specific_data.data.hostname': 1,
+                                  'specific_data.data.name': 1,
+                                  'specific_data.data.os.type': 1,
+                                  'specific_data.data.device_serial': 1,
+                                  'specific_data.data.device_manufacturer': 1,
+                                  'specific_data.data.network_interfaces.mac': 1,
+                                  'specific_data.data.network_interfaces.ips': 1}
+        current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']),
+                                               projection=service_now_projection)
         if current_result is None:
             logger.info("Skipping reports trigger because there were no current results.")
             return
@@ -312,9 +325,9 @@ class ReportsService(PluginBase, Triggerable):
                 if os_raw is None:
                     os_raw = data_from_adapter.get('os', {}).get('type')
                 if mac_address_raw is None:
-                    mac_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('mac')
+                    mac_address_raw = data_from_adapter.get('network_interfaces', [{'ips': []}])[0].get('mac')
                 if ip_address_raw is None:
-                    ip_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('ips', [None])[0]
+                    ip_address_raw = data_from_adapter.get('network_interfaces', [{'ips': []}])[0].get('ips', [None])[0]
                 if serial_number_raw is None:
                     serial_number_raw = data_from_adapter.get('device_serial')
                 if manufacturer_raw is None:
@@ -353,6 +366,49 @@ class ReportsService(PluginBase, Triggerable):
                                                               report_data['view']))
         self.create_service_now_incident(report_data['name'], log_message,
                                          report_consts.SERVICE_NOW_SEVERITY.get(report_data['severity'], report_consts.SERVICE_NOW_SEVERITY['error']))
+
+    def _carbon_black_action(self, action, report_data):
+        cb_projection = {'adapters': 1,
+                         'specific_data.client_used': 1,
+                         'specific_data.data.id': 1,
+                         'specific_data.plugin_name': 1}
+        current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']),
+                                               projection=cb_projection)
+        if current_result is None:
+            logger.info("Skipping reports trigger because there were no current results.")
+            return
+        for entry in current_result:
+            if 'carbonblack_response_adapter' not in entry['adapters']:
+                # It is not CB Response adapter
+                continue
+            for adapter_data in entry['specific_data']:
+                if adapter_data['plugin_name'] == 'carbonblack_response_adapter':
+                    device_id = adapter_data['data']['id']
+                    client_id = adapter_data['client_used']
+                    cb_response_dict = dict()
+                    cb_response_dict['device_id'] = device_id
+                    cb_response_dict['client_id'] = client_id
+                    self.request_remote_plugin(action, 'carbonblack_response_adapter', 'post', json=cb_response_dict)
+
+    def _handle_action_carbonblack_isolate(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                           action_data=None):
+        """ Isolate a CarbonBlack response device
+
+        :param dict report_data: The report settings.
+        :param set triggered: triggered triggers set.
+        :param trigger_data: The results difference.
+        """
+        self._carbon_black_action('isolate_device', report_data)
+
+    def _handle_action_carbonblack_unisolate(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                             action_data=None):
+        """ Unisolate a CarbonBlack response device
+
+        :param dict report_data: The report settings.
+        :param set triggered: triggered triggers set.
+        :param trigger_data: The results difference.
+        """
+        self._carbon_black_action('unisolate_device', report_data)
 
     def _handle_action_notify_syslog(self, report_data, triggered, trigger_data, current_num_of_devices,
                                      action_data=None):
