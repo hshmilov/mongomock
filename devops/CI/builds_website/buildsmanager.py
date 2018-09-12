@@ -470,7 +470,7 @@ class BuildsManager(object):
     def update_export_status(self, export_id, status, log):
         export = self.db.exports.find_one({"_id": ObjectId(export_id)})
         self.db.exports.update_one({"_id": ObjectId(export_id)}, {"$set": {"status": status, "log": log,
-                                                                           "download_link": "<a href='http://{0}.s3-accelerate.amazonaws.com/{1}/{1}_export.ova'>Click here</a>".format(
+                                                                           "download_link": "<a href='http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova'>Click here</a>".format(
                                                                                S3_BUCKET_NAME_FOR_OVA,
                                                                                export['version'])}})
         return export is not None
