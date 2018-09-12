@@ -188,6 +188,9 @@ class StresstestAdapter(AdapterBase):
             device.set_raw(device_raw)
             yield device
 
+    def _test_reachability(self, client_config):
+        return client_config['name']
+
     def _get_client_id(self, client_config):
         return client_config['name']
 
