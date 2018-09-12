@@ -281,6 +281,8 @@ def find_entity_field(entity_data, field_path):
                 def same_string(x, y):
                     if not isinstance(x, str):
                         return False
+                    if not isinstance(y, str):
+                        return False
                     x = x.lower()
                     y = y.lower()
                     return x in y or y in x
@@ -292,7 +294,7 @@ def find_entity_field(entity_data, field_path):
                 if isinstance(value, dict):
                     # For a dict, check if there is an element of whom all keys are identical to value's keys
                     return not [item for item in children if
-                                len([key for key in item.keys() if same_string(item[key], value[key])]) > 0]
+                                len([key for key in item.keys() if same_string(item[key], value.get(key))]) > 0]
                 return True
 
             if type(child_value) == list:
