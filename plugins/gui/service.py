@@ -26,7 +26,7 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUG
     CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartMetrics, ChartViews, ChartFuncs, ResearchStatus, \
-    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT,\
+    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT, \
     SUPPORT_ACCESS_THREAD_ID
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -42,7 +42,7 @@ from apscheduler.triggers.cron import CronTrigger
 import io
 import os
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse as parse_date
 from flask import jsonify, request, session, after_this_request, make_response, send_file, redirect
@@ -56,6 +56,9 @@ import json
 from axonius.utils.parsing import parse_filter, bytes_image_to_base64
 from urllib3.util.url import parse_url
 import re
+from multiprocessing.pool import ThreadPool
+from multiprocessing import cpu_count
+from math import ceil
 
 
 # Caution! These decorators must come BEFORE @add_rule
@@ -199,6 +202,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.metadata = self.load_metadata()
         self._activate('execute')
         self._research_status = ResearchStatus.done
+        self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
 
     def _mark_demo_views(self):
         """
@@ -1440,10 +1444,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             new_api_key = secrets.token_urlsafe()
             self._api_keys_collection.update({'api_key': self._api_data.api_key},
                                              {
-                "$set": {
-                    'api_key': new_api_key,
-                    'api_secret': new_token
-                }
+                                                 "$set": {
+                                                     'api_key': new_api_key,
+                                                     'api_secret': new_token
+                                                 }
             })
             self._api_data = ApiAuth(new_api_key, new_token)
         return jsonify(self._api_data._asdict())
@@ -1654,7 +1658,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         ChartMetrics.compare: self._fetch_chart_compare,
                         ChartMetrics.intersect: self._fetch_chart_intersect,
                         ChartMetrics.segment: self._fetch_chart_segment,
-                        ChartMetrics.abstract: self._fetch_chart_abstract
+                        ChartMetrics.abstract: self._fetch_chart_abstract,
+                        ChartMetrics.timeline: self._fetch_chart_timeline
                     }
                     config = {**dashboard['config']}
                     if config.get('entity'):
@@ -1957,6 +1962,83 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return [
                 {'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
         return [{'name': name, 'value': count, 'view': base_view, 'module': entity.value}]
+
+    def _fetch_chart_timeline(self, _: ChartViews, views, datefrom, dateto):
+        """
+        Fetch and count results for each view from given views, per day in given range of datefrom to dateto.
+        Create for each view a sequence of points that represent the count for each day in the range.
+
+        :param views: List of view for which to fetch results over timeline
+        :param dateFrom: Date to start fetching from
+        :param dateTo: Date to fetch up to
+        :return:
+        """
+        logger.info(f'Gathering data between {datefrom} and {dateto}')
+        try:
+            dateto = parse_date(dateto)
+            datefrom = parse_date(datefrom)
+        except Exception:
+            logger.exception('Given date to or from is invalid')
+            return return_error('Given date to or from is invalid')
+
+        return {
+            'lines': self._fetch_view_timeline(views, datefrom, dateto),
+            'scale': [(datefrom + timedelta(i)).strftime('%m/%d/%Y') for i in range((dateto - datefrom).days + 1)]
+        }
+
+    def _fetch_view_timeline(self, views, date_from, date_to):
+        date_ranges = list(self._get_date_ranges(date_from, date_to))
+        for view in views:
+            if not view.get('name'):
+                continue
+            entity = EntityType(view['entity'])
+            base_view = self._find_filter_by_name(entity, view['name'])
+            base_query = parse_filter(base_view['query']['filter'])
+
+            def aggregate_for_date_range(args):
+                rangefrom, rangeto = args
+                return self._historical_entity_views_db_map[entity].aggregate([
+                    {
+                        '$match': {
+                            '$and': [
+                                base_query, {
+                                    'accurate_for_datetime': {
+                                        '$lte': datetime.combine(rangeto, datetime.min.time()),
+                                        '$gte': datetime.combine(rangefrom, datetime.min.time())
+                                    }
+                                }
+                            ]
+                        }
+                    }, {
+                        '$group': {
+                            '_id': '$accurate_for_datetime',
+                            'count': {
+                                '$sum': 1
+                            }
+                        }
+                    }
+                ])
+            points = {}
+            for results in self.__aggregate_thread_pool.map_async(aggregate_for_date_range, date_ranges).get():
+                for item in results:
+                    # _id here is the grouping id, so in fact it is accurate_for_datetime
+                    points[item['_id'].strftime('%m/%d/%Y')] = item.get('count', 0)
+            yield {
+                'title': view['name'],
+                'points': points
+            }
+
+    def _get_date_ranges(self, start, end):
+        start = start.date()
+        end = end.date()
+
+        thread_count = min([cpu_count(), (end - start).days])
+        interval = (end - start) / thread_count
+
+        for i in range(thread_count):
+            start = start + (interval * i)
+            end = start + (interval * (i + 1))
+            yield (start, end)
 
     @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
     def remove_dashboard(self, dashboard_id):

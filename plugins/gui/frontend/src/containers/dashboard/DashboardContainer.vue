@@ -10,15 +10,16 @@
                 <x-data-discovery-card :data="dashboard.dataDiscovery.users.data" module="users" :filter="runFilter" />
                 <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title"
                                  :data="item" @click-one="runCoverageFilter(item.properties, $event)"/>
-                <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
+                <x-card v-for="(chart, chartInd) in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
-                    <div class="card-history">Showing for
+                    <div class="card-history" v-if="chart.metric !== 'timeline'">Showing for
                         <x-date-edit @input="confirmPickDate(chart.uuid, chart.name)"
                                      placeholder="latest" v-model="chartsCurrentlyShowing[chart.uuid]" :show-time="false"
                                      :limit="[{ type: 'fromto', from: cardHistoricalMin, to: new Date()}]"/>
                         <a v-if="chart.showingHistorical" class="x-btn link" @click="clearDate(chart.uuid)">clear</a>
                     </div>
-                    <components :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
+                    <components :is="`x-${chart.view}`" :data="chart.data" :config="chart.config"
+                                @click-one="runChartFilter(chartInd, $event)"/>
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                     <x-cycle-chart :data="lifecycle.subPhases"/>
@@ -75,6 +76,7 @@
                 },
                 charts(state) {
                     return state.dashboard.charts.data.map(chart => {
+                        if (chart.metric === 'timeline') return chart
                     	return {
                             ...chart, showingHistorical: this.dateChosen[chart.uuid],
                             data: chart.data.map(item => {

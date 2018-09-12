@@ -9,6 +9,7 @@ class ChartMetrics(Enum):
     intersect = auto()
     segment = auto()
     abstract = auto()
+    timeline = auto()
 
 
 class ChartViews(Enum):
@@ -18,6 +19,7 @@ class ChartViews(Enum):
     histogram = auto()
     pie = auto()
     summary = auto()
+    line = auto()
 
 
 class ChartFuncs(Enum):

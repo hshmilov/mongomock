@@ -9,12 +9,10 @@
         <a @click="addView" class="x-btn light grid-span3" :class="{ disabled: hasMaxViews }" :title="addBtnTitle">+</a>
         <label>Show Results From</label>
         <div class="line-range grid-span2">
-            <x-date-edit v-model="config.dateFrom" />
+            <x-date-edit v-model="config.datefrom" />
             <label>to</label>
-            <x-date-edit v-model="config.dateTo" />
+            <x-date-edit v-model="config.dateto" />
         </div>
-        <label>Group Results By</label>
-        <x-select :options="groupOptions" v-model="config.groupBy" class="grid-span2" />
     </div>
 </template>
 
@@ -30,20 +28,11 @@
         mixins: [ ChartMixin ],
         components: { xSelect, xSelectSymbol, xDateEdit },
         props: { value: {}, views: { required: true }, entities: { required: true } },
-        computed: {
-            groupOptions() {
-                return [
-                    { title: 'Day', name: 'day' },
-                    { title: 'Week', name: 'week' },
-                    { title: 'Month', name: 'month' }
-                ]
-            }
-        },
         data() {
             return {
                 config: {
                     views: [ { ...dashboardView } ],
-                    dateFrom: null, dateTo: null, groupBy: ''
+                    datefrom: null, dateto: null
                 },
                 max: 3
             }
