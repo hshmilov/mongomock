@@ -103,7 +103,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 del mac_indexed[mac]
 
         for matches in mac_indexed.values():
-            if len(matches) >= 2:
+            if 30 >= len(matches) >= 2:
                 yield from self._bucket_correlate(matches,
                                                   [],
                                                   [],
