@@ -148,9 +148,9 @@ class CiscoMerakiAdapter(AdapterBase):
                 for key in client_raw:
                     if client_raw[key] is not None:
                         client_raw[key] = str(client_raw[key])
-                device_id = client_raw.get("id") or ""
+                device_id = client_raw.get("mac") or client_raw.get("id") or ""
                 if device_id == "":
-                    logger.info(f"No ID for device: {client_raw}")
+                    logger.info(f"No ID (MAC) for device: {client_raw}")
                     continue
 
                 # fix ips
