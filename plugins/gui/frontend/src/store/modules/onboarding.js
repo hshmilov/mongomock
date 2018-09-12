@@ -486,7 +486,7 @@ export const onboarding = {
 					]
 				},
 				'lifecycleRun': {
-					id: 'research_run', title: 'DISCOVERY RUN NOW', align: 'bottom',
+					id: 'run_research', title: 'DISCOVERY RUN NOW', align: 'bottom',
 					content: 'Click to start a discovery run now. Once started, you can click to stop at any time.',
 					actions: [
 						{ title: 'Next', state: 'settingsGlobal' }
