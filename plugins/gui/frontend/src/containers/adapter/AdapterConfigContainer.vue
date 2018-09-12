@@ -215,13 +215,21 @@
                     uuid: this.serverModal.uuid
                 }).then((updateRes) => {
                     if (updateRes.data.status === 'error') {
-                        this.message = 'Problem connecting to server.'
+                        if (updateRes.data.type === 'NotImplementedError') {
+                            this.message = 'Test connectivity is not supported for this adapter.'
+                        } else {
+                            this.message = 'Problem connecting to server.'
+                        }
                     } else {
                         this.message = 'Connection is valid.'
                     }
                     setTimeout(() => {this.message = ''}, 60000)
                 }).catch((error) => {
-                    this.message = 'Problem connecting to server.'
+                    if (error.response.data.type === 'NotImplementedError') {
+                        this.message = 'Test connectivity is not supported for this adapter.'
+                    } else {
+                        this.message = 'Problem connecting to server.'
+                    }
                     setTimeout(() => {this.message = ''}, 60000)
                 })
             },

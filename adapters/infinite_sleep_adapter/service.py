@@ -49,7 +49,7 @@ class InfiniteSleepAdapter(AdapterBase):
         return client_config['name']
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError()
 
     def _connect_client(self, client_config):
         return client_config['name']

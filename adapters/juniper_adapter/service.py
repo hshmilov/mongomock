@@ -99,7 +99,7 @@ class JuniperAdapter(AdapterBase):
         return f'{client_config[consts.USER]}@{client_config[consts.JUNIPER_HOST]}'
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError()
 
     def _connect_client(self, client_config):
         try:

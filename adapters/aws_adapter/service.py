@@ -103,7 +103,7 @@ class AwsAdapter(AdapterBase):
         return client_config[AWS_ACCESS_KEY_ID]
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError
 
     def _connect_client(self, client_config):
         try:

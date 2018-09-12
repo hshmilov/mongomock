@@ -39,7 +39,7 @@ class AzureAdapter(AdapterBase):
         return client_config[AZURE_SUBSCRIPTION_ID]
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError
 
     def _connect_client(self, client_config):
         try:

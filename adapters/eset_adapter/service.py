@@ -134,7 +134,7 @@ class EsetAdapter(AdapterBase):
         return f"{client_config[ESET_HOST]}:{client_config.get(ESET_PORT, 2223)}"
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError()
 
     def _connect_client(self, client_config):
         return EsetClient(self.eset_session_lock, self.eset_connection_library,

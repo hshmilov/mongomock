@@ -109,7 +109,7 @@ class CiscoAdapter(AdapterBase):
         return client_config['host']
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError()
 
     @classmethod
     def adapter_properties(cls):

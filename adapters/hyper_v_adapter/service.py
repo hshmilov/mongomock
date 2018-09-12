@@ -45,7 +45,7 @@ class HyperVAdapter(AdapterBase):
             raise ClientConnectionException(message)
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError()
 
     def _query_devices_by_client(self, client_name, client_data):
         """

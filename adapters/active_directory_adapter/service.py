@@ -217,7 +217,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         return dc_details['dc_name']
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError
 
     def _connect_client(self, dc_details):
         try:

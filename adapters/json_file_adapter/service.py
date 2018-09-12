@@ -101,4 +101,4 @@ class JsonFileAdapter(AdapterBase):
         return "1"
 
     def _test_reachability(self, client_config):
-        return True
+        raise NotImplementedError()

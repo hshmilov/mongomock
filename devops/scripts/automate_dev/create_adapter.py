@@ -189,7 +189,7 @@ class %sAdapter(AdapterBase):
 
     def _test_reachability(self, client_config):
         'AUTOADAPTER - add code that tests client reachability'
-        return True
+        raise NotImplementedError()
 
     def _connect_client(self, client_config):
         try:
