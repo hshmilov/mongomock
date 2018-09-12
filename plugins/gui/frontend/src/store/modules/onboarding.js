@@ -144,9 +144,14 @@ export const onboarding = {
 					actions: [
 						{ title: 'Amazon Elastic', state: 'aws' },
 						{ title: 'Microsoft Azure', state: 'azure' },
+						{ title: 'Google Compute/Kubernetes Engine', state: 'gce' },
 						{ title: 'IBM Cloud', state: 'ibmCloud' },
 						{ title: 'SKIP', state: 'virtualizationLocal' }
 					]
+				},
+				'gce': {
+					id: 'gce_adapter', title: 'Google Compute/Kubernetes Engine', align: 'right',
+					content: 'Click to configure it.'
 				},
 				'aws': {
 					id: 'aws_adapter', title: 'Amazon Elastic ADAPTER', align: 'right',
@@ -199,8 +204,24 @@ export const onboarding = {
 						{ title: 'SentinelOne', state: 'sentinelOne' },
 						{ title: 'Symantec', state: 'symantec' },
 						{ title: 'FireEye HX', state: 'fireeyeHX' },
+						{ title: 'CrowdStrike Falcon', state: 'crowdStrike' },
+						{ title: 'FireEye HX', state: 'fireeyeHX' },
+						{ title: 'Sophos', state: 'sophos' },
+						{ title: 'Cylance', state: 'cylance' },
 						{ title: 'SKIP', state: 'agentIT' }
 					]
+				},
+				'cylance': {
+					id: 'cylance_adapter', title: 'CylancePROTECT', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'sophos': {
+					id: 'sophos_adapter', title: 'Sophos Endpoint Protection', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'crowdStrike': {
+					id: 'crowd_strike_adapter', title: 'CrowdStrike Falcon', align: 'right',
+					content: 'Click to configure it.'
 				},
 				'epo': {
 					id: 'epo_adapter', title: 'McAfee ePO', align: 'right',

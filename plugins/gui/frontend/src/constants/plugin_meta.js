@@ -1,6 +1,6 @@
 export const pluginMeta = {
     divvycloud_adapter: {
-        title: 'DivvyCloud Adapter - BETA',
+        title: 'DivvyCloud - BETA',
         description: 'DivvyCloud is a cloud management platform (CMP) that specializes in managing multi/hybrid cloud footprints and event-driven infrastructure.'
     },
     cisco_amp_adapter: {
@@ -8,7 +8,7 @@ export const pluginMeta = {
         description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'
     },
     claroty_adapter: {
-        title: 'Claroty',
+        title: 'Claroty - BETA',
         description: 'Claroty’s integrated ICS suite protects the safety of people, assets, and critical processes from cyberattacks.'
     },
     solarwinds_orion_adapter: {
@@ -292,7 +292,7 @@ export const pluginMeta = {
         description: 'The Symantec Asset Management Suite enables organizations to take control, uncover savings, and ensure compliance of IT assets, by giving a picture of assets throughout their lifecycle.'
     },
     azure_adapter: {
-        title: 'Microsoft Azure',
+        title: 'Microsoft Azure - BETA',
         description: 'Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers.'
     },
     okta_adapter: {
