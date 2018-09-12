@@ -1,5 +1,7 @@
 from ui_tests.pages.page import Page
 
+DISCOVERY_TIMEOUT = 600
+
 
 class BasePage(Page):
     DISCOVERY_RUN_ID = 'run_research'
@@ -13,7 +15,13 @@ class BasePage(Page):
     def url(self):
         pass
 
-    def run_discovery(self):
+    def run_discovery(self, wait=True):
         self.driver.find_element_by_id(self.DISCOVERY_RUN_ID).click()
-        self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=600)
-        self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=600)
+        if wait:
+            self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=DISCOVERY_TIMEOUT)
+            self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=DISCOVERY_TIMEOUT)
+
+    def stop_discovery(self):
+        stop_element = self.wait_for_element_present_by_id(self.DISCOVERY_STOP_ID, retries=DISCOVERY_TIMEOUT)
+        stop_element.click()
+        self.wait_for_element_present_by_id(self.DISCOVERY_RUN_ID, retries=DISCOVERY_TIMEOUT)
