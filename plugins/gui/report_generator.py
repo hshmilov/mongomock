@@ -66,6 +66,7 @@ class ReportGenerator(object):
         sections = []
         # Add summary section containing dashboard panels, pre- and user-defined
         sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
+
         # Add section for each adapter with results of its queries
         adapter_data = self.report_data.get('adapter_data')
         if adapter_data:
@@ -73,6 +74,13 @@ class ReportGenerator(object):
                 sections.append(self.templates['section'].render(
                     {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'], adapter['views'])}))
                 logger.info(f'Report Generator, Adapter Section: Added {adapter["name"]} section')
+
+        # Add section for saved views
+        if self.report_data.get('views_data'):
+            sections.append(self.templates['section'].render(
+                {'title': 'Saved Queries', 'content': self._create_data_views()}))
+            logger.info(f'Report Generator, Views Section: Added views data section')
+
         # Join all sections as the content of the report
         html_data = self.templates['report'].render(
             {'date': current_time.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})

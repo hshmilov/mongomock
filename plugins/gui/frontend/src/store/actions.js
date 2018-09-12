@@ -169,7 +169,12 @@ export const saveDataView = ({state, dispatch, commit}, payload) => {
 
 export const SAVE_VIEW = 'SAVE_VIEW'
 export const saveView = ({dispatch, commit}, payload) => {
-	let viewObj = {name: payload.name, view: payload.view, query_type: 'saved'}
+	let viewObj = {
+		name: payload.name, view: payload.view, query_type: 'saved'
+	}
+	if (payload.predefined) {
+		viewObj.predefined = true
+	}
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/views',
 		data: viewObj,

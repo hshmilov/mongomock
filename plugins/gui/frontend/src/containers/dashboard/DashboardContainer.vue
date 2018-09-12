@@ -253,7 +253,7 @@
 						filter = 'specific_data.data.os.distribution == "10"'
 					}
 					this.saveView({
-						name: `DEMO - ${name}`, module: 'devices', view: {
+						name: `DEMO - ${name}`, module: 'devices', predefined: true, view: {
 							...this.devicesView, query: { filter }
 						}
 					})

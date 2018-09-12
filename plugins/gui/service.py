@@ -179,6 +179,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
+        self._mark_demo_views()
         self.add_default_reports('default_reports.ini')
         self.add_default_dashboard_charts('default_dashboard_charts.ini')
         if not self.system_collection.find({'type': 'server'}):
@@ -198,6 +199,23 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.metadata = self.load_metadata()
         self._activate('execute')
         self._research_status = ResearchStatus.done
+
+    def _mark_demo_views(self):
+        """
+        Search and update all relevant views - containing 'DEMO - ' in their name, i.e created for tour.
+        Added the mark 'predefined' to separate from those saved by user
+        :return:
+        """
+        for entity in EntityType:
+            self.gui_dbs.entity_query_views_db_map[entity].update({
+                'name': {
+                    '$regex': 'DEMO - '
+                }
+            }, {
+                '$set': {
+                    'predefined': True
+                }
+            })
 
     def load_metadata(self):
         try:
@@ -268,16 +286,25 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception(f'Error adding default dashboard chart. Reason: {repr(e)}')
 
     def _insert_view(self, views_collection, name, mongo_view):
-        existed_view = views_collection.find_one({'name': name})
+        existed_view = views_collection.find_one({
+            'name': name
+        })
         if existed_view is not None and not existed_view.get('archived'):
             logger.info(f'view {name} already exists id: {existed_view["_id"]}')
+            if not existed_view.get('predefined'):
+                views_collection.update_one({'name': name}, {
+                    '$set': {
+                        'predefined': True
+                    }
+                })
             return existed_view['_id']
 
         result = views_collection.replace_one({'name': name}, {
             'name': name,
             'view': mongo_view,
             'query_type': 'saved',
-            'timestamp': datetime.now()
+            'timestamp': datetime.now(),
+            'predefined': True
         }, upsert=True)
         logger.info(f'Added view {name} id: {result.upserted_id}')
         return result.upserted_id
@@ -423,6 +450,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     fielded_plugins.append(plugin[PLUGIN_NAME])
 
             def _validate_adapters_used(view):
+                if not view.get('predefined'):
+                    return True
                 for expression in view['view']['query'].get('expressions', []):
                     adapter_matches = re.findall('adapters_data\.(\w*)\.', expression.get('field', ''))
                     if adapter_matches and list(filter(lambda x: x not in fielded_plugins, adapter_matches)):
@@ -2195,7 +2224,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         views_data = []
         for entity in EntityType:
             field_to_title = _get_field_titles(entity)
-            saved_views = self.gui_dbs.entity_query_views_db_map[entity].find(filter_archived({'query_type': 'saved'}))
+            # Fetch only saved views that were added by user, excluding out-of-the-box queries
+            saved_views = self.gui_dbs.entity_query_views_db_map[entity].find(filter_archived({
+                'query_type': 'saved',
+                '$or': [
+                    {
+                        'predefined': False
+                    },
+                    {
+                        'predefined': {
+                            '$exists': False
+                        }
+                    }
+                ]
+            }))
             for i, view_doc in enumerate(saved_views):
                 try:
                     view = view_doc.get('view')
@@ -2335,7 +2377,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'adapter_users': self._adapter_data(EntityType.Users),
             'covered_devices': self._get_dashboard_coverage(),
             'custom_charts': list(self._get_dashboard()),
-            'views_data': []
+            'views_data': self._get_saved_views_data()
         }
         report = self._get_collection('reports_config').find_one({'name': 'Main Report'})
         if report.get('adapters'):
