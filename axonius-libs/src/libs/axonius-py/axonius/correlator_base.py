@@ -193,7 +193,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         pool = ThreadPool(processes=2 * multiprocessing.cpu_count())
 
         def multilink(correlations):
-            self.request_remote_plugin('multi_plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json=[{
+            self.request_remote_plugin('multi_plugin_push?rebuild=False', AGGREGATOR_PLUGIN_NAME, 'post', json=[{
                 "plugin_type": "Plugin",
                 "data": result.data,
                 "associated_adapters": result.associated_adapters,
@@ -215,6 +215,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         pool.close()
         pool.join()
         logger.info("Done!")
+        self._request_db_rebuild(sync=False)
 
     def _correlate_with_lock(self, entities: list):
         """

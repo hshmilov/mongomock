@@ -1,6 +1,7 @@
 import logging
 from typing import List
 
+from flask import request
 from funcy import chunks
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -576,84 +577,89 @@ class AggregatorService(PluginBase, Triggerable):
         db_lock = self.__db_locks[entity]
         entities_db = self._entity_db_map[entity]
 
-        with self.__rebuild_db_view_lock[entity]:
-            with db_lock.get_lock(
-                    [get_unique_name_from_plugin_unique_name_and_id(name, associated_id) for name, associated_id in
-                     associated_adapters]):
-                # now let's update our db
+        # this lock is commented out because it should actually be an A-B lock
+        # and having a regular lock is causing too many performance issues
+        # so we prefer having slight inconsistencies with the view instead of performance issues
+        # see https://axonius.atlassian.net/browse/AX-2059
+        # with self.__rebuild_db_view_lock[entity]:
 
-                # figure out all axonius entities that at least one of its adapters are in the
-                # given plugin's association
-                entities_candidates = list(entities_db.find({"$or": [
-                    {
-                        'adapters': {
-                            '$elemMatch': {
-                                PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
-                                'data.id': associated_id
-                            }
+        with db_lock.get_lock(
+                [get_unique_name_from_plugin_unique_name_and_id(name, associated_id) for name, associated_id in
+                 associated_adapters]):
+            # now let's update our db
+
+            # figure out all axonius entities that at least one of its adapters are in the
+            # given plugin's association
+            entities_candidates = list(entities_db.find({"$or": [
+                {
+                    'adapters': {
+                        '$elemMatch': {
+                            PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
+                            'data.id': associated_id
                         }
                     }
-                    for associated_plugin_unique_name, associated_id in associated_adapters
-                ]}))
+                }
+                for associated_plugin_unique_name, associated_id in associated_adapters
+            ]}))
 
-                if len(entities_candidates) == 0:
-                    return f"No entities given or all entities given don't exist. " \
-                           f"Associated adapters: {associated_adapters}"
+            if len(entities_candidates) == 0:
+                return f"No entities given or all entities given don't exist. " \
+                       f"Associated adapters: {associated_adapters}"
 
-                if association_type == 'Tag':
-                    if len(entities_candidates) != 1:
-                        # it has been checked that at most 1 device was provided (if len(associated_adapters) != 1)
-                        # then if it's not 1, its definitely 0
-                        return "A tag must be associated with just one adapter, the entity provided is unavailable"
-                    # take (assumed single) key from candidates
-                    entities_candidate = entities_candidates[0]
+            if association_type == 'Tag':
+                if len(entities_candidates) != 1:
+                    # it has been checked that at most 1 device was provided (if len(associated_adapters) != 1)
+                    # then if it's not 1, its definitely 0
+                    return "A tag must be associated with just one adapter, the entity provided is unavailable"
+                # take (assumed single) key from candidates
+                entities_candidate = entities_candidates[0]
 
-                    if sent_plugin.get('type') == "adapterdata":
-                        relevant_adapter = [x for x in entities_candidate['adapters']
-                                            if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
-                        assert relevant_adapter, "Couldn't find adapter in axon device"
-                        sent_plugin['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
+                if sent_plugin.get('type') == "adapterdata":
+                    relevant_adapter = [x for x in entities_candidate['adapters']
+                                        if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
+                    assert relevant_adapter, "Couldn't find adapter in axon device"
+                    sent_plugin['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
 
-                    self._update_entity_with_tag(sent_plugin, entities_candidate, entities_db)
-                elif association_type == 'Multitag':
-                    for device in entities_candidates:
-                        # here we tag all adapter_devices per axonius device candidate
-                        new_sent_plugin = dict(sent_plugin)
-                        del new_sent_plugin['tags']
-                        new_sent_plugin['associated_adapters'] = [
-                            (adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id'])
-                            for adapter_device in device['adapters']
-                        ]
+                self._update_entity_with_tag(sent_plugin, entities_candidate, entities_db)
+            elif association_type == 'Multitag':
+                for device in entities_candidates:
+                    # here we tag all adapter_devices per axonius device candidate
+                    new_sent_plugin = dict(sent_plugin)
+                    del new_sent_plugin['tags']
+                    new_sent_plugin['associated_adapters'] = [
+                        (adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id'])
+                        for adapter_device in device['adapters']
+                    ]
 
-                        for tag in sent_plugin['tags']:
-                            self._update_entity_with_tag({**new_sent_plugin, **tag}, device, entities_db)
-                elif association_type == 'Link':
-                    # in this case, we need to link (i.e. "merge") all entities_candidates
-                    # if there's only one, then the link is either associated only to
-                    # one entity (which is as irrelevant as it gets)
-                    # or all the entities are already linked. In any case, if a real merge isn't done
-                    # it means someone made a mistake.
-                    if len(entities_candidates) < 2:
-                        return f'Found less than two candidates, got {len(entities_candidates)}'
+                    for tag in sent_plugin['tags']:
+                        self._update_entity_with_tag({**new_sent_plugin, **tag}, device, entities_db)
+            elif association_type == 'Link':
+                # in this case, we need to link (i.e. "merge") all entities_candidates
+                # if there's only one, then the link is either associated only to
+                # one entity (which is as irrelevant as it gets)
+                # or all the entities are already linked. In any case, if a real merge isn't done
+                # it means someone made a mistake.
+                if len(entities_candidates) < 2:
+                    return f'Found less than two candidates, got {len(entities_candidates)}'
 
-                    if len(associated_adapters) != 2:
-                        return f'Link with wrong number of devices {len(associated_adapters)}'
+                if len(associated_adapters) != 2:
+                    return f'Link with wrong number of devices {len(associated_adapters)}'
 
-                    if associated_adapters[0] == associated_adapters[1]:
-                        return f'Got link of the same device {associated_adapters}'
+                if associated_adapters[0] == associated_adapters[1]:
+                    return f'Got link of the same device {associated_adapters}'
 
-                    self._link_entities(entities_candidates, entities_db)
-                elif association_type == 'Unlink':
-                    if len(entities_candidates) != 1:
-                        return f"All associated_adapters in an unlink operation must be from the same Axonius entity, in your case, they're from {len(entities_candidates)} entities."
-                    entity_to_split = entities_candidates[0]
+                self._link_entities(entities_candidates, entities_db)
+            elif association_type == 'Unlink':
+                if len(entities_candidates) != 1:
+                    return f"All associated_adapters in an unlink operation must be from the same Axonius entity, in your case, they're from {len(entities_candidates)} entities."
+                entity_to_split = entities_candidates[0]
 
-                    if len(entity_to_split['adapters']) == len(associated_adapters):
-                        return "You can't remove all devices from an entity, that'll be unfair."
+                if len(entity_to_split['adapters']) == len(associated_adapters):
+                    return "You can't remove all devices from an entity, that'll be unfair."
 
-                    self._unlink_entities(associated_adapters, entity_to_split, entities_db)
-                if should_update_view:
-                    self._rebuild_entity_view(entity, [x['internal_axon_id'] for x in entities_candidates])
+                self._unlink_entities(associated_adapters, entity_to_split, entities_db)
+            if should_update_view:
+                self._rebuild_entity_view(entity, [x['internal_axon_id'] for x in entities_candidates])
 
         # raw == parsed for plugin_data
         self._save_parsed_in_db(sent_plugin)  # save in parsed too
@@ -682,11 +688,13 @@ class AggregatorService(PluginBase, Triggerable):
 
     @add_rule("multi_plugin_push", methods=["POST"])
     def multi_plugin_push(self):
+        # if ?rebuild=True/False is passed than this request will rebuild the db
+        rebuild = request.args.get('rebuild', 'True') == 'True'
         sent_plugin = self.get_request_data_as_object()
-        should_rebuild_all = len(sent_plugin) > 1000
-        logger.info(f"Handling {len(sent_plugin)} pushes")
-        results = [self._do_plugin_push(d, should_update_view=not should_rebuild_all) for d in sent_plugin]
-        if should_rebuild_all:
+        should_rebuild_all = len(sent_plugin) > 50
+        logger.info(f"Handling {len(sent_plugin)} pushes with rebuild = {rebuild}")
+        results = [self._do_plugin_push(d, should_update_view=rebuild and not should_rebuild_all) for d in sent_plugin]
+        if should_rebuild_all and rebuild:
             for entity_type in EntityType:
                 self._rebuild_entity_view(entity_type)
         if any(x != "" for x in results):

@@ -198,6 +198,10 @@ class Triggerable(Feature, ABC):
         # use with caution!
         # priority assumes blocking
         priority = request.args.get('priority', 'False') == 'True'
+        logger.info(f"Triggered {job_name} " +
+                    ('blocking' if blocking else 'unblocked') + " with " +
+                    ('prioritized' if priority else 'unprioritized') +
+                    f" from {self.get_caller_plugin_name()}")
         return self._trigger(job_name, blocking, priority)
 
     def _trigger(self, job_name, blocking=True, priority=False):
