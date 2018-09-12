@@ -16,6 +16,7 @@ from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
 from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.alert_page import AlertPage
+from ui_tests.pages.notification_page import NotificationPage
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -82,6 +83,7 @@ class TestBase:
         self.users_page = UsersPage(**params)
         self.report_page = ReportPage(**params)
         self.alert_page = AlertPage(**params)
+        self.notification_page = NotificationPage(**params)
 
     def login(self):
         self.driver.get(self.base_url)
