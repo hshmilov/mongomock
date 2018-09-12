@@ -84,6 +84,7 @@ def test_pm_online_rpc():
     _test_pm_online("rpc")
 
 
+@pytest.mark.skip('AX-2060')
 def test_pm_online_smb():
     _test_pm_online("smb")
 
