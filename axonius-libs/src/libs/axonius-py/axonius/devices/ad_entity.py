@@ -47,6 +47,8 @@ class ADEntity(object):
     ad_guid = Field(str, "AD objectGUID")
     ad_name = Field(str, "AD name")
     ad_sAMAccountName = Field(str, "AD sAMAccountName")
+    ad_user_principal_name = Field(str, "AD User Principal Name")
+    ad_display_name = Field(str, "AD displayName")
     ad_distinguished_name = Field(str, "AD distinguishedName")
     ad_account_expires = Field(datetime.datetime, "AD accountExpires")
     ad_object_class = ListField(str, "AD objectClass")

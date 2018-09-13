@@ -2,7 +2,7 @@ import logging
 from itertools import combinations
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 from axonius.correlator_base import (CorrelationReason, has_hostname, has_mac,
-                                     has_serial, has_cloud_id)
+                                     has_serial, has_cloud_id, has_ad_or_azure_name)
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_device_normalized_hostname,
@@ -15,7 +15,9 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    normalize_adapter_devices, normalize_mac,
                                    compare_id, is_old_device, is_sccm_or_ad, get_id, is_from_epo_with_empty_mac,
                                    is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial,
-                                   compare_domain, get_domain, get_cloud_data, compare_clouds)
+                                   compare_domain, get_domain, get_cloud_data, compare_clouds,
+                                   is_azuread_or_ad_and_have_name, get_ad_name_or_azure_display_name,
+                                   compare_ad_name_or_azure_display_name)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -50,7 +52,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        return [has_hostname, has_mac, has_serial, has_cloud_id]
+        return [has_hostname, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name]
 
     def _correlate_mac(self, adapters_to_correlate):
         """
@@ -229,6 +231,20 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same ID and one is AD and the second is SCCM'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_ad_azure_ad(self, adapters_to_correlate):
+        """
+        Correlate Azure AD and AD
+        """
+        logger.info('Starting to correlate on AD-AzureAD')
+        filtered_adapters_list = filter(is_azuread_or_ad_and_have_name, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_ad_name_or_azure_display_name],
+                                      [compare_ad_name_or_azure_display_name],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same name'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
@@ -257,6 +273,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # Find SCCM or Ad adapters with the same ID
         yield from self._correlate_ad_sccm_id(adapters_to_correlate)
+
+        # Find azure ad and ad with the same display name
+        yield from self._correlate_ad_azure_ad(adapters_to_correlate)
 
         # EPO devices on VPN netwrok will almost conflict on IP+MAC with other Agents.
         # If no mac on EPO allow correlation by full host name

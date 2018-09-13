@@ -71,11 +71,19 @@ def has_hostname(adapters):
 
 
 def has_serial(adapters):
-    return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('device_serial'))  # not none
+    # not none
+    return does_entity_have_field(adapters, lambda adapter_data: (adapter_data.get('device_serial'))) or \
+        does_entity_have_field(adapters, lambda adapter_data: (adapter_data.get('bios_serial')))
 
 
 def has_cloud_id(adapters):
     return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('cloud_id'))  # not none
+
+
+def has_ad_or_azure_name(adapters):
+    # not none
+    return does_entity_have_field(adapters, lambda adapter_data: (adapter_data.get('ad_name'))) or \
+        does_entity_have_field(adapters, lambda adapter_data: (adapter_data.get('azure_display_name')))
 
 
 def has_mac(adapters):

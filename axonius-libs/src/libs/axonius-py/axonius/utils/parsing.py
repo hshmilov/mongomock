@@ -572,6 +572,12 @@ def is_sccm_or_ad(adapter_device):
         adapter_device.get('plugin_name') == 'sccm_adapter'
 
 
+def is_azuread_or_ad_and_have_name(adapter_device):
+    # Its from ad or azuread and it also has one of these fields not None.
+    return adapter_device.get('plugin_name') in ('active_directory_adapter', 'azure_ad_adapter') and \
+        get_ad_name_or_azure_display_name(adapter_device)
+
+
 def is_from_epo_with_empty_mac(adapter_device):
     return (adapter_device['plugin_name'] == 'epo_adapter') and \
            (not adapter_device.get(NORMALIZED_MACS))
@@ -628,6 +634,20 @@ def get_normalized_hostname(adapter_device):
 
 def get_normalized_hostname_str(adapter_device):
     return adapter_device.get(NORMALIZED_HOSTNAME_STRING)
+
+
+def get_ad_name_or_azure_display_name(adapter_device):
+    name = adapter_device['data'].get('ad_name') or adapter_device['data'].get('azure_display_name')
+    if isinstance(name, str):
+        return name.lower()
+
+
+def compare_ad_name_or_azure_display_name(adapter_device1, adapter_device2):
+    name1 = get_ad_name_or_azure_display_name(adapter_device1)
+    name2 = get_ad_name_or_azure_display_name(adapter_device2)
+    if name1 and name2:
+        return name1 == name2
+    return False
 
 
 def get_bios_serial_or_serial(adapter_device):

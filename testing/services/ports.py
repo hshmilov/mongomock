@@ -89,6 +89,7 @@ DOCKER_PORTS = {
     'cisco-amp-adapter':                6033,
     'static-users-correlator':          6034,
     'divvycloud-adapter':               6035,
+    'azure-ad-adapter':                 6036,
     'mongo':                            27017,
 }
 

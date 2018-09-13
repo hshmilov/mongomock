@@ -56,6 +56,7 @@ class UserAdapter(SmartJsonClass):
     user_department = Field(str, "User Department")
     user_manager = Field(str, "User Manager Username")
     user_telephone_number = Field(str, "User Telephone Number")
+    user_city = Field(str, "User City")
     user_country = Field(str, "User Country")
 
     first_name = Field(str, "User first name")

@@ -94,7 +94,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_dfsr_shares = ListField(ADDfsrShare, "AD DFSR Shares")
 
     class MyUserAdapter(UserAdapter, ADEntity):
-        ad_user_principal_name = Field(str, "AD User Principal Name")
         user_managed_objects = ListField(str, "AD User Managed Objects")
 
     def __init__(self):
@@ -234,7 +233,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                   dc_details.get('fetch_disabled_users', False)
                                   )
         except LdapException as e:
-            message = f'Error in ldap process for dc {dc_details["dc_name"]}.'
+            additional_msg = ''
+            if "socket connection error while opening: timed out" in str(e):
+                additional_msg = ": connection timed out"
+
+            message = f'Error in ldap process for dc {dc_details["dc_name"]}{additional_msg}.'
             logger.exception(message)
         except KeyError as e:
             if "dc_name" in dc_details:
@@ -364,6 +367,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_entity.ad_guid = raw_data.get("objectGUID")
         ad_entity.ad_name = raw_data.get("name")
         ad_entity.ad_sAMAccountName = raw_data.get("sAMAccountName")
+        ad_entity.ad_display_name = raw_data.get("displayName")
         ad_entity.ad_distinguished_name = raw_data.get("distinguishedName")
         ad_entity.ad_account_expires = parse_date(raw_data.get("accountExpires"))
         ad_entity.ad_object_class = [i.lower() for i in raw_data.get("objectClass")]

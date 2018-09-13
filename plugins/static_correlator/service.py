@@ -64,7 +64,9 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'bios_serial': '$$adapter.data.bios_serial',
                                 'domain': '$$adapter.data.domain',
                                 'cloud_provider': '$$adapter.data.cloud_provider',
-                                'cloud_id': '$$adapter.data.cloud_id'
+                                'cloud_id': '$$adapter.data.cloud_id',
+                                'ad_name': '$$adapter.data.ad_name',
+                                'azure_display_name': '$$adapter.data.azure_display_name'
                             }
                         }
                     }

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    azure_ad_adapter: {
+        title: 'Microsoft Azure AD - BETA',
+        description: 'Microsoft Azure Active Directory is a fully managed multi-tenant service from Microsoft that offers identity and access capabilities for applications running in Microsoft Azure and for applications running in an on-premises environment.'
+    },
     divvycloud_adapter: {
         title: 'DivvyCloud - BETA',
         description: 'DivvyCloud is a cloud management platform (CMP) that specializes in managing multi/hybrid cloud footprints and event-driven infrastructure.'
@@ -292,7 +296,7 @@ export const pluginMeta = {
         description: 'The Symantec Asset Management Suite enables organizations to take control, uncover savings, and ensure compliance of IT assets, by giving a picture of assets throughout their lifecycle.'
     },
     azure_adapter: {
-        title: 'Microsoft Azure - BETA',
+        title: 'Microsoft Azure Compute - BETA',
         description: 'Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers.'
     },
     okta_adapter: {
