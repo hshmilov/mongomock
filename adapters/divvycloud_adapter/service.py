@@ -96,7 +96,7 @@ class DivvycloudAdapter(AdapterBase):
                 },
                 {
                     "name": "port",
-                    "title": "Port (Default is 8001)",
+                    "title": "Port",
                     "type": "integer",
                     "format": "port"
                 },
