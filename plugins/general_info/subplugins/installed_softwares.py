@@ -1,13 +1,7 @@
 import threading
-import time
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_query_commands, smb_shell_commands, is_wmi_answer_ok
-from general_info.utils.nvd_nist.nvd_search import NVDSearcher
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.background_scheduler import LoggedBackgroundScheduler
-from apscheduler.executors.pool import ThreadPoolExecutor
-from apscheduler.triggers.interval import IntervalTrigger
-from datetime import datetime, timedelta
 
 import logging
 basic_logger = logging.getLogger(f'axonius.{__name__}')
@@ -23,9 +17,6 @@ GET_INSTALLED_SOFTWARE_COMMANDS = [
 ]
 
 
-NVD_DB_UPDATE_HOURS = 12     # amount of hours after of which we update the db, if possible
-
-
 class GetInstalledSoftwares(GeneralInfoSubplugin):
     """ Using wmi queries, determines all installed software on the machine. """
     nvd_objects_lock = threading.Lock()
@@ -38,49 +29,6 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         """
         super().__init__(*args, **kwargs)
 
-        # If not initialized yet, initialize NVDSearcher
-        try:
-            with GetInstalledSoftwares.nvd_objects_lock:
-                if GetInstalledSoftwares.nvd_searcher is None:
-                    basic_logger.info("Initializing NVDSearcher")
-                    start_time = time.time()
-                    GetInstalledSoftwares.nvd_searcher = NVDSearcher()
-                    basic_logger.info(f"Init of NVDSearcher done in {time.time() - start_time} seconds")
-
-                if GetInstalledSoftwares.nvd_updater_scheduler is None:
-                    basic_logger.info("Initializing background scheduler for updating nvd nist")
-                    executors = {'default': ThreadPoolExecutor(1)}
-                    GetInstalledSoftwares.nvd_updater_scheduler = LoggedBackgroundScheduler(executors=executors)
-
-                    # Thread for resolving IP addresses of devices
-                    GetInstalledSoftwares.nvd_updater_scheduler.add_job(
-                        func=self._update_nvd_db,
-                        trigger=IntervalTrigger(hours=NVD_DB_UPDATE_HOURS),
-                        next_run_time=datetime.now() + timedelta(hours=NVD_DB_UPDATE_HOURS),
-                        name='update_nvd_db_thread',
-                        id='update_nvd_db_thread',
-                        max_instances=1)
-
-                    GetInstalledSoftwares.nvd_updater_scheduler.start()
-        except Exception:
-            basic_logger.exception("An error occured while initializing NVDSearcher! Not using it")
-
-    def _update_nvd_db(self):
-        """
-        Updates the NVD DB.
-        :return:
-        """
-        try:
-            basic_logger.info("Trying to update the nvd db..")
-            with GetInstalledSoftwares.nvd_objects_lock:
-                if GetInstalledSoftwares.nvd_searcher is not None:
-                    GetInstalledSoftwares.nvd_searcher.update()
-                    basic_logger.info("Successfully updated nvd db")
-                else:
-                    basic_logger.error("NVDSearcher is not initialized! Not updating")
-        except Exception:
-            basic_logger.exception("Failure while updating nvd_searcher, bypassing")
-
     @staticmethod
     def get_wmi_smb_commands():
         return wmi_query_commands(["select Vendor, Name, Version, InstallState from Win32_Product"]) + \
@@ -88,6 +36,15 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
+
+        # Vulnerability parsing moved to static_analyzer since version 1.11.
+        # However old versions still have vulnerabilities that came from general_info,
+        # so we need to delete them to make sure we don't have incorrect data shown.
+
+        # This would ideally be in an upgrade script that upgrades from version 1.11, but so far we don't have this.
+        # TODO: Remove this line once we have an upgrade script that deletes adapterdata_device.software_cves
+        # from the general_info plugin.
+        adapterdata_device.software_cves = []
 
         installed_software = set()
 
@@ -152,48 +109,12 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
                 installed_software.add(
                     (software.get("Publisher"), software.get("DisplayName"), software.get("DisplayVersion")))
 
-        # Now finally add everything here.
-        with GetInstalledSoftwares.nvd_objects_lock:
-            for software_vendor, software_name, software_version in installed_software:
-                # Add it to the installed softwares
-                adapterdata_device.add_installed_software(
-                    vendor=software_vendor,
-                    name=software_name,
-                    version=software_version
-                )
-
-                if GetInstalledSoftwares.nvd_searcher is None:
-                    continue
-
-                try:
-                    # Search for CVE's!
-                    if software_vendor is None or software_name is None or software_version is None:
-                        # Sometimes, that happens.
-                        continue
-                    cves = GetInstalledSoftwares.nvd_searcher.search_vuln(
-                        software_vendor, software_name, software_version)
-
-                    for cve in cves:
-                        try:
-                            cve_id = cve["id"]
-                            cve_description = cve.get("description")
-                            cve_references = cve.get("references")
-                            cve_severity = cve.get("severity")
-
-                            adapterdata_device.add_vulnerable_software(
-                                software_vendor=software_vendor,
-                                software_name=software_name,
-                                software_version=software_version,
-                                cve_id=cve_id,
-                                cve_description=cve_description,
-                                cve_references=cve_references,
-                                cve_severity=cve_severity
-                            )
-                        except Exception:
-                            self.logger.exception(
-                                f"Exception parsing cve {cve} for {software_vendor}:{software_name}:{software_version}")
-                except Exception:
-                    self.logger.exception(
-                        f"Exception while searching for vuln for {software_vendor}:{software_name}:{software_version}")
+        for software_vendor, software_name, software_version in installed_software:
+            # Add it to the installed software
+            adapterdata_device.add_installed_software(
+                vendor=software_vendor,
+                name=software_name,
+                version=software_version
+            )
 
         return True

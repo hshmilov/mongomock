@@ -126,6 +126,7 @@
 				if (!this.entity.specific) return []
 				let lastSeen = new Set()
 				return this.entity.specific.filter((item) => {
+				    if (item['hidden_for_gui']) return false
 					if (item['plugin_type'] && item['plugin_type'].toLowerCase().includes('plugin')) return false
 
                     return true

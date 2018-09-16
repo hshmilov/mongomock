@@ -127,26 +127,11 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._correlation_scheduler = None
-
         self._correlation_lock = threading.RLock()
-        self._refresh_entities_filter()
 
     @classmethod
     def specific_supported_features(cls) -> list:
         return ["Correlator"]
-
-    def _refresh_entities_filter(self):
-        """
-        in "correlator_xxx:filter" will always be one (or none, which means default) document that
-        will represent the mongodb query to apply over the entities when correlating.
-        this can be used to set up a correlator that will only correlate a subset of the entities
-        :return:
-        """
-        collection = self._get_collection("filter")
-        self._entities_filter = collection.find_one()
-        if self._entities_filter is None:
-            self._entities_filter = {}
 
     def _triggered(self, job_name, post_json, *args):
         """
@@ -179,14 +164,14 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         :return:
         """
         db = self._entity_db_map[self._entity_to_correlate]
-        if entities_ids is None:
-            return list(db.find(self._entities_filter))
-        else:
+        if entities_ids:
             return list(db.find({
                 'internal_axon_id': {
                     "$in": entities_ids
                 }
             }))
+
+        return list(db.find({}))
 
     @stoppable
     def __correlate(self, entities_ids=None):

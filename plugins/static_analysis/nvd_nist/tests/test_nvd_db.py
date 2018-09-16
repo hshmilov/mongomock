@@ -14,7 +14,7 @@ def test_update():
 
 
 def test_nvd_search():
-    db = nvd_search.NVDSearcher(download_on_init=False)
+    db = nvd_search.NVDSearcher()
 
     def get_cve_with_id(cve_raw_list, cve_id):
         for cve_item in cve_raw_list:

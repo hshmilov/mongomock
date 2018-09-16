@@ -7,8 +7,8 @@ import zipfile
 import logging
 import threading
 import requests.exceptions
-from general_info.utils.nvd_nist import nvd_update
 from axonius.utils.parsing import get_exception_string
+from static_analysis.nvd_nist import nvd_update
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -21,19 +21,16 @@ class NVDSearcher(object):
     Loads the NVD artifacts into the memory and parses them.
     """
 
-    def __init__(self, download_on_init=True):
+    def __init__(self):
         """
         Initializes the class. We have to read all artifacts and load them into the memory.
         """
-        self.cve_db = dict()
-        self.products_db = dict()
-        self.use_lock = threading.Lock()
+        self.__cve_db = dict()
+        self.__products_db = dict()
+        self.__use_lock = threading.Lock()
 
-        if download_on_init is True:
-            self.update()   # Update on first usage
-        else:
-            # Just load artifacts
-            self._load_artifacts()
+        # Just load artifacts
+        self._load_artifacts()
 
     def update(self):
         """
@@ -53,10 +50,10 @@ class NVDSearcher(object):
         Loads all artifacts.
         :return:
         """
-        with self.use_lock:
+        with self.__use_lock:
             # Delete all we have. It might be incorrect
-            self.cve_db = dict()
-            self.products_db = dict()
+            self.__cve_db = dict()
+            self.__products_db = dict()
 
             # Get all files we can update from
             list_dir = os.listdir(ARTIFACT_FOLDER)
@@ -100,7 +97,7 @@ class NVDSearcher(object):
                     'baseMetricV3', {}).get('cvssV3', {}).get('baseSeverity')
 
                 # Save only what's important
-                self.cve_db[cve_id] = {
+                self.__cve_db[cve_id] = {
                     "id": cve_id,
                     "description": cve_description,
                     "references": cve_references,
@@ -114,25 +111,25 @@ class NVDSearcher(object):
                     # This might have '_', we need to filter that out because that's not how we'd get in in the search.
                     vendor_name = vendor_name.replace("_", " ")
 
-                    if vendor_name not in self.products_db:
-                        self.products_db[vendor_name] = {}
+                    if vendor_name not in self.__products_db:
+                        self.__products_db[vendor_name] = {}
 
                     for products_raw in vendor_raw.get('product', {}).get('product_data', []):
                         product_name = products_raw['product_name']
                         product_name = product_name.replace("_", " ")
 
-                        if product_name not in self.products_db[vendor_name]:
-                            self.products_db[vendor_name][product_name] = dict()
+                        if product_name not in self.__products_db[vendor_name]:
+                            self.__products_db[vendor_name][product_name] = dict()
 
                         for version_raw in products_raw.get('version', {}).get('version_data', []):
                             version_value = version_raw['version_value']
-                            if version_value not in self.products_db[vendor_name][product_name]:
-                                self.products_db[vendor_name][product_name][version_value] = list()
+                            if version_value not in self.__products_db[vendor_name][product_name]:
+                                self.__products_db[vendor_name][product_name][version_value] = list()
 
                             # Each version can be affected by multiple id's. But we might have this cve already
                             # from other artifacts
-                            if cve_id not in self.products_db[vendor_name][product_name][version_value]:
-                                self.products_db[vendor_name][product_name][version_value].append(cve_id)
+                            if cve_id not in self.__products_db[vendor_name][product_name][version_value]:
+                                self.__products_db[vendor_name][product_name][version_value].append(cve_id)
             except Exception:
                 logger.exception(f"Couldn't parse CVE {cve_raw}, moving on")
 
@@ -177,15 +174,15 @@ class NVDSearcher(object):
                          f"product {str(product_name)} version {str(product_version)}")
             return []
 
-        with self.use_lock:
-            for db_vendor_name, db_vendor_products in self.products_db.items():
+        with self.__use_lock:
+            for db_vendor_name, db_vendor_products in self.__products_db.items():
                 # we have to replace all '_' with spaces from now on.
                 if str(db_vendor_name).lower() in vendor_name:
                     for db_vendor_product, db_vendor_product_versions in db_vendor_products.items():
                         if str(db_vendor_product).lower() in product_name:
                             for db_version, db_version_cves in db_vendor_product_versions.items():
                                 if str(db_version).lower() == product_version:
-                                    return [self.cve_db[v] for v in db_version_cves]
+                                    return [self.__cve_db[v] for v in db_version_cves]
 
         return []
 

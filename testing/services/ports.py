@@ -90,6 +90,7 @@ DOCKER_PORTS = {
     'static-users-correlator':          6034,
     'divvycloud-adapter':               6035,
     'azure-ad-adapter':                 6036,
+    'static-analysis':                  6037,
     'mongo':                            27017,
 }
 

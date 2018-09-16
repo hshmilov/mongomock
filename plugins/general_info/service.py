@@ -1,4 +1,7 @@
 import logging
+
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.thread_stopper import stoppable
@@ -477,7 +480,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # Now get some info depending on the adapter that ran the execution
             executer_info = dict()
             executer_info["adapter_unique_name"] = data["responder"]
-            adapter_used = [adap for adap in device["adapters"] if adap["plugin_unique_name"]
+            adapter_used = [adap for adap in device["adapters"] if adap[PLUGIN_UNIQUE_NAME]
                             == executer_info["adapter_unique_name"]][0]
             executer_info["adapter_client_used"] = adapter_used['client_used']
             executer_info["adapter_unique_id"] = adapter_used["data"]["id"]
@@ -489,6 +492,8 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # Create a new device, since these subplugins will have some generic info enrichments.
             adapterdata_device = self._new_device_adapter()
+            adapterdata_device.id = f"{adapter_used[PLUGIN_UNIQUE_NAME]},{adapter_used['data']['id']}"
+
             all_error_logs = []
 
             for subplugin in self.subplugins_list:
@@ -519,7 +524,6 @@ class GeneralInfoService(PluginBase, Triggerable):
             # All of these plugins might have inserted new devices, lets get it.
             adapterdata_device.general_info_last_success_execution = datetime.now()
             new_data = adapterdata_device.to_dict()
-            new_data['id'] = executer_info["adapter_unique_id"]
 
             # Add the final one
             self.devices.add_adapterdata(
@@ -598,7 +602,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # We need to tag that device, but we have no associated adapter devices. we must use the first one.
             if len(device["adapters"]) > 0:
                 executer_info = dict()
-                executer_info["adapter_unique_name"] = device["adapters"][0]["plugin_unique_name"]
+                executer_info["adapter_unique_name"] = device["adapters"][0][PLUGIN_UNIQUE_NAME]
                 executer_info["adapter_unique_id"] = device["adapters"][0]["data"]["id"]
 
                 if "connection refused" in str(exc).lower():

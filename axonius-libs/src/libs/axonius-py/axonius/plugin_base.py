@@ -1287,7 +1287,9 @@ class PluginBase(Configurable, Feature):
 
         return response
 
-    def _tag(self, entity: EntityType, identity_by_adapter, name, data, tag_type, action_if_exists, client_used=None):
+    def _tag(self, entity: EntityType, identity_by_adapter, name, data, tag_type, action_if_exists,
+             client_used,
+             additional_data):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
@@ -1299,18 +1301,22 @@ class PluginBase(Configurable, Feature):
         :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
         :param client_used: an optional parameter to indicate client_used. This is important since we show this in
                             the gui (we can know where the data came from)
+        :param additional_data: additional data to the dict sent to the aggregator
         :return:
         """
 
         assert action_if_exists == "replace" or (action_if_exists == "update" and tag_type == "adapterdata")
 
-        tag_data = {'association_type': 'Tag',
-                    'associated_adapters': identity_by_adapter,
-                    "name": name,
-                    "data": data,
-                    "type": tag_type,
-                    "entity": entity.value,
-                    "action_if_exists": action_if_exists}
+        tag_data = {
+            'association_type': 'Tag',
+            'associated_adapters': identity_by_adapter,
+            "name": name,
+            "data": data,
+            "type": tag_type,
+            "entity": entity.value,
+            "action_if_exists": action_if_exists,
+            **additional_data
+        }
 
         if client_used is not None:
             assert type(client_used) == str
@@ -1331,19 +1337,19 @@ class PluginBase(Configurable, Feature):
         """ Tag many devices with many tags. if is_enabled = False, the labels are grayed out."""
         return self._tag_many(entity, identity_by_adapter, labels, are_enabled, "label", "replace")
 
-    def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True):
+    def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True, additional_data={}):
         """ A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out."""
-        return self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None)
+        return self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None, additional_data)
 
-    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data):
+    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data={}):
         """ A shortcut to __tag with type "data" """
-        return self._tag(entity, identity_by_adapter, name, data, "data", "replace", None)
+        return self._tag(entity, identity_by_adapter, name, data, "data", "replace", None, additional_data)
 
     def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data,
-                                  action_if_exists="replace", client_used=None):
+                                  action_if_exists="replace", client_used=None, additional_data={}):
         """ A shortcut to __tag with type "adapterdata" """
         return self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
-                         action_if_exists, client_used=client_used)
+                         action_if_exists, client_used, additional_data)
 
     @add_rule("update_config", methods=['POST'], should_authenticate=False)
     def update_config(self):
