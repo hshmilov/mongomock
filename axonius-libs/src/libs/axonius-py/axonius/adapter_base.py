@@ -2,6 +2,7 @@
 AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
+import concurrent.futures
 import json
 import logging
 import sys
@@ -251,16 +252,19 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :return:
         """
         db_to_use = self._entity_db_map.get(entity_type)
-        deleted_entities_count = 0
-        for axonius_entity in self.__find_old_axonius_entities(age_cutoff, db_to_use):
-            old_adapter_entities = self.__extract_old_entities_from_axonius_device(axonius_entity,
-                                                                                   age_cutoff)
+        futures = []
+        with concurrent.futures.ThreadPoolExecutor(10) as r:
+            for axonius_entity in self.__find_old_axonius_entities(age_cutoff, db_to_use):
+                old_adapter_entities = self.__extract_old_entities_from_axonius_device(axonius_entity,
+                                                                                       age_cutoff)
+                futures.append(r.submit(self.__unlink_and_delete_entity,
+                                        axonius_entity,
+                                        db_to_use,
+                                        entity_type,
+                                        old_adapter_entities))
 
-            deleted_entities_count += self.__unlink_and_delete_entity(axonius_entity,
-                                                                      db_to_use,
-                                                                      entity_type,
-                                                                      old_adapter_entities)
-
+        deleted_entities_count = sum(x.result() for x in concurrent.futures.wait(futures).done)
+        self._request_db_rebuild(sync=False)
         return deleted_entities_count
 
     def __unlink_and_delete_entity(self, axonius_entity, db_to_use, entity_type,
@@ -272,7 +276,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 # if the above condition isn't met it means
                 # that the current entity is the last one (or even the only one)
                 # if it is in fact the only one there's no Unlink to do: the whole axonius device is gone
-                response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
+                response = self.request_remote_plugin('plugin_push?rebuild=False', AGGREGATOR_PLUGIN_NAME, 'post', json={
                     "plugin_type": "Plugin",
                     "data": {
                         'Reason': 'The device is too old so it is going to be deleted'

@@ -676,10 +676,12 @@ class AggregatorService(PluginBase, Triggerable):
         Refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/86310913/Devices+DB+Correlation+Process for more
         :return:
         """
+        # if ?rebuild=True/False is passed than this request will rebuild the db
+        rebuild = request.args.get('rebuild', 'True') == 'True'
         sent_plugin = self.get_request_data_as_object()
         if sent_plugin is None:
             return return_error("Invalid data sent", 400)
-        res = self._do_plugin_push(sent_plugin, should_update_view=True)
+        res = self._do_plugin_push(sent_plugin, should_update_view=rebuild)
         if res != '':
             logger.warning(f'plugin push failed {res}')
             return return_error(res)
