@@ -1,46 +1,57 @@
-import logging
-from typing import Tuple, List
-
-from axonius.clients.ldap.exceptions import LdapException, IpResolveError, NoClientError
-from axonius.clients.ldap.ldap_connection import LdapConnection, LDAP_ACCOUNTDISABLE
-from axonius.devices import ad_entity
-from axonius.mixins.configurable import Configurable
-from axonius.smart_json_class import SmartJsonClass
-
-from axonius.mixins.devicedisabelable import Devicedisabelable
-from axonius.mixins.userdisabelable import Userdisabelable
-from axonius.types.ssl_state import SSLState
-
-logger = logging.getLogger(f'axonius.{__name__}')
-from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.executors.pool import ThreadPoolExecutor
-from axonius.fields import Field, JsonStringFormat, ListField
-from datetime import datetime, timedelta
+import ipaddress
 import json
+import logging
 import os
 import os.path
+import subprocess
 import tempfile
 import threading
 import time
-import subprocess
-import ipaddress
-
 from collections import defaultdict
-from axonius.adapter_exceptions import ClientConnectionException, TagDeviceError
+from datetime import datetime, timedelta
+from typing import List, Tuple
+
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.triggers.interval import IntervalTrigger
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import (ClientConnectionException,
+                                        TagDeviceError)
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS, IPS_FIELDNAME, NETWORK_INTERFACES_FIELDNAME
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.devices.dns_resolvable import DNSResolvableDevice
+from axonius.clients.ldap.exceptions import (IpResolveError, LdapException,
+                                             NoClientError)
+from axonius.clients.ldap.ldap_connection import (LDAP_ACCOUNTDISABLE,
+                                                  LdapConnection)
+from axonius.consts.adapter_consts import (DEVICES_DATA, DNS_RESOLVE_STATUS,
+                                           IPS_FIELDNAME,
+                                           NETWORK_INTERFACES_FIELDNAME)
+from axonius.devices import ad_entity
 from axonius.devices.ad_entity import ADEntity
-from axonius.devices.dns_resolvable import DNSResolveStatus
-from axonius.utils.dns import query_dns
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.dns_resolvable import (DNSResolvableDevice,
+                                            DNSResolveStatus)
+from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.mixins.configurable import Configurable
+from axonius.mixins.devicedisabelable import Devicedisabelable
+from axonius.mixins.userdisabelable import Userdisabelable
 from axonius.plugin_base import add_rule
-from axonius.utils.files import get_local_config_file
+from axonius.smart_json_class import SmartJsonClass
+from axonius.types.ssl_state import SSLState
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.parsing import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
-    is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name, format_ip, \
-    get_organizational_units_from_dn, get_member_of_list_from_memberof, get_first_object_from_dn, parse_bool_from_raw
+from axonius.utils.dns import query_dns
+from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import (ad_integer8_to_timedelta,
+                                   bytes_image_to_base64,
+                                   convert_ldap_searchpath_to_domain_name,
+                                   format_ip, get_exception_string,
+                                   get_first_object_from_dn,
+                                   get_member_of_list_from_memberof,
+                                   get_organizational_units_from_dn,
+                                   is_date_real, parse_bool_from_raw,
+                                   parse_date)
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
@@ -216,7 +227,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         return dc_details['dc_name']
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError
+        try:
+            conn = self._connect_client(client_config)
+            conn.disconnect()
+        except Exception:
+            return False
+        return True
 
     def _connect_client(self, dc_details):
         try:

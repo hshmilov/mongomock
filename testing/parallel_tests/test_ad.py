@@ -116,9 +116,8 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
-    @pytest.mark.skip("No reachability test")
     def test_check_reachability(self):
-        pass
+        assert self.adapter_service.is_client_reachable(self.some_client_details)
 
     @pytest.mark.skip("report generation for AD is disabled")
     def test_report_generator(self):
