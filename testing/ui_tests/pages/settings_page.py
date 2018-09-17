@@ -13,8 +13,11 @@ class SettingsPage(Page):
     SCHEDULE_RATE_ID = 'system_research_rate'
     DEFAULT_SCHEDULE_RATE = '12'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
+    GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
-    SEND_EMAILS_CHECKBOX_XPATH = '//div[child::label[text()=\'Send emails\']]/div[contains(@class, \'x-checkbox\')]'
+    SEND_EMAILS_LABEL = 'Send emails'
+    LDAP_LOGINS_LABEL = 'Allow LDAP logins'
+    CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
 
@@ -31,6 +34,9 @@ class SettingsPage(Page):
 
     def click_global_settings(self):
         self.driver.find_element_by_css_selector(self.GLOBAL_SETTINGS_CSS).click()
+
+    def click_gui_settings(self):
+        self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
 
     def fill_current_password(self, password):
         self.fill_text_field_by_element_id(self.CURRENT_PASSWORD_ID, password)
@@ -70,7 +76,7 @@ class SettingsPage(Page):
         return self.driver.find_element_by_id(self.SCHEDULE_RATE_ID).get_attribute('value')
 
     def find_send_emails_toggle(self):
-        return self.driver.find_element_by_xpath(self.SEND_EMAILS_CHECKBOX_XPATH)
+        return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
 
     def set_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()
@@ -96,3 +102,12 @@ class SettingsPage(Page):
 
     def find_saved_successfully_toaster(self):
         return self.find_toaster('Saved Successfully.')
+
+    def find_allow_ldap_logins_toggle(self):
+        return self.find_checkbox_by_label(self.LDAP_LOGINS_LABEL)
+
+    def fill_dc_address(self, dc_address):
+        self.fill_text_field_by_element_id('dc_address', dc_address)
+
+    def find_checkbox_by_label(self, text):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))

@@ -23,5 +23,10 @@ class TestMinervaAdapter(AdapterTestBase):
         return SOME_DEVICE_ID
 
     @flaky(max_runs=2)
+    @pytest.mark.skip('AX-2083')
     def test_fetch_devices(self):
         super().test_fetch_devices()
+
+    @pytest.mark.skip('AX-2083')
+    def test_check_reachability(self):
+        pass
