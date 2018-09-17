@@ -7,4 +7,4 @@
 # )
 
 # temporal error with nvd.nist.gov
-# python3.6 ./plugins/general_info/utils/nvd_nist/nvd_update.py
+# python3.6 ./plugins/static_analysis/nvd_nist/nvd_update.py

@@ -8,6 +8,7 @@ basic_logger = logging.getLogger(f'axonius.{__name__}')
 
 
 GET_INSTALLED_SOFTWARE_COMMANDS = [
+    r'reg query "HKCR\Word.Application\CurVer" /s',
     r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
     r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:64 /s',
     r'reg query HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
@@ -15,6 +16,19 @@ GET_INSTALLED_SOFTWARE_COMMANDS = [
     'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:64 /s)',
     'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:32 /s)'
 ]
+
+
+OFFICE_NUMERIC_TO_OFFICE_VERSION = {
+    "word.application.7": "97",
+    "word.application.8": "98",
+    "word.application.9": "2000",
+    "word.application.10": "XP",
+    "word.application.11": "2003",
+    "word.application.12": "2007",
+    "word.application.14": "2010",
+    "word.application.15": "2013",
+    "word.application.16": "2016",
+}
 
 
 class GetInstalledSoftwares(GeneralInfoSubplugin):
@@ -49,8 +63,9 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         installed_software = set()
 
         win32_product_answer = result[0]["data"]
+        office_version_answer = result[1]["data"]
         # we have a list of cmd commands, lets join to one big output.
-        exec_installed_software = "\n".join([i["data"] for i in result[1:]])
+        exec_installed_software = "\n".join([i["data"] for i in result[2:]])
 
         if is_wmi_answer_ok(result[0]):
             try:
@@ -60,6 +75,20 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
                         installed_software.add((i['Vendor'], i['Name'], i['Version']))
             except Exception:
                 self.logger.exception("Exception while handling win32_product")
+
+        if is_wmi_answer_ok(result[1]):
+            try:
+                # Office isn't necessarily shown in the list of installed software. We need to get it out of
+                # the registry. so we query for the version of Word.Application to find out what it is and then
+                # assume that if word is installed, office in general is installed.
+
+                office_version_answer = office_version_answer.strip().lower()
+                for office_version_raw_string, office_version in OFFICE_NUMERIC_TO_OFFICE_VERSION.items():
+                    if office_version_raw_string in office_version_answer:
+                        installed_software.add(("Microsoft", "Office", office_version))
+                        break
+            except Exception:
+                self.logger.exception(f"Error while handling office version: {result[1]['data']}")
 
         # Each software contains firstly the registry key, the following one appears in all of them.
         for software_details in exec_installed_software.split(r"Microsoft\Windows\CurrentVersion"):

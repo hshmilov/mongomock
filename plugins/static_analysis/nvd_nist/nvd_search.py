@@ -157,6 +157,9 @@ class NVDSearcher(object):
         might occur we are not using that (an example of a false positive: Search for "Adobe Acrobat 15.0.0" will
         return a CVE affecting "Adobe Acrobat DC 18.0.0 and earlier". but DC and non-DC are entirely different
         so that's incorrect.
+
+        Edit Sept. 2018: We now allow empty vendor names, since sometimes this information is not visible to us.
+        In that case we simply ignore the vendor name.
         :param vendor_name:
         :param product_name:
         :param product_version:
@@ -168,16 +171,20 @@ class NVDSearcher(object):
         product_version = str(product_version).strip().lower()
 
         empty_strings = ["", "0"]
-        if vendor_name in empty_strings or product_name in empty_strings or product_version in empty_strings:
+        if product_name in empty_strings or product_version in empty_strings:
             logger.error(f"Error, got an empty string. "
                          f"Software details - vendor: {str(vendor_name)} "
                          f"product {str(product_name)} version {str(product_version)}")
             return []
 
+        if vendor_name == "0":
+            logger.error(f"Error, got vendor name 0")
+            return []
+
         with self.__use_lock:
             for db_vendor_name, db_vendor_products in self.__products_db.items():
                 # we have to replace all '_' with spaces from now on.
-                if str(db_vendor_name).lower() in vendor_name:
+                if str(db_vendor_name).lower() in vendor_name or vendor_name == "":
                     for db_vendor_product, db_vendor_product_versions in db_vendor_products.items():
                         if str(db_vendor_product).lower() in product_name:
                             for db_version, db_version_cves in db_vendor_product_versions.items():
@@ -192,7 +199,7 @@ if __name__ == '__main__':
     cves = db.search_vuln("Adobe Incorporated Systems", "Adobe Acrobat Reader DC", "15.006.30060")
 
     for cve in cves:
-        cve_id = cve['cve']['CVE_data_meta']['ID']
-        description = cve['cve']['description']['description_data'][0]['value']
+        cve_id = cve['id']
+        description = cve['description']
         print(f"CVE {cve_id}:\n{description}\n")
     exit(0)

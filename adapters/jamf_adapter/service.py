@@ -341,8 +341,12 @@ class JamfAdapter(AdapterBase, Configurable):
                 applications = [applications] if type(applications) != list else applications
                 for app in applications:
                     try:
+                        app_name = app.get('name', app.get('application_name', '')) or ''
+                        if app_name.lower().endswith('.app'):
+                            # We don't nee the .app, it can make vulnerability assessment not find vulns.
+                            app_name = app_name[:-len('.app')]
                         device.add_installed_software(
-                            name=app.get('name', app.get('application_name', '')),
+                            name=app_name,
                             version=app.get('version', app.get('application_version', ''))
                         )
                     except Exception:

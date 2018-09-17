@@ -1,7 +1,7 @@
 import logging
 import threading
 from datetime import datetime
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Dict
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
@@ -181,19 +181,40 @@ class StaticAnalysisService(PluginBase, Triggerable):
         except Exception:
             logger.exception(f'Exception while processing device {device}')
 
-    def __process_installed_software(self, installed_software: Iterable[Tuple[str, str, str]]) -> Iterable[dict]:
+    def __process_installed_software(self, installed_software: Iterable[Dict]) -> Iterable[dict]:
         """
         Processes all installed softwares and returns all CVEs found in those softwares
         :param installed_software: Iterable of tuples from DB, the tuples represent DeviceAdapterInstalledSoftware
         :return: yields dicts that each represent a DeviceAdapterSoftwareCVE
         """
         for software in installed_software:
-            software_vendor = software.get('vendor')
-            software_name = software.get('name')
-            software_version = software.get('version')
+            software_vendor = software.get('vendor') or ''
+            software_name = software.get('name') or ''
+            software_version = software.get('version') or ''
+
             try:
-                if not all(x is not None for x in (software_vendor, software_name, software_version)):
+                # We want all of our params to be strings, and only strings. but, software_vendor might be empty,
+                # so our conditions will be:
+                # software_vendor, software_name, and software_version are strings
+                # software_name, software_version are not empty strings.
+
+                if not all(isinstance(x, str) for x in (software_vendor, software_name, software_version)):
                     # Sometimes, that happens.
+                    logger.error(f'Error: installed software contains not strings: {installed_software}')
+                    continue
+
+                if not software_name or not software_version:
+                    # Sometimes, that also happens.
+                    # do note that we allow empty software_vendor as some adapters do not give it.
+                    logger.error(f'Error: installed software contains name/version empty strings: {installed_software}')
+                    continue
+
+                if 'microsoft' in software_vendor.lower() and 'office' in software_name.lower():
+                    # Microsoft Office is not supported since the CVE's there are too broad.
+                    # e.g. https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2018-8161
+                    # is a cve for all versions of Office 2016. This could lead to many false-positives.
+                    # However we do get information about patches for office and other microsoft products from
+                    # our patch management modules.
                     continue
 
                 for cve in self.__nvd_searcher.search_vuln(software_vendor, software_name, software_version):
