@@ -53,6 +53,8 @@ class TestBase:
             return
         self.axonius_system.get_devices_db().remove()
         self.axonius_system.get_users_db().remove()
+        self.axonius_system.get_reports_db().remove()
+        self.axonius_system.get_notifications_db().remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
 

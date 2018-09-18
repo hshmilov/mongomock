@@ -132,6 +132,9 @@ class AxoniusService():
     def get_reports_db(self):
         return self.db.get_collection(self.reports.unique_name, 'reports')
 
+    def get_notifications_db(self):
+        return self.db.get_collection(self.core.unique_name, 'notifications')
+
     def insert_device(self, device_data):
         self.get_devices_db().insert_one(device_data)
         self.aggregator.rebuild_views([device_data['internal_axon_id']])

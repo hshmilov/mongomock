@@ -1,4 +1,7 @@
+import datetime
+
 from ui_tests.tests.ui_test_base import TestBase
+from axonius.utils.wait import wait_until
 
 ALERT_NAME = 'Special alert name'
 
@@ -46,3 +49,15 @@ class TestAlert(TestBase):
         self.alert_page.check_not_changed()
         self.alert_page.check_push_system_notification()
         self.alert_page.click_save_button()
+
+    def test_alert_timezone(self):
+        self.create_outputting_notification_alert()
+        self.base_page.run_discovery()
+        self.notification_page.switch_to_page()
+        wait_until(func=self.notification_page.get_rows_from_notification_table, total_timeout=60 * 5)
+        rows = self.notification_page.get_rows_from_notification_table()
+        timestamps = self.notification_page.get_timestamps_from_rows(rows)
+        times = [self.notification_page.convert_timestamp_to_datetime(timestamp) for timestamp in timestamps]
+        now = datetime.datetime.now()
+        seconds_diff = [(now - single_time).total_seconds() for single_time in times]
+        assert any(seconds < 60 * 5 for seconds in seconds_diff)
