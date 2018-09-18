@@ -1,15 +1,22 @@
+import math
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-
 import datetime
 import json
 from gzip import decompress as gzip_decompress
-import requests
 import xml.etree.cElementTree as ET
 
+import requests
+import aiohttp
+
+from axonius.async.utils import async_request
 from bomgar_adapter.exceptions import BomgarAlreadyConnected, BomgarConnectionError, BomgarNotConnected, \
     BomgarRequestException
 from bomgar_adapter.json_utils import xml2json
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
+MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
 
 
 class BomgarConnection(object):
@@ -127,6 +134,7 @@ class BomgarConnection(object):
         return self._get('get_connected_clients', params)
 
     def get_archive_listing(self, date):
+        logger.info(f"get_archive_listing with date {date}")
         report = self._get('', {'generate_report': 'ArchiveListing', 'date': date}, command=False)
         xml = ET.fromstring(report)
         archives = []
@@ -150,7 +158,68 @@ class BomgarConnection(object):
             return None
         return json.loads(data)
 
+    def get_archive_async(self, list_of_requests):
+        aio_requests = []
+
+        # Build the requests
+        for date, index in list_of_requests:
+            aio_req = dict()
+            aio_req['method'] = "GET"
+            aio_req['url'] = self.report_url
+            aio_req['params'] = {'generate_report': 'Archive', 'date': date, 'type': 'state', 'index': index}
+            aio_req['headers'] = self.headers
+            aio_req['timeout'] = (5, 30)
+            aio_req['get_binary'] = True
+            aio_requests.append(aio_req)
+
+        for chunk_id in range(int(math.ceil(len(aio_requests) / MAX_ASYNC_REQUESTS_IN_PARALLEL))):
+            logger.info(
+                f"Async requests: sending {chunk_id * MAX_ASYNC_REQUESTS_IN_PARALLEL} out of {len(aio_requests)}")
+
+            all_answers = async_request(
+                aio_requests[MAX_ASYNC_REQUESTS_IN_PARALLEL * chunk_id:
+                             MAX_ASYNC_REQUESTS_IN_PARALLEL * (chunk_id + 1)])
+
+            # We got the requests, time to check if they are valid and transform them to what the user wanted.
+            for i, raw_answer in enumerate(all_answers):
+                try:
+                    # The answer could be an exception
+                    if isinstance(raw_answer, Exception):
+                        yield raw_answer
+
+                    # Or, it can be the actual response
+                    elif isinstance(raw_answer, tuple) and isinstance(raw_answer[0], bytes) \
+                            and isinstance(raw_answer[1], aiohttp.ClientResponse):
+                        binary_answer = raw_answer[0]
+                        response_object = raw_answer[1]
+
+                        try:
+                            response_object.raise_for_status()
+                            try:
+                                data = gzip_decompress(binary_answer).decode('utf-8')
+                                yield json.loads(data)
+                            except Exception as e:
+                                if 'No archives found for the given search criteria.' not in binary_answer.decode("utf-8"):
+                                    yield e
+                        except aiohttp.ClientResponseError as e:
+                            yield BomgarRequestException(f"async error code {e.status} on "
+                                                         f"data {list_of_requests[i]}. original "
+                                                         f"response is {raw_answer}")
+                        except Exception as e:
+                            logger.exception(f"Exception while parsing async response for {binary_answer}")
+                            yield e
+                    else:
+                        msg = f"Got an async response which is not exception or ClientResponse. " \
+                              f"This should never happen! response is {raw_answer}"
+                        logger.critical(msg)
+                        yield ValueError(msg)
+                except Exception:
+                    msg = f"Error while parsing request {i} - {raw_answer}, continuing"
+                    logger.exception(msg)
+                    yield ValueError(msg)
+
     def get_clients_history(self, max_history_days=7):
+        logger.info(f"Getting client history")
         assert isinstance(max_history_days, int) and 1 <= max_history_days <= 7
         # We first acquire the current timestamp on bomgar server.
         timestamp = int(ET.fromstring(self.get_api_info()).find('timestamp').text)
@@ -170,16 +239,24 @@ class BomgarConnection(object):
             archives = self.get_archive_listing(date)
 
             # for each listing we retrieve the archive itself
+            get_archive_requests = []
+            timestamps = []
             for archive_listing in archives:
                 if archive_listing['archive_type'] == 'event_archive':
-                    archive = self.get_archive(date, archive_listing['index'], 'event')
-                    listing_timestamp = int(archive_listing['start_time']['@timestamp'])
+                    get_archive_requests.append((date, archive_listing['index']))
+                    timestamps.append(int(archive_listing['start_time']['@timestamp']))
                 elif archive_listing['archive_type'] == 'state_archive':
-                    archive = self.get_archive(date, archive_listing['index'], 'state')
-                    listing_timestamp = int(archive_listing['time']['@timestamp'])
+                    get_archive_requests.append((date, archive_listing['index']))
+                    timestamps.append(int(archive_listing['time']['@timestamp']))
                 else:
-                    assert False
+                    logger.error(f"Error, archive listing type is {archive_listing['archive_type']}")
+
+            for archive, listing_timestamp in zip(self.get_archive_async(get_archive_requests), timestamps):
                 if archive is None:
+                    continue
+
+                if isinstance(archive, Exception):
+                    logger.error(f"Asyncio exception, continuing: {archive}")
                     continue
 
                 # we only care about two "tables" in the returned "db"
@@ -208,7 +285,7 @@ class BomgarConnection(object):
                         all_clients[hostname] = client_dict
 
                 # extract the last support session and set the 'last_session' fields for each client.
-                support_sessions = archive['support_session']
+                support_sessions = archive.get('support_session')
                 if support_sessions is not None:
                     for support_session_id, support_session in support_sessions.items():
                         hostname = support_session['customer_name']
@@ -218,7 +295,7 @@ class BomgarConnection(object):
                         }
                         last_session_representative_username = None
 
-                        if archive['representative_support_session'] is not None:
+                        if archive.get('representative_support_session') is not None:
                             logger.info("A representative support session exists")
                             for representative_support_session in archive['representative_support_session'].values():
                                 if representative_support_session['support_session_id'] == support_session_id:

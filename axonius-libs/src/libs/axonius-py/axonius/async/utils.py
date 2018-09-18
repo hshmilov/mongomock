@@ -28,8 +28,16 @@ def async_request(req_list: list) -> typing.List[ClientResponse]:
         if kwargs.get('auth') is not None:
             kwargs['auth'] = BasicAuth(*kwargs['auth'])
 
+        # This is a setting for us, and not for session.request
+        get_binary = bool(kwargs.get('get_binary'))
+        kwargs.pop('get_binary', None)
+
         # Send the request
         async with session.request(**kwargs) as response:
+            if get_binary is True:
+                binary_response = await response.read()
+                return binary_response, response
+
             text = await response.text()
             return text, response
 

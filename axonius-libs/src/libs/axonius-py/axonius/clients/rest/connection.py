@@ -323,7 +323,6 @@ class RESTConnection(ABC):
             elif self._proxies.get('http') is not None:
                 aio_req['proxy'] = self._proxies['http']
 
-            logger.info(aio_req)
             aio_requests.append(aio_req)
 
         # Now that we have built the new requests, try to asynchronously get them.
