@@ -228,26 +228,33 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
     def _test_reachability(self, client_config):
         try:
-            conn = self._connect_client(client_config)
+            conn = self._get_ldap_connection(client_config)
             conn.disconnect()
+        except LdapException as e:
+            if 'invalid server address' in str(e):
+                return False
         except Exception:
-            return False
+            return True
         return True
 
+    def _get_ldap_connection(self, dc_details):
+        return LdapConnection(dc_details['dc_name'],
+                              dc_details['user'],
+                              dc_details['password'],
+                              dc_details.get('dns_server_address'),
+                              self._ldap_page_size,
+                              SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
+                              self._grab_file_contents(dc_details.get('ca_file')),
+                              self._grab_file_contents(dc_details.get('cert_file')),
+                              self._grab_file_contents(dc_details.get('private_key')),
+                              dc_details.get('fetch_disabled_devices', False),
+                              dc_details.get('fetch_disabled_users', False)
+                              )
+
     def _connect_client(self, dc_details):
+        message = ''
         try:
-            return LdapConnection(dc_details['dc_name'],
-                                  dc_details['user'],
-                                  dc_details['password'],
-                                  dc_details.get('dns_server_address'),
-                                  self._ldap_page_size,
-                                  SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
-                                  self._grab_file_contents(dc_details.get('ca_file')),
-                                  self._grab_file_contents(dc_details.get('cert_file')),
-                                  self._grab_file_contents(dc_details.get('private_key')),
-                                  dc_details.get('fetch_disabled_devices', False),
-                                  dc_details.get('fetch_disabled_users', False)
-                                  )
+            return self._get_ldap_connection(dc_details)
         except LdapException as e:
             additional_msg = ''
             if "socket connection error while opening: timed out" in str(e):
@@ -261,6 +268,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             else:
                 message = "Missing dc name for configuration line"
             logger.exception(message)
+        except Exception:
+            logger.exception('Error in _connect_client')
         raise ClientConnectionException(message)
 
     def _clients_schema(self):
