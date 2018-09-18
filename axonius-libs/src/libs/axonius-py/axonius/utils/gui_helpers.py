@@ -171,11 +171,8 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
     logger.debug(f'Fetching data for entity {entity_type.name}')
     pipeline = [{'$match': view_filter}]
     if projection and run_over_projection:
-        projection['internal_axon_id'] = 1
-        projection['adapters'] = 1
-        projection['unique_adapter_names'] = 1
-        projection['labels'] = 1
-        projection[ADAPTERS_LIST_LENGTH] = 1
+        for field in ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]:
+            projection[field] = 1
         pipeline.append({'$project': projection})
     if sort:
         pipeline.append({'$sort': sort})
@@ -198,10 +195,10 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
     if view_filter and not skip and request and include_history:
         # getting the original filter text on purpose.
         view_filter = request.args.get('filter')
-        mongo_sort = {'desc': True, 'field': ''}
+        mongo_sort = {'desc': -1, 'field': ''}
         if sort:
-            desc, field = next(iter(sort.items()))
-            mongo_sort = {'desc': desc, 'field': field}
+            field, desc = next(iter(sort.items()))
+            mongo_sort = {'desc': int(desc), 'field': field}
         db_connection.replace_one(
             {'name': {'$exists': False}, 'view.query.filter': view_filter},
             {

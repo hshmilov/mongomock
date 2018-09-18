@@ -22,6 +22,10 @@ class EntitiesPage(Page):
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{0}\']'
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Active Directory'
+    TABLE_HEADER_CELLS_CSS = 'th'
+    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{0}\')]'
+    TABLE_DATA_POS_XPATH = '//tr[contains(@class, \'x-row\')]/td[position()={0}]/div'
+    TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
 
     @property
     def root_page_css(self):
@@ -90,3 +94,41 @@ class EntitiesPage(Page):
 
     def select_page_size(self, page_size):
         self.driver.find_element_by_xpath(self.TABLE_PAGE_SIZE_XPATH.format(page_size)).click()
+
+    def click_sort_column(self, col_name):
+        self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name)).click()
+
+    def count_sort_column(self, col_name):
+        # Return the position of given col_name in list of column headers, 1-based
+        try:
+            return [element.text.strip() for element in
+                    self.driver.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
+        except ValueError:
+            # Unfortunately col_name is not in the composed list
+            return 0
+
+    def get_column_data(self, col_name):
+        col_position = self.count_sort_column(col_name)
+        if not col_position:
+            return []
+        return [el.text for el in self.driver.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(col_position))]
+
+    def is_text_in_coloumn(self, col_name, text):
+        return any(text in item for item in self.get_column_data(col_name))
+
+    def open_edit_columns(self):
+        self.driver.find_element_by_xpath(self.BUTTON_XPATH_TEMPLATE.format(button_text='Edit Columns')).click()
+        self.wait_for_element_present_by_css(self.TABLE_COLUMNS_MENU_CSS)
+
+    def select_column_name(self, col_name):
+        self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=col_name)).click()
+
+    def close_edit_columns(self):
+        self.driver.find_element_by_xpath(self.BUTTON_XPATH_TEMPLATE.format(button_text='Done')).click()
+
+    def select_columns(self, col_names):
+        self.open_edit_columns()
+        for col_name in col_names:
+            self.select_column_name(col_name)
+        self.wait_for_spinner_to_end()
+        self.close_edit_columns()

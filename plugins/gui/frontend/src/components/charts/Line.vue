@@ -59,7 +59,8 @@
                     let prev = { x: 0, y: 0 }
                     let segments = []
                     this.data.scale.forEach((scale, index) => {
-                        let pointValue = line['points'][scale] || 0
+                        let pointValue = line['points'][scale]
+                        if (!pointValue) return
                         let next = {
                             x: this.calcHorizontalX(index + 1),
                             y: this.viewHeight - this.textOffset - pointValue * this.viewScalePortion

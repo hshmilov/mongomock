@@ -216,7 +216,10 @@ class AdapterService(PluginService):
         if isinstance(client_data, FileForCredentialsMock):
             import gridfs
             fs = gridfs.GridFS(self.db.client[self.unique_name])
-            written_file = fs.put(client_data.file_contents, filename=client_data.filename)
+            if isinstance(client_data.file_contents, str):
+                written_file = fs.put(client_data.file_contents, filename=client_data.filename, encoding='utf8')
+            else:
+                written_file = fs.put(client_data.file_contents, filename=client_data.filename)
             return {"uuid": str(written_file), "filename": client_data.filename}
         return client_data
 

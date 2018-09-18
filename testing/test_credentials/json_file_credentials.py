@@ -1,6 +1,8 @@
 from adapters.json_file_adapter.service import DEVICES_DATA, USERS_DATA
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
+USER_NAME_UNICODE = 'אבידור'
+
 client_details = {
     DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, b'''
     {
@@ -24,7 +26,7 @@ client_details = {
        "raw_fields" : []
     }
     '''),
-    USERS_DATA: FileForCredentialsMock(USERS_DATA, b'''
+    USERS_DATA: FileForCredentialsMock(USERS_DATA, '''
         {
             "users" : [
                 {
@@ -35,6 +37,15 @@ client_details = {
                 "mail": "ofri@axonius.com",
                 "last_seen": "2018-04-11 02:13:24.485Z",
                 "last_password_change": "2017-04-11 02:13:24.485Z"
+                },
+                {
+                "id": "avidor@TestDomain.test",
+                "username": "''' + USER_NAME_UNICODE + '''",
+                "domain": "TestDomain.test",
+                "is_admin": false,
+                "mail": "avidor@axonius.com",
+                "last_seen": "2018-05-11 02:13:24.485Z",
+                "last_password_change": "2017-05-11 02:13:24.485Z"
                 }
             ],
             "fields" : ["id", "username", "domain", "is_admin", "last_seen", "mail"],

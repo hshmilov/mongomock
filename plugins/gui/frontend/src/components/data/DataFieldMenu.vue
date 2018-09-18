@@ -1,6 +1,6 @@
 <template>
     <div class="x-data-field-menu">
-        <div @click="isActive = true" class="x-btn link">Edit Columns</div>
+        <button @click="isActive = true" class="x-btn link">Edit Columns</button>
         <modal v-if="isActive" @close="isActive = false">
             <template slot="body">
                 <div class="x-field-menu-filter">
@@ -10,7 +10,7 @@
                 <x-checkbox-list :items="currentFields" v-model="selectedFields"/>
             </template>
             <template slot="footer">
-                <a class="x-btn" :tabindex="3" @click="isActive = false">Done</a>
+                <button class="x-btn" :tabindex="3" @click="isActive = false">Done</button>
             </template>
         </modal>
     </div>

@@ -21,8 +21,7 @@
                     <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected" />
                 </td>
                 <td v-for="field in fields" nowrap>
-                    <component :is="field.type" :schema="field"
-                               :value="field.name.split('->').reduce((item, field_segment) => item[field_segment], item)" />
+                    <component :is="field.type" :schema="field" :value="processDataValue(item, field)" />
                 </td>
             </tr>
             <template v-if="pageSize">
@@ -107,6 +106,12 @@
                 // } else {
                 //     this.$emit('input', {ids: this.selected, included: true})
                 // }
+            },
+            processDataValue(item, field) {
+			    if (Array.isArray(item[field.name]) && field.name === this.sort.field && !this.sort.desc) {
+                    return [...item[field.name]].reverse()
+                }
+			    return field.name.split('->').reduce((item, field_segment) => item[field_segment], item)
             }
         }
 	}

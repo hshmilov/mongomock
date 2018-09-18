@@ -16,7 +16,7 @@ class TestUsersQuery(TestBase):
         self.users_page.select_query_logic_op('and')
         self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
         self.users_page.wait_for_spinner_to_end()
-        assert self.users_page.count_entities() == 1
+        assert self.users_page.count_entities() == 2
 
     def test_over_20_query(self):
         # Do a query that results in more then 20 users (Can use testSecDomain credentials to get more users).

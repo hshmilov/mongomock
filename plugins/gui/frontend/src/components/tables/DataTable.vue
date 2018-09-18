@@ -108,11 +108,12 @@
         },
         watch: {
             view(newView, oldView) {
-            	if (newView.query.filter !== oldView.query.filter ||
+            	if (newView.query.filter !== oldView.query.filter || newView.fields.length > oldView.fields.length ||
+                    newView.sort.field !== oldView.sort.field || newView.sort.desc !== oldView.sort.desc ||
                     Math.abs(newView.page - oldView.page) > 3 ||
-                    newView.fields.length > oldView.fields.length ||
                     this.content.data.length <= (newView.page % this.pageLinkNumbers.length) * newView.pageSize) {
-                    this.loading = true
+
+            	    this.loading = true
                 }
                 this.fetchContentPages()
             },

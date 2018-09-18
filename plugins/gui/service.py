@@ -2032,7 +2032,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         start = start.date()
         end = end.date()
 
-        thread_count = min([cpu_count(), (end - start).days])
+        thread_count = min([cpu_count(), (end - start).days]) or 1
         interval = (end - start) / thread_count
 
         for i in range(thread_count):
