@@ -38,12 +38,15 @@ class TestAlert(TestBase):
 
         assert old_length == new_length
 
-    def create_outputting_notification_alert(self):
+    def create_basic_alert(self):
         self.alert_page.switch_to_page()
         self.alert_page.click_new_alert()
         self.alert_page.wait_for_spinner_to_end()
         self.alert_page.fill_alert_name(ALERT_NAME)
         self.alert_page.select_saved_query('Enabled AD Devices')
+
+    def create_outputting_notification_alert(self):
+        self.create_basic_alert()
         self.alert_page.check_increased()
         self.alert_page.check_decreased()
         self.alert_page.check_not_changed()
@@ -61,3 +64,10 @@ class TestAlert(TestBase):
         now = datetime.datetime.now()
         seconds_diff = [(now - single_time).total_seconds() for single_time in times]
         assert any(seconds < 60 * 5 for seconds in seconds_diff)
+
+    def test_invalid_input(self):
+        self.create_basic_alert()
+        self.alert_page.check_increased()
+        self.alert_page.fill_increased(-5)
+        value = self.alert_page.get_increased_value()
+        assert value == '5'

@@ -8,6 +8,7 @@ class AlertPage(EntitiesPage):
     SAVED_QUERY_INPUT_CSS = 'input.input-value'
     SAVED_QUERY_OPTION_CSS = 'div.x-select-option'
     ALERTS_CHECKBOX = 'div.x-checkbox-container'
+    INCREASE_ID = 'alert_above'
 
     @property
     def url(self):
@@ -64,3 +65,9 @@ class AlertPage(EntitiesPage):
 
     def remove_selected_alerts(self):
         self.find_element_by_text('Remove').click()
+
+    def fill_increased(self, value):
+        self.fill_text_field_by_element_id(self.INCREASE_ID, value)
+
+    def get_increased_value(self):
+        return self.driver.find_element_by_id(self.INCREASE_ID).get_attribute('value')

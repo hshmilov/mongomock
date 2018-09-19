@@ -8,8 +8,8 @@ def wait_until(func,
                exc_list=None,
                error_message='',
                **kwargs):
-    start_function = time.time()
-    while time.time() - start_function < total_timeout:
+    start_time = time.time()
+    while time.time() - start_time < total_timeout:
 
         try:
             return_value = func(**kwargs)
@@ -17,7 +17,7 @@ def wait_until(func,
                 return return_value
 
         except Exception as e:
-            if exc_list and any([isinstance(e, x) for x in exc_list]):
+            if exc_list and any(isinstance(e, x) for x in exc_list):
                 pass
             else:
                 raise
