@@ -205,6 +205,7 @@ a {
     display: inline-block;
     text-align: center;
     margin-bottom: 12px;
+    margin-left: 28%;
 }
 .card:nth-child(odd) {
     margin-right: 12px;
@@ -219,23 +220,31 @@ a {
 }
 .histogram .item {
     position: relative;
-    line-height: 30px;
+    line-height: 7px;
+    margin-bottom: 2px;
+    top: 1px;
+    height: 7px;
 }
 .histogram .item .quantity {
     position: absolute;
-    top: 0;
     right: 0;
     font-weight: 500;
-    font-size: 18px;
+    font-size: 14px;
+    top: 2px;
 }
 .histogram .item .bar {
-    height: 20px;
+    height: 10px;
     background-color: rgba(222, 222, 222, 0.4);
 }
-.histogram .title {
+.histogram .title{
+    margin-top: 1px;
+}
+.title {
     /*white-space: nowrap;*/
     /*text-overflow: ellipsis;*/
     /*overflow: hidden;*/
+    width: 100%;
+    display: inline-block;
 }
 
 .box {
@@ -274,8 +283,8 @@ a {
 
 .summary {
     border-top: 2px dashed #DEDEDE;
-    padding-top: 12px;
-    margin-top: 12px;
+    padding-top: 5px;
+    margin-top: 5px;
 }
 .summary .row {
     position: relative;
