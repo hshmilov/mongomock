@@ -4,7 +4,7 @@
         <x-select v-if="!first" :options="logicOps" placeholder="op..." v-model="expression.logicOp" class="x-select-logic"/>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
-        <label class="x-btn light checkbox-label" :class="{'active': expression.leftBracket}">
+        <label class="x-btn light checkbox-label expression-bracket-left" :class="{'active': expression.leftBracket}">
             <input type="checkbox" v-model="expression.leftBracket">(</label>
         <label class="x-btn light checkbox-label" :class="{active: expression.not, disabled: disableNot}">
             <input type="checkbox" v-model="expression.not">NOT</label>
@@ -12,10 +12,10 @@
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
             <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length"
-                      placeholder="func..." :id="first? 'query_op': undefined" />
+                      placeholder="func..." :id="first? 'query_op': undefined" class="x-select-comp" />
             <template v-if="showValue">
                 <component :is="valueSchema.type" :schema="valueSchema" v-model="expression.value"
-                           class="fill" :class="{'grid-span2': !fieldOpsList.length}"
+                           class="fill expression-value" :class="{'grid-span2': !fieldOpsList.length}"
                            :id="first? 'query_value': undefined" />
             </template>
             <template v-else>
@@ -25,9 +25,9 @@
         </template>
         <template v-else><div/><div/></template>
         <!-- Option to add ')' and to remove the expression -->
-        <label class="x-btn light checkbox-label" :class="{'active': expression.rightBracket}">
+        <label class="x-btn light checkbox-label expression-bracket-right" :class="{'active': expression.rightBracket}">
             <input type="checkbox" v-model="expression.rightBracket">)</label>
-        <div class="x-btn link" @click="$emit('remove')">x</div>
+        <div class="x-btn link expression-remove" @click="$emit('remove')">x</div>
     </div>
 </template>
 

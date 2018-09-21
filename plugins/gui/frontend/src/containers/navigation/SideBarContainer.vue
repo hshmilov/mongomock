@@ -15,7 +15,7 @@
             <x-nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true" id="dashboard"/>
             <x-nested-nav-item route-name="Devices" icon-name="devices" id="devices">
                 <x-nested-nav nest-level="1" class="collapse">
-                    <x-nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved"/>
+                    <x-nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved" id="devices-queries"/>
                 </x-nested-nav>
             </x-nested-nav-item>
             <x-nested-nav-item route-name="Users" icon-name="users" id="users">

@@ -11,6 +11,7 @@ from services.axonius_service import get_service
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.devices_page import DevicesPage
+from ui_tests.pages.devices_queries_page import DevicesQueriesPage
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
@@ -82,6 +83,7 @@ class TestBase:
         self.login_page = LoginPage(**params)
         self.settings_page = SettingsPage(**params)
         self.devices_page = DevicesPage(**params)
+        self.devices_queries_page = DevicesQueriesPage(**params)
         self.users_page = UsersPage(**params)
         self.report_page = ReportPage(**params)
         self.alert_page = AlertPage(**params)

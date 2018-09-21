@@ -8,6 +8,7 @@ from selenium.common.exceptions import (ElementNotVisibleException,
                                         WebDriverException)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 from services.axon_service import TimeoutException
 
@@ -57,7 +58,6 @@ SLEEP_INTERVAL = 0.2
 
 class Page:
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
-    BUTTON_XPATH_TEMPLATE = '//button[contains(@class, \'x-btn\') and text()=\'{button_text}\']'
 
     def __init__(self, driver, base_url):
         self.driver = driver
@@ -130,14 +130,18 @@ class Page:
         element.send_keys(val)
 
     @staticmethod
-    def get_button_xpath(text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS):
+    def get_button_xpath(text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, partial_class=False):
         button_xpath_template = './/{}[@class=\'{}\' and .//text()=\'{}\']'
+        if partial_class:
+            button_xpath_template = './/{}[contains(@class, \'{}\') and .//text()=\'{}\']'
         xpath = button_xpath_template.format(button_type, button_class, text)
         return xpath
 
-    def get_button(self, text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, context=None):
+    def get_button(self, text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, partial_class=False,
+                   context=None):
         base = context if context is not None else self.driver
-        xpath = self.get_button_xpath(text, button_type=button_type, button_class=button_class)
+        xpath = self.get_button_xpath(text, button_type=button_type, button_class=button_class,
+                                      partial_class=partial_class)
         return base.find_element_by_xpath(xpath)
 
     # this is a special case where the usual get_button doesn't work, name will be changed later
@@ -153,12 +157,14 @@ class Page:
                      call_space=True,
                      button_type=BUTTON_DEFAULT_TYPE,
                      button_class=BUTTON_DEFAULT_CLASS,
+                     partial_class=False,
                      ignore_exc=False,
                      with_confirmation=False,
                      context=None):
         button = self.get_button(text,
                                  button_type=button_type,
                                  button_class=button_class,
+                                 partial_class=partial_class,
                                  context=context)
         self.scroll_into_view(button)
         if call_space:
@@ -348,8 +354,11 @@ class Page:
     def select_option_without_search(self,
                                      dropdown_css_selector,
                                      selected_options_css_selector,
-                                     text):
-        self.driver.find_element_by_css_selector(dropdown_css_selector).click()
+                                     text,
+                                     parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_element_by_css_selector(dropdown_css_selector).click()
         options = self.driver.find_elements_by_css_selector(selected_options_css_selector)
         for option in options:
             if option.text == text:
@@ -361,5 +370,13 @@ class Page:
     def key_down_enter(element):
         element.send_keys(Keys.ENTER)
 
+    @staticmethod
+    def key_down_arrow_down(element):
+        element.send_keys(Keys.ARROW_DOWN)
+
     def wait_for_spinner_to_end(self):
         return self.wait_for_element_absent_by_css(LOADING_SPINNER_CSS)
+
+    def hover_element_by_css(self, css_selector):
+        element = self.wait_for_element_present_by_css(css_selector)
+        ActionChains(self.driver).move_to_element(element).perform()

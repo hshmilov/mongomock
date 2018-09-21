@@ -43,8 +43,8 @@
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" ref="filter"
                                  @change="updateFilter" @error="filterValid = false" />
                 <div class="place-right">
-                    <a class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</a>
-                    <a class="x-btn" @click="compileFilter" @keyup.enter="compileFilter">Search</a>
+                    <button class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</button>
+                    <button class="x-btn" @click="compileFilter" @keyup.enter="compileFilter">Search</button>
                 </div>
             </div>
         </x-dropdown>
