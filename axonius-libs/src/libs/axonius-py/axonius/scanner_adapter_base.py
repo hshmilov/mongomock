@@ -185,7 +185,11 @@ class ScannerCorrelatorBase(object):
             return None
 
         # generate a fake id
-        parsed_device['data']['id'] = uuid.uuid4().hex
+        if parsed_device['data'].get('id'):
+            device_has_id = True
+        else:
+            device_has_id = False
+            parsed_device['data']['id'] = uuid.uuid4().hex
 
         remote_correlation = self._find_correlation_with_real_adapter(parsed_device_copy)
         if remote_correlation:
@@ -216,7 +220,7 @@ class ScannerCorrelatorBase(object):
         hostname = get_hostname(parsed_device)
 
         # the device has only a fake ID and no correlations - ignore it
-        return None if my_macs or hostname else IGNORE_DEVICE
+        return None if my_macs or hostname or device_has_id else IGNORE_DEVICE
 
 
 class ScannerAdapterBase(AdapterBase, Feature, ABC):
