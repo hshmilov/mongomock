@@ -60,6 +60,7 @@ DOCKER_PORTS = {
     'forcepoint-csv-adapter':           5770,
     'observeit-adapter':                5773,
     'qualys-scans-adapter':             5777,
+    'splunk-adapter':                   5781,
     'infoblox-adapter':                 5794,
     'nessus-csv-adapter':               5796,
     'tanium-adapter':                   5797,

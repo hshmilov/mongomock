@@ -119,6 +119,10 @@ export const pluginMeta = {
         title: 'SentinelOne',
         description: 'SentinelOne is an endpoint protection solution including prevention, detection, and response.'
     },
+    splunk_adapter: {
+        title: 'Splunk',
+        description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository from which it can generate graphs, reports, alerts, dashboards, and visualizations.'
+    },
     splunk_nexpose_adapter: {
         title: 'Splunk <> Rapid7 Nexpose',
         description: 'The Splunk adapter for Rapid7 Nexpose leverages data from Splunk instances that receive alerts from Rapid7 Nexpose.'
