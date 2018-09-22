@@ -163,6 +163,7 @@ class DeviceAdapterUser(SmartJsonClass):
     is_disabled = Field(bool, "Is Disabled")
     is_admin = Field(bool, "Is Admin")
     user_department = Field(str, "Department")
+    password_max_age = Field(int, "Password Max Age")
 
     # Where did this user really come from?
     origin_unique_adapter_name = Field(str)

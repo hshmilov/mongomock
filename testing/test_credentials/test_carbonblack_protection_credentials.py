@@ -4,4 +4,4 @@ client_details = {
     "verify_ssl": False
 }
 
-SOME_DEVICE_ID = '1'
+SOME_DEVICE_ID = '1TESTDOMAIN\WIN-76F9735PMOJ'

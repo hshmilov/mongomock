@@ -39,6 +39,10 @@ export const pluginMeta = {
         title: 'Duo Beyond',
         description: 'Duo Beyond is a zero-trust security platform that bases application access decisions on the trust of user identities and their devices.'
     },
+    datadog_adapter: {
+        title: 'Datadog - BETA',
+        description: 'Datadog is a monitoring service for cloud-scale applications, providing monitoring of servers, databases, tools, and services, through a SaaS-based data analytics platform.'
+    },
     redseal_adapter: {
         title: 'RedSeal',
         description: 'RedSeal provides companies with a simple metric for how effectively their current security measures are working to protect their network.'
@@ -238,6 +242,10 @@ export const pluginMeta = {
     cynet_adapter: {
         title: 'Cynet 360',
         description: 'Cynet 360 is a detection and response security platform for finding, ranking, and remediating unknown, camouflaged threats.'
+    },
+    illusive_adapter: {
+        title: 'Illusive Networks',
+        description: 'Illusive Networks produces technology that deceives cyber attackers by planting false information about given network\'s resources.'
     },
     kace_adapter: {
         title: 'Quest KACE - BETA',

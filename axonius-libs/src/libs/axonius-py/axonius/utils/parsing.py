@@ -35,7 +35,7 @@ mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 # Currently (28/01/2018) this means removing LOCAL and WORKGROUP.
 # Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
 NORMALIZED_HOSTNAME = 'normalized_hostname'
-OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks']
+OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks', 'darwin']
 # In some cases we don't want to use compare_hostnames because indexing using it is complicated
 # and in some cases indexsing is performance critical
 NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
@@ -199,7 +199,7 @@ def figure_out_os(s):
     if 'cisco' in s or ('IOS' in orig_s and not any(x in s for x in ios_devices)):
         # If it has 'cisco', or it has 'IOS' (upper letters) and it doesn't have 'iphone', 'ipad', etc.
         os_type = 'Cisco'
-    elif 'windows' in s or 'win' in s:
+    elif 'windows' in s or ('win' in s and 'darwin' not in s):
         os_type = 'Windows'
         # XP must reamin the last item in the list because there is a chance it will be found in "s" by chacne
         windows_distribution = ['Vista', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
@@ -465,6 +465,12 @@ def parse_date(datetime_to_parse):
         return None
 
 
+def is_items_in_list1_are_in_list2(list1, list2):
+    if not list1 or not list2:
+        return False
+    return all(item in list2 for item in list1)
+
+
 def does_list_startswith(list1, list2):
     """
      by slicing list1 the size of list2 and comparing to list2 we can check if list1 starts with list2
@@ -567,6 +573,10 @@ def is_old_device(adapter_device, number_of_days=DEFAULT_NUMBER_OF_DAYS_FOR_OLD_
         return True
 
 
+def is_snow_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'service_now_adapter'
+
+
 def is_sccm_or_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter' or \
         adapter_device.get('plugin_name') == 'sccm_adapter'
@@ -617,6 +627,21 @@ def get_domain(adapter_device):
     if domain:
         return domain.upper()
     return None
+
+
+def get_last_used_users(adapter_device):
+    last_used_user = adapter_device['data'].get('last_used_users')
+    if last_used_user:
+        return [user.lower().strip() for user in last_used_user if user.strip()]
+    return None
+
+
+def compare_last_used_users(adapter_device1, adapter_device2):
+    users1 = get_last_used_users(adapter_device1)
+    users2 = get_last_used_users(adapter_device2)
+    if not users1 or not users2:
+        return False
+    return is_items_in_list1_are_in_list2(users1, users2) or is_items_in_list1_are_in_list2(users2, users1)
 
 
 def compare_domain(adapter_device1, adapter_device2):
@@ -677,6 +702,21 @@ def get_serial(adapter_device):
         return serial
 
 
+def get_asset_or_host(adapter_device):
+    asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
+    if asset:
+        return asset.split('.')[0].lower()
+    return None
+
+
+def compare_asset_hosts(adapter_device1, adapter_device2):
+    asset1 = get_asset_or_host(adapter_device1)
+    asset2 = get_asset_or_host(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 def get_cloud_data(adapter_device):
     adapter_device_data = adapter_device.get('data') or {}
 
@@ -716,6 +756,7 @@ def normalize_hostname(adapter_data):
         adapter_data['hostname'] = final_hostname
         final_hostname = final_hostname.replace(' ', '-')
         final_hostname = final_hostname.replace('\'', '')
+        final_hostname = final_hostname.replace('’', '')
         for extension in DEFAULT_DOMAIN_EXTENSIONS:
             final_hostname = remove_trailing(final_hostname, extension)
         split_hostname = final_hostname.split('.')

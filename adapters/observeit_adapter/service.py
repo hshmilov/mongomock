@@ -112,20 +112,22 @@ class ObserveitAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting os of {device_raw}')
                 domain = device_raw.get('SrvCurrentDomainName')
+                if domain.endswith('.local'):
+                    domain = domain[:-len('.local')]
                 if not is_domain_valid(domain):
                     domain = None
                 hostname = device_raw.get('SrvName')
                 if os_type is not None and consts.OS_TYPES_DICT[os_type] == 'Mac OS X':
-                    if domain and hostname:
-                        # That is the weird case of OS X
-                        if '.' not in domain:
-                            device.hostname = domain
-                        elif hostname.lower() != 'localhost':
-                            device.hostname = hostname
-                        else:
-                            logger.warning(f'Got an Observeit id with only localhost in the names, '
-                                           f'it is a bad device {device_raw}')
-                            continue
+                    if domain and '.' not in domain:
+                        domain = domain.replace('’', '')
+                        device.hostname = domain
+                    elif hostname and hostname.lower() != 'localhost':
+                        hostname = hostname.replace('’', '')
+                        device.hostname = hostname
+                    else:
+                        logger.warning(f'Got an Observeit id with only localhost in the names, '
+                                       f'it is a bad device {device_raw}')
+                        continue
                 elif hostname:
                     if domain and not hostname.strip().lower().startswith(domain.strip().lower()):
                         device.hostname = f'{hostname}.{domain}'

@@ -14,44 +14,59 @@ class ServiceNowConnection(RESTConnection):
         """
         self.__number_of_offsets = consts.NUMBER_OF_OFFSETS
         self.__offset_size = consts.OFFSET_SIZE
-        super().__init__(url_base_prefix="api/now/", *args, **kwargs)
+        super().__init__(url_base_prefix='api/now/', *args, **kwargs)
         self._permanent_headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
 
     def _connect(self):
         if self._username is not None and self._password is not None:
-            self._get("table/cmdb_ci_computer", url_params={"sysparm_limit": 1}, do_basic_auth=True)
+            self._get('table/cmdb_ci_computer', url_params={'sysparm_limit': 1}, do_basic_auth=True)
         else:
-            raise RESTException("No user name or password")
+            raise RESTException('No user name or password')
 
     def get_device_list(self):
         tables_devices = []
+        users_table = []
+        try:
+            users_table = list(self.__get_devices_from_table(USERS_TABLE, number_of_offsets=5))
+        except Exception:
+            logger.exception(f'Problem getting users')
+        users_table_dict = dict()
+        for user in users_table:
+            users_table_dict[user.get('sys_id') or ''] = user
         for table_details in TABLES_DETAILS:
             new_table_details = table_details.copy()
             table_devices = {DEVICES_KEY: self.__get_devices_from_table(table_details[TABLE_NAME_KEY])}
             new_table_details.update(table_devices)
+            new_table_details[USERS_TABLE_KEY] = users_table_dict
             tables_devices.append(new_table_details)
+
         return tables_devices
 
-    def __get_devices_from_table(self, table_name):
-        for sysparm_offset in range(0, self.__number_of_offsets):
+    def __get_devices_from_table(self, table_name, number_of_offsets=None):
+        if not number_of_offsets:
+            number_of_offsets = self.__number_of_offsets
+        number_of_exception = 0
+        for sysparm_offset in range(0, number_of_offsets):
             try:
-                table_results_paged = self._get(f"table/{str(table_name)}", url_params={"sysparm_limit":
+                table_results_paged = self._get(f'table/{str(table_name)}', url_params={'sysparm_limit':
                                                                                         self.__offset_size,
-                                                                                        "sysparm_offset": sysparm_offset * self.__offset_size})
-                if len(table_results_paged.get("result", [])) == 0:
+                                                                                        'sysparm_offset': sysparm_offset * self.__offset_size})
+                if len(table_results_paged.get('result', [])) == 0:
                     break
-                yield from table_results_paged.get("result", [])
+                yield from table_results_paged.get('result', [])
             except Exception:
-                logger.exception(f"Got exception in offset {sysparm_offset} with table {table_name}")
-                break
+                logger.exception(f'Got exception in offset {sysparm_offset} with table {table_name}')
+                number_of_exception += 1
+                if number_of_exception >= 3:
+                    break
 
     def __add_dict_to_table(self, table_name, dict_data):
-        self._post(f"table/{str(table_name)}", body_params=dict_data)
+        self._post(f'table/{str(table_name)}', body_params=dict_data)
 
     def create_service_now_incident(self, service_now_dict):
         impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
-        short_description = service_now_dict.get('short_description', "")
-        description = service_now_dict.get('description', "")
+        short_description = service_now_dict.get('short_description', '')
+        description = service_now_dict.get('description', '')
         try:
             self.__add_dict_to_table('incident', {'impact': impact, 'urgency': impact,
                                                   'short_description': short_description, 'description': description})

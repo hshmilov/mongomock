@@ -66,6 +66,10 @@ def does_entity_have_field(adapters, check_data):
     return any(check_data(entity_info['data']) for entity_info in adapters)
 
 
+def has_name(adapters):
+    return does_entity_have_field(adapters, lambda adapter_data: 'name' in adapter_data)
+
+
 def has_hostname(adapters):
     return does_entity_have_field(adapters, lambda adapter_data: 'hostname' in adapter_data)
 

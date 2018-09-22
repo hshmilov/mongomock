@@ -101,12 +101,12 @@ class CarbonblackProtectionAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device.id = device_raw.get('id')
-                if device.id is None:
+                device_id = device_raw.get('id')
+                if not device_id:
+                    logger.warning(f'Device with bad ID {device_id}')
                     continue
-                else:
-                    device.id = str(device.id)
                 hostname = device_raw.get('name')
+                device.id = str(device_id) + (hostname or '')
                 if hostname and '\\' in hostname:
                     split_hostname = hostname.split('\\')
                     device.hostname = split_hostname[1]

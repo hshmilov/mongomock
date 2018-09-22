@@ -40,6 +40,7 @@ class JamfAdapter(AdapterBase, Configurable):
         site = Field(JamfSite, "Jamf Sites")
         phone_number = Field(str, 'Phone Number')
         imei = Field(str, 'IMEI')
+        disable_automatic_login = Field(str, 'Disable Automatic Login')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -189,7 +190,8 @@ class JamfAdapter(AdapterBase, Configurable):
                     device.device_model_family = hardware.get('model')
 
                     try:
-                        users_raw = (device_raw.get('groups_accounts') or {}).get('local_accounts', [])
+                        groups_accounts = (device_raw.get('groups_accounts') or {})
+                        users_raw = groups_accounts.get('local_accounts', [])
                         # This can come in a few formats
                         if users_raw is not None and isinstance(users_raw, dict) and users_raw.get("user"):
                             users_raw_user_object = users_raw["user"]
@@ -199,17 +201,39 @@ class JamfAdapter(AdapterBase, Configurable):
                                 users_raw = users_raw_user_object
                             else:
                                 users_raw = []
-
+                        inventory_users_dict = dict()
+                        try:
+                            device.disable_automatic_login = (groups_accounts.get('user_inventories')
+                                                              or {}).get('disable_automatic_login')
+                            user_inventory_list = (groups_accounts.get('user_inventories')
+                                                   or {}).get('user') or []
+                            if not isinstance(user_inventory_list, list):
+                                user_inventory_list = [user_inventory_list]
+                            for user_inventory in user_inventory_list:
+                                inventory_users_dict[user_inventory.get('username') or 'UNKNOWN'] = user_inventory
+                        except Exception:
+                            logger.exception(f'Problem getting inventory list')
+                        device.last_used_users = []
                         for user_raw in users_raw:
-                            logger.info(f"Adding user {user_raw.get('realname')}")
-                            device.add_users(username=user_raw.get('realname') + "@" + str(hostname),
-                                             user_sid=user_raw.get('uid'),
-                                             is_local=True,
-                                             is_admin=str(user_raw.get('administrator')).lower() == "true",
-                                             origin_unique_adapter_name=self.plugin_unique_name,
-                                             origin_unique_adapter_data_id=device.id,
-                                             user_department=user_raw.get("user_department")
-                                             )
+                            try:
+                                logger.info(f"Adding user {user_raw.get('realname')}")
+                                user_name_raw = user_raw.get('name')
+                                user_inverntory_raw = inventory_users_dict.get(user_name_raw) or {}
+                                if user_name_raw:
+                                    device.last_used_users.append(user_name_raw)
+                                device.add_users(username=user_raw.get('realname') + "@" + str(hostname),
+                                                 user_sid=user_raw.get('uid'),
+                                                 is_local=True,
+                                                 is_admin=str(user_raw.get('administrator')).lower() == "true",
+                                                 origin_unique_adapter_name=self.plugin_unique_name,
+                                                 origin_unique_adapter_data_id=device.id,
+                                                 user_department=user_raw.get("user_department"),
+                                                 password_max_age=(int(user_inverntory_raw.get('password_max_age'))
+                                                                   if user_inverntory_raw.get('password_max_age')
+                                                                   else None)
+                                                 )
+                            except Exception:
+                                logger.exception(f'Problem getting user {str(user_raw)}')
                     except Exception:
                         logger.exception(f'Problem getting users at {device_raw}')
 
@@ -264,6 +288,8 @@ class JamfAdapter(AdapterBase, Configurable):
                             if not isinstance(partitions, list):
                                 partitions = [partitions]
                             for partition in partitions:
+                                if not partition:
+                                    continue
                                 total_size = partition.get('partition_capacity_mb')
                                 if total_size:
                                     total_size = int(total_size) / 1024.0

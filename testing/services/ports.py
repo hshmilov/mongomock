@@ -65,6 +65,8 @@ DOCKER_PORTS = {
     'nessus-csv-adapter':               5796,
     'tanium-adapter':                   5797,
     'selenium-vnc':                     5900,
+    'cynet-adapter':                    5910,
+    'illusive-adapter':                 5911,
     'cisco-adapter':                    6001,
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,
@@ -92,6 +94,7 @@ DOCKER_PORTS = {
     'divvycloud-adapter':               6035,
     'azure-ad-adapter':                 6036,
     'static-analysis':                  6037,
+    'datadog-adapter':                  6041,
     'mongo':                            27017,
 }
 

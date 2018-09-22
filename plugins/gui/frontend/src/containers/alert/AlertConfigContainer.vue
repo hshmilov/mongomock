@@ -84,6 +84,8 @@
                                     v-model="actions.notification" @change="tour('alertSave')" /><div></div>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenowIncident"/>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Computer" v-model="actions.servicenowComputer"/>
+                        <x-checkbox class="grid-span2" label="Isolate CB Response devices" v-model="actions.cbIsolate"/>
+                        <x-checkbox class="grid-span2" label="Unisolate CB Response devices" v-model="actions.cbUnisolate"/>
                         <!-- SYSLOG -->
                         <x-checkbox label="Notify Syslog" v-model="actions.syslog" @change="checkSyslogSettings"/>
                         <x-checkbox v-if="actions.syslog" label="Send Device Data To Syslog" v-model="sendAllDevicesToSyslog"/>
@@ -200,7 +202,7 @@
                 },
                 currentQuery: null,
                 actions: {
-                	notification: false, mail: false, tag: false, syslog: false, servicenowIncident: false, servicenowComputer: false
+                	notification: false, mail: false, tag: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false
                 },
                 mailList: [],
                 tagName: '',
@@ -263,6 +265,13 @@
                         case 'create_service_now_computer':
                             this.actions.servicenowComputer = true
                             break
+                        case 'carbonblack_isolate':
+                            this.actions.cbIsolate = true
+                            break
+                        case 'carbonblack_unisolate':
+                            this.actions.cbUnisolate = true
+                            break
+
 					}
 				})
 				this.alert = { ...alert,
@@ -317,6 +326,17 @@
                         type: 'create_service_now_computer'
                     })
                 }
+                if (this.actions.cbIsolate) {
+                    this.alert.actions.push({
+                        type: 'carbonblack_isolate'
+                    })
+                }
+                if (this.actions.cbUnisolate) {
+                    this.alert.actions.push({
+                        type: 'carbonblack_unisolate'
+                    })
+                }
+
                 this.alert.view = this.currentQuery
                 this.alert.viewEntity = this.currentQueryOptions.find(item => item.name === this.currentQuery).entity
                 /* Save and return to alerts page */

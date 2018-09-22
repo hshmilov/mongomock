@@ -1,7 +1,7 @@
 import logging
 from itertools import combinations
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
-from axonius.correlator_base import (CorrelationReason, has_hostname, has_mac,
+from axonius.correlator_base import (CorrelationReason, has_hostname, has_name, has_mac,
                                      has_serial, has_cloud_id, has_ad_or_azure_name)
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import (NORMALIZED_MACS,
@@ -17,7 +17,8 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial,
                                    compare_domain, get_domain, get_cloud_data, compare_clouds,
                                    is_azuread_or_ad_and_have_name, get_ad_name_or_azure_display_name,
-                                   compare_ad_name_or_azure_display_name)
+                                   compare_ad_name_or_azure_display_name, get_last_used_users, compare_last_used_users,
+                                   compare_asset_hosts, get_asset_or_host)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -52,7 +53,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        return [has_hostname, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name]
+        return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name]
 
     def _correlate_mac(self, adapters_to_correlate):
         """
@@ -96,7 +97,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         mac_blacklist = mac_blacklist.union(map(normalize_mac, JUNIPER_NON_UNIQUE_MACS))
         for mac, matches in mac_indexed.items():
             for x, y in combinations(matches, 2):
-                if (not hostnames_do_not_contradict(x, y)) and (not is_different_plugin(x, y)):
+                if (not hostnames_do_not_contradict(x, y)) and (not is_different_plugin(x, y)
+                                                                or (get_domain(x) and get_domain(y)
+                                                                    and compare_domain(x, y))):
                     mac_blacklist.add(mac)
                     break
 
@@ -124,6 +127,18 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection],
                                       {'Reason': 'They have the same hostname and IPs'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_hostname_user(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Hostname-LastUsedUser')
+        filtered_adapters_list = filter(get_normalized_hostname_str,
+                                        filter(get_last_used_users, adapters_to_correlate))
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_normalized_hostname_str],
+                                      [compare_device_normalized_hostname],
+                                      [],
+                                      [compare_last_used_users],
+                                      {'Reason': 'They have the same hostname and LastUsedUser'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_domain(self, adapters_to_correlate):
@@ -242,7 +257,23 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_ad_name_or_azure_display_name],
                                       [],
                                       [],
-                                      {'Reason': 'They have the same name'},
+                                      {'Reason': 'They have the same display name'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_asset_host(self, adapters_to_correlate):
+        """
+        Correlating by asset first + IP
+        :param adapters_to_correlate:
+        :return:
+        """
+        logger.info('Starting to correlate on Asset-Host')
+        filtered_adapters_list = filter(get_asset_or_host, filter(get_normalized_ip, adapters_to_correlate))
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_asset_or_host],
+                                      [compare_asset_hosts],
+                                      [get_asset_name],
+                                      [ips_do_not_contradict_or_mac_intersection],
+                                      {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 
     def _raw_correlate(self, entities):
@@ -287,6 +318,10 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
 
         yield from self._correlate_hostname_domain(adapters_to_correlate)
+
+        yield from self._correlate_hostname_user(adapters_to_correlate)
+
+        yield from self._correlate_asset_host(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

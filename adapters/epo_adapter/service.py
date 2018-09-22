@@ -126,6 +126,7 @@ class EpoAdapter(AdapterBase):
                 # skipping devices without Agent-ID
                 continue
 
+            name = device_raw.get('EPOComputerProperties.ComputerName')
             hostname = device_raw.get('EPOComputerProperties.IPHostName')
             if hostname is None or hostname == '':
                 hostname = device_raw.get('EPOComputerProperties.ComputerName')
@@ -142,6 +143,7 @@ class EpoAdapter(AdapterBase):
 
             device = self._new_device_adapter()
             device.hostname = hostname
+            device.name = name
             device.figure_os(device_raw.get('EPOLeafNode.os', ''))
             device.os.bitness = 64 if device_raw.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
             # I think that we get ePO duplications also in the field

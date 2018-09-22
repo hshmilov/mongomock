@@ -163,7 +163,7 @@ class SolarwindsOrionAdapter(AdapterBase):
 
                     device.software_hardware_makeup = raw_device_data.get("NodeDescription", '')
                     device.location = raw_device_data.get("Location", '')
-
+                device.set_raw(raw_device_data)
                 yield device
             except Exception:
                 logger.exception(f'Got exception for raw_device_data: {raw_device_data}')

@@ -57,6 +57,7 @@ class StaticCorrelatorService(CorrelatorBase):
                             'data': {
                                 'id': '$$adapter.data.id',
                                 OS_FIELD: '$$adapter.data.os',
+                                'name': '$$adapter.data.name',
                                 'hostname': '$$adapter.data.hostname',
                                 NETWORK_INTERFACES_FIELD: '$$adapter.data.network_interfaces',
                                 'device_serial': '$$adapter.data.device_serial',
@@ -66,7 +67,8 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'cloud_provider': '$$adapter.data.cloud_provider',
                                 'cloud_id': '$$adapter.data.cloud_id',
                                 'ad_name': '$$adapter.data.ad_name',
-                                'azure_display_name': '$$adapter.data.azure_display_name'
+                                'azure_display_name': '$$adapter.data.azure_display_name',
+                                'last_used_users': '$$adapter.data.last_used_users'
                             }
                         }
                     }
