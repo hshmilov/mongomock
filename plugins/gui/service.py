@@ -58,10 +58,10 @@ from urllib3.util.url import parse_url
 import re
 from multiprocessing.pool import ThreadPool
 from multiprocessing import cpu_count
-from math import ceil
-
 
 # Caution! These decorators must come BEFORE @add_rule
+
+
 def gzipped_downloadable(filename, extension):
     filename = filename.format(date.today())
 
@@ -156,6 +156,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                          requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
         self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
+        self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
+
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
         self.__users_collection = self._get_collection('users')
