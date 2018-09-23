@@ -518,6 +518,21 @@ class ReportsService(PluginBase, Triggerable):
                                                                          report_data['view'])),
                                  report_data['severity'])
 
+    def _handle_action_tag_all_entities(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                        action_data=None):
+        tag_projection = {'specific_data.data.id': 1,
+                          'specific_data.plugin_unique_name': 1}
+        current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']),
+                                               projection=tag_projection)
+        if current_result is None:
+            logger.info("Skipping reports trigger because there were no current results.")
+            return
+        entities = []
+        for entity in current_result:
+            for adapter_data in entity['specific_data']:
+                entities.append((adapter_data[PLUGIN_UNIQUE_NAME], adapter_data['data']['id']))
+        self.add_many_labels_to_entity(EntityType(report_data['view_entity']), entities, [action_data])
+
     def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices,
                                     action_data=None):
         """ Sends an email to the list of e-mails
