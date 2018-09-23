@@ -99,6 +99,9 @@
                         <div v-if="!actions.mail"></div>
                         <!-- MAIL -->
                         <!-- TAGS -->
+                        <x-checkbox class="grid-span2" label="Tag All Entities" v-model="actions.tagAll"/>
+                        <input class="form-control" id="tagAllName" v-model="tagAllName" v-if="actions.tagAll">
+                        <div v-if="!actions.tagAll"></div>
                         <template v-if="alert.triggers.increase">
                             <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag New Entities"
                                         v-model="actions.tag"/>
@@ -202,10 +205,11 @@
                 },
                 currentQuery: null,
                 actions: {
-                	notification: false, mail: false, tag: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false
+                	notification: false, mail: false, tag: false, tagAll: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false
                 },
                 mailList: [],
                 tagName: '',
+                tagAllName: '',
                 sendAllDevicesToSyslog: false,
                 sendDevicesCSVToEmail: false,
                 error: '',
@@ -254,6 +258,10 @@
                         case 'tag_entities':
                             this.actions.tag = true
                             this.tagName = action.data
+                            break
+                        case 'tag_all_entities':
+                            this.actions.tagAll = true
+                            this.tagAllName = action.data
                             break
                         case 'notify_syslog':
                             this.actions.syslog = true
@@ -309,6 +317,11 @@
                 if (this.actions.tag) {
                     this.alert.actions.push({
                         type: 'tag_entities', data: this.tagName
+                    })
+                }
+                if (this.actions.tagAll) {
+                    this.alert.actions.push({
+                        type: 'tag_all_entities', data: this.tagAllName
                     })
                 }
                 if (this.actions.syslog) {
