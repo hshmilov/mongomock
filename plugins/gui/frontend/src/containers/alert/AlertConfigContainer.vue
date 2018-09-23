@@ -99,7 +99,6 @@
                         <div v-if="!actions.mail"></div>
                         <!-- MAIL -->
                         <!-- TAGS -->
-                        <x-checkbox class="grid-span2" label="Tag All Entities" v-model="actions.tagAll"/>
                         <template v-if="alert.triggers.increase">
                             <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag New Entities"
                                         v-model="actions.tag"/>
@@ -203,7 +202,7 @@
                 },
                 currentQuery: null,
                 actions: {
-                	notification: false, mail: false, tag: false, tagAll: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false
+                	notification: false, mail: false, tag: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false
                 },
                 mailList: [],
                 tagName: '',
@@ -254,10 +253,6 @@
                             break
                         case 'tag_entities':
                             this.actions.tag = true
-                            this.tagName = action.data
-                            break
-                        case 'tag_all_entities':
-                            this.actions.tagAll = true
                             this.tagName = action.data
                             break
                         case 'notify_syslog':
@@ -314,11 +309,6 @@
                 if (this.actions.tag) {
                     this.alert.actions.push({
                         type: 'tag_entities', data: this.tagName
-                    })
-                }
-                if (this.actions.tagAll) {
-                    this.alert.actions.push({
-                        type: 'tag_all_entities', data: this.tagName
                     })
                 }
                 if (this.actions.syslog) {
