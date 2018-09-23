@@ -182,6 +182,7 @@ class BomgarConnection(object):
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.
             for i, raw_answer in enumerate(all_answers):
+                request_id_absolute = MAX_ASYNC_REQUESTS_IN_PARALLEL * chunk_id + i
                 try:
                     # The answer could be an exception
                     if isinstance(raw_answer, Exception):
@@ -203,7 +204,7 @@ class BomgarConnection(object):
                                     yield e
                         except aiohttp.ClientResponseError as e:
                             yield BomgarRequestException(f"async error code {e.status} on "
-                                                         f"data {list_of_requests[i]}. original "
+                                                         f"data {list_of_requests[request_id_absolute]}. original "
                                                          f"response is {raw_answer}")
                         except Exception as e:
                             logger.exception(f"Exception while parsing async response for {binary_answer}")
@@ -214,7 +215,7 @@ class BomgarConnection(object):
                         logger.critical(msg)
                         yield ValueError(msg)
                 except Exception:
-                    msg = f"Error while parsing request {i} - {raw_answer}, continuing"
+                    msg = f"Error while parsing request {request_id_absolute} - {raw_answer}, continuing"
                     logger.exception(msg)
                     yield ValueError(msg)
 

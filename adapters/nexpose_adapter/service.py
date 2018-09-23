@@ -5,7 +5,7 @@ from typing import Tuple
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
@@ -60,6 +60,7 @@ class NexposeAdapter(ScannerAdapterBase):
         vulnerabilities_moderate = Field(int, "Moderate Vulnerabiliies")
         vulnerabilities_severe = Field(int, "Severe Vulnerabiliies")
         vulnerabilities_total = Field(int, "Total Vulnerabiliies")
+        nexpose_tags = ListField(str, "Nexpose Tags")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

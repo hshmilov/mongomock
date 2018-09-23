@@ -1,13 +1,20 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-import requests
+import math
 import urllib3
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import aiohttp
+import requests
 
 from axonius.adapter_exceptions import GetDevicesError, ClientConnectionException
 from nexpose_adapter.clients.nexpose_base_client import NexposeClient
 from axonius.utils.parsing import figure_out_cloud
+from axonius.async.utils import async_request
+from axonius.utils.json import from_json
+
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+logger = logging.getLogger(f'axonius.{__name__}')
+MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
 
 
 class NexposeV3Client(NexposeClient):
@@ -26,7 +33,74 @@ class NexposeV3Client(NexposeClient):
                     devices = current_page_response_as_json.get('resources', [])
                     for item in devices:
                         item.update({"API": '3'})
-                        yield item
+
+                    # Get all tags for all devices asynchronously
+                    # Build the requests
+                    aio_requests = []
+                    aio_ids = []
+                    for i, item in enumerate(devices):
+                        item_id = item.get('id')
+                        if not item_id:
+                            logger.warning("Got device with no id, not yielding")
+                            continue
+
+                        aio_req = dict()
+                        aio_req['method'] = "GET"
+                        aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/tags'
+                        aio_req['auth'] = (self.username, self.password)
+                        aio_req['timeout'] = (5, 30)
+
+                        if self.verify_ssl is False:
+                            aio_req['ssl'] = False
+                        aio_requests.append(aio_req)
+                        aio_ids.append(i)
+
+                    for chunk_id in range(int(math.ceil(len(aio_requests) / MAX_ASYNC_REQUESTS_IN_PARALLEL))):
+                        logger.info(
+                            f"Async requests: sending {chunk_id * MAX_ASYNC_REQUESTS_IN_PARALLEL} out of {len(aio_requests)}")
+
+                        all_answers = async_request(
+                            aio_requests[MAX_ASYNC_REQUESTS_IN_PARALLEL * chunk_id:
+                                         MAX_ASYNC_REQUESTS_IN_PARALLEL * (chunk_id + 1)])
+
+                        # We got the requests,
+                        # time to check if they are valid and transform them to what the user wanted.
+
+                        for i, raw_answer in enumerate(all_answers):
+                            request_id_absolute = MAX_ASYNC_REQUESTS_IN_PARALLEL * chunk_id + i
+                            current_device = devices[aio_ids[request_id_absolute]]
+                            try:
+                                # The answer could be an exception
+                                if isinstance(raw_answer, Exception):
+                                    logger.error(f"Exception getting tags for request {request_id_absolute}, yielding"
+                                                 f" device with no tags")
+
+                                # Or, it can be the actual response
+                                elif isinstance(raw_answer, tuple) and isinstance(raw_answer[0], str) \
+                                        and isinstance(raw_answer[1], aiohttp.ClientResponse):
+                                    text_answer = raw_answer[0]
+                                    response_object = raw_answer[1]
+
+                                    try:
+                                        response_object.raise_for_status()
+                                        current_device['tags'] = from_json(text_answer)['resources']
+                                    except aiohttp.ClientResponseError as e:
+                                        logger.error(f"async error code {e.status} on "
+                                                     f"request id {request_id_absolute}. "
+                                                     f"original response is {raw_answer}. Yielding with no tags")
+                                    except Exception:
+                                        logger.exception(f"Exception while parsing async response for {text_answer}"
+                                                         f". Yielding with no tags")
+                                else:
+                                    msg = f"Got an async response which is not exception or ClientResponse. " \
+                                          f"This should never happen! response is {raw_answer}"
+                                    logger.critical(msg)
+                            except Exception:
+                                msg = f"Error while parsing request {request_id_absolute} - {raw_answer}, continuing"
+                                logger.exception(msg)
+
+                            yield current_device
+
                     num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                 except Exception:
                     logger.exception(f"Got exception while fetching page {current_page_num+1} "
@@ -118,5 +192,17 @@ class NexposeV3Client(NexposeClient):
 
         except Exception:
             logger.exception(f"Error getting id's array from Rapid7 Nexpose: {device_raw.get('ids')}")
+
+        try:
+            tags = device_raw.get('tags') or []
+            if tags and isinstance(tags, list):
+                for tag in tags:
+                    try:
+                        device.nexpose_tags.append((tag.get('type') or '') + '_' + (tag.get('name') or ''))
+                    except Exception:
+                        logger.exception(f'Problem adding tag {tag}')
+        except Exception:
+            logger.exception(f'Problem parsing tags')
+
         device.set_raw(device_raw)
         return device

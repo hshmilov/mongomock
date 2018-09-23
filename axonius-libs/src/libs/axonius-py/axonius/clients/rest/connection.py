@@ -332,6 +332,7 @@ class RESTConnection(ABC):
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.
             for i, raw_answer in enumerate(all_answers):
+                request_id_absolute = chunks * chunk_id + i
                 # The answer could be an exception
                 if isinstance(raw_answer, Exception):
                     yield raw_answer
@@ -344,9 +345,9 @@ class RESTConnection(ABC):
                         response_object = raw_answer[1]
 
                         response_object.raise_for_status()
-                        if list_of_requests[(chunk_id * chunks) + i].get("return_response_raw", False) is True:
+                        if list_of_requests[request_id_absolute].get("return_response_raw", False) is True:
                             yield response_object
-                        elif list_of_requests[(chunk_id * chunks) + i].get("use_json_in_response", True) is True:
+                        elif list_of_requests[request_id_absolute].get("use_json_in_response", True) is True:
                             yield from_json(answer_text)    # from_json also handles datetime with json.loads doesn't
                         else:
                             yield answer_text
@@ -356,7 +357,7 @@ class RESTConnection(ABC):
                         except Exception:
                             rp = str(answer_text)
                         yield RESTRequestException(f"async error code {e.status} on "
-                                                   f"url {list_of_requests[i]['name']} - {rp}")
+                                                   f"url {list_of_requests[request_id_absolute]['name']} - {rp}")
                     except Exception as e:
                         logger.exception(f"Exception while parsing async response for text {answer_text}")
                         yield e
