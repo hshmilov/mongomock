@@ -304,6 +304,7 @@ class AwsAdapter(AdapterBase):
             for reservation in ec2_devices_raw_data.get('Reservations', []):
                 for device_raw in reservation.get('Instances', []):
                     device = self._new_device_adapter()
+                    device.hostname = device_raw.get('PublicDnsName')
                     tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
                     for key, value in tags_dict.items():
                         device.add_aws_ec2_tag(key=key, value=value)
