@@ -198,7 +198,22 @@ class NexposeV3Client(NexposeClient):
             if tags and isinstance(tags, list):
                 for tag in tags:
                     try:
-                        device.nexpose_tags.append((tag.get('type') or '') + '_' + (tag.get('name') or ''))
+                        tag_type = tag.get('type')
+                        tag_name = tag.get('name')
+                        if not tag_type:
+                            logger.warning(f'Bad tag type at device {device_raw}')
+                            continue
+                        if tag_type == 'location':
+                            device.location_tags.append(tag_name)
+                        elif tag_type == 'owner':
+                            device.owner_tags.append(tag_name)
+                        elif tag_type == 'criticality':
+                            device.criticality_tags.append(tag_name)
+                        elif tag_type == 'custom':
+                            device.custom_tags.append(tag_name)
+                        else:
+                            logger.warning(f'Bad tags with weird type {tag_type} '
+                                           f'__ {str(tag_name)} in device {device_raw}')
                     except Exception:
                         logger.exception(f'Problem adding tag {tag}')
         except Exception:

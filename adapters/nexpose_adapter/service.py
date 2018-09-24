@@ -60,7 +60,10 @@ class NexposeAdapter(ScannerAdapterBase):
         vulnerabilities_moderate = Field(int, "Moderate Vulnerabiliies")
         vulnerabilities_severe = Field(int, "Severe Vulnerabiliies")
         vulnerabilities_total = Field(int, "Total Vulnerabiliies")
-        nexpose_tags = ListField(str, "Nexpose Tags")
+        location_tags = ListField(str, "Locations")
+        owner_tags = ListField(str, "Owners")
+        criticality_tags = ListField(str, "Criticality")
+        custom_tags = ListField(str, "Custom Tags")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

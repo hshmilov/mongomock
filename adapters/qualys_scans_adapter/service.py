@@ -177,7 +177,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                 device.last_seen = last_seen
                 if 'IP' in device_raw:
                     device.add_nic('', [device_raw['IP']])
-                device.qualys_scan_id = device_raw.get('ID')
+                device.id = device_raw.get('ID')
                 try:
                     device.severity_results = []
                     vulns_list = device_raw.get("DETECTION_LIST", {}).get("DETECTION", [])
