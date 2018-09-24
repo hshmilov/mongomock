@@ -64,6 +64,7 @@ DOCKER_PORTS = {
     'infoblox-adapter':                 5794,
     'nessus-csv-adapter':               5796,
     'tanium-adapter':                   5797,
+    'deep-security-adapter':            5799,
     'selenium-vnc':                     5900,
     'cynet-adapter':                    5910,
     'illusive-adapter':                 5911,

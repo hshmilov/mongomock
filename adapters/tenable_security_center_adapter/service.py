@@ -102,6 +102,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
     def create_device(self, raw_device_data):
         device = self._new_device_adapter()
 
+        uuid = raw_device_data.get('uuid')
+        if uuid:
+            device.id = uuid
+
         # Parse all raw data
         device.figure_os(raw_device_data.get("os"))
         ip_list_raw = raw_device_data.get("ip", [])

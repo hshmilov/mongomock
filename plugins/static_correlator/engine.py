@@ -18,7 +18,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_domain, get_domain, get_cloud_data, compare_clouds,
                                    is_azuread_or_ad_and_have_name, get_ad_name_or_azure_display_name,
                                    compare_ad_name_or_azure_display_name, get_last_used_users, compare_last_used_users,
-                                   compare_asset_hosts, get_asset_or_host)
+                                   compare_asset_hosts, get_asset_or_host, is_deep_security_adapter)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -150,6 +150,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [compare_domain],
                                       {'Reason': 'They have the same hostname and domain'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_hostname_deep_security(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Hostname-DeepSecurity')
+        filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_normalized_hostname_str],
+                                      [compare_device_normalized_hostname],
+                                      [is_deep_security_adapter],
+                                      [],
+                                      {'Reason': 'They have the same hostname and one is DeepSecurity'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_serial(self, adapters_to_correlate):
@@ -322,6 +333,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_hostname_user(adapters_to_correlate)
 
         yield from self._correlate_asset_host(adapters_to_correlate)
+
+        yield from self._correlate_hostname_deep_security(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

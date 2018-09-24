@@ -1,7 +1,8 @@
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 from collections import defaultdict
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
@@ -12,7 +13,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.clients.rest.connection import RESTConnection
 
 
-class TenableIoAdapter(AdapterBase):
+class TenableIoAdapter(ScannerAdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         has_agent = Field(bool, "Has Agent")

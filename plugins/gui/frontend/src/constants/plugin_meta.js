@@ -1,11 +1,11 @@
 export const pluginMeta = {
     azure_ad_adapter: {
         title: 'Microsoft Azure AD - BETA',
-        description: 'Microsoft Azure Active Directory is a fully managed multi-tenant service from Microsoft that offers identity and access capabilities for applications running in Microsoft Azure and for applications running in an on-premises environment.'
+        description: 'Microsoft Azure Active Directory (Azure AD) is Microsoft\'s multi-tenant, cloud-based directory, and identity management service.'
     },
     divvycloud_adapter: {
         title: 'DivvyCloud - BETA',
-        description: 'DivvyCloud is a cloud management platform (CMP) that specializes in managing multi/hybrid cloud footprints and event-driven infrastructure.'
+        description: 'DivvyCloud offers security, compliance, and governance guardrails for public and private cloud infrastructures.'
     },
     cisco_amp_adapter: {
         title: 'Cisco Advanced Malware Protection - BETA',
@@ -31,6 +31,10 @@ export const pluginMeta = {
         title: 'CrowdStrike Falcon',
         description: 'The CrowdStrike Falcon platform is delivers next-generation antivirus, endpoint detection and response (EDR), managed threat hunting, and threat intelligence.'
     },
+    deep_security_adapter: {
+        title: 'Trend Micro Deep Security',
+        description: 'Trend Micro Deep Security can automatically virtually patch server, cloud, VDI and application vulnerabilities.'
+    },
     gce_adapter: {
         title: 'Google Compute/Kubernetes Engine',
         description: 'The Google Compute/Kubernetes Engine adapter supports both GCE\'s virtual machines as well as the GKE environment for deploying containerized applications.'
@@ -41,7 +45,7 @@ export const pluginMeta = {
     },
     datadog_adapter: {
         title: 'Datadog - BETA',
-        description: 'Datadog is a monitoring service for cloud-scale applications, providing monitoring of servers, databases, tools, and services, through a SaaS-based data analytics platform.'
+        description: 'Datadog is a monitoring service for cloud-scale applications, providing monitoring of servers, databases, tools, and services.'
     },
     redseal_adapter: {
         title: 'RedSeal',

@@ -577,6 +577,10 @@ def is_snow_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'service_now_adapter'
 
 
+def is_deep_security_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'deep_security_adapter'
+
+
 def is_sccm_or_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter' or \
         adapter_device.get('plugin_name') == 'sccm_adapter'
