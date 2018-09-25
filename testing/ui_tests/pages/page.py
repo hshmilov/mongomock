@@ -15,9 +15,20 @@ from services.axon_service import TimeoutException
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # arguments[0] is the argument being passed by execute_script of selenium's driver
-SCROLL_TO_TOP = '(function(container){container.scrollTo(0,0)})(arguments[0] || window)'
+SCROLL_TO_TOP = '''
+var containerElement = window;
+if (arguments[1]) {
+    containerElement = document.querySelector(arguments[1])
+}
+
+(function(container){container.scrollTo(0,0)})(containerElement)
+'''
 SCROLL_INTO_VIEW_JS = '''
-var containerElement = arguments[1] || window;
+var containerElement = window;
+if (arguments[1]) {
+    containerElement = document.querySelector(arguments[1])
+}
+
 return (function(el, container){
     container.scrollTo(0, 0);
     var old_scroll = container == window ? container.scrollY : container.scrollTop;
@@ -52,12 +63,14 @@ TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
 LOADING_SPINNER_CSS = '.v-spinner'
+TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
 RETRY_WAIT_FOR_ELEMENT = 150
 SLEEP_INTERVAL = 0.2
 
 
 class Page:
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
+    CHECKBOX_CSS = 'div.x-checkbox-container'
 
     def __init__(self, driver, base_url):
         self.driver = driver
@@ -328,7 +341,7 @@ class Page:
         if (make_yes and not is_selected) or (not make_yes and is_selected):
             try:
                 if scroll_to_toggle:
-                    self.scroll_into_view(toggle)
+                    self.scroll_into_view(toggle, '.x-body')
                 toggle.click()
                 return True
             except WebDriverException:
@@ -377,6 +390,12 @@ class Page:
     def wait_for_spinner_to_end(self):
         return self.wait_for_element_absent_by_css(LOADING_SPINNER_CSS)
 
+    def wait_for_table_to_load(self):
+        self.wait_for_element_present_by_xpath(TABLE_SPINNER_NOT_DISPLAYED_XPATH)
+
     def hover_element_by_css(self, css_selector):
         element = self.wait_for_element_present_by_css(css_selector)
         ActionChains(self.driver).move_to_element(element).perform()
+
+    def get_all_checkboxes(self):
+        return self.driver.find_elements_by_css_selector(self.CHECKBOX_CSS)

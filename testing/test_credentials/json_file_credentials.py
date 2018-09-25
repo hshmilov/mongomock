@@ -14,14 +14,17 @@ client_details = {
             "network_interfaces": [{"mac": "06:3A:9B:D7:D7:A8", "ips": ["10.0.2.1"]}],
             "av_status": "active",
             "last_contact": "-",
-            "sensor_version": "0.4.1"
+            "sensor_version": "0.4.1",
+            "test_alert_change" : 5
             }
         ],
-       "fields" : ["id", "network_interfaces", "av_status", "last_contact", "sensor_version", "name", "hostname"],
+       "fields" : ["id", "network_interfaces", "av_status", "last_contact", "sensor_version", "name", "hostname", 
+                   "test_alert_change"],
        "additional_schema" : [
             {"name": "av_status", "title": "AvStatus", "type": "string"},
             {"name": "last_contact", "title": "Last Contact", "type": "string"},
-            {"name": "sensor_version", "title": "Sensor Version", "type": "string"}
+            {"name": "sensor_version", "title": "Sensor Version", "type": "string"},
+            {"name": "test_alert_change", "title": "Test Alert Change", "type": "integer"}
         ],
        "raw_fields" : []
     }

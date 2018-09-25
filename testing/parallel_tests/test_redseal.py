@@ -22,6 +22,10 @@ class TestRedsealAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip("does not work")
+    @pytest.mark.skip('AX-1678')
     def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('AX-1678')
+    def test_check_reachability(self):
         pass

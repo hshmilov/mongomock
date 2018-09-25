@@ -9,6 +9,8 @@ class AlertPage(EntitiesPage):
     SAVED_QUERY_OPTION_CSS = 'div.x-select-option'
     ALERTS_CHECKBOX = 'div.x-checkbox-container'
     INCREASE_ID = 'alert_above'
+    EDIT_ALERT_XPATH = '//div[@title=\'{alert_name}\']'
+    SELECT_SAVED_QUERY_TEXT_CSS = 'div.trigger-text'
 
     @property
     def url(self):
@@ -22,6 +24,8 @@ class AlertPage(EntitiesPage):
         self.wait_for_spinner_to_end()
         self.wait_for_element_present_by_text(self.NEW_ALERT_BUTTON)
         self.find_element_by_text(self.NEW_ALERT_BUTTON).click()
+        # Bug in the UI: AX-2101
+        self.driver.refresh()
 
     def fill_alert_name(self, name):
         self.fill_text_field_by_element_id(self.ALERT_NAME_ID, name)
@@ -46,13 +50,16 @@ class AlertPage(EntitiesPage):
     def check_not_changed(self):
         self.check_alert_checkbox('Not Changed')
 
+    def fill_decreased_value(self, value):
+        self.fill_text_field_by_element_id('TriggerBelow', value)
+
     def check_push_system_notification(self):
         self.check_alert_checkbox('Push a system notification')
 
     def select_saved_query(self, text):
         self.driver.find_element_by_css_selector(self.SELECT_SAVED_QUERY_CSS).click()
         self.fill_text_field_by_css_selector(self.SAVED_QUERY_INPUT_CSS, text)
-        self.driver.find_element_by_css_selector(self.SAVED_QUERY_OPTION_CSS).click()
+        self.wait_for_element_present_by_css(self.SAVED_QUERY_OPTION_CSS).click()
 
     def click_save_button(self):
         # Ugly but will do for now
@@ -71,3 +78,9 @@ class AlertPage(EntitiesPage):
 
     def get_increased_value(self):
         return self.driver.find_element_by_id(self.INCREASE_ID).get_attribute('value')
+
+    def edit_alert(self, alert_name):
+        self.driver.find_element_by_xpath(self.EDIT_ALERT_XPATH.format(alert_name=alert_name)).click()
+
+    def get_saved_query_text(self):
+        return self.driver.find_element_by_css_selector(self.SELECT_SAVED_QUERY_TEXT_CSS).get_attribute('title')

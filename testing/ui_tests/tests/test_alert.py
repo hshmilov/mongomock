@@ -1,9 +1,12 @@
 import datetime
 
+import pytest
+
 from ui_tests.tests.ui_test_base import TestBase
 from axonius.utils.wait import wait_until
 
 ALERT_NAME = 'Special alert name'
+ALERT_CHANGE_NAME = 'test_alert_change'
 
 
 class TestAlert(TestBase):
@@ -30,6 +33,7 @@ class TestAlert(TestBase):
 
         self.alert_page.switch_to_page()
         self.alert_page.wait_for_spinner_to_end()
+        self.alert_page.wait_for_table_to_load()
         self.alert_page.select_all_alerts()
         self.alert_page.remove_selected_alerts()
 
@@ -71,3 +75,111 @@ class TestAlert(TestBase):
         self.alert_page.fill_increased(-5)
         value = self.alert_page.get_increased_value()
         assert value == '5'
+
+    def create_basic_saved_query(self):
+        self.devices_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.fill_filter('adapters_data.json_file_adapter.test_alert_change == 5')
+        self.devices_page.enter_search()
+        self.devices_page.click_save_query()
+        self.devices_page.fill_query_name(ALERT_CHANGE_NAME)
+        self.devices_page.click_save_query_save_button()
+
+    @pytest.mark.skip('Need to fetch new devices in each discovery')
+    def test_alert_changing_triggers(self):
+        self.create_basic_saved_query()
+        self.alert_page.switch_to_page()
+        self.alert_page.wait_for_table_to_load()
+        self.alert_page.click_new_alert()
+        self.alert_page.wait_for_spinner_to_end()
+        self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
+        self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
+        self.alert_page.check_not_changed()
+        self.alert_page.check_push_system_notification()
+        self.alert_page.click_save_button()
+
+        self.base_page.run_discovery()
+        assert len(self.notification_page.get_peek_notifications()) == 1
+        assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
+
+        self.alert_page.wait_for_table_to_load()
+        self.alert_page.edit_alert(ALERT_CHANGE_NAME)
+        self.alert_page.wait_for_spinner_to_end()
+        # uncheck Not Changed
+        self.alert_page.check_not_changed()
+        self.alert_page.check_decreased()
+        self.alert_page.fill_decreased_value(1)
+        self.alert_page.click_save_button()
+
+        self.base_page.run_discovery()
+        # make sure it is still 1
+        assert len(self.notification_page.get_peek_notifications()) == 1
+
+        # Making the query return 0 results
+        db = self.axonius_system.get_devices_db()
+        result = db.update_one({'adapters.data.test_alert_change': 5},
+                               {'$set': {'adapters.$.data.test_alert_change': 4}})
+        assert result.modified_count == 1
+
+        self.base_page.run_discovery()
+        # make sure it is now 2
+        assert len(self.notification_page.get_peek_notifications()) == 1
+
+    def test_save_query_deletion(self):
+        self.create_basic_saved_query()
+        self.alert_page.switch_to_page()
+        self.alert_page.wait_for_table_to_load()
+        self.alert_page.click_new_alert()
+        self.alert_page.wait_for_spinner_to_end()
+        self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
+        self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
+        self.alert_page.check_not_changed()
+        self.alert_page.check_push_system_notification()
+        self.alert_page.click_save_button()
+
+        self.base_page.run_discovery()
+        assert len(self.notification_page.get_peek_notifications()) == 1
+        assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
+
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_spinner_to_end()
+        self.devices_queries_page.check_query_by_name(ALERT_CHANGE_NAME)
+        self.devices_queries_page.remove_selected_queries()
+
+        self.alert_page.switch_to_page()
+        self.alert_page.wait_for_table_to_load()
+        self.alert_page.edit_alert(ALERT_CHANGE_NAME)
+        self.alert_page.wait_for_spinner_to_end()
+
+        self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
+        text = self.alert_page.get_saved_query_text()
+        formatted = f'{ALERT_CHANGE_NAME} (deleted)'
+        assert text == formatted
+
+    def test_edit_alert(self):
+        self.create_basic_saved_query()
+        self.alert_page.switch_to_page()
+        self.alert_page.wait_for_table_to_load()
+        self.alert_page.click_new_alert()
+        self.alert_page.wait_for_spinner_to_end()
+        self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
+        self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
+        self.alert_page.check_decreased()
+        self.alert_page.check_push_system_notification()
+        self.alert_page.click_save_button()
+
+        self.base_page.run_discovery()
+        assert len(self.notification_page.get_peek_notifications()) == 0
+
+        self.alert_page.wait_for_table_to_load()
+        self.alert_page.edit_alert(ALERT_CHANGE_NAME)
+        self.alert_page.wait_for_spinner_to_end()
+        # uncheck Decreased
+        self.alert_page.check_decreased()
+        self.alert_page.check_not_changed()
+        self.alert_page.click_save_button()
+
+        self.base_page.run_discovery()
+        # make sure it is now 1
+        assert len(self.notification_page.get_peek_notifications()) == 1
+        assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)

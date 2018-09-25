@@ -32,6 +32,9 @@ class EntitiesPage(Page):
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
+    SAVE_QUERY_ID = 'query_save'
+    SAVE_QUERY_NAME_ID = 'saveName'
+    SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
 
     @property
     def url(self):
@@ -182,3 +185,12 @@ class EntitiesPage(Page):
         if not text:
             return self.wait_for_element_absent_by_css(self.QUERY_ERROR_CSS)
         return text == self.driver.find_element_by_css_selector(self.QUERY_ERROR_CSS).text
+
+    def click_save_query(self):
+        self.driver.find_element_by_id(self.SAVE_QUERY_ID).click()
+
+    def fill_query_name(self, name):
+        self.fill_text_field_by_element_id(self.SAVE_QUERY_NAME_ID, name)
+
+    def click_save_query_save_button(self):
+        self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
