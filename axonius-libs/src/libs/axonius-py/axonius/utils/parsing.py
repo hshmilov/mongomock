@@ -838,6 +838,21 @@ def contain_macbook_names(device1_hostnames, device2_hostnames):
             (''.join(char for char in str(device1_hostnames) if char.isalnum())))
 
 
+def snow_asset_names_do_not_contradict(adapter_device1, adapter_device2):
+    if not is_snow_adapter(adapter_device1) or not is_snow_adapter(adapter_device2):
+        return True
+    asset1 = get_asset_name(adapter_device1)
+    asset2 = get_asset_name(adapter_device2)
+    if asset1 and asset2 and asset1.lower() != asset2.lower():
+        return False
+    return True
+
+
+def asset_hostnames_do_not_contradict(adapter_device1, adapter_device2):
+    return hostnames_do_not_contradict(adapter_device1, adapter_device2) and \
+        snow_asset_names_do_not_contradict(adapter_device1, adapter_device2)
+
+
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
     device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)

@@ -8,7 +8,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_device_normalized_hostname,
                                    compare_hostname, compare_macs,
                                    get_hostname, get_normalized_ip, get_normalized_hostname_str,
-                                   get_serial, hostnames_do_not_contradict,
+                                   get_serial, hostnames_do_not_contradict, asset_hostnames_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection, is_from_ad,
                                    get_asset_name, compare_asset_name, is_from_juniper_and_asset_name,
                                    is_junos_space_device,
@@ -171,7 +171,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [lambda a, b: a['data']['device_serial'].upper() == b['data'][
                                           'device_serial'].upper()],
                                       [],
-                                      [hostnames_do_not_contradict],
+                                      [asset_hostnames_do_not_contradict],
                                       {'Reason': 'They have the same serial'},
                                       CorrelationReason.StaticAnalysis)
 
