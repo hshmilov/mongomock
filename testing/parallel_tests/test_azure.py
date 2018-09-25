@@ -11,7 +11,7 @@ class TestAzureAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        from azure_adapter.service import AZURE_SUBSCRIPTION_ID
+        from azure_adapter.service import AZURE_SUBSCRIPTION_ID, AZURE_TENANT_ID
         return f'{client_details[AZURE_SUBSCRIPTION_ID]}_{client_details[AZURE_TENANT_ID]}'
 
     @property
