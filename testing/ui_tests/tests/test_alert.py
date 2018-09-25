@@ -1,6 +1,7 @@
 import datetime
 
 import pytest
+from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.tests.ui_test_base import TestBase
 from axonius.utils.wait import wait_until
@@ -155,6 +156,16 @@ class TestAlert(TestBase):
         text = self.alert_page.get_saved_query_text()
         formatted = f'{ALERT_CHANGE_NAME} (deleted)'
         assert text == formatted
+
+    def test_delete_saved_query(self):
+        self.create_basic_saved_query()
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_spinner_to_end()
+        self.devices_queries_page.check_query_by_name(ALERT_CHANGE_NAME)
+        self.devices_queries_page.remove_selected_queries()
+        self.driver.refresh()
+        with pytest.raises(NoSuchElementException):
+            self.devices_queries_page.find_query_row_by_name(ALERT_CHANGE_NAME)
 
     def test_edit_alert(self):
         self.create_basic_saved_query()
