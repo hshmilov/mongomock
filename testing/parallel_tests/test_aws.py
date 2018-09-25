@@ -11,10 +11,10 @@ class TestAwsAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details[0]['aws_access_key_id']
+        return client_details[0]['aws_access_key_id'] + client_details[0]['region_name']
 
     def get_some_client_id(self, client_count=0):
-        return client_details[client_count]['aws_access_key_id']
+        return client_details[client_count]['aws_access_key_id'] + client_details[client_count]['region_name']
 
     @property
     def some_client_details(self):

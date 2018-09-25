@@ -36,7 +36,7 @@ class AzureAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config[AZURE_SUBSCRIPTION_ID]
+        return f'{client_config[AZURE_SUBSCRIPTION_ID]}_{client_config[AZURE_TENANT_ID]}'
 
     def _test_reachability(self, client_config):
         raise NotImplementedError
