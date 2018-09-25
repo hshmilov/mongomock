@@ -115,20 +115,31 @@ class SplunkAdapter(AdapterBase):
                 device = self._new_device_adapter()
                 if 'DHCP' in device_type:
                     mac = device_raw.get('mac')
-                    if not mac:
+                    hostname = device_raw.get('hostname')
+                    if not mac and not hostname:
                         logger.warning(f'Bad device no mac {device_raw}')
                         continue
 
                     if mac in dhcp_macs_set:
                         continue
-
-                    device.id = mac + device_type
-                    device.hostname = device_raw.get('hostname')
-                    ip = device_raw.get('ip')
-                    if not ip:
-                        device.add_nic(mac, None)
+                    if mac:
+                        device.id = mac + device_type
                     else:
-                        device.add_nic(mac, [ip])
+                        device.id = hostname + device_type
+                    device.hostname = hostname
+                    ip = device_raw.get('ip')
+                    macs = []
+                    if len(mac) > 12 and len(mac) % 12 == 0:
+                        while mac != '':
+                            macs.append(mac[:12])
+                            mac = mac[12:]
+                    else:
+                        macs = [mac]
+                    for mac in macs:
+                        if not ip:
+                            device.add_nic(mac, None)
+                        else:
+                            device.add_nic(mac, [ip])
 
                     dhcp_macs_set.add(mac)
 

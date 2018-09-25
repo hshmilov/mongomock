@@ -81,7 +81,12 @@ class SplunkConnection(object):
 
     @staticmethod
     def parse_dhcp(raw_line):
-        logger.info(f'Raw line: {raw_line}')
+        line_split = raw_line.split(',')
+        raw_device = dict()
+        raw_device['ip'] = line_split[4]
+        raw_device['hostname'] = line_split[5]
+        raw_device['mac'] = line_split[6]
+        return raw_device
 
     @staticmethod
     def parse_time(t):
@@ -100,7 +105,6 @@ class SplunkConnection(object):
                 if devices_count % 1000 == 0:
                     logger.info(f"Got {devices_count} devices so far")
                 raw = result[b'_raw'].decode('utf-8')
-                logger.info(f'result is {result}')
                 try:
                     new_item = split_raw(raw)
                     if new_item is not None:
@@ -111,11 +115,11 @@ class SplunkConnection(object):
             logger.exception(f'Problem fetching with search {str(search)}')
 
     def get_devices(self, earliest=None):
+        yield from self.fetch('search index=winevents sourcetype=DhcpSrvLog',
+                              SplunkConnection.parse_dhcp, earliest, 'DHCP')
         yield from self.fetch('search sourcetype="*Cisco*"  AND "from port"  AND "to port"',
                               SplunkConnection.parse_cisco_port, earliest, 'Cisco client port')
         yield from self.fetch('search sourcetype="*Cisco*" AND "Target MAC Address"',
                               SplunkConnection.parse_cisco_arp, earliest, 'Cisco client')
         yield from self.fetch('search sourcetype="*cisco*" AND NOT "(Target MAC Address) [" AND "mac= "',
                               SplunkConnection.parse_cisco_sig_alarm, earliest, 'Cisco client SIG')
-        yield from self.fetch('search index=winevents sourcetype=DhcpSrvLog',
-                              SplunkConnection.parse_dhcp, earliest, 'DHCP')
