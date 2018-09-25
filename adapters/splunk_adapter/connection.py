@@ -80,6 +80,10 @@ class SplunkConnection(object):
         return raw_device
 
     @staticmethod
+    def parse_dhcp(raw_line):
+        logger.info(f'Raw line: {raw_line}')
+
+    @staticmethod
     def parse_time(t):
         return time.mktime(time.strptime(t, '%Y-%m-%d %H:%M:%S'))
 
@@ -96,6 +100,7 @@ class SplunkConnection(object):
                 if devices_count % 1000 == 0:
                     logger.info(f"Got {devices_count} devices so far")
                 raw = result[b'_raw'].decode('utf-8')
+                logger.info(f'result is {result}')
                 try:
                     new_item = split_raw(raw)
                     if new_item is not None:
@@ -112,3 +117,5 @@ class SplunkConnection(object):
                               SplunkConnection.parse_cisco_arp, earliest, 'Cisco client')
         yield from self.fetch('search sourcetype="*cisco*" AND NOT "(Target MAC Address) [" AND "mac= "',
                               SplunkConnection.parse_cisco_sig_alarm, earliest, 'Cisco client SIG')
+        yield from self.fetch('search index=winevents sourcetype=DhcpSrvLog',
+                              SplunkConnection.parse_dhcp, earliest, 'DHCP')

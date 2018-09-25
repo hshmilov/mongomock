@@ -109,10 +109,30 @@ class SplunkAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         macs_set = set()
+        dhcp_macs_set = set()
         for device_raw, device_type in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                if 'Cisco' in device_type:
+                if 'DHCP' in device_type:
+                    mac = device_raw.get('mac')
+                    if not mac:
+                        logger.warning(f'Bad device no mac {device_raw}')
+                        continue
+
+                    if mac in dhcp_macs_set:
+                        continue
+
+                    device.id = mac + device_type
+                    device.hostname = device_raw.get('hostname')
+                    ip = device_raw.get('ip')
+                    if not ip:
+                        device.add_nic(mac, None)
+                    else:
+                        device.add_nic(mac, [ip])
+
+                    dhcp_macs_set.add(mac)
+
+                elif 'Cisco' in device_type:
                     mac = device_raw.get('mac')
                     if not mac:
                         logger.warning(f'Bad device no MAC {device_raw}')
@@ -129,8 +149,8 @@ class SplunkAdapter(AdapterBase):
                     device.port = device_raw.get('port')
                     device.cisco_device = device_raw.get('cisco_device')
                     macs_set.add(mac)
-                    device.set_raw(device_raw)
-                    yield device
+                device.set_raw(device_raw)
+                yield device
             except Exception:
                 logger.exception(f'Problem getting device {device_raw}')
 
