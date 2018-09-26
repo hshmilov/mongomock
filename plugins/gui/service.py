@@ -448,12 +448,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
         if method == 'GET':
             mongo_filter = filter_archived(mongo_filter)
-            fielded_plugins = []
-            for plugin in requests.get(self.core_address + '/register').json().values():
-                # From registered plugins, saving those that have a 'fields' DB for given entity_type
-                if self._get_collection(f'{entity_type.value}_fields', plugin[PLUGIN_UNIQUE_NAME]). \
-                        count_documents({}, limit=1):
-                    fielded_plugins.append(plugin[PLUGIN_NAME])
+            fielded_plugins = self._entity_views_db_map[entity_type].distinct(f'specific_data.{PLUGIN_NAME}')
 
             def _validate_adapters_used(view):
                 if not view.get('predefined'):
