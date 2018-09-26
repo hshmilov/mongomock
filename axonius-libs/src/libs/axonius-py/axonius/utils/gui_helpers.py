@@ -7,18 +7,18 @@ from datetime import datetime
 import pymongo
 import requests
 from flask import request, session
+from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
 from axonius.adapter_base import AdapterProperty
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.plugin_base import EntityType, add_rule, return_error
+from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import parse_filter
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -163,12 +163,17 @@ def beautify_db_entry(entry):
     return tmp
 
 
-def get_entities(limit, skip, view_filter, sort, projection, db_connection, entity_views_db, entity_type: EntityType,
-                 include_history=False, default_sort=True, run_over_projection=True):
+def _perform_aggregation(entity_views_db,
+                         limit, skip, view_filter, sort,
+                         projection, entity_type,
+                         default_sort, run_over_projection):
     """
-    Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
+    Performs the required query on the DB using the aggregation method.
+    This method is more reliable as it allows for the DB to use the disk by it is much slower in most cases.
+    This should be used in cases where the regular (_perform_find) method failed.
+    For parameter info see get_entities
+    :return:
     """
-    logger.debug(f'Fetching data for entity {entity_type.name}')
     pipeline = [{'$match': view_filter}]
     if projection and run_over_projection:
         for field in ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]:
@@ -187,36 +192,83 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
         pipeline.append({'$limit': limit})
 
     # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
-    # The reason is that sorting without the flag, causes exceeding of the memory limit.
+    # This allows bypassing a memory overflow occurring in Mongo
+    # https://stackoverflow.com/questions/27023622/overflow-sort-stage-buffered-data-usage-exceeds-internal-limit
+    # This should be used as a last resort when all other methods have failed
+    def aggregate_list():
+        return list(entity_views_db.aggregate(pipeline, allowDiskUse=True))
 
     # The reason for the retry is https://jira.mongodb.org/browse/SERVER-36737
-    data_list = retry_call(entity_views_db.aggregate, fargs=[pipeline], fkwargs={'allowDiskUse': True}, tries=15)
+    return retry_call(aggregate_list, tries=5)
 
-    if view_filter and not skip and request and include_history:
-        # getting the original filter text on purpose.
-        view_filter = request.args.get('filter')
-        mongo_sort = {'desc': -1, 'field': ''}
-        if sort:
-            field, desc = next(iter(sort.items()))
-            mongo_sort = {'desc': int(desc), 'field': field}
-        db_connection.replace_one(
-            {'name': {'$exists': False}, 'view.query.filter': view_filter},
-            {
-                'view': {
-                    'page': 0,
-                    'pageSize': limit,
-                    'fields': list((projection or {}).keys()),
-                    'coloumnSizes': [],
-                    'query': {
-                        'filter': view_filter,
-                        'expressions': json.loads(request.args.get('expressions', '[]'))
-                    },
-                    'sort': mongo_sort
-                },
-                'query_type': 'history',
-                'timestamp': datetime.now()
-            },
-            upsert=True)
+
+def _perform_find(entity_views_db,
+                  limit, skip, view_filter, sort,
+                  projection, entity_type,
+                  default_sort, run_over_projection):
+    """
+    Tries to perform the given query using the 'find' method on mongo
+    For parameter info see get_entities
+    :raises PyMongoError: if some mongo error happened
+    :return:
+    """
+    if projection and run_over_projection:
+        for field in ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]:
+            projection[field] = 1
+
+    find_sort = list(sort.items())
+    if not find_sort and entity_type == EntityType.Devices:
+        if default_sort:
+            # Default sort by adapters list size and then Mongo id (giving order of insertion)
+            find_sort.append((ADAPTERS_LIST_LENGTH, pymongo.DESCENDING))
+    return list(
+        entity_views_db.find(filter=view_filter,
+                             sort=find_sort,
+                             projection=projection,
+                             limit=limit,
+                             skip=skip))
+
+
+def get_entities(limit: int, skip: int,
+                 view_filter: dict,
+                 sort: dict,
+                 projection: dict,
+                 entity_type: EntityType,
+                 default_sort: bool = True,
+                 run_over_projection=True):
+    """
+    Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
+    :param limit: the max amount of entities to return
+    :param skip: use this only with a "sort" defined. skips a defined amount first - usually for pagination
+    :param view_filter: a query to be queried for, that matches mongos's filter
+    :param sort: a dict {name: pymongo.DESCENDING/ASCENDING, ...} to specify sort
+    :param projection: a projection in mongo's format to project which fields are to be returned
+    :param entity_type: Entity type to get
+    :param default_sort: adds an optional default sort using ADAPTERS_LIST_LENGTH
+    :param run_over_projection: adds some common fields to the projection
+    :return:
+    """
+    entity_views_db = PluginBase.Instance._entity_views_db_map[entity_type]
+    logger.debug(f'Fetching data for entity {entity_type.name}')
+    limit = limit or 0
+    skip = skip or 0
+    try:
+        data_list = _perform_find(entity_views_db, limit, skip, view_filter, sort, projection, entity_type,
+                                  default_sort, run_over_projection)
+    except PyMongoError:
+        try:
+            logger.error("Find couldn't handle the weight! Going to slow path")
+            data_list = _perform_aggregation(entity_views_db,
+                                             limit, skip, view_filter, sort,
+                                             projection, entity_type,
+                                             default_sort, run_over_projection)
+        except Exception:
+            logger.exception("Exception when using perform aggregation")
+            raise
+    except Exception:
+        logger.exception("Exception when using perform find")
+        raise
+
     for entity in data_list:
         if not projection:
             yield beautify_db_entry(entity)
@@ -350,8 +402,8 @@ def entity_fields(entity_type: EntityType, core_address, db_connection):
             'name': 'adapters', 'title': 'Adapters', 'type': 'array', 'items': {
                 'type': 'string', 'format': 'logo', 'enum': []
             }, 'sort': True, 'unique': True}, {
-                'name': 'specific_data.adapter_properties', 'title': 'Adapter Properties', 'type': 'string',
-                'enum': all_supported_properties
+            'name': 'specific_data.adapter_properties', 'title': 'Adapter Properties', 'type': 'string',
+            'enum': all_supported_properties
         }] + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [{
             'name': 'labels', 'title': 'Tags', 'type': 'array', 'items': {'type': 'string', 'format': 'tag'}
         }],
@@ -382,32 +434,26 @@ def entity_fields(entity_type: EntityType, core_address, db_connection):
     return fields
 
 
-def get_csv(mongo_filter, mongo_sort, mongo_projection, db_connection, entity_views_db_map, core_address,
+def get_csv(mongo_filter, mongo_sort, mongo_projection,
             basic_db_connection, entity_type: EntityType, default_sort=True):
     """
     Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
-
-    :param mongo_filter:
-    :param mongo_sort:
-    :param mongo_projection:
-    :param entity_type:
-    :return:
     """
     logger.info('Generating csv')
     string_output = io.StringIO()
     entities = list(get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
-                                 db_connection,
-                                 entity_views_db_map, entity_type,
-                                 default_sort=default_sort, run_over_projection=False))
-    output = ''
+                                 entity_type,
+                                 default_sort=default_sort,
+                                 run_over_projection=False))
     if len(entities) > 0:
         # Beautifying the resulting csv.
         mongo_projection.pop('internal_axon_id', None)
         mongo_projection.pop('unique_adapter_names', None)
         mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
         # Getting pretty titles for all generic fields as well as specific
-        current_entity_fields = entity_fields(entity_type, core_address, basic_db_connection)
+        current_entity_fields = entity_fields(entity_type, PluginBase.Instance.core_address,
+                                              basic_db_connection)
         for field in current_entity_fields['generic']:
             if field['name'] in mongo_projection:
                 mongo_projection[field['name']] = field['title']

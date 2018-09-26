@@ -76,13 +76,15 @@ class API:
     @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices", methods=["GET"], auth_method=basic_authentication)
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         devices_collection = self._entity_views_db_map[EntityType.Devices]
+        self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
             "page": get_page_metadata(skip, limit,
                                       int(gui_helpers.get_entities_count(mongo_filter, devices_collection))),
-            "assets": list(gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                                    self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
-                                                    devices_collection, EntityType.Devices, True,
-                                                    default_sort=self._system_settings["defaultSort"]))
+            "assets": list(
+                gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort,
+                                         mongo_projection,
+                                         EntityType.Devices,
+                                         default_sort=self._system_settings['defaultSort']))
         }
 
         return jsonify(return_doc)
@@ -111,12 +113,14 @@ class API:
     @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users", auth_method=basic_authentication)
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         users_collection = self._entity_views_db_map[EntityType.Users]
+        self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
             "page": get_page_metadata(skip, limit, int(gui_helpers.get_entities_count(mongo_filter, users_collection))),
-            "assets": list(gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                                    self.gui_dbs.entity_query_views_db_map[EntityType.Users],
-                                                    users_collection, EntityType.Users, True,
-                                                    default_sort=self._system_settings["defaultSort"]))
+            "assets": list(
+                gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort,
+                                         mongo_projection,
+                                         EntityType.Users,
+                                         default_sort=self._system_settings['defaultSort']))
         }
 
         return jsonify(return_doc)

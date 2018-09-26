@@ -190,7 +190,8 @@ def return_error(error_message, http_status=500, additional_data=None):
 
 
 """
-entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)"""
+entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
+"""
 GUI_DBs = namedtuple("GUI_DBs", ['entity_query_views_db_map'])
 
 
@@ -207,6 +208,10 @@ class PluginBase(Configurable, Feature):
     """
     MyDeviceAdapter = None
     MyUserAdapter = None
+    """
+    This is effectively a singleton anyway
+    """
+    Instance = None
 
     def __init__(self, config_file_path: str, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
         """ Initialize the class.
@@ -218,6 +223,8 @@ class PluginBase(Configurable, Feature):
         :raise KeyError: In case of environment variables missing
         """
         print(f"{datetime.now()} Hello docker from {type(self)}")
+
+        PluginBase.Instance = self
         super().__init__(*args, **kwargs)
 
         # Basic configurations concerning axonius-libs. This will be changed by the CI.

@@ -1,6 +1,5 @@
 import logging
 
-
 logger = logging.getLogger(f'axonius.{__name__}')
 # Standard modules
 import concurrent.futures
@@ -363,7 +362,9 @@ class ReportsService(PluginBase, Triggerable):
                                                               report_data['view_entity'],
                                                               report_data['view']))
         self.create_service_now_incident(report_data['name'], log_message,
-                                         report_consts.SERVICE_NOW_SEVERITY.get(report_data['severity'], report_consts.SERVICE_NOW_SEVERITY['error']))
+                                         report_consts.SERVICE_NOW_SEVERITY.get(report_data['severity'],
+                                                                                report_consts.SERVICE_NOW_SEVERITY[
+                                                                                    'error']))
 
     def _carbon_black_action(self, action, report_data):
         cb_projection = {'adapters': 1,
@@ -438,12 +439,7 @@ class ReportsService(PluginBase, Triggerable):
             all_gui_entities = gui_helpers.get_entities(None, None, parsed_query_filter,
                                                         gui_helpers.get_sort(query['view']),
                                                         {field: 1 for field in field_list},
-                                                        self.gui_dbs.entity_query_views_db_map[EntityType(
-                                                            report_data['view_entity'])],
-                                                        self._entity_views_db_map[EntityType(
-                                                            report_data['view_entity'])],
-                                                        EntityType(report_data['view_entity']),
-                                                        default_sort=True)
+                                                        EntityType(report_data['view_entity']))
 
             for entity in all_gui_entities:
                 entity['alert_name'] = report_data['name']
@@ -473,14 +469,8 @@ class ReportsService(PluginBase, Triggerable):
                     csv_string = gui_helpers.get_csv(parsed_query_filter,
                                                      gui_helpers.get_sort(query['view']),
                                                      {field: 1 for field in field_list},
-                                                     self.gui_dbs.entity_query_views_db_map[EntityType(
-                                                         report_data['view_entity'])],
-                                                     self._entity_views_db_map[EntityType(report_data['view_entity'])
-                                                                               ],
-                                                     self.core_address,
                                                      db_connection,
-                                                     EntityType(report_data['view_entity']),
-                                                     default_sort=True)
+                                                     EntityType(report_data['view_entity']))
 
                 email.add_attachment("Axonius Entity Data.csv", csv_string.getvalue().encode('utf-8'), "text/csv")
 
@@ -628,9 +618,11 @@ class ReportsService(PluginBase, Triggerable):
             report_period = report_data.get('period', 'all')
             if report_period != 'all':
                 if 'last_triggered' in report_data and report_data['last_triggered'] is not None:
-                    if report_period == 'weekly' and report_data['last_triggered'] + datetime.timedelta(days=7) >= datetime.datetime.now():
+                    if report_period == 'weekly' and report_data['last_triggered'] + datetime.timedelta(
+                            days=7) >= datetime.datetime.now():
                         return
-                    elif report_period == 'daily' and report_data['last_triggered'] + datetime.timedelta(days=1) >= datetime.datetime.now():
+                    elif report_period == 'daily' and report_data['last_triggered'] + datetime.timedelta(
+                            days=1) >= datetime.datetime.now():
                         return
 
             current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))

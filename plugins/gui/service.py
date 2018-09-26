@@ -59,6 +59,7 @@ import re
 from multiprocessing.pool import ThreadPool
 from multiprocessing import cpu_count
 
+
 # Caution! These decorators must come BEFORE @add_rule
 
 
@@ -154,6 +155,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
+
+        # this command sets mongo's query space to be larger default
+        # which allows for faster queries using the RAM alone
+        self._get_db_connection()['admin'].command({
+            'setParameter': 1,
+            'internalQueryExecMaxBlockingSortBytes': 2 * 1024 * 1024 * 1024 - 1  # max size mongo allows
+        })
         self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
@@ -534,6 +542,44 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return '', 200
 
+    def _save_query_to_history(self, entity_type: EntityType, view_filter, skip, limit, sort, projection):
+        """
+        After a query (e.g. find all devices) has been made in the GUI we want to save it in the history
+        for the user's comfort.
+        :param entity_type: The type of the entity queried
+        :param view_filter: the filter passed by @gui_helpers.filtered
+        :param skip: the "skip" used by the user from @gui_helpers.paginated()
+        :param limit: the "limit" used by the users from @gui_helpers.paginated()
+        :param sort: the "sort" from @gui_helpers.sorted_endpoint()
+        :param projection: the "mongo_projection" from @gui_helpers.projected()
+        :return: None
+        """
+        if view_filter and not skip:
+            # getting the original filter text on purpose - we want to pass it
+            view_filter = request.args.get('filter')
+            mongo_sort = {'desc': -1, 'field': ''}
+            if sort:
+                field, desc = next(iter(sort.items()))
+                mongo_sort = {'desc': int(desc), 'field': field}
+            self.gui_dbs.entity_query_views_db_map[entity_type].replace_one(
+                {'name': {'$exists': False}, 'view.query.filter': view_filter},
+                {
+                    'view': {
+                        'page': 0,
+                        'pageSize': limit,
+                        'fields': list((projection or {}).keys()),
+                        'coloumnSizes': [],
+                        'query': {
+                            'filter': view_filter,
+                            'expressions': json.loads(request.args.get('expressions', '[]'))
+                        },
+                        'sort': mongo_sort
+                    },
+                    'query_type': 'history',
+                    'timestamp': datetime.now()
+                },
+                upsert=True)
+
     ##########
     # DEVICE #
     ##########
@@ -547,10 +593,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
             return self.__delete_entities_by_internal_axon_id(EntityType.Devices, to_delete)
+        self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
-                                     self._entity_views_db_map[EntityType.Devices], EntityType.Devices, True,
+                                     EntityType.Devices,
                                      default_sort=self._system_settings['defaultSort']))
 
     @gui_helpers.filtered()
@@ -560,8 +606,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
         with self._get_db_connection() as db_connection:
             csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
-                                             self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
-                                             self._entity_views_db_map[EntityType.Devices], self.core_address,
                                              db_connection, EntityType.Devices,
                                              default_sort=self._system_settings['defaultSort'])
             output = make_response(csv_string.getvalue().encode('utf-8'))
@@ -617,10 +661,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
             return self.__delete_entities_by_internal_axon_id(EntityType.Users, to_delete)
+        self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     self.gui_dbs.entity_query_views_db_map[EntityType.Users],
-                                     self._entity_views_db_map[EntityType.Users], EntityType.Users, True,
+                                     EntityType.Users,
                                      default_sort=self._system_settings['defaultSort']))
 
     @gui_helpers.filtered()
@@ -633,8 +677,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if "specific_data.data.image" in mongo_projection:
                 del mongo_projection["specific_data.data.image"]
             csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
-                                             self.gui_dbs.entity_query_views_db_map[EntityType.Users],
-                                             self._entity_views_db_map[EntityType.Users], self.core_address,
                                              db_connection, EntityType.Users,
                                              default_sort=self._system_settings['defaultSort'])
             output = make_response(csv_string.getvalue().encode('utf-8'))
@@ -2015,6 +2057,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         }
                     }
                 ])
+
             points = {}
             for results in self.__aggregate_thread_pool.map_async(aggregate_for_date_range, date_ranges).get():
                 for item in results:
@@ -2325,12 +2368,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         views_data.append({
                             'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in field_list],
-                            'data': list(gui_helpers.get_entities(view.get('pageSize', 20), 0,
-                                                                  parse_filter(view.get('query', {}).get('filter', '')),
-                                                                  gui_helpers.get_sort(
-                                                                      view), {field: 1 for field in field_list},
-                                                                  self.gui_dbs.entity_query_views_db_map[entity],
-                                                                  self._entity_views_db_map[entity], entity,
+                            'data': list(gui_helpers.get_entities(limit=view.get('pageSize', 20),
+                                                                  skip=0,
+                                                                  view_filter=parse_filter(
+                                                                      view.get('query', {}).get('filter', '')),
+                                                                  sort=gui_helpers.get_sort(view),
+                                                                  projection={field: 1 for field in field_list},
+                                                                  entity_type=entity,
                                                                   default_sort=self._system_settings['defaultSort']))
                         })
                 except Exception:

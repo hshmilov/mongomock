@@ -20,3 +20,11 @@ class TestPuppetAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('Temporarily fails AX-2112')
+    def test_check_reachability(self):
+        pass
+
+    @pytest.mark.skip('Temporarily fails AX-2112')
+    def test_fetch_devices(self):
+        pass

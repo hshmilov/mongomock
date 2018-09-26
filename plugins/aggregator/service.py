@@ -219,6 +219,8 @@ class AggregatorService(PluginBase, Triggerable):
             db.create_index([(f'specific_data.adapter_properties', pymongo.ASCENDING)])
             # this is used for when you want to see a single snapshot in time
             db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)])
+            # this is commonly sorted by
+            db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)])
 
         for entity_type in EntityType:
             common_view_indexes(self._historical_entity_views_db_map[entity_type])
