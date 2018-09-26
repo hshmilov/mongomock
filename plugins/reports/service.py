@@ -243,8 +243,8 @@ class ReportsService(PluginBase, Triggerable):
                     applied_triggers.add(report_consts.Triggers.Increase.name)
             elif decreased_by > 0:
                 if int(below) > 0:
-                    if decreased_by > int(below):
-                        # If Increased above
+                    if decreased_by >= int(below):
+                        # If Decreased below
                         applied_triggers.add(report_consts.Triggers.Below.name)
                 else:
                     # If Decrease

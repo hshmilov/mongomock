@@ -1,15 +1,17 @@
 import datetime
 import logging
+from typing import List
 from urllib.parse import urljoin
 
 from ui_tests.pages.page import Page
+from axonius.utils.wait import wait_until
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class NotificationPage(Page):
     NOTIFICATION_PEEK_CSS = 'div.x-dropdown.notification-peek'
-    NOTIFICATION_PEEK_TITLE = 'div.notification-title'
+    NOTIFICATION_PEEK_TITLE = 'div.d-flex'
     NOTIFICATION_PEEK_TIMESTAMP_CSS = 'div.c-grey-4'
 
     @property
@@ -27,9 +29,19 @@ class NotificationPage(Page):
 
     def get_peek_notifications(self):
         self.driver.find_element_by_css_selector(self.NOTIFICATION_PEEK_CSS).click()
-        peek_notifications = [element.text for
+
+        def get_expanded_notification(notification_text: str) -> List[str]:
+            # notification text looks like this "bla bla bla (X)" where X is a number
+            count = int(notification_text[notification_text.rfind('(') + 1: -1])
+            return [notification_text] * count
+
+        peek_notifications = [get_expanded_notification(element.text) for
                               element in
                               self.driver.find_elements_by_css_selector(self.NOTIFICATION_PEEK_TITLE)]
+
+        # flatten list
+        peek_notifications = [item for sublist in peek_notifications for item in sublist]
+
         self.driver.find_element_by_css_selector(self.NOTIFICATION_PEEK_CSS).click()
         return peek_notifications
 
@@ -53,3 +65,9 @@ class NotificationPage(Page):
     def convert_timestamp_to_datetime(timestamp):
         # timestamp format: 9/17/2018 7:59:34 PM
         return datetime.datetime.strptime(timestamp, '%m/%d/%Y %I:%M:%S %p')
+
+    def verify_amount_of_notifications(self, count: int):
+        """
+        Waits until the amount of notifications is the amount specified, or fails
+        """
+        wait_until(lambda: len(self.get_peek_notifications()) == count)

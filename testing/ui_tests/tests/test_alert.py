@@ -5,6 +5,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.tests.ui_test_base import TestBase
 from axonius.utils.wait import wait_until
+from services.adapters.json_file_service import JsonFileService
 
 ALERT_NAME = 'Special alert name'
 ALERT_CHANGE_NAME = 'test_alert_change'
@@ -86,7 +87,6 @@ class TestAlert(TestBase):
         self.devices_page.fill_query_name(ALERT_CHANGE_NAME)
         self.devices_page.click_save_query_save_button()
 
-    @pytest.mark.skip('Need to fetch new devices in each discovery')
     def test_alert_changing_triggers(self):
         self.create_basic_saved_query()
         self.alert_page.switch_to_page()
@@ -100,7 +100,7 @@ class TestAlert(TestBase):
         self.alert_page.click_save_button()
 
         self.base_page.run_discovery()
-        assert len(self.notification_page.get_peek_notifications()) == 1
+        self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
 
         self.alert_page.wait_for_table_to_load()
@@ -114,17 +114,25 @@ class TestAlert(TestBase):
 
         self.base_page.run_discovery()
         # make sure it is still 1
-        assert len(self.notification_page.get_peek_notifications()) == 1
+        self.notification_page.verify_amount_of_notifications(1)
 
-        # Making the query return 0 results
-        db = self.axonius_system.get_devices_db()
-        result = db.update_one({'adapters.data.test_alert_change': 5},
-                               {'$set': {'adapters.$.data.test_alert_change': 4}})
-        assert result.modified_count == 1
+        json_service = JsonFileService()
+        json_service.take_process_ownership()
+        json_service.stop(should_delete=False)
 
-        self.base_page.run_discovery()
-        # make sure it is now 2
-        assert len(self.notification_page.get_peek_notifications()) == 1
+        try:
+            # Making the query return 0 results
+            db = self.axonius_system.get_devices_db()
+            result = db.update_one({'adapters.data.test_alert_change': 5},
+                                   {'$set': {'adapters.$.data.test_alert_change': 4}})
+            assert result.modified_count == 1
+
+            self.base_page.run_discovery()
+            # make sure it is now 2
+            self.notification_page.verify_amount_of_notifications(2)
+
+        finally:
+            json_service.start_and_wait()
 
     def test_save_query_deletion(self):
         self.create_basic_saved_query()
@@ -139,7 +147,7 @@ class TestAlert(TestBase):
         self.alert_page.click_save_button()
 
         self.base_page.run_discovery()
-        assert len(self.notification_page.get_peek_notifications()) == 1
+        self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
 
         self.devices_queries_page.switch_to_page()
@@ -180,7 +188,7 @@ class TestAlert(TestBase):
         self.alert_page.click_save_button()
 
         self.base_page.run_discovery()
-        assert len(self.notification_page.get_peek_notifications()) == 0
+        self.notification_page.verify_amount_of_notifications(0)
 
         self.alert_page.wait_for_table_to_load()
         self.alert_page.edit_alert(ALERT_CHANGE_NAME)
@@ -192,5 +200,5 @@ class TestAlert(TestBase):
 
         self.base_page.run_discovery()
         # make sure it is now 1
-        assert len(self.notification_page.get_peek_notifications()) == 1
+        self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
