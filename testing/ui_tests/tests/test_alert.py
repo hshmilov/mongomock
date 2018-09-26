@@ -134,6 +134,31 @@ class TestAlert(TestBase):
         finally:
             json_service.start_and_wait()
 
+    def test_increasing(self):
+        json_service = JsonFileService()
+        json_service.take_process_ownership()
+        try:
+            json_service.stop(should_delete=False)
+            self.create_basic_saved_query()
+            self.alert_page.switch_to_page()
+            self.alert_page.wait_for_table_to_load()
+            self.alert_page.click_new_alert()
+            self.alert_page.wait_for_spinner_to_end()
+            self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
+            self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
+            self.alert_page.check_increased()
+            self.alert_page.check_push_system_notification()
+            self.alert_page.click_save_button()
+
+            self.base_page.run_discovery()
+            self.notification_page.verify_amount_of_notifications(0)
+        finally:
+            json_service.start_and_wait()
+
+        self.base_page.run_discovery()
+        self.notification_page.verify_amount_of_notifications(1)
+        assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
+
     def test_save_query_deletion(self):
         self.create_basic_saved_query()
         self.alert_page.switch_to_page()
