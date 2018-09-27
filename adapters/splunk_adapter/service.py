@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_date
 from splunk_adapter.connection import SplunkConnection
 from axonius.fields import Field
 
@@ -160,6 +161,10 @@ class SplunkAdapter(AdapterBase):
                     device.port = device_raw.get('port')
                     device.cisco_device = device_raw.get('cisco_device')
                     macs_set.add(mac)
+
+                raw_splunk_insertion_time = device_raw.get('raw_splunk_insertion_time')
+                if raw_splunk_insertion_time:
+                    device.last_seen = parse_date(raw_splunk_insertion_time)
                 device.set_raw(device_raw)
                 yield device
             except Exception:

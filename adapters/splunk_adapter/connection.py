@@ -3,7 +3,7 @@ import time
 
 from axonius.utils.parsing import format_ip, format_mac
 from splunklib.client import Service, connect
-from splunklib.results import ResultsReader
+from splunklib.results import ResultsReader, Message
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -101,13 +101,20 @@ class SplunkConnection(object):
             reader = ResultsReader(job)
             devices_count = 1
             for result in reader:
+                if isinstance(result, Message):
+                    # splunk can have two types of objects. we need the dict ones and not the message ones.
+                    continue
                 devices_count += 1
                 if devices_count % 1000 == 0:
                     logger.info(f"Got {devices_count} devices so far")
-                raw = result[b'_raw'].decode('utf-8')
                 try:
+                    raw = result[b'_raw'].decode('utf-8')
                     new_item = split_raw(raw)
                     if new_item is not None:
+                        try:
+                            new_item['raw_splunk_insertion_time'] = result[b'_time'].decode('utf-8')
+                        except Exception:
+                            logger.exception(f"Couldn't fetch raw splunk insertion time for {new_item}")
                         yield new_item, device_type
                 except Exception as err:
                     logger.exception("The data did not return as expected. we got {0}".format(repr(raw)))

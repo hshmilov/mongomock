@@ -4,7 +4,7 @@ import time
 
 from splunk_symantec_adapter.plugins import splunk_split_symantec_win, splunk_split_symantec_mac
 from splunklib.client import connect, Service
-from splunklib.results import ResultsReader
+from splunklib.results import ResultsReader, Message
 
 
 class SplunkConnection(object):
@@ -50,13 +50,23 @@ class SplunkConnection(object):
         reader = ResultsReader(job)
         devices_count = 1
         for result in reader:
+            if isinstance(result, Message):
+                # splunk can have two types of objects. we need the dict ones and not the message ones.
+                continue
             devices_count += 1
             if devices_count % 1000 == 0:
                 logger.info(f"Got {devices_count} devices so far")
-            raw = result[b'_raw'].decode('utf-8')
-            new_item = split_raw(raw)
-            if new_item is not None:
-                yield new_item
+            try:
+                raw = result[b'_raw'].decode('utf-8')
+                new_item = split_raw(raw)
+                if new_item is not None:
+                    try:
+                        new_item['raw_splunk_insertion_time'] = result[b'_time'].decode('utf-8')
+                    except Exception:
+                        logger.exception(f"Couldn't fetch raw splunk insertion time for {new_item}")
+                    yield new_item
+            except Exception:
+                logger.exception(f"The data did not return as expected.")
 
     def get_symantec_active_hosts(self, past):
         current_hosts = []

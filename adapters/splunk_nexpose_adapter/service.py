@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_date
 from splunk_nexpose_adapter.connection import SplunkConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -112,6 +113,9 @@ class SplunkNexposeAdapter(AdapterBase):
                 device.figure_os(device_raw.get('version', device_raw.get('os')))
                 device.add_nic(device_raw.get('mac'), [device_raw.get('ip')])
                 device.id = device_raw['asset_id']
+                raw_splunk_insertion_time = device_raw.get('raw_splunk_insertion_time')
+                if raw_splunk_insertion_time:
+                    device.last_seen = parse_date(raw_splunk_insertion_time)
                 device.set_raw(device_raw)
                 yield device
             except Exception:

@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, IPS_FIELD, MAC_FIELD
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_date
 from splunk_symantec_adapter.connection import SplunkConnection
 from axonius.clients.rest.connection import RESTConnection
 
@@ -176,6 +177,11 @@ class SplunkSymantecAdapter(AdapterBase):
                 for iface in host.get('network', []):
                     device.add_nic(iface.get(MAC_FIELD, ''), iface.get(IPS_FIELD, '').split(' '))
             device.id = host['name']
+
+            raw_splunk_insertion_time = device_raw.get('raw_splunk_insertion_time')
+            if raw_splunk_insertion_time:
+                device.last_seen = parse_date(raw_splunk_insertion_time)
+
             device.set_raw(device_raw)
             yield device
 
