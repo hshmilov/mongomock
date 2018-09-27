@@ -2,7 +2,7 @@
 
 echo "Start UI tests"
 cd ./testing
-timeout 2400 python3 run_ui_tests.py ui_tests/tests
+timeout 2700 python3 run_ui_tests.py ui_tests/tests
 if [ $? -ne 0 ]
 then
   echo "UI tests failed"

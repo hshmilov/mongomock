@@ -56,6 +56,36 @@ class TestChangePasswordSettings(TestBase):
                               self.password,
                               self.settings_page.wait_for_password_changed_toaster)
 
+    def test_gui_restart_keeps_password(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_change_admin_password()
+
+        # Fill in new password
+        self._change_password(self.password,
+                              ui_consts.NEW_PASSWORD,
+                              ui_consts.NEW_PASSWORD,
+                              self.settings_page.wait_for_password_changed_toaster)
+
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+
+        gui_service = self.axonius_system.gui
+        gui_service.take_process_ownership()
+        gui_service.stop(should_delete=False)
+        gui_service.start_and_wait()
+
+        # Check that we can log in with the new password
+        self.settings_page.refresh()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=self.username, password=ui_consts.NEW_PASSWORD)
+        self.settings_page.switch_to_page()
+
+        # Change password back
+        self._change_password(ui_consts.NEW_PASSWORD,
+                              self.password,
+                              self.password,
+                              self.settings_page.wait_for_password_changed_toaster)
+
     def _change_password(self, current, new1, new2, wait_for=None):
         self.settings_page.refresh()
         self.settings_page.click_change_admin_password()

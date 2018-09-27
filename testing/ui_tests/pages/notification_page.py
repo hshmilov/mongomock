@@ -70,4 +70,4 @@ class NotificationPage(Page):
         """
         Waits until the amount of notifications is the amount specified, or fails
         """
-        wait_until(lambda: len(self.get_peek_notifications()) == count)
+        wait_until(lambda: len(self.get_peek_notifications()) == count, total_timeout=60 * 3)
