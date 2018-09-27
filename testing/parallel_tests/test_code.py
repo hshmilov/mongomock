@@ -73,12 +73,15 @@ def _is_file_empty(path):
 
 
 def _get_all_pylint_files():
-    return [
-        file_name
-        for file_name
-        in _get_all_files()
-        if not file_name.startswith('/usr/lib') and 'splunklib' not in file_name and not _is_file_empty(file_name)
-    ]
+    if not hasattr(_get_all_pylint_files, 'all_pylint_files'):
+        _get_all_pylint_files.all_pylint_files = [
+            file_name
+            for file_name
+            in _get_all_files()
+            if not file_name.startswith('/usr/lib') and 'splunklib' not in file_name and not _is_file_empty(file_name)
+        ]
+
+    return _get_all_pylint_files.all_pylint_files
 
 
 def _get_single_exempt_path(file_name):
@@ -87,12 +90,15 @@ def _get_single_exempt_path(file_name):
 
 
 def _get_pylint_exempt():
-    with open(PYLINT_EXEMPT_FILE_NAME, 'rb') as f:
-        return [
-            _get_single_exempt_path(file_name)
-            for file_name
-            in f.readlines()
-        ]
+    if not hasattr(_get_pylint_exempt, 'pylint_exempt'):
+        with open(PYLINT_EXEMPT_FILE_NAME, 'rb') as f:
+            _get_pylint_exempt.pylint_exempt = [
+                _get_single_exempt_path(file_name)
+                for file_name
+                in f.readlines()
+            ]
+
+    return _get_pylint_exempt.pylint_exempt
 
 
 def _get_unexpected_pylint_state(is_success_expected):

@@ -84,12 +84,10 @@ def test_pm_online_rpc():
     _test_pm_online("rpc")
 
 
-@pytest.mark.skip('AX-2060')
 def test_pm_online_smb():
     _test_pm_online("smb")
 
 
-@pytest.mark.skip("AX-2014")
 def test_pm_online_rpc_and_fallback_smb():
     _test_pm_online("rpc_and_fallback_smb")
 
@@ -240,7 +238,7 @@ def test_wmi():
         if r["status"] != "ok":
             raise ValueError(f"Error, status is not ok. response: {r}")
 
-    assert "Program Files" in response[0]["data"]
+    assert "System32" in response[0]["data"]
     assert {'SID': 'S-1-5-21-3246437399-2412088855-2625664447-500'} in response[1]["data"]
     assert "Console" in response[2]["data"][0]['sNames']
     assert "hello, world" in response[3]["data"]

@@ -193,9 +193,8 @@ class TestAdAdapter(AdapterTestBase):
             assert "S-1-5-19" in sids  # NT Authority - Local Service
             assert "S-1-5-20" in sids  # NT Authority - Network Service
 
-        try_until_not_thrown(15, 5, check_execute_wmi_results)
+        try_until_not_thrown(15, 10, check_execute_wmi_results)
 
-    @pytest.mark.skip("AX-1838")
     def test_ad_execute_shell(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
@@ -226,7 +225,7 @@ class TestAdAdapter(AdapterTestBase):
             assert product_1_status == "ok"
             assert "cmd.exe" in product_1_data
 
-        try_until_not_thrown(15, 5, check_execute_shell_results)
+        try_until_not_thrown(15, 10, check_execute_shell_results)
 
     def test_ad_execute_binary(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
@@ -250,9 +249,8 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok"
             assert "Hello, World" in action_data["product"][0]["data"]
 
-        try_until_not_thrown(15, 5, check_execute_binary_results)
+        try_until_not_thrown(15, 10, check_execute_binary_results)
 
-    @pytest.mark.skip("AX-1838")
     def test_ad_execute_shell_by_device_control(self, device_control_fixture):
         # TODO: We should have a parallel test for device control but this is complicated now.
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
@@ -328,7 +326,7 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
             assert action_data["product"][0]["data"] is True and action_data["product"][1]["data"] is True
 
-        try_until_not_thrown(15, 5, check_put_files_results)
+        try_until_not_thrown(15, 10, check_put_files_results)
 
         # 2. Get the files
         action_id = self.axonius_system.execution.make_action("get_files",
@@ -346,7 +344,7 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
             assert action_data["product"][0]["data"] == "abcd" and action_data["product"][1]["data"] == "efgh"
 
-        try_until_not_thrown(15, 5, check_get_files_results)
+        try_until_not_thrown(15, 10, check_get_files_results)
 
         # 3. Delete the files
         action_id = self.axonius_system.execution.make_action("delete_files",
@@ -364,7 +362,7 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
             assert action_data["product"][0]["data"] is True and action_data["product"][1]["data"] is True
 
-        try_until_not_thrown(15, 5, check_delete_files_results)
+        try_until_not_thrown(15, 10, check_delete_files_results)
 
         # 4. Try to get the files again. This should fail
         # 3. Delete the files
@@ -386,4 +384,4 @@ class TestAdAdapter(AdapterTestBase):
             assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[0]["data"]
             assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[1]["data"]
 
-        try_until_not_thrown(15, 5, check_get_files_after_delete_results)
+        try_until_not_thrown(15, 10, check_get_files_after_delete_results)

@@ -1,3 +1,4 @@
+#pylint: disable=too-many-instance-attributes
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -16,7 +17,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class SophosAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        aws_id = Field(str, 'AWS ID')
         agent_version = Field(str, 'Agent Version')
 
     def __init__(self, *args, **kwargs):
@@ -122,7 +122,11 @@ class SophosAdapter(AdapterBase):
                 domain = device_info.get('domain_name')
                 if domain and 'workgroup' not in domain.lower() and 'local' not in domain.lower():
                     device.domain = domain
-                device.aws_id = device_info.get('aws/instance_id')
+
+                aws_id = device_info.get('aws/instance_id')
+                if aws_id:
+                    device.cloud_id = aws_id
+                    device.cloud_provider = 'AWS'
                 try:
                     used_user = device_raw.get('last_user')
                     if used_user:

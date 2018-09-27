@@ -25,7 +25,7 @@ from impacket.dcerpc.v5.dcom import wmi
 from impacket.dcerpc.v5.dcomrt import DCOMConnection
 from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_AUTHN_LEVEL_PKT_INTEGRITY, \
     RPC_C_AUTHN_LEVEL_NONE
-from impacket.smbconnection import SMBConnection
+from impacket.smbconnection import SMBConnection, SessionError
 from multiprocessing.pool import ThreadPool
 from retrying import retry
 from contextlib import contextmanager
@@ -48,6 +48,9 @@ TIME_TO_SLEEP_BETWEEN_EACH_ANSWER_CHECK_IN_SECONDS = 2
 # Note! ADMIN$ usually points to %windir% so we can have relative paths across the entire code.
 # If you change it, change all usages across the entire code!
 DEFAULT_SHARE = "ADMIN$"
+
+# The name of the directory we will be creating, in which all of our internal files reside
+FILES_DIRECTORY = "axonius"
 
 __global_counter = 0
 __global_counter_lock = threading.Lock()
@@ -118,6 +121,8 @@ class WmiSmbRunner(object):
     """
     Runs WMI queries and methods on a given host.
     """
+    did_create_files_directory = False
+    default_working_directory = None
 
     def __init__(self, address, username, password, domain='', dc_ip=None, lmhash='', nthash='', aes_key=None,
                  use_kerberos=False, rpc_auth_level="default", namespace="//./root/cimv2"):
@@ -151,7 +156,9 @@ class WmiSmbRunner(object):
         self.rpc_auth_level = rpc_auth_level
         self.namespace = namespace
         self.dcom = None
-        self.rpc_creation_lock = threading.Lock()
+        self.__rpc_creation_lock = threading.Lock()
+        self.__smb_connection_creation_lock = threading.RLock()
+        self.__is_smb_connection_initialized = False
         self.__iWbemServices = None
         self.__remotewua = None
 
@@ -160,12 +167,11 @@ class WmiSmbRunner(object):
 
     def __enter__(self):
         self.connect()
+
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    def __del__(self):
+        self.before_close()
         self.close()
 
     def getfile(self, filepath, share=DEFAULT_SHARE):
@@ -292,14 +298,60 @@ class WmiSmbRunner(object):
 
         return True
 
+    def _trydeletefile(self, filepath, share=DEFAULT_SHARE):
+        """
+        Try to delete the file, if it doesn't work just go on.
+        :param filepath: the filpath arg for deletefile
+        :param share: the share arg for deletefile
+        :return: deletefile's result on success
+        """
+
+        try:
+            return self.deletefile(filepath, share)
+        except Exception:
+            return None
+
+    def createdirectory(self, directory_path, share=DEFAULT_SHARE):
+        """
+        Puts a file remotely.
+        :param directory_path: the path of the directory
+        :param share: the share (optional).
+        :return:
+        """
+
+        # Normalize filepath
+        directory_path = ntpath.normpath(directory_path)  # also replaces / with \
+        assumed_share, directory_path = ntpath.splitdrive(directory_path)
+        if assumed_share != '':
+            share = assumed_share[:-1] + "$"
+
+        with self.get_smb_connection() as smb_connection:
+            sharing_violation_times = 0
+            while True:
+                try:
+                    smb_connection.createDirectory(share, directory_path)
+                    return True
+                except Exception as e:
+                    if str(e).find('STATUS_SHARING_VIOLATION') >= 0:
+                        sharing_violation_times = sharing_violation_times + 1
+                        if sharing_violation_times > MAX_SHARING_VIOLATION_TIMES:
+                            raise
+                        # Not finished, let's wait
+                        time.sleep(1)
+                    else:
+                        raise
+
     def _exec_generic(self, binary_path,
                       binary_params,
-                      optional_output_name=None):
+                      optional_output_name=None,
+                      optional_working_directory=None):
         """
         Executes a binary and returns its output.
         :param str binary_path: the path of the binary to run
         :param str binary_params: the parameters to pass to the binary, as a cmd string.
         :param str optional_output_name: an optional string representing the output file.
+        :param str optional_working_directory: the working directory of the new process.
+                                               default is the default share directory.
         :return str: the output.
         """
 
@@ -307,25 +359,27 @@ class WmiSmbRunner(object):
         if optional_output_name is not None:
             output_filename = optional_output_name
         else:
-            output_filename = "axonius_output_{0}_{1}.txt".format(get_global_counter(), str(time.time()), )
+            output_filename = "{0}\\axonius_output_{1}_{2}.txt".format(FILES_DIRECTORY,
+                                                                       get_global_counter(),
+                                                                       str(time.time()), )
 
         command_to_run = r"{0} {1} 1> \\127.0.0.1\{2}\{3} 2>&1".format(
             binary_path, binary_params, DEFAULT_SHARE, output_filename)
 
-        is_process_created = False
-
         try:
-            # Open the process. We specify c:\\ just because we have to specify something valid.
-            # TODO: Change c:\\ to something else. "None" does not work (as it should, by msdn documentation)
-            # TODO: and env variables are not supported. so we assume c:\\ is there.
-            rv = win32_process.Create(command_to_run, "c:\\", None)
+            # MSDN states that win32_proces.create should get NULL in its second paramter to allow the process
+            # to be created in the directory the parent process currently has.
+            # but 1. this could be the wrong directory (we want to reside in the share directory)
+            # and 2. due to a bug in impacket we can not have None, NULL, or anything else here (impacket wmi.py
+            # will always try to encode this as string in the dcerpc protocol)
+            cwd = optional_working_directory or WmiSmbRunner.default_working_directory
+            assert cwd is not None, "working directory for new process is None"
+            rv = win32_process.Create(command_to_run, cwd, None)
 
             # Lets get it's pid.
             pid = int(rv.getProperties()['ProcessId']['value'])
             if pid == 0:
                 raise ValueError("cmd with {0} could not be created, pid is 0".format(binary_path))
-
-            is_process_created = True
 
             # Now we have to wait until the process ends. If it takes too much time terminate it.
             create_time = time.time()
@@ -354,7 +408,7 @@ class WmiSmbRunner(object):
                 # We have to terminate it by ourselves. and raise an error
                 try:
                     query_results = self.iWbemServices.ExecQuery(
-                        'SELECT * from Win32_Process where Handle ={0}'.format(pid))
+                        'select * from Win32_Process where ProcessId={0}'.format(pid))
                     query_results.Next(0xffffffff, 1)[0].Terminate(0)
 
                     # If its not terminated pop up an error.
@@ -362,31 +416,33 @@ class WmiSmbRunner(object):
                         "select ProcessId from Win32_Process where ProcessId={0}".format(pid))
                     if len(query_results) != 0:
                         raise ValueError("Process was not terminated")
-                except Exception as e:
-                    raise ValueError("Process {0} with cmd {1} (params {2}...} took too much time and "
-                                     "could not be terminated. exception {3}".format(pid, binary_path,
-                                                                                     binary_params[:20], repr(e)))
 
-                raise ValueError("Process {0} with cmd {1} (params {2}...) took too much time and had "
+                except Exception as e:
+                    raise ValueError("Pid {0} with process {1} (params {2}...) took too much time and "
+                                     "could not be terminated. exception {3}".format(pid,
+                                                                                     binary_path,
+                                                                                     binary_params[:20],
+                                                                                     str(e)))
+
+                raise ValueError("Pid {0} with process {1} (params {2}...) took too much time and had "
                                  "to be terminated".format(pid, binary_path, binary_params[:20]))
 
             return self.getfile(output_filename)
         finally:
-            if is_process_created is True:
-                # If this raises exceptions, its probably because it can't delete the file, because we couldn't
-                # terminate the process...
-                self.deletefile(output_filename)
+            self._trydeletefile(output_filename)
 
-    def execshell(self, shell_command, optional_output_name=None):
+    def execshell(self, shell_command, optional_output_name=None, optional_working_directory=None):
         """
         Executes a shell command and returns its output.
         :param str shell_command: the command, as you would type it in cmd.
-        :param optional_output_name: look at exec_generic
+        :param optional_output_name: a param for exec_generic
+        :param optional_working_directory: a param for exec_generic
         :return str: the output.
         """
 
         return self._exec_generic("cmd.exe", "/Q /c {0}".format(shell_command),
-                                  optional_output_name=optional_output_name)
+                                  optional_output_name=optional_output_name,
+                                  optional_working_directory=optional_working_directory)
 
     def execbinary(self, binary_file_path, binary_params):
         """
@@ -399,18 +455,18 @@ class WmiSmbRunner(object):
         # What we do:
         # 1. self.putfile
         # 2. same thing like exec shell but without the output redirecting
-        # 3. self.deletefile
+        # 3. self._trydeletefile
 
-        did_put_file = False
         try:
             with open(binary_file_path, "rb") as f:
                 binary_file = f.read()
-            binary_path = "axonius_binary_{0}_{1}.exe".format(get_global_counter(), str(time.time()), )
-            did_put_file = self.putfile(binary_path, binary_file)
+            binary_path = "{0}\\axonius_binary_{1}_{2}.exe".format(FILES_DIRECTORY,
+                                                                   get_global_counter(),
+                                                                   str(time.time()))
+            self.putfile(binary_path, binary_file)
             return self._exec_generic("cmd.exe", "/Q /c {0} {1}".format(binary_path, binary_params))
         finally:
-            if did_put_file is True:
-                self.deletefile(binary_path)
+            self._trydeletefile(binary_path)
 
     def execmethod(self, object_name, method_name, *args):
         """
@@ -473,34 +529,29 @@ class WmiSmbRunner(object):
 
         with open(AXR_BINARY_LOCATION, "rb") as f:
             exe_binary_file = f.read()
-            exe_binary_path = "axonius_axr.exe"
+            exe_binary_path = "{0}\\axonius_axr_{1}_{2}.exe".format(FILES_DIRECTORY,
+                                                                    get_global_counter(),
+                                                                    str(time.time()), )
 
         with open(AXR_CONFIG_BINARY_LOCATION, "rb") as f:
             config_binary_file = f.read()
             config_binary_path = "{0}.config".format(exe_binary_path)
 
-        did_put_exe_file = False
-        did_put_config_file = False
-
         try:
             # Transfer both files
-            did_put_config_file = self.putfile(config_binary_path, config_binary_file)
-            did_put_exe_file = self.putfile(exe_binary_path, exe_binary_file)
+            self.putfile(config_binary_path, config_binary_file)
+            self.putfile(exe_binary_path, exe_binary_file)
 
             # Escaping some json.dumps outputs is extremely hard, so we move this with base64.
-            output = self.execshell(r"{0} {1}".format(exe_binary_path, base64.b64encode(json.dumps(arguments))),
-                                    optional_output_name="axonius_axr_output.txt")
+            output = self.execshell(r"{0} {1}".format(exe_binary_path, base64.b64encode(json.dumps(arguments))))
             try:
                 return json.loads(output)
             except Exception:
                 # The program must have had an error
                 raise ValueError, "AXR Returned an invalid json: {0}".format(output)
         finally:
-            if did_put_config_file is True:
-                self.deletefile(config_binary_path)
-
-            if did_put_exe_file is True:
-                self.deletefile(exe_binary_path)
+            self._trydeletefile(config_binary_path)
+            self._trydeletefile(exe_binary_path)
 
     def execpm(self, exe_filepath, wsusscn2_file_path):
         """
@@ -515,36 +566,23 @@ class WmiSmbRunner(object):
 
         with open(exe_filepath, "rb") as f:
             exe_binary_file = f.read()
-            exe_binary_path = "axonius_pm_{0}_{1}.exe".format(get_global_counter(), str(time.time()), )
+            exe_binary_path = "{0}\\axonius_pm_{1}_{2}.exe".format(FILES_DIRECTORY,
+                                                                   get_global_counter(),
+                                                                   str(time.time()), )
 
         with open(wsusscn2_file_path, "rb") as f:
             wsusscn2_binary_file = f.read()
-            wsusscn2_binary_path = "axonius_wsusscn2.cab".format(get_global_counter(), str(time.time()), )
+            wsusscn2_binary_path = "{0}\\axonius_wsusscn2.cab".format(FILES_DIRECTORY)
 
-        did_put_exe_file = False
-        did_put_wsusscn2_file = False
         try:
-            # We have to get the path of our default share, or else the exe will fail, since we can't
-            # open such files from a share. we have to use the physical path.
-            # If path isn't there, we need to raise an exception. It must be in the result.
-            shell_details = self.execshell("net share {0}".format(DEFAULT_SHARE)).splitlines()
-            try:
-                physical_path = [line[4:].strip() for line in shell_details if line.lower().startswith("path")][0]
-            except Exception:
-                raise ValueError(
-                    "Unexpected error occured: coludn't find the physical path of {0}".format(DEFAULT_SHARE))
-
             # Transfer both files
-            did_put_wsusscn2_file = self.putfile(wsusscn2_binary_path, wsusscn2_binary_file)
-            did_put_exe_file = self.putfile(exe_binary_path, exe_binary_file)
+            self.putfile(wsusscn2_binary_path, wsusscn2_binary_file)
+            self.putfile(exe_binary_path, exe_binary_file)
 
-            return self.execshell(r"{0} {1}\{2}".format(exe_binary_path, physical_path, wsusscn2_binary_path))
+            return self.execshell(r"{0} {1}".format(exe_binary_path, wsusscn2_binary_path))
         finally:
-            if did_put_wsusscn2_file is True:
-                self.deletefile(wsusscn2_binary_path)
-
-            if did_put_exe_file is True:
-                self.deletefile(exe_binary_path)
+            self._trydeletefile(wsusscn2_binary_path)
+            self._trydeletefile(exe_binary_path)
 
     def exec_pm_online(self, pm_type):
         """
@@ -596,13 +634,78 @@ class WmiSmbRunner(object):
         self.dcom = DCOMConnection(self.address, self.username, self.password, self.domain, self.lmhash, self.nthash,
                                    self.aes_key, oxidResolver=True, doKerberos=self.use_kerberos, kdcHost=self.dc_ip)
 
+    def __initialize_smb_connection(self):
+        """
+        Initialize the usage after we connect. for example, we create the working directory and get its actual location
+        in this function
+        :return: None
+        """
+        # If we did not create the directory yet, create it. This is a thing we must do only once.
+        if WmiSmbRunner.did_create_files_directory is False:
+            try:
+                self.createdirectory(FILES_DIRECTORY)
+                WmiSmbRunner.did_create_files_directory = True
+            except SessionError as e:
+                # This is a legitimate error - it means the directory already exists
+                if "STATUS_OBJECT_NAME_COLLISION" not in str(e):
+                    raise
+
+        # We must get the directory in which the default share resides, since this is a parameter we pass
+        # to win32_process.create, to create processes with the right current working directory.
+        if WmiSmbRunner.default_working_directory is None:
+            try:
+                result = self.execquery("select Name, Path from win32_share where Name='{0}'".format(DEFAULT_SHARE))
+                WmiSmbRunner.default_working_directory = result[0]["Path"]
+            except Exception:
+                raise ValueError(
+                    "Unexpected error occured: coludn't find the physical path of {0}".format(DEFAULT_SHARE))
+
+    def before_close(self):
+        """
+        Some things we have to do before we close the smb connection.
+        :return:
+        """
+        # This is relevant only to connections that used smb. this function is called when the whole class finishes
+        # so there is just one thread which will run it.
+        if self.__is_smb_connection_initialized is False:
+            return
+
+        # sometimes, files are not being deleted and are left on the machine.
+        # we need to delete all files that start with axonius_* for that, both on the default working directory
+        # and in the files directory. we delete from the default working directory since this is where we have been
+        # putting files before we put them in a specific directory, so we want to delete old files that currently reside
+        # in our customers.
+        # do note that this command delete all axonius files that are older than 1 day.
+        # The reason we delete files that are older than 1 day is that this command gets only "days" and deleting
+        # all axonius files right now is a bad thing for us since we might be using some of them. as an example
+        # if two tests are running and one deletes the other one's files then the other test will fail.
+
+        # [CAUTION!!!]
+        # Do not change this command without a CR of several rnd members. we run this command
+        # with high privilleges, so we could theoretically delete important files and shut down the organization.
+        # [/CAUTION!!!]
+
+        # This will delete all files that start with "axonius_" and are older than 1 day, in the default cwd
+        # and in our specific files directory.
+
+        try:
+            DO_NOT_EVER_CHANGE_ME_1 = 'forfiles /m axonius_* /D -1 /C "cmd /c del /Q /F @path"'
+            DO_NOT_EVER_CHANGE_ME_2 = 'forfiles /p {0} /m axonius_* /D -1 /C "cmd /c del /Q /F @path"'.format(
+                FILES_DIRECTORY)
+
+            self.execshell(DO_NOT_EVER_CHANGE_ME_1)
+            self.execshell(DO_NOT_EVER_CHANGE_ME_2)
+        except Exception:
+            # best try
+            pass
+
     @property
     def iWbemServices(self):
         """
         Creates an RPC WMI Object
         :return: an interface for querying wmi
         """
-        with self.rpc_creation_lock:
+        with self.__rpc_creation_lock:
             if self.__iWbemServices is None:
                 iInterface = self.dcom.CoCreateInstanceEx(wmi.CLSID_WbemLevel1Login, wmi.IID_IWbemLevel1Login)
                 iWbemLevel1Login = wmi.IWbemLevel1Login(iInterface)
@@ -625,7 +728,7 @@ class WmiSmbRunner(object):
         :return: an internal for querying patch management queries
         """
 
-        with self.rpc_creation_lock:
+        with self.__rpc_creation_lock:
             if self.__remotewua is None:
                 self.__remotewua = RemoteWUAHandler(self.dcom)
 
@@ -633,6 +736,19 @@ class WmiSmbRunner(object):
 
     @contextmanager
     def get_smb_connection(self):
+        with self.__smb_connection_creation_lock:
+            if self.__is_smb_connection_initialized is False:
+                # initialize_smb_connection uses get_smb_connection itself. since we use RLock
+                # this won't be a deadlock as we will simply bypass this block (we specificy initialization finished)
+                # on the other hand all other threads will wait until the init finishes.
+                try:
+                    self.__is_smb_connection_initialized = True  # Putting this below will result in a deadlock.
+                    self.__initialize_smb_connection()
+                except Exception:
+                    # Return to False, other threads will try to re-initialize this.
+                    self.__is_smb_connection_initialized = False
+                    raise
+
         # Open an SMB connection. We do this again and again to allow parallelism
         smb_connection = SMBConnection(self.address, self.address)
         smb_connection.login(self.username, self.password, self.domain, self.lmhash, self.nthash)

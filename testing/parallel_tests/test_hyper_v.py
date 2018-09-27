@@ -3,6 +3,10 @@ from services.adapters.hyper_v_service import HyperVService, hyper_v_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_hyper_v_credentials import *
 
+# Hyper-V is part of our sanity tests since it uses the wmi runner to fetch devices from hyperv. Since this
+# is a big part of the execution it could affect hyper-v (it indeed affects hyper-v a lot)
+pytestmark = pytest.mark.sanity
+
 
 class TestHyperVAdapter(AdapterTestBase):
     @property
