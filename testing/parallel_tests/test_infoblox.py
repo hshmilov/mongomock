@@ -22,17 +22,9 @@ class TestInfobloxAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip("No test environment.")
     def test_fetch_devices(self):
-        pass
-
-    @pytest.mark.skip("No test env")
-    def test_removing_adapter_creds_with_devices(self):
-        pass
-
-    @pytest.mark.skip("No test env")
-    def test_removing_adapter_creds_with_users(self):
-        pass
+        # The trail was set on the 28.9.18, it should not work in 2 months, or 3 months.
+        super().test_fetch_devices()
 
     @pytest.mark.skip("No reachability test")
     def test_check_reachability(self):

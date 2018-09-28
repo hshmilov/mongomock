@@ -48,8 +48,6 @@ adapters/hyper_v_adapter/connection.py
 adapters/hyper_v_adapter/exceptions.py
 adapters/hyper_v_adapter/service.py
 adapters/infinite_sleep_adapter/service.py
-adapters/infoblox_adapter/connection.py
-adapters/infoblox_adapter/service.py
 adapters/jamf_adapter/connection.py
 adapters/jamf_adapter/exceptions.py
 adapters/jamf_adapter/service.py
