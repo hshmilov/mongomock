@@ -1,11 +1,12 @@
 <template>
         <input v-if="inputType" :id="schema.name" :type="inputType" v-model="processedData" :class="{'error-border': error}"
-           @input="input" @focusout.stop="focusout"/>
+           @input="input" @focusout.stop="focusout" :disabled="readOnly" />
         <!-- Date Picker -->
-    <x-date-edit v-else-if="schema.format === 'date-time' || schema.format === 'date'" v-model="data" @input="input" />
+    <x-date-edit v-else-if="schema.format === 'date-time' || schema.format === 'date'" v-model="data" @input="input"
+                 :disabled="readOnly" />
     <!-- Select from enum values -->
-    <x-select v-else-if="enumOptions" :options="enumOptions" v-model="data" placeholder="value..."
-              @input="input" @focusout.stop="validate" :class="{'error-border': error}" :searchable="true" />
+    <x-select v-else-if="enumOptions" :options="enumOptions" v-model="data" placeholder="value..." :searchable="true"
+              @input="input" @focusout.stop="validate" :class="{'error-border': error}" :read-only="readOnly" />
 </template>
 
 <script>

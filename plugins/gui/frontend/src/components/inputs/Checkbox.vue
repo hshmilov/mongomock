@@ -1,8 +1,8 @@
 <template>
-    <div class="x-checkbox" :class="{'x-checked': checked}" :id="id"
+    <div class="x-checkbox" :class="{'x-checked': checked, disabled: readOnly}" :id="id"
          @click.stop="$refs.checkbox.click()" @keyup.enter.stop="$refs.checkbox.click()">
         <div class="x-checkbox-container" :class="{'x-checkbox-semi': semi}">
-            <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox">
+            <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox" :disabled="readOnly">
         </div>
         <label v-if="label" class="x-checkbox-label">{{label}}</label>
     </div>
@@ -11,7 +11,10 @@
 <script>
 	export default {
 		name: 'x-checkbox',
-        props: {data: {}, value: {default: 'on'}, label: {}, semi: {default: false}, id: {}},
+        props: {
+		    data: {}, value: {default: 'on'}, label: {}, semi: {default: false}, id: {},
+            readOnly: { default: false }
+        },
         model: {
 			prop: 'data',
             event: 'change'
@@ -63,6 +66,16 @@
 <style lang="scss">
     .x-checkbox {
         cursor: pointer;
+        &.disabled {
+            cursor: default;
+            opacity: 0.6;
+            .x-checkbox-container:hover {
+                border-color: $grey-3;
+            }
+            &.x-checked .x-checkbox-container:hover {
+                border-color: $grey-5;
+            }
+        }
         .x-checkbox-container {
             width: 12px;
             height: 12px;

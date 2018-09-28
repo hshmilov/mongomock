@@ -31,10 +31,9 @@
     import xDataActionItem from '../../components/data/DataActionItem.vue'
 	import xTagModal from '../../components/popover/TagModal.vue'
 
-	import { mapState, mapGetters, mapActions } from 'vuex'
-    import { FETCH_ADAPTERS } from '../../store/modules/adapter'
-	import { GET_DATA_BY_ID } from '../../store/getters'
-    import { DELETE_DATA, DISABLE_DATA } from '../../store/actions'
+	import { mapGetters, mapActions } from 'vuex'
+    import { GET_DATA_BY_ID } from '../../store/getters'
+    import { DELETE_DATA, DISABLE_DATA, REQUEST_API } from '../../store/actions'
 
     const disableableByModule = {
 		'devices': 'Devicedisabelable',
@@ -48,16 +47,6 @@
         },
         props: { module: {required: true}, selected: {required: true} },
         computed: {
-            ...mapState({
-                adapterByUniqueName(state) {
-                	let adapterData = state.adapter.adapterList.data
-					if (!adapterData || !adapterData.length) return {}
-					return adapterData.reduce((map, input) => {
-						map[input.unique_plugin_name] = input
-						return map
-					}, {})
-                }
-            }),
 			...mapGetters({getDataByID: GET_DATA_BY_ID }),
 			dataByID() {
                 return this.getDataByID(this.module)
@@ -85,8 +74,8 @@
 					let entity = this.dataByID[entityID]
 					if (!entity) return false
 					return entity.unique_adapter_names.some((uniqueName) => {
-                        let adapter = this.adapterByUniqueName[uniqueName]
-                        return adapter && adapter.supported_features.includes(disableableByModule[this.module])
+                        let adapter = this.adapterFeatures[uniqueName]
+                        return adapter && adapter.includes(disableableByModule[this.module])
                     })
 				})
             },
@@ -98,8 +87,13 @@
                 return count
             }
         },
+        data() {
+		     return {
+                 adapterFeatures: {}
+             }
+        },
         methods: {
-            ...mapActions({ disableData: DISABLE_DATA, deleteData: DELETE_DATA, fetchAdapters: FETCH_ADAPTERS }),
+            ...mapActions({ disableData: DISABLE_DATA, deleteData: DELETE_DATA, fetchData: REQUEST_API }),
             activate(item) {
             	if (!item || !item.activate) return
                 item.activate()
@@ -115,7 +109,11 @@
             }
         },
         created() {
-			this.fetchAdapters()
+			this.fetchData({
+                rule: 'adapter_features'
+            }).then((response) => {
+                this.adapterFeatures = response.data
+            })
         }
 	}
 </script>

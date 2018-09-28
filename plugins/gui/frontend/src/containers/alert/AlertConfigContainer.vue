@@ -136,6 +136,7 @@
     import {UPDATE_EMPTY_STATE} from '../../store/modules/onboarding'
     import {SET_ALERT, UPDATE_ALERT, FETCH_ALERTS} from '../../store/modules/alert'
     import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
+    import { entities } from '../../constants/entities'
 
     export default {
         name: 'alert-config-container',
@@ -146,12 +147,20 @@
             ...mapState({
                 alertData: state => state.alert.current.data,
                 alerts: state => state.alert.content.data,
+                availableEntities(state) {
+                    if (!state.auth.data) return {}
+                    let permissions = state.auth.data.permissions
+                    return entities.filter(module => {
+                        return permissions[module] !== 'Restricted'
+                    }).map(module => module.toLowerCase())
+                },
                 currentQueryOptions(state) {
-                    let queries = [...state.devices.views.saved.data.map((item) => {
-                        return {...item, entity: 'devices'}
-                    }), ...state.users.views.saved.data.map((item) => {
-                        return { ...item, entity: 'users' }
-                    })]
+                    let queries = []
+                    this.availableEntities.forEach(entity => {
+                        queries.push(...state[entity].views.saved.data.map((item) => {
+                            return { ...item, entity }
+                        }))
+                    })
                     if (!queries || !queries.length) return []
                     if (this.alert && this.alert.view) {
                         let hasCurrent = queries.some(query => query.name === this.alert.view)
@@ -164,7 +173,8 @@
                     return queries.map(q => {return {...q, title: q.title ? q.title : q.name}})
                 },
                 globalSettings(state) {
-                    return state.configurable.core.CoreService.config
+                    if (!state.configuration || !state.configuration.data || !state.configuration.data.global) return
+                    return state.configuration.data.global
                 },
                 selectedOption() {
 				    if (!this.currentQuery) return undefined
@@ -362,7 +372,7 @@
             checkMailSettings(on) {
             	if (!on) {
 					this.updateEmptyState({ mailSettings: false})
-				} else if (!this.globalSettings.email_settings.enabled) {
+				} else if (!this.globalSettings.mail) {
 					this.updateEmptyState({ mailSettings: true})
 					this.updateEmptyState({ syslogSettings: false})
 					this.emptySettings['mail'] = true
@@ -371,7 +381,7 @@
             checkSyslogSettings(on) {
 				if (!on) {
 					this.updateEmptyState({ syslogSettings: false})
-				} else if (!this.globalSettings.syslog_settings.enabled) {
+				} else if (!this.globalSettings.syslog) {
 					this.updateEmptyState({ syslogSettings: true })
 					this.updateEmptyState({ mailSettings: false})
 					this.emptySettings['syslog'] = true
@@ -398,17 +408,12 @@
             this.tour('alertName')
 
             /* Fetch all saved queries for offering user to base alert upon */
-            if (!this.currentQueryOptions.length) {
-                this.fetching.views = true
-                Promise.all([this.fetchViews({module: 'devices', type: 'saved'}),
-                    this.fetchViews({module: 'users', type: 'saved'})]).then(() => {
-                        this.fillView()
-                        this.fetching.views = false
-                    }
-                )
-            } else {
-            	this.fillView()
-            }
+            this.fetching.views = true
+            Promise.all(this.availableEntities.map(module => this.fetchViews({module, type: 'saved'}))).then(() => {
+                    this.fillView()
+                    this.fetching.views = false
+                }
+            )
         }
     }
 </script>

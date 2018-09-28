@@ -3,199 +3,245 @@
         <tabs ref="tabs" @click="determineState">
             <tab title="Lifecycle Settings" id="research-settings-tab" :selected="true">
                 <h3>Discovery Phase</h3>
-                <div class="grid grid-col-2">
-                    <label for="research_time" class="label">Next Scheduled Time:</label>
-                    <div id="research_time">
-                        <x-date-edit :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>
-                    </div>
+                <div class="research-settings-schedule">
+                    <label class="label">Next Scheduled Time:</label>
+                    <x-date-edit :value="nextDiscoverySchedule" @input="scheduleDiscovery" :limit="limit"
+                                 :disabled="isReadOnly"/>
                 </div>
                 <div class="tab-settings">
-                    <template v-if="configurable.system_scheduler">
-                        <x-schema-form :schema="configurable.system_scheduler.SystemSchedulerService.schema" @validate="updateSystemSchedulerValidity"
-                                       v-model="configurable.system_scheduler.SystemSchedulerService.config" api-upload="adapters/system_scheduler"/>
+                    <template v-if="schedulerSettings">
+                        <x-schema-form :schema="schedulerSettings.schema" v-model="schedulerSettings.config"
+                                       @validate="updateSchedulerValidity" :read-only="isReadOnly"
+                                       api-upload="adapters/system_scheduler"/>
                         <div class="place-right">
-                            <button class="x-btn" :class="{disabled: !coreComplete}" @click="saveSystemSchedulerSettings">Save</button>
+                            <button class="x-btn"
+                                    :class="{ disabled: !schedulerComplete || !validResearchRate || isReadOnly }"
+                                    @click="saveSchedulerSettings">Save
+                            </button>
                         </div>
                     </template>
                 </div>
             </tab>
             <tab title="Global Settings" id="global-settings-tab">
                 <div class="tab-settings">
-                    <template v-if="configurable.core">
-                        <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateCoreValidity"
-                                       v-model="configurable.core.CoreService.config" api-upload="adapters/core"/>
+                    <template v-if="coreSettings">
+                        <x-schema-form :schema="coreSettings.schema" @validate="updateCoreValidity"
+                                       :read-only="isReadOnly"
+                                       v-model="coreSettings.config" api-upload="adapters/core"/>
                         <div class="place-right">
-                            <button class="x-btn" :class="{disabled: !coreComplete}" @click="saveGlobalSettings">Save</button>
+                            <button class="x-btn" :class="{ disabled: !coreComplete || isReadOnly }"
+                                    @click="saveGlobalSettings">Save
+                            </button>
                         </div>
                         <h4>Remote Support Control</h4>
                         <div class="global-settings-access">
                             <label for="support_access">Temporary Remote Support (hours):</label>
-                            <input type="number" v-model="supportAccess.duration" id="support_access" />
-                            <button @click="startSupportAccess" class="x-btn right">Start</button>
+                            <input type="number" v-model="supportAccess.duration" id="support_access"
+                                   :disabled="isReadOnly"/>
+                            <button @click="startSupportAccess" class="x-btn right" :class="{ disabled: isReadOnly }">
+                                Start
+                            </button>
                             <template v-if="supportAccessEndTime">
                                 <div>Will stop at:</div>
-                                <div class="">{{ supportAccessEndTime.toLocaleDateString()}} {{ supportAccessEndTime.toLocaleTimeString() }}</div>
+                                <div>{{ supportAccessEndTime.toLocaleDateString() }} {{
+                                    supportAccessEndTime.toLocaleTimeString() }}
+                                </div>
                                 <!--button @click="stopSupportAccess" class="x-btn link">Stop Now</button-->
                             </template>
-                            <div v-else class="grid-span3" />
+                            <div v-else class="grid-span3"/>
                         </div>
                     </template>
                 </div>
             </tab>
             <tab title="GUI Settings" id="gui-settings-tab">
                 <div class="tab-settings">
-                    <template v-if="configurable.gui">
-                        <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateGuiValidity"
-                                       v-model="configurable.gui.GuiService.config" api-upload="adapters/gui"/>
+                    <template v-if="guiSettings">
+                        <x-schema-form :schema="guiSettings.schema" @validate="updateGuiValidity"
+                                       :read-only="isReadOnly"
+                                       v-model="guiSettings.config" api-upload="adapters/gui"/>
                         <div class="place-right">
-                            <button class="x-btn" :class="{disabled: !guiComplete}" @click="saveGuiSettings">Save</button>
+                            <button class="x-btn" :class="{ disabled: !guiComplete || isReadOnly }"
+                                    @click="saveGuiSettings">Save
+                            </button>
                         </div>
                     </template>
                 </div>
             </tab>
-            <tab title="Change admin password" id="change-admin-password">
-                <div class="tab-settings">
-                    <x-schema-form :schema="{type:'array','items':[
-                        {
-                            name: 'currentPassword',
-                            title: 'Current password',
-                            type: 'string',
-                            format: 'password'
-                        },
-                        {
-                            name: 'newPassword',
-                            title: 'New password',
-                            type: 'string',
-                            format: 'password'
-                        },
-                        {
-                            name: 'confirmNewPassword',
-                            title: 'Confirm new password',
-                            type: 'string',
-                            format: 'password'
-                        },
-                     ], required: ['currentPassword', 'newPassword', 'confirmNewPassword']}"
-                                   v-model="adminChangePassword"
-                                   @validate="updateChangePassValidity"/>
-                    <div class="place-right">
-                        <button class="x-btn" :class="{disabled: !adminChangePasswordComplete}" @click="doChangePassword">
-                            Save
-                        </button>
-                    </div>
+            <tab title="Manage Users" id="user-settings-tab">
+                <div class="header">
+                    <h4 class="title">Users and Roles</h4>
+                    <button class="x-btn" :class="{ disabled: isReadOnly }" @click="openNewUserForm">+ New User</button>
                 </div>
-            </tab>
-            <tab title="API Key" id="apikey-settings-tab">
-                <div class="tab-settings">
-                    <div class="grid grid-col-2">
-                        <label for="api_key" class="label">API Key:</label>
-                        <div id="api_key">
-                            {{apiKey['api_key']}}
+                <div v-for="user in users" class="user">
+                    <div class="user-details">
+                        <img :src="user.pic_name" class="user-details-profile"/>
+                        <div>
+                            <div class="user-details-title">{{ user.user_name }}</div>
+                            <div>{{ user.source }}</div>
                         </div>
                     </div>
-                    <div class="grid grid-col-2">
-                        <label for="api_secret" class="label">API secret:</label>
-                        <div id="api_secret">
-                            {{apiKey['api_secret']}}
-                        </div>
+                    <div class="user-roles">
+                        <template v-if="!user.admin">
+                            <x-schema-form :schema="permissionSchema" v-model="user.permissions"
+                                           :read-only="isReadOnly"/>
+                            <button class="x-btn link" :class="{ disabled: isReadOnly }" @click="savePermissions(user)">
+                                Save
+                            </button>
+                        </template>
                     </div>
-                    <button class="x-btn" @click="openRenewKeyModal">
-                        Revoke and renew
-                    </button>
                 </div>
             </tab>
             <tab title="About" id="about-settings-tab">
                 <div class="tab-settings">
-                    <x-custom-data :data="system_info" :vertical="true"/>
+                    <x-custom-data :data="systemInfo" :vertical="true"/>
                 </div>
             </tab>
         </tabs>
-        <modal v-if="renewingKey" @close="closeRenewKeyModal" @confirm="revokeRenew" approve-text="Revoke and renew">
+        <modal v-if="createUserActive" @close="closeNewUserForm" @confirm="saveNewUser" approve-text="Create User">
             <div slot="body">
-                Are you sure you want to revoke the current key and generate a new one?<br/>
-                This means that all applications using this key will stop working.
+                <x-schema-form :schema="newUserSchema" v-model="userForm"/>
             </div>
         </modal>
-        <x-toast v-if="message" :message="message" @done="removeToast" />
+        <x-toast v-if="message" :message="message" @done="removeToast"/>
     </x-page>
 </template>
 
 <script>
+    import xPage from '../../components/layout/Page.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
     import xCustomData from '../../components/schema/CustomData.vue'
-    import xPage from '../../components/layout/Page.vue'
     import Tabs from '../../components/tabs/Tabs.vue'
     import Tab from '../../components/tabs/Tab.vue'
     import xDateEdit from '../../components/controls/string/DateEdit.vue'
-    import xCheckbox from '../../components/inputs/Checkbox.vue'
     import xToast from '../../components/popover/Toast.vue'
-	import Modal from '../../components/popover/Modal.vue'
+    import Modal from '../../components/popover/Modal.vue'
 
-    import { mapState, mapActions, mapMutations } from 'vuex'
-    import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from "../../store/modules/configurable";
-    import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
-    import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
-    import { CHANGE_PASSWORD } from "../../store/modules/auth";
+    import {mapState, mapActions, mapMutations} from 'vuex'
+    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/configurable";
+    import {REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE} from '../../store/actions'
+    import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
+    import {CHANGE_PERMISSIONS, GET_ALL_USERS, CREATE_USER} from "../../store/modules/auth"
 
-	export default {
+    export default {
         name: 'settings-container',
-        components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast, xCustomData, Modal },
+        components: {
+            xPage, Tabs, Tab,
+            xDateEdit,
+            xSchemaForm, xCustomData, xToast, Modal
+        },
         computed: {
             ...mapState({
-                nextResearchStart(state) {
-					let tempDate = new Date(parseInt(state.dashboard.lifecycle.data.nextRunTime) * 1000)
-					return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
+                nextDiscoverySchedule(state) {
+                    let tempDate = new Date(parseInt(state.dashboard.lifecycle.data.nextRunTime) * 1000)
+                    return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
                 },
-                configurable(state) {
-                    return state.configurable
+                constants(state) {
+                    return state.constants.data
                 },
-                userName(state) {
-                	return state.auth.data.user_name
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Settings === 'ReadOnly'
+                },
+                schedulerSettings(state) {
+                    if (!state.configurable.system_scheduler) return null
+                    return state.configurable.system_scheduler.SystemSchedulerService
+                },
+                coreSettings(state) {
+                    if (!state.configurable.core) return null
+                    return state.configurable.core.CoreService
+                },
+                guiSettings(state) {
+                    if (!state.configurable.gui) return null
+                    return state.configurable.gui.GuiService
                 }
             }),
             limit() {
-            	let now = new Date()
+                let now = new Date()
                 now.setDate(now.getDate() - 1)
                 return [{
                     type: 'fromto',
                     from: now
                 }]
             },
-            scheduleConfig: {
-                get() {
-                    if (!this.configurable.system_scheduler || !this.configurable.system_scheduler.SystemSchedulerService) {
-                    	return null
-					}
-                    return this.configurable.system_scheduler.SystemSchedulerService.config
-                }
-            },
-			validResearchRate() {
-				return this.validNumber(this.scheduleConfig.system_research_rate)
+            validResearchRate() {
+                if (!this.schedulerSettings.config) return 12
+                return this.validNumber(this.schedulerSettings.config.system_research_rate)
             },
             supportAccessEndTime() {
-                if (!this.configurable.core.CoreService.config.maintenance_settings.analytics) {
+                if (!this.coreSettings.config || !this.coreSettings.config.maintenance_settings.analytics) {
                     return null
                 }
                 return this.supportAccess.endTime
+            },
+            permissionTypes() {
+                var levels = this.constants.permission_levels
+                if (!levels) return
+                return _.map(levels, (a, b) => {
+                    return {
+                        title: a,
+                        name: b
+                    }
+                })
+            },
+            newUserSchema() {
+                return {
+                    'type': 'array', 'items': [{
+                        "name": 'user_name',
+                        "title": 'Username',
+                        "type": "string",
+                    }, {
+                        "name": 'password',
+                        "title": 'Password',
+                        "type": "string",
+                        "format": "password"
+                    }, {
+                        "name": "first_name",
+                        "title": "First name",
+                        "type": "string"
+                    }, {
+                        "name": "last_name",
+                        "title": "Last name",
+                        "type": "string"
+                    }], 'required': ['user_name', 'password']
+                }
+            },
+            permissionSchema() {
+                return {
+                    "items": [
+                        this.permissionSchemeItem("Dashboard", ['Restricted']),
+                        this.permissionSchemeItem("Devices"),
+                        this.permissionSchemeItem("Users"),
+                        this.permissionSchemeItem("Adapters"),
+                        this.permissionSchemeItem("Alerts"),
+                        this.permissionSchemeItem("Reports"),
+                        this.permissionSchemeItem("Settings"),
+                    ],
+                    "required": [
+                        'settings', 'adapters', 'users', 'devices', 'alerts', 'dashboard'
+                    ],
+                    "type": "array"
+                }
             }
         },
         data() {
             return {
                 coreComplete: true,
                 guiComplete: true,
+                schedulerComplete: true,
                 message: '',
-                system_info: {},
-                adminChangePassword: {
-                    currentPassword: null,
-                    newPassword: null,
-                    confirmNewPassword: null
-                },
-                adminChangePasswordComplete: false,
+                systemInfo: {},
                 supportAccess: {
-                	duration: 24,
+                    duration: 24,
                     endTime: null
-				},
-                apiKey: {},
-                renewingKey: false
+                },
+                users: [],
+                createUserActive: false,
+                userForm: {
+                    user_name: '',
+                    password: '',
+                    first_name: '',
+                    last_name: ''
+                }
             }
         },
         methods: {
@@ -208,58 +254,72 @@
                 stopResearch: STOP_RESEARCH_PHASE,
                 updatePluginConfig: SAVE_PLUGIN_CONFIG,
                 loadPluginConfig: LOAD_PLUGIN_CONFIG,
-                changePassword: CHANGE_PASSWORD
+                getAllUsers: GET_ALL_USERS,
+                setPermissions: CHANGE_PERMISSIONS,
+                createUser: CREATE_USER
             }),
             validNumber(value) {
-				if (value === undefined || isNaN(value) || value <= 0) {
-					return false
-				}
-				return true
+                if (value === undefined || isNaN(value) || value <= 0) {
+                    return false
+                }
+                return true
             },
-            scheduleResearch(scheduleDate) {
-				scheduleDate = new Date(scheduleDate)
-				scheduleDate.setMinutes(scheduleDate.getMinutes() + scheduleDate.getTimezoneOffset())
+            permissionSchemeItem(name, exclude = []) {
+                let permissionTypes = (exclude.length) ? this.permissionTypes.filter(a => !exclude.includes(a.name)) : this.permissionTypes
+                return {
+                    "name": name,
+                    "title": name + " Permissions",
+                    "type": "string",
+                    "enum": permissionTypes,
+                    "default": "Restricted",
+                }
+            },
+            scheduleDiscovery(scheduleDate) {
+                scheduleDate = new Date(scheduleDate)
+                scheduleDate.setMinutes(scheduleDate.getMinutes() + scheduleDate.getTimezoneOffset())
                 this.fetchData({
                     rule: 'research_phase',
                     method: 'POST',
                     data: {
-                    	timestamp: `${scheduleDate.toLocaleDateString()} ${scheduleDate.toLocaleTimeString()}`
+                        timestamp: `${scheduleDate.toLocaleDateString()} ${scheduleDate.toLocaleTimeString()}`
                     }
-                }).then((response) => {
-                	this.createToast(response)
-				})
+                }).then(response => {
+                    this.createToast(response)
+                }).catch(error => {
+                    this.createToast(error)
+                })
             },
             saveGlobalSettings() {
-                if (!this.coreComplete) return
+                if (!this.coreComplete || this.isReadOnly) return
                 this.updatePluginConfig({
                     pluginId: 'core',
                     configName: 'CoreService',
-                    config: this.configurable.core.CoreService.config
+                    config: this.coreSettings.config
                 }).then(response => {
                     this.createToast(response)
                     this.getSupportAccess()
                 }).catch(error => {
-                	if (error.response.status === 400) {
-                		this.message = error.response.data.message
+                    if (error.response.status === 400) {
+                        this.message = error.response.data.message
                     }
                 })
             },
-            saveSystemSchedulerSettings() {
-                if (!this.system_schedulerComplete || !this.validResearchRate) return
+            saveSchedulerSettings() {
+                if (!this.schedulerComplete || !this.validResearchRate || this.isReadOnly) return
                 this.updatePluginConfig({
                     pluginId: 'system_scheduler',
                     configName: 'SystemSchedulerService',
-                    config: this.scheduleConfig
+                    config: this.schedulerSettings
                 }).then(response => {
                     this.createToast(response)
                 }).catch(error => {
                     if (error.response.status === 400) {
-                		this.message = error.response.data.message
+                        this.message = error.response.data.message
                     }
                 })
             },
-            updateSystemSchedulerValidity(valid) {
-                this.system_schedulerComplete = valid
+            updateSchedulerValidity(valid) {
+                this.schedulerComplete = valid
             },
             updateCoreValidity(valid) {
                 this.coreComplete = valid
@@ -267,146 +327,137 @@
             updateGuiValidity(valid) {
                 this.guiComplete = valid
             },
-            updateChangePassValidity(valid) {
-                this.adminChangePasswordComplete = valid
-            },
-            doChangePassword() {
-                if (!this.adminChangePasswordComplete) return
-                if (this.adminChangePassword.newPassword !== this.adminChangePassword.confirmNewPassword) {
-                    this.message = "Passwords don't match"
-                    return
-                }
-                this.changePassword({
-                    'user_name': this.userName,
-                    'old_password': this.adminChangePassword.currentPassword,
-                    'new_password': this.adminChangePassword.newPassword
-                }).then(() => {
-                    this.message = "Password changed"
-                    this.adminChangePassword.currentPassword = null
-                    this.adminChangePassword.newPassword = null
-                    this.adminChangePassword.confirmNewPassword = null
-                    this.adminChangePassword = {...this.adminChangePassword}
-                }).catch(error => {
-                    this.message = JSON.parse(error.request.response).message
-			    })
-            },
             saveGuiSettings() {
-            	if (!this.guiComplete) return
+                if (!this.guiComplete || this.isReadOnly) return
                 this.updatePluginConfig({
                     pluginId: 'gui',
                     configName: 'GuiService',
-                    config: this.configurable.gui.GuiService.config
+                    config: this.guiSettings.config
                 }).then(response => {
-					this.createToast(response)
+                    this.createToast(response)
                 })
             },
             removeToast() {
                 this.message = ''
             },
             createToast(response) {
-				if (response.status === 200) {
-					this.message = 'Saved Successfully.'
-				} else {
-					this.message = response.data.message
-				}
+                if (response.status === 200) {
+                    this.message = 'Saved Successfully.'
+                } else {
+                    this.message = 'Error: ' + response.data.message
+                }
             },
             determineState(tabId) {
-            	this.changeState({ name: tabId})
+                this.changeState({name: tabId})
             },
-			startSupportAccess() {
-            	this.fetchData({
+            startSupportAccess() {
+                if (this.isReadOnly) return
+                this.fetchData({
                     rule: 'support_access',
                     method: 'POST',
-                    data: { duration: this.supportAccess.duration }
+                    data: {duration: this.supportAccess.duration}
                 }).then(() => {
-                	this.message = `Support Access Started for ${this.supportAccess.duration} hours`
+                    this.message = `Support Access Started for ${this.supportAccess.duration} hours`
                     this.getSupportAccess()
-					this.loadPluginConfig({
-						pluginId: 'core',
-						configName: 'CoreService'
-					})
+                    this.loadPluginConfig({
+                        pluginId: 'core',
+                        configName: 'CoreService'
+                    })
                 }).catch(error => {
-					if (error.response.status === 400) {
-						this.message = error.response.data.message
-					}
+                    if (error.response.status === 400) {
+                        this.message = error.response.data.message
+                    }
                 })
             },
             stopSupportAccess() {
-				this.fetchData({
-					rule: 'support_access',
-					method: 'DELETE'
-				}).then(() => {
-					this.message = `Support Access Ended`
-					this.getSupportAccess()
-					this.loadPluginConfig({
-						pluginId: 'core',
-						configName: 'CoreService'
-					})
+                this.fetchData({
+                    rule: 'support_access',
+                    method: 'DELETE'
+                }).then(() => {
+                    this.message = `Support Access Ended`
+                    this.getSupportAccess()
+                    this.loadPluginConfig({
+                        pluginId: 'core',
+                        configName: 'CoreService'
+                    })
                 }).catch(error => {
-					if (error.response.status === 400) {
-						this.message = error.response.data.message
-					}
-				})
+                    if (error.response.status === 400) {
+                        this.message = error.response.data.message
+                    }
+                })
             },
             getSupportAccess() {
-				this.fetchData({
-					rule: `support_access`
-				}).then((response) => {
-					if (response.status === 200 && response.data) {
-						// Date timestamp received in seconds and JS Date expects milliseconds
+                this.fetchData({
+                    rule: `support_access`
+                }).then((response) => {
+                    if (response.status === 200 && response.data) {
+                        // Date timestamp received in seconds and JS Date expects milliseconds
                         this.supportAccess.endTime = new Date(parseInt(response.data) * 1000)
                     } else {
-						this.supportAccess.endTime = null
+                        this.supportAccess.endTime = null
                     }
                 })
             },
-            getApiKey() {
-                this.fetchData({
-                    rule: `get_api_key`
-                }).then(response => {
-                    if (response.status === 200 && response.data) {
-                        this.apiKey = response.data
-                    }
+            openNewUserForm() {
+                if (this.isReadOnly) return
+                this.createUserActive = true
+            },
+            closeNewUserForm() {
+                this.createUserActive = false
+            },
+            saveNewUser() {
+                if (this.isReadOnly) return
+                this.closeNewUserForm()
+                this.createUser(this.userForm).then(response => {
+                    this.createToast(response)
+                    this.getAllUsers().then(response => {
+                        if (response.status === 200) {
+                            this.users = response.data
+                        }
+                    })
+                }).catch(error => {
+                    this.createToast(error.response)
                 })
             },
-            openRenewKeyModal() {
-                this.renewingKey = true
-            },
-            closeRenewKeyModal() {
-                this.renewingKey = false
-            },
-            revokeRenew(){
-                this.closeRenewKeyModal()
-                this.fetchData({
-                    rule: `get_api_key`,
-                    method: 'POST'
-                }).then(response => {
-                    if (response.status === 200 && response.data) {
-                        this.apiKey = response.data
-                        this.message = "a new secret key has been generated, the old one is no longer valid"
-                    }
+            savePermissions(user) {
+                if (this.isReadOnly) return
+                this.setPermissions({user_name: user.user_name, permissions: user.permissions}).then(response => {
+                    this.createToast(response)
                 })
+
             }
         },
         created() {
+            this.loadPluginConfig({
+                pluginId: 'gui',
+                configName: 'GuiService'
+            })
+            this.loadPluginConfig({
+                pluginId: 'core',
+                configName: 'CoreService'
+            })
             this.loadPluginConfig({
                 pluginId: 'system_scheduler',
                 configName: 'SystemSchedulerService'
             })
             this.fetchData({
-                rule: `metadata`
+                rule: 'metadata'
             }).then((response) => {
                 if (response.status === 200) {
-                    this.system_info = response.data
+                    this.systemInfo = response.data
+                }
+            })
+            this.getAllUsers().then(response => {
+                if (response.status === 200) {
+                    this.users = response.data
                 }
             })
             this.getSupportAccess()
-            this.changeState({ name: 'research-settings-tab' })
-            this.getApiKey()
+            this.changeState({name: 'research-settings-tab'})
         },
         mounted() {
             if (this.$route.hash) {
-				this.$refs.tabs.selectTab(this.$route.hash.slice(1))
+                this.$refs.tabs.selectTab(this.$route.hash.slice(1))
             }
         }
     }
@@ -414,37 +465,16 @@
 
 <style lang="scss">
     .settings {
-        .grid {
-            display: grid;
-            grid-row-gap: 12px;
-            align-items: center;
-            grid-auto-rows: auto;
-            margin-bottom: 24px;
-            margin-right: 15px;
-            &.grid-col-2 {
-                grid-template-columns: 2fr 3fr;
-            }
-            &.grid-col-4 {
-                width: 300px;
-                grid-template-columns: 2fr 3fr;
-            }
-            .grid-item {
-                text-align: right;
-            }
-            .x-btn {
-                justify-self: end;
-            }
+        .x-tabs {
+            max-width: 840px;
         }
-        .tab-settings .schema-form {
-            > .array {
-                display: block;
-            }
-            .x-btn {
-                justify-self: end;
-            }
+        .tab-settings .schema-form .array {
+            grid-template-columns: 1fr;
+        }
+        .research-settings-schedule {
+            display: grid;
         }
         .global-settings-access {
-            width: 40vw;
             display: grid;
             grid-template-columns: 2fr 2fr 1fr;
             grid-gap: 8px 0;
@@ -453,6 +483,42 @@
         }
         .research-settings-tab .tab-settings .schema-form > .array {
             display: grid;
+        }
+        .user-settings-tab {
+            .header {
+                display: flex;
+                align-items: center;
+                .title {
+                    flex: 1 0 auto;
+                }
+            }
+            .user {
+                margin-bottom: 24px;
+                .user-details {
+                    display: flex;
+                    align-items: center;
+                    .user-details-profile {
+                        height: 60px;
+                        margin-right: 8px;
+                    }
+                    .user-details-title {
+                        font-weight: 400;
+                        font-size: 16px;
+                    }
+                }
+                .user-roles {
+                    text-align: right;
+                    .schema-form {
+                        text-align: left;
+                        .array {
+                            grid-template-columns: 1fr 1fr 1fr;
+                        }
+                        .error {
+                            display: none;
+                        }
+                    }
+                }
+            }
         }
         input.cov-datepicker {
             width: 100%;

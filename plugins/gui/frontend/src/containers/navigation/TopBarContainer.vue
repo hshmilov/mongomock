@@ -10,7 +10,7 @@
             <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
         </div>
         <ul class="bar-nav">
-            <li class="nav-item">
+            <li class="nav-item" v-if="isDashboardWrite">
                 <a v-if="researchStatusLocal === 'starting'" class="item-link research-link disabled">
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20" />
                     <div>Initiating...</div>
@@ -36,8 +36,8 @@
                     <notification-peek-container />
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="item-link" @click="navigateSettings" id="settings">
+            <li class="nav-item" :class="{ disabled: isSettingsRestricted}">
+                <a class="item-link" @click="navigateSettings" id="settings" >
                     <svg-icon name="navigation/settings" :original="true" height="20" />
                 </a>
                 <x-tip-info content="In order to send alerts through mail, define the server under settings"
@@ -82,7 +82,15 @@
                 },
 				tourActive(state) {
                 	return state.onboarding.tourStates.active
-				}
+				},
+                isSettingsRestricted(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Settings === 'Restricted'
+                },
+                isDashboardWrite(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Dashboard === 'ReadWrite' || state.auth.data.admin
+                }
             }),
             mailSettingsTip: {
             	get() {
@@ -133,6 +141,10 @@
                 this.stopResearch().catch(() => this.researchStatusLocal = 'running' )
             },
             navigateSettings() {
+			    if (this.isSettingsRestricted) {
+                    this.$emit('access-violation', name)
+			        return
+                }
 				if (this.mailSettingsTip || this.syslogSettingsTip) {
 					this.$router.push({path: '/settings#global-settings-tab'})
                     this.mailSettingsTip = false
@@ -210,6 +222,15 @@
                 }
                 .svg-fill {
                     fill: $theme-orange;
+                }
+                &.disabled .item-link, &.disabled .item-link:hover {
+                    cursor: default;
+                    .svg-stroke {
+                        stroke: $grey-2;
+                    }
+                    .svg-fill {
+                        fill: $grey-2;
+                    }
                 }
                 .item-link {
                     .svg-fill {

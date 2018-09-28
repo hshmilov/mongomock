@@ -1,5 +1,4 @@
 import { pluginMeta } from '../constants/plugin_meta.js'
-import { SINGLE_ADAPTER } from './modules/configurable'
 
 export const GET_DATA_FIELD_BY_PLUGIN = 'GET_DATA_FIELD_BY_PLUGIN'
 export const getDataFieldsByPlugin = (state) => (module) => {
@@ -35,7 +34,7 @@ export const getDataFieldListSpread =  (state, getters) => (module) => {
 	}).concat(Object.keys(fields.specific || []).reduce((list, name) => {
 		if (!fields.specific[name]) return list
 		list = [...list, ...fields.specific[name].map((field) => {
-			if (getters[SINGLE_ADAPTER]) return field
+			if (singleAdapter(state)) return field
 			return { ...field, logo: name}
 		})]
 		return list
@@ -51,4 +50,10 @@ export const getDataByID = (state) => (module) => {
 		map[input['internal_axon_id']] = input
 		return map
 	}, {})
+}
+
+export const SINGLE_ADAPTER = 'SINGLE_ADAPTER'
+export const singleAdapter = (state) => {
+	if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false
+	return state.configuration.data.system.singleAdapter
 }

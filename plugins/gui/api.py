@@ -3,9 +3,12 @@ import math
 
 from passlib.hash import bcrypt
 from flask import jsonify, request
+from typing import Iterable
 
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils import gui_helpers
+from axonius.utils.gui_helpers import Permission, check_permissions, deserialize_db_permissions, PermissionType, \
+    PermissionLevel, ReadOnlyJustForGet
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -13,30 +16,51 @@ API_VERSION = "1"
 
 
 # Caution! These decorators must come BEFORE @add_rule
-def basic_authentication(func):
+def basic_authentication(func, required_permissions: Iterable[Permission]):
     """
     Decorator stating that the view requires the user to be connected
     """
 
     def wrapper(self, *args, **kwargs):
+        users_collection = self._get_collection("users")
+
         def check_auth_user(username, password):
             """
             This function is called to check if a username /
             password combination is valid.
             """
-            users_collection = self._get_collection("users")
             user_from_db = users_collection.find_one({"user_name": username})
             if user_from_db is None:
                 logger.info(f"Unknown user {username} tried logging in")
                 return False
-            return bcrypt.verify(password, user_from_db["password"])
+            if not bcrypt.verify(password, user_from_db["password"]):
+                return False
+            if user_from_db.get('admin'):
+                return True
+            if not check_permissions(deserialize_db_permissions(user_from_db['permissions']),
+                                     required_permissions,
+                                     request.method):
+                return False
+            return True
 
         def check_auth_api_key(api_key, api_secret):
             """
             This function is called to check if an api key and secret match
             """
-            api_data = self._api_data
-            return api_data.api_key == api_key and api_data.api_secret == api_secret
+            user_from_db = users_collection.find_one({
+                'api_key': api_key,
+                'api_secret': api_secret
+            })
+
+            if not user_from_db:
+                return False
+            if user_from_db.get('admin'):
+                return True
+            if not check_permissions(deserialize_db_permissions(user_from_db['permissions']),
+                                     required_permissions,
+                                     request.method):
+                return False
+            return True
 
         api_auth = request.headers.get('api-key'), request.headers.get('api-secret')
         auth = request.authorization
@@ -46,6 +70,18 @@ def basic_authentication(func):
         return return_error("Unauthorized", 401)
 
     return wrapper
+
+
+def api_add_rule(rule, required_permissions: Iterable[Permission] = None, *args, **kwargs):
+    """
+    A URL mapping for API endpoints that use the API method to log in (either user and pass or API key)
+    """
+
+    def basic_authentication_permissions(*args, **kwargs):
+        return basic_authentication(*args, **kwargs, required_permissions=required_permissions)
+
+    return gui_helpers.add_rule_custom_authentication(f"V{API_VERSION}/{rule}", basic_authentication_permissions, *args,
+                                                      **kwargs)
 
 
 def get_page_metadata(skip, limit, number_of_assets):
@@ -64,8 +100,7 @@ class API:
     ###########
     # DEVICES #
     ###########
-    @gui_helpers.add_rule_unauthenticated(f"api", methods=["GET"],
-                                          auth_method=None)
+    @gui_helpers.add_rule_unauth(f"api")
     def api_description(self):
         return API_VERSION
 
@@ -73,7 +108,8 @@ class API:
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices", methods=["GET"], auth_method=basic_authentication)
+    @api_add_rule(f"devices", required_permissions={Permission(PermissionType.Devices,
+                                                               PermissionLevel.ReadOnly)})
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         devices_collection = self._entity_views_db_map[EntityType.Devices]
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
@@ -90,13 +126,13 @@ class API:
         return jsonify(return_doc)
 
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices/count", methods=["GET"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"devices/count", required_permissions={Permission(PermissionType.Devices,
+                                                                     PermissionLevel.ReadOnly)})
     def api_devices_count(self, mongo_filter):
         return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices])
 
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices/<device_id>", methods=["GET"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"devices/<device_id>", required_permissions={Permission(PermissionType.Devices,
+                                                                           PermissionLevel.ReadOnly)})
     def api_device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id, ["installed_software", "security_patches",
                                                                   "available_security_patches", "users",
@@ -110,7 +146,8 @@ class API:
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users", auth_method=basic_authentication)
+    @api_add_rule(f"users", required_permissions={Permission(PermissionType.Users,
+                                                             PermissionLevel.ReadOnly)})
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         users_collection = self._entity_views_db_map[EntityType.Users]
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
@@ -126,13 +163,13 @@ class API:
         return jsonify(return_doc)
 
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users/count", methods=["GET"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"users/count", required_permissions={Permission(PermissionType.Users,
+                                                                   PermissionLevel.ReadOnly)})
     def api_users_count(self, mongo_filter):
         return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users])
 
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users/<user_id>", methods=["GET"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"users/<user_id>", required_permissions={Permission(PermissionType.Users,
+                                                                       PermissionLevel.ReadOnly)})
     def api_user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ["associated_devices"])
 
@@ -144,8 +181,8 @@ class API:
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/alerts", methods=["GET", "PUT", "DELETE"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"alerts", methods=["GET", "PUT", "DELETE"], required_permissions={Permission(PermissionType.Alerts,
+                                                                                                ReadOnlyJustForGet)})
     def api_alerts(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         if request.method == "GET":
             alerts = self.get_alerts(limit, mongo_filter, mongo_projection, mongo_sort, skip)
@@ -182,8 +219,9 @@ class API:
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices/views", methods=["GET", "POST", "DELETE"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"devices/views", methods=["GET", "POST", "DELETE"],
+                  required_permissions={Permission(PermissionType.Devices,
+                                                   ReadOnlyJustForGet)})
     def api_device_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the devices db
@@ -193,8 +231,9 @@ class API:
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users/views", methods=["GET", "POST", "DELETE"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"users/views", methods=["GET", "POST", "DELETE"],
+                  required_permissions={Permission(PermissionType.Users,
+                                                   ReadOnlyJustForGet)})
     def api_users_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the users db
@@ -206,8 +245,9 @@ class API:
     # ACTIONS #
     ###########
 
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/actions/<action_type>", methods=["POST"],
-                                          auth_method=basic_authentication)
+    @api_add_rule(f"actions/<action_type>", methods=["POST"],
+                  required_permissions={Permission(PermissionType.Devices,
+                                                   PermissionLevel.ReadWrite)})
     def api_run_actions(self, action_type):
         """
         Executes a run shell command on devices.
@@ -218,7 +258,7 @@ class API:
         action_data["action_type"] = action_type
         return self.run_actions(action_type)
 
-    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/actions", methods=["GET"], auth_method=basic_authentication)
+    @api_add_rule(f"actions")
     def api_get_actions(self):
         """
         Executes a run shell command on devices.

@@ -3,7 +3,7 @@
     	{ title: 'users', path: { name: 'Users'}},
     	{ title: userName }
     ]">
-        <x-data-entity module="users" />
+        <x-data-entity module="users" :read-only="isReadOnly" />
     </x-page>
 </template>
 
@@ -31,6 +31,10 @@
 					} else if (!Array.isArray(name)) {
 						return name
 					}
+                },
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Users === 'ReadOnly'
                 }
             })
         }

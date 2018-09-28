@@ -1,31 +1,34 @@
 <template>
-    <aside class="x-side-bar" v-bind:class="{ 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
+    <aside class="x-side-bar" v-bind:class="{ collapse: collapseSidebar || ($resize && $mq.below(1200)) }">
         <div class="x-user">
             <div class="x-user-profile">
-                <img :src="auth.data.pic_name" />
-                <h5>{{ `${auth.data.first_name} ${auth.data.last_name}` }}</h5>
+                <img :src="userDetails.pic" />
+                <h5>{{ userDetails.name }}</h5>
             </div>
             <div class="x-user-actions">
                 <a @click="logout" title="Logout">
                     <svg-icon name="navigation/logout" height="16" :original="true" />
                 </a>
+                <router-link :to="{name: 'My Account'}" active-class="active" @click.native="$emit('click')" title="My Account">
+                    <svg-icon name="navigation/settings" height="16" :original="true" />
+                </router-link>
             </div>
         </div>
         <x-nested-nav>
-            <x-nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true" id="dashboard"/>
-            <x-nested-nav-item route-name="Devices" icon-name="devices" id="devices">
-                <x-nested-nav nest-level="1" class="collapse">
-                    <x-nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved" id="devices-queries"/>
+            <x-nested-nav-item v-bind="navigationLinkProps('Dashboard')" icon="dashboard" :exact="true" id="dashboard" />
+            <x-nested-nav-item v-bind="navigationLinkProps('Devices')" icon="devices" id="devices" >
+                <x-nested-nav nest-level="1" class="collapse" v-if="!isRestricted('Devices')">
+                    <x-nested-nav-item name="Saved Queries" path="/devices/query/saved" id="devices-queries"/>
                 </x-nested-nav>
             </x-nested-nav-item>
-            <x-nested-nav-item route-name="Users" icon-name="users" id="users">
-                <x-nested-nav nest-level="1" class="collapse">
-                    <x-nested-nav-item route-name="Saved Queries" router-path="/users/query/saved"/>
+            <x-nested-nav-item v-bind="navigationLinkProps('Users')" icon="users" id="users">
+                <x-nested-nav nest-level="1" class="collapse" v-if="!isRestricted('Users')">
+                    <x-nested-nav-item name="Saved Queries" path="/users/query/saved"/>
                 </x-nested-nav>
             </x-nested-nav-item>
-            <x-nested-nav-item route-name="Alerts" icon-name="alert" id="alerts" />
-            <x-nested-nav-item route-name="Adapters" icon-name="adapter" id="adapters" />
-            <x-nested-nav-item route-name="Reporting" icon-name="report" id="reports" />
+            <x-nested-nav-item v-bind="navigationLinkProps('Alerts')" icon="alert" id="alerts" />
+            <x-nested-nav-item v-bind="navigationLinkProps('Adapters')" icon="adapter" id="adapters" />
+            <x-nested-nav-item v-bind="navigationLinkProps('Reports')" icon="report" id="reports" />
         </x-nested-nav>
     </aside>
 </template>
@@ -40,8 +43,37 @@
     export default {
         name: 'side-bar-container',
         components: { xNestedNav, xNestedNavItem },
-        computed: mapState([ 'auth', 'interaction' ]),
-        methods: mapActions({ logout: LOGOUT })
+        computed: mapState({
+            userDetails(state) {
+                return {
+                    name: `${state.auth.data.first_name} ${state.auth.data.last_name}`,
+                    pic: state.auth.data.pic_name
+                }
+            },
+            userPermissions(state) {
+                return state.auth.data.permissions
+            },
+            collapseSidebar(state) {
+                return state.interaction.collapseSidebar
+            }
+        }),
+        methods: {
+            ...mapActions({ logout: LOGOUT }),
+            navigationLinkProps(name) {
+                let restricted = this.isRestricted(name)
+                return {
+                    name,
+                    disabled: restricted,
+                    clickHandler: restricted? this.notifyAccess : undefined
+                }
+            },
+            isRestricted(name) {
+                return this.userPermissions[name] === 'Restricted'
+            },
+            notifyAccess(name) {
+                this.$emit('access-violation', name)
+            }
+        }
     }
 </script>
 
@@ -91,7 +123,7 @@
                     padding: 0 4px;
                     .svg-fill {  fill: $grey-4;  }
                     .svg-stroke {  stroke: $grey-4;  }
-                    &:hover {
+                    &:hover, &.active {
                         color: $theme-white;
                         .svg-fill {  fill: $theme-white;  }
                         .svg-stroke {  stroke: $theme-white;  }

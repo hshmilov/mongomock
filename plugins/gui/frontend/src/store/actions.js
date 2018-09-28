@@ -4,10 +4,9 @@ import Promise from 'promise'
 import { INIT_USER } from './modules/auth'
 import {
 	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT,
-	UPDATE_DATA_VIEWS, ADD_DATA_VIEW,
-	UPDATE_DATA_FIELDS,
+	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
-	UPDATE_REMOVED_DATA_VIEW
+	UPDATE_REMOVED_DATA_VIEW, UPDATE_SYSTEM_CONFIG
 } from './mutations'
 
 let host = ''
@@ -310,6 +309,14 @@ export const runAction = ({dispatch}, payload) => {
 export const STOP_RESEARCH_PHASE = 'STOP_RESEARCH_PHASE'
 export const stopResearch = ({dispatch}) => {
     return dispatch(REQUEST_API, {
-        rule: `stop_research_phase`,
+        rule: 'stop_research_phase',
         method: 'POST'
     })}
+
+export const FETCH_SYSTEM_CONFIG = 'FETCH_SYSTEM_CONFIG'
+export const fetchSystemConfig =({dispatch}) => {
+    return dispatch(REQUEST_API, {
+        rule: 'configuration',
+        type: UPDATE_SYSTEM_CONFIG
+    })
+}

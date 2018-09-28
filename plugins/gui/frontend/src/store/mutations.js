@@ -170,3 +170,12 @@ export const updateDataByID = (state, payload) => {
 		current.data = payload.data
 	}
 }
+
+export const UPDATE_SYSTEM_CONFIG = 'UPDATE_SYSTEM_CONFIG'
+export const updateSystemConfig = (state, payload) => {
+	state.configuration.fetching = payload.fetching
+	state.configuration.error = payload.error
+	if (payload.data) {
+		state.configuration.data = payload.data
+	}
+}

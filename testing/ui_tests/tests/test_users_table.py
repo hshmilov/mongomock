@@ -52,6 +52,7 @@ class TestUsersTable(TestBase):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
+        self.users_page.wait_for_spinner_to_end()
         assert self.users_page.is_text_in_coloumn(self.USER_NAME_COLUMN, USER_NAME_UNICODE)
 
     def test_user_edit_columns(self):

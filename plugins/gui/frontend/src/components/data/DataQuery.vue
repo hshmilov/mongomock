@@ -78,7 +78,9 @@
 		components: {
 			xDropdown, SearchInput, NestedMenu, NestedMenuItem, xSchemaFilter, Modal
         },
-		props: {module: {required: true}, limit: {default: 5}},
+		props: {
+		    module: {required: true}, limit: {default: 5}, readOnly: { default: false }
+		    },
 		computed: {
 			...mapState({
                 savedViews(state) {
@@ -129,7 +131,7 @@
 			},
 			disableSaveQuery() {
 				/* Determine whether query cannot be saved right now or it can */
-				return this.queryFilter === '' || this.queryFilter !== this.searchValue || !this.filterValid
+				return this.readOnly || this.queryFilter === '' || this.queryFilter !== this.searchValue || !this.filterValid
 			},
             isSearchSimple() {
 				/* Determine whether current search input value is an AQL filter, or just text */

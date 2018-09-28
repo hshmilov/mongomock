@@ -3,10 +3,12 @@ import io
 import json
 import logging
 from datetime import datetime
+from enum import Enum
+from typing import NamedTuple
 
 import pymongo
 import requests
-from flask import request, session
+from flask import request
 from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
@@ -24,34 +26,93 @@ logger = logging.getLogger(f'axonius.{__name__}')
 PAGINATION_LIMIT_MAX = 2000
 
 
+def check_permissions(user_permissions, required_permissions, request_action: str) -> bool:
+    """
+    Checks whether user_permissions has all required_permissions
+    :param request_action: POST, GET, ...
+    :return: whether or not it has all permissions
+    """
+    if required_permissions:
+        for required_perm in required_permissions:
+            curr_level = user_permissions.get(required_perm.Type, PermissionLevel.Restricted)
+            required_perm_level = required_perm.Level
+            if curr_level == PermissionLevel.ReadWrite:
+                continue
+            elif curr_level == PermissionLevel.ReadOnly:
+                if required_perm_level == ReadOnlyJustForGet:
+                    if request_action != 'GET':
+                        return False
+                    continue
+                elif required_perm_level == PermissionLevel.ReadOnly:
+                    continue
+                elif required_perm_level == PermissionLevel.ReadWrite:
+                    return False
+
+            else:
+                # implied that curr_level == PermissionLevel.Restricted
+                return False
+    return True
+
+
+def deserialize_db_permissions(permissions):
+    """
+    Converts DB-like permissions to pythonic types
+    """
+    return {
+        PermissionType[k]: PermissionLevel[v] for k, v in permissions.items()
+    }
+
+
+# This is sort of an extension for the enum below, this can be used instead of PermissionLevel.* for
+# marking required permissions for endpoints and it means that ReadOnly is required for GET requests
+# while any other type (DELETE, PUT, POST) require ReadWrite permissions
+ReadOnlyJustForGet = object()
+
+
+# Represent the level of access granted to a user
+class PermissionLevel(Enum):
+    Restricted = 'Restricted'
+    ReadOnly = 'Read only'
+    ReadWrite = 'Read and edit'
+
+
+# Represent the possible aspects of the system the user might access
+class PermissionType(Enum):
+    Settings = 'Settings'
+    Adapters = 'Adapters'
+    Devices = 'Devices'
+    Users = 'Users'
+    Alerts = 'Alerts'
+    Dashboard = 'Dashboard'
+    Reports = 'Reports'
+
+
+# Represent a permission in the system
+class Permission(NamedTuple):
+    Type: PermissionType
+    Level: PermissionLevel
+
+
 # Caution! These decorators must come BEFORE @add_rule
-def session_connection(func):
+def add_rule_custom_authentication(rule, auth_method, *args, **kwargs):
     """
-    Decorator stating that the view requires the user to be connected
-    """
-
-    def wrapper(self, *args, **kwargs):
-        user = session.get('user')
-        if user is None:
-            return return_error('You are not connected', 401)
-        return func(self, *args, **kwargs)
-
-    return wrapper
-
-
-def add_rule_unauthenticated(rule, auth_method=session_connection, *args, **kwargs):
-    """
-    Syntactic sugar for add_rule(should_authenticate=False, ...)
+    A URL mapping for methods that are exposed to external services, i.e. browser or applications
     :param rule: rule name
     :param auth_method: An auth method
-    :param args:
-    :param kwargs:
-    :return:
     """
+    # the should_authenticate=False means that we're not checking API-Key,
+    # because those are APIs exposed to either the browser or external applications
     add_rule_res = add_rule(rule, should_authenticate=False, *args, **kwargs)
     if auth_method is not None:
         return lambda func: auth_method(add_rule_res(func))
     return add_rule_res
+
+
+def add_rule_unauth(rule, *args, **kwargs):
+    """
+    A URL mapping for GUI/API endpoints that work even if the user is not logged in, e.g. the login mechanism itself
+    """
+    return add_rule_custom_authentication(rule, None, *args, **kwargs)
 
 
 # Caution! These decorators must come BEFORE @add_rule
@@ -161,6 +222,25 @@ def beautify_db_entry(entry):
     tmp['uuid'] = str(entry['_id'])
     del tmp['_id']
     return tmp
+
+
+def beautify_user_entry(user):
+    """
+    Takes a user from DB form and converts it to the form the GUI accepts.
+    Takes off password field and other sensitive information.
+    :param entry:
+    :return:
+    """
+    user = beautify_db_entry(user)
+    user = {k: v for k, v in user.items() if k in ['_id',
+                                                   'user_name',
+                                                   'first_name',
+                                                   'last_name',
+                                                   'pic_name',
+                                                   'permissions',
+                                                   'admin',
+                                                   'source']}
+    return user
 
 
 def _perform_aggregation(entity_views_db,

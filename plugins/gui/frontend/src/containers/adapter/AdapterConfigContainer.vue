@@ -6,14 +6,15 @@
         <x-table-actions title="Add or Edit Servers" :loading="loading">
             <template slot="actions">
                 <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="x-btn link">Remove</div>
-                <div @click="configServer('new')" id="new_server" class="x-btn">+ New Server</div>
+                <div @click="configServer('new')" id="new_server"
+                     class="x-btn" :class="{ disabled: isReadOnly }">+ New Server</div>
             </template>
-            <x-table slot="table" :fields="tableFields" :data="adapterClients" :click-row-handler="configServer"
-                     id-field="uuid" v-model="selectedServers" />
+            <x-table slot="table" :fields="tableFields" id-field="uuid" v-model="isReadOnly? undefined: selectedServers"
+                     :click-row-handler="isReadOnly? undefined: configServer" :data="adapterClients" />
         </x-table-actions>
 
         <div class="config-settings">
-            <div class="header x-btn link" @click="toggleSettings">
+            <div class="header x-btn link" :class="{ disabled: isReadOnly }" @click="toggleSettings">
                 <svg-icon name="navigation/settings" :original="true" height="20"/>Advanced Settings</div>
             <div class="content">
                 <tabs v-if="currentAdapter && advancedSettings" class="growing-y" ref="tabs">
@@ -38,13 +39,15 @@
                     <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
                     <div class="error-text">{{serverModal.error}}</div>
                 </div>
-                <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" @submit="saveServer"
-                               @validate="validateServer" :api-upload="`adapters/${adapterId}`" />
+                <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" :api-upload="`adapters/${adapterId}`"
+                               @submit="saveServer" @validate="validateServer" />
             </div>import aiohttp
             <template slot="footer">
                 <button @click="toggleServerModal" class="x-btn link">Cancel</button>
-                <button id="test_reachability" @click="testServer" class="x-btn" :class="{disabled: !serverModal.valid}">Test Connectivity</button>
-                <button id="save_server" @click="saveServer" class="x-btn" :class="{disabled: !serverModal.valid}">Save</button>
+                <button id="test_reachability" @click="testServer"
+                        class="x-btn" :class="{disabled: !serverModal.valid}">Test Connectivity</button>
+                <button id="save_server" @click="saveServer"
+                        class="x-btn" :class="{disabled: !serverModal.valid}">Save</button>
             </template>
         </modal>
         <modal v-if="deleting" @close="closeConfirmDelete" @confirm="doRemoveServers" approve-text="Delete">
@@ -76,13 +79,17 @@
     import { SAVE_PLUGIN_CONFIG } from "../../store/modules/configurable"
 	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
-	export default {
+    export default {
 		name: 'adapter-config-container',
 		components: { xPage, xTableActions, xTable, Tabs, Tab, Modal, xLogoName, xSchemaForm, xToast },
 		computed: {
 			...mapState({
                 currentAdapter(state) {
 					return state.adapter.currentAdapter
+                },
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Adapters === 'ReadOnly'
                 }
 			}),
 			adapterId () {
@@ -140,12 +147,15 @@
 			}
 		},
 		methods: {
-            ...mapMutations({ updateAdapter: UPDATE_CURRENT_ADAPTER, changeState: CHANGE_TOUR_STATE }),
+            ...mapMutations({
+                updateAdapter: UPDATE_CURRENT_ADAPTER, changeState: CHANGE_TOUR_STATE
+            }),
 			...mapActions({
                 fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER, testAdapter: TEST_ADAPTER_SERVER,
                 archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG
 			}),
 			configServer (serverId) {
+                if (this.isReadOnly) return
             	this.message = ''
 				this.serverModal.valid = true
 				if (serverId === 'new') {
@@ -164,6 +174,7 @@
 				this.changeState({name: 'saveServer'})
             },
 			removeServers () {
+                if (this.isReadOnly) return
                 this.deleting = true
 			},
             doRemoveServers() {
@@ -183,7 +194,7 @@
             	this.serverModal.valid = valid
             },
 			saveServer () {
-				if (!this.serverModal.valid) {
+				if (!this.serverModal.valid || this.isReadOnly) {
 					return
                 }
                 this.message = 'Connecting to Server...'
@@ -250,6 +261,7 @@
                 this.message = ''
             },
             toggleSettings() {
+                if (this.isReadOnly) return
                 if (this.advancedSettings) {
             		this.$refs.tabs.$el.classList.add('shrinking-y')
                     setTimeout(() => this.advancedSettings = false, 1000)

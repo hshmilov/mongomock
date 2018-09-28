@@ -3,7 +3,7 @@
     	{ title: 'devices', path: { name: 'Devices'}},
     	{ title: deviceName }
     ]">
-        <x-data-entity module="devices"/>
+        <x-data-entity module="devices" :read-only="isReadOnly" />
     </x-page>
 </template>
 
@@ -35,6 +35,10 @@
                         return name
                     }
 
+                },
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Devices === 'ReadOnly'
                 }
             })
 		}

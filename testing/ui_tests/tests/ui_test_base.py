@@ -13,6 +13,7 @@ from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
 from ui_tests.pages.login_page import LoginPage
+from ui_tests.pages.my_account_page import MyAccountPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
 from ui_tests.pages.report_page import ReportPage
@@ -82,6 +83,7 @@ class TestBase:
         self.base_page = BasePage(**params)
         self.login_page = LoginPage(**params)
         self.settings_page = SettingsPage(**params)
+        self.my_account_page = MyAccountPage(**params)
         self.devices_page = DevicesPage(**params)
         self.devices_queries_page = DevicesQueriesPage(**params)
         self.users_page = UsersPage(**params)

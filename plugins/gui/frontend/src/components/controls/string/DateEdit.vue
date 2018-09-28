@@ -1,5 +1,6 @@
 <template>
-    <date-picker :date="date" :option="dateTimeOption" @change="$emit('input', date.time)" :limit="limit"/>
+    <date-picker :date="date" :option="dateTimeOption" @change="$emit('input', date.time)" :limit="limit" v-if="!disabled" />
+    <input :value="value" :disabled="true" v-else>
 </template>
 
 <script>
@@ -20,6 +21,9 @@
             },
             placeholder: {
                 default: ''
+            },
+            disabled: {
+                default: false
             }
         },
         computed: {

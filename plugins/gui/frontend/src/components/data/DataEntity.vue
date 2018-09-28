@@ -41,11 +41,11 @@
                 </tabs>
             </tab>
             <tab title="Tags" id="tags" key="tags">
-                <div @click="activateTag" class="x-btn link tag-edit">Edit Tags</div>
+                <div @click="activateTag" class="x-btn link tag-edit" :class="{ disabled: readOnly }">Edit Tags</div>
                 <div class="x-grid x-grid-col-2 w-lg">
                     <template v-for="label in entity.labels">
                         <div>{{ label }}</div>
-                        <div class="x-btn link" @click="removeTag(label)">Remove</div>
+                        <div class="x-btn link" :class="{ disabled: readOnly }" @click="removeTag(label)">Remove</div>
                     </template>
                 </div>
             </tab>
@@ -65,10 +65,9 @@
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+    import { SINGLE_ADAPTER } from '../../store/getters'
     import { FETCH_DATA_FIELDS, FETCH_DATA_BY_ID } from '../../store/actions'
-	import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
-	import { SINGLE_ADAPTER } from '../../store/modules/configurable'
-
+    import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
 
     const lastSeenByModule = {
 		'users': 'last_seen_in_devices',
@@ -77,7 +76,7 @@
 	export default {
 		name: 'x-data-entity',
         components: { Tabs, Tab, xSchemaList, xSchemaTable, xSchemaCalendar, xCustomData, xTagModal, PulseLoader },
-        props: { module: {required: true } },
+        props: { module: { required: true }, readOnly: { default: false } },
 		data () {
 			return {
 				viewBasic: true,
@@ -97,7 +96,7 @@
                 	return state.onboarding.tourStates.current
                 },
                 tableView(state) {
-                	return state.configurable.gui.GuiService.config.system_settings.tableView
+                	return state.configuration.data.system.tableView
                 }
             }),
             ...mapGetters({ singleAdapter: SINGLE_ADAPTER }),
@@ -170,11 +169,11 @@
 				return Object.values(this.fields.schema.specific)[0].items.find(schema => schema.name === field)
 			},
 			removeTag (label) {
-				if (!this.$refs || !this.$refs.tagModal) return
+				if (!this.$refs || !this.$refs.tagModal ||this.readOnly) return
 				this.$refs.tagModal.removeEntitiesLabels([label])
 			},
 			activateTag() {
-				if (!this.$refs || !this.$refs.tagModal) return
+				if (!this.$refs || !this.$refs.tagModal ||this.readOnly) return
 				this.$refs.tagModal.activate()
 			},
             toggleView() {

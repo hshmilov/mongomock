@@ -11,7 +11,7 @@
                 <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title"
                                  :data="item" @click-one="runCoverageFilter(item.properties, $event)"/>
                 <x-card v-for="(chart, chartInd) in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
-                        :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
+                        :removable="!isReadOnly" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
                     <div class="card-history" v-if="chart.metric !== 'timeline'">Showing for
                         <x-date-edit @input="confirmPickDate(chart.uuid, chart.name)"
                                      placeholder="latest" v-model="chartsCurrentlyShowing[chart.uuid]" :show-time="false"
@@ -27,10 +27,10 @@
                     </div>
                 </x-card>
                 <x-card title="New Chart" class="chart-new print-exclude">
-                    <div class="x-btn link" @click="createNewDashboard" id="dashboard_wizard">+</div>
+                    <div class="x-btn link" :class="{disabled: isReadOnly}" @click="createNewDashboard" id="dashboard_wizard">+</div>
                 </x-card>
             </div>
-            <dashboard-wizard-container ref="wizard"/>
+            <dashboard-wizard-container ref="wizard" />
         </template>
         <x-toast v-if="message" :message="message" @done="removeToast"/>
     </x-page>
@@ -55,9 +55,8 @@
 
     import {
         FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
-        FETCH_HISTORICAL_SAVED_CARD, FETCH_HISTORICAL_SAVED_CARD_MIN
+        FETCH_HISTORICAL_SAVED_CARD, FETCH_HISTORICAL_SAVED_CARD_MIN, FETCH_DASHBOARD_FIRST_USE
     } from '../../store/modules/dashboard'
-    import { FETCH_ADAPTERS } from '../../store/modules/adapter'
     import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
     import { SAVE_VIEW } from '../../store/actions'
     import { CHANGE_TOUR_STATE, NEXT_TOUR_STATE } from '../../store/modules/onboarding'
@@ -94,14 +93,22 @@
                         }
                     })
                 },
-                adapterList(state) {
-                    return state.adapter.adapterList.data
-                },
                 devicesView(state) {
 					return state.devices.view
                 },
                 devicesViewsList(state) {
 					return state.devices.views.saved.data
+                },
+                dashboardFirstUse(state) {
+                    return state.dashboard.firstUse.data
+                },
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Dashboard === 'ReadOnly'
+                },
+                isDevicesWrite(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Devices === 'ReadWrite'
                 }
             }),
             lifecycle() {
@@ -128,7 +135,7 @@
             isEmptySystem() {
                 if (this.deviceDiscovery.seen === undefined) return null
 
-                if (this.seenDevices || this.adapterList.some(item => item.status !== '')) {
+                if (this.seenDevices || !this.dashboardFirstUse) {
                     return false
                 }
                 return true
@@ -161,8 +168,8 @@
             }),
             ...mapActions({
                 fetchDiscoveryData: FETCH_DISCOVERY_DATA, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
+                fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE, saveView: SAVE_VIEW,
                 fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
-                fetchAdapters: FETCH_ADAPTERS, saveView: SAVE_VIEW,
                 fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD, fetchHistoricalCardMin: FETCH_HISTORICAL_SAVED_CARD_MIN
             }),
             runCoverageFilter(properties, covered) {
@@ -195,7 +202,7 @@
                 this.$router.push({path: module})
             },
             createNewDashboard() {
-                if (!this.$refs.wizard) return
+                if (!this.$refs.wizard || this.isReadOnly) return
                 this.wizardActivated = true
                 this.$refs.wizard.activate()
             },
@@ -227,7 +234,7 @@
             },
         },
         created() {
-            this.fetchAdapters()
+            this.fetchDashboardFirstUse()
             const getDashboardData = () => {
                 return Promise.all([
                 	this.fetchDiscoveryData({module: 'devices'}), this.fetchDiscoveryData({module: 'users'}),
@@ -241,7 +248,7 @@
             	if (!this.isEmptySystem) this.nextState('dashboard')
                 if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count
-				if (this.seenDevices) {
+				if (this.seenDevices && this.isDevicesWrite) {
 					let adapter = this.deviceDiscovery.counters.find((item) => !item.name.includes('active_directory'))
 					let name = ''
 					let filter = ''

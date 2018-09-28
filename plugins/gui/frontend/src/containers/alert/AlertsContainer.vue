@@ -1,7 +1,8 @@
 <template>
-    <x-page title="alerts">
-        <x-data-table module="alert" title="Alerts" @click-row="configAlert" id-field="uuid" v-model="selected" ref="table">
-            <template slot="actions">
+    <x-page title="alerts" class="x-alerts" :class="{disabled: isReadOnly}">
+        <x-data-table module="alert" title="Alerts" @click-row="configAlert" id-field="uuid"
+                      v-model="isReadOnly? undefined: selected" ref="table">
+            <template slot="actions" v-if="!isReadOnly">
                 <div v-if="selected && selected.length" @click="removeAlerts" class="x-btn link">Remove</div>
                 <div @click="createAlert" class="x-btn" id="alert_new">+ New Alert</div>
             </template>
@@ -25,6 +26,10 @@
             ...mapState({
                 tourAlerts(state) {
                     return state.onboarding.tourStates.queues.alerts
+                },
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Alerts === 'ReadOnly'
                 }
 			})
 		},
@@ -40,15 +45,23 @@
 				/*
                     Fetch the requested alert configuration and navigate to configuration page with the id, to load it
 				 */
-				if (!alertId) { return }
+				if (!alertId || this.isReadOnly) {
+				    return
+				}
                 this.setAlert(alertId)
 				this.$router.push({path: `alert/${alertId}`})
             },
             createAlert() {
+                if (this.isReadOnly) {
+                    return
+                }
 				this.setAlert('new')
 				this.$router.push({path: '/alert/new'});
             },
             removeAlerts() {
+                if (this.isReadOnly) {
+                    return
+                }
             	this.archiveAlerts(this.selected)
             }
         },
@@ -62,5 +75,10 @@
 
 
 <style lang="scss">
-
+    .x-alerts.disabled {
+        .x-striped-table .clickable:hover {
+            cursor: default;
+            box-shadow: none;
+        }
+    }
 </style>

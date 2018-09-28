@@ -1,9 +1,11 @@
 <template>
     <div class="x-range-edit">
         <div class="label">From</div>
-        <input v-model="data.gte" type="text" @input="input" @focusout.stop="focusout" :class="{'error-border': error}" />
+        <input v-model="data.gte" type="text" @input="input" @focusout.stop="focusout"
+               :class="{'error-border': error}" :disabled="readOnly" />
         <div class="label">To</div>
-        <input v-model="data.lte" type="text" @input="input" @focusout.stop="focusout" :class="{'error-border': error}" />
+        <input v-model="data.lte" type="text" @input="input" @focusout.stop="focusout"
+               :class="{'error-border': error}" :disabled="readOnly" />
     </div>
 </template>
 

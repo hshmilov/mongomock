@@ -21,15 +21,19 @@ export const UPDATE_DASHBOARD_COVERAGE = 'UPDATE_DASHBOARD_COVERAGE'
 export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
 export const FETCH_HISTORICAL_SAVED_CARD_MIN = 'FETCH_HISTORICAL_SAVED_CARD_MIN'
 
+export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE'
+export const UPDATE_DASHBOARD_FIRST_USE = 'UPDATE_DASHBOARD_FIRST_USE'
+
 export const dashboard = {
 	state: {
 		lifecycle: { data: {}, fetching: false, error: '' },
 		dataDiscovery: {
 			devices: {data: {}, fetching: false, error: ''},
-			users: {data: {}, fetching: false, error: ''}
+			users: {data: {}, fetching: false, error: '' }
 		},
-		charts: { data: [], fetching: false, error: ''},
-		coverage: { data: {}, fetching: false, error: ''}
+		charts: { data: [], fetching: false, error: '' },
+		coverage: { data: {}, fetching: false, error: '' },
+		firstUse: { data: null, fetching: false, error: '' }
 	},
 	mutations: {
 		[ UPDATE_LIFECYCLE ] (state, payload) {
@@ -67,6 +71,13 @@ export const dashboard = {
 		},
 		[ UPDATE_REMOVED_DASHBOARD ] (state, dashboardId) {
 			state.charts.data = state.charts.data.filter(dashboard => dashboard.uuid != dashboardId)
+		},
+		[ UPDATE_DASHBOARD_FIRST_USE] (state, payload) {
+            state.firstUse.fetching = payload.fetching
+            state.firstUse.error = payload.error
+			if (payload.data !== undefined) {
+				state.firstUse.data = payload.data
+			}
 		}
 	},
 	actions: {
@@ -132,7 +143,13 @@ export const dashboard = {
 		},
 		[ FETCH_HISTORICAL_SAVED_CARD_MIN ] ({ dispatch }) {
 			return dispatch(REQUEST_API, {
-				rule: `first_historical_date`
+				rule: 'first_historical_date'
+			})
+		},
+		[ FETCH_DASHBOARD_FIRST_USE ] ({ dispatch }) {
+			return dispatch(REQUEST_API, {
+				rule: 'dashboard/first_use',
+				type: UPDATE_DASHBOARD_FIRST_USE
 			})
 		}
 	}

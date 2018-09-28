@@ -1,1 +1,1 @@
-export const entities = ['devices', 'users']
+export const entities = ['Devices', 'Users']

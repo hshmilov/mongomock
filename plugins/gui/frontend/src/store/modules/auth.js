@@ -9,7 +9,10 @@ export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
 export const INIT_ERROR = 'INIT_ERROR'
 export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS'
+export const GET_ALL_USERS = 'GET_ALL_USERS'
 export const CHANGE_PASSWORD = 'CHANGE_PASSWORD'
+export const CHANGE_PERMISSIONS = 'CHANGE_PERMISSIONS'
+export const CREATE_USER = 'CREATE_USER'
 
 
 export const auth = {
@@ -138,6 +141,14 @@ export const auth = {
             	if (window.location.pathname != '/') window.location.pathname = '/'
 			})
 		},
+		[ GET_ALL_USERS ] ({dispatch}) {
+			/*
+				Request from server to login a user according to its Google token id
+			 */
+			return dispatch(REQUEST_API, {
+				rule: 'authusers',
+			})
+		},
 		[ CHANGE_PASSWORD ] ({dispatch, commit}, payload) {
 			/*
 				Request from server to login a user according to its Google token id
@@ -151,5 +162,31 @@ export const auth = {
 				data: payload
 			})
 		},
+		[ CHANGE_PERMISSIONS ] ({dispatch, commit}, payload) {
+			/*
+				Request from server to login a user according to its Google token id
+			 */
+			if (!payload || !payload.user_name || !payload.permissions) {
+				return
+			}
+			return dispatch(REQUEST_API, {
+				rule: 'edit_foreign_user',
+				method: 'POST',
+				data: payload
+			})
+		},
+		[ CREATE_USER ] ({dispatch, commit}, payload) {
+			/*
+				Request from server to login a user according to its Google token id
+			 */
+			if (!payload || !payload.user_name) {
+				return
+			}
+			return dispatch(REQUEST_API, {
+				rule: 'edit_foreign_user',
+				method: 'PUT',
+				data: payload
+			})
+		}
 	}
 }

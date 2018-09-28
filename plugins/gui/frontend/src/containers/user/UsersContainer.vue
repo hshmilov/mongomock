@@ -1,8 +1,8 @@
 <template>
     <x-page title="users">
-        <x-data-query :module="module" />
-        <x-data-table :module="module" v-model="selectedUsers" id-field="internal_axon_id" title="Users"
-                      @click-row="configUser" ref="table">
+        <x-data-query :module="module" :read-only="isReadOnly" />
+        <x-data-table :module="module" id-field="internal_axon_id" title="Users" ref="table"
+                      @click-row="configUser" v-model="isReadOnly? undefined: selectedUsers">
             <template slot="actions">
                 <x-data-action-menu v-show="selectedUsers && selectedUsers.length" :module="module"
                                     :selected="selectedUsers" @done="updateUsers" />
@@ -21,13 +21,19 @@
     import xDataFieldMenu from '../../components/data/DataFieldMenu.vue'
     import xDataActionMenu from '../../components/data/DataActionMenu.vue'
 
-	import { mapActions } from 'vuex'
+	import { mapState, mapActions } from 'vuex'
 	import { FETCH_DATA_CONTENT_CSV } from '../../store/actions'
 
 	export default {
 		name: 'users-container',
         components: { xPage, xDataQuery, xDataTable, xDataFieldMenu, xDataActionMenu },
         computed: {
+            ...mapState({
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Users === 'ReadOnly'
+                }
+            }),
 			module() {
 				return 'users'
             }

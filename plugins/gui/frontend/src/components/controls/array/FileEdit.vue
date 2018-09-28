@@ -7,9 +7,9 @@
             </div>
         </template>
         <template v-else>
-            <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file"/>
+            <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file" :disabled="readOnly" />
             <div class="file-name" :class="{'error-border': error}">{{value ? value.filename : "No file chosen"}}</div>
-            <div class="x-btn link" @click="selectFile">Choose file</div>
+            <div class="x-btn link" :class="{ disabled: readOnly }" @click="selectFile">Choose file</div>
         </template>
     </div>
 </template>
@@ -17,7 +17,7 @@
 <script>
     export default {
         name: 'x-array-edit',
-        props: ['schema', 'value', 'apiUpload'],
+        props: ['schema', 'value', 'apiUpload', 'readOnly'],
         data() {
             return {
                 valid: !!this.value,
@@ -28,6 +28,7 @@
         },
         methods: {
         	selectFile() {
+        	    if (this.readOnly) return
         		this.$refs.file.click()
             },
             uploadFile(uploadEvent) {
@@ -89,6 +90,9 @@
             color: $theme-black;
             font-size: 12px;
             font-weight: 200;
+            &.disabled {
+                cursor: default;
+            }
         }
         .file-name {
             border: 1px solid $grey-2;

@@ -11,10 +11,10 @@
 		computed: {
             ...mapState({
                 percentageThresholds(state) {
-                    if (!state.configurable.gui.GuiService || !state.configurable.gui.GuiService.config.system_settings) {
+                    if (!state.configuration || !state.configuration.data || !state.configuration.data.system) {
                         return []
                     }
-                    return state.configurable.gui.GuiService.config.system_settings.percentageThresholds
+                    return state.configuration.data.system.percentageThresholds
                 }
             }),
 			processedData() {

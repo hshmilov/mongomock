@@ -1,14 +1,12 @@
 <template>
     <div class="array">
-        <div class="grid-span2">
-            <h4 v-if="schema.title" :title="schema.description || ''" class="array-header"
-                :id="schema.name">{{ schema.title }}</h4>
-        </div>
+        <h4 v-if="schema.title" :title="schema.description || ''" class="array-header"
+            :id="schema.name">{{ schema.title }}</h4>
         <div v-for="item in shownSchemaItems" class="item">
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
                 <component :is="item.type" :schema="item" v-model="data[item.name]" @validate="onValidate"
-                           @input="onInput" :api-upload="apiUpload" ref="itemChild" />
+                           @input="onInput" :api-upload="apiUpload" ref="itemChild" :read-only="readOnly" />
             </x-type-wrap>
         </div>
     </div>
@@ -28,6 +26,7 @@
     export default {
         name: 'array',
         mixins: [ArrayMixin],
+        props: { readOnly: { default: false } },
         components: {
             xTypeWrap, string, number, integer, bool, file, range
         },

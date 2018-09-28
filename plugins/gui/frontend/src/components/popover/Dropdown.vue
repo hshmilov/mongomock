@@ -1,5 +1,5 @@
 <template>
-    <div class="x-dropdown" v-bind:class="{ 'active': isActive }" v-on-clickaway="close">
+    <div class="x-dropdown" v-bind:class="{ active: isActive, disabled: readOnly }" v-on-clickaway="close">
         <div :class="{trigger: true, arrow: arrow}" data-toggle="dropdown" aria-haspopup="true" :aria-expanded="isActive"
              @click="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
             <slot name="trigger"></slot>
@@ -16,7 +16,13 @@
     export default {
         name: 'x-dropdown',
         mixins: [ clickaway ],
-        props: {size: {default: ''}, align: {default: 'left'}, alignSpace: {default: 0}, arrow: {default: true}},
+        props: {
+            size: {default: ''},
+            align: {default: 'left'},
+            alignSpace: {default: 0},
+            arrow: {default: true},
+            readOnly: { default: false }
+        },
         computed: {
         	alignAuto() {
         		if (this.align === 'right') return 'left'
@@ -42,10 +48,14 @@
         },
         methods: {
         	open() {
-        	    this.isActive = true
+        	    if (!this.readOnly) {
+        	        this.isActive = true
+                }
             },
             toggle() {
-                this.isActive = !this.isActive
+        	    if (!this.readOnly) {
+                    this.isActive = !this.isActive
+                }
             },
         	close() {
         		this.isActive = false
@@ -69,6 +79,9 @@
                 right: 8px;
                 @include triangle('down', 0.35rem);
             }
+        }
+        &.disabled .trigger {
+            cursor: default;
         }
         > .content {
             background-color: $theme-white;

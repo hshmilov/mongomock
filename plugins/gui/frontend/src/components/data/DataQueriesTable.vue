@@ -3,11 +3,13 @@
         <x-search v-model="searchText" placeholder="Search Query Name..." />
         <x-actionable-table title="Queries" :count="queries.length" :loading="loading">
             <template slot="actions">
-                <div v-if="selected.length === 1" class="x-btn link" @click="createAlert">+ New Alert</div>
-                <div class="x-btn link" @click="removeQuery">Remove</div>
+                <div v-if="selected.length === 1" class="x-btn link" :class="{disabled: !isAlertsWrite}"
+                     @click="createAlert">+ New Alert</div>
+                <div v-if="selected && selected.length" @click="removeQuery"
+                     class="x-btn link" :class="{ disabled: readOnly }">Remove</div>
             </template>
-            <x-table slot="table" id-field="uuid" :data="filteredQueries" :fields="fields" v-model="selected"
-                     :click-row-handler="runQuery" />
+            <x-table slot="table" id-field="uuid" :data="filteredQueries" :fields="fields"
+                     v-model="readOnly? undefined: selected" :click-row-handler="runQuery" />
         </x-actionable-table>
     </div>
 </template>
@@ -19,24 +21,23 @@
 
     import { mapState, mapMutations, mapActions } from 'vuex'
 	import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
-    import {FETCH_DATA_VIEWS, REMOVE_DATA_VIEW} from '../../store/actions'
+    import { FETCH_DATA_VIEWS, REMOVE_DATA_VIEW } from '../../store/actions'
 	import { UPDATE_ALERT_VIEW } from '../../store/modules/alert'
 
 	export default {
 		name: 'data-queries-table',
         components: { xSearch, xActionableTable, xTable },
-        props: {module: {required: true}},
-        data() {
-			return {
-				selected: [],
-                loading: true,
-                searchText: ''
-            }
+        props: {
+		    module: { required: true }, readOnly: { default: false }
         },
         computed: {
             ...mapState({
                 queries(state) {
                 	return state[this.module].views.saved.data
+                },
+                isAlertsWrite(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Alerts === 'ReadWrite'
                 }
             }),
             filteredQueries() {
@@ -51,6 +52,13 @@
 					{name: 'view->query->filter', title: 'Filter', type: 'string'},
 					{name: 'timestamp', title: 'Save Time', type: 'string', format: 'date-time'},
 				]
+            }
+        },
+        data() {
+            return {
+                selected: [],
+                loading: true,
+                searchText: ''
             }
         },
         methods: {
@@ -69,7 +77,7 @@
 				this.$router.push({ path: `/${this.module}` })
 			},
 			createAlert() {
-				if (!this.selected.length) return
+				if (!this.selected.length || !this.isAlertsWrite) return
 
 				this.updateAlertQuery(this.selected[0])
 				/* Navigating to new alert - requested query will be selected there */

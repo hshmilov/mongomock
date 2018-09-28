@@ -19,8 +19,11 @@ class GuiService(PluginService):
         super()._migrade_db()
         if self.db_schema_version < 1:
             self._update_schema_version_1()
+        if self.db_schema_version < 2:
+            self._update_schema_version_2()
 
     def _update_schema_version_1(self):
+        print('upgrade to schema 1')
         try:
             preceding_charts = []
             for chart in self._get_all_dashboard():
@@ -50,6 +53,62 @@ class GuiService(PluginService):
             self.db_schema_version = 1
         except Exception as e:
             print(f'Could not upgrade gui db to version 1. Details: {e}')
+
+    def __perform_schema_2(self):
+        """
+        (1) Delete all fake users that aren't admin
+        (2) User permissions were added
+        (3) 'source' was added - where did the user come from?
+        (4) API Key is now on a per user basis
+        """
+        users_collection = self.db.get_collection(self.plugin_name, 'users')
+
+        # (1) delete all nonadmin users
+        users_collection.delete_many(
+            {
+                'user_name': {
+                    '$ne': 'admin'
+                }
+            })
+
+        # (4) fetch the API key/secret from DB
+        api_keys_collection = self.db.get_collection(self.plugin_name, 'api_keys')
+        api_data = api_keys_collection.find_one({})
+        if not api_data:
+            print('No API Key, GUI is new, stopping')
+            return
+
+        # We assume we only have one "regular" user because the system didn't allow multiple users so far
+        # (2) - Add max permissions to the user
+        # (3) - Mark it as 'internal' - i.e. not from LDAP, etc
+        # (4) - Add the API key and secret
+        users_collection.update_one(
+            {
+                'user_name': 'admin'
+            },
+            {
+                '$set': {
+                    'permissions': {},
+                    'admin': True,
+                    'source': 'internal',
+                    'api_key': api_data['api_key'],
+                    'api_secret': api_data['api_secret']
+                }
+            }
+        )
+
+    def _update_schema_version_2(self):
+        """
+        See __perform_schema_2 for implementation
+        :return:
+        """
+        print('upgrade to schema 2')
+        try:
+            self.__perform_schema_2()
+        except Exception as e:
+            print(f'Could not upgrade gui db to version 2. Details: {e}')
+
+        self.db_schema_version = 2
 
     def _get_all_dashboard(self):
         return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find({})

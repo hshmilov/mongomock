@@ -1,8 +1,8 @@
 <template>
     <x-page title="devices">
-        <x-data-query :module="module" />
-        <x-data-table :module="module" id-field="internal_axon_id" v-model="selectedDevices" title="Devices"
-                      @click-row="configDevice" @data="updateDeviceState" ref="table">
+        <x-data-query :module="module" :read-only="isReadOnly" />
+        <x-data-table :module="module" id-field="internal_axon_id" title="Devices" ref="table" @click-row="configDevice"
+                      v-model="isReadOnly? undefined: selectedDevices" @data="updateDeviceState">
             <template slot="actions">
                 <!-- Available actions for performing on currently selected group of devices --->
                 <devices-actions-container v-show="anySelected" :devices="selectedDevices" @done="updateDevices" />
@@ -35,7 +35,11 @@
             ...mapState({
 				tourDevices(state) {
 					return state.onboarding.tourStates.queues.devices
-				}
+				},
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Devices === 'ReadOnly'
+                }
             }),
 			module() {
 				return 'devices'

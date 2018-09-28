@@ -1,5 +1,5 @@
 <template>
-    <div v-show="isActive" :class="{'active': isActive, [ id ]: true, 'content': true}" role="tabpanel">
+    <div v-show="isActive" :class="{'active': isActive, [ id ]: true}" class="tab-content" role="tabpanel">
         <slot></slot>
     </div>
 </template>
@@ -22,8 +22,8 @@
 	}
 </script>
 
-<style lang="scss" scoped>
-    .content {
+<style lang="scss">
+    .tab-content {
         height: 100%;
     }
 

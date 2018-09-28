@@ -1,66 +1,107 @@
+import configparser
+import io
+import json
 import logging
+import os
+import re
 import secrets
+import tarfile
 import threading
-from collections import namedtuple
-from typing import Iterable
+import time
+from datetime import date, datetime, timedelta
+from multiprocessing import cpu_count
+from multiprocessing.pool import ThreadPool
+from typing import Iterable, Tuple
 
 import gridfs
 import ldap3
-
+import pymongo
+import requests
+from apscheduler.executors.pool import \
+    ThreadPoolExecutor as ThreadPoolExecutorApscheduler
+from apscheduler.triggers.cron import CronTrigger
+from axonius.adapter_base import AdapterProperty
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
+                                          ANALYTICS_SETTING,
+                                          CONFIGURABLE_CONFIGS,
+                                          CORE_UNIQUE_NAME,
+                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
+                                          GUI_SYSTEM_CONFIG_COLLECTION,
+                                          MAINTENANCE_SETTINGS, METADATA_PATH,
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                          SYSTEM_SETTINGS,
+                                          TROUBLESHOOTING_SETTING)
+from axonius.consts.scheduler_consts import Phases, ResearchPhases, StateLevels
+from axonius.email_server import EmailServer
 from axonius.mixins.configurable import Configurable
+from axonius.mixins.triggerable import Triggerable
+from axonius.plugin_base import EntityType, PluginBase, return_error
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.thread_stopper import stoppable
 from axonius.types.ssl_state import SSLState
+from axonius.utils import gui_helpers
+from axonius.utils.datetime import next_weekday, time_from_now
+from axonius.utils.files import create_temp_file, get_local_config_file
+from axonius.utils.gui_helpers import beautify_user_entry, PermissionType, Permission, \
+    PermissionLevel, deserialize_db_permissions, check_permissions, ReadOnlyJustForGet
+from axonius.utils.parsing import bytes_image_to_base64, parse_filter
+from bson import ObjectId
+from dateutil.parser import parse as parse_date
+from dateutil.relativedelta import relativedelta
+from elasticsearch import Elasticsearch
+from flask import (after_this_request, jsonify, make_response, redirect,
+                   request, send_file, session)
+from passlib.hash import bcrypt
+from urllib3.util.url import parse_url
+
+from gui.api import API
+from gui.cached_session import CachedSessionInterface
+from gui.consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
+                        EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE,
+                        SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics,
+                        ChartViews, ResearchStatus)
 from gui.okta_login import try_connecting_using_okta
+from gui.report_generator import ReportGenerator
 
 logger = logging.getLogger(f'axonius.{__name__}')
-from axonius.adapter_base import AdapterProperty
 
-from axonius.thread_stopper import stoppable
-from axonius.utils.files import get_local_config_file, create_temp_file
-from axonius.utils.datetime import next_weekday, time_from_now
-from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
-    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
-    METADATA_PATH, SYSTEM_SETTINGS, MAINTENANCE_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, \
-    CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME
-from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
-from gui.consts import ChartMetrics, ChartViews, ChartFuncs, ResearchStatus, \
-    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT, \
-    SUPPORT_ACCESS_THREAD_ID
-from gui.report_generator import ReportGenerator
-from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.email_server import EmailServer
-from axonius.mixins.triggerable import Triggerable
-from axonius.utils import gui_helpers
-from gui.api import API
 
-import tarfile
-from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
-from axonius.background_scheduler import LoggedBackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-import io
-import os
-import time
-from datetime import date, datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from dateutil.parser import parse as parse_date
-from flask import jsonify, request, session, after_this_request, make_response, send_file, redirect
-from passlib.hash import bcrypt
-from elasticsearch import Elasticsearch
-import requests
-import configparser
-import pymongo
-from bson import ObjectId
-import json
-from axonius.utils.parsing import parse_filter, bytes_image_to_base64
-from urllib3.util.url import parse_url
-import re
-from multiprocessing.pool import ThreadPool
-from multiprocessing import cpu_count
+def session_connection(func, required_permissions: Iterable[Permission]):
+    """
+    Decorator stating that the view requires the user to be connected
+    :param required_permissions: The set (or list...) of Permission required for this api call or none
+    """
+
+    def wrapper(self, *args, **kwargs):
+        user = session.get('user')
+        if user is None:
+            return return_error('You are not connected', 401)
+        permissions = user.get('permissions')
+        if not check_permissions(permissions, required_permissions, request.method) and not user.get('admin'):
+            return return_error("You are lacking some permissions for this request", 401)
+
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 # Caution! These decorators must come BEFORE @add_rule
+def gui_add_rule_logged_in(rule, required_permissions: Iterable[Permission] = None, *args, **kwargs):
+    """
+    A URL mapping for GUI endpoints that use the browser session for authentication,
+    see add_rule_custom_authentication for more information.
+    :param required_permissions: see session_connection for docs
+    """
+    required_permissions = set(required_permissions or [])
+
+    def session_connection_permissions(*args, **kwargs):
+        return session_connection(*args, **kwargs, required_permissions=required_permissions)
+
+    return gui_helpers.add_rule_custom_authentication(rule, session_connection_permissions, *args, **kwargs)
 
 
 def gzipped_downloadable(filename, extension):
@@ -146,7 +187,20 @@ def filter_archived(additional_filter=None):
     return base_non_archived
 
 
-ApiAuth = namedtuple("ApiAuth", ['api_key', 'api_secret'])
+def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, date]]:
+    """
+    Generate date intervals from the given datetimes according to the amount of threads
+    """
+    start = start.date()
+    end = end.date()
+
+    thread_count = min([cpu_count(), (end - start).days]) or 1
+    interval = (end - start) / thread_count
+
+    for i in range(thread_count):
+        start = start + (interval * i)
+        end = start + (interval * (i + 1))
+        yield (start, end)
 
 
 class GuiService(PluginBase, Triggerable, Configurable, API):
@@ -155,6 +209,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
+        self.__all_sessions = {}
+        self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
 
         # this command sets mongo's query space to be larger default
         # which allows for faster queries using the RAM alone
@@ -162,14 +218,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'setParameter': 1,
             'internalQueryExecMaxBlockingSortBytes': 2 * 1024 * 1024 * 1024 - 1  # max size mongo allows
         })
-        self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
-        self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
         self.__users_collection = self._get_collection('users')
-        self._api_keys_collection = self._get_collection('api_keys')
         current_user = self.__users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
             # User doesn't exist, this must be the installation process
@@ -178,17 +231,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                             'password':
                                                 '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
                                             'first_name': 'administrator', 'last_name': '',
-                                            'pic_name': self.DEFAULT_AVATAR_PIC
+                                            'pic_name': self.DEFAULT_AVATAR_PIC,
+                                            'permissions': {},
+                                            'admin': True,
+                                            'source': 'internal',
+                                            'api_key': secrets.token_urlsafe(),
+                                            'api_secret': secrets.token_urlsafe()
                                             }, upsert=True)
-        api_data = self._api_keys_collection.find_one({})
-        if not api_data:
-            api_data = {
-                'api_key': secrets.token_urlsafe(),
-                'api_secret': secrets.token_urlsafe()
-            }
-            self._api_keys_collection.insert_one(api_data)
-
-        self._api_data = ApiAuth(api_data['api_key'], api_data['api_secret'])
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
@@ -213,6 +262,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._activate('execute')
         self._research_status = ResearchStatus.done
         self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
+        self._set_first_time_use()
 
     def _mark_demo_views(self):
         """
@@ -347,6 +397,28 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                    'view': dashboard_view,
                                                    'config': dashboard_data}, upsert=True)
         logger.info(f'Added report {dashboard_name} id: {result.upserted_id}')
+
+    def _set_first_time_use(self):
+        """
+        Check the clients db of each registered adapter to determine if there is any connected adapter.
+        We regard no connected adapters as a fresh system, that should offer user a tutorial.
+        Answer is saved in a private member that is read by the frontend via a designated endpoint.
+
+        """
+        plugins_available = requests.get(self.core_address + '/register').json()
+        self.__is_system_first_use = True
+        with self._get_db_connection() as db_connection:
+            adapters_from_db = db_connection['core']['configs'].find({
+                'plugin_type': {
+                    '$in': [
+                        'Adapter', 'ScannerAdapter'
+                    ]
+                }
+            }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            for adapter in adapters_from_db:
+                if adapter[PLUGIN_UNIQUE_NAME] in plugins_available and db_connection[adapter[PLUGIN_UNIQUE_NAME]][
+                        'clients'].count_documents({}):
+                    self.__is_system_first_use = False
 
     ########
     # DATA #
@@ -588,7 +660,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated("devices", methods=['GET', 'DELETE'])
+    @gui_add_rule_logged_in("devices", methods=['GET', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             ReadOnlyJustForGet)})
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
@@ -602,7 +676,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated("devices/csv")
+    @gui_add_rule_logged_in("devices/csv", required_permissions={Permission(PermissionType.Devices,
+                                                                            PermissionLevel.ReadOnly)})
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
         with self._get_db_connection() as db_connection:
             csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
@@ -614,25 +689,31 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             output.headers['Content-type'] = 'text/csv'
             return output
 
-    @gui_helpers.add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
+    @gui_add_rule_logged_in("devices/<device_id>", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadOnly)})
     def device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'software_cves',
                                                                   'security_patches', 'available_security_patches',
                                                                   'users', 'connected_hardware', 'local_admins'])
 
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("devices/count")
+    @gui_add_rule_logged_in("devices/count", required_permissions={Permission(PermissionType.Devices,
+                                                                              PermissionLevel.ReadOnly)})
     def get_devices_count(self, mongo_filter):
         return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices])
 
-    @gui_helpers.add_rule_unauthenticated("devices/fields")
+    @gui_add_rule_logged_in("devices/fields", required_permissions={Permission(PermissionType.Devices,
+                                                                               PermissionLevel.ReadOnly)})
     def device_fields(self):
         with self._get_db_connection() as db_connection:
             return jsonify(gui_helpers.entity_fields(EntityType.Devices, self.core_address, db_connection))
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("devices/views", methods=['GET', 'POST', 'DELETE'])
+    @gui_add_rule_logged_in("devices/views", methods=['GET', 'POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             ReadOnlyJustForGet)})
     def device_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the devices db
@@ -640,11 +721,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter))
 
-    @gui_helpers.add_rule_unauthenticated("devices/labels", methods=['GET', 'POST', 'DELETE'])
+    @gui_add_rule_logged_in("devices/labels", methods=['GET', 'POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             ReadOnlyJustForGet)})
     def device_labels(self):
         return self._entity_labels(self.devices_db_view, self.devices)
 
-    @gui_helpers.add_rule_unauthenticated("devices/disable", methods=['POST'])
+    @gui_add_rule_logged_in("devices/disable", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadWrite)})
     def disable_device(self):
         return self._disable_entity(EntityType.Devices)
 
@@ -656,7 +741,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated("users", methods=['GET', 'DELETE'])
+    @gui_add_rule_logged_in("users", methods=['GET', 'DELETE'], required_permissions={Permission(PermissionType.Users,
+                                                                                                 ReadOnlyJustForGet)})
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
@@ -670,7 +756,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated("users/csv")
+    @gui_add_rule_logged_in("users/csv", required_permissions={Permission(PermissionType.Users,
+                                                                          PermissionLevel.ReadOnly)})
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
         with self._get_db_connection() as db_connection:
             # Deleting image from the CSV (we dont need this base64 blob in the csv)
@@ -685,31 +772,39 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             output.headers['Content-type'] = 'text/csv'
             return output
 
-    @gui_helpers.add_rule_unauthenticated("users/<user_id>", methods=['GET'])
+    @gui_add_rule_logged_in("users/<user_id>", methods=['GET'], required_permissions={Permission(PermissionType.Users,
+                                                                                                 PermissionLevel.ReadOnly)})
     def user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'])
 
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("users/count")
+    @gui_add_rule_logged_in("users/count", required_permissions={Permission(PermissionType.Users,
+                                                                            PermissionLevel.ReadOnly)})
     def get_users_count(self, mongo_filter):
         return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users])
 
-    @gui_helpers.add_rule_unauthenticated("users/fields")
+    @gui_add_rule_logged_in("users/fields", required_permissions={Permission(PermissionType.Users,
+                                                                             PermissionLevel.ReadOnly)})
     def user_fields(self):
         with self._get_db_connection() as db_connection:
             return jsonify(gui_helpers.entity_fields(EntityType.Users, self.core_address, db_connection))
 
-    @gui_helpers.add_rule_unauthenticated("users/disable", methods=['POST'])
+    @gui_add_rule_logged_in("users/disable", methods=['POST'], required_permissions={Permission(PermissionType.Users,
+                                                                                                PermissionLevel.ReadWrite)})
     def disable_user(self):
         return self._disable_entity(EntityType.Users)
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("users/views", methods=['GET', 'POST', 'DELETE'])
+    @gui_add_rule_logged_in("users/views", methods=['GET', 'POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             ReadOnlyJustForGet)})
     def user_views(self, limit, skip, mongo_filter):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
 
-    @gui_helpers.add_rule_unauthenticated("users/labels", methods=['GET', 'POST', 'DELETE'])
+    @gui_add_rule_logged_in("users/labels", methods=['GET', 'POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             ReadOnlyJustForGet)})
     def user_labels(self):
         return self._entity_labels(self.users_db_view, self.users)
 
@@ -731,12 +826,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return {}
         return {'clients': clients_value.get('schema')}
 
-    @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("adapters")
-    def adapters(self, mongo_filter):
+    @gui_add_rule_logged_in("adapters", required_permissions={Permission(PermissionType.Adapters,
+                                                                         PermissionLevel.ReadOnly)})
+    def adapters(self):
         """
         Get all adapters from the core
-        :mongo_filter
         :return:
         """
         plugins_available = requests.get(self.core_address + '/register').json()
@@ -772,6 +866,33 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                            })
 
             return jsonify(adapters_to_return)
+
+    @gui_add_rule_logged_in("adapter_features")
+    def adapter_features(self):
+        """
+        Getting the features of each registered adapter, as they are saved in core's "configs" db.
+        This is needed for the case that user has permissions to disable entities but is restricted from adapters.
+        The user would need to know which entities can be disabled, according to the features of their adapters.
+
+        :return: Dict between unique plugin name of the adapter and their list of features
+        """
+        plugins_available = requests.get(self.core_address + '/register').json()
+        with self._get_db_connection() as db_connection:
+            adapters_from_db = db_connection['core']['configs'].find({
+                'plugin_type': {
+                    '$in': [
+                        'Adapter', 'ScannerAdapter'
+                    ]
+                }
+            }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            adapters_by_unique_name = {}
+            for adapter in adapters_from_db:
+                adapter_name = adapter[PLUGIN_UNIQUE_NAME]
+                if adapter_name not in plugins_available:
+                    # Plugin not registered - unwanted in UI
+                    continue
+                adapters_by_unique_name[adapter_name] = adapter['supported_features']
+            return jsonify(adapters_by_unique_name)
 
     def _test_client_connectivity(self, adapter_unique_name, data_from_db_for_unchanged=None):
         client_to_test = request.get_json(silent=True)
@@ -816,7 +937,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             pass
         return
 
-    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/upload_file", methods=['POST'])
+    @gui_add_rule_logged_in("adapters/<adapter_unique_name>/upload_file", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Adapters,
+                                                             PermissionLevel.ReadWrite)})
     def adapter_upload_file(self, adapter_unique_name):
         return self._upload_file(adapter_unique_name)
 
@@ -834,7 +957,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'POST'])
+    @gui_add_rule_logged_in("adapters/<adapter_unique_name>/clients", methods=['PUT', 'POST'],
+                            required_permissions={Permission(PermissionType.Adapters,
+                                                             PermissionLevel.ReadWrite)})
     def adapters_clients(self, adapter_unique_name):
         """
         Gets or creates clients in the adapter
@@ -843,12 +968,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         with self._get_db_connection() as db_connection:
             if request.method == 'PUT':
+                self.__is_system_first_use = False
                 return self._query_client_for_devices(adapter_unique_name)
             else:
                 return self._test_client_connectivity(adapter_unique_name)
 
-    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>",
-                                          methods=['PUT', 'DELETE'])
+    @gui_add_rule_logged_in("adapters/<adapter_unique_name>/clients/<client_id>",
+                            methods=['PUT', 'DELETE'], required_permissions={Permission(PermissionType.Adapters,
+                                                                                        PermissionLevel.ReadWrite)})
     def adapters_clients_update(self, adapter_unique_name, client_id=None):
         """
         Create or delete credential sets (clients) in the adapter
@@ -923,13 +1050,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
 
-    @gui_helpers.add_rule_unauthenticated("actions/<action_type>", methods=['POST'])
+    @gui_add_rule_logged_in("actions/<action_type>", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadWrite)})
     def actions_run(self, action_type):
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type
         return self.run_actions(action_data)
 
-    @gui_helpers.add_rule_unauthenticated("actions/upload_file", methods=['POST'])
+    @gui_add_rule_logged_in("actions/upload_file", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Adapters,
+                                                             PermissionLevel.ReadWrite)})
     def actions_upload_file(self):
         return self._upload_file(self.device_control_plugin)
 
@@ -967,7 +1098,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_helpers.add_rule_unauthenticated("alert", methods=['GET', 'PUT', 'DELETE'])
+    @gui_add_rule_logged_in("alert", methods=['GET', 'PUT', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Alerts,
+                                                             ReadOnlyJustForGet)})
     def alert(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         """
         GET results in list of all currently configured alerts, with their query id they were created with
@@ -986,13 +1119,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return self.delete_alert(report_ids)
 
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("alert/count")
+    @gui_add_rule_logged_in("alert/count", required_permissions={Permission(PermissionType.Alerts,
+                                                                            PermissionLevel.ReadOnly)})
     def alert_count(self, mongo_filter):
         with self._get_db_connection() as db_connection:
             report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
             return jsonify(db_connection[report_service]['reports'].count_documents(mongo_filter))
 
-    @gui_helpers.add_rule_unauthenticated("alert/<alert_id>", methods=['POST'])
+    @gui_add_rule_logged_in("alert/<alert_id>", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Alerts,
+                                                             PermissionLevel.ReadWrite)})
     def alerts_update(self, alert_id):
         """
 
@@ -1014,9 +1150,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return response.text, response.status_code
 
-    @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("plugins")
-    def plugins(self, mongo_filter):
+    @gui_add_rule_logged_in("plugins")
+    def plugins(self):
         """
         Get all plugins configured in core and update each one's status.
         Status will be "error" if the plugin is not registered.
@@ -1081,7 +1216,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }
         return plugin_data
 
-    @gui_helpers.add_rule_unauthenticated("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST', 'GET'])
+    @gui_add_rule_logged_in("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST', 'GET'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             ReadOnlyJustForGet)})
     def plugins_configs_set(self, plugin_unique_name, config_name):
         """
         Set a specific config on a specific plugin
@@ -1119,6 +1256,22 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
                                 'schema': schema_collection.find_one({'config_name': config_name})['schema']})
 
+    @gui_add_rule_logged_in("configuration", methods=['GET'])
+    def system_config(self):
+        """
+        Get only the GUIs settings as well as whether Mail Server and Syslog Server are enabled.
+        This is needed for the case that user is restricted from the settings but can view pages that use them.
+        They pages should render the same, so these settings must be permitted to read anyway.
+
+        :return: Settings for the system and Global settings, indicating if Mail and Syslog are enabled
+        """
+        return jsonify({
+            'system': self._system_settings, 'global': {
+                'mail': self._email_settings['enabled'] if self._email_settings else False,
+                'syslog': self._syslog_settings['enabled'] if self._system_settings else False
+            }
+        })
+
     def _update_plugin_config(self, plugin_unique_name, config_name, config_to_set):
         """
         Update given configuration settings for given configuration name, under given plugin.
@@ -1139,7 +1292,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             })
             self.request_remote_plugin("update_config", plugin_unique_name, method='POST')
 
-    @gui_helpers.add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
+    @gui_add_rule_logged_in("plugins/<plugin_unique_name>/<command>", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Adapters,
+                                                             PermissionLevel.ReadOnly)})
     def run_plugin(self, plugin_unique_name, command):
         """
         Calls endpoint of given plugin_unique_name, according to given command
@@ -1154,7 +1309,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return ""
         return response.json(), response.status_code
 
-    @gui_helpers.add_rule_unauthenticated("config/<config_name>", methods=['POST', 'GET'])
+    @gui_add_rule_logged_in("config/<config_name>", methods=['POST', 'GET'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             ReadOnlyJustForGet)})
     def config(self, config_name):
         """
         Get or set config by name
@@ -1178,7 +1335,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
-    @gui_helpers.add_rule_unauthenticated("notifications", methods=['POST', 'GET'])
+    @gui_add_rule_logged_in("notifications", methods=['POST', 'GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             ReadOnlyJustForGet)})
     def notifications(self, limit, skip, mongo_filter, mongo_sort):
         """
         Get all notifications
@@ -1225,7 +1384,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return str(update_result.modified_count), 200
 
     @gui_helpers.filtered()
-    @gui_helpers.add_rule_unauthenticated("notifications/count", methods=['GET'])
+    @gui_add_rule_logged_in("notifications/count", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
     def notifications_count(self, mongo_filter):
         """
         Fetches from core's notification collection, according to given mongo_filter,
@@ -1237,7 +1398,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             notification_collection = db['core']['notifications']
             return str(notification_collection.count_documents(mongo_filter))
 
-    @gui_helpers.add_rule_unauthenticated("notifications/<notification_id>", methods=['GET'])
+    @gui_add_rule_logged_in("notifications/<notification_id>", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
     def notifications_by_id(self, notification_id):
         """
         Get all notification data
@@ -1249,7 +1412,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return jsonify(
                 gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
-    @add_rule("get_login_options", should_authenticate=False)
+    @gui_helpers.add_rule_unauth("get_login_options")
     def get_login_options(self):
         return jsonify({
             "okta": {
@@ -1268,7 +1431,22 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }
         })
 
-    @add_rule("login", methods=['GET', 'POST'], should_authenticate=False)
+    @staticmethod
+    def __validate_master_password(user_name: str, password: str) -> bool:
+        """
+        If the user has forgotten his password it is possible to allow a 'master' password
+        by placing a file with that master password in a well defined location on this machine
+        :return: whether or not the given password is the master password
+        """
+        if user_name != 'admin':
+            return False
+        try:
+            master_password = open('master_password').read()
+            return master_password and master_password == password
+        except Exception:
+            return False
+
+    @gui_helpers.add_rule_unauth("login", methods=['GET', 'POST'])
     def login(self):
         """
         Get current user or login
@@ -1278,11 +1456,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             user = session.get('user')
             if user is None:
                 return return_error('', 401)
-            if 'password' in user:
-                user = {k: v for k, v in user.items() if k not in ['password']}
             if 'pic_name' not in user:
                 user['pic_name'] = self.DEFAULT_AVATAR_PIC
-            return jsonify(user), 200
+            user = dict(user)
+            user['permissions'] = {
+                k.name: v.name for k, v in user['permissions'].items()
+            }
+            return jsonify(beautify_user_entry(user)), 200
 
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
@@ -1292,27 +1472,100 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
             return return_error("remember_me isn't boolean", 401)
-        user_from_db = self.__users_collection.find_one({'user_name': user_name})
+        user_from_db = self.__users_collection.find_one({
+            'user_name': user_name,
+            'source': 'internal'  # this means that the user must be a local user and not one from an external service
+        })
         if user_from_db is None:
             logger.info(f"Unknown user {user_name} tried logging in")
             return return_error("Wrong user name or password", 401)
-        if not bcrypt.verify(password, user_from_db['password']):
+
+        if not bcrypt.verify(password, user_from_db['password']) and not self.__validate_master_password(user_name, password):
             logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
         if request and request.referrer and 'localhost' not in request.referrer and '127.0.0.1' not in request.referrer:
             self.system_collection.replace_one({'type': 'server'},
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
-        session['user'] = user_from_db
-        session.permanent = remember_me
+        self.__perform_login_with_user(user_from_db, remember_me)
         return ""
 
-    @add_rule("okta-redirect", methods=['GET'], should_authenticate=False)
+    def __perform_login_with_user(self, user, remember_me=False):
+        """
+        Given a user, mark the current session as associated with it
+        """
+        user = dict(user)
+        user['permissions'] = deserialize_db_permissions(user['permissions'])
+        session['user'] = user
+        session.permanent = remember_me
+
+    def __exteranl_login_successful(self, source: str,
+                                    username: str,
+                                    first_name: str = None,
+                                    last_name: str = None,
+                                    picname: str = None,
+                                    remember_me: bool = False):
+        """
+        Our system supports external login systems, such as LDAP, Okta and Google.
+        To generically support such systems with our permission model we must normalize the login mechanism.
+        Once the code that handles the login with the external source finishes it must call this method
+        to finalize the login.
+        :param source: the name of the service that made the connection, i.e. 'Google'
+        :param username: the username from the service, could also be an email
+        :param first_name: the first name of the user (optional)
+        :param last_name: the last name of the user (optional)
+        :param picname: the URL of the avatar of the user (optional)
+        :param remember_me: whether or not to remember the session after the browser has been closed
+        :return: None
+        """
+        user = self.__create_user_if_doesnt_exist(username, first_name, last_name, picname, source)
+        self.__perform_login_with_user(user, remember_me)
+
+    def __create_user_if_doesnt_exist(self, username, first_name, last_name, picname=None, source='internal',
+                                      password=None):
+        """
+        Create a new user in the system if it does not exist already
+        :return: Created user
+        """
+        if source != 'internal' and password:
+            password = bcrypt.hash(password)
+
+        user = self.__users_collection.find_one({
+            'user_name': username,
+            'source': source
+        })
+        if not user:
+            user = {
+                'user_name': username,
+                'first_name': first_name,
+                'last_name': last_name,
+                'pic_name': picname or self.DEFAULT_AVATAR_PIC,
+                'permissions': {
+                    p.name: PermissionLevel.Restricted.name for p in PermissionType
+                },
+                'source': source,
+                'password': password,
+                'api_key': secrets.token_urlsafe(),
+                'api_secret': secrets.token_urlsafe()
+            }
+            user['permissions'][PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
+            self.__users_collection.insert_one(user)
+        return user
+
+    @gui_helpers.add_rule_unauth("okta-redirect")
     def okta_redirect(self):
-        try_connecting_using_okta(self.__okta)
+        claims = try_connecting_using_okta(self.__okta)
+        if claims:
+            self.__exteranl_login_successful(
+                'okta',
+                claims['email'],
+                claims.get('given_name', ''),
+                claims.get('family_name', '')
+            )
+
         return redirect("/", code=302)
 
-    @add_rule("ldap-login", methods=['POST'], should_authenticate=False)
+    @gui_helpers.add_rule_unauth("ldap-login", methods=['POST'])
     def ldap_login(self):
         try:
             log_in_data = self.get_request_data_as_object()
@@ -1362,11 +1615,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             except Exception:
                 logger.exception(f"Exception while setting thumbnailPhoto for user {user_name}")
 
-            session['user'] = {'user_name': user.get('displayName') or user_name,
-                               'first_name': user.get('givenName') or '',
-                               'last_name': user.get('sn') or '',
-                               'pic_name': image or self.DEFAULT_AVATAR_PIC,
-                               }
+            self.__exteranl_login_successful('ldap',
+                                             user.get('displayName') or user_name,
+                                             user.get('givenName') or '',
+                                             user.get('sn') or '',
+                                             image or self.DEFAULT_AVATAR_PIC)
             return ""
         except ldap3.core.exceptions.LDAPException:
             return return_error("LDAP verification has failed, please try again")
@@ -1374,7 +1627,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception("LDAP Verification error")
             return return_error("An error has occurred while verifying your account")
 
-    @add_rule("google-login", methods=['POST'], should_authenticate=False)
+    @gui_helpers.add_rule_unauth("google-login", methods=['POST'])
     def google_login(self):
         """
         Login with google
@@ -1418,12 +1671,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     return return_error(f"You're not in the allowed group {google_creds['allowed_group']}")
 
             # ID token is valid. Get the user's Google Account ID from the decoded token.
-            session['user'] = {
-                'user_name': idinfo.get('name') or 'unamed',
-                'first_name': idinfo.get('given_name') or 'unamed',
-                'last_name': idinfo.get('family_name') or 'unamed',
-                'pic_name': idinfo.get('picture') or self.DEFAULT_AVATAR_PIC,
-            }
+            self.__exteranl_login_successful('google',
+                                             idinfo.get('name') or 'unamed',
+                                             idinfo.get('given_name') or 'unamed',
+                                             idinfo.get('family_name') or 'unamed',
+                                             idinfo.get('picture') or self.DEFAULT_AVATAR_PIC)
             return ""
         except ValueError:
             logger.exception("Invalid token")
@@ -1432,33 +1684,35 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception("Unknown exception")
             return return_error("Error logging in, please try again")
 
-    @gui_helpers.add_rule_unauthenticated("logout", methods=['GET'])
+    @gui_add_rule_logged_in("logout", methods=['GET'])
     def logout(self):
         """
         Clears session, logs out
         :return:
         """
+        logger.info(f"User {session} has logged out")
         session['user'] = None
         return ""
 
     @gui_helpers.paginated()
-    @gui_helpers.add_rule_unauthenticated("authusers", methods=['GET', 'POST'])
+    @gui_add_rule_logged_in("authusers", methods=['GET', 'POST'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             ReadOnlyJustForGet)})
     def authusers(self, limit, skip):
         """
-        View or add users
+        View users or change user password
         :param limit: limit for pagination
         :param skip: start index for pagination
         :return:
         """
         if request.method == 'GET':
-            return jsonify(gui_helpers.beautify_db_entry(n) for n in
-                           self.__users_collection.find(projection={
-                               "_id": 1,
-                               "user_name": 1,
-                               "first_name": 1,
-                               "last_name": 1,
-                               "pic_name": 1}).sort(
-                               [('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+            return jsonify(beautify_user_entry(n) for n in
+                           self.__users_collection.find({}).sort(
+                               [
+                                   ('_id', pymongo.ASCENDING)
+                               ])
+                           .skip(skip)
+                           .limit(limit))
         elif request.method == 'POST':
             post_data = self.get_request_data_as_object()
             user = session.get('user')
@@ -1472,27 +1726,91 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                    'password': bcrypt.hash(post_data['new_password'])
                                                }
             })
-            user_from_db = self.__users_collection.find_one({'user_name': user['user_name']})
-            session['user'] = user_from_db
+            self.__invalidate_sessions(user['user_name'])
+            self.__users_collection.find_one({'user_name': user['user_name']})
             return "", 200
 
-    @gui_helpers.add_rule_unauthenticated("get_api_key", methods=['GET', 'POST'])
+    @gui_add_rule_logged_in("edit_foreign_user", methods=['POST', 'PUT'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             PermissionLevel.ReadWrite)})
+    def edit_foreign_user(self):
+        """
+        Allows changing a users' permission set
+        """
+        post_data = self.get_request_data_as_object()
+        if request.method == 'POST':
+            self.__users_collection.update({'user_name': post_data['user_name']},
+                                           {
+                                               "$set": {
+                                                   'permissions': post_data['permissions']
+                                               }
+            })
+            self.__invalidate_sessions(post_data['user_name'])
+            return ""
+        elif request.method == 'PUT':
+            post_data['password'] = bcrypt.hash(post_data['password'])
+            if self.__users_collection.find_one({
+                'user_name': post_data['user_name'],
+                'source': 'internal'
+            }):
+                return return_error("User already exists", 400)
+            self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
+                                               picname=None, source='internal', password=post_data['password'])
+            return ""
+
+    @gui_helpers.add_rule_unauth("get_constants")
+    def get_constants(self):
+        """
+        Returns a dictionary between all string names and string values in the system.
+        This is used to print "nice" spacted strings to the user while not using them as variable names
+        """
+
+        def dictify_enum(e):
+            return {r.name: r.value for r in e}
+
+        constants = dict()
+        constants['permission_levels'] = dictify_enum(PermissionLevel)
+        constants['permission_types'] = dictify_enum(PermissionType)
+        return jsonify(constants)
+
+    def __invalidate_sessions(self, user_name: str):
+        """
+        Invalidate all sessions for this user except the current one
+        :param user_name: username to invalidate all sessions for
+        :return:
+        """
+        for k, v in self.__all_sessions.items():
+            if k == session.sid:
+                continue
+            d = v.get('d')
+            if not d:
+                continue
+            if d.get('user') and d['user'].get('user_name') == user_name:
+                d['user'] = None
+
+    @gui_add_rule_logged_in("get_api_key", methods=['GET', 'POST'])
     def get_api_key(self):
+        """
+        Get or change the API key
+        """
         if request.method == 'POST':
             new_token = secrets.token_urlsafe()
             new_api_key = secrets.token_urlsafe()
-            self._api_keys_collection.update({'api_key': self._api_data.api_key},
-                                             {
-                                                 "$set": {
-                                                     'api_key': new_api_key,
-                                                     'api_secret': new_token
-                                                 }
+            self.__users_collection.update({'user_name': session['user']['user_name']},
+                                           {
+                                               "$set": {
+                                                   'api_key': new_api_key,
+                                                   'api_secret': new_token
+                                               }
             })
-            self._api_data = ApiAuth(new_api_key, new_token)
-        return jsonify(self._api_data._asdict())
+        api_data = self.__users_collection.find_one({'user_name': session['user']['user_name']})
+        return jsonify({
+            'api_key': api_data['api_key'],
+            'api_secret': api_data['api_secret']
+        })
 
     @gui_helpers.paginated()
-    @gui_helpers.add_rule_unauthenticated("logs")
+    @gui_add_rule_logged_in("logs")
     def logs(self, limit, skip):
         """
         Maybe this should be datewise paginated, perhaps the whole scheme will change.
@@ -1508,7 +1826,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify(res['hits']['hits'])
 
     @gzipped_downloadable("axonius_logs_{}", "json")
-    @add_rule("logs/export", should_authenticate=False)
+    @gui_helpers.add_rule_unauth("logs/export")
     def logs_export(self):
         """
         Pass 'start_date' and/or 'end_date' in GET parameters
@@ -1533,6 +1851,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     #############
     # DASHBOARD #
     #############
+
+    @gui_add_rule_logged_in("dashboard/first_use", methods=['GET'])
+    def dashboard_first(self):
+        """
+        __is_first_time_use maintains whether any adapter was connected with a client.
+        Otherwise, user should be offered to take a walkthrough of the system.
+
+        :return: Whether this is the first use of the system
+        """
+        return jsonify(self.__is_system_first_use)
 
     def _fetch_historical_chart_intersect(self, card, from_given_date, to_given_date):
         if not card.get('config') or not card['config'].get('entity') or not card.get('view'):
@@ -1604,7 +1932,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return None
         return latest_date['accurate_for_datetime']
 
-    @gui_helpers.add_rule_unauthenticated("saved_card_results/<card_uuid>", methods=['GET'])
+    @gui_add_rule_logged_in("saved_card_results/<card_uuid>", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
     def saved_card_results(self, card_uuid: str):
         """
         Saved results for cards, i.e. the mechanism used to show the user the results
@@ -1644,7 +1974,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return jsonify({x['name']: x for x in res})
 
-    @gui_helpers.add_rule_unauthenticated("first_historical_date", methods=['GET'])
+    @gui_add_rule_logged_in("first_historical_date", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
     def saved_card_results_min(self):
         dates = [self._historical_entity_views_db_map[entity_type].find_one({},
                                                                             sort=[('accurate_for_datetime', 1)],
@@ -1656,7 +1988,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
              if d), default=None)
         return jsonify(minimum_date)
 
-    @gui_helpers.add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
+    @gui_add_rule_logged_in("dashboard", methods=['POST', 'GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             ReadOnlyJustForGet)})
     def get_dashboard(self):
         if request.method == 'GET':
             return jsonify(self._get_dashboard())
@@ -2026,7 +2360,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         }
 
     def _fetch_view_timeline(self, views, date_from, date_to):
-        date_ranges = list(self._get_date_ranges(date_from, date_to))
+        date_ranges = list(_get_date_ranges(date_from, date_to))
         for view in views:
             if not view.get('name'):
                 continue
@@ -2068,24 +2402,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'points': points
             }
 
-    def _get_date_ranges(self, start, end):
-        start = start.date()
-        end = end.date()
-
-        thread_count = min([cpu_count(), (end - start).days]) or 1
-        interval = (end - start) / thread_count
-
-        for i in range(thread_count):
-            start = start + (interval * i)
-            end = start + (interval * (i + 1))
-            yield (start, end)
-
-    @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
+    @gui_add_rule_logged_in("dashboard/<dashboard_id>", methods=['DELETE'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadWrite)})
     def remove_dashboard(self, dashboard_id):
         """
         Fetches data, according to definition saved for the dashboard named by given name
-
-        :param dashboard_name: Name of the dashboard to fetch data for
         :return:
         """
         update_result = self._get_collection('dashboard').update_one(
@@ -2094,7 +2416,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
         return ''
 
-    @gui_helpers.add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
+    @gui_add_rule_logged_in("dashboard/lifecycle", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
     def get_system_lifecycle(self):
         """
         Fetches and build data needed for presenting current status of the system's lifecycle in a graph
@@ -2139,7 +2463,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'sub_phases': sub_phases, 'next_run_time': run_time_response.text, 'status': self._research_status.name
         })
 
-    @gui_helpers.add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
+    @gui_add_rule_logged_in("dashboard/lifecycle_rate", methods=['GET', 'POST'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             ReadOnlyJustForGet)})
     def system_lifecycle_rate(self):
         """
 
@@ -2184,7 +2510,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return adapter_entities
 
-    @gui_helpers.add_rule_unauthenticated("dashboard/adapter_data/<entity_name>", methods=['GET'])
+    @gui_add_rule_logged_in("dashboard/adapter_data/<entity_name>", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
     def get_adapter_data(self, entity_name):
         try:
             return jsonify(self._adapter_data(EntityType(entity_name)))
@@ -2229,18 +2557,24 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             item['portion'] = devices_property / devices_total
         return coverage_list
 
-    @gui_helpers.add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
+    @gui_add_rule_logged_in("dashboard/coverage", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
     def get_dashboard_coverage(self):
         return jsonify(self._get_dashboard_coverage())
 
-    @gui_helpers.add_rule_unauthenticated("get_latest_report_date", methods=['GET'])
+    @gui_add_rule_logged_in("get_latest_report_date", methods=['GET'],
+                            required_permissions={Permission(PermissionType.Reports,
+                                                             PermissionLevel.ReadOnly)})
     def get_latest_report_date(self):
         recent_report = self._get_collection("reports").find_one({'filename': 'most_recent_report'})
         if recent_report is not None:
             return jsonify(recent_report['time'])
         return ''
 
-    @gui_helpers.add_rule_unauthenticated("research_phase", methods=['POST'])
+    @gui_add_rule_logged_in("research_phase", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadWrite)})
     def schedule_research_phase(self):
         """
         Schedules or initiates research phase.
@@ -2263,7 +2597,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return ''
 
-    @gui_helpers.add_rule_unauthenticated("stop_research_phase", methods=['POST'])
+    @gui_add_rule_logged_in("stop_research_phase", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadWrite)})
     def stop_research_phase(self):
         """
         Stops currently running research phase.
@@ -2461,7 +2797,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         fs = gridfs.GridFS(db_connection[GUI_NAME])
                         fs.delete(ObjectId(uuid))
 
-    @gui_helpers.add_rule_unauthenticated('export_report')
+    @gui_add_rule_logged_in('export_report', required_permissions={Permission(PermissionType.Dashboard,
+                                                                              PermissionLevel.ReadOnly)})
     def export_report(self):
         """
         Gets definition of report from DB for the dynamic content.
@@ -2510,7 +2847,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         logger.info(f'All data for report gathered - about to generate for server {server_name}')
         return ReportGenerator(report_data, 'gui/templates/report/', host=server_name).render_html(datetime.now())
 
-    @gui_helpers.add_rule_unauthenticated('test_exec_report', methods=['POST'])
+    @gui_add_rule_logged_in('test_exec_report', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Reports,
+                                                             PermissionLevel.ReadWrite)})
     def test_exec_report(self):
         try:
             recipients = self.get_request_data_as_object()
@@ -2568,7 +2907,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         logger.info(f"Scheduling an exec_report sending for {next_run_time} and period of {time_period}.")
         return "Scheduled next run."
 
-    @gui_helpers.add_rule_unauthenticated('exec_report', methods=['POST', 'GET'])
+    @gui_add_rule_logged_in('exec_report', methods=['POST', 'GET'],
+                            required_permissions={Permission(PermissionType.Reports,
+                                                             ReadOnlyJustForGet)})
     def exec_report(self):
         """
         Makes the apscheduler schedule a research phase right now.
@@ -2597,7 +2938,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 logger.info("Email cannot be sent because no email server is configured")
                 raise RuntimeWarning("No email server configured")
 
-    @gui_helpers.add_rule_unauthenticated('support_access', methods=['GET', 'POST', 'DELETE'])
+    @gui_add_rule_logged_in('support_access', methods=['GET', 'POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             ReadOnlyJustForGet)})
     def support_access(self):
         """
         Try retrieving current job for stopping the support access.
@@ -2666,7 +3009,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         config_to_set[MAINTENANCE_SETTINGS][TROUBLESHOOTING_SETTING] = support_access_on
         self._update_plugin_config(CORE_UNIQUE_NAME, 'CoreService', config_to_set)
 
-    @gui_helpers.add_rule_unauthenticated('metadata', methods=['GET'])
+    @gui_add_rule_logged_in('metadata', methods=['GET'], required_permissions={Permission(PermissionType.Settings,
+                                                                                          PermissionLevel.ReadOnly)})
     def get_metadata(self):
         """
         Gets the system metadata.
@@ -2700,11 +3044,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.__ldap_login = config['ldap_login_settings']
         self._system_settings = config[SYSTEM_SETTINGS]
 
-    @gui_helpers.add_rule_unauthenticated('analytics', methods=['GET'], auth_method=None)
+    @gui_helpers.add_rule_unauth('analytics')
     def get_analytics(self):
         return jsonify(self._maintenance_settings[ANALYTICS_SETTING])
 
-    @gui_helpers.add_rule_unauthenticated('troubleshooting', methods=['GET'], auth_method=None)
+    @gui_helpers.add_rule_unauth('troubleshooting')
     def get_troubleshooting(self):
         return jsonify(self._maintenance_settings[TROUBLESHOOTING_SETTING])
 

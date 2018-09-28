@@ -6,10 +6,14 @@
     <div id="app">
         <!-- Nested navigation linking to routes defined in router/index.js -->
         <template v-if="userName || isDev">
-            <side-bar-container class="print-exclude"/>
+            <side-bar-container class="print-exclude" @access-violation="notifyAccess" />
             <router-view/>
-            <top-bar-container class="print-exclude"/>
+            <top-bar-container class="print-exclude" @access-violation="notifyAccess" />
             <x-tour-state />
+            <modal v-if="accessMessage" @close="removeAccessMessage">
+                <div slot="body">{{ accessMessage }}</div>
+                <div slot="footer"><button class="x-btn" @click="removeAccessMessage">OK</button></div>
+            </modal>
         </template>
         <template v-else>
             <login-container />
@@ -22,16 +26,18 @@
     import SideBarContainer from './navigation/SideBarContainer.vue'
     import LoginContainer from './auth/LoginContainer.vue'
 	import xTourState from '../components/onboard/TourState.vue'
+    import Modal from '../components/popover/Modal.vue'
 
     import { GET_USER} from '../store/modules/auth'
-    import { LOAD_PLUGIN_CONFIG } from "../store/modules/configurable";
+    import { FETCH_SYSTEM_CONFIG } from "../store/actions";
+    import { FETCH_CONSTANTS } from "../store/modules/constants";
 	import { mapState, mapActions } from 'vuex'
 	import '../components/icons'
 
 
 	export default {
         name: 'app',
-        components: { LoginContainer, TopBarContainer, SideBarContainer, xTourState },
+        components: { LoginContainer, TopBarContainer, SideBarContainer, xTourState, Modal },
         computed: {
             ...mapState({
                 userName(state) {
@@ -45,6 +51,11 @@
             	return this.$route.fullPath
             }
 		},
+        data() {
+             return {
+                 accessMessage: ''
+             }
+        },
         watch: {
         	userName(newUserName) {
                 if (newUserName) {
@@ -57,17 +68,17 @@
         },
         methods: {
             ...mapActions({
-                getUser: GET_USER, loadPluginConfig: LOAD_PLUGIN_CONFIG
+                getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS
             }),
             fetchGlobalData() {
-				this.loadPluginConfig({
-					pluginId: 'gui',
-					configName: 'GuiService'
-				})
-				this.loadPluginConfig({
-					pluginId: 'core',
-					configName: 'CoreService'
-				})
+				this.fetchConfig()
+                this.fetchConstants()
+            },
+            notifyAccess(name) {
+                this.accessMessage = `You do not have permission to access the ${name} screen`
+            },
+            removeAccessMessage() {
+                this.accessMessage = ''
             }
 		},
         created() {

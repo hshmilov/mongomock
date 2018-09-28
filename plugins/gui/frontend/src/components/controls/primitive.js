@@ -16,7 +16,7 @@
 
  */
 export default {
-	props: ['schema', 'value'],
+	props: ['schema', 'value', 'readOnly'],
 	data() {
 		return {
 			data: null,

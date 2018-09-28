@@ -1,10 +1,10 @@
 <template>
-    <router-link tag="li" :to="disabled? {}: link" :id="id"
-                 class="x-nested-nav-item" :active-class="(!disabled && !exact)? 'active': ''"
-                 :exact-active-class="(!disabled && exact)? 'active': ''" @click.native="$emit('click')">
-        <a class="item-link" :title="routeName">
-            <svg-icon v-if="iconName" :name="`navigation/${iconName}`" width="24" :original="true" />
-            <span>{{ routeName }}</span>
+    <router-link tag="li" :to="disabled? {}: link" :id="id" @click.native="onClick"
+                 class="x-nested-nav-item" :class="{ disabled }"
+                 :active-class="activeClass" :exact-active-class="exactActiveClass">
+        <a class="item-link" :title="disabled? undefined : name">
+            <svg-icon v-if="icon" :name="`navigation/${icon}`" width="24" :original="true" />
+            <span>{{ name }}</span>
         </a>
         <slot/>
     </router-link>
@@ -13,11 +13,31 @@
 <script>
     export default {
 		name: 'x-nested-nav-item',
-		props: ['routeName', 'routerPath', 'iconName', 'exact', 'disabled', 'id'],
+		props: [ 'name', 'path', 'icon', 'exact', 'disabled', 'id', 'clickHandler' ],
         computed: {
             link() {
-            	if (this.routerPath) return { path: this.routerPath }
-            	return { name: this.routeName }
+            	if (this.path) return { path: this.path }
+            	return { name: this.name }
+            },
+            activeClass() {
+                if (!this.disabled && !this.exact) {
+                    return 'active'
+                }
+                return ''
+            },
+            exactActiveClass() {
+                if (!this.disabled && this.exact) {
+                    return 'active'
+                }
+                return ''
+            }
+        },
+        methods: {
+		    onClick() {
+		        if (this.clickHandler) {
+		            this.clickHandler(this.name)
+                }
+                this.$emit('click')
             }
         }
     }
@@ -45,7 +65,16 @@
                 stroke-width: 24px;
             }
         }
-        &:hover, &.active {
+        &.disabled {
+            .svg-icon {
+                .svg-fill {  fill: $grey-5;  }
+                .svg-stroke {  stroke: $grey-5;  }
+            }
+            .item-link {
+                cursor: default;
+            }
+        }
+        &:not(.disabled):hover, &.active {
             >.item-link {  color: $theme-orange;  }
             .svg-icon {
                 .svg-fill {  fill: $theme-orange;  }

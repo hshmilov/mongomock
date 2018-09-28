@@ -1,5 +1,5 @@
 <template>
-    <x-page title="Reporting">
+    <x-page title="Reports">
         <x-box class="x-report">
             <div class="v-spinner-bg" v-if="loading"></div>
             <pulse-loader :loading="loading" color="#FF7D46" />
@@ -18,22 +18,23 @@
                 <div id="reports_frequency">
                     <h4>Email Frequency</h4>
                     <div class="x-grid">
-                        <input id="period-daily" type="radio" value="daily" v-model="execReportSettings.period">
+                        <input id="period-daily" type="radio" value="daily" v-model="execReportSettings.period" :disabled="isReadOnly">
                         <label for="period-daily">Daily</label>
-                        <input id="period-weekly" type="radio" value="weekly" v-model="execReportSettings.period">
+                        <input id="period-weekly" type="radio" value="weekly" v-model="execReportSettings.period" :disabled="isReadOnly">
                         <label for="period-weekly">Weekly</label>
-                        <input id="period-monthly" type="radio" value="monthly" v-model="execReportSettings.period">
+                        <input id="period-monthly" type="radio" value="monthly" v-model="execReportSettings.period" :disabled="isReadOnly">
                         <label for="period-monthly">Monthly</label>
                     </div>
                 </div>
                 <div class="x-section" id="reports_mails">
                     <h4>Email List</h4>
-                    <vm-select v-model="execReportSettings.recipients" multiple filterable allow-create
-                               placeholder="" no-data-text="Type mail addresses..." :default-first-option="true"/>
+                    <vm-select v-model="execReportSettings.recipients" :disabled="isReadOnly"
+                               multiple filterable allow-create :default-first-option="true"
+                               placeholder="" no-data-text="Type mail addresses..." />
                 </div>
                 <div class="x-section x-btn-container">
                     <a class="x-btn" :class="{disabled: !valid}" @click="scheduleExecReport">Save</a>
-                    <a class="x-btn inverse" :class="{ disabled: !hasRecipients || disableDownloadReport }"
+                    <a class="x-btn inverse" :class="{ disabled: !hasRecipients || disableDownloadReport || isReadOnly }"
                        @click="testExecReport">Test Now</a>
                 </div>
             </div>
@@ -48,7 +49,7 @@
     import xToast from '../../components/popover/Toast.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
-    import { mapMutations, mapActions } from 'vuex'
+    import { mapState, mapMutations, mapActions } from 'vuex'
     import { DOWNLOAD_REPORT } from '../../store/modules/report'
     import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 	import { REQUEST_API } from '../../store/actions'
@@ -57,8 +58,14 @@
         name: 'report-container',
         components: { xPage, xBox, xToast, PulseLoader },
         computed: {
+            ...mapState({
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Reports === 'ReadOnly'
+                },
+            }),
         	valid() {
-        		return this.execReportSettings.period
+        		return !this.isReadOnly && this.execReportSettings.period
             },
             hasRecipients() {
         		return this.execReportSettings.recipients && this.execReportSettings.recipients.length
@@ -108,7 +115,7 @@
                 })
             },
             testExecReport() {
-            	if (!this.hasRecipients) return
+            	if (!this.hasRecipients || this.isReadOnly) return
 
                 this.fetchData({
                     rule: `test_exec_report`,

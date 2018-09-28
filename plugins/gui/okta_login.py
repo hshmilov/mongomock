@@ -127,8 +127,4 @@ def try_connecting_using_okta(okta_config) -> bool:
     if 'iat' in claims and claims['iat'] > acceptable_iat:
         logger.info("IAT isn't true")
         return False
-    session['user'] = {'user_name': claims['email'],
-                       'first_name': claims.get('given_name', ''),
-                       'last_name': claims.get('family_name', '')
-                       }
-    return True
+    return claims
