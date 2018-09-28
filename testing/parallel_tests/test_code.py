@@ -17,8 +17,7 @@ EXCLUDE_PATHS = [
     'usr',
     '.idea',
     '.git',
-    '.venv',
-    os.path.join('adapters', 'splunk_nexpose_adapter', 'external')
+    '.venv'
 ]
 ACTUAL_PARENT_FOLDER = os.path.realpath(os.path.dirname(__file__))
 BASE_PATH = os.path.realpath(os.path.dirname(os.path.dirname(ACTUAL_PARENT_FOLDER)))

@@ -50,8 +50,6 @@ DOCKER_PORTS = {
     'symantec-altiris-adapter':         5676,
     'qualys-adapter':                   5677,
     'sentinelone-adapter':              5678,
-    'splunk-symantec-adapter':          5679,
-    'splunk-nexpose-adapter':           5681,
     'eset-adapter':                     5682,
     'desktop-central-adapter':          5683,
     'fortigate-adapter':                5689,

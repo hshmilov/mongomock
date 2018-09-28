@@ -15,7 +15,7 @@ source testing/test_credentials/docker_login.sh
 echo "#### Creating venv done"
 
 echo "#### Creating installer"
-./pyrun.sh ./deployment/make.py --version ${version}  --rebuild --pull --exclude traiana_lab_machines json_file qcore stresstest_scanner stresstest splunk_symantec infinite_sleep &> logs/create_installer.log
+./pyrun.sh ./deployment/make.py --version ${version}  --rebuild --pull --exclude traiana_lab_machines json_file qcore stresstest_scanner stresstest infinite_sleep &> logs/create_installer.log
 mv ${installer_name} ${install_dir}/
 echo "#### Installer created"
 

@@ -131,14 +131,6 @@ export const pluginMeta = {
         title: 'Splunk',
         description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository from which it can generate graphs, reports, alerts, dashboards, and visualizations.'
     },
-    splunk_nexpose_adapter: {
-        title: 'Splunk <> Rapid7 Nexpose',
-        description: 'The Splunk adapter for Rapid7 Nexpose leverages data from Splunk instances that receive alerts from Rapid7 Nexpose.'
-    },
-    splunk_symantec_adapter: {
-        title: 'Splunk <> Symantec Endpoint Protection Manager',
-        description: 'The Splunk adapter for Symantec Endpoint Protection Manager leverages data from Splunk instances that receive alerts from Symantec Endpoint Protection Manager.'
-    },
     symantec_adapter: {
         title: 'Symantec Endpoint Protection Manager',
         description: 'Symantec Endpoint Protection Manager manages events, policies, and registration for the client computers that connect to customer networks.'
