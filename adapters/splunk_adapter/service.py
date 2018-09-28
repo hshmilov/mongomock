@@ -6,22 +6,23 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
-from splunk_adapter.connection import SplunkConnection
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
+from splunk_adapter.connection import SplunkConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class SplunkAdapter(AdapterBase):
+class SplunkAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         vlan = Field(str, 'Vlan')
         port = Field(str, 'port')
         cisco_device = Field(str, 'Cisco Device')
+        splunk_source = Field(str, "Splunk Source")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-        self.max_log_history = int(self.config['DEFAULT']['max_log_history'])  # in days
 
     def _get_client_id(self, client_config):
         return '{}:{}'.format(client_config['host'], client_config['port'])
@@ -63,7 +64,9 @@ class SplunkAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Splunk Server
         """
         with client_data:
-            yield from client_data.get_devices(f'-{self.max_log_history}d')
+            yield from client_data.get_devices(f'-{self.__max_log_history}d',
+                                               self.__maximum_records,
+                                               self.__fetch_plugins)
 
     def _clients_schema(self):
         """
@@ -110,7 +113,9 @@ class SplunkAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         macs_set = set()
-        dhcp_macs_set = set()
+        dhcp_ids_sets = set()
+        nexpose_asset_id_set = set()
+
         for device_raw, device_type in devices_raw_data:
             try:
                 device = self._new_device_adapter()
@@ -118,15 +123,18 @@ class SplunkAdapter(AdapterBase):
                     mac = device_raw.get('mac')
                     hostname = device_raw.get('hostname')
                     if not mac and not hostname:
-                        logger.warning(f'Bad device no mac {device_raw}')
+                        logger.warning(f'Bad device no mac or hostname{device_raw}')
                         continue
 
-                    if mac in dhcp_macs_set:
-                        continue
                     if mac:
-                        device.id = mac + device_type
+                        device_id = mac + device_type
                     else:
-                        device.id = hostname + device_type
+                        device_id = hostname + device_type
+
+                    if device_id in dhcp_ids_sets:
+                        continue
+
+                    device.id = device_id
                     device.hostname = hostname
                     ip = device_raw.get('ip')
                     macs = []
@@ -142,7 +150,8 @@ class SplunkAdapter(AdapterBase):
                         else:
                             device.add_nic(mac, [ip])
 
-                    dhcp_macs_set.add(mac)
+                    dhcp_ids_sets.add(device_id)
+                    device.splunk_source = "AD DHCP"
 
                 elif 'Cisco' in device_type:
                     mac = device_raw.get('mac')
@@ -161,6 +170,21 @@ class SplunkAdapter(AdapterBase):
                     device.port = device_raw.get('port')
                     device.cisco_device = device_raw.get('cisco_device')
                     macs_set.add(mac)
+                    device.splunk_source = "Cisco"
+
+                elif 'Nexpose' in device_type:
+                    device_id = device_raw['asset_id']
+                    if device_id in nexpose_asset_id_set:
+                        continue
+                    nexpose_asset_id_set.add(device_id)
+                    device.id = device_raw['asset_id']
+                    device.hostname = device_raw.get('hostname')
+                    device.figure_os(device_raw.get('version') or device_raw.get('os'))
+                    try:
+                        device.add_nic(device_raw.get('mac'), [device_raw.get('ip')])
+                    except Exception:
+                        logger.exception(f"Couldn't add nic to device {device_raw}")
+                    device.splunk_source = "Nexpose"
 
                 raw_splunk_insertion_time = device_raw.get('raw_splunk_insertion_time')
                 if raw_splunk_insertion_time:
@@ -169,6 +193,51 @@ class SplunkAdapter(AdapterBase):
                 yield device
             except Exception:
                 logger.exception(f'Problem getting device {device_raw}')
+
+    def _on_config_update(self, config):
+        logger.info(f"Loading Splunk config: {config}")
+        self.__max_log_history = int(config['max_log_history'])
+        self.__maximum_records = int(config['maximum_records'])
+        self.__fetch_plugins = {
+            'nexpose': bool(config['fetch_nexpose'])
+        }
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'max_log_history',
+                    'title': 'Number of days to fetch',
+                    'type': 'number'
+                },
+                {
+                    "name": "maximum_records",
+                    "title": "Maximum amount of records per search",
+                    "type": "number"
+                },
+                {
+                    "name": "fetch_nexpose",
+                    "title": "Fetch devices from the splunk-nexpose plugin",
+                    "type": "bool"
+                }
+            ],
+            "required": [
+                'max_log_history',
+                "maximum_records",
+                'fetch_nexpose',
+            ],
+            "pretty_name": "Splunk Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'max_log_history': 30,
+            'maximum_records': 100000,
+            'fetch_nexpose': False
+        }
 
     @classmethod
     def adapter_properties(cls):

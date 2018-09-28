@@ -454,6 +454,7 @@ testing/parallel_tests/test_sentinelone.py
 testing/parallel_tests/test_service_now.py
 testing/parallel_tests/test_softlayer.py
 testing/parallel_tests/test_solarwinds_orion.py
+testing/parallel_tests/test_splunk.py
 testing/parallel_tests/test_splunk_nexpose.py
 testing/parallel_tests/test_splunk_symantec.py
 testing/parallel_tests/test_symantec.py
