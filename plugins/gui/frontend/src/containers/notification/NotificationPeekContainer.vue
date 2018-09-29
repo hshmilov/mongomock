@@ -1,6 +1,6 @@
 <template>
     <x-dropdown size="lg" align="right" :align-space="-4" :arrow="false" class="notification-peek" ref="notifications">
-        <div slot="trigger" @click="clearNotifications">
+        <div slot="trigger" @click="isReadOnly? undefined: clearNotifications">
             <svg-icon name="navigation/notifications" :original="true" height="20" />
             <div class="badge" v-if="notificationUnseenCount">{{ notificationUnseenCount }}</div>
         </div>
@@ -47,6 +47,10 @@
                 },
                 notificationAggregatedList(state) {
                 	return state.notifications.aggregatedList.data
+                },
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Dashboard === 'ReadOnly'
                 }
             })
         },

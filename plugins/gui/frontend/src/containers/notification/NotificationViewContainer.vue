@@ -20,7 +20,15 @@
 		name: 'notification-view-container',
 		components: { xPage, xBox },
 		computed: {
-			...mapState(['notifications']),
+			...mapState({
+                notifications(state) {
+                    return state.notifications
+                },
+                isReadOnly(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Dashboard === 'ReadOnly'
+                }
+            }),
 			notificationId () {
 				return this.$route.params.id
 			},
@@ -30,7 +38,7 @@
 		},
         watch: {
 			notificationData(newNotificationData) {
-				if (!newNotificationData.seen) {
+				if (!newNotificationData.seen && !this.isReadOnly) {
 					this.updateNotificationsSeen([ this.notificationId ])
                 }
             }
@@ -46,7 +54,7 @@
 			if (!this.notificationData || !this.notificationData.uuid
                 || (this.notificationData.uuid !== this.notificationId)) {
 				this.fetchNotification(this.notificationId)
-			} else if (!this.notificationData.seen) {
+			} else if (!this.notificationData.seen && !this.isReadOnly) {
 				this.updateNotificationsSeen([ this.notificationId ])
 			}
 		}
