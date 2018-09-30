@@ -469,14 +469,14 @@ class BuildsManager(object):
             return {'value': remote_file.read().decode('utf-8')}
 
     def update_export_status(self, export_id, status, log):
-        export = self.db.exports.find_one({"_id": ObjectId(export_id)})
+        export = self.db.exports.find_one({"version": export_id})
         ami_id_match = re.search("us-east-2: (.*)$", log)
         ami_id = ami_id_match.group(0) if ami_id_match else ''
-        self.db.exports.update_one({"_id": ObjectId(export_id)}, {"$set": {"status": status, "log": log,
-                                                                           "download_link": "<a href='http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova'>Click here</a>".format(
-                                                                               S3_BUCKET_NAME_FOR_OVA,
-                                                                               export['version']),
-                                                                           "ami_id": ami_id}})
+        self.db.exports.update_one({"version": export_id}, {"$set": {"status": status, "log": log,
+                                                                     "download_link": "<a href='http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova'>Click here</a>".format(
+                                                                         S3_BUCKET_NAME_FOR_OVA,
+                                                                         export['version']),
+                                                                     "ami_id": ami_id}})
         return export is not None
 
     def deleteConfiguration(self, object_id):
