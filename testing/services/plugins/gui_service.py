@@ -1,3 +1,4 @@
+import secrets
 import requests
 import json
 import os
@@ -76,6 +77,10 @@ class GuiService(PluginService):
         api_data = api_keys_collection.find_one({})
         if not api_data:
             print('No API Key, GUI is new or really old')
+            api_data = {
+                'api_key': secrets.token_urlsafe(),
+                'api_secret': secrets.token_urlsafe()
+            }
 
         # We assume we only have one "regular" user because the system didn't allow multiple users so far
         # (2) - Add max permissions to the user
