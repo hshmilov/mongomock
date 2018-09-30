@@ -75,8 +75,7 @@ class GuiService(PluginService):
         api_keys_collection = self.db.get_collection(self.plugin_name, 'api_keys')
         api_data = api_keys_collection.find_one({})
         if not api_data:
-            print('No API Key, GUI is new, stopping')
-            return
+            print('No API Key, GUI is new or really old')
 
         # We assume we only have one "regular" user because the system didn't allow multiple users so far
         # (2) - Add max permissions to the user
@@ -106,7 +105,7 @@ class GuiService(PluginService):
         try:
             self.__perform_schema_2()
         except Exception as e:
-            print(f'Could not upgrade gui db to version 2. Details: {e}')
+            print(f'Exception while upgrading gui db to version 2. Details: {e}')
 
         self.db_schema_version = 2
 
