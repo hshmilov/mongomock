@@ -32,7 +32,7 @@ class SeleniumService(DockerService):
                       extra_flags=extra_flags)
         cmd = 'docker exec grid wait_all_done 30s'
         subprocess.Popen(shlex.split(cmd)).communicate()
-        time.sleep(15)  # bug in selenium time causes tests to fail on servers the first time after docker cleanup
+        time.sleep(30)  # bug in selenium time causes tests to fail on servers the first time after docker cleanup
 
     def get_dockerfile(self, mode=''):
         return ''

@@ -39,7 +39,6 @@ set +e; ./pyrun.sh devops/scripts/automate_dev/credentials_inputer.py; set -e;
 echo "#### Populating with data finished"
 
 echo "#### Running before upgrade setups"
-./pyrun.sh devops/scripts/discover_now.py --wait
 cd testing
 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/before_upgrade
 cd ..
@@ -53,6 +52,7 @@ cd ..
 echo "#### Installed ${version}"
 
 echo "#### Running after upgrade tests"
+./pyrun.sh devops/scripts/discover_now.py --wait
 cd testing
 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/after_upgrade
 cd ..

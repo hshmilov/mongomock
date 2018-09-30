@@ -9,7 +9,10 @@ from axonius.consts.scheduler_consts import Phases
 from services.plugins.system_scheduler_service import SystemSchedulerService
 
 
-def main(should_wait=False, seconds=600):
+WAIT_TIMEOUT = 60 * 25
+
+
+def main(should_wait=False, seconds=WAIT_TIMEOUT):
     system_scheduler = SystemSchedulerService()
     system_scheduler.start_research()
 
@@ -21,10 +24,9 @@ def main(should_wait=False, seconds=600):
             if state == Phases.Stable.name:
                 print('System phase stable')
                 return
-            else:
-                print(f'System phase {state}')
-                time.sleep(3)
-                waited += 3
+            print(f'System phase {state}')
+            time.sleep(3)
+            waited += 3
             if waited > seconds:
                 raise TimeoutError()
 
@@ -32,7 +34,7 @@ def main(should_wait=False, seconds=600):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--wait', action='store_true', default=False)
-    parser.add_argument('-s', '--seconds', type=int, default=600)
+    parser.add_argument('-s', '--seconds', type=int, default=WAIT_TIMEOUT)
 
     try:
         args = parser.parse_args()
