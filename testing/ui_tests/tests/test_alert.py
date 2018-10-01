@@ -1,14 +1,24 @@
 import datetime
 
 import pytest
-from selenium.common.exceptions import NoSuchElementException
+from retrying import retry
 
-from ui_tests.tests.ui_test_base import TestBase
-from axonius.utils.wait import wait_until
+from selenium.common.exceptions import NoSuchElementException
 from services.adapters.json_file_service import JsonFileService
+from services.standalone_services.syslog_server import SyslogService
+
+from axonius.utils.wait import wait_until
+from ui_tests.tests.ui_test_base import TestBase
 
 ALERT_NAME = 'Special alert name'
 ALERT_CHANGE_NAME = 'test_alert_change'
+COMMON_ALERT_QUERY = 'Enabled AD Devices'
+
+
+@retry(stop_max_attempt_number=100, wait_fixed=100)
+def _verify_in_syslog_data(syslog_service: SyslogService, text):
+    last_log = list(syslog_service.get_syslog_data())[-1]
+    assert text in last_log
 
 
 class TestAlert(TestBase):
@@ -49,7 +59,7 @@ class TestAlert(TestBase):
         self.alert_page.click_new_alert()
         self.alert_page.wait_for_spinner_to_end()
         self.alert_page.fill_alert_name(ALERT_NAME)
-        self.alert_page.select_saved_query('Enabled AD Devices')
+        self.alert_page.select_saved_query(COMMON_ALERT_QUERY)
 
     def create_outputting_notification_alert(self):
         self.create_basic_alert()
@@ -228,3 +238,37 @@ class TestAlert(TestBase):
         # make sure it is now 1
         self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
+
+    def test_syslog_operation(self):
+        syslog_server = SyslogService()
+        syslog_server.take_process_ownership()
+
+        with syslog_server.contextmanager():
+            # set up syslog in settings
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            toggle = self.settings_page.find_syslog_toggle()
+            self.settings_page.click_toggle_button(toggle, make_yes=True)
+            self.settings_page.fill_syslog_host(syslog_server.name)
+            self.settings_page.fill_syslog_port(syslog_server.port)
+            self.settings_page.click_save_button()
+
+            # switch to alerts page
+            self.create_basic_alert()
+
+            # check all trigger causes so it will always jump
+            self.alert_page.check_not_changed()
+            self.alert_page.check_increased()
+            self.alert_page.check_decreased()
+
+            # This is here because our syslog doesn't like logs sent using "INFO"
+            # this is an issue with our syslog's configuration, and it's not worth the time fixing
+            self.alert_page.choose_severity_warning()
+
+            self.alert_page.check_notify_syslog()
+            self.alert_page.click_save_button()
+
+            self.base_page.run_discovery()
+            syslog_expected = f'Axonius:Alert - "{ALERT_NAME}"' + \
+                              f' for the following query has been triggered: {COMMON_ALERT_QUERY}'
+            _verify_in_syslog_data(syslog_server, syslog_expected)

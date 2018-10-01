@@ -59,6 +59,9 @@ def _is_pylint_ok(file_name):
     decoded = stdout.decode('utf-8')
     good_file = child.returncode == GOOD_EXIT_CODE and \
         any(report in decoded for report in (PERFECT_PYLINT_MESSAGE, PYLINT_EMPTY_FILE))
+    if not good_file:
+        print(f'ERROR: Found bad pylinted file {file_name}')
+        print(decoded)
     return file_name, good_file
 
 

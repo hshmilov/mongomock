@@ -11,6 +11,7 @@ class AlertPage(EntitiesPage):
     INCREASE_ID = 'alert_above'
     EDIT_ALERT_XPATH = '//div[@title=\'{alert_name}\']'
     SELECT_SAVED_QUERY_TEXT_CSS = 'div.trigger-text'
+    SEVERITY_WARNING_RADIO = '#SeverityWarning'
 
     @property
     def url(self):
@@ -57,6 +58,9 @@ class AlertPage(EntitiesPage):
     def check_push_system_notification(self):
         self.check_alert_checkbox('Push a system notification')
 
+    def check_notify_syslog(self):
+        self.check_alert_checkbox('Notify Syslog')
+
     def select_saved_query(self, text):
         self.driver.find_element_by_css_selector(self.SELECT_SAVED_QUERY_CSS).click()
         self.fill_text_field_by_css_selector(self.SAVED_QUERY_INPUT_CSS, text)
@@ -73,6 +77,9 @@ class AlertPage(EntitiesPage):
 
     def remove_selected_alerts(self):
         self.find_element_by_text('Remove').click()
+
+    def choose_severity_warning(self):
+        self.driver.find_element_by_css_selector(self.SEVERITY_WARNING_RADIO).click()
 
     def fill_increased(self, value):
         self.fill_text_field_by_element_id(self.INCREASE_ID, value)

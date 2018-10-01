@@ -8,9 +8,12 @@ class SettingsPage(Page):
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
+    USE_SYSLOG_LABEL = 'Use syslog'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
+    SYSLOG_HOST = 'syslogHost'
+    SYSLOG_PORT = 'syslogPort'
 
     @property
     def url(self):
@@ -48,9 +51,18 @@ class SettingsPage(Page):
     def find_send_emails_toggle(self):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
 
+    def find_syslog_toggle(self):
+        return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
+
     def set_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()
         self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
+
+    def fill_syslog_host(self, host):
+        self.fill_text_field_by_element_id(self.SYSLOG_HOST, host)
+
+    def fill_syslog_port(self, port):
+        self.fill_text_field_by_element_id(self.SYSLOG_PORT, port)
 
     def fill_email_port(self, port):
         self.fill_text_field_by_element_id(self.EMAIL_PORT_ID, port)

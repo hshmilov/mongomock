@@ -1,6 +1,6 @@
-from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests import ui_consts
 from services.standalone_services.smtp_server import SMTPService
+from ui_tests.tests import ui_consts
+from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestReport(TestBase):
