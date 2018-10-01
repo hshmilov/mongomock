@@ -107,12 +107,12 @@ class ObserveitAdapter(AdapterBase):
                     continue
                 os_type = None
                 try:
-                    os_type = int(device_raw.get('OSType'))
+                    os_type = int(device_raw.get('OSType') or device_raw.get('OperatingSystemType'))
                     device.figure_os(consts.OS_TYPES_DICT[os_type])
                 except Exception:
                     logger.exception(f'Problem getting os of {device_raw}')
                 domain = device_raw.get('SrvCurrentDomainName')
-                if domain.endswith('.local'):
+                if domain and domain.endswith('.local'):
                     domain = domain[:-len('.local')]
                 if not is_domain_valid(domain):
                     domain = None
@@ -135,7 +135,7 @@ class ObserveitAdapter(AdapterBase):
                     else:
                         device.hostname = hostname
                 device.id = device_id + (hostname or '') + (domain or '')
-                ip_list = device_raw.get('PrimaryIPAddress')
+                ip_list = device_raw.get('PrimaryIPAddress') or device_raw.get('CurrentIPAddressList')
                 try:
                     if ip_list is not None:
                         device.add_nic(None, ip_list.split(','))

@@ -118,10 +118,11 @@ class ScannerCorrelatorBase(object):
         devices_to_search = remove_duplicates_by_reference(devices_to_search)
         return self.find_suitable_newest(parsed_device, *args, **kwargs, adapter_list=devices_to_search)
 
-    def find_suitable_no_ip_contradictions(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
+    def find_suitable_no_ip_and_host_contradictions(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
         devices = list(self.find_suitable(parsed_device, *args, **kwargs))
         if len(devices) > 0:
-            device = next(filter(lambda dev: ips_do_not_contradict(dev, parsed_device), devices), None)
+            device = next(filter(lambda dev: ips_do_not_contradict(dev, parsed_device)
+                                 and hostnames_do_not_contradict(dev, parsed_device), devices), None)
         else:
             return None
         return None if device is None else (device[PLUGIN_UNIQUE_NAME], device['data']['id'])
@@ -150,10 +151,10 @@ class ScannerCorrelatorBase(object):
 
         adapters_with_same_mac = remove_duplicates_by_reference(adapters_with_same_mac)
 
-        return self.find_suitable_no_ip_contradictions(parsed_device,
-                                                       adapter_list=adapters_with_same_mac) or \
-            self.find_suitable_no_ip_contradictions(parsed_device,
-                                                    adapter_list=adapters_with_same_hostname)
+        return self.find_suitable_no_ip_and_host_contradictions(parsed_device,
+                                                                adapter_list=adapters_with_same_mac) or \
+            self.find_suitable_no_ip_and_host_contradictions(parsed_device,
+                                                             adapter_list=adapters_with_same_hostname)
 
     def _find_correlation_with_real_adapter(self, parsed_device) -> Tuple[str, str]:
         """
