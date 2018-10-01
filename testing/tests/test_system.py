@@ -2,7 +2,6 @@ import random
 import time
 
 import pytest
-from retrying import retry
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import StateLevels, Phases
@@ -58,16 +57,11 @@ def test_system_is_up(axonius_fixture):
 
 
 def test_stop_research(axonius_fixture, infinite_sleep_fixture):
-    @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
-    def _wait_for_state(scheduler, cond):
-        state = scheduler.current_state().json()
-        return (state[StateLevels.Phase.name] == Phases.Stable.name) == cond
-
     scheduler = axonius_fixture.scheduler
     infinite_sleep_fixture.add_client(test_infinite_sleep_credentials.client_details)
     assert len(infinite_sleep_fixture.clients()) > 0
     scheduler.start_research()
-    _wait_for_state(scheduler, False)
+    scheduler.wait_for_scheduler(False)
     time.sleep(5)  # otherwise the adapter might not even start fetching
     scheduler.stop_research()
-    _wait_for_state(scheduler, True)
+    scheduler.wait_for_scheduler(True)

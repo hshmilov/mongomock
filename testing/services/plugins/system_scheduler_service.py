@@ -1,4 +1,6 @@
 import requests
+from retrying import retry
+from axonius.consts.scheduler_consts import StateLevels, Phases
 
 from services.plugin_service import PluginService, API_KEY_HEADER
 
@@ -27,3 +29,12 @@ class SystemSchedulerService(PluginService):
         assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
                                             f"{str(response.content)}"
         return response
+
+    @retry(stop_max_attempt_number=100, wait_fixed=1000)
+    def wait_for_scheduler(self, is_scheduler_at_rest: bool):
+        """
+        Waits until scheduler is running or not running or raises
+        """
+        scheduler_state = self.current_state().json()
+        state = scheduler_state['state']
+        assert (state[StateLevels.Phase.name] == Phases.Stable.name) == is_scheduler_at_rest

@@ -31,6 +31,9 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                          requested_unique_plugin_name=plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)
         self.current_phase = scheduler_consts.Phases.Stable.name
 
+        # whether or not stopping sequence has initiated
+        self.__stopping_initiated = False
+
         self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
         self.research_phase_lock = threading.RLock()
         # This lock is held while the system is trying to stop
@@ -51,7 +54,10 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         """
         Get plugin state.
         """
-        return jsonify(self.state)
+        return jsonify({
+            'state': self.state,
+            'stopping': self.__stopping_initiated
+        })
 
     @add_rule('next_run_time', should_authenticate=False)
     def get_next_run_time(self):
@@ -316,20 +322,26 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
     def stop_research_phase(self):
         with self.__stopping_lock:
-            @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
-            def _wait_for_stable():
-                return self.current_phase == scheduler_consts.Phases.Stable.name
-            logger.info(f"received stop request for plugin: {self.plugin_unique_name}")
             try:
-                self._stop_plugins()
-            except Exception:
-                logger.exception('An exception was raised while stopping all plugins')
-            try:
-                _wait_for_stable()
-            except Exception:
-                logger.exception("Couldn't stop plugins for more than a 100 seconds - forcing stop")
-                self.current_phase = scheduler_consts.Phases.Stable.name
-                # raise axonius.plugin_exceptions.PluginException("Couldn't stop plugins for more than a 100 seconds")
+                self.__stopping_initiated = True
+
+                @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
+                def _wait_for_stable():
+                    return self.current_phase == scheduler_consts.Phases.Stable.name
+
+                logger.info(f"received stop request for plugin: {self.plugin_unique_name}")
+                try:
+                    self._stop_plugins()
+                except Exception:
+                    logger.exception('An exception was raised while stopping all plugins')
+                try:
+                    _wait_for_stable()
+                except Exception:
+                    logger.exception("Couldn't stop plugins for more than a 100 seconds - forcing stop")
+                    self.current_phase = scheduler_consts.Phases.Stable.name
+
+            finally:
+                self.__stopping_initiated = False
 
     @add_rule('stop_all', should_authenticate=False, methods=['POST'])
     def stop_all(self):
@@ -339,7 +351,9 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         except Exception:
             logger.exception("Exception while stopping")
         finally:
-            logger.info("FInished stopping all")
+            logger.info("Finished stopping all")
+            # Let's rebuild once at the end for precaution
+            self._request_db_rebuild(sync=False)
         return '', 204
 
     def get_all_plugins(self):

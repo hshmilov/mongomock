@@ -1,5 +1,4 @@
 import pytest
-from retrying import retry
 
 # pylint: disable=redefined-outer-name,unused-import
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
@@ -108,11 +107,6 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
 
 @pytest.mark.skip('AX-1977')
 def test_minimum_fetch_wait_time(axonius_fixture, esx_fixture):
-    @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
-    def _wait_for_state(scheduler_instance, cond):
-        state = scheduler_instance.current_state().json()
-        return (state[StateLevels.Phase.name] == Phases.Stable.name) == cond
-
     def _get_update_time(adapter_name, device_id=None):
         # Getting device from esx
         if device_id:
@@ -132,8 +126,8 @@ def test_minimum_fetch_wait_time(axonius_fixture, esx_fixture):
     # Sanity check that the device can be fatched
     esx_fixture.set_configurable_config('AdapterBase', 'minimum_time_until_next_fetch')  # Will delete this option
     scheduler.start_research()
-    _wait_for_state(scheduler, False)
-    _wait_for_state(scheduler, True)
+    scheduler.wait_for_scheduler(False)
+    scheduler.wait_for_scheduler(True)
     _, device_update_time_new = _get_update_time('esx_adapter', device_id)
     assert device_update_time_old < device_update_time_new, f'Device {device_id} didnt fetched on the second try'
     device_update_time_old = device_update_time_new
@@ -141,8 +135,8 @@ def test_minimum_fetch_wait_time(axonius_fixture, esx_fixture):
     esx_fixture.set_configurable_config('AdapterBase', 'minimum_time_until_next_fetch', 20)
 
     scheduler.start_research()
-    _wait_for_state(scheduler, False)
-    _wait_for_state(scheduler, True)
+    scheduler.wait_for_scheduler(False)
+    scheduler.wait_for_scheduler(True)
     _, device_update_time_new = _get_update_time('esx_adapter', device_id)
     assert device_update_time_new == device_update_time_old, f'Device {device_id} fetched although it shouldnt. ' \
                                                              f'old time - {device_update_time_old}, ' \

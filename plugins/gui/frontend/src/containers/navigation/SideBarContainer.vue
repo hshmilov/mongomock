@@ -68,7 +68,7 @@
                 }
             },
             isRestricted(name) {
-                return this.userPermissions[name] && this.userPermissions[name] === 'Restricted'
+                return this.userPermissions && this.userPermissions[name] === 'Restricted'
             },
             notifyAccess(name) {
                 this.$emit('access-violation', name)
