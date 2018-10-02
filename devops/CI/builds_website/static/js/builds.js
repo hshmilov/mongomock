@@ -608,16 +608,20 @@
     }
     function add_new_instance() {
         var instance_type = "";
+        var data = {};
+
         if (instance_vm_type === "demo") {
             instance_type = "Demo-VM";
+            data["fork"] = 'axonius/cortex';
+            data["branch"] = $("#new_vm_release")[0].value;
         }
         else {
             instance_type = "Builds-VM";
+            data["fork"] = $("#new_vm_fork")[0].value;
+            data["branch"] = $("#new_vm_branch")[0].value;
         }
-        var data = {};
+
         data["name"] = $("#new_vm_name")[0].value;
-        data["fork"] = $("#new_vm_fork")[0].value;
-        data["branch"] = $("#new_vm_branch")[0].value;
         data["owner"] = $("#new_vm_owner")[0].value;
         data["public"] = $("#new_vm_public")[0].checked;
         data["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
