@@ -1553,7 +1553,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @gui_helpers.add_rule_unauth("okta-redirect")
     def okta_redirect(self):
-        claims = try_connecting_using_okta(self.__okta)
+        okta_settings = self.__okta
+        if not okta_settings['enabled']:
+            return return_error("Okta login is disabled", 400)
+        claims = try_connecting_using_okta(okta_settings)
         if claims:
             self.__exteranl_login_successful(
                 'okta',
@@ -1574,6 +1577,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             password = log_in_data.get('password')
             domain = log_in_data.get('domain')
             ldap_login = self.__ldap_login
+            if not ldap_login['enabled']:
+                return return_error('LDAP login is disabled', 400)
 
             try:
                 conn = LdapConnection(ldap_login['dc_address'], f'{domain}\\{user_name}', password,
@@ -1637,6 +1642,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         except ImportError:
             return return_error("Import error, Google login isn't available")
         google_creds = self.__google
+
+        if not google_creds['enabled']:
+            return return_error('Google login is disabled', 400)
+
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
             return return_error("No login data provided", 400)
@@ -1823,29 +1832,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                               'from': skip,
                               'sort': [{'@timestamp': {'order': 'desc'}}]})
         return jsonify(res['hits']['hits'])
-
-    @gzipped_downloadable("axonius_logs_{}", "json")
-    @gui_helpers.add_rule_unauth("logs/export")
-    def logs_export(self):
-        """
-        Pass 'start_date' and/or 'end_date' in GET parameters
-        :return:
-        """
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        es = Elasticsearch(hosts=[self._elk_addr], http_auth=self._elk_auth)
-        res = es.search(index='logstash-*', doc_type='logstash-log',
-                        body={
-                            "query": {
-                                "range": {  # expect this to return the one result on 2012-12-20
-                                    "@timestamp": {
-                                        "gte": start_date,
-                                        "lte": end_date,
-                                    }
-                                }
-                            }
-                        })
-        return json.dumps(list(res['hits']['hits']))
 
     #############
     # DASHBOARD #
