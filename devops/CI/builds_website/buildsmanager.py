@@ -20,7 +20,7 @@ BUILDS_DEMO_VM_TYPE = "Demo-VM"
 AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
-IMAGE_ID = "ami-906f56f5"  # Our own imported ubuntu 16.04 Server.
+IMAGE_ID = "ami-0a6310041d410db3b"  # Our own imported ubuntu 16.04 Server.
 INSTANCE_TYPE = "t2.xlarge"
 PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
 PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
