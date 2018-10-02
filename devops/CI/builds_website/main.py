@@ -25,11 +25,15 @@ chmod 777 *
 # This is done this way for getting the credentials of the raised adapters (more precisely to query the core register endpoint to get registered adapters.
 # This should be changed in the future when the system matures for security reasons and others.
 ./install.sh {install_params} --clean --run-system {set_credentials}
-cd ..
+cd /axonius
 rm .git*
+if [ "{run_cycle}" == "True" ]; then
+    source prepare_python_env.sh
+    python devops/scripts/discover_now.py
+fi
 exit"""
 
-INSTALL_SYSTEM_LINE = "curl -k 'https://builds.axonius.lan/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}' | bash -"
+INSTALL_SYSTEM_LINE = "curl -k 'https://builds.axonius.lan/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}&run_cycle={run_cycle}' | bash -"
 INSTALL_DEMO_CONFIG = "#!/bin/bash\nset -x\nHOME_DIRECTORY=/home/ubuntu/axonius/install/\nmkdir -p $HOME_DIRECTORY\nLOG_FILE=$HOME_DIRECTORY\"install.log\"\nexec 1>$LOG_FILE 2>&1\n\n{install_system_line}\n\necho Reporting current state to builds server\n\n\nBUILDS_SERVER_URL=\"https://builds.axonius.lan\"\nINSTANCE_ID=$(cat /var/lib/cloud/data/instance-id)\nURL=$(printf \"%s/instances/%s/manifest\" \"$BUILDS_SERVER_URL\" \"$INSTANCE_ID\")\n\ndocker images --digests\ndocker images --digests > $DOCKER_IMAGES_FILE\n\ncurl -k -v -F \"key=docker_images\" -F \"value=@$DOCKER_IMAGES_FILE\" $URL\n\n# we have to copy the install log file and send the copied one, or else problems will happen\n# since this file is open.\ncp $LOG_FILE $LOG_FILE.send\ncurl -k -v -F \"key=install_log\" -F \"value=@$LOG_FILE.send\" $URL\n\necho downloading final manifest from server\ncurl -k $URL > $HOME_DIRECTORY\"manifest.json\"\n\necho final tweeks\nchown -R ubuntu:ubuntu $HOME_DIRECTORY"
 
 
@@ -151,7 +155,8 @@ def instances():
                 install_system_line=INSTALL_SYSTEM_LINE.format(fork=request.form["fork"], branch=request.form["branch"],
                                                                set_credentials=request.form.get("set_credentials",
                                                                                                 'false'),
-                                                               include=include, exclude=exclude))
+                                                               include=include, exclude=exclude,
+                                                               run_cycle=instance_type == "Demo-VM"))
 
         json_result = (bm.add_instance(
             request.form["name"],
@@ -228,6 +233,7 @@ def get_install_demo_script():
     set_credentials = "--set-credentials" if request.args.get("set_credentials", False) == "true" else ""
     exclude = request.args.get("exclude")
     include = request.args.get("include")
+    run_cycle = request.args.get("run_cycle", '') == 'True'
     if exclude != '':
         exclude = [current_adapter[:-len('_adapter')] for current_adapter in exclude.split(',')]
         opt_params = "'--exclude {0}'".format(' '.join(exclude))
@@ -240,7 +246,7 @@ def get_install_demo_script():
         branch = "develop"
 
     return INSTALL_DEMO_SCRIPT.format(fork=fork, branch=branch, set_credentials=set_credentials,
-                                      install_params=opt_params)
+                                      install_params=opt_params, run_cycle=str(run_cycle))
 
 
 @app.after_request

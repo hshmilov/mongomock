@@ -505,11 +505,7 @@
     function load_release_list(page_number) {
         var select = $("#new_vm_release");
 
-        if (page_number === 1) {
-            select.html("");
-        }
-
-        $.ajax({url: "https://api.github.com/repos/axonius/cortex/branches?page=" + page_number,
+        $.ajax({url: "https://api.github.com/repos/axonius/cortex/tags",
             type: "GET",
             beforeSend: function (xhr) {
                 var token_hash = "Basic " + btoa(github_token);
@@ -517,14 +513,8 @@
             }})
             .done(function(data) {
                 data.forEach(function (i) {
-                    if (i.name.startsWith("Release/")) {
                         select.append($("<option>").attr("value", i.name).text(i.name));
-                    }
                 });
-
-                if (data.length !== 0) {
-                    load_release_list(page_number + 1);
-                }
             })
             .fail(exception_modal)
     }
