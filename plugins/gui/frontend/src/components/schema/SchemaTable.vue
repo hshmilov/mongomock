@@ -108,7 +108,7 @@
                 // }
             },
             processDataValue(item, field) {
-			    if (Array.isArray(item[field.name]) && field.name === this.sort.field && !this.sort.desc) {
+			    if (Array.isArray(item[field.name]) && this.sort && field.name === this.sort.field && !this.sort.desc) {
                     return [...item[field.name]].reverse()
                 }
 			    return field.name.split('->').reduce((item, field_segment) => item[field_segment], item)
