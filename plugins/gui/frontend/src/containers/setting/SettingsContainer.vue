@@ -26,8 +26,7 @@
                 <div class="tab-settings">
                     <template v-if="coreSettings">
                         <x-schema-form :schema="coreSettings.schema" @validate="updateCoreValidity"
-                                       :read-only="isReadOnly"
-                                       v-model="coreSettings.config" api-upload="adapters/core"/>
+                                       :read-only="isReadOnly" v-model="coreSettings.config" api-upload="adapters/core"/>
                         <div class="place-right">
                             <button class="x-btn" :class="{ disabled: !coreComplete || isReadOnly }"
                                     @click="saveGlobalSettings">Save
@@ -313,7 +312,7 @@
                 this.updatePluginConfig({
                     pluginId: 'system_scheduler',
                     configName: 'SystemSchedulerService',
-                    config: this.schedulerSettings
+                    config: this.schedulerSettings.config
                 }).then(response => {
                     this.createToast(response)
                 }).catch(error => {

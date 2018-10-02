@@ -2150,7 +2150,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         child2_filter = ''
         if len(intersecting) == 1:
             # Fetch the only child, intersecting with parent
-            child1_view['filter'] = f'{base_filter}({child1_filter})'
+            child1_view['query']['filter'] = f'{base_filter}({child1_filter})'
             data.append({'name': intersecting[0], 'view': child1_view, 'module': entity.value,
                          'value': data_collection.count_documents({
                              '$and': base_queries + [child1_query]
@@ -2305,6 +2305,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 base_query = {
                     '$and': [
                         base_query, {
+                            field['name']: {
+                                '$exists': True
+                            }
+                        }, {
                             'accurate_for_datetime': for_date
                         }
                     ]
