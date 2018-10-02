@@ -20,7 +20,13 @@ def main(should_wait=False, seconds=WAIT_TIMEOUT):
         waited = 10
         time.sleep(waited)  # because for some reason it takes time to change phase (AX-1832)
         while True:
-            state = system_scheduler.current_state().json()['state']['Phase']
+            state = system_scheduler.current_state().json()
+
+            # this API has changed it signature over 1.10->1.11, therefore this code should support both
+            if 'state' in state:
+                state = state['state']
+
+            state = state['Phase']
             if state == Phases.Stable.name:
                 print('System phase stable')
                 return
