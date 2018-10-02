@@ -25,7 +25,7 @@ INSTANCE_TYPE = "t2.xlarge"
 PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
 PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
-OVA_IMAGE_NAME = "Axonius-operational-export-103"
+OVA_IMAGE_NAME = "Axonius-operational-export-104"
 
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
@@ -431,7 +431,7 @@ class BuildsManager(object):
         commands = []
         if len(running_exports) == 0:
             commands.append(
-                "rm -f /home/ubuntu/packer_image_creator/*.py; rm -rf /home/ubuntu/packer_image_creator/output-axonius-*")
+                "rm -f /home/ubuntu/exports/*.py; rm -rf /home/ubuntu/exports/output-axonius-*")
 
         export_id = ObjectId()
         commands.extend([
@@ -466,7 +466,7 @@ class BuildsManager(object):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(AXONIUS_EXPORTS_SERVER, username='ubuntu', password='Password2')
-        with ssh.open_sftp().open('/home/ubuntu/packer_image_creator/build_{0}.log'.format(export_version), 'r') as remote_file:
+        with ssh.open_sftp().open('/home/ubuntu/exports/build_{0}.log'.format(export_version), 'r') as remote_file:
             return {'value': remote_file.read().decode('utf-8')}
 
     def update_export_status(self, export_id, status, log):
