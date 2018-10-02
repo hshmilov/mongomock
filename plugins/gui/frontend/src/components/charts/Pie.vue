@@ -1,5 +1,5 @@
 <template>
-    <div class="pie" :id="id">
+    <div class="pie" :id="id" :class="{disabled: readOnly}">
         <svg viewBox="-1 -1 2 2" @mouseout="inHover = -1">
             <defs>
                 <linearGradient id="intersection-1-2">
@@ -11,8 +11,7 @@
                     <stop class="extra-stop-3" offset="100%"></stop>
                 </linearGradient>
             </defs>
-            <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)"
-               :id="getId(index)">
+            <g v-for="slice, index in slices" @click="onClick(index)" @mouseover="onHover($event, index)" :id="getId(index)">
                 <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
                 <text v-if="showPercentageText(slice.value)" class="scaling" text-anchor="middle"
                       :x="slice.middle.x" :y="slice.middle.y">{{Math.round(slice.value * 100)}}%</text>
@@ -40,7 +39,9 @@
 <script>
 	export default {
 		name: 'x-pie-chart',
-		props: {data: {required: true}, id: {}, forceText: {default: false}},
+		props: {
+		    data: {required: true}, id: {}, forceText: {default: false}, readOnly: { default: false }
+        },
 		computed: {
 			processedData () {
 				return this.data.map((item, index) => {
@@ -114,7 +115,11 @@
 			},
 			showPercentageText(val) {
 				return (this.forceText && val > 0) || val > 0.04
-			}
+			},
+            onClick(index) {
+			    if (this.readOnly) return
+                this.$emit('click-one', index)
+            }
 		}
 	}
 </script>
@@ -142,6 +147,9 @@
                 font-size: 1%;
                 fill: $theme-black;
             }
+        }
+        &.disabled g {
+            cursor: default;
         }
     }
 

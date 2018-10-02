@@ -67,7 +67,7 @@
                     </template>
                 </div>
             </tab>
-            <tab title="Manage Users" id="user-settings-tab">
+            <tab title="Manage Users" id="user-settings-tab" v-if="isAdmin">
                 <div class="header">
                     <h4 class="title">Users and Roles</h4>
                     <button class="x-btn" :class="{ disabled: isReadOnly }" @click="openNewUserForm">+ New User</button>
@@ -141,6 +141,10 @@
                 isReadOnly(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
                     return state.auth.data.permissions.Settings === 'ReadOnly'
+                },
+                isAdmin(state) {
+                    if (!state.auth.data) return false
+                    return state.auth.data.admin
                 },
                 schedulerSettings(state) {
                     if (!state.configurable.system_scheduler) return null

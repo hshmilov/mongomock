@@ -1,5 +1,5 @@
 <template>
-    <div class="histogram">
+    <div class="histogram" :class="{disabled: readOnly}">
         <div v-for="item, index in limitedData" class="histogram-item" @click="$emit('click-one', index)">
             <div class="item-bar">
                 <img v-if="type === 'logo'" :src="`/src/assets/images/logos/${item.name}.png`" width="16">
@@ -20,7 +20,9 @@
 
 	export default {
 		name: 'x-histogram-chart',
-		props: { data: { required: true }, limit: { default: 5 }, type: { default: 'text' } },
+		props: {
+		    data: { required: true }, limit: { default: 5 }, type: { default: 'text' }, readOnly: { default: false }
+        },
 		computed: {
 			limitedData () {
 				return this.data.slice(0, this.limit)
@@ -93,6 +95,14 @@
             color: $grey-3;
             width: 100%;
             text-align: right;
+        }
+        &.disabled {
+            .histogram-item {
+                cursor: default;
+                .bar:hover {
+                    background-color: rgba($grey-2, 0.4);
+                }
+            }
         }
     }
 

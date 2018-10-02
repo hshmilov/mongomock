@@ -1,6 +1,7 @@
 <template>
     <x-card :title="`${data.title} Coverage`" class="coverage">
-        <x-pie-chart :data="pieSlices" @click-one="$emit('click-one', $event)" :id="data.name" :force-text="true" />
+        <x-pie-chart :data="pieSlices" @click-one="$emit('click-one', $event)" :id="data.name" :force-text="true"
+                     :read-only="readOnly" />
     </x-card>
 </template>
 
@@ -12,7 +13,7 @@
 	export default {
 		name: 'coverage-card',
         components: { xCard, xPieChart },
-        props: { data: {} },
+        props: { data: {}, readOnly: { default: false } },
         computed: {
 			quarter() {
 				return Math.ceil(this.data.portion * 4)

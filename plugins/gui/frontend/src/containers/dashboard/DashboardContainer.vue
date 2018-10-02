@@ -6,10 +6,12 @@
         </template>
         <template v-else>
             <div class="dashboard-charts">
-                <x-data-discovery-card :data="deviceDiscovery" module="devices" :filter="runFilter" />
-                <x-data-discovery-card :data="dashboard.dataDiscovery.users.data" module="users" :filter="runFilter" />
-                <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title"
-                                 :data="item" @click-one="runCoverageFilter(item.properties, $event)"/>
+                <x-data-discovery-card :data="deviceDiscovery" module="devices"
+                                       :filter="isDevicesRestricted? undefined: runFilter" />
+                <x-data-discovery-card :data="dashboard.dataDiscovery.users.data" module="users"
+                                       :filter="isUsersRestricted? undefined: runFilter" />
+                <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title" :data="item"
+                                 @click-one="runCoverageFilter(item.properties, $event)" :read-only="isDevicesRestricted"/>
                 <x-card v-for="(chart, chartInd) in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="!isReadOnly" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
                     <div class="card-history" v-if="chart.metric !== 'timeline'">Showing for
@@ -19,7 +21,7 @@
                         <a v-if="chart.showingHistorical" class="x-btn link" @click="clearDate(chart.uuid)">clear</a>
                     </div>
                     <components :is="`x-${chart.view}`" :data="chart.data" :config="chart.config"
-                                @click-one="runChartFilter(chartInd, $event)"/>
+                                @click-one="runChartFilter(chartInd, $event)" />
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                     <x-cycle-chart :data="lifecycle.subPhases"/>
@@ -106,9 +108,17 @@
                     if (!state.auth.data || !state.auth.data.permissions) return true
                     return state.auth.data.permissions.Dashboard === 'ReadOnly'
                 },
-                isDevicesWrite(state) {
+                isDevicesEdit(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
                     return state.auth.data.permissions.Devices === 'ReadWrite'
+                },
+                isDevicesRestricted(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Devices === 'Restricted'
+                },
+                isUsersRestricted(state) {
+                    if (!state.auth.data || !state.auth.data.permissions) return true
+                    return state.auth.data.permissions.Users === 'Restricted'
                 }
             }),
             lifecycle() {
@@ -184,6 +194,10 @@
             },
             runChartFilter(chartInd, queryInd) {
                 let query = this.dashboard.charts.data[chartInd].data[queryInd]
+                if ((query.module === 'devices' && this.isDevicesRestricted)
+                    || (query.module === 'users' && this.isUsersRestricted)) {
+                    return
+                }
                 if (query.view === undefined || query.view === null
                     || query.module === undefined || query.module === null) return
 				this.updateView({
@@ -248,7 +262,7 @@
             	if (!this.isEmptySystem) this.nextState('dashboard')
                 if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count
-				if (this.seenDevices && this.isDevicesWrite) {
+				if (this.seenDevices && this.isDevicesEdit) {
 					let adapter = this.deviceDiscovery.counters.find((item) => !item.name.includes('active_directory'))
 					let name = ''
 					let filter = ''
