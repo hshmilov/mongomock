@@ -3,13 +3,14 @@
     "build_name": "test",
     "password": "bringorder",
     "branch": "develop",
-    "fork": "axonius"
+    "fork": "axonius",
+    "image": "Axonius-operational-export-103"
   },
   "builders": [
     {
       "name": "axonius-{{user `build_name` }}-build",
       "type": "vmware-vmx",
-      "source_path": "/home/ubuntu/Axonius-operational-export/Axonius-operational-export.vmx",
+      "source_path": "/home/ubuntu/{{user `image` }}/{{user `image` }}.vmx",
       "ssh_username": "ubuntu",
       "ssh_password": "{{user `password` }}",
       "shutdown_command": "echo {{user `password`}} | sudo -S shutdown -P now",

@@ -1,0 +1,9 @@
+The ova creation process is separated to two packer processes in which the second one is
+dependent on the first ones output.
+
+The processes:
+1. The first process (axonius_generate_installer.json) works in a VM, downloads the code from github (selected branch fork),
+uses make.py to builds the system and generate our updater/installer. The output is the updater/installer.
+
+2. Takes the updater installer into a new copy of our VM. Installs the system (The docker containers), Sets-up Chef provisioning.
+Closes the OVA, Uploads it to S3 and creates an AMI.

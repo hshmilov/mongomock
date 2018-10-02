@@ -25,6 +25,7 @@ INSTANCE_TYPE = "t2.xlarge"
 PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
 PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
+OVA_IMAGE_NAME = "Axonius-operational-export-103"
 
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
@@ -435,10 +436,10 @@ class BuildsManager(object):
         export_id = ObjectId()
         commands.extend([
             "cd /home/ubuntu/packer_image_creator/",
-            "./packer build -force -var build_name={0} -var fork={1} -var branch={2} axonius_generate_installer.json >> build_{0}.log 2>&1".format(
-                version, fork, branch),
-            "./packer build -force -var build_name={0} -var fork={1} -var branch={2} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
-                version, fork, branch),
+            "./packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_generate_installer.json >> build_{0}.log 2>&1".format(
+                version, fork, branch, OVA_IMAGE_NAME),
+            "./packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
+                version, fork, branch, OVA_IMAGE_NAME),
             "curl -k -v -F \"status=$?\" -F \"log=@./build_{1}.log\" https://builds.axonius.lan/exports/{0}/status".format(
                 export_id, version),
             "rm -f ./build_{0}.log".format(version)
@@ -470,8 +471,8 @@ class BuildsManager(object):
 
     def update_export_status(self, export_id, status, log):
         export = self.db.exports.find_one({"version": export_id})
-        ami_id_match = re.search("us-east-2: (.*)$", log)
-        ami_id = ami_id_match.group(0) if ami_id_match else ''
+        ami_id_match = re.search("^us-east-2: (.*)$", log, re.MULTILINE)
+        ami_id = ami_id_match.group(1) if ami_id_match else ''
         self.db.exports.update_one({"version": export_id}, {"$set": {"status": status, "log": log,
                                                                      "download_link": "<a href='http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova'>Click here</a>".format(
                                                                          S3_BUCKET_NAME_FOR_OVA,
