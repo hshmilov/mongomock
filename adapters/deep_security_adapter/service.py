@@ -1,17 +1,21 @@
 import ipaddress
 import logging
+import sys
 
 from dsp3.models.manager import Manager
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from deep_security_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+def raise_not_exit(msg=''):
+    raise Exception(msg)
 
 
 class DeepSecurityAdapter(AdapterBase):
@@ -31,26 +35,35 @@ class DeepSecurityAdapter(AdapterBase):
 
     @staticmethod
     def __create_manager_from_config(client_config):
-        if client_config.get('domain'):
-            dsm = Manager(username=client_config['username'],
-                          password=client_config['password'],
-                          host=client_config['domain'],
-                          port=client_config.get('port') or consts.DEFAULT_PORT,
-                          )
-        else:
-            dsm = Manager(username=client_config['username'],
-                          password=client_config['password'],
-                          tenant=client_config.get('tenant'),
-                          verify_ssl=client_config.get('verify_ssl') or False)
-        return dsm
+        # In case of an error dsp3 calls to exit(). We have to change this to an exception
+        exit_func = sys.exit
+        try:
+            sys.exit = raise_not_exit
+            if client_config.get('domain'):
+                dsm = Manager(username=client_config['username'],
+                              password=client_config['password'],
+                              host=client_config['domain'],
+                              port=client_config.get('port') or consts.DEFAULT_PORT,
+                              )
+            else:
+                dsm = Manager(username=client_config['username'],
+                              password=client_config['password'],
+                              tenant=client_config.get('tenant'),
+                              verify_ssl=client_config.get('verify_ssl') or False)
+            return dsm
+        finally:
+            sys.exit = exit_func
 
     def _connect_client(self, client_config):
         try:
             dsm = self.__create_manager_from_config(client_config)
             dsm.end_session()
             return client_config
-        except RESTException as e:
-            message = 'Error connecting to client , reason: {0}'.format(str(e))
+        except Exception as e:
+            reason = str(e)
+            if not reason:
+                reason = 'Login Failed'
+            message = 'Error connecting to client , reason: {0}'.format(reason)
             logger.exception(message)
             raise ClientConnectionException(message)
 
