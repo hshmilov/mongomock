@@ -7,3 +7,6 @@ uses make.py to builds the system and generate our updater/installer. The output
 
 2. Takes the updater installer into a new copy of our VM. Installs the system (The docker containers), Sets-up Chef provisioning.
 Closes the OVA, Uploads it to S3 and creates an AMI.
+
+Packer should be downloaded and deployed to this dir manually from:
+https://releases.hashicorp.com/packer/1.3.1/packer_1.3.1_linux_amd64.zip
