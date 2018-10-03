@@ -2341,7 +2341,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             datefrom = parse_date(datefrom)
         except Exception:
             logger.exception('Given date to or from is invalid')
-            return return_error('Given date to or from is invalid')
+            return None
 
         return {
             'lines': self._fetch_view_timeline(views, datefrom, dateto),

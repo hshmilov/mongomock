@@ -46,7 +46,8 @@
                 this.config.views.push({ ...dashboardView })
             },
             validate() {
-                this.$emit('validate', !this.config.views.filter(view => view.name === '').length)
+                this.$emit('validate', !this.config.views.filter(view => view.name === '').length
+                    && this.config.datefrom !== null && this.config.dateto !== null)
             }
         }
     }
