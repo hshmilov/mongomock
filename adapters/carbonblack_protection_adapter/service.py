@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
 from carbonblack_protection_adapter.connection import \
@@ -15,7 +16,7 @@ from carbonblack_protection_adapter.connection import \
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CarbonblackProtectionAdapter(AdapterBase):
+class CarbonblackProtectionAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         connected = Field(bool, 'Connected')
@@ -100,6 +101,9 @@ class CarbonblackProtectionAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
+                uninstall = device_raw.get('uninstalled') or False
+                if uninstall is True and not self.__fetch_uninstall:
+                    continue
                 device = self._new_device_adapter()
                 device_id = device_raw.get('id')
                 if not device_id:
@@ -140,3 +144,29 @@ class CarbonblackProtectionAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_uninstall',
+                    'title': 'Fetch Uninstall Devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_uninstall',
+            ],
+            'pretty_name': 'Carbonblack Protection Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_uninstall': True,
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_uninstall = config['fetch_uninstall']
