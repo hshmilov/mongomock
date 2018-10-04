@@ -20,12 +20,13 @@ BUILDS_DEMO_VM_TYPE = "Demo-VM"
 AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
-IMAGE_ID = "ami-0a6310041d410db3b"  # Our own imported ubuntu 16.04 Server.
 INSTANCE_TYPE = "t2.xlarge"
 PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
 PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
-OVA_IMAGE_NAME = "Axonius-operational-export-104"
+
+IMAGE_ID = "ami-0a7dc9406a9db994e"  # Our own imported ubuntu 16.04 Server.
+OVA_IMAGE_NAME = "Axonius-operational-export-105"
 
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
