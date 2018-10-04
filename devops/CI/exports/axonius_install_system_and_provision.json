@@ -102,7 +102,6 @@
       {
         "type": "shell-local",
         "inline": [
-          "aws s3 put-object-acl --bucket axonius-releases --key {{user `build_name`}}/{{user `build_name`}}_export.ova --acl public-read",
           "rm -rf ./output-axonius-{{user `build_name` }}-build"
         ]
       }
