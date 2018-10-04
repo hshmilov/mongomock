@@ -1,5 +1,4 @@
 import pytest
-from flaky import flaky
 from services.adapters.cisco_service import CiscoService, cisco_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_cisco_credentials import cisco_creds, SOME_DEVICE_ID
@@ -22,7 +21,7 @@ class TestCiscoAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @flaky(max_runs=2)
+    @pytest.mark.skip('AX-2169')
     def test_fetch_devices(self):
         super().test_fetch_devices()
 
