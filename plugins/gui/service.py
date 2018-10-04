@@ -844,7 +844,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     continue
 
                 clients_collection = db_connection[adapter_name]['clients']
-                schema = self._get_plugin_schemas(db_connection, adapter_name)['clients']
+                schema = self._get_plugin_schemas(db_connection, adapter_name).get('clients')
+                if not schema:
+                    # there might be a race - in the split second that the adapter is up
+                    # but it still hasn't written it's schema
+                    continue
+
                 clients = [gui_helpers.beautify_db_entry(client) for client in clients_collection.find()
                            .sort([('_id', pymongo.DESCENDING)])]
                 for client in clients:
