@@ -15,6 +15,7 @@
     var current_configurations = [];
     var current_configuration_details_i = 0;
     var instance_vm_type = "instance";
+    var code_source = "Branch";
 
     var last_custom_configuration_code = "";
     var is_in_custom_configuration_code = false;
@@ -491,6 +492,7 @@
         }
     }
     function new_instance_by_release_code_change(code_choice_option) {
+        code_source = code_choice_option;
         if (code_choice_option === "Release") {
             $("#new_instance_fork_and_branch_select_cell").hide();
             $("#new_instance_release_select_cell").show();
@@ -607,16 +609,15 @@
             .fail(exception_modal)
     }
     function add_new_instance() {
-        var instance_type = "";
         var data = {};
 
-        if (instance_vm_type === "demo") {
-            instance_type = "Demo-VM";
+        var instance_type = (instance_vm_type === "demo") ? "Demo-VM" : "Builds-VM";
+
+        if (code_source === "Release") {
             data["fork"] = 'axonius/cortex';
             data["branch"] = $("#new_vm_release")[0].value;
         }
         else {
-            instance_type = "Builds-VM";
             data["fork"] = $("#new_vm_fork")[0].value;
             data["branch"] = $("#new_vm_branch")[0].value;
         }
