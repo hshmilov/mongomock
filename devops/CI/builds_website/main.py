@@ -235,8 +235,7 @@ def get_install_demo_script():
     include = request.args.get("include")
     run_cycle = request.args.get("run_cycle", '') == 'True'
     if exclude != '':
-        exclude = [current_adapter[:-len('_adapter')] for current_adapter in exclude.split(',')]
-        opt_params = "'--exclude {0}'".format(' '.join(exclude))
+        opt_params = "'--exclude {0}'".format(' '.join(exclude.split(',')))
     elif include != '':
         opt_params = "'{0}'".format(' '.join(include.split(',')))
     elif include == '' and exclude == '':
