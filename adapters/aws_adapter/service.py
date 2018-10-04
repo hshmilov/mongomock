@@ -72,6 +72,7 @@ class AWSTagKeyValue(SmartJsonClass):
 
 class AwsAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
+        account_tag = Field(str, 'Account Tag')
         # EC2-specific fields
         aws_tags = ListField(AWSTagKeyValue, "AWS EC2 Tags")
         instance_type = Field(str, "AWS EC2 Instance Type")
@@ -169,6 +170,8 @@ class AwsAdapter(AdapterBase):
                 raise ClientConnectionException("Could not connect to AWS EC2 or ECS services.")
             else:
                 # Stores both EC2 and EKS clients in a dict
+                if client_config.get('account_tag'):
+                    boto3_clients['account_tag'] = client_config.get('account_tag')
                 if errors.get('ec2') is None:
                     boto3_clients['ec2'] = boto3_client_ec2
                 if errors.get('ecs') is None:
@@ -195,6 +198,7 @@ class AwsAdapter(AdapterBase):
         :return: http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.Client.describe_instances
         """
         raw_data = {}
+        raw_data['account_tag'] = client_data.get('account_tag')
         # Checks whether client_data contains EC2 data
         if client_data.get('ec2') is not None:
             try:
@@ -284,6 +288,12 @@ class AwsAdapter(AdapterBase):
                     "format": "password"
                 },
                 {
+                    'name': 'account_tag',
+                    'title': 'Account Tag',
+                    'type': 'string'
+
+                },
+                {
                     "name": PROXY,
                     "title": "Proxy",
                     "type": "string"
@@ -298,12 +308,14 @@ class AwsAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        account_tag = devices_raw_data.get('account_tag')
         # Checks whether devices_raw_data contains EC2 data
         if devices_raw_data.get('ec2') is not None:
             ec2_devices_raw_data = devices_raw_data.get('ec2')
             for reservation in ec2_devices_raw_data.get('Reservations', []):
                 for device_raw in reservation.get('Instances', []):
                     device = self._new_device_adapter()
+                    device.account_tag = account_tag
                     device.hostname = device_raw.get('PublicDnsName')
                     tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
                     for key, value in tags_dict.items():
@@ -342,6 +354,7 @@ class AwsAdapter(AdapterBase):
             for device_raw in ecs_devices_raw_data:
                 try:
                     device = self._new_device_adapter()
+                    device.account_tag = account_tag
                     attachments = device_raw.get('attachments')
                     if attachments:
                         try:
