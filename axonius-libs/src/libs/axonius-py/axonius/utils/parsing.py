@@ -592,13 +592,17 @@ def is_azuread_or_ad_and_have_name(adapter_device):
         get_ad_name_or_azure_display_name(adapter_device)
 
 
-def is_from_epo_with_empty_mac(adapter_device):
-    return (adapter_device['plugin_name'] == 'epo_adapter') and \
+def is_from_no_mac_adapters_with_empty_mac(adapter_device):
+    return (adapter_device['plugin_name'] in ['epo_adapter', 'observeit_adapter', 'cynet_adapter']) and \
            (not adapter_device.get(NORMALIZED_MACS))
 
 
 def is_from_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter'
+
+
+def is_illusive_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'illusive_adapter'
 
 
 def is_junos_space_device(adapter_device):
@@ -616,6 +620,15 @@ def compare_id(adapter_device1, adapter_device2):
 def get_os_type(adapter_device):
     from axonius.devices.device_adapter import OS_FIELD
     return (adapter_device['data'].get(OS_FIELD) or {}).get('type')
+
+
+def is_linux(adapter_device):
+    os_type = get_os_type(adapter_device)
+    if not os_type:
+        return False
+    if os_type.lower() == 'linux':
+        return True
+    return False
 
 
 def get_id(adapter_device):

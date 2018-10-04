@@ -1,7 +1,7 @@
 import logging
 from itertools import combinations
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
-from axonius.correlator_base import (CorrelationReason, has_hostname, has_name, has_mac,
+from axonius.correlator_base import (CorrelationReason, has_hostname, has_name, has_mac, has_last_used_users,
                                      has_serial, has_cloud_id, has_ad_or_azure_name)
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import (NORMALIZED_MACS,
@@ -13,12 +13,14 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_asset_name, compare_asset_name, is_from_juniper_and_asset_name,
                                    is_junos_space_device,
                                    normalize_adapter_devices, normalize_mac,
-                                   compare_id, is_old_device, is_sccm_or_ad, get_id, is_from_epo_with_empty_mac,
+                                   compare_id, is_old_device, is_sccm_or_ad, get_id,
+                                   is_from_no_mac_adapters_with_empty_mac,
                                    is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial,
                                    compare_domain, get_domain, get_cloud_data, compare_clouds,
                                    is_azuread_or_ad_and_have_name, get_ad_name_or_azure_display_name,
                                    compare_ad_name_or_azure_display_name, get_last_used_users, compare_last_used_users,
-                                   compare_asset_hosts, get_asset_or_host, is_deep_security_adapter)
+                                   compare_asset_hosts, get_asset_or_host, is_deep_security_adapter,
+                                   ips_do_not_contradict, is_illusive_adapter, is_linux)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -53,7 +55,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name]
+        return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users]
 
     def _correlate_mac(self, adapters_to_correlate):
         """
@@ -212,20 +214,20 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_with_epo(self, adapters_to_correlate):
+    def _correlate_with_no_mac_adapters(self, adapters_to_correlate):
         """
-        EPO correlation is a little more loose - we allow correlation based on hostname alone,
+        EPO (and more adaptrers) correlation is a little more loose - we allow correlation based on hostname alone,
         but only where theres is no MAC.
         In order to lower the false positive rate we don't use the normalized hostname but rather the full one
         """
-        logger.info('Starting to correlate on Hostname-EPO-No-Mac')
+        logger.info('Starting to correlate on Hostname-No-Mac-ADAPTERS')
         filtered_adapters_list = filter(get_hostname, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
                                       [compare_hostname],
-                                      [is_from_epo_with_empty_mac],
+                                      [is_from_no_mac_adapters_with_empty_mac],
                                       [],
-                                      {'Reason': 'They have the same hostname and one is EPO with no MAC'},
+                                      {'Reason': 'They have the same hostname and one is No MACs Adapters with no MAC'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_with_juniper(self, adapters_to_correlate):
@@ -287,6 +289,22 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_ip_linux_illusive(self, adapters_to_correlate):
+        """
+        Correlating IP do not contradict with Illusive Linux
+        :param adapters_to_correlate:
+        :return:
+        """
+        logger.info('Starting to correlate on Illusive Linux IPS')
+        filtered_adapters_list = filter(is_linux, filter(get_normalized_ip, adapters_to_correlate))
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [],
+                                      [],
+                                      [is_illusive_adapter],
+                                      [ips_do_not_contradict],
+                                      {'Reason': 'They have the same IP one is Illusive and They are Linux'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
@@ -321,7 +339,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # EPO devices on VPN netwrok will almost conflict on IP+MAC with other Agents.
         # If no mac on EPO allow correlation by full host name
-        yield from self._correlate_with_epo(adapters_to_correlate)
+        yield from self._correlate_with_no_mac_adapters(adapters_to_correlate)
 
         # juniper correlation is a little more loose - we allow correlation based on asset name alone,
         yield from self._correlate_with_juniper(adapters_to_correlate)
@@ -335,6 +353,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_asset_host(adapters_to_correlate)
 
         yield from self._correlate_hostname_deep_security(adapters_to_correlate)
+
+        yield from self._correlate_ip_linux_illusive(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

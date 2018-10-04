@@ -1,24 +1,21 @@
-import ipaddress
 import logging
+import ipaddress
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
-from illusive_adapter.connection import IllusiveConnection
+from cynet_adapter.connection import CynetConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class IllusiveAdapter(AdapterBase):
+class CynetAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        policy_name = Field(str, 'Policy Name')
-        deployment_status = Field(str, 'Deployment Status')
+        pass
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -31,10 +28,11 @@ class IllusiveAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = IllusiveConnection(domain=client_config['domain'],
-                                            apikey=client_config['apikey'],
-                                            verify_ssl=client_config.get('verify_ssl', False),
-                                            https_proxy=client_config.get('https_proxy'))
+            connection = CynetConnection(domain=client_config['domain'],
+                                         username=client_config['username'],
+                                         password=client_config['password'],
+                                         verify_ssl=client_config.get('verify_ssl', False),
+                                         https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -46,19 +44,19 @@ class IllusiveAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         """
-        Get all devices from a specific Illusive domain
+        Get all devices from a specific cynet domain
 
         :param str client_name: The name of the client
-        :param obj client_data: The data that represent a Illusive connection
+        :param obj client_data: The data that represent a cynet connection
 
-        :return: A json with all the attributes returned from the Illusive Server
+        :return: A json with all the attributes returned from the cynet Server
         """
         with client_data:
             yield from client_data.get_device_list()
 
     def _clients_schema(self):
         """
-        The schema IllusiveAdapter expects from configs
+        The schema cynetAdapter expects from configs
 
         :return: JSON scheme
         """
@@ -66,12 +64,17 @@ class IllusiveAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Illusive Domain',
+                    'title': 'Cynet Domain',
                     'type': 'string'
                 },
                 {
-                    'name': 'apikey',
-                    'title': 'API Key',
+                    'name': 'username',
+                    'title': 'Username',
+                    'type': 'string'
+                },
+                {
+                    'name': 'password',
+                    'title': 'Password',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -88,7 +91,8 @@ class IllusiveAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'apikey',
+                'username',
+                'password',
                 'verify_ssl'
             ],
             'type': 'array'
@@ -98,35 +102,24 @@ class IllusiveAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device_id = device_raw.get('hostId')
+                device_id = device_raw.get('id')
+                hostname = device_raw.get('hostname')
                 if not device_id:
                     logger.warning(f'No id of device {device_raw}')
                     continue
-                device.id = device_id + (device_raw.get('host') or '')
-                hostname_or_ip = device_raw.get('host')
+                device.id = device_id + (hostname or '')
+                device.hostname = hostname
                 try:
-                    ip = str(ipaddress.ip_address(hostname_or_ip))
-                    device.add_nic(None, [ip])
+                    ip = device_raw.get('ip')
+                    if ip:
+                        device.add_nic(None, [str(ipaddress.ip_address(int(ip)))])
                 except Exception:
-                    device.hostname = hostname_or_ip
-                device.domain = device_raw.get('domainName')
-                try:
-                    device.figure_os((device_raw.get('operatingSystem') or '') +
-                                     (device_raw.get('operatingSystemBitness') or ''))
-                except Exception:
-                    logger.exception(f'Probelm getting OS for {device_raw}')
-                device.last_seen = parse_date(device_raw.get('lastDeployment'))
-                try:
-                    device.last_used_users = (device_raw.get('lastSeenUser') or '').split(',')
-                except Exception:
-                    logger.exception(f'Problem getting users at {device_raw}')
-                device.policy_name = device_raw.get('policyName')
-                device.deployment_status = device_raw.get('deploymentStatus')
+                    logger.exception(f'Problem getting IP for cynet device {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception(f'Problem with fetching Illusive Device {device_raw}')
+                logger.exception(f'Problem with fetching Cynet Device {device_raw}')
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Agent, AdapterProperty.Manager]
+        return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]

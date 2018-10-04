@@ -80,6 +80,10 @@ def has_serial(adapters):
         does_entity_have_field(adapters, lambda adapter_data: (adapter_data.get('bios_serial')))
 
 
+def has_last_used_users(adapters):
+    return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('last_used_users'))  # not none
+
+
 def has_cloud_id(adapters):
     return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('cloud_id'))  # not none
 
