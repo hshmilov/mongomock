@@ -1,7 +1,7 @@
 
 
 client_details = {
-    "host": "EC2AMAZ-G3CI904.axonius.lan",
+    "host": "10.0.2.63",
     "port": 8443,
     "user": "administrator",
     "password": "Password2"
