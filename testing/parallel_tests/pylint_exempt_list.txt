@@ -344,7 +344,6 @@ plugins/static_correlator/tests/test_static_correlator.py
 plugins/system_scheduler/service.py
 testing/run_parallel_tests.py
 testing/run_tests.py
-testing/benchmarks/benchmark_correlation.py
 testing/parallel_tests/test_ad.py
 testing/parallel_tests/test_airwatch.py
 testing/parallel_tests/test_aruba.py
