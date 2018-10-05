@@ -1,14 +1,20 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-import requests
 from contextlib import contextmanager
 from json.decoder import JSONDecodeError
 
+import requests
+import uritools
+
 import axonius.adapter_exceptions
-from fortigate_adapter.consts import DEFAULT_FORTIGATE_PORT, DEFAULT_DHCP_LEASE_TIME
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from fortigate_adapter.consts import (DEFAULT_DHCP_LEASE_TIME,
+                                      DEFAULT_FORTIGATE_PORT)
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class FortigateClient(object):
+class FortigateClient():
 
     def __init__(self, host, username, password, verify_ssl=False, port=DEFAULT_FORTIGATE_PORT,
                  vdom=None, dhcp_lease_time=DEFAULT_DHCP_LEASE_TIME):
@@ -31,17 +37,19 @@ class FortigateClient(object):
             with self._get_session():
                 pass
 
-        except Exception as err:
-            logger.exception("Failed connecting to fortigate")
-            raise axonius.adapter_exceptions.ClientConnectionException("Failed to connect to fortigate.")
+        except Exception:
+            logger.exception('Failed connecting to fortigate')
+            raise axonius.adapter_exceptions.ClientConnectionException('Failed to connect to fortigate.')
 
     def _make_request(self, session, method, resource, payload=None):
-        response = session.request(method, f'https://{self.host}:{self.port}/{resource}',
-                                   data=payload, verify=self.verify_ssl, params={'vdom': self.vdom})
+        url = uritools.urijoin(RESTConnection.build_url(domain=self.host, port=self.port), resource)
+        response = session.request(method, url,
+                                   data=payload, verify=self.verify_ssl, params={'vdom': self.vdom},
+                                   timeout=DEFAULT_TIMEOUT)
         response.raise_for_status()
         try:
             return response.json()
-        except JSONDecodeError as err:
+        except JSONDecodeError:
             # All cases that return 200 status code (That would not raise an exception on raise_for_status())
             # Return json except for login and logout in-which we don't care about the content.
             return response.content
