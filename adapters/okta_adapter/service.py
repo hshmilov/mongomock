@@ -5,21 +5,23 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
+from axonius.mixins.configurable import Configurable
 from okta_adapter.connection import OktaConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class OktaAdapter(AdapterBase):
+class OktaAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
     class MyUserAdapter(UserAdapter):
         manager_id = Field(str, 'Manager ID')
+        apps = ListField(str, 'Assigned Applications')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -32,7 +34,9 @@ class OktaAdapter(AdapterBase):
         return RESTConnection.test_reachability(client_config.get("url"))
 
     def _connect_client(self, client_config):
-        connection = OktaConnection(**client_config)
+        connection = OktaConnection(url=client_config['url'],
+                                    api_key=client_config['api_key'],
+                                    fetch_apps=self.__fetch_apps)
         try:
             connection.is_alive()
         except Exception as e:
@@ -88,6 +92,17 @@ class OktaAdapter(AdapterBase):
                 user.user_department = profile.get('department')
                 user.user_country = profile.get('countryCode')
                 user.manager_id = profile.get('managerId')
+                try:
+                    for app in user_raw.get('apps') or []:
+                        if app.get('status') != 'ACTIVE':
+                            # We want only active apps
+                            continue
+                        app_name = app.get('label') or app.get('name')
+                        if not app_name:
+                            continue
+                        user.apps.append(app_name)
+                except Exception:
+                    logger.exception(f'Problem getting apps for {user_raw}')
                 user.set_raw(user_raw)
                 yield user
             except Exception:
@@ -96,3 +111,29 @@ class OktaAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    "name": "fetch_apps",
+                    "title": "Should fetch Users Apps",
+                    "type": "bool"
+                }
+            ],
+            "required": [
+                "fetch_apps"
+            ],
+            "pretty_name": "Okta Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            "fetch_apps": False
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_apps = config['fetch_apps']
