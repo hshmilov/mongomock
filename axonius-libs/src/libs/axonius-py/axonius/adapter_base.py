@@ -1031,9 +1031,16 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                     self._clients[client_id] = self.__connect_client_facade(current_client["client_config"])
             except Exception as e2:
                 # No connection to attempt querying
-                self.create_notification("Connection error to client {0}.".format(client_id), str(e2))
+                self.create_notification(f"Adapter {self.plugin_name} had connection error to "
+                                         f"server with the ID {client_id}.",
+                                         str(e2))
                 logger.exception(
                     "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
+                try:
+                    self.send_syslog_message(f'Adapter {self.plugin_name} had connection error'
+                                             f' to server with the ID {client_id}.', 'info')
+                except Exception:
+                    logger.exception(f'Problem sending syslog message')
                 _update_client_status("error", str(e2))
                 raise
             else:
