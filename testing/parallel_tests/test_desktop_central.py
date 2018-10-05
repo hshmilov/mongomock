@@ -20,3 +20,7 @@ class TestDesktopCentralAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip("AX-2178")
+    def test_fetch_devices(self):
+        pass
