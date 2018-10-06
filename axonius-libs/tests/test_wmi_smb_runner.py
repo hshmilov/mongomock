@@ -219,6 +219,8 @@ def test_wmi():
         {"type": "query", "args": ["select SID from Win32_Account"]},
         {"type": "method", "args": ["StdRegProv", "EnumKey", 2147483649, ""]},
         {"type": "execbinary", "args": [TEST_BINARY_LOCATION, "\"hello, world\""]},
+        {"type": "query", "args": ["select * from Win32_DeviceGuard",
+                                   "//./root/Microsoft/Windows/DeviceGuard"]},
         # {"type": "putfile", "args": ["c:\\a.txt", "abcdefgh"]},
         # {"type": "getfile", "args": ["c:\\a.txt"]},
         # {"type": "deletefile", "args": ["c:\\a.txt"]},
@@ -242,3 +244,4 @@ def test_wmi():
     assert {'SID': 'S-1-5-21-3246437399-2412088855-2625664447-500'} in response[1]["data"]
     assert "Console" in response[2]["data"][0]['sNames']
     assert "hello, world" in response[3]["data"]
+    assert response[4]["data"][0]["AvailableSecurityProperties"] == [3]

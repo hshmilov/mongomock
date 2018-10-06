@@ -124,8 +124,8 @@ class WmiSmbRunner(object):
     did_create_files_directory = False
     default_working_directory = None
 
-    def __init__(self, address, username, password, domain='', dc_ip=None, lmhash='', nthash='', aes_key=None,
-                 use_kerberos=False, rpc_auth_level="default", namespace="//./root/cimv2"):
+    def __init__(self, address, username, password, domain='', dc_ip=None, lmhash='', namespace="//./root/cimv2", nthash='', aes_key=None,
+                 use_kerberos=False, rpc_auth_level="default"):
         """
         Initializes a WmiSmbRunner object.
         :param address: the ip of the host we are connecting to.
@@ -154,13 +154,13 @@ class WmiSmbRunner(object):
         self.aes_key = aes_key
         self.use_kerberos = use_kerberos
         self.rpc_auth_level = rpc_auth_level
-        self.namespace = namespace
         self.dcom = None
         self.__rpc_creation_lock = threading.Lock()
+        self.__namespace = namespace
         self.__smb_connection_creation_lock = threading.RLock()
         self.__is_smb_connection_initialized = False
-        self.__iWbemServices = None
         self.__remotewua = None
+        self.__iWbemServices_dict = {}
 
         if aes_key is not None:
             self.use_kerberos = True
@@ -355,7 +355,7 @@ class WmiSmbRunner(object):
         :return str: the output.
         """
 
-        win32_process, _ = self.iWbemServices.GetObject("Win32_Process")
+        win32_process, _ = self.get_iWbemServices().GetObject("Win32_Process")
         if optional_output_name is not None:
             output_filename = optional_output_name
         else:
@@ -407,7 +407,7 @@ class WmiSmbRunner(object):
             if is_process_terminated is False:
                 # We have to terminate it by ourselves. and raise an error
                 try:
-                    query_results = self.iWbemServices.ExecQuery(
+                    query_results = self.get_iWbemServices().ExecQuery(
                         'select * from Win32_Process where ProcessId={0}'.format(pid))
                     query_results.Next(0xffffffff, 1)[0].Terminate(0)
 
@@ -480,7 +480,7 @@ class WmiSmbRunner(object):
         :return: an object that represents the answer.
         """
 
-        object, _ = self.iWbemServices.GetObject(object_name)
+        object, _ = self.get_iWbemServices().GetObject(object_name)
         method = getattr(object, method_name)
         handle = method(*args)
         result = handle.getProperties()
@@ -491,17 +491,19 @@ class WmiSmbRunner(object):
         else:
             return minimize(result)
 
-    def execquery(self, query):
+    def execquery(self, query, namespace=None):
         """
         Executes a query.
         :param query: a wql string representing the query.
         :return: a list of objects representing the results of the query.
         """
+        if namespace is None:
+            namespace = self.__namespace
 
         line = query.strip('\n')
         if line[-1:] == ';':
             line = line[:-1]
-        iEnumWbemClassObject = self.iWbemServices.ExecQuery(line)
+        iEnumWbemClassObject = self.get_iWbemServices(namespace).ExecQuery(line)
 
         records = []
         while True:
@@ -699,17 +701,16 @@ class WmiSmbRunner(object):
             # best try
             pass
 
-    @property
-    def iWbemServices(self):
+    def get_iWbemServices(self, namespace="//./root/cimv2"):
         """
         Creates an RPC WMI Object
         :return: an interface for querying wmi
         """
         with self.__rpc_creation_lock:
-            if self.__iWbemServices is None:
+            if namespace not in self.__iWbemServices_dict:
                 iInterface = self.dcom.CoCreateInstanceEx(wmi.CLSID_WbemLevel1Login, wmi.IID_IWbemLevel1Login)
                 iWbemLevel1Login = wmi.IWbemLevel1Login(iInterface)
-                iWbemServices = iWbemLevel1Login.NTLMLogin(self.namespace, NULL, NULL)
+                iWbemServices = iWbemLevel1Login.NTLMLogin(namespace, NULL, NULL)
                 if self.rpc_auth_level == 'privacy':
                     iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
                 elif self.rpc_auth_level == 'integrity':
@@ -717,9 +718,9 @@ class WmiSmbRunner(object):
 
                 iWbemLevel1Login.RemRelease()
 
-                self.__iWbemServices = iWbemServices
+                self.__iWbemServices_dict[namespace] = iWbemServices
 
-        return self.__iWbemServices
+        return self.__iWbemServices_dict.get(namespace)
 
     @property
     def remotewua(self):
@@ -769,8 +770,8 @@ class WmiSmbRunner(object):
         """
 
         try:
-            if self.iWbemServices is not None:
-                self.iWbemServices.RemRelease()
+            for ns in self.__iWnemServices_dict.values():
+                ns.RemRelease()
         except Exception:
             pass
 

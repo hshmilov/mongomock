@@ -52,6 +52,15 @@ def wmi_query_commands(list_of_queries):
     return [{"type": "query", "args": [q]} for q in list_of_queries]
 
 
+def wmi_query_namespace_commands(list_of_queries):
+    """
+    Get wmi queries plus name spaces and returns the format needed for execution commans.
+    :param list_of_queries: a list of wmi queries plus namespaces
+    :return:
+    """
+    return [{"type": "query", "args": [q, ns]} for (q, ns) in list_of_queries]
+
+
 def smb_shell_commands(list_of_shell_commands):
     """
     Gets shell commands and returns the format needed for execution commands.
