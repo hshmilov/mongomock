@@ -30,7 +30,7 @@ class SystemSchedulerService(PluginService):
                                             f"{str(response.content)}"
         return response
 
-    @retry(stop_max_attempt_number=100, wait_fixed=1000)
+    @retry(stop_max_attempt_number=300, wait_fixed=1000)
     def wait_for_scheduler(self, is_scheduler_at_rest: bool):
         """
         Waits until scheduler is running or not running or raises
