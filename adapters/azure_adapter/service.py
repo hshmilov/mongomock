@@ -4,7 +4,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from azure_adapter.client import AzureClient
@@ -31,6 +31,7 @@ class AzureAdapter(AdapterBase):
         image = Field(AzureImage, 'Image')
         admin_username = Field(str, 'Admin Username')
         vm_id = Field(str, 'VM ID')
+        public_ip = ListField(str, 'Public IPs')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -131,8 +132,13 @@ class AzureAdapter(AdapterBase):
                 ips = []
                 subnets = []
                 for ip_config in iface.get('ip_configurations', []):
-                    ips.append(ip_config.get('private_ip_address'))
-                    ips.append(ip_config.get('public_ip_address', {}).get('ip_address'))
+                    private_ip = ip_config.get('private_ip_address')
+                    if private_ip:
+                        ips.append(private_ip)
+                    public_ip = ip_config.get('public_ip_address', {}).get('ip_address')
+                    if public_ip:
+                        ips.append(public_ip)
+                        device.public_ip.append(public_ip)
                     subnets.append(ip_config.get('subnet', {}).get('address_prefix'))
                 device.add_nic(mac=iface.get('mac_address'), ips=[ip for ip in ips if ip is not None],
                                subnets=[subnet for subnet in subnets if subnet is not None], name=iface.get('name'))

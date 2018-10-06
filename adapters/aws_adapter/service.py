@@ -74,11 +74,14 @@ class AwsAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         account_tag = Field(str, 'Account Tag')
         # EC2-specific fields
+        public_ip = Field(str, 'Public IP')
         aws_tags = ListField(AWSTagKeyValue, "AWS EC2 Tags")
         instance_type = Field(str, "AWS EC2 Instance Type")
         key_name = Field(str, "AWS EC2 Key Name")
         vpc_id = Field(str, "AWS EC2 VPC Id")
         vpc_name = Field(str, "AWS EC2 VPC Name")
+        monitoring_state = Field(str, 'Monitoring State')
+        security_groups = ListField(str, 'Security Groups')
         # ECS-specific fields
         subnet_id = Field(str, "AWS ECS SubnetId")
         cluster_arn = Field(str, "AWS ECS Cluster Arn")
@@ -334,13 +337,23 @@ class AwsAdapter(AdapterBase):
                                      if device_raw['DescribedImage'] is not None
                                      else device_raw.get('Platform'))
                     device.id = device_raw['InstanceId']
+                    try:
+                        device.monitoring_state = (device_raw.get('Monitoring') or {}).get('State')
+                    except Exception:
+                        logger.exception(f'Problem getting monitoring state for {device_raw}')
+                    try:
+                        for security_group in device_raw.get('SecurityGroups'):
+                            device.security_groups.append(security_group.get('GroupName'))
+                    except Exception:
+                        logger.exception(f'Problem getting security groups at {device_raw}')
                     device.cloud_id = device_raw['InstanceId']
                     device.cloud_provider = "AWS"
                     for iface in device_raw.get('NetworkInterfaces', []):
                         assoc = iface.get("Association")
                         if assoc is not None:
                             public_ip = assoc.get('PublicIp')
-                            if public_ip is not None:
+                            if public_ip:
+                                device.public_ip = public_ip
                                 device.add_nic(iface.get("MacAddress"), [public_ip])
                         device.add_nic(iface.get("MacAddress"), [addr.get('PrivateIpAddress')
                                                                  for addr in iface.get("PrivateIpAddresses", [])])
