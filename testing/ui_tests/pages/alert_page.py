@@ -25,8 +25,6 @@ class AlertPage(EntitiesPage):
         self.wait_for_spinner_to_end()
         self.wait_for_element_present_by_text(self.NEW_ALERT_BUTTON)
         self.find_element_by_text(self.NEW_ALERT_BUTTON).click()
-        # Bug in the UI: AX-2101
-        self.driver.get(self.driver.current_url)
         self.wait_for_table_to_load()
 
     def fill_alert_name(self, name):

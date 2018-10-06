@@ -23,7 +23,7 @@
                 This means that all applications using this key will stop working.
             </div>
         </modal>
-        <x-toast v-if="message" :message="message" @done="removeToast" :timed="false" />
+        <x-toast v-if="message" :message="message" @done="removeToast" :timeout="6000" />
     </x-page>
 </template>
 
