@@ -2283,10 +2283,19 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         # Query and data collections according to given module
         data_collection = self._entity_views_db_map[entity]
         base_view = {'query': {'filter': ''}}
-        base_query = {}
+        base_query = {
+            field['name']: {
+                '$exists': True
+            }
+        }
         if view:
             base_view = self._find_filter_by_name(entity, view)
-            base_query = parse_filter(base_view['query']['filter'])
+            base_query = {
+                '$and': [
+                    parse_filter(base_view['query']['filter']),
+                    base_query
+                ]
+            }
             base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and ' if view else ''
         base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == exists(true)'
         if for_date:
@@ -2313,15 +2322,18 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         sigma = 0
         for item in results:
             field_values = gui_helpers.find_entity_field(item, field['name'])
-            if field_values:
-                if isinstance(field_values, list):
-                    count += len(field_values)
-                    if ChartFuncs[func] == ChartFuncs.average:
-                        sigma += sum(field_values)
-                else:
-                    count += 1
-                    if ChartFuncs[func] == ChartFuncs.average:
-                        sigma += field_values
+            if not field_values:
+                continue
+            if ChartFuncs[func] == ChartFuncs.count:
+                count += 1
+                continue
+            if isinstance(field_values, list):
+                count += len(field_values)
+                sigma += sum(field_values)
+            else:
+                count += 1
+                sigma += field_values
+
         if not count:
             return [{'name': view, 'value': 0, 'view': base_view, 'module': entity.value}]
         name = f'{func} of {field["title"]} on {view or "ALL"} results'
