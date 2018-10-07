@@ -6,7 +6,7 @@
                 <div class="research-settings-schedule">
                     <label class="label">Next Scheduled Time:</label>
                     <x-date-edit :value="nextDiscoverySchedule" @input="scheduleDiscovery" :limit="limit"
-                                 :disabled="isReadOnly"/>
+                                 :disabled="isReadOnly" id="research_time "/>
                 </div>
                 <div class="tab-settings">
                     <template v-if="schedulerSettings">
