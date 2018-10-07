@@ -136,7 +136,7 @@
             isSearchSimple() {
 				/* Determine whether current search input value is an AQL filter, or just text */
 				if (!this.searchValue) return true
-                let simpleMatch = this.searchValue.match('[a-zA-Z0-9 -\._]*')
+                let simpleMatch = this.searchValue.match('[a-zA-Z0-9 -\._:]*')
                 return simpleMatch && simpleMatch.length === 1 && simpleMatch[0] === this.searchValue
             },
             noResults() {
