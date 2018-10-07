@@ -129,15 +129,31 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 		rule: `${payload.module}/csv?${createContentRequest(state, payload)}`,
 		payload: {module: payload.module, skip: payload.skip}
 	}).then((response) => {
-		let blob = new Blob([response.data], { type: response.headers["content-type"]} )
-		let link = document.createElement('a')
-		link.href = window.URL.createObjectURL(blob)
-		let now = new Date()
-		let formattedDate = now.toLocaleDateString().replace(/\//g,'')
-		let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
-		link.download = `axonius-data_${formattedDate}-${formattedTime}.csv`
-		link.click()
+        downloadFile('csv', response)
 	})
+}
+
+export const downloadFile = (fileType, response)=>{
+	let format = '';
+	let reportType = '';
+	switch (fileType) {
+        case 'csv':
+            format = 'csv';
+            reportType = 'data';
+            break
+        case 'pdf':
+            format = 'pdf';
+            reportType = 'report';
+            break
+    }
+    let blob = new Blob([response.data], { type: response.headers["content-type"]} )
+    let link = document.getElementById('download-link')
+    link.href = window.URL.createObjectURL(blob)
+    let now = new Date()
+    let formattedDate = now.toLocaleDateString().replace(/\//g,'')
+    let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
+    link.download = `axonius-${reportType}_${formattedDate}-${formattedTime}.${format}`
+    link.click()
 }
 
 export const FETCH_DATA_VIEWS = 'FETCH_DATA_VIEWS'

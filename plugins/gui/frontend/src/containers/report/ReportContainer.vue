@@ -100,14 +100,6 @@
                 this.downloading = true
                 this.downloadReport().then((response) => {
                     this.downloading = false
-                    let blob = new Blob([response.data], {type: response.headers["content-type"]})
-                    let link = document.createElement('a')
-                    link.href = window.URL.createObjectURL(blob)
-                    let now = new Date()
-                    let formattedDate = now.toLocaleDateString().replace(/\//g, '')
-                    let formattedTime = now.toLocaleTimeString().replace(/:/g, '')
-                    link.download = `axonius-report_${formattedDate}-${formattedTime}.pdf`
-                    link.click()
                     this.changeState({ name: 'tourFinale' })
                 }).catch((error) => {
                     this.downloading = false

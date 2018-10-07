@@ -1,4 +1,4 @@
-import { REQUEST_API } from '../actions'
+import { REQUEST_API, downloadFile } from '../actions'
 
 export const DOWNLOAD_REPORT = 'DOWNLOAD_REPORT'
 export const report = {
@@ -8,7 +8,9 @@ export const report = {
 			return dispatch(REQUEST_API, {
 				rule: 'export_report',
 				binary: true
-			})
+			}).then((response) => {
+                downloadFile('pdf', response)
+            })
 		}
 	}
 }

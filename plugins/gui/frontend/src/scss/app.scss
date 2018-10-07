@@ -9,7 +9,9 @@ html {
   min-height: 100%;
   background: $grey-1;
 }
-
+#download-link {
+  display: none;
+}
 body {
   font: 100% $font-stack;
   font-size: 14px;

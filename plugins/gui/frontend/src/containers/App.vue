@@ -4,6 +4,8 @@
         with changing content, according to chosen route
     -->
     <div id="app">
+        <!--Link for downloading files-->
+        <a id="download-link"/>
         <!-- Nested navigation linking to routes defined in router/index.js -->
         <template v-if="userName || isDev">
             <side-bar-container class="print-exclude" @access-violation="notifyAccess" />
