@@ -6,8 +6,10 @@ import pytest
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import StateLevels, Phases
 from services.adapters.infinite_sleep_service import InfiniteSleepService, infinite_sleep_fixture
-from services.adapters.esx_service import EsxService, esx_fixture
+from services.adapters.stresstest_scanner_service import StresstestScannerService, StresstestScanner_fixture
+from services.adapters.stresstest_service import StresstestService, Stresstest_fixture
 from test_credentials import test_infinite_sleep_credentials
+from test_credentials.test_gui_credentials import DEFAULT_USER
 
 pytestmark = pytest.mark.sanity
 
@@ -56,12 +58,31 @@ def test_system_is_up(axonius_fixture):
         service.wait_for_service()
 
 
+def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixture, Stresstest_fixture):
+    scheduler = axonius_fixture.scheduler
+    gui = axonius_fixture.gui
+
+    StresstestScanner_fixture.add_client({'device_count': 50, 'name': 'blah'})
+    Stresstest_fixture.add_client({'device_count': 50, 'name': 'blah'})
+
+    assert len(StresstestScanner_fixture.clients()) == 1
+    assert len(Stresstest_fixture.clients()) == 1
+
+    time.sleep(10)
+    scheduler.start_research()
+    time.sleep(10)
+    scheduler.wait_for_scheduler(True)
+
+    gui.login_user(DEFAULT_USER)
+    assert gui.get_devices_count().content == b'50'
+
+
 def test_stop_research(axonius_fixture, infinite_sleep_fixture):
     scheduler = axonius_fixture.scheduler
     infinite_sleep_fixture.add_client(test_infinite_sleep_credentials.client_details)
     assert len(infinite_sleep_fixture.clients()) > 0
     scheduler.start_research()
     scheduler.wait_for_scheduler(False)
-    time.sleep(5)  # otherwise the adapter might not even start fetching
+    time.sleep(10)  # otherwise the adapter might not even start fetching
     scheduler.stop_research()
     scheduler.wait_for_scheduler(True)
