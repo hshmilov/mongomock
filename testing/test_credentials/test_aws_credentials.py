@@ -9,7 +9,8 @@ client_details = [
     ({
         "aws_access_key_id": "AKIAJOCJ5PGEAR6LNIFQ",
         "aws_secret_access_key": "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",
-        "region_name": "us-east-2"
+        "region_name": "us-east-2",
+        'get_all_regions': False
     }, US_EAST_2_EC2_BUILDS_MACHINE_ID),
     # currently unavailable
     # ({
@@ -20,7 +21,8 @@ client_details = [
     ({
         "aws_access_key_id": "AKIAJNIRAK5MDDHPSLTQ",
         "aws_secret_access_key": "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",
-        "region_name": "us-east-1"
+        "region_name": "us-east-1",
+        'get_all_regions': False
     }, US_EAST_1_EKS_NODE_ID)
 ]
 

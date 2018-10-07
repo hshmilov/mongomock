@@ -16,6 +16,11 @@ AWS_ACCESS_KEY_ID = 'aws_access_key_id'
 REGION_NAME = 'region_name'
 AWS_SECRET_ACCESS_KEY = 'aws_secret_access_key'
 PROXY = 'proxy'
+GET_ALL_REGIONS = 'get_all_regions'
+REGIONS_NAMES = ['us-west-2', 'us-west-1', 'us-east-2', 'us-east-1', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1',
+                 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'cn-north-1', 'eu-central-1', 'eu-west-1',
+                 'eu-west-2', 'eu-west-3', 'sa-east-1', 'us-gov-west-1']
+
 
 """
 Matches AWS Instance IDs
@@ -73,6 +78,7 @@ class AWSTagKeyValue(SmartJsonClass):
 class AwsAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         account_tag = Field(str, 'Account Tag')
+        aws_region = Field(str, 'AWS Region')
         # EC2-specific fields
         public_ip = Field(str, 'Public IP')
         aws_tags = ListField(AWSTagKeyValue, "AWS EC2 Tags")
@@ -104,12 +110,41 @@ class AwsAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config[AWS_ACCESS_KEY_ID] + client_config[REGION_NAME]
+        return client_config[AWS_ACCESS_KEY_ID] + client_config.get(REGION_NAME, GET_ALL_REGIONS)
 
     def _test_reachability(self, client_config):
         raise NotImplementedError
 
     def _connect_client(self, client_config):
+        regions_clients_dict = {}
+        if (client_config.get(GET_ALL_REGIONS) or False) is False:
+            if not client_config.get(REGION_NAME):
+                raise ClientConnectionException('No region was chosen')
+            regions_clients_dict[client_config[REGION_NAME]] = self._connect_client_by_region(client_config)
+            return regions_clients_dict
+        # This varialbe will be false if all the regions will raise exception
+        client_ok = False
+        region_success = []
+        for region_name in REGIONS_NAMES:
+            try:
+                client_config_region = client_config.copy()
+                client_config_region[REGION_NAME] = region_name
+                regions_clients_dict[region_name] = self._connect_client_by_region(client_config_region)
+                client_ok = True
+                region_success.append(region_name)
+            except Exception:
+                logger.exception(f'Problem with Region {region_name}')
+        if client_ok:
+            regions_success_str = ','.join(region_success)
+            self.create_notification(f'AWS adapter with Access Key: '
+                                     f'{client_config[AWS_ACCESS_KEY_ID]} connection status',
+                                     content=f'AWS adapter with Access Key: '
+                                             f'{client_config[AWS_ACCESS_KEY_ID]} connected successfully '
+                                             f'to these regions: {regions_success_str})')
+            return regions_clients_dict
+        raise ClientConnectionException('All the regions returned error')
+
+    def _connect_client_by_region(self, client_config):
         try:
             params = dict()
             params[REGION_NAME] = client_config[REGION_NAME]
@@ -191,8 +226,17 @@ class AwsAdapter(AdapterBase):
         raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
+        parsed_data_regions_dict = {}
+        for region, client_data_region in client_data.items():
+            try:
+                parsed_data_regions_dict[region] = self._query_devices_by_client_by_region(client_data[region])
+            except Exception:
+                logger.exception(f'Problem querying region {region}')
+        return parsed_data_regions_dict
+
+    def _query_devices_by_client_by_region(self, client_data):
         """
-        Get all AWS (EC2 & EKS) instances from a specific client
+        Get all AWS (EC2 & EKS) instances from a specific client on a specific region
 
         :param str client_name: the name of the client as returned from _get_clients
         :param client_data: The data of the client, as returned from the _parse_clients_data function
@@ -280,6 +324,11 @@ class AwsAdapter(AdapterBase):
                     "type": "string"
                 },
                 {
+                    'name': GET_ALL_REGIONS,
+                    'title': 'Get All Regions',
+                    'type': 'bool'
+                },
+                {
                     "name": AWS_ACCESS_KEY_ID,
                     "title": "AWS Access Key ID",
                     "type": "string"
@@ -303,7 +352,7 @@ class AwsAdapter(AdapterBase):
                 }
             ],
             "required": [
-                REGION_NAME,
+                GET_ALL_REGIONS,
                 AWS_ACCESS_KEY_ID,
                 AWS_SECRET_ACCESS_KEY
             ],
@@ -311,6 +360,13 @@ class AwsAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        for region, devices_raw_data_region in devices_raw_data.items():
+            try:
+                yield from self._parse_raw_data_region(devices_raw_data_region, region)
+            except Exception:
+                logger.exception(f'Problem parsing data from region {region}')
+
+    def _parse_raw_data_region(self, devices_raw_data, region):
         account_tag = devices_raw_data.get('account_tag')
         # Checks whether devices_raw_data contains EC2 data
         if devices_raw_data.get('ec2') is not None:
@@ -318,6 +374,7 @@ class AwsAdapter(AdapterBase):
             for reservation in ec2_devices_raw_data.get('Reservations', []):
                 for device_raw in reservation.get('Instances', []):
                     device = self._new_device_adapter()
+                    device.aws_region = region
                     device.account_tag = account_tag
                     device.hostname = device_raw.get('PublicDnsName')
                     tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
@@ -367,6 +424,7 @@ class AwsAdapter(AdapterBase):
             for device_raw in ecs_devices_raw_data:
                 try:
                     device = self._new_device_adapter()
+                    device.aws_region = region
                     device.account_tag = account_tag
                     attachments = device_raw.get('attachments')
                     if attachments:
