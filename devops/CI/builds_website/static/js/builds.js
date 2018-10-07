@@ -576,10 +576,18 @@
             }
         }).done(function (data) {
             data.forEach(function (i) {
-                select.append($("<option>").attr("value", i.name).text(i.name));
+                if (i.name == "develop"){
+                    select.append($("<option selected>").attr("value", i.name).text(i.name));
+                }
+                else {
+                    select.append($("<option>").attr("value", i.name).text(i.name));
+                }
             });
             if (data.length !== 0) {
                 new_instance_modal_fork_change(fork_name, page_number + 1);
+            }
+            else {
+                new_instance_modal_branch_change($("#new_vm_branch").val());
             }
         })
             .fail(exception_modal)
@@ -1046,7 +1054,6 @@
         load_release_list(1);
         load_fork_list();
         new_instance_modal_fork_change('axonius/cortex', 1);
-        // new_instance_modal_branch_change($("#new_vm_branch")[0].value, $("#new_vm_fork")[0].value);
 
         // initialize datatables.
         if (window.location.hash === "") {
