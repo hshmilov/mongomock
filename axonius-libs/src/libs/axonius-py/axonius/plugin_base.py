@@ -1450,7 +1450,9 @@ class PluginBase(Configurable, Feature):
             return EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
                                email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
                                self._grab_file_contents(email_settings.get('smtpKey'), stored_locally=False),
-                               self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False))
+                               self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False),
+                               source=email_settings.get('sender_address')
+                               if email_settings.get('sender_address') else None)
         return None
 
     # Global settings
@@ -1593,6 +1595,11 @@ class PluginBase(Configurable, Feature):
                             "name": "smtpCert",
                             "title": "TLS 1.2 Cert File",
                             "type": "file"
+                        },
+                        {
+                            'name': 'sender_address',
+                            'title': 'Sender Address',
+                            'type': 'string'
                         }
                     ],
                     "name": "email_settings",
@@ -1676,7 +1683,8 @@ class PluginBase(Configurable, Feature):
                 "smtpUser": None,
                 "smtpPassword": None,
                 "smtpCert": None,
-                "smtpKey": None
+                "smtpKey": None,
+                'sender_address': None
             },
             "execution_settings": {
                 "enabled": False,
