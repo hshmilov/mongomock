@@ -355,7 +355,7 @@ class AggregatorService(PluginBase, Triggerable):
             logger.info("Performance: finished")
             self.__last_full_db_rebuild[entity_type] = datetime.utcnow()
 
-    def _save_entity_views_to_historical_db(self, entity_type: EntityType):
+    def _save_entity_views_to_historical_db(self, entity_type: EntityType, now):
         from_db = self._entity_views_db_map[entity_type]
         to_db = self._historical_entity_views_db_map[entity_type]
 
@@ -372,7 +372,6 @@ class AggregatorService(PluginBase, Triggerable):
         # benchmark: 1-2k/sec devices (docker, mongo 3.6) - 100k devices ~ a minute
 
         tmp_collection = self._get_db_connection()[to_db.database.name][f"temp_{to_db.name}"]
-        now = datetime.now()
 
         val = to_db.find_one(filter={},
                              sort=[('accurate_for_datetime', -1)],
@@ -436,8 +435,9 @@ class AggregatorService(PluginBase, Triggerable):
         elif job_name == 'fetch_filtered_adapters':
             adapters = _filter_adapters_by_parameter(post_json, adapters)
         elif job_name == 'save_history':
+            now = datetime.utcnow()
             for entity_type in EntityType:
-                self._save_entity_views_to_historical_db(entity_type)
+                self._save_entity_views_to_historical_db(entity_type, now)
             return
         elif job_name == 'rebuild_entity_view':
             for entity_type in EntityType:
