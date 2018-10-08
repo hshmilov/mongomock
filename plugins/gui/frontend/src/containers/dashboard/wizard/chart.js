@@ -19,10 +19,5 @@ export default {
 			},
 			deep: true
 		}
-	},
-	created() {
-		if (Object.keys(this.value).length) {
-			this.config = { ...this.value }
-		}
 	}
 }
