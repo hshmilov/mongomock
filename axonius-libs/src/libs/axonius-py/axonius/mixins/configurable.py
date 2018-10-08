@@ -1,9 +1,9 @@
 import logging
+from typing import Dict, Iterable, Tuple
 
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
 
 logger = logging.getLogger(f'axonius.{__name__}')
-from typing import Tuple, Dict, Iterable
 
 
 def does_method_belongs_to_class(method, cls) -> bool:
@@ -100,6 +100,41 @@ class Configurable(object):
             if does_method_belongs_to_class(inheritor._on_config_update, inheritor):
                 inheritor._on_config_update(self, config_to_save)
 
+    @staticmethod
+    def __try_automigrate_config_schema(new_schema, old_data, default_data) -> dict:
+        """
+        Once in a while a developer approaches a Configurable plugin and wishes to change the schema and defaults!
+        We don't want to lose the old configuration so we really want to try to keep as much of it as possible
+        This adds missing fields from the default configuration. It will not delete existing fields.
+        This supports changing a field to an array and vice versa.
+        :param new_schema: the new schema from the plugin
+        :param old_data: the data (values) currently in the database
+        :param default_data: the default data from the plugin
+        :return: the data, which conforms to the new_schema, while preserving the most from the old_schema
+        """
+        schema_type = new_schema['type']
+        if schema_type != 'array':  # assuming scalar
+
+            if isinstance(old_data, dict):
+                # if a field has changed from array to scalar we want to discard the array
+                return default_data
+
+            return old_data or default_data
+
+        assert schema_type == 'array'
+
+        if not isinstance(old_data, dict):
+            # in the case where a field changed to a property "old_data" will not be a dict
+            old_data = {}
+
+        returned_dict = {}
+        for item in new_schema['items']:
+            name = item['name']
+            returned_dict[name] = Configurable.__try_automigrate_config_schema(item,
+                                                                               old_data.get(name),
+                                                                               default_data.get(name))
+        return returned_dict
+
     def _update_schema(self):
         """
         Updates DB with the schema and default configs (if no other config exists)
@@ -113,12 +148,9 @@ class Configurable(object):
                 'config_name': config_class.__name__,
                 'schema': config_schema
             }, upsert=True) or {}
+            old_schema = old_schema.get('schema')
 
-            config_to_insert = {
-                'config_name': config_class.__name__,
-                'config': config_default
-            }
-            if old_schema.get('schema') == config_schema:
+            if old_schema == config_schema:
                 # if the schema didn't change it means we don't override the current config with the
                 # default config.
 
@@ -127,14 +159,31 @@ class Configurable(object):
                     'config_name': config_class.__name__
                 },
                     update={
-                        "$setOnInsert": config_to_insert
+                        "$setOnInsert": {
+                            'config_name': config_class.__name__,
+                            'config': config_default
+                        }
                 },
                     upsert=True)
             else:
-                # if the schema did change it is likely that the old config isn't compatible so we must overthrow
-                # it with the default config
+                # if the schema did change it is likely that the old config isn't compatible so we must fix
+                # it according to schema
+                previous_config = configs.find_one(filter={
+                    'config_name': config_class.__name__
+                }) or {}
+                previous_config = previous_config.get('config')
+                logger.info(f"Got previous - {previous_config}, default = {config_default}")
+                if previous_config:
+                    previous_config = self.__try_automigrate_config_schema(config_schema,
+                                                                           previous_config,
+                                                                           config_default)
+                else:
+                    previous_config = config_default
                 configs.replace_one(filter={
                     'config_name': config_class.__name__
                 },
-                    replacement=config_to_insert,
+                    replacement={
+                        'config_name': config_class.__name__,
+                        'config': previous_config
+                },
                     upsert=True)
