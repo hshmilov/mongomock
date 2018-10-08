@@ -20,6 +20,7 @@ class SplunkAdapter(AdapterBase, Configurable):
         port = Field(str, 'port')
         cisco_device = Field(str, 'Cisco Device')
         splunk_source = Field(str, "Splunk Source")
+        vpn_source_ip = Field(str, 'VPN Source IP')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -114,6 +115,7 @@ class SplunkAdapter(AdapterBase, Configurable):
     def _parse_raw_data(self, devices_raw_data):
         macs_set = set()
         dhcp_ids_sets = set()
+        vpn_ids_sets = set()
         nexpose_asset_id_set = set()
 
         for device_raw, device_type in devices_raw_data:
@@ -171,7 +173,34 @@ class SplunkAdapter(AdapterBase, Configurable):
                     device.cisco_device = device_raw.get('cisco_device')
                     macs_set.add(mac)
                     device.splunk_source = "Cisco"
+                elif 'VPN' in device_type:
+                    hostname = device_raw.get('hostname')
+                    if not hostname:
+                        logger.warning(f'Bad device no hostname {device_raw}')
+                        continue
+                    device_id = hostname + device_type
+                    if device_id in vpn_ids_sets:
+                        continue
+                    device.id = device_id
+                    device.hostname = hostname
+                    ip = device_raw.get('ip')
+                    if ip:
+                        device.add_nic(None, [ip])
+                    vpn_ids_sets.add(device_id)
+                    device.vpn_source_ip = device_raw.get('vpn_source_ip')
+                    device.splunk_source = 'VPN'
+                elif 'Windows Login' in device_type:
+                    hostname = device_raw.get('hostname')
+                    if not hostname:
+                        logger.warning(f'Bad device no hostname {device_raw}')
+                        continue
+                    device.id = hostname + device_type
+                    device.hostname = hostname
+                    users = device_raw.get('users')
+                    if users:
+                        device.last_used_users = users
 
+                    device.splunk_source = 'Windows Login'
                 elif 'Nexpose' in device_type:
                     device_id = device_raw['asset_id']
                     if device_id in nexpose_asset_id_set:
@@ -199,7 +228,8 @@ class SplunkAdapter(AdapterBase, Configurable):
         self.__max_log_history = int(config['max_log_history'])
         self.__maximum_records = int(config['maximum_records'])
         self.__fetch_plugins = {
-            'nexpose': bool(config['fetch_nexpose'])
+            'nexpose': bool(config['fetch_nexpose']),
+            'win_logs_fetch_hours': int(config['win_logs_fetch_hours'])
         }
 
     @classmethod
@@ -217,6 +247,11 @@ class SplunkAdapter(AdapterBase, Configurable):
                     "type": "number"
                 },
                 {
+                    'name': 'win_logs_fetch_hours',
+                    'title': 'Winodws Login Fetch Hours',
+                    'type': 'number'
+                },
+                {
                     "name": "fetch_nexpose",
                     "title": "Fetch devices from the splunk-nexpose plugin",
                     "type": "bool"
@@ -226,6 +261,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                 'max_log_history',
                 "maximum_records",
                 'fetch_nexpose',
+                'win_logs_fetch_hours'
             ],
             "pretty_name": "Splunk Configuration",
             "type": "array"
@@ -236,9 +272,10 @@ class SplunkAdapter(AdapterBase, Configurable):
         return {
             'max_log_history': 30,
             'maximum_records': 100000,
-            'fetch_nexpose': False
+            'fetch_nexpose': False,
+            'win_logs_fetch_hours': 3
         }
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]
+        return [AdapterProperty.Assets]

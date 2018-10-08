@@ -601,6 +601,11 @@ def is_from_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter'
 
 
+def is_splunk_vpn(adapter_device):
+    return adapter_device.get('plugin_name') == 'splunk_adapter' and \
+        (adapter_device.get('data') or {}).get('splunk_source') == 'VPN'
+
+
 def is_illusive_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'illusive_adapter'
 

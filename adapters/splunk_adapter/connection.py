@@ -1,5 +1,6 @@
 import logging
 import time
+import re
 
 from axonius.utils.parsing import format_ip, format_mac
 from splunklib.client import Service, connect
@@ -55,14 +56,33 @@ class SplunkConnection(object):
         self.try_close()
 
     @staticmethod
+    def parse_cisco_bt(raw_line):
+        raw_device = dict()
+        if 'M=' in raw_line and (raw_line.find('M=') + len('M=')) < len(raw_line):
+            mac_raw = raw_line[raw_line.find('M=') + len('M='):].split(' ')[0]
+            mac_raw = ':'.join([chars if len(chars) == 2 else '0' + chars for chars in mac_raw.split(':')])
+            raw_device['mac'] = format_mac(mac_raw)
+            if not raw_device['mac']:
+                return None
+        else:
+            return None
+        line_split = raw_line.split(' ')
+        line_split = [item for item in line_split if item]
+        if len(line_split) > 3:
+            raw_device['cisco_device'] = line_split[3]
+        return raw_device
+
+    @staticmethod
     def parse_cisco_sig_alarm(raw_line):
         raw_device = dict()
         if 'mac= ' in raw_line:
             mac_raw = raw_line[raw_line.find('mac= ') + len('mac= '):].split(' ')[0]
             mac_raw = ':'.join([chars if len(chars) == 2 else '0' + chars for chars in mac_raw.split(':')])
             raw_device['mac'] = format_mac(mac_raw)
-        if len(raw_line.split(' ')) > 3:
-            raw_device['cisco_device'] = raw_line.split(' ')[3]
+        line_split = raw_line.split(' ')
+        line_split = [item for item in line_split if item]
+        if len(line_split) > 3:
+            raw_device['cisco_device'] = line_split[3]
         return raw_device
 
     @staticmethod
@@ -74,8 +94,10 @@ class SplunkConnection(object):
             raw_device['port'] = raw_line[raw_line.find(' to port ') + len(' to port '):].split(' ')[0]
         if ' vlan ' in raw_line:
             raw_device['vlan'] = raw_line[raw_line.find(' vlan ') + len(' vlan '):].split(' ')[0]
-        if len(raw_line.split(' ')) > 3:
-            raw_device['cisco_device'] = raw_line.split(' ')[3]
+        line_split = raw_line.split(' ')
+        line_split = [item for item in line_split if item]
+        if len(line_split) > 3:
+            raw_device['cisco_device'] = line_split(' ')[3]
         return raw_device
 
     @staticmethod
@@ -87,8 +109,27 @@ class SplunkConnection(object):
         if 'TPA(Destination IP Address) ':
             raw_device['ip'] = format_ip(raw_line[raw_line.find(
                 'TPA(Destination IP Address) ') + len('TPA(Destination IP Address) '):].split('[')[0])
-        if len(raw_line.split(' ')) > 3:
-            raw_device['cisco_device'] = raw_line.split(' ')[3]
+        line_split = raw_line.split(' ')
+        line_split = [item for item in line_split if item]
+        if len(line_split) > 3:
+            raw_device['cisco_device'] = line_split[3]
+        return raw_device
+
+    @staticmethod
+    def parse_vpn(raw_line):
+        raw_device = dict()
+        line_split = raw_line.split(' ')
+        line_split = [item for item in line_split if item]
+        if 'PulseSecure:' in line_split:
+            raw_device['hostname'] = line_split[line_split.index('PulseSecure:') - 1]
+            if 'NCIP' in line_split:
+                raw_device['ip'] = line_split[line_split.index('NCIP') + 1]
+        elif 'FLOW_REASSEMBLE_SUCCEED' in raw_line:
+            raw_device['hostname'] = line_split[3]
+            if 'source' in line_split:
+                raw_device['vpn_source_ip'] = line_split[line_split.index('source') + 1]
+        else:
+            return None
         return raw_device
 
     @staticmethod
@@ -106,7 +147,7 @@ class SplunkConnection(object):
     def parse_nexpose(raw_line):
         return dict([x.split('="', 1) for x in raw_line[:-1].split('", ')])
 
-    def fetch(self, search, split_raw, earliest, maximum_records_per_search, device_type):
+    def fetch(self, search, split_raw, earliest, maximum_records_per_search, device_type, send_object_to_raw=False):
         try:
             if earliest is not None:
                 if not isinstance(earliest, str):
@@ -144,10 +185,14 @@ class SplunkConnection(object):
                             logger.info(f"Got {devices_count} devices so far")
                         try:
                             raw = result[b'_raw'].decode('utf-8')
-                            new_item = split_raw(raw)
+                            if not send_object_to_raw:
+                                new_item = split_raw(raw)
+                            else:
+                                new_item = split_raw(result)
                             if new_item is not None:
                                 try:
                                     new_item['raw_splunk_insertion_time'] = result[b'_time'].decode('utf-8')
+                                    new_item['raw_line'] = raw
                                 except Exception:
                                     logger.exception(f"Couldn't fetch raw splunk insertion time for {new_item}")
 
@@ -164,7 +209,44 @@ class SplunkConnection(object):
         except Exception:
             logger.exception(f'Problem fetching with search {search}')
 
+    @staticmethod
+    def parse_win_events(result):
+        raw_object = dict()
+        raw_line = result[b'_raw'].decode('utf-8')
+        raw_object['hostname'] = result[b'ComputerName'].decode('utf-8')
+        raw_object['users'] = []
+        users_locations = [user_location.start() + len('Account Name') +
+                           1 for user_location in re.finditer('Account Name', raw_line)]
+        for user_location in users_locations:
+            user_raw = raw_line[user_location:].split('\n')[0].strip()
+            raw_object['users'].append(user_raw)
+        return raw_object
+
     def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict):
+        fetch_hours = fetch_plugins_dict.get('win_logs_fetch_hours') or 3
+        yield from self.fetch('search "SourceName=Microsoft Windows security auditing" AND '
+                              '"Audit Success"AND NOT "Acount_Name=SYSTEM" AND '
+                              '"A logon was attempted using explicit credentials" |dedup ComputerName',
+                              SplunkConnection.parse_win_events,
+                              f'-{fetch_hours}h',  # This log can be huge, please avoid changing this number
+                              maximum_records_per_search,
+                              'Windows Login',
+                              send_object_to_raw=True)
+        yield from self.fetch('search sourcetype="*cisco*" AND "BT PROCESS" AND "M="',
+                              SplunkConnection.parse_cisco_bt,
+                              earliest,
+                              maximum_records_per_search,
+                              'Cisco client BT PROCESS')
+        yield from self.fetch('search index=inf_netauth AND "PulseSecure:" AND "NCIP"',
+                              SplunkConnection.parse_vpn,
+                              earliest,
+                              1000,  # This repeats it very fast
+                              'VPN')
+        yield from self.fetch('search index=inf_netauth AND "FLOW_REASSEMBLE_SUCCEED"',
+                              SplunkConnection.parse_vpn,
+                              earliest,
+                              1000,  # This repeats it very fast
+                              'VPN')
         yield from self.fetch('search index=winevents sourcetype=DhcpSrvLog',
                               SplunkConnection.parse_dhcp,
                               earliest,
@@ -185,6 +267,7 @@ class SplunkConnection(object):
                               earliest,
                               maximum_records_per_search,
                               'Cisco client SIG')
+
         if fetch_plugins_dict.get("nexpose"):
             yield from self.fetch('search sourcetype="rapid7:nexpose:asset" site_id=* index=rapid7 | dedup asset_id | fields version asset_id ip hostname site_name version mac description installed_software services',
                                   SplunkConnection.parse_nexpose,

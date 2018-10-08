@@ -21,6 +21,7 @@ class CarbonblackResponseAdapter(AdapterBase):
         build_version_string = Field(str, 'Sensor Version')
         sensor_health_message = Field(str, 'Sensor Health Message')
         is_isolating = Field(bool, 'Is Isolating')
+        sensor_status = Field(str, 'Sensor Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -121,6 +122,7 @@ class CarbonblackResponseAdapter(AdapterBase):
             device.id = str(device_id)
             device.sensor_health_message = device_raw.get('sensor_health_message')
             device.build_version_string = device_raw.get('build_version_string')
+            device.sensor_status = device_raw.get('status')
             device.hostname = device_raw.get('computer_dns_name') or device_raw.get('computer_name')
             device.figure_os(device_raw.get('os_environment_display_string', ''))
             try:

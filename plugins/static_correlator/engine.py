@@ -20,7 +20,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_azuread_or_ad_and_have_name, get_ad_name_or_azure_display_name,
                                    compare_ad_name_or_azure_display_name, get_last_used_users, compare_last_used_users,
                                    compare_asset_hosts, get_asset_or_host, is_deep_security_adapter,
-                                   ips_do_not_contradict, is_illusive_adapter, is_linux)
+                                   ips_do_not_contradict, is_illusive_adapter, is_linux, is_splunk_vpn)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -305,6 +305,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same IP one is Illusive and They are Linux'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_splunk_vpn_hostName(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Splunk VPN')
+        filtered_adapters_list = filter(is_splunk_vpn, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_normalized_hostname_str],
+                                      [compare_device_normalized_hostname],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same Normalized hostname and both are Splunk VPN'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
@@ -355,6 +366,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_hostname_deep_security(adapters_to_correlate)
 
         yield from self._correlate_ip_linux_illusive(adapters_to_correlate)
+
+        yield from self._correlate_splunk_vpn_hostName(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:
