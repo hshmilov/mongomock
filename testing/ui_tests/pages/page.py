@@ -247,6 +247,9 @@ class Page:
     def wait_for_element_absent_by_css(self, css_selector, *vargs, **kwargs):
         return self.wait_for_element_absent(By.CSS_SELECTOR, css_selector, *vargs, **kwargs)
 
+    def wait_for_element_absent_by_xpath(self, xpath, *vargs, **kwargs):
+        return self.wait_for_element_absent(By.XPATH, xpath, *vargs, **kwargs)
+
     def wait_for_element_absent(self,
                                 by,
                                 value,

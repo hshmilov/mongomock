@@ -24,6 +24,8 @@ class EntitiesPage(Page):
     TABLE_COUNT_CSS = '.x-table-header .x-title .count'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
     TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
+    TABLE_FIRST_ROW_CHECKBOX_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(1) .x-checkbox'
+    TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     VALUE_ADAPTERS_JSON = 'JSON File'
@@ -32,6 +34,7 @@ class EntitiesPage(Page):
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
+    TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
@@ -86,6 +89,9 @@ class EntitiesPage(Page):
 
     def click_row(self):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_CELL_CSS).click()
+
+    def click_first_row_checkbox(self):
+        self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CHECKBOX_CSS).click()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -191,6 +197,9 @@ class EntitiesPage(Page):
 
     def fill_query_name(self, name):
         self.fill_text_field_by_element_id(self.SAVE_QUERY_NAME_ID, name)
+
+    def click_actions_tag_button(self):
+        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_TAG_CSS).click()
 
     def click_save_query_save_button(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
