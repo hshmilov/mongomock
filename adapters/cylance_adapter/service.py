@@ -122,7 +122,7 @@ class CylanceAdapter(AdapterBase):
                                     hostname = device_raw.get('name') or ''
                                     break
                 except Exception:
-                    logger.exception(f'Problem in MAX OS hostname parsing for {device_raw}')
+                    logger.debug(f'Problem in MAX OS hostname parsing for {device_raw}')
                 if len(hostname) > 0:
                     device.hostname = hostname
                 try:
