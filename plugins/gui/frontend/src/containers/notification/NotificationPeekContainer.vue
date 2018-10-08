@@ -1,6 +1,7 @@
 <template>
-    <x-dropdown size="lg" align="right" :align-space="-4" :arrow="false" class="notification-peek" ref="notifications">
-        <div slot="trigger" @click="isReadOnly? undefined: clearNotifications">
+    <x-dropdown size="lg" align="right" :align-space="-4" :arrow="false" class="notification-peek" ref="notifications"
+                @click="clearNotifications">
+        <div slot="trigger">
             <svg-icon name="navigation/notifications" :original="true" height="20" />
             <div class="badge" v-if="notificationUnseenCount">{{ notificationUnseenCount }}</div>
         </div>
@@ -77,6 +78,7 @@
 				this.$router.push({path: `/notification/${notificationId}`})
 			},
 			clearNotifications() {
+			    if (this.isReadOnly) return
 				this.updateNotificationsSeen([])
 			},
 			navigateNotifications() {

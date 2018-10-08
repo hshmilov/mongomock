@@ -55,6 +55,7 @@
             toggle() {
         	    if (!this.readOnly) {
                     this.isActive = !this.isActive
+                    this.$emit('click')
                 }
             },
         	close() {
