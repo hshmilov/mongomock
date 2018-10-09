@@ -402,3 +402,6 @@ class Page:
 
     def get_all_checkboxes(self):
         return self.driver.find_elements_by_css_selector(self.CHECKBOX_CSS)
+
+    def safe_refresh(self):
+        self.driver.get(self.driver.current_url)

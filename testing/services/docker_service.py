@@ -1,13 +1,13 @@
-import subprocess
 import os
+import subprocess
 from abc import abstractmethod
 from contextlib import contextmanager
+from pathlib import Path
 
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
-from pathlib import Path
 
 
 class DockerService(AxonService):
@@ -20,8 +20,8 @@ class DockerService(AxonService):
             raise RuntimeError(f'Cortex dir is wrong ... {self.cortex_root_dir}')
 
         self.log_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'logs', self.container_name))
-        self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, "uploaded_files"))
-        self.shared_readonly_dir = os.path.abspath(os.path.join(self.cortex_root_dir, "shared_readonly_files"))
+        self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'uploaded_files'))
+        self.shared_readonly_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'shared_readonly_files'))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
         self.package_name = os.path.basename(self.service_dir)
         self._process_owner = False
@@ -63,7 +63,7 @@ class DockerService(AxonService):
         return []
 
     def get_dockerfile(self, mode=''):
-        return f"""
+        return f'''
 FROM axonius/axonius-libs
 
 # Set the working directory to /app
@@ -74,10 +74,10 @@ COPY ./ ./{self.package_name}/
 
 # Link to libcrypto for RSA keys (originally was a problem for chef adapter)
 RUN ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so
-"""[1:]
+'''[1:]
 
     def get_main_file(self):
-        return f"""
+        return f'''
 from {self.package_name}.service import {self.service_class_name} as CurrentService
 from axonius.utils.server import init_wsgi
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
 else:
     # Init wsgi if in it.
     wsgi_app = init_wsgi(CurrentService)
-"""[1:]
+'''[1:]
 
     @property
     def docker_network(self):
@@ -106,9 +106,9 @@ else:
               extra_flags=None):
         self._migrade_db()
         assert mode in ('prod', '')
-        assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
+        assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
 
-        logsfile = os.path.join(self.log_dir, "{0}.docker.log".format(self.container_name.replace("-", "_")))
+        logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
 
         docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
 
@@ -129,7 +129,7 @@ else:
             docker_up.extend(['--volume', volume])
         for env in self.environment:
             docker_up.extend(['--env', env])
-        docker_up.extend(['--env', "DOCKER=true"])
+        docker_up.extend(['--env', 'DOCKER=true'])
 
         if extra_flags:
             docker_up.extend(extra_flags)
@@ -153,14 +153,14 @@ else:
             self.remove_volume()
 
         # print(' '.join(docker_up))
-        print(f"Running container {self.container_name} in -{'production' if mode == 'prod' else 'debug'}- mode.")
+        print(f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.')
         subprocess.check_call(docker_up, cwd=self.service_dir, stdout=subprocess.PIPE)
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows
             os.system(f'start /B cmd /c "docker logs -f {self.container_name} >> {logsfile} 2>&1"')
         else:  # good stuff
-            os.system(f"docker logs -f {self.container_name} >> {logsfile} 2>&1 &")
+            os.system(f'docker logs -f {self.container_name} >> {logsfile} 2>&1 &')
 
     def build(self, mode='', runner=None):
         docker_build = ['docker', 'build', '.']
@@ -218,7 +218,7 @@ else:
             pass
 
     def stop_async(self, should_delete=False, remove_image=False, remove_volume=False):
-        assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
+        assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
 
         # killing the container is faster than down. but killing it will make some apps not flush their data
         # to the disk, so we give it a second.
@@ -242,7 +242,7 @@ else:
             print(f'Container {self.container_name} still in use, skipping remove data volume '
                   f'\'{self.container_name}_data\'')
             return  # docker volume rm will fail otherwise...
-        subprocess.call(['docker', 'volume', 'rm', f"{self.container_name}_data"], cwd=self.service_dir,
+        subprocess.call(['docker', 'volume', 'rm', f'{self.container_name}_data'], cwd=self.service_dir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False):
@@ -265,7 +265,7 @@ else:
         (out, err) = p.communicate()
 
         if p.returncode != 0:
-            raise DockerException("Failed to run 'cat' on docker {0}".format(self.container_name))
+            raise DockerException('Failed to run \'cat\' on docker {0}'.format(self.container_name))
 
         return out, err, p.returncode
 
@@ -281,7 +281,7 @@ else:
         (out, err) = p.communicate()
 
         if p.returncode != 0:
-            raise DockerException("Failed to run {0} on docker {1}".format(command, self.container_name))
+            raise DockerException('Failed to run {0} on docker {1}'.format(command, self.container_name))
 
         return out, err, p.returncode
 
@@ -314,9 +314,11 @@ else:
         pass
 
     @contextmanager
-    def contextmanager(self):
+    def contextmanager(self, *, should_delete=True, take_ownership=False):
+        if take_ownership:
+            self.take_process_ownership()
         try:
             self.start_and_wait()
             yield self
         finally:
-            self.stop(should_delete=True)
+            self.stop(should_delete=should_delete)
