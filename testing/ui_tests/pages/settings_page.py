@@ -8,6 +8,10 @@ class SettingsPage(Page):
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
+    REMOTE_SUPPORT_LABEL = 'Remote Support - Warning: turning off this feature prevents Axonius from'\
+                           '                             updating the system and can lead'\
+                           ' to slower issue resolution time.'\
+                           '                             Note: anonymized analytics must be enabled for remote support'
     USE_SYSLOG_LABEL = 'Use syslog'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     EMAIL_PORT_ID = 'smtpPort'
@@ -51,12 +55,19 @@ class SettingsPage(Page):
     def find_send_emails_toggle(self):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
 
+    def find_remote_support_toggle(self):
+        return self.find_checkbox_by_label(self.REMOTE_SUPPORT_LABEL)
+
     def find_syslog_toggle(self):
         return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
 
     def set_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()
         self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
+
+    def set_remote_support_toggle(self, make_yes):
+        toggle = self.find_remote_support_toggle()
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
 
     def fill_syslog_host(self, host):
         self.fill_text_field_by_element_id(self.SYSLOG_HOST, host)
@@ -93,3 +104,7 @@ class SettingsPage(Page):
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
+
+    def save_and_wait_for_toaster(self):
+        self.click_save_button()
+        self.wait_for_toaster('Saved Successfully.')

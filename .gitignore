@@ -324,6 +324,8 @@ nvd_current_state.json
 # Selenium
 *chromedriver.exe
 testing/screenshots/*
+testing/upgrade/*/screenshots/
+testing/upgrade/*/screenshots/
 
 # tags
 cscope.out
