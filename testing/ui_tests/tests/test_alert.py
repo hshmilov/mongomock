@@ -244,7 +244,7 @@ class TestAlert(TestBase):
         self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
 
-    def test_syslog_operation(self):
+    def test_syslog_operation_multiple_actions(self):
         syslog_server = SyslogService()
         syslog_server.take_process_ownership()
 
@@ -266,6 +266,8 @@ class TestAlert(TestBase):
             self.alert_page.check_increased()
             self.alert_page.check_decreased()
 
+            self.alert_page.check_push_system_notification()
+
             # This is here because our syslog doesn't like logs sent using "INFO"
             # this is an issue with our syslog's configuration, and it's not worth the time fixing
             self.alert_page.choose_severity_warning()
@@ -277,6 +279,9 @@ class TestAlert(TestBase):
             syslog_expected = f'Axonius:Alert - "{ALERT_NAME}"' + \
                               f' for the following query has been triggered: {COMMON_ALERT_QUERY}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
+
+            # Verifying the multiple actions in alert worked
+            self.notification_page.verify_amount_of_notifications(1)
 
     def test_notification_sanity(self):
         self.create_notifications(2)

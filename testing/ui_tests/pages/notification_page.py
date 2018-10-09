@@ -102,8 +102,8 @@ class NotificationPage(Page):
 
     @staticmethod
     def convert_timestamp_to_datetime(timestamp):
-        # timestamp format: 9/17/2018 7:59:34 PM
-        return datetime.datetime.strptime(timestamp, '%m/%d/%Y %I:%M:%S %p')
+        # timestamp format: 2018-10-09 16:34:10
+        return datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
     def verify_amount_of_notifications(self, count: int):
         """
