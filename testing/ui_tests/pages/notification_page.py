@@ -11,8 +11,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class NotificationPage(Page):
     NOTIFICATION_PEEK_CSS = 'div.x-dropdown.notification-peek'
-    NOTIFICATION_PEEK_TITLE = 'div.d-flex'
     NOTIFICATION_PEEK_TIMESTAMP_CSS = 'div.c-grey-4'
+    NOTIFICATION_COUNT_CSS = 'div.badge'
+    NOTIFICATION_VIEW_ALL_BUTTON_CLASS = 'x-btn link'
+    NOTIFICATION_VIEW_ALL_TEXT = 'View All'
+
+    # The first one is the title for the whole peek,
+    # the 2nd is for each notification in the peek.
+    NOTIFICATIONS_PEEK_TITLE = 'h5.mb-8'
+    NOTIFICATION_PEEK_TITLE = 'div.d-flex'
 
     @property
     def root_page_css(self):
@@ -27,8 +34,38 @@ class NotificationPage(Page):
         full_url = urljoin(self.base_url, self.url)
         self.driver.get(full_url)
 
+    def click_notification_peek(self):
+        self.driver.find_element_by_css_selector(
+            self.NOTIFICATION_PEEK_CSS).click()
+
+    def click_view_notifications(self):
+        assert self.is_peek_open(), 'View notifications must be called with peek open'
+        self.click_button(text=self.NOTIFICATION_VIEW_ALL_TEXT,
+                          button_type='div',
+                          button_class=self.NOTIFICATION_VIEW_ALL_BUTTON_CLASS,
+                          call_space=False)
+        # wait for notification_page to load
+        self.wait_for_table_to_load()
+
+    def click_notification(self, name):
+        assert self.is_peek_open(), 'View notifications must be called with peek open'
+        self.find_element_by_text(f'"{name}"').click()
+
+    def is_peek_open(self):
+        return bool(self.driver.find_elements_by_css_selector(self.NOTIFICATIONS_PEEK_TITLE))
+
+    def get_count(self):
+        elements = self.driver.find_elements_by_css_selector(self.NOTIFICATION_COUNT_CSS)
+        if not elements:
+            # No badge -> no new notifications
+            return 0
+
+        assert len(elements) == 1, 'Multiple notification badge candidates found'
+
+        return int(elements[0].text)
+
     def get_peek_notifications(self):
-        self.driver.find_element_by_css_selector(self.NOTIFICATION_PEEK_CSS).click()
+        self.click_notification_peek()
 
         def get_expanded_notification(notification_text: str) -> List[str]:
             # notification text looks like this "bla bla bla (X)" where X is a number
@@ -40,16 +77,18 @@ class NotificationPage(Page):
                               self.driver.find_elements_by_css_selector(self.NOTIFICATION_PEEK_TITLE)]
 
         # flatten list
-        peek_notifications = [item for sublist in peek_notifications for item in sublist]
+        peek_notifications = [
+            item for sublist in peek_notifications for item in sublist]
 
-        self.driver.find_element_by_css_selector(self.NOTIFICATION_PEEK_CSS).click()
+        self.click_notification_peek()
         return peek_notifications
 
     def is_text_in_peek_notifications(self, text):
         return any(text in notification for notification in self.get_peek_notifications())
 
     def get_timestamps_in_peek_notifications(self):
-        elements = self.driver.find_elements_by_css_selector(self.NOTIFICATION_PEEK_TIMESTAMP_CSS)
+        elements = self.driver.find_elements_by_css_selector(
+            self.NOTIFICATION_PEEK_TIMESTAMP_CSS)
         return [element.text for element in elements]
 
     def get_rows_from_notification_table(self):
