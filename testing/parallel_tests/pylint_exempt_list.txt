@@ -412,7 +412,6 @@ testing/services/axonius_service.py
 testing/services/debug_template.py
 testing/services/docker_service.py
 testing/services/plugin_service.py
-testing/services/ports.py
 testing/services/adapters/ad_service.py
 testing/services/adapters/airwatch_service.py
 testing/services/adapters/aws_service.py

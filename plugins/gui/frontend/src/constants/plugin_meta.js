@@ -310,5 +310,9 @@ export const pluginMeta = {
     okta_adapter: {
         title: 'Okta',
         description: 'Okta provides cloud software that helps companies manage their employees\' passwords, by providing a “single sign-on” experience.'
+    },
+    alibaba_adapter: {
+        title: 'Alibaba Cloud - BETA',
+        description: 'Alibaba Cloud provides cloud computing services to online businesses and Alibaba Group\'s own e-commerce ecosystem'
     }
 }

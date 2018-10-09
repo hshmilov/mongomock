@@ -94,10 +94,11 @@ DOCKER_PORTS = {
     'divvycloud-adapter':               6035,
     'azure-ad-adapter':                 6036,
     'static-analysis':                  6037,
+    'alibaba-adapter':                  6038,
     'datadog-adapter':                  6041,
     'mongo':                            27017,
 }
 
 assert len(set(DOCKER_PORTS.values())) == len(DOCKER_PORTS)
 for port in DOCKER_PORTS.values():
-    assert port < 32768, "Can not allow any port above that, since this is not vpc-acl-allowed in case of demo's!"
+    assert port < 32768, 'Can not allow any port above that, since this is not vpc-acl-allowed in case of demo\'s!'
