@@ -127,6 +127,7 @@ class ReportsService(PluginBase, Triggerable):
                                'triggered': 0,
                                'name': report_data['name'],
                                'severity': report_data['severity'],
+                               # 'ticket_email': report_data.get('ticket_email', ''),
                                'period': report_data['period'],
                                'last_triggered': report_data.get('last_triggered', None)
                                }
@@ -342,6 +343,27 @@ class ReportsService(PluginBase, Triggerable):
                                              manufacturer=manufacturer_raw,
                                              os=os_raw,
                                              serial_number=serial_number_raw)
+
+    def _handle_action_create_fresh_service_incident(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                                     action_data=None):
+
+        # create an html of the description
+        description_text = report_consts.REPORT_CONTENT.format(name=report_data['name'],
+                                                               query=report_data['view'],
+                                                               num_of_triggers=report_data['triggered'],
+                                                               trigger_message=self._parse_action_content(
+            report_data['triggers'], triggered),
+            num_of_current_devices=current_num_of_devices,
+            old_results_num_of_devices=len(report_data['result']),
+            query_link=self._generate_query_link(
+            report_data['view_entity'],
+            report_data['view']))
+
+        logger.info(f'Print the report data: {report_data}')
+
+        # pass into fresh service the name of the alert, the html of the description and the priority
+        self.create_fresh_service_incident(subject=report_data.get('name'), description=description_text, email=action_data,
+                                           priority=report_consts.FRESH_SERVICE_PRIORITY.get('medium'))
 
     def _handle_action_create_service_now_incident(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):

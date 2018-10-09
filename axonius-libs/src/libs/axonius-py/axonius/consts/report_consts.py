@@ -43,3 +43,10 @@ REPORT_CONTENT_HTML = """\
 """
 
 REPORT_CONTENT = "Alert - \"{name}\" for the following query has been triggered: {query}\n\nAlert Details\nNumber of times this alert has been triggered:{num_of_triggers}\nThe alert was triggered because:the number of devices has {trigger_message}\nThe number of devices returned by the query:{num_of_current_devices}\nThe previous number of devices was:{old_results_num_of_devices}\n\nYou can view the query and its results here:{query_link}"
+
+FRESH_SERVICE_PRIORITY = {
+    'low': 1,
+    'medium': 2,
+    'high': 3,
+    'urgent': 4
+}

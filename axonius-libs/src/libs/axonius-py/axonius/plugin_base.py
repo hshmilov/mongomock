@@ -38,6 +38,7 @@ from axonius import plugin_exceptions, adapter_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.service_now.connection import ServiceNowConnection
+from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -1372,6 +1373,41 @@ class PluginBase(Configurable, Feature):
         self.__renew_global_settings_from_db()
         return ""
 
+    def create_fresh_service_incident(self, subject, description, priority, email):
+        """
+        Create new incident on alerts page.
+        :param description: string - html content of the ticket
+        :param subject: string - subject of the ticket
+        :param email: string - email address of the requester
+        :param priority: integer - priority of the ticket (1 (low) - 4 (urgent))
+        :return:
+        """
+        fresh_service_settings = self._fresh_service_settings
+
+        if email:
+            ticket_email = email
+        else:
+            ticket_email = fresh_service_settings['admin_email']
+
+        # we make status = 2 because this denotes that the ticket must be opened. Also manually setting priority
+        # as medium to begin
+        fresh_service_dict = {'subject': subject,
+                              'description': description,
+                              'email': ticket_email,
+                              'priority': priority,
+                              'status': 2
+                              }
+
+        if fresh_service_settings['enabled']:
+            try:
+                fresh_service_connection = FreshServiceConnection(domain=fresh_service_settings['domain'],
+                                                                  apikey=fresh_service_settings['api_key'])
+
+                with fresh_service_connection:
+                    fresh_service_connection.create_fresh_service_incident(dict_data=fresh_service_dict)
+            except Exception:
+                logger.exception(f'Got exception creating Fresh Service incident with {fresh_service_dict}')
+
     def create_service_now_incident(self, short_description, description, impact):
         service_now_dict = {'short_description': short_description, 'description': description, 'impact': impact}
         service_now_settings = self._service_now_settings
@@ -1477,6 +1513,7 @@ class PluginBase(Configurable, Feature):
         self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
         self._syslog_settings = config['syslog_settings']
         self._service_now_settings = config['service_now_settings']
+        self._fresh_service_settings = config['fresh_service_settings']
 
         if not config[MAINTENANCE_SETTINGS][ANALYTICS_SETTING]:
             config[MAINTENANCE_SETTINGS][TROUBLESHOOTING_SETTING] = False
@@ -1561,6 +1598,40 @@ class PluginBase(Configurable, Feature):
                     "type": "array",
                     "name": "service_now_settings",
                     "title": "ServiceNow Settings",
+                },
+                {
+                    "items": [
+                        {
+                            "name": "enabled",
+                            "title": "Use FreshService",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "domain",
+                            "title": "FreshService Domain",
+                            "type": "string"
+                        },
+                        {
+                            "name": "api_key",
+                            "title": "API Key",
+                            "type": "string",
+                            "format": "password"
+                        },
+                        {
+                            "name": "admin_email",
+                            "title": "Admin Email",
+                            "type": "string"
+                        }
+                    ],
+                    "required": [
+                        "enabled",
+                        "domain",
+                        "api_key",
+                        "admin_email"
+                    ],
+                    "type": "array",
+                    "name": "fresh_service_settings",
+                    "title": "FreshService Settings",
                 },
                 {
                     "items": [
@@ -1680,6 +1751,12 @@ class PluginBase(Configurable, Feature):
                 "password": None,
                 "https_proxy": None,
                 "verify_ssl": True
+            },
+            'fresh_service_settings': {
+                'enabled': False,
+                'domain': None,
+                'api_key': None,
+                'admin_email': None
             },
             "email_settings": {
                 "enabled": False,

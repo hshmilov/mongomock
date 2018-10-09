@@ -9,6 +9,7 @@ setup(
     packages=["axonius", "axonius.mixins", "axonius.consts", "axonius.devices", "axonius.utils", "axonius.users",
               "axonius.logging", "axonius.types", "axonius.clients",
               "axonius.clients.service_now",
+              "axonius.clients.fresh_service",
               "axonius.clients.rest",
               "axonius.clients.mssql",
               "axonius.clients.ldap",

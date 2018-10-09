@@ -84,6 +84,12 @@
                                     v-model="actions.notification" @change="tour('alertSave')" /><div></div>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenowIncident"/>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Computer" v-model="actions.servicenowComputer"/>
+                        <x-checkbox class="grid-span2" label="Create FreshService Incident" v-model="actions.freshserviceIncident"/>
+                        <div v-if="actions.freshserviceIncident" class="x-grid">
+                            <label for="ticket_email">Email for Fresh Service Ticket:</label>
+                            <input id="ticket_email" v-model="ticketEmail">
+                        </div>
+                        <div v-if="!actions.freshserviceIncident"></div>
                         <x-checkbox class="grid-span2" label="Isolate CB Response devices" v-model="actions.cbIsolate"/>
                         <x-checkbox class="grid-span2" label="Unisolate CB Response devices" v-model="actions.cbUnisolate"/>
                         <!-- SYSLOG -->
@@ -205,6 +211,7 @@
             	return this.fetching.alert || this.fetching.views
             }
 		},
+        // Todo: do my fields have to be added to alert
         data() {
             return {
                 /* Control of the criteria parameter with the use of two conditions */
@@ -215,11 +222,12 @@
                 },
                 currentQuery: null,
                 actions: {
-                	notification: false, mail: false, tag: false, tagAll: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false
+                	notification: false, mail: false, tag: false, tagAll: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false, freshserviceIncident: false
                 },
                 mailList: [],
                 tagName: '',
                 tagAllName: '',
+                ticketEmail: '',
                 sendAllDevicesToSyslog: false,
                 sendDevicesCSVToEmail: false,
                 error: '',
@@ -283,15 +291,19 @@
                         case 'create_service_now_computer':
                             this.actions.servicenowComputer = true
                             break
+                        case 'create_fresh_service_incident':
+                            this.actions.freshserviceIncident = true
+                            this.ticketEmail = action.data
+                            break
                         case 'carbonblack_isolate':
                             this.actions.cbIsolate = true
                             break
                         case 'carbonblack_unisolate':
                             this.actions.cbUnisolate = true
                             break
-
 					}
 				})
+                // Todo: do my fields have to be added to alert
 				this.alert = { ...alert,
                     triggers: { ...alert.triggers },
                     actions: []
@@ -347,6 +359,11 @@
                 if (this.actions.servicenowComputer) {
                     this.alert.actions.push({
                         type: 'create_service_now_computer'
+                    })
+                }
+                if (this.actions.freshserviceIncident) {
+                    this.alert.actions.push({
+                        type: 'create_fresh_service_incident', data: this.ticketEmail
                     })
                 }
                 if (this.actions.cbIsolate) {
