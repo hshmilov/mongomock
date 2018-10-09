@@ -1996,8 +1996,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def all_historical_dates(self):
         dates = {}
         for entity_type in EntityType:
-            entity_dates = self._historical_entity_views_db_map[entity_type]. \
-                distinct('accurate_for_datetime')
+            entity_dates = self._historical_entity_views_db_map[entity_type].distinct('accurate_for_datetime')
             dates[entity_type.value] = {x.date().isoformat(): x.isoformat() for x in entity_dates}
         return jsonify(dates)
 

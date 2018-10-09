@@ -37,7 +37,6 @@
             </div>
         </x-dropdown>
         <a class="x-btn link" :class="{disabled: disableSaveQuery}" @click="openSaveView" id="query_save">Save Query</a>
-        <a class="x-btn link" :class="{disabled: disableSaveQuery}" @click="openSaveView" id="query_save">Save Query</a>
         <!-- Triggerable menu containing a wizard for building a query filter -->
         <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false" ref="wizard"
                     @activated="tour('queryField')">

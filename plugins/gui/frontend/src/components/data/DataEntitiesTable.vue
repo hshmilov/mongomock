@@ -21,7 +21,8 @@
     import xDataEntityActions from '../../components/data/DataEntityActions.vue'
     import xDataFieldMenu from '../../components/data/DataFieldMenu.vue'
 
-    import { mapState, mapActions } from 'vuex'
+    import { mapState, mapMutations, mapActions } from 'vuex'
+    import { UPDATE_DATA_VIEW } from '../../store/mutations';
     import { FETCH_DATA_CONTENT_CSV } from '../../store/actions'
 
     export default {
@@ -43,8 +44,8 @@
             }),
             historical: {
                 get() {
-                    if (this.historicalState)
-                        return this.historicalState.substring(0, 10)
+                    if (!this.historicalState) return null
+                    return this.historicalState.substring(0, 10)
                 },
                 set(newDate) {
                     this.updateView({
@@ -61,11 +62,12 @@
             }
         },
         methods: {
+            ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
             ...mapActions({
                 fetchContentCSV: FETCH_DATA_CONTENT_CSV
             }),
             configEntity (entityId) {
-                if (this.selectedUsers && this.selectedUsers.length) return
+                if (this.selected && this.selected.length) return
 
                 let path = `${this.module}/${entityId}`
                 if (this.historicalState) {

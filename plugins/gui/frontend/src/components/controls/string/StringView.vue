@@ -2,7 +2,7 @@
     <img :src="value" v-if="schema.format && schema.format === 'image'" height="24" :style="{borderRadius: '50%'}">
     <img :src="`/src/assets/images/logos/${value}.png`" height="24"
          v-else-if="schema.format && schema.format === 'logo'" class="logo">
-    <svg-icon :name="`symbol/${value}`" :original="true" v-else-if="schema.format && schema.format === 'icon'" height="16"></svg-icon>
+    <svg-icon :name="`symbol/${value}`" :original="true" v-else-if="schema.format && schema.format === 'icon'" height="16" />
     <div :class="{tag: schema.format && schema.format === 'tag'}" :title="processedData" v-else>{{ processedData }}</div>
 </template>
 
@@ -27,14 +27,15 @@
 					if (!value) return ''
 					let dateTime = new Date(value)
 					if (dateTime === 'Invalid Date') return value
-
+                    let dateParts = dateTime.toISOString().split('T')
+					dateParts[1] = dateParts[1].split('.')[0]
                     if (this.schema.format === 'date') {
-						return dateTime.toLocaleDateString()
+						return dateParts[0]
                     }
 					if (this.schema.format === 'time') {
-						return dateTime.toLocaleTimeString()
+						return dateParts[1]
 					}
-					return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
+					return dateParts.join(' ')
                 }
 				return value
             }
