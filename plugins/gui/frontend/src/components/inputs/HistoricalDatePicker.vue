@@ -1,0 +1,53 @@
+<template>
+    <div>
+        Showing for
+        <x-date-edit @input="confirmPickDate"
+                     placeholder="latest" v-model="date" :show-time="false"
+                     :limit="[{ type: 'fromto', from: firstHistoricalDate, to: new Date()}]"/>
+        <a v-if="showingHistorical" class="x-btn link" @click="clearDate">clear</a>
+    </div>
+</template>
+
+
+<script>
+    import xDateEdit from '../../components/controls/string/DateEdit.vue'
+    import {mapState} from 'vuex'
+
+    export default {
+        name: 'x-historical-date-picker',
+        components: {
+            xDateEdit
+        },
+        data() {
+            return {
+                date: this.value
+            }
+        },
+        props: ['value'],
+        computed: {
+            ...mapState({
+                firstHistoricalDate(state) {
+                    return state.constants.first_historical_date
+                }
+            }),
+            showingHistorical() {
+                return this.date != null
+            }
+        },
+        methods: {
+            confirmPickDate() {
+                this.$emit('input', this.date)
+            },
+            clearDate() {
+                this.date = null
+                this.$emit('input', this.date)
+                this.$emit('cleared', null)
+            }
+        },
+    }
+</script>
+
+
+<style lang="scss">
+
+</style>

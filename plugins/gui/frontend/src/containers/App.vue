@@ -32,7 +32,7 @@
 
     import { GET_USER} from '../store/modules/auth'
     import { FETCH_SYSTEM_CONFIG } from "../store/actions";
-    import { FETCH_CONSTANTS } from "../store/modules/constants";
+    import { FETCH_CONSTANTS, FETCH_FIRST_HISTORICAL_DATE, FETCH_ALLOWED_DATES } from "../store/modules/constants";
 	import { mapState, mapActions } from 'vuex'
 	import '../components/icons'
 
@@ -70,11 +70,14 @@
         },
         methods: {
             ...mapActions({
-                getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS
+                getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS,
+                firstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE, allowedDates: FETCH_ALLOWED_DATES
             }),
             fetchGlobalData() {
 				this.fetchConfig()
                 this.fetchConstants()
+                this.firstHistoricalDate()
+                this.allowedDates()
             },
             notifyAccess(name) {
                 this.accessMessage = `You do not have permission to access the ${name} screen`

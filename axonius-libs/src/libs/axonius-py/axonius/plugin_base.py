@@ -921,6 +921,11 @@ class PluginBase(Configurable, Feature):
             db_name = self.plugin_unique_name
         return self._get_db_connection()[db_name][collection_name]
 
+    def _get_appropriate_view(self, historical, entity_type: EntityType):
+        if historical:
+            return self._historical_entity_views_db_map[entity_type]
+        return self._entity_views_db_map[entity_type]
+
     def _grab_file(self, field_data, stored_locally=True):
         """
         Fetches the file pointed by `field_data` from the DB.

@@ -103,6 +103,9 @@
             entityId() {
 				return this.$route.params.id
             },
+            history() {
+				return this.$route.query.history
+            },
 			entityGenericAdvanced() {
 				if (!this.entity.generic || !this.entity.generic.advanced) return []
 				return this.entity.generic.advanced
@@ -209,7 +212,7 @@
 				this.fetchDataFields({ module: this.module })
 			}
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId) {
-				this.fetchDataByID({ module: this.module, id: this.entityId })
+				this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
 			} else {
 				this.delayInitTourState = true
             }

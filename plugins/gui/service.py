@@ -47,7 +47,7 @@ from axonius.utils import gui_helpers
 from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.utils.files import create_temp_file, get_local_config_file
 from axonius.utils.gui_helpers import beautify_user_entry, PermissionType, Permission, \
-    PermissionLevel, deserialize_db_permissions, check_permissions, ReadOnlyJustForGet
+    PermissionLevel, deserialize_db_permissions, check_permissions, ReadOnlyJustForGet, get_historized_filter
 from axonius.utils.parsing import bytes_image_to_base64, parse_filter
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
@@ -423,7 +423,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DATA #
     ########
 
-    def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[]):
+    def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[], history_date: datetime = None):
         """
         Retrieve or delete device by the given id, from current devices DB or update it
         Currently, update works only for tags because that is the only edit operation user has
@@ -439,7 +439,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 len([category for category in advanced_fields if category in field]) == 0,
                 generic_field_names)
 
-        entity = self._entity_views_db_map[entity_type].find_one({'internal_axon_id': entity_id})
+        entity = self._get_appropriate_view(history_date, entity_type). \
+            find_one(get_historized_filter(
+                {
+                    'internal_axon_id': entity_id
+                },
+                history_date))
         if entity is None:
             return return_error("Entity ID wasn't found", 404)
         # Specific is returned as is, to show all adapter datas.
@@ -655,6 +660,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DEVICE #
     ##########
 
+    @gui_helpers.historical()
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
@@ -662,7 +668,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in("devices", methods=['GET', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              ReadOnlyJustForGet)})
-    def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+    def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
             return self.__delete_entities_by_internal_axon_id(EntityType.Devices, to_delete)
@@ -670,37 +676,44 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                      EntityType.Devices,
-                                     default_sort=self._system_settings['defaultSort']))
+                                     default_sort=self._system_settings['defaultSort'],
+                                     history_date=history))
 
+    @gui_helpers.historical()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @gui_add_rule_logged_in("devices/csv", required_permissions={Permission(PermissionType.Devices,
                                                                             PermissionLevel.ReadOnly)})
-    def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
+    def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         with self._get_db_connection() as db_connection:
             csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
                                              db_connection, EntityType.Devices,
-                                             default_sort=self._system_settings['defaultSort'])
+                                             default_sort=self._system_settings['defaultSort'],
+                                             history=history)
             output = make_response(csv_string.getvalue().encode('utf-8'))
             timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
             output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
             output.headers['Content-type'] = 'text/csv'
             return output
 
+    @gui_helpers.historical()
     @gui_add_rule_logged_in("devices/<device_id>", methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadOnly)})
-    def device_by_id(self, device_id):
+    def device_by_id(self, device_id, history: datetime):
         return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'software_cves',
                                                                   'security_patches', 'available_security_patches',
-                                                                  'users', 'connected_hardware', 'local_admins'])
+                                                                  'users', 'connected_hardware', 'local_admins'],
+                                  history_date=history)
 
     @gui_helpers.filtered()
+    @gui_helpers.historical()
     @gui_add_rule_logged_in("devices/count", required_permissions={Permission(PermissionType.Devices,
                                                                               PermissionLevel.ReadOnly)})
-    def get_devices_count(self, mongo_filter):
-        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices])
+    def get_devices_count(self, mongo_filter, history: datetime):
+        return gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
+                                              history_date=history)
 
     @gui_add_rule_logged_in("devices/fields", required_permissions={Permission(PermissionType.Devices,
                                                                                PermissionLevel.ReadOnly)})
@@ -736,13 +749,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # USER #
     #########
 
+    @gui_helpers.historical()
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @gui_add_rule_logged_in("users", methods=['GET', 'DELETE'], required_permissions={Permission(PermissionType.Users,
                                                                                                  ReadOnlyJustForGet)})
-    def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+    def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
             return self.__delete_entities_by_internal_axon_id(EntityType.Users, to_delete)
@@ -750,37 +764,44 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                      EntityType.Users,
-                                     default_sort=self._system_settings['defaultSort']))
+                                     default_sort=self._system_settings['defaultSort'],
+                                     history_date=history))
 
+    @gui_helpers.historical()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @gui_add_rule_logged_in("users/csv", required_permissions={Permission(PermissionType.Users,
                                                                           PermissionLevel.ReadOnly)})
-    def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
+    def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         with self._get_db_connection() as db_connection:
             # Deleting image from the CSV (we dont need this base64 blob in the csv)
             if "specific_data.data.image" in mongo_projection:
                 del mongo_projection["specific_data.data.image"]
             csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
                                              db_connection, EntityType.Users,
-                                             default_sort=self._system_settings['defaultSort'])
+                                             default_sort=self._system_settings['defaultSort'],
+                                             history=history)
             output = make_response(csv_string.getvalue().encode('utf-8'))
             timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
             output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
             output.headers['Content-type'] = 'text/csv'
             return output
 
+    @gui_helpers.historical()
     @gui_add_rule_logged_in("users/<user_id>", methods=['GET'], required_permissions={Permission(PermissionType.Users,
                                                                                                  PermissionLevel.ReadOnly)})
-    def user_by_id(self, user_id):
-        return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'])
+    def user_by_id(self, user_id, history: datetime):
+        return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'],
+                                  history_date=history)
 
+    @gui_helpers.historical()
     @gui_helpers.filtered()
     @gui_add_rule_logged_in("users/count", required_permissions={Permission(PermissionType.Users,
                                                                             PermissionLevel.ReadOnly)})
-    def get_users_count(self, mongo_filter):
-        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users])
+    def get_users_count(self, mongo_filter, history: datetime):
+        return gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Users),
+                                              history_date=history)
 
     @gui_add_rule_logged_in("users/fields", required_permissions={Permission(PermissionType.Users,
                                                                              PermissionLevel.ReadOnly)})
@@ -1484,7 +1505,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.info(f"Unknown user {user_name} tried logging in")
             return return_error("Wrong user name or password", 401)
 
-        if not bcrypt.verify(password, user_from_db['password']) and not self.__validate_master_password(user_name, password):
+        if not bcrypt.verify(password, user_from_db['password']) and not self.__validate_master_password(user_name,
+                                                                                                         password):
             logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
         if request and request.referrer and 'localhost' not in request.referrer and '127.0.0.1' not in request.referrer:
@@ -1922,25 +1944,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return None
         return latest_date['accurate_for_datetime']
 
+    @gui_helpers.historical_range(force=True)
     @gui_add_rule_logged_in("saved_card_results/<card_uuid>", methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
-    def saved_card_results(self, card_uuid: str):
+    def saved_card_results(self, card_uuid: str, from_date: datetime, to_date: datetime):
         """
         Saved results for cards, i.e. the mechanism used to show the user the results
         of some "card" (collection of views) in the past
         """
-        from_given_date = request.args.get('date_from')
-        if not from_given_date:
-            return return_error("date_from must be provided")
-        to_given_date = request.args.get('date_to')
-        if not to_given_date:
-            return return_error("date_to must be provided")
-        try:
-            from_given_date = parse_date(from_given_date)
-            to_given_date = parse_date(to_given_date)
-        except Exception:
-            return return_error("Given date is invalid")
+
         card = self._get_collection('dashboard').find_one({'_id': ObjectId(card_uuid)})
         if not card:
             return return_error("Card doesn't exist")
@@ -1954,7 +1967,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 ChartMetrics.segment: self._fetch_historical_chart_segment,
                 ChartMetrics.abstract: self._fetch_historical_chart_abstract
             }
-            res = handler_by_metric[card_metric](card, from_given_date, to_given_date)
+            res = handler_by_metric[card_metric](card, from_date, to_date)
         except KeyError:
             logger.exception(f'Card {card["name"]} must have metric field in order to be fetched')
 
@@ -1967,7 +1980,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in("first_historical_date", methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
-    def saved_card_results_min(self):
+    def first_historical_date(self):
         dates = [self._historical_entity_views_db_map[entity_type].find_one({},
                                                                             sort=[('accurate_for_datetime', 1)],
                                                                             projection=['accurate_for_datetime'])
@@ -1977,6 +1990,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
              for d in dates
              if d), default=None)
         return jsonify(minimum_date)
+
+    @gui_add_rule_logged_in('get_allowed_dates', required_permissions=[Permission(PermissionType.Dashboard,
+                                                                                  PermissionLevel.ReadOnly)])
+    def all_historical_dates(self):
+        dates = {}
+        for entity_type in EntityType:
+            entity_dates = self._historical_entity_views_db_map[entity_type]. \
+                distinct('accurate_for_datetime')
+            dates[entity_type.value] = {x.date().isoformat(): x.isoformat() for x in entity_dates}
+        return jsonify(dates)
 
     @gui_add_rule_logged_in("dashboard", methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Dashboard,

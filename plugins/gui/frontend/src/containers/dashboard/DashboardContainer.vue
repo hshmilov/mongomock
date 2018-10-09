@@ -14,11 +14,11 @@
                                  @click-one="runCoverageFilter(item.properties, $event)" :read-only="isDevicesRestricted"/>
                 <x-card v-for="(chart, chartInd) in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="!isReadOnly" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
-                    <div class="card-history" v-if="chart.metric !== 'timeline'">Showing for
-                        <x-date-edit @input="confirmPickDate(chart.uuid, chart.name)"
-                                     placeholder="latest" v-model="chartsCurrentlyShowing[chart.uuid]" :show-time="false"
-                                     :limit="[{ type: 'fromto', from: cardHistoricalMin, to: new Date()}]"/>
-                        <a v-if="chart.showingHistorical" class="x-btn link" @click="clearDate(chart.uuid)">clear</a>
+                    <div class="card-history" v-if="chart.metric !== 'timeline'">
+                        <x-historical-date-picker v-model="chartsCurrentlyShowing[chart.uuid]"
+                                                  @input="confirmPickDate(chart.uuid, chart.name)"
+                                                  @cleared="clearDate(chart.uuid)">
+                        </x-historical-date-picker>
                     </div>
                     <components :is="`x-${chart.view}`" :data="chart.data" :config="chart.config"
                                 @click-one="runChartFilter(chartInd, $event)" />
@@ -51,9 +51,9 @@
     import DashboardWizardContainer from './wizard/DashboardWizardContainer.vue'
     import xEmptySystem from '../../components/onboard/empty_states/EmptySystem.vue'
     import Modal from '../../components/popover/Modal.vue'
-    import xDateEdit from '../../components/controls/string/DateEdit.vue'
     import xToast from '../../components/popover/Toast.vue'
     import xLine from '../../components/charts/Line.vue'
+    import xHistoricalDatePicker from '../../components/inputs/HistoricalDatePicker.vue'
 
     import {
         FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
@@ -68,7 +68,7 @@
         name: 'x-dashboard',
         components: {
             xPage, xCard, xCoverageCard, xDataDiscoveryCard, xHistogram, xPie, xSummary, xLine,
-            xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xDateEdit, xToast
+            xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xToast, xHistoricalDatePicker
         },
         computed: {
             ...mapState({
@@ -159,7 +159,6 @@
                 dateChosen: {},
                 pendingDateChosen: null,
                 cardHistoricalData: {},
-                cardHistoricalMin: null,
                 chartsCurrentlyShowing: {},
                 message: ''
             }
@@ -180,7 +179,7 @@
                 fetchDiscoveryData: FETCH_DISCOVERY_DATA, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
                 fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE, saveView: SAVE_VIEW,
                 fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
-                fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD, fetchHistoricalCardMin: FETCH_HISTORICAL_SAVED_CARD_MIN
+                fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD
             }),
             runCoverageFilter(properties, covered) {
                 if (!properties || !properties.length) return
@@ -282,10 +281,6 @@
 					})
 				}
 			})
-            this.fetchHistoricalCardMin().then((response) => {
-                this.cardHistoricalMin = new Date(response.data)
-                this.cardHistoricalMin.setDate(this.cardHistoricalMin.getDate() - 1);
-            })
 		},
         updated() {
             if (this.wizardActivated && this.newChart) {

@@ -32,7 +32,10 @@
                 isReadOnly(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
                     return state.auth.data.permissions.Users === 'ReadOnly'
-                }
+                },
+                historicalState(state) {
+                    return state[this.module].view.historical
+                },
             }),
 			module() {
 				return 'users'
@@ -50,7 +53,11 @@
 			configUser (userId) {
 				if (this.selectedUsers && this.selectedUsers.length) return
 
-				this.$router.push({path: `${this.module}/${userId}`})
+                let path = `${this.module}/${userId}`
+                if (this.historicalState) {
+				    path += `?history=${encodeURIComponent(this.historicalState)}`
+                }
+				this.$router.push({path: path})
 			},
 			exportCSV() {
 				this.fetchContentCSV({ module: this.module })

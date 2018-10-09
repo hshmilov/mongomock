@@ -7,7 +7,8 @@ export const users = {
             page: 0, pageSize: 20, fields: [
                 'adapters', 'specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
                 'specific_data.data.last_seen', 'specific_data.data.is_admin',
-            ], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
+            ], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true},
+            historical: null
         },
         fields: {data: [], fetching: false, error: ''},
         views: {

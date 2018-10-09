@@ -7,7 +7,8 @@ export const devices = {
 			page: 0, pageSize: 20, fields: [
 				'adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.os.type',
 				'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'
-			], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
+			], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true},
+			historical: null
 		},
 		fields: { data: {}, fetching: false, error: ''},
 		views: {

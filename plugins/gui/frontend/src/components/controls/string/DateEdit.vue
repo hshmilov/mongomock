@@ -33,7 +33,7 @@
                     week: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
                     month: ['January', 'February', 'March', 'April', 'May', 'June',
                         'July', 'August', 'September', 'October', 'November', 'December'],
-                    format: this.showTime ? 'MM/DD/YYYY h:mm A' : 'MM/DD/YYYY',
+                    format: this.showTime ? 'YYYY-MM-DD h:mm A' : 'YYYY-MM-DD',
                     placeholder: this.placeholder,
                     inputStyle: {},
                     color: {

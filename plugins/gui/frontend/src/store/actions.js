@@ -74,9 +74,16 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
 	const view = state[payload.module].view
 
-	let param = (view.query && view.query.filter) ? `?filter=${encodeURIComponent(view.query.filter)}` : ''
+	let params = []
+
+	if (view.query && view.query.filter) {
+		params.push(`filter=${encodeURIComponent(view.query.filter)}`)
+	}
+	if (view.historical) {
+		params.push(`history=${encodeURIComponent(view.historical)}`)
+	}
 	dispatch(REQUEST_API, {
-		rule: `${payload.module}/count${param}`,
+		rule: `${payload.module}/count?${params.join('&')}`,
 		type: UPDATE_DATA_COUNT,
 		payload
 	})
@@ -98,6 +105,9 @@ const createContentRequest = (state, payload) => {
 	}
 	if (view.query && view.query.filter) {
 		params.push(`filter=${encodeURIComponent(view.query.filter)}`)
+	}
+	if (view.historical) {
+		params.push(`history=${encodeURIComponent(view.historical)}`)
 	}
 	// TODO: Not passing expressions because it might reach max URL size
 	// if (view.query.expressions) {
@@ -302,9 +312,13 @@ export const deleteData = ({state, dispatch}, payload) => {
 export const FETCH_DATA_BY_ID = 'FETCH_DATA_BY_ID'
 export const fetchDataByID = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
+	let rule = `${payload.module}/${payload.id}`
+	if (payload.history) {
+		rule += `?history=${encodeURIComponent(payload.history)}`
+	}
 
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/${payload.id}`,
+		rule: rule,
 		type: UPDATE_DATA_BY_ID,
 		payload
 	})

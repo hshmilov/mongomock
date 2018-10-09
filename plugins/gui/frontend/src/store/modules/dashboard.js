@@ -19,7 +19,6 @@ export const FETCH_DASHBOARD_COVERAGE = 'FETCH_DASHBOARD_COVERAGE'
 export const UPDATE_DASHBOARD_COVERAGE = 'UPDATE_DASHBOARD_COVERAGE'
 
 export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
-export const FETCH_HISTORICAL_SAVED_CARD_MIN = 'FETCH_HISTORICAL_SAVED_CARD_MIN'
 
 export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE'
 export const UPDATE_DASHBOARD_FIRST_USE = 'UPDATE_DASHBOARD_FIRST_USE'
@@ -139,11 +138,6 @@ export const dashboard = {
 		[ FETCH_HISTORICAL_SAVED_CARD ] ({ dispatch }, payload) {
 			return dispatch(REQUEST_API, {
 				rule: `saved_card_results/${encodeURI(payload.cardUuid)}?date_to=${encodeURI(payload.date)} 23:59:59&date_from=${encodeURI(payload.date)}`,
-			})
-		},
-		[ FETCH_HISTORICAL_SAVED_CARD_MIN ] ({ dispatch }) {
-			return dispatch(REQUEST_API, {
-				rule: 'first_historical_date'
 			})
 		},
 		[ FETCH_DASHBOARD_FIRST_USE ] ({ dispatch }) {

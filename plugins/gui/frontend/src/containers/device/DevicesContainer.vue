@@ -39,7 +39,10 @@
                 isReadOnly(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
                     return state.auth.data.permissions.Devices === 'ReadOnly'
-                }
+                },
+                historicalState(state) {
+                    return state[this.module].view.historical
+                },
             }),
 			module() {
 				return 'devices'
@@ -58,8 +61,11 @@
             ...mapMutations({ changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE }),
 			configDevice (deviceId) {
 				if (this.anySelected) return
-
-				this.$router.push({path: `${this.module}/${deviceId}`})
+                let path = `${this.module}/${deviceId}`
+                if (this.historicalState) {
+				    path += `?history=${encodeURIComponent(this.historicalState)}`
+                }
+				this.$router.push({path: path})
 			},
             exportCSV() {
 				this.fetchContentCSV({ module: this.module })

@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import NamedTuple
 
+import dateutil
 import pymongo
 import requests
 from flask import request
@@ -186,8 +187,9 @@ def projected():
 
     return wrap
 
-
 # Caution! These decorators must come BEFORE @add_rule
+
+
 def paginated(limit_max=PAGINATION_LIMIT_MAX):
     """
     Decorator stating that the view supports '?limit=X&start=Y' for pagination
@@ -205,6 +207,63 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
             if skip < 0:
                 raise ValueError('start must not be negative')
             return func(self, limit=limit, skip=skip, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def historical_range(force: bool = False):
+    """
+    Decorator stating that the view supports '?date_from=DATE&date_to=DATE' for historical views
+    :param force: If true, then empty date will not be accepted
+    """
+    def wrap(func):
+        def raise_or_return(err):
+            if force:
+                raise ValueError(err)
+            return None
+
+        def try_get_date():
+            from_given_date = request.args.get('date_from')
+            if not from_given_date:
+                return raise_or_return('date_from must be provided')
+            to_given_date = request.args.get('date_to')
+            if not to_given_date:
+                return raise_or_return('date_to must be provided')
+            try:
+                from_given_date = dateutil.parser.parse(from_given_date)
+                to_given_date = dateutil.parser.parse(to_given_date)
+            except Exception:
+                raise ValueError('Dates are invalid')
+            return from_given_date, to_given_date
+
+        def actual_wrapper(self, *args, **kwargs):
+            got_date = try_get_date()
+            from_date, to_date = None, None
+            if got_date:
+                from_date, to_date = got_date
+            return func(self, from_date=from_date, to_date=to_date, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def historical():
+    """
+    Decorator stating that the view supports '?history=EXACT_DATE' for historical views
+    """
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            history = request.args.get('history', None)
+            if history:
+                try:
+                    history = dateutil.parser.parse(history)
+                except Exception:
+                    return return_error('Specified date is invalid')
+            logger.info(f"historical for {history}")
+            return func(self, history=history, *args, **kwargs)
 
         return actual_wrapper
 
@@ -315,7 +374,8 @@ def get_entities(limit: int, skip: int,
                  projection: dict,
                  entity_type: EntityType,
                  default_sort: bool = True,
-                 run_over_projection=True):
+                 run_over_projection=True,
+                 history_date: datetime = None):
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -326,9 +386,11 @@ def get_entities(limit: int, skip: int,
     :param entity_type: Entity type to get
     :param default_sort: adds an optional default sort using ADAPTERS_LIST_LENGTH
     :param run_over_projection: adds some common fields to the projection
+    :param history_date: the date for which to fetch, or None for latest
     :return:
     """
-    entity_views_db = PluginBase.Instance._entity_views_db_map[entity_type]
+    entity_views_db = PluginBase.Instance._get_appropriate_view(history_date, entity_type)
+    view_filter = get_historized_filter(view_filter, history_date)
     logger.debug(f'Fetching data for entity {entity_type.name}')
     limit = limit or 0
     skip = skip or 0
@@ -356,14 +418,32 @@ def get_entities(limit: int, skip: int,
             yield parse_entity_fields(entity, projection.keys())
 
 
-def get_entities_count(filter, entity_collection):
+def get_historized_filter(entities_filter, history_date: datetime):
     """
-            Count total number of devices answering given mongo_filter
+    If you wish to write generic code for both historical data and non historical data
+    You can build the appropriate mongo filter using this method by passing the desired filter
+    and the date to fetch for
+    :param entities_filter: the desired mongo filter
+    :param history_date: the desired date to fetch for, or None for latest
+    :return: processed filter
+    """
+    if history_date:
+        entities_filter = {
+            '$and': [
+                entities_filter,
+                {
+                    'accurate_for_datetime': history_date
+                }
+            ]
+        }
+    return entities_filter
 
-            :param filter: Object defining a Mongo query
-            :return: Number of devices
-            """
-    return str(entity_collection.count_documents(filter))
+
+def get_entities_count(entities_filter, entity_collection, history_date: datetime = None):
+    """
+    Count total number of devices answering given mongo_filter
+    """
+    return str(entity_collection.count_documents(get_historized_filter(entities_filter, history_date)))
 
 
 def find_entity_field(entity_data, field_path):
@@ -515,7 +595,7 @@ def entity_fields(entity_type: EntityType, core_address, db_connection):
 
 
 def get_csv(mongo_filter, mongo_sort, mongo_projection,
-            basic_db_connection, entity_type: EntityType, default_sort=True):
+            basic_db_connection, entity_type: EntityType, default_sort=True, history: datetime = None):
     """
     Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
@@ -525,7 +605,8 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection,
     entities = list(get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
                                  entity_type,
                                  default_sort=default_sort,
-                                 run_over_projection=False))
+                                 run_over_projection=False,
+                                 history_date=history))
     if len(entities) > 0:
         # Beautifying the resulting csv.
         mongo_projection.pop('internal_axon_id', None)

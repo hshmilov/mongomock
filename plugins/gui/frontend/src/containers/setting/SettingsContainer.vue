@@ -135,7 +135,7 @@
                     return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
                 },
                 constants(state) {
-                    return state.constants.data
+                    return state.constants.constants
                 },
                 isReadOnly(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
