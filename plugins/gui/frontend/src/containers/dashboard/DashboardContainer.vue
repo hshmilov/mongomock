@@ -5,6 +5,7 @@
             <x-empty-system/>
         </template>
         <template v-else>
+            <x-insights-search @click="onClickInsights" />
             <div class="dashboard-charts">
                 <x-data-discovery-card :data="deviceDiscovery" module="devices"
                                        :filter="isDevicesRestricted? undefined: runFilter" />
@@ -53,13 +54,14 @@
     import Modal from '../../components/popover/Modal.vue'
     import xToast from '../../components/popover/Toast.vue'
     import xLine from '../../components/charts/Line.vue'
+    import xInsightsSearch from './explorer/ExplorerSearch.vue'
     import xHistoricalDatePicker from '../../components/inputs/HistoricalDatePicker.vue'
 
     import {
         FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
         FETCH_HISTORICAL_SAVED_CARD, FETCH_HISTORICAL_SAVED_CARD_MIN, FETCH_DASHBOARD_FIRST_USE
     } from '../../store/modules/dashboard'
-    import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
+    import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { SAVE_VIEW } from '../../store/actions'
     import { CHANGE_TOUR_STATE, NEXT_TOUR_STATE } from '../../store/modules/onboarding'
     import { mapState, mapMutations, mapActions } from 'vuex'
@@ -68,7 +70,7 @@
         name: 'x-dashboard',
         components: {
             xPage, xCard, xCoverageCard, xDataDiscoveryCard, xHistogram, xPie, xSummary, xLine,
-            xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xToast, xHistoricalDatePicker
+            xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xToast, xInsightsSearch, xHistoricalDatePicker
         },
         computed: {
             ...mapState({
@@ -172,8 +174,7 @@
         },
         methods: {
             ...mapMutations({
-                updateView: UPDATE_DATA_VIEW, clearDataContent: CLEAR_DATA_CONTENT,
-                changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
+                updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
             }),
             ...mapActions({
                 fetchDiscoveryData: FETCH_DISCOVERY_DATA, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
@@ -202,7 +203,6 @@
 				this.updateView({
 					module: query.module, view: query.view
 				})
-				this.clearDataContent({module: query.module})
 				this.$router.push({path: query.module})
             },
             runFilter(filter, module) {
@@ -211,7 +211,6 @@
                         page: 0, query: {filter, expressions: []}
                     }
                 })
-                this.clearDataContent({module})
                 this.$router.push({path: module})
             },
             createNewDashboard() {
@@ -245,6 +244,9 @@
             removeToast() {
                 this.message = ''
             },
+            onClickInsights() {
+                this.$router.push({name: 'Insights Explorer'})
+            }
         },
         created() {
             this.fetchDashboardFirstUse()

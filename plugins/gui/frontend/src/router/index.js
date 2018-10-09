@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import DashboardContainer from '../containers/dashboard/DashboardContainer.vue'
+import DashboardExplorerContainer from '../containers/dashboard/explorer/DashboardExplorerContainer.vue'
 import DevicesContainer from '../containers/device/DevicesContainer.vue'
 import DeviceConfigContainer from '../containers/device/DeviceConfigContainer.vue'
 import DeviceQueriesContainer from '../containers/device/DeviceQueriesContainer.vue'
@@ -27,6 +28,11 @@ export default new Router({
             name: 'Dashboard',
 			component: DashboardContainer
         },
+		{
+			path: '/dashboard/explorer',
+			name: 'Insights Explorer',
+			component: DashboardExplorerContainer
+		},
         {
             path: '/devices',
             name: 'Devices',

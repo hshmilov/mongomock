@@ -1,1 +1,7 @@
-export const entities = ['Devices', 'Users']
+export const entities = [
+    {
+        name: 'devices', title: 'Devices'
+    }, {
+        name: 'users', title: 'Users'
+    }
+]

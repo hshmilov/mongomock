@@ -27,7 +27,6 @@ import {
 	UPDATE_DATA_CONTENT, updateDataContent,
 	UPDATE_DATA_COUNT, updateDataCount,
 	UPDATE_DATA_VIEW, updateDataView,
-	CLEAR_DATA_CONTENT, clearDataContent,
 	UPDATE_DATA_VIEWS, updateDataViews,
 	ADD_DATA_VIEW, addDataView,
 	UPDATE_REMOVED_DATA_VIEW, updateRemovedDataView,
@@ -46,6 +45,7 @@ import {
 } from './getters'
 import { devices } from './modules/devices'
 import { users } from './modules/users'
+import { explorer } from './modules/explorer'
 import { adapter } from './modules/adapter'
 import { alert } from './modules/alert'
 import { notifications } from './modules/notifications'
@@ -78,7 +78,6 @@ export default new Vuex.Store({
         [ UPDATE_DATA_CONTENT ]: updateDataContent,
 		[ UPDATE_DATA_COUNT ]: updateDataCount,
 		[ UPDATE_DATA_VIEW ]: updateDataView,
-		[ CLEAR_DATA_CONTENT ]: clearDataContent,
 		[ UPDATE_DATA_VIEWS ]: updateDataViews,
 		[ ADD_DATA_VIEW ]: addDataView,
 		[ UPDATE_REMOVED_DATA_VIEW ]: updateRemovedDataView,
@@ -117,6 +116,7 @@ export default new Vuex.Store({
          */
         devices,
 		users,
+		explorer,
 		adapter,
 		alert,
         notifications,

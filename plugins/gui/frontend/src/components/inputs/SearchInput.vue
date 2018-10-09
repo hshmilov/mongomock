@@ -3,15 +3,15 @@
         <div class="input-icon">
             <svg-icon name="action/search" :original="true" height="18"></svg-icon>
         </div>
-        <input type="text" v-model="searchValue" class="input-value" ref="input" :placeholder="placeholder"
-               @input="updateSearchValue()" @focusout="focused = false" @click.stop="focused = true">
+        <input type="text" v-model="searchValue" class="input-value" :disabled="disabled" :placeholder="placeholder"
+               @input="updateSearchValue()" @focusout="focused = false" @click.stop="focused = true" ref="input">
     </div>
 </template>
 
 <script>
     export default {
         name: 'x-search-input',
-        props: [ 'value', 'placeholder' ],
+        props: { value: {}, placeholder: { default: '' }, disabled: { default: false } },
         data() {
             return {
                 searchValue: this.value,
@@ -28,6 +28,7 @@
                 this.$emit('input', this.searchValue)
             },
             focus() {
+                if (this.disabled) return
             	this.focused = true
             	this.$refs.input.focus()
             }

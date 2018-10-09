@@ -65,14 +65,20 @@ export const requestApi = ({commit}, payload) => {
 		}))
 }
 
-export const validModule = (state, payload) => {
-	return (payload && payload.module && state[payload.module])
+export const getModule = (state, payload) => {
+	if (!payload || !payload.module) return false
+	if (payload.section && state[payload.section]) {
+		return state[payload.section][payload.module]
+	} else if (!payload.section) {
+        return state[payload.module]
+    }
 }
 
 export const FETCH_DATA_COUNT = 'FETCH_DATA_COUNT'
 export const fetchDataCount = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload)) return
-	const view = state[payload.module].view
+	let module = getModule(state, payload)
+    if (!module) return
+	const view = module.view
 
 	let params = []
 
@@ -90,8 +96,9 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 }
 
 const createContentRequest = (state, payload) => {
-	if (!validModule(state, payload)) return ''
-	const view = state[payload.module].view
+    let module = getModule(state, payload)
+    if (!module) return
+	const view = module.view
 
 	let params = []
 	if (payload.skip !== undefined) {
@@ -123,12 +130,12 @@ const createContentRequest = (state, payload) => {
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
 export const fetchDataContent = ({state, dispatch}, payload) => {
 	if (!payload.skip) {
-		dispatch(FETCH_DATA_COUNT, {module: payload.module})
+		dispatch(FETCH_DATA_COUNT, { module: payload.module, section: payload.section})
 	}
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}?${createContentRequest(state, payload)}`,
 		type: UPDATE_DATA_CONTENT,
-		payload: {module: payload.module, skip: payload.skip}
+		payload
 	})
 }
 
@@ -168,7 +175,7 @@ export const downloadFile = (fileType, response)=>{
 
 export const FETCH_DATA_VIEWS = 'FETCH_DATA_VIEWS'
 export const fetchDataViews = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
     if (!payload.skip) payload.skip = 0
 	if (!payload.limit) payload.limit = 1000
 
@@ -187,7 +194,7 @@ export const fetchDataViews = ({state, dispatch}, payload) => {
 
 export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW'
 export const saveDataView = ({state, dispatch, commit}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	payload.view = state[payload.module].view
 	saveView({dispatch, commit}, payload)
 }
@@ -213,7 +220,7 @@ export const saveView = ({dispatch, commit}, payload) => {
 
 export const REMOVE_DATA_VIEW = 'REMOVE_DATA_VIEW'
 export const removeDataView = ({state, dispatch, commit}, payload) => {
-	if (!validModule(state, payload) || !payload.ids || !payload.ids.length) return
+	if (!getModule(state, payload) || !payload.ids || !payload.ids.length) return
 
 	dispatch(REQUEST_API, {
 		rule: `${payload.module}/views`,
@@ -229,7 +236,7 @@ export const removeDataView = ({state, dispatch, commit}, payload) => {
 
 export const FETCH_DATA_FIELDS = 'FETCH_DATA_FIELDS'
 export const fetchDataFields = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/fields',
 		type: UPDATE_DATA_FIELDS,
@@ -247,7 +254,7 @@ export const startResearch = ({dispatch}) => {
 
 export const FETCH_DATA_LABELS = 'FETCH_DATA_LABELS'
 export const fetchDataLabels = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	dispatch(REQUEST_API, {
 		rule: `${payload.module}/labels`,
 		type: UPDATE_DATA_LABELS,
@@ -257,7 +264,7 @@ export const fetchDataLabels = ({state, dispatch}, payload) => {
 
 export const ADD_DATA_LABELS = 'ADD_DATA_LABELS'
 export const addDataLabels = ({state, dispatch, commit}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 
 	if (!payload.data || !payload.data.entities || !payload.data.entities.length
 		|| !payload.data.labels || !payload.data.labels.length) {
@@ -273,7 +280,7 @@ export const addDataLabels = ({state, dispatch, commit}, payload) => {
 
 export const REMOVE_DATA_LABELS = 'REMOVE_DATA_LABELS'
 export const removeDataLabels = ({state, dispatch, commit}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 
 	if (!payload.data || !payload.data.entities || !payload.data.entities.length
 		|| !payload.data.labels || !payload.data.labels.length) {
@@ -289,7 +296,7 @@ export const removeDataLabels = ({state, dispatch, commit}, payload) => {
 
 export const DISABLE_DATA = 'DISABLE_DATA'
 export const disableData = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}/disable`,
@@ -300,7 +307,7 @@ export const disableData = ({state, dispatch}, payload) => {
 
 export const DELETE_DATA = 'DELETE_DATA'
 export const deleteData = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload) || !payload.data.internal_axon_ids) return
+	if (!getModule(state, payload) || !payload.data.internal_axon_ids) return
 
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}`,
@@ -311,12 +318,11 @@ export const deleteData = ({state, dispatch}, payload) => {
 
 export const FETCH_DATA_BY_ID = 'FETCH_DATA_BY_ID'
 export const fetchDataByID = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	let rule = `${payload.module}/${payload.id}`
 	if (payload.history) {
 		rule += `?history=${encodeURIComponent(payload.history)}`
 	}
-
 	return dispatch(REQUEST_API, {
 		rule: rule,
 		type: UPDATE_DATA_BY_ID,

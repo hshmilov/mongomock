@@ -27,7 +27,7 @@ class UserAdapter(SmartJsonClass):
     image = Field(str, "Image", json_format=JsonStringFormat.image)
     id = Field(str, "ID")  # Usually username@domain.
     user_sid = Field(str, "SID")
-    mail = Field(str, "mail")
+    mail = Field(str, "Mail")
     username = Field(str, 'User Name')  # Only username, no domain
     description = Field(str, 'Description')
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
@@ -59,8 +59,8 @@ class UserAdapter(SmartJsonClass):
     user_city = Field(str, "User City")
     user_country = Field(str, "User Country")
 
-    first_name = Field(str, "User first name")
-    last_name = Field(str, "User last name")
+    first_name = Field(str, "First Name")
+    last_name = Field(str, "Last Name")
 
     required = ['id', 'username']
 

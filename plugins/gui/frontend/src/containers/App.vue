@@ -12,10 +12,7 @@
             <router-view/>
             <top-bar-container class="print-exclude" @access-violation="notifyAccess" />
             <x-tour-state />
-            <modal v-if="accessMessage" @close="removeAccessMessage">
-                <div slot="body">{{ accessMessage }}</div>
-                <div slot="footer"><button class="x-btn" @click="removeAccessMessage">OK</button></div>
-            </modal>
+            <x-access-modal v-model="blockedComponent" />
         </template>
         <template v-else>
             <login-container />
@@ -28,7 +25,7 @@
     import SideBarContainer from './navigation/SideBarContainer.vue'
     import LoginContainer from './auth/LoginContainer.vue'
 	import xTourState from '../components/onboard/TourState.vue'
-    import Modal from '../components/popover/Modal.vue'
+    import xAccessModal from '../components/popover/AccessModal.vue'
 
     import { GET_USER} from '../store/modules/auth'
     import { FETCH_SYSTEM_CONFIG } from "../store/actions";
@@ -39,7 +36,9 @@
 
 	export default {
         name: 'app',
-        components: { LoginContainer, TopBarContainer, SideBarContainer, xTourState, Modal },
+        components: {
+            LoginContainer, TopBarContainer, SideBarContainer, xTourState, xAccessModal
+        },
         computed: {
             ...mapState({
                 userName(state) {
@@ -55,7 +54,7 @@
 		},
         data() {
              return {
-                 accessMessage: ''
+                 blockedComponent: ''
              }
         },
         watch: {
@@ -80,10 +79,7 @@
                 this.allowedDates()
             },
             notifyAccess(name) {
-                this.accessMessage = `You do not have permission to access the ${name} screen`
-            },
-            removeAccessMessage() {
-                this.accessMessage = ''
+                this.blockedComponent = name
             }
 		},
         created() {

@@ -1,6 +1,6 @@
 <template>
     <div class="x-data-table" :class="{ multiline }">
-        <x-actionable-table :title="title" :count="count.data" :loading="loading" :error="content.error">
+        <x-actionable-table :title="tableTitle" :count="count.data" :loading="loading" :error="content.error">
             <slot name="actions" slot="actions"/>
             <x-table slot="table" :data="pageData" :fields="viewFields" :page-size="view.pageSize" :sort="view.sort"
                      :id-field="idField" :value="value" @input="$emit('input', $event)"
@@ -40,7 +40,7 @@
 	export default {
 		name: 'x-data-table',
         components: { xActionableTable, xTable },
-        props: { module: {required: true}, idField: {default: 'id'}, value: {}, title: {} },
+        props: { module: {required: true}, section: {}, idField: {default: 'id'}, value: {}, title: {} },
         data() {
 			return {
 				loading: true
@@ -48,14 +48,11 @@
         },
         computed: {
 			...mapState({
-                content(state) {
-                	return state[this.module].content
-                },
-                count(state) {
-                	return state[this.module].count
-                },
-                view(state) {
-                	return state[this.module].view
+                moduleState(state) {
+                    if (this.section) {
+                        return state[this.section][this.module]
+                    }
+                    return state[this.module]
                 },
                 refresh(state) {
                 	if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 0
@@ -69,6 +66,19 @@
             ...mapGetters({
                 getDataFieldsListSpread: GET_DATA_FIELD_LIST_SPREAD
             }),
+            tableTitle() {
+			    if (this.title) return this.title
+                return this.module.charAt(0).toUpperCase() + this.module.slice(1).toLowerCase()
+            },
+            content() {
+                return this.moduleState.content
+            },
+            count() {
+                return this.moduleState.count
+            },
+            view() {
+                return this.moduleState.view
+            },
             fields() {
 				return this.getDataFieldsListSpread(this.module)
             },
@@ -147,7 +157,7 @@
             },
             fetchContentSegment(skip, limit) {
                 return this.fetchContent({
-                    module: this.module, skip, limit
+                    module: this.module, section: this.section, skip, limit
                 }).then(() => {
                     if (!this.content.fetching) {
                         this.loading = false
@@ -181,7 +191,7 @@
                 this.updateModuleView({ sort, page: 0 })
             },
             updateModuleView(view) {
-            	this.updateView({module: this.module, view})
+            	this.updateView({module: this.module, section: this.section, view})
             },
             startRefreshTimeout() {
 				const fetchAuto = () => {

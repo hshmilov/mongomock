@@ -36,7 +36,6 @@
                 <div v-if="noResults">No results</div>
             </div>
         </x-dropdown>
-        <x-historical-date-picker v-model="historical"></x-historical-date-picker>
         <a class="x-btn link" :class="{disabled: disableSaveQuery}" @click="openSaveView" id="query_save">Save Query</a>
         <a class="x-btn link" :class="{disabled: disableSaveQuery}" @click="openSaveView" id="query_save">Save Query</a>
         <!-- Triggerable menu containing a wizard for building a query filter -->
@@ -70,7 +69,6 @@
     import NestedMenuItem from '../menus/NestedMenuItem.vue'
     import xSchemaFilter from '../schema/SchemaFilter.vue'
     import Modal from '../../components/popover/Modal.vue'
-    import xHistoricalDatePicker from '../../components/inputs/HistoricalDatePicker.vue'
     import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
     import {GET_DATA_FIELD_BY_PLUGIN} from '../../store/getters'
     import {UPDATE_DATA_VIEW} from '../../store/mutations'
@@ -81,7 +79,7 @@
     export default {
         name: 'x-data-query',
         components: {
-            xDropdown, SearchInput, NestedMenu, NestedMenuItem, xSchemaFilter, Modal, xHistoricalDatePicker
+            xDropdown, SearchInput, NestedMenu, NestedMenuItem, xSchemaFilter, Modal
         },
         props: {
             module: {required: true}, limit: {default: 5}, readOnly: {default: false}
@@ -99,13 +97,7 @@
                 },
                 selected(state) {
                     return state[this.module].view.fields
-                },
-                historicalState(state) {
-                    return state[this.module].view.historical
-                },
-                allowedDates(state) {
-                    return state.constants.allowedDates[this.module]
-                },
+                }
             }),
             ...mapGetters({getDataFieldsByPlugin: GET_DATA_FIELD_BY_PLUGIN}),
             schema() {
@@ -140,19 +132,6 @@
                     this.updateView({
                         module: this.module, view: {
                             query: {filter, expressions: this.queryExpressions}, page: 0
-                        }
-                    })
-                }
-            },
-            historical: {
-                get() {
-                    if (this.historicalState)
-                        return this.historicalState.substring(0, 10)
-                },
-                set(newDate) {
-                    this.updateView({
-                        module: this.module, view: {
-                            historical: this.allowedDates[newDate]
                         }
                     })
                 }

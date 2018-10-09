@@ -1,75 +1,28 @@
 <template>
     <x-page title="devices">
-        <x-data-query :module="module" :read-only="isReadOnly" />
-        <x-data-table :module="module" id-field="internal_axon_id" title="Devices" ref="table" @click-row="configDevice"
-                      v-model="isReadOnly? undefined: selectedDevices" @data="updateDeviceState">
-            <template slot="actions">
-                <!-- Available actions for performing on currently selected group of devices --->
-                <devices-actions-container v-show="anySelected" :devices="selectedDevices" @done="updateDevices" />
-                <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
-                <x-data-field-menu :module="module" />
-                <div class="x-btn link" @click="exportCSV">Export CSV</div>
-            </template>
-        </x-data-table>
+        <x-data-entities-table module="devices" @data="updateDeviceState" />
     </x-page>
 </template>
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-	import DevicesActionsContainer from './DevicesActionsContainer.vue'
-	import xDataQuery from '../../components/data/DataQuery.vue'
-    import xDataFieldMenu from '../../components/data/DataFieldMenu.vue'
-    import xDataTable from '../../components/tables/DataTable.vue'
+	import xDataEntitiesTable from '../../components/data/DataEntitiesTable.vue'
 
-
-	import { mapState, mapActions, mapMutations } from 'vuex'
-	import { FETCH_DATA_CONTENT_CSV } from '../../store/actions'
+	import { mapState, mapMutations } from 'vuex'
 	import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
 
 	export default {
 		name: 'devices-container',
-		components: {
-			xPage, xDataQuery, xDataTable, DevicesActionsContainer, xDataFieldMenu
-		},
+		components: { xPage, xDataEntitiesTable },
         computed: {
             ...mapState({
 				tourDevices(state) {
 					return state.onboarding.tourStates.queues.devices
-				},
-                isReadOnly(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Devices === 'ReadOnly'
-                },
-                historicalState(state) {
-                    return state[this.module].view.historical
-                },
-            }),
-			module() {
-				return 'devices'
-            },
-            anySelected() {
-				return (this.selectedDevices && this.selectedDevices.length)
-            }
-        },
-        data() {
-			return {
-				selectedDevices: []
-            }
+				}
+            })
         },
 		methods: {
-			...mapActions({ fetchContentCSV: FETCH_DATA_CONTENT_CSV }),
             ...mapMutations({ changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE }),
-			configDevice (deviceId) {
-				if (this.anySelected) return
-                let path = `${this.module}/${deviceId}`
-                if (this.historicalState) {
-				    path += `?history=${encodeURIComponent(this.historicalState)}`
-                }
-				this.$router.push({path: path})
-			},
-            exportCSV() {
-				this.fetchContentCSV({ module: this.module })
-            },
             updateDeviceState(deviceId) {
 				if (!this.tourDevices || !this.tourDevices.length) return
 				if (this.tourDevices[0] === 'bestDevice') {
@@ -81,11 +34,7 @@
                 } else {
 			        this.changeState({name: this.tourDevices[0]})
                 }
-            },
-            updateDevices() {
-				this.$refs.table.fetchContentPages()
-                this.selectedDevices = []
-			}
+            }
 		}
 	}
 </script>

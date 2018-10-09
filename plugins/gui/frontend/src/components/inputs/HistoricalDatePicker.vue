@@ -1,10 +1,9 @@
 <template>
-    <div>
-        Showing for
-        <x-date-edit @input="confirmPickDate"
-                     placeholder="latest" v-model="date" :show-time="false"
+    <div class="x-historical-date-picker">
+        <div class="title">Showing Results for</div>
+        <x-date-edit @input="confirmPickDate" placeholder="latest" v-model="date" :show-time="false"
                      :limit="[{ type: 'fromto', from: firstHistoricalDate, to: new Date()}]"/>
-        <a v-if="showingHistorical" class="x-btn link" @click="clearDate">clear</a>
+        <a v-if="showingHistorical" class="x-btn link" @click="clearDate">x</a>
     </div>
 </template>
 
@@ -49,5 +48,25 @@
 
 
 <style lang="scss">
-
+    .x-historical-date-picker {
+        display: flex;
+        justify-content: flex-end;
+        .title {
+            color: $theme-orange;
+            font-weight: 400;
+            margin-right: 12px;
+            line-height: 30px;
+        }
+        .cov-vue-date {
+            width: 170px;
+            margin-right: 16px;
+            input {
+                width: calc(100% - 4px);
+            }
+        }
+        .x-btn.link {
+            padding: 2px 0;
+            margin-left: -8px;
+        }
+    }
 </style>

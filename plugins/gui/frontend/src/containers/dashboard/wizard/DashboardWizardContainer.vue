@@ -58,7 +58,7 @@
         computed: {
 			...mapState({
 				views (state) {
-					return this.availableEntities.reduce((map, module) => {
+					return this.availableModules.reduce((map, module) => {
 						map[module] = state[module].views.saved.data.map((view) => {
 							return { name: view.name, title: view.name }
                         })
@@ -68,12 +68,12 @@
                 dashboards (state) {
                     return state['dashboard']
                 },
-                availableEntities(state) {
+                availableModules(state) {
                     if (!state.auth.data) return {}
                     let permissions = state.auth.data.permissions
-                    return entities.filter(module => {
-                        return permissions[module] !== 'Restricted'
-                    }).map(module => module.toLowerCase())
+                    return entities.filter(entity => {
+                        return permissions[entity.title] !== 'Restricted'
+                    }).map(entity => entity.name)
                 }
 			}),
 			...mapGetters({ getDataFieldsByPlugin: GET_DATA_FIELD_BY_PLUGIN }),
@@ -87,12 +87,10 @@
                 ]
             },
 			entityOptions() {
-				return this.availableEntities.map((module) => {
-					return { name: module, title: module}
-				})
+				return entities
 			},
             fields () {
-				return this.availableEntities.reduce((map, module) => {
+				return this.availableModules.reduce((map, module) => {
 					map[module] = this.getDataFieldsByPlugin(module)
 					return map
 				}, {})
@@ -164,7 +162,7 @@
             }
         },
         created() {
-            this.availableEntities.forEach(module => {
+            this.availableModules.forEach(module => {
 				this.fetchViews({ module, type: 'saved' })
 				this.fetchFields({ module })
 			})

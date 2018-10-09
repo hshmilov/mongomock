@@ -4,7 +4,7 @@
             <h4 class="x-title" v-if="title">{{ title }}</h4>
             <h4 class="x-title" v-else>
                 <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
-                <template v-for="breadcrumb in breadcrumbs.splice(0, breadcrumbs.length - 1)">
+                <template v-for="breadcrumb in breadcrumbs.slice(0, breadcrumbs.length - 1)">
                     <router-link :to="breadcrumb.path" active-class="" class="x-crumb">{{ breadcrumb.title }}</router-link>
                 </template>
                 <!-- Adding currently viewed page without a link -->

@@ -1,4 +1,4 @@
-import { validModule } from './actions'
+import { getModule } from './actions'
 import { pluginMeta } from '../constants/plugin_meta'
 
 export const TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR'
@@ -8,8 +8,9 @@ export const toggleSidebar = (state) => {
 
 export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
 export const updateDataCount = (state, payload) => {
-	if (!validModule(state, payload)) return
-	const count = state[payload.module].count
+	let module = getModule(state, payload)
+	if (!module) return
+	const count = module.count
 	if (!payload.fetching && count.rule !== payload.rule) {
 		return
 	}
@@ -23,8 +24,9 @@ export const updateDataCount = (state, payload) => {
 
 export const UPDATE_DATA_CONTENT = 'UPDATE_DATA_CONTENT'
 export const updateDataContent = (state, payload) => {
-	if (!validModule(state, payload)) return
-	const content = state[payload.module].content
+	let module = getModule(state, payload)
+	if (!module) return
+	const content = module.content
 	if (!payload.fetching && content.rule !== payload.rule) {
 		return
 	}
@@ -38,17 +40,15 @@ export const updateDataContent = (state, payload) => {
 
 export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
 export const updateDataView = (state, payload) => {
-	if (!validModule(state, payload)) return
-	state[payload.module].view = { ...state[payload.module].view, ...payload.view }
-}
-export const CLEAR_DATA_CONTENT = 'CLEAR_DATA_CONTENT'
-export const clearDataContent = (state, payload) => {
-	state[payload.module].content.data = []
+	let module = getModule(state, payload)
+	if (!module) return
+    module.content.data = []
+	module.view = { ...module.view, ...payload.view }
 }
 
 export const UPDATE_DATA_VIEWS = 'UPDATE_DATA_VIEWS'
 export const updateDataViews = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	const views = state[payload.module].views[payload.type]
 	views.fetching = payload.fetching
 	views.error = payload.error
@@ -59,7 +59,7 @@ export const updateDataViews = (state, payload) => {
 
 export const ADD_DATA_VIEW = 'ADD_DATA_VIEW'
 export const addDataView = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	const views = state[payload.module].views[payload.query_type]
 	if (!views.data) views.data = []
 	views.data = [{ name: payload.name, view: payload.view }, ...views.data.filter(item => item.name !== payload.name)]
@@ -67,7 +67,7 @@ export const addDataView = (state, payload) => {
 
 export const UPDATE_REMOVED_DATA_VIEW = 'UPDATE_REMOVED_DATA_VIEW'
 export const updateRemovedDataView = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 
 	state[payload.module].views.saved.data =
 		state[payload.module].views.saved.data.filter(query => !payload.ids.includes(query.uuid))
@@ -75,7 +75,7 @@ export const updateRemovedDataView = (state, payload) => {
 
 export const UPDATE_DATA_FIELDS = 'UPDATE_DATA_FIELDS'
 export const updateDataFields = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	const fields = state[payload.module].fields
 	fields.fetching = payload.fetching
 	fields.error = payload.error
@@ -92,7 +92,7 @@ export const updateDataFields = (state, payload) => {
 
 export const UPDATE_DATA_LABELS = 'UPDATE_DATA_LABELS'
 export const updateDataLabels = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	const labels = state[payload.module].labels
 	labels.fetching = payload.fetching
 	labels.error = payload.error
@@ -105,7 +105,7 @@ export const updateDataLabels = (state, payload) => {
 
 export const UPDATE_ADDED_DATA_LABELS = 'UPDATE_ADDED_DATA_LABELS'
 export const updateAddedDataLabels = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	let data = payload.data
 	state[payload.module].labels.data = state[payload.module].labels.data
 		.filter(label => !data.labels.includes(label.name))
@@ -132,7 +132,7 @@ export const updateAddedDataLabels = (state, payload) => {
 
 export const UPDATE_REMOVED_DATA_LABELS = 'UPDATE_REMOVED_DATA_LABELS'
 export const updateRemovedDataLabels = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	let data = payload.data
 	state[payload.module].labels.data = state[payload.module].labels.data.filter((label) => {
 		if (!data.labels.includes(label.name)) return true
@@ -162,7 +162,7 @@ export const updateRemovedDataLabels = (state, payload) => {
 
 export const UPDATE_DATA_BY_ID = 'UPDATE_DATA_BY_ID'
 export const updateDataByID = (state, payload) => {
-	if (!validModule(state, payload)) return
+	if (!getModule(state, payload)) return
 	const current = state[payload.module].current
 	current.fetching = payload.fetching
 	current.error = payload.error

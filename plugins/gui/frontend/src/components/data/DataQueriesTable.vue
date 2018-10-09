@@ -20,7 +20,7 @@
     import xTable from '../schema/SchemaTable.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
-	import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
+	import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { FETCH_DATA_VIEWS, REMOVE_DATA_VIEW } from '../../store/actions'
 	import { UPDATE_ALERT_VIEW } from '../../store/modules/alert'
 
@@ -63,8 +63,7 @@
         },
         methods: {
 			...mapMutations({
-				updateView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_VIEW,
-                clearDataContent: CLEAR_DATA_CONTENT
+				updateView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_VIEW
 	        }),
             ...mapActions({
                 fetchDataQueries: FETCH_DATA_VIEWS, removeDataQuery: REMOVE_DATA_VIEW
@@ -73,7 +72,6 @@
 				let query = this.queries.filter(query => query.uuid === queryId)[0]
                 this.updateView({ module: this.module, view: query.view })
 
-				this.clearDataContent({module: this.module})
 				this.$router.push({ path: `/${this.module}` })
 			},
 			createAlert() {

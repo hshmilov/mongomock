@@ -6,7 +6,7 @@ class TestUsersTable(TestBase):
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
     USER_NAME_COLUMN = 'User Name'
     DOMAIN_COLUMN = 'Domain'
-    MAIL_COLUMN = 'mail'
+    MAIL_COLUMN = 'Mail'
 
     def test_users_fetched(self):
         self.settings_page.switch_to_page()

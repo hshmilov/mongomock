@@ -153,16 +153,16 @@
             ...mapState({
                 alertData: state => state.alert.current.data,
                 alerts: state => state.alert.content.data,
-                availableEntities(state) {
+                availableModules(state) {
                     if (!state.auth.data) return {}
                     let permissions = state.auth.data.permissions
-                    return entities.filter(module => {
-                        return permissions[module] !== 'Restricted'
-                    }).map(module => module.toLowerCase())
+                    return entities.filter(entity => {
+                        return permissions[entity.name] !== 'Restricted'
+                    }).map(module => module.name)
                 },
                 currentQueryOptions(state) {
                     let queries = []
-                    this.availableEntities.forEach(entity => {
+                    this.availableModules.forEach(entity => {
                         queries.push(...state[entity].views.saved.data.map((item) => {
                             return { ...item, entity }
                         }))
@@ -426,7 +426,7 @@
 
             /* Fetch all saved queries for offering user to base alert upon */
             this.fetching.views = true
-            Promise.all(this.availableEntities.map(module => this.fetchViews({module, type: 'saved'}))).then(() => {
+            Promise.all(this.availableModules.map(module => this.fetchViews({module, type: 'saved'}))).then(() => {
                     this.fillView()
                     this.fetching.views = false
                 }
