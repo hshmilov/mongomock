@@ -4,7 +4,7 @@ export const pluginMeta = {
         description: 'Microsoft Azure Active Directory (Azure AD) is Microsoft\'s multi-tenant, cloud-based directory, and identity management service.'
     },
     divvycloud_adapter: {
-        title: 'DivvyCloud - BETA',
+        title: 'DivvyCloud',
         description: 'DivvyCloud offers security, compliance, and governance guardrails for public and private cloud infrastructures.'
     },
     cisco_amp_adapter: {
@@ -44,7 +44,7 @@ export const pluginMeta = {
         description: 'Duo Beyond is a zero-trust security platform that bases application access decisions on the trust of user identities and their devices.'
     },
     datadog_adapter: {
-        title: 'Datadog - BETA',
+        title: 'Datadog',
         description: 'Datadog is a monitoring service for cloud-scale applications, providing monitoring of servers, databases, tools, and services.'
     },
     redseal_adapter: {
