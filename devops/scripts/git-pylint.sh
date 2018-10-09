@@ -83,7 +83,7 @@ if [ $PARALLEL -eq 1 ]; then
 fi
 
 
-for file in `git diff --cached --name-only; git diff --name-only; git ls-files --other --exclude-standard`; do 
+for file in `git diff --cached --name-only --diff-filter=d; git diff --name-only --diff-filter=d; git ls-files --other --exclude-standard`; do 
     if [ ${file: -3} == ".py" ]; then
 
         # handle pep
