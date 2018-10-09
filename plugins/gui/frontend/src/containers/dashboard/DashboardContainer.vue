@@ -21,8 +21,7 @@
                                                   @cleared="clearDate(chart.uuid)">
                         </x-historical-date-picker>
                     </div>
-                    <components :is="`x-${chart.view}`" :data="chart.data" :config="chart.config"
-                                @click-one="runChartFilter(chartInd, $event)" />
+                    <components :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" />
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                     <x-cycle-chart :data="lifecycle.subPhases"/>
@@ -48,12 +47,12 @@
     import xHistogram from '../../components/charts/Histogram.vue'
     import xPie from '../../components/charts/Pie.vue'
     import xSummary from '../../components/charts/Summary.vue'
+    import xLine from '../../components/charts/Line.vue'
     import xCycleChart from '../../components/charts/Cycle.vue'
     import DashboardWizardContainer from './wizard/DashboardWizardContainer.vue'
     import xEmptySystem from '../../components/onboard/empty_states/EmptySystem.vue'
     import Modal from '../../components/popover/Modal.vue'
     import xToast from '../../components/popover/Toast.vue'
-    import xLine from '../../components/charts/Line.vue'
     import xInsightsSearch from './explorer/ExplorerSearch.vue'
     import xHistoricalDatePicker from '../../components/inputs/HistoricalDatePicker.vue'
 

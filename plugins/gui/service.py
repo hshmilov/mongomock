@@ -205,6 +205,17 @@ def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, dat
 
 class GuiService(PluginBase, Triggerable, Configurable, API):
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
+    DEFAULT_USER = {'user_name': 'admin',
+                    'password':
+                        '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
+                    'first_name': 'administrator', 'last_name': '',
+                    'pic_name': DEFAULT_AVATAR_PIC,
+                    'permissions': {},
+                    'admin': True,
+                    'source': 'internal',
+                    'api_key': secrets.token_urlsafe(),
+                    'api_secret': secrets.token_urlsafe()
+                    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
@@ -226,18 +237,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         current_user = self.__users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
             # User doesn't exist, this must be the installation process
-            self.__users_collection.update({'user_name': 'admin'},
-                                           {'user_name': 'admin',
-                                            'password':
-                                                '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
-                                            'first_name': 'administrator', 'last_name': '',
-                                            'pic_name': self.DEFAULT_AVATAR_PIC,
-                                            'permissions': {},
-                                            'admin': True,
-                                            'source': 'internal',
-                                            'api_key': secrets.token_urlsafe(),
-                                            'api_secret': secrets.token_urlsafe()
-                                            }, upsert=True)
+            self.__users_collection.update({'user_name': 'admin'}, self.DEFAULT_USER, upsert=True)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
@@ -2383,10 +2383,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception('Given date to or from is invalid')
             return None
 
-        return {
-            'lines': self._fetch_view_timeline(views, datefrom, dateto),
-            'scale': [(datefrom + timedelta(i)).strftime('%m/%d/%Y') for i in range((dateto - datefrom).days + 1)]
-        }
+        scale = [(datefrom + timedelta(i)) for i in range((dateto - datefrom).days + 1)]
+        lines = list(self._fetch_view_timeline(views, datefrom, dateto))
+        return [
+            ['Day'] + [{
+                'label': line['title'],
+                'type': 'number'
+            } for line in lines],
+            *[[day] + [line['points'].get(day.strftime('%m/%d/%Y')) for line in lines] for day in scale]
+        ]
 
     def _fetch_view_timeline(self, views, date_from, date_to):
         date_ranges = list(_get_date_ranges(date_from, date_to))
