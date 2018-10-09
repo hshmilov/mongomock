@@ -97,7 +97,7 @@ class SplunkConnection(object):
         line_split = raw_line.split(' ')
         line_split = [item for item in line_split if item]
         if len(line_split) > 3:
-            raw_device['cisco_device'] = line_split(' ')[3]
+            raw_device['cisco_device'] = line_split[3]
         return raw_device
 
     @staticmethod
