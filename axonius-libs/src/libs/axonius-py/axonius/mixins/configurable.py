@@ -119,7 +119,7 @@ class Configurable(object):
                 # if a field has changed from array to scalar we want to discard the array
                 return default_data
 
-            return old_data or default_data
+            return old_data
 
         assert schema_type == 'array'
 
@@ -130,9 +130,12 @@ class Configurable(object):
         returned_dict = {}
         for item in new_schema['items']:
             name = item['name']
-            returned_dict[name] = Configurable.__try_automigrate_config_schema(item,
-                                                                               old_data.get(name),
-                                                                               default_data.get(name))
+            if name not in old_data:
+                returned_dict[name] = default_data[name]
+            else:
+                returned_dict[name] = Configurable.__try_automigrate_config_schema(item,
+                                                                                   old_data.get(name),
+                                                                                   default_data.get(name))
         return returned_dict
 
     def _update_schema(self):

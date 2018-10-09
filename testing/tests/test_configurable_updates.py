@@ -212,3 +212,28 @@ def test_field_added_in_array():
                                   'z': 16
                               }
                       })
+
+
+def test_false_value():
+    """
+    Test where one field was added
+    """
+    schema = {
+        'items': [
+            {
+                'name': 'x',
+                'type': 'number'
+            },
+            {
+                'name': 'y',
+                'type': 'number'
+            }
+        ],
+        'type': 'array'
+    }
+
+    processed_data = run_configurable_upgrade(schema,
+                                              old_data={'x': False},
+                                              default_data={'x': True, 'y': 2})
+    check_dict_subset(processed_data,
+                      {'x': False, 'y': 2})
