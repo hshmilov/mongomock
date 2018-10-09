@@ -7,10 +7,14 @@ try:
 except ModuleNotFoundError:
     COLOR = {}
 
+MAX_PARALLEL_TASKS = 10
+SUBPROCESS_POLLING_INTERVAL_IN_SEC = 5
+
 
 class ParallelRunner(object):
     def __init__(self):
-        self.wait_list = {}
+        self.waiting_list = []
+        self.running_list = {}
         self.start_times = {}
         self.logs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'logs', 'build_log'))
         if not os.path.exists(self.logs_dir):
@@ -22,18 +26,30 @@ class ParallelRunner(object):
     def err_file(self, task_name):
         return os.path.join(f"{self.logs_dir}", f"task_{task_name}_err.log")
 
-    def append_single(self, task_name, args, **kwargs):
+    def __run_next_task(self):
+        # Actually executes the task
+        task_name, args, kwargs = self.waiting_list.pop(0)
         command = ' '.join(args)
-        print(f"Running {COLOR.get('light_blue', '<')}{command}{COLOR.get('reset', '>')}")
+        print(f"[{len(self.running_list) + 1} / {MAX_PARALLEL_TASKS}] "
+              f"Running {COLOR.get('light_blue', '<')}{command}{COLOR.get('reset', '>')}")
         stdout = kwargs.pop('stdout', None)
         stdout = stdout if stdout is not None else open(self.std_file(task_name), "wb")
         stderr = kwargs.pop('stderr', None)
         stderr = stderr if stderr is not None else open(self.err_file(task_name), "wb")
 
         process = subprocess.Popen(args, stdout=stdout, stderr=stderr, **kwargs)
-        self.wait_list[task_name] = process
+        self.running_list[task_name] = process
         self.start_times[task_name] = time.time()
         return process
+
+    def append_single(self, task_name, args, **kwargs):
+        self.waiting_list.append((task_name, args, kwargs))
+        # runs the task or adds it to the waiting list to be run afterwards.
+        if len(self.running_list) < MAX_PARALLEL_TASKS:
+            self.__run_next_task()
+            return True
+
+        return False
 
     def wait_for_all(self, timeout=45 * 60):
         ret_code = 0
@@ -41,7 +57,7 @@ class ParallelRunner(object):
         first = True
         try:
             while start + timeout > time.time():
-                for name, proc in self.wait_list.copy().items():
+                for name, proc in self.running_list.copy().items():
                     status = "Finished"
                     if proc.poll() is not None:
                         if proc.returncode != 0:
@@ -52,22 +68,29 @@ class ParallelRunner(object):
                                 ret_code = proc.returncode
 
                         seconds = int(time.time() - self.start_times[name])
-                        del self.wait_list[name]
+                        del self.running_list[name]
                         del self.start_times[name]
 
                         or_less = ' or less' if first else ''
 
-                        print(f"{status} {name} in {seconds} seconds{or_less}. Still waiting for {list(self.wait_list.keys())}")
+                        print(
+                            f"{status} {name} in {seconds} seconds{or_less}. Still waiting for {list(self.running_list.keys())}")
 
-                if bool(self.wait_list):
-                    time.sleep(0.5)
+                        # Put a new process to run
+                        if len(self.waiting_list) > 0:
+                            self.__run_next_task()
+
+                if (len(self.running_list) + len(self.waiting_list)) > 0:
+                    time.sleep(SUBPROCESS_POLLING_INTERVAL_IN_SEC)
                     first = False
                 else:
                     break
 
-            if len(self.wait_list) > 0:
-                for proc in self.wait_list:
+            if len(self.running_list) > 0:
+                for proc in self.running_list:
                     print(f"{proc} timed out")
+                for future_task in self.waiting_list:
+                    print(f"{future_task[0]} did not start running because of the timeout")
                 raise Exception("Not all tasks finished successfully")
             return ret_code
         finally:
@@ -85,13 +108,13 @@ class ParallelRunner(object):
         self.clean()
 
     def clean(self):
-        for procname in self.wait_list.keys():
+        for procname in self.running_list.keys():
             print(f"Killing timed out process {procname}")
             self.try_kill(procname)
 
     def try_kill(self, procname):
         try:
-            proc = self.wait_list[procname]
+            proc = self.running_list[procname]
             proc.kill()
             self.pump_std(procname, proc)
         except Exception as e:

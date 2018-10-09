@@ -8,7 +8,7 @@ import pytest
 
 pytestmark = pytest.mark.sanity
 
-NUMBER_OF_PROCESSES = 12
+NUMBER_OF_PROCESSES = 3
 GOOD_EXIT_CODE = 0
 EXCLUDE_PATHS = [
     'devops',
@@ -37,9 +37,7 @@ def _get_all_files():
     for path, subdirs, files in os.walk(BASE_PATH):
         for name in files:
             fullname = os.path.realpath(os.path.join(path, name))
-            if _file_name_in_excluded_paths(BASE_PATH, fullname):
-                continue
-            if name.endswith('.py'):
+            if name.endswith('.py') and not _file_name_in_excluded_paths(BASE_PATH, fullname):
                 yield fullname
 
 
