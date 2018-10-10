@@ -1,3 +1,4 @@
+import datetime
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 from collections import defaultdict
@@ -17,6 +18,8 @@ class TenableIoAdapter(ScannerAdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         has_agent = Field(bool, "Has Agent")
+        agent_version = Field(str, 'Agent Version')
+        status = Field(str, 'Status')
         plugin_and_severity = ListField(str, "EXPORT - Plugin and severity")
         risk_and_name_list = ListField(str, "CSV - Vulnerability Details")
 
@@ -58,7 +61,12 @@ class TenableIoAdapter(ScannerAdapterBase):
         """
         try:
             client_data.connect()
-            return client_data.get_device_list()
+            logger.info('Getting all assets')
+            devices_list = client_data.get_device_list()
+            logger.info(f'Got {len(devices_list)} assets, starting agents')
+            agents_list = client_data.get_agents()
+            logger.info(f'Got {len(agents_list)} agents')
+            return [devices_list, agents_list]
         finally:
             client_data.close()
 
@@ -157,7 +165,8 @@ class TenableIoAdapter(ScannerAdapterBase):
         device.set_raw(device_raw)
         return device
 
-    def _parse_raw_data(self, devices_raw_data):
+    def _parse_raw_data(self, devices_raw_data_all):
+        devices_raw_data, agents_data = devices_raw_data_all
         devices_raw_data, connection_type = devices_raw_data
         if connection_type == 'export':
             for device_id, device_raw in devices_raw_data:
@@ -167,6 +176,37 @@ class TenableIoAdapter(ScannerAdapterBase):
                     logger.exception(f'Problem with parsing device {device_raw}')
         elif connection_type == 'csv':
             yield from self._parse_raw_data_csv(devices_raw_data)
+        yield from self._parse_agents(agents_data)
+
+    def _parse_agents(self, agents_data):
+        try:
+            for agent_raw in agents_data:
+                try:
+                    device = self._new_device_adapter()
+                    device_id = agent_raw.get('id')
+                    if not device_id:
+                        logger.warning(f'Bad agent with no ID {agent_raw}')
+                        continue
+                    hostname = agent_raw.get('name')
+                    device.id = device_id + hostname or ''
+                    device.hostname = hostname
+                    ip = agent_raw.get('ip')
+                    if ip:
+                        device.add_nic(None, [ip])
+                    try:
+                        device.last_seen = datetime.datetime.fromtimestamp(agent_raw.get('last_connect'))
+                    except Exception:
+                        logger.exception(f'Problem getting last seen at {agent_raw}')
+                    device.has_agent = True
+                    device.status = agent_raw.get('status')
+                    device.agent_version = agent_raw.get('core_version')
+                    device.set_raw(agent_raw)
+                    yield device
+                except Exception:
+                    logger.exception(f'Problem parsing {agent_raw}')
+        except Exception:
+            logger.exception('Problem with all agents')
+        return
 
     def _parse_raw_data_csv(self, devices_raw_data):
         assets_dict = defaultdict(list)

@@ -162,3 +162,32 @@ class TenableIoConnection(RESTConnection):
             sleep_times += 1
         return make_dict_from_csv(self._get(f'workbenches/export/{file_id}/download',
                                             use_json_in_response=False).decode('utf-8'))
+
+    def get_agents(self):
+        agents_raw = []
+        try:
+            scanners = self._get('scanners')['scanners']
+            logger.info(f'Got {len(scanners)} scanners')
+            scanners_ids = [scanner.get('id') for scanner in scanners]
+            for scanner_id in scanners_ids:
+                try:
+                    response = self._get(f'scanners/{scanner_id}/agents', url_params={'offset': 0,
+                                                                                      'limit': consts.AGENTS_PER_PAGE})
+                    total = response['pagination']['total']
+                    logger.info(f'Got {total} number of agents in {scanner_id}')
+                    agents_raw.extend(response['agents'])
+                    offset = consts.AGENTS_PER_PAGE
+                    while offset < min(total, consts.MAX_AGENTS):
+                        try:
+                            agents_raw.extend(self._get(f'scanners/{scanner_id}/agents',
+                                                        url_params={'offset': offset,
+                                                                    'limit': consts.AGENTS_PER_PAGE})['agents'])
+                        except BaseException:
+                            logger.exception(f'Problem with offset {offset}')
+                        offset += consts.MAX_AGENTS
+                except Exception:
+                    logger.exception(f'Problem getting agents from scanner id {scanner_id}')
+            return agents_raw
+        except Exception:
+            logger.exception(f'Problem getting agents return []')
+            return agents_raw

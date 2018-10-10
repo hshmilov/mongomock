@@ -1,3 +1,4 @@
+import json
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -16,6 +17,7 @@ class DatadogAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
+        python_version = Field(str, 'Python Version')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -111,6 +113,36 @@ class DatadogAdapter(AdapterBase):
                 device.id = str(device_id) + (device_raw.get('name') or '')
                 device.name = device_raw.get('name')
                 device.hostname = device_raw.get('host_name')
+                try:
+                    for app in device_raw.get('apps') or []:
+                        device.add_installed_software(name=app)
+                except Exception:
+                    logger.exception(f'Problem adding apps to device {device_raw}')
+
+                try:
+                    gohai = json.loads((device_raw.get('meta') or {}).get('gohai') or '{}')
+                    try:
+                        network = gohai.get('network') or {}
+                        ips = []
+                        if network.get('ipaddress'):
+                            ips.append(network.get('ipaddress'))
+                        if network.get('ipaddressv6'):
+                            ips.append(network.get('ipaddressv6'))
+                        mac = None
+                        if network.get('macaddress'):
+                            mac = network.get('macaddress')
+                        if mac or ips:
+                            device.add_nic(mac, ips)
+                    except Exception:
+                        logger.exception(f'Problem adding nic to {device_raw}')
+                    platform = gohai.get('platform') or {}
+                    device.python_version = platform.get('pythonV')
+                    os_raw = (platform.get('kernel_name') or '') + ' ' + (platform.get('os') or '') \
+                        + ' ' + (platform.get('processor') or '')
+                    device.figure_os(os_raw)
+                    device.agent_version = (device_raw.get('meta') or {}).get('agent_version')
+                except Exception:
+                    logger.exception(f'Problem getting ohai at {device_raw}')
 
                 aws_id = device_raw.get('aws_id')
                 if aws_id:
