@@ -37,7 +37,7 @@
                 },
                 isAlertsWrite(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Alerts === 'ReadWrite'
+                    return state.auth.data.permissions.Alerts === 'ReadWrite' || state.auth.data.admin
                 }
             }),
             filteredQueries() {

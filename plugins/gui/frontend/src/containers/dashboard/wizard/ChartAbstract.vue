@@ -57,7 +57,11 @@
 		},
         methods: {
 			updateField(fieldName) {
-				this.config.field = this.fieldMap[fieldName]
+			    if (this.fieldMap[fieldName]) {
+				    this.config.field = this.fieldMap[fieldName]
+                } else {
+                    this.config.field = { name: '' }
+                }
             },
 			validate() {
 				this.$emit('validate', this.config.field.name && this.config.func)

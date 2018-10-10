@@ -111,7 +111,7 @@
                 },
                 isDevicesEdit(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Devices === 'ReadWrite'
+                    return state.auth.data.permissions.Devices === 'ReadWrite' || state.auth.data.admin
                 },
                 isDevicesRestricted(state) {
                     if (!state.auth.data || !state.auth.data.permissions) return true
