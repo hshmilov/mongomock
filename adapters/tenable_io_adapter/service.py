@@ -188,7 +188,7 @@ class TenableIoAdapter(ScannerAdapterBase):
                         logger.warning(f'Bad agent with no ID {agent_raw}')
                         continue
                     hostname = agent_raw.get('name')
-                    device.id = device_id + hostname or ''
+                    device.id = str(device_id) + hostname or ''
                     device.hostname = hostname
                     ip = agent_raw.get('ip')
                     if ip:
