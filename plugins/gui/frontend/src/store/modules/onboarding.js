@@ -189,7 +189,7 @@ export const onboarding = {
 					content: 'Click to configure it.'
 				},
 				'oracleVM': {
-					id: 'oracle_vm', title: 'Oracle VM ADAPTER', align: 'right',
+					id: 'oracle_vm_adapter', title: 'Oracle VM ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
 				'agent': {

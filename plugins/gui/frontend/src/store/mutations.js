@@ -42,7 +42,9 @@ export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
 export const updateDataView = (state, payload) => {
 	let module = getModule(state, payload)
 	if (!module) return
-    module.content.data = []
+    if (module.view.query && payload.view.query && module.view.query.filter !== payload.view.query.filter) {
+        module.content.data = []
+    }
 	module.view = { ...module.view, ...payload.view }
 }
 
