@@ -174,6 +174,8 @@ class EsxAdapter(AdapterBase):
         :param _curr_path: internally used
         :return: iterator(dict)
         """
+        if node is None:
+            return
         node_type = node.get('Type')
         if not node_type:
             return
