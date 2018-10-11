@@ -33,8 +33,22 @@ class InfobloxConnection(RESTConnection):
                 logger.exception(f'Problem in networks with CIDR {cidr}')
         for network in networks:
             try:
-                for device_raw in self._get(f'ipv4address?network={network}&_return_as_object=1',
-                                            do_basic_auth=True)['result']:
-                    yield device_raw
+                logger.info(f'Starting network {network}')
+                respone = self._get(f'ipv4address?network={network}&_return_as_object=1&'
+                                    f'_max_results=1000&_paging=1', do_basic_auth=True)
+                yield from respone['result']
+                next_page_id = respone.get('next_page_id')
+                number_of_pages = 1
+                while next_page_id and number_of_pages < 20000:
+                    try:
+                        respone = self._get(f'ipv4address?network={network}&_return_as_object=1&'
+                                            f'_max_results=1000&_paging=1&_page_id={next_page_id}',
+                                            do_basic_auth=True)
+                        yield from respone['result']
+                        next_page_id = respone.get('next_page_id')
+                    except Exception:
+                        logger.exception(f'Bad requests at {next_page_id}')
+                        break
+                    number_of_pages += 1
             except Exception:
                 logger.exception(f'Problem getting network {network}')

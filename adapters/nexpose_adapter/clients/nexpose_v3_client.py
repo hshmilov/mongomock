@@ -161,7 +161,7 @@ class NexposeV3Client(NexposeClient):
         device.figure_os(' '.join([device_raw.get('osFingerprint', {}).get('description', ''),
                                    device_raw.get('osFingerprint', {}).get('architecture', '')]))
         device.last_seen = last_seen
-        device.id = str(device_raw['id'])
+        device.id = str(device_raw['id']) + (device_raw.get('hostName') or '')
         for address in device_raw.get('addresses', []):
             device.add_nic(address.get('mac'), [address.get('ip')] if 'ip' in address else [])
         device.hostname = device_raw.get('hostName', '')

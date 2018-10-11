@@ -232,7 +232,7 @@ export const pluginMeta = {
         description: 'The Aruba Adapter connects to Aruba switches and routers.'
     },
     infoblox_adapter: {
-        title: 'Infoblox DDI - BETA',
+        title: 'Infoblox DDI',
         description: 'Infoblox DDI consolidates DNS, DHCP, IP address management, and other core network services into a single platform, managed from a common console.'
     },
     cynet_adapter: {
