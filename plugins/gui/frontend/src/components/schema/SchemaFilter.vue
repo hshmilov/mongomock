@@ -1,6 +1,6 @@
 <template>
     <div class="filter">
-        <div class="mb-4">Show only Devices:</div>
+        <div class="title">Show only data:</div>
         <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i" :fields="schema"
                              v-model="expressions[i]" ref="expression"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
@@ -127,6 +127,9 @@
 
 <style lang="scss">
     .filter {
+        .title {
+            line-height: 24px;
+        }
         .expression-container {
             display: grid;
             grid-template-columns: auto 20px;

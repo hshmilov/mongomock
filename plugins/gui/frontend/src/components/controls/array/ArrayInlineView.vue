@@ -60,6 +60,7 @@
         display: flex;
        .item {
            margin-right: 8px;
+           line-height: 24px;
         }
     }
 </style>

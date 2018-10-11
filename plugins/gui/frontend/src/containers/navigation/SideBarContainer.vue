@@ -92,7 +92,7 @@
         .x-user {
             flex: 0 1 auto;
             position: relative;
-            font-size: $font-size-title;
+            font-size: 16px;
             width: 100%;
             overflow-x: hidden;
             transition: all ease-in 0.2s;

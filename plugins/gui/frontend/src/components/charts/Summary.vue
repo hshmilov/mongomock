@@ -62,6 +62,7 @@
         grid-template-columns: 1fr 2fr;
         .summary {
             font-size: 60px;
+            line-height: 72px;
             display: inline;
             color: $theme-blue;
             opacity: 0.6;

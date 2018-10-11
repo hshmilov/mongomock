@@ -332,6 +332,12 @@
         > .x-dropdown {
             .search-input {
                 padding: 0 12px 0 0;
+                .input-icon {
+                    padding: 0 8px;
+                }
+                .input-value {
+                    padding-left: 36px;
+                }
             }
             .query-quick {
                 .x-nested-menu {

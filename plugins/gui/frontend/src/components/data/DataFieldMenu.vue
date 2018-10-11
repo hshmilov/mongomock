@@ -92,26 +92,20 @@
         .modal-mask .modal-wrapper .modal-container {
             width: 80vw;
         }
+
         .x-select-trigger {
             color: $theme-black;
         }
-        .x-select-symbol {
-            flex-basis: 25%;
-            margin-right: 12px;
-        }
-        .search-input {
-            flex-basis: 25%;
-        }
+
+
         .x-field-menu-filter {
             display: flex;
-        }
-        .x-checkbox {
-            flex-basis: 25%;
-            .x-checkbox-container {
-                vertical-align: top;
+            .x-select-symbol {
+                margin-right: 12px;
+                flex-basis: 40%;
             }
-            .x-checkbox-label {
-                width: calc(100% - 30px);
+            .search-input {
+                flex: 1 0 auto;
             }
         }
     }

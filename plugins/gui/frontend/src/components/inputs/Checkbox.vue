@@ -134,6 +134,7 @@
         .x-checkbox-label {
             margin-left: 8px;
             cursor: pointer;
+            vertical-align: middle;
             &:hover {
                 text-shadow: 1px 1px rgba(0, 0, 0, 0.2)
             }

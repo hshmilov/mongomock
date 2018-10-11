@@ -479,7 +479,7 @@
         }
         .global-settings-access {
             display: grid;
-            grid-template-columns: 2fr 2fr 1fr;
+            grid-template-columns: 1fr 1fr 120px;
             grid-gap: 8px 0;
             margin-bottom: 24px;
             align-items: center;

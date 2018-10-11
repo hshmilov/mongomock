@@ -51,15 +51,16 @@
     .x-historical-date-picker {
         display: flex;
         justify-content: flex-end;
+        margin-bottom: 8px;
         .title {
             color: $theme-orange;
-            font-weight: 400;
+            font-weight: 300;
             margin-right: 12px;
-            line-height: 30px;
+            line-height: 24px;
         }
         .cov-vue-date {
-            width: 170px;
-            margin-right: 16px;
+            width: 200px;
+            margin-right: 12px;
             input {
                 width: calc(100% - 4px);
             }

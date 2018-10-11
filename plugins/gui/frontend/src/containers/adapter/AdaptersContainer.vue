@@ -106,7 +106,6 @@
                             border-top-right-radius: 4px;
                         }
                         .content {
-                            height: 3.6em;
                             line-height: 1.2em;
                             overflow: hidden;
                             display: -webkit-box;

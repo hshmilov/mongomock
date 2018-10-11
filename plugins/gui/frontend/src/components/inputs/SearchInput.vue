@@ -61,7 +61,7 @@
             top: 0;
             z-index: 100;
             padding: 0 12px;
-            line-height: 30px;
+            line-height: 24px;
             .svg-fill { fill: $grey-4 }
             .svg-stroke { stroke: $grey-4 }
         }

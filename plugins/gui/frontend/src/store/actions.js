@@ -164,7 +164,7 @@ export const downloadFile = (fileType, response)=>{
             break
     }
     let blob = new Blob([response.data], { type: response.headers["content-type"]} )
-    let link = document.getElementById('download-link')
+    let link = document.getElementById('file-auto-download-link')
     link.href = window.URL.createObjectURL(blob)
     let now = new Date()
     let formattedDate = now.toLocaleDateString().replace(/\//g,'')

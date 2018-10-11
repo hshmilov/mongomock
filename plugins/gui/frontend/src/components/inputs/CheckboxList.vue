@@ -16,13 +16,12 @@
 
 <style lang="scss">
     .x-checkbox-list {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         margin-top: 16px;
         font-size: 12px;
         color: $theme-black;
         height: 360px;
         overflow: auto;
-        align-content: flex-start;
     }
 </style>

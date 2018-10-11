@@ -26,6 +26,7 @@
 <style lang="scss">
     .x-logo-name {
         display: flex;
+        align-items: center;
         .title {
             margin-left: 8px;
             white-space: nowrap;

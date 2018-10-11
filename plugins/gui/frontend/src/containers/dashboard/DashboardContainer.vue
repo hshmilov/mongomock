@@ -340,6 +340,7 @@
             .link {
                 font-size: 144px;
                 text-align: center;
+                line-height: 200px;
             }
         }
     }

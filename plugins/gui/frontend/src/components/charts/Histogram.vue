@@ -59,6 +59,7 @@
             .item-bar {
                 display: flex;
                 align-items: center;
+                line-height: 24px;
                 img {
                     margin-right: 8px;
                 }
@@ -73,7 +74,7 @@
                     margin-left: 8px;
                     flex: 1 0 auto;
                     text-align: right;
-                    font-weight: 500;
+                    font-weight: 400;
                     font-size: 18px;
                     .quantity-text {
                         width: 60px;

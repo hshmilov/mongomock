@@ -5,7 +5,7 @@
     -->
     <div id="app">
         <!--Link for downloading files-->
-        <a id="download-link"/>
+        <a id="file-auto-download-link"/>
         <!-- Nested navigation linking to routes defined in router/index.js -->
         <template v-if="userName || isDev">
             <side-bar-container class="print-exclude" @access-violation="notifyAccess" />
@@ -89,7 +89,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/app';
     @import '../scss/styles';
     @import '../scss/custom_styles';
 

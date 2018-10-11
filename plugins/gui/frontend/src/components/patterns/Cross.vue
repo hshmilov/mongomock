@@ -14,6 +14,7 @@
 <style lang="scss">
     .cross {
         position: relative;
+        height: 20px;
         .first, .second {
             width: 2px;
             height: 20px;

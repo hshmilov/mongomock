@@ -69,7 +69,7 @@
                 top: 0;
                 left: 0;
                 .cov-date-monthly, .cov-date-box, .button-box {
-                    font-family: Poppins, sans-serif;
+                    font-family: Roboto, sans-serif;
                     .hour-box, .min-box {
                         .hour-item, .min-item {
                             font-size: 20px !important;

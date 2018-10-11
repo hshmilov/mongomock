@@ -1,8 +1,8 @@
 /* GENERAL */
 
 @font-face {
-    font-family: 'Poppins';
-    src: url('Poppins-Regular.ttf') format('truetype');
+    font-family: 'Roboto';
+    src: url('Roboto-Regular.ttf') format('truetype');
 }
 
 @page {
@@ -226,11 +226,12 @@ a {
     height: 7px;
 }
 .histogram .item .quantity {
-    position: absolute;
-    right: 0;
+    width: 60px;
+    text-align: center;
+    margin-right: 0;
+    margin-left: auto;
     font-weight: 500;
     font-size: 14px;
-    top: 2px;
 }
 .histogram .item .bar {
     height: 10px;
@@ -288,32 +289,24 @@ a {
 }
 .summary .row {
     position: relative;
-}
-.summary .row .quantity {
-    position: absolute;
-    top: 0;
-    right: 0;
-}
-.summary .arrow {
-    margin: auto;
+    text-align: left;
     margin-top: 8px;
-    margin-bottom: 16px;
-    padding: 4px 0;
-    width: 180px;
-    position: relative;
-    text-align: center;
-    background-color: #FF7D46;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 400;
+}
+.summary .row .title {
+    display: inline-block;
+    width: auto;
+    font-size: 16px;
+}
+.summary .row .title.mid {
+    font-size: 14px;
+    color: #FF7D46;
+    margin: auto 0;
     text-transform: capitalize;
 }
-.summary .arrow:after {
-    content: '';
-    position: absolute;
-    border-right: 90px solid transparent;
-    border-top: 12px solid #FF7D46;
-    border-left: 90px solid transparent;
-    left: 0;
-    bottom: -12px;
+.summary .row .quantity {
+    display: inline-block;
+    font-weight: 500;
+    width: 60px;
+    text-align: center;
+    float: right;
 }

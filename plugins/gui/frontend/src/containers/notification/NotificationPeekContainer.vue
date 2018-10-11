@@ -131,25 +131,26 @@
             background-color: $theme-white;
             display: grid;
             grid-template-columns: 40px auto 40px;
-            grid-template-rows: 24px;
             margin: 2px -12px;
             letter-spacing: 1px;
             padding: 12px 0;
-            height: 24px;
+            &.bold {
+                font-weight: 500;
+            }
             .status {
-                line-height: 24px;
+                line-height: 30px;
                 text-align: center;
-                padding: 4px 12px;
             }
             .content {
                 text-overflow: ellipsis;
                 overflow: hidden;
                 font-size: 12px;
-                line-height: 14px;
+                line-height: 16px;
                 .notification-title {
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    margin-right: 4px;
                 }
             }
             &:hover {

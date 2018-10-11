@@ -1,29 +1,29 @@
 /* Font */
 
 @font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Light.ttf') format('truetype');
+  font-family: 'Roboto';
+  src: url('/src/assets/plugins/fonts/Roboto/Roboto-Thin.ttf') format('truetype');
+  font-weight: 100;
+}
+@font-face {
+  font-family: 'Roboto';
+  src: url('/src/assets/plugins/fonts/Roboto/Roboto-Light.ttf') format('truetype');
   font-weight: 200;
 }
 @font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Medium.ttf') format('truetype');
+  font-family: 'Roboto';
+  src: url('/src/assets/plugins/fonts/Roboto/Roboto-Regular.ttf') format('truetype');
   font-weight: 300;
 }
 @font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Regular.ttf') format('truetype');
+  font-family: 'Roboto';
+  src: url('/src/assets/plugins/fonts/Roboto/Roboto-Medium.ttf') format('truetype');
   font-weight: 400;
 }
 @font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-SemiBold.ttf') format('truetype');
+  font-family: 'Roboto';
+  src: url('/src/assets/plugins/fonts/Roboto/Roboto-Bold.ttf') format('truetype');
   font-weight: 500;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Bold.ttf') format('truetype');
-  font-weight: 600;
 }
 
 /* Colouring */
@@ -67,22 +67,77 @@
 
 /* Elements Baseline */
 
+html {
+  position: relative;
+  min-height: 100%;
+  background: $grey-1;
+}
+
+body {
+  font: 100% $font-stack;
+  line-height: 20px;
+  font-size: 14px;
+  margin: 0;
+  overflow: hidden;
+  color: $theme-black;
+  font-weight: 200;
+  width: 100%;
+  height: 100%;
+}
+
 :focus {
   outline: none;
 }
+
 a, a:hover, a:focus {
   text-decoration: none;
   cursor: pointer;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  color: $theme-black;
+  font-family: $font-stack;
+  font-weight: 400;
+}
+
+h1 {
+  line-height: 40px;
+  font-size: 36px
+}
+
+h2 {
+  line-height: 36px;
+  font-size: 24px
+}
+
+h3 {
+  line-height: 30px;
+  font-size: 20px
+}
+
+h4 {
+  line-height: 22px;
+  font-size: 18px
+}
+
 h5 {
+  line-height: 18px;
+  font-size: 16px;
+  font-weight: 400;
   margin: 0;
 }
 
+h6 {
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
 input, select {
-  line-height: 24px;
+  line-height: 20px;
   font-size: inherit;
   font-family: inherit;
+  font-weight: 200;
 }
 
 ul {
@@ -215,6 +270,28 @@ ul {
   text-align: center;
 }
 
+
+/* Specific Styles */
+
+#file-auto-download-link {
+  display: none;
+}
+
+.svg-icon {
+  vertical-align: middle;
+}
+
+.error-text {
+  color: $indicator-error;
+  font-size: 12px;
+}
+
+.place-right {
+  width: 100%;
+  text-align: right;
+}
+
+
 /* Basic Components */
 
 table {
@@ -256,11 +333,11 @@ table {
   transition: all 0.2s ease-in;
   color: $theme-white;
   background-color: $theme-blue;
-  line-height: 30px;
-  padding: 2px 12px;
+  padding: 4px 12px;
   text-align: center;
   width: 120px;
-  font: 300 14px Poppins;
+  font: 300 14px Roboto;
+  line-height: 20px;
   &:hover {
     color: $theme-white;
     &:not(.disabled) {
@@ -421,6 +498,63 @@ table {
 
 .pulsing {
   animation: pulse 1.4s linear infinite;
+}
+
+.tag {
+  display: inline;
+  border: 1px solid $grey-4;
+  border-right: 0;
+  border-radius: 2px;
+  padding:  4px;
+  margin-right: 8px;
+  position: relative;
+  margin-top: 4px;
+  vertical-align: middle;
+  &:first-of-type {
+    margin-top: 0;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    transform: rotate(45deg);
+    border-right: 1px solid $grey-4;
+    border-top: 1px solid $grey-4;
+    border-radius: 2px;
+    height: 18px;
+    width: 18px;
+    top: 3px;
+    right: -9px;
+  }
+}
+
+.v-spinner-bg {
+  height: 100%;
+  width: 100%;
+  background: $grey-3;
+  opacity: 0.4;
+  top: 0;
+  position: absolute;
+  z-index: 100;
+  transition: opacity .3s ease;
+}
+.v-spinner {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index: 101;
+  .v-pulse {
+    position: absolute;
+    top: 50%;
+    &.v-pulse1 {
+      left: 48%;
+    }
+    &.v-pulse2 {
+      left: 50%;
+    }
+    &.v-pulse3 {
+      left: 52%;
+    }
+  }
 }
 
 

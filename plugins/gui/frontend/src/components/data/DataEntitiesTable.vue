@@ -86,6 +86,8 @@
     }
 </script>
 
-<style scoped>
-
+<style lang="scss">
+    .x-data-entities {
+        height: calc(100% - 24px);
+    }
 </style>

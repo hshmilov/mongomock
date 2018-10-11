@@ -2,12 +2,17 @@
     {{histogram}}
     <div class="summary">
         <div class="row">
-            <div>Total seen {{entities}}</div>
+            <div class="title">Total seen {{entities}}</div>
             <div class="quantity">{{seen}}</div>
         </div>
-        <div class="arrow">Axonius {{entity}} Correlation</div>
         <div class="row">
-            <div>Total unique {{entities}}</div>
+            <div class="title mid">Axonius {{entity}} Correlation</div>
+            <div class="quantity">
+                <img src="icons/funnel.svg" height="48">
+            </div>
+        </div>
+        <div class="row">
+            <div class="title">Total unique {{entities}}</div>
             <div class="quantity">{{unique}}</div>
         </div>
     </div>
