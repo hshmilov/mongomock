@@ -1,22 +1,52 @@
 import logging
-import multiprocessing
-import threading
-from abc import ABC, abstractmethod
-from multiprocessing.dummy import Pool as ThreadPool
 
-from axonius.devices.device_adapter import (MAC_FIELD,
-                                            NETWORK_INTERFACES_FIELD, OS_FIELD)
 from axonius.entities import EntityType
-from axonius.mixins.feature import Feature
-from axonius.mixins.triggerable import Triggerable
-from axonius.plugin_base import PluginBase
-from axonius.thread_stopper import stoppable
-from funcy import chunks
-from namedlist import namedlist
-
-from axonius.types.correlation import CorrelationResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
+from axonius.thread_stopper import stoppable
+from funcy import chunks
+import threading
+import multiprocessing
+from abc import ABC, abstractmethod
+
+from namedlist import namedlist
+
+from axonius.devices.device_adapter import MAC_FIELD, OS_FIELD, NETWORK_INTERFACES_FIELD
+from axonius.plugin_base import PluginBase
+from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.feature import Feature
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
+from enum import Enum, auto
+from multiprocessing.dummy import Pool as ThreadPool
+
+DEFAULT_SEND_TO_AGGREGATOR_CHUNK_SIZE = 100
+
+
+class CorrelationReason(Enum):
+    Execution = auto()
+    Logic = auto()
+    NonexistentDeduction = auto()  # Associativity over a nonexisting entity (a->b and b->c therefore a->c)
+    StaticAnalysis = auto()
+
+
+# the reason for these data types is that it allows separation of the code that figures out correlations
+# and code that links entities (aggregator) or sends notifications.
+"""
+Represent a link that should take place.
+
+associated_adapters  - tuple between unique adapter name and id, e.g.
+    (
+        ("aws_adapter_30604", "i-0549ca2d6c2e42a70"),
+        ("esx_adapter_14575", "527f5691-de18-6657-783e-56fd1a5322cd")
+    )
+
+data                        - associated data with this link, e.g. {"reason": "they look the same"}
+reason (CorrelationReason)  - 'Execution' or 'Logic' or whatever else correlators will use
+                              'Logic' means the second part has plugin_unique_name
+                              Anything else means the second part has plugin_name
+"""
+CorrelationResult = namedlist('CorrelationResult',
+                              ['associated_adapters', 'data', ('reason', CorrelationReason.Execution)])
 
 """
 Represents a warning that should be passed on to the GUI.
@@ -163,19 +193,26 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
             f"Correlator {self.plugin_unique_name} started to correlate {len(entities_to_correlate)} entities")
         pool = ThreadPool(processes=2 * multiprocessing.cpu_count())
 
-        def process_correlation_result(result):
-            if isinstance(result, CorrelationResult):
-                try:
-                    self.link_adapters(self._entity_to_correlate, result)
-                except Exception:
-                    logger.exception(f'Failed linking for some reason, {result}')
-            if isinstance(result, WarningResult):
-                logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
-                self.create_notification(result.title, result.content, result.notification_type)
-                return
+        def multilink(correlations):
+            self.request_remote_plugin('multi_plugin_push?rebuild=False', AGGREGATOR_PLUGIN_NAME, 'post', json=[{
+                "plugin_type": "Plugin",
+                "data": result.data,
+                "associated_adapters": result.associated_adapters,
+                "association_type": "Link",
+                "entity": self._entity_to_correlate.value
+            } for result in correlations])
 
-        pool.map_async(process_correlation_result, self._correlate_with_lock(entities_to_correlate))
-        logger.info("Waiting for correlation")
+        for chunk in chunks(DEFAULT_SEND_TO_AGGREGATOR_CHUNK_SIZE, self._correlate_with_lock(entities_to_correlate)):
+            for result in chunk:
+                if isinstance(result, WarningResult):
+                    logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
+                    self.create_notification(result.title, result.content, result.notification_type)
+            correlations = [r for r in chunk if isinstance(r, CorrelationResult)]
+            for result in correlations:
+                logger.debug(f"Correlation: {result.data}, for {result.associated_adapters}")
+            logger.info(f"Sending {len(correlations)} correlation to aggregator async")
+            pool.apply_async(multilink, args=[correlations])
+        logger.info("Waiting for aggregator...")
         pool.close()
         pool.join()
         logger.info("Done!")

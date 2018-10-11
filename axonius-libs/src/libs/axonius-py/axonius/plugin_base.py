@@ -16,7 +16,6 @@ import threading
 import traceback
 import uuid
 from datetime import datetime, timedelta
-from itertools import groupby
 from pathlib import Path
 from typing import Iterable, List
 
@@ -26,7 +25,6 @@ import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 # bson is requirement of mongo and its not recommended to install it manually
-from axonius.devices import deep_merge_only_dict
 from bson import ObjectId, json_util
 from flask import Flask, jsonify, request
 from funcy import chunks
@@ -50,7 +48,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORE_UNIQUE_NAME, GUI_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           TROUBLESHOOTING_SETTING,
-                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME)
+                                          VOLATILE_CONFIG_PATH)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
@@ -59,11 +57,9 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.thread_stopper import (StopThreadException, ThreadStopper,
                                     stoppable)
-from axonius.types.correlation import CorrelationResult, CorrelateException
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.json_encoders import IteratorJSONEncoder
-from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper, run_and_forget
 
@@ -911,8 +907,7 @@ class PluginBase(Configurable, Feature):
 
         :return: MongoClient
         """
-        return MongoClient(self.db_host, replicaset='axon-cluster', retryWrites=True,
-                           username=self.db_user, password=self.db_password)
+        return MongoClient(self.db_host, username=self.db_user, password=self.db_password)
 
     def _get_collection(self, collection_name, db_name=None):
         """
@@ -998,8 +993,7 @@ class PluginBase(Configurable, Feature):
             logger.exception(f"Timeout for {client_name} on {self.plugin_unique_name}")
             raise adapter_exceptions.AdapterException(f"Fetching has timed out")
 
-    def __do_save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType,
-                                   should_log_info=True) -> int:
+    def __do_save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType, should_log_info=True) -> int:
         """
         Saves all given data from adapter (devices, users) into the DB for the given client name
         :return: Device count saved
@@ -1272,158 +1266,43 @@ class PluginBase(Configurable, Feature):
             # wanna see my "something too large"?
             logger.warn(f"Got DocumentTooLarge with client.")
 
-    @mongo_retry()
-    def __perform_tag(self, entity: EntityType, associated_adapters, name: str, data, tag_type: str, action_if_exists,
-                      additional_data) -> List[dict]:
+    def _tag_many(self, entity: EntityType, identity_by_adapter, names, data, type, action_if_exists):
+        """ Function for tagging many adapter devices with many tags.
+        This function will tag a wanted device. The tag will be related to all adapters in the device.
+        :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
+                                           e.g. [("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D...."),...]
+        :param names: a list of the tag. should be a list of strings.
+        :param data: the data of the tag. could be any object. will be the same for all tags.
+        :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
+                     will be the same for all tags.
+        :param entity: "devices" or "users" -> what is the entity we are tagging.
+        :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
+        :return:
         """
-        Actually performs a 'tag' operation
-        See _tag for more docs
-        :return: List of affected entities
-        """
-        _entities_db = self._entity_db_map[entity]
-        additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = self.plugin_unique_name, self.plugin_name
-        with _entities_db.start_session() as session:
-            entities_candidates_list = list(session.find({"$or": [
-                {
-                    'adapters': {
-                        '$elemMatch': {
-                            PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
-                            'data.id': associated_id
-                        }
+        assert action_if_exists == "replace" or (action_if_exists == "update" and type == "adapterdata")
+
+        tag_data = {'association_type': 'Multitag',
+                    'associated_adapters': identity_by_adapter,
+                    'entity': entity.value,
+                    'tags': [{
+                        "action_if_exists": action_if_exists,
+                        "name": name,
+                        "data": data,
+                        "type": type} for name in names]
                     }
-                }
-                for associated_plugin_unique_name, associated_id in associated_adapters
-            ]}))
+        # Since datetime is often passed here, and it is not serializable, we use json_util.default
+        # That automatically serializes it as a mongodb date object.
+        response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
+                                              data=json.dumps(tag_data, default=json_util.default))
+        if response.status_code != 200:
+            logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+            raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
 
-            if len(entities_candidates_list) != 1:
-                raise TagDeviceError(f"A tag must be associated with just one adapter, "
-                                     f"0 != {len(entities_candidates_list)}")
-
-            # take (assumed single) candidate
-            entities_candidate = entities_candidates_list[0]
-
-            if tag_type == "adapterdata":
-                relevant_adapter = [x for x in entities_candidate['adapters']
-                                    if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
-                assert relevant_adapter, "Couldn't find adapter in axon device"
-                additional_data['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
-
-            if any(x['name'] == name and
-                   x[PLUGIN_UNIQUE_NAME] == self.plugin_unique_name and
-                   x['type'] == tag_type
-                   for x
-                   in entities_candidate['tags']):
-
-                # We found the tag. If action_if_exists is replace just replace it. but if its update, lets
-                # make a deep merge here.
-                if action_if_exists == "update" and tag_type == "adapterdata":
-                    # Take the old value of this tag.
-                    final_data = [
-                        x["data"] for x in entities_candidate["tags"] if
-                        x["plugin_unique_name"] == self.plugin_unique_name
-                        and x["type"] == "adapterdata"
-                        and x["name"] == name
-                    ]
-
-                    if len(final_data) != 1:
-                        msg = f"Got {name}/{tag_type} with " \
-                              f"action_if_exists=update, but final_data is not of length 1: {final_data}"
-                        logger.error(msg)
-                        raise TagDeviceError(msg)
-
-                    final_data = final_data[0]
-
-                    # Merge. Note that we deep merge dicts but not lists, since lists are like fields
-                    # for us (for example ip). Usually when we get some list variable we get all of it so we don't need
-                    # any update things
-                    data = deep_merge_only_dict(data, final_data)
-                    logger.debug("action if exists on tag!")
-
-                tag_data = {
-                    'association_type': 'Tag',
-                    'associated_adapters': associated_adapters,
-                    "name": name,
-                    "data": data,
-                    "type": tag_type,
-                    "entity": entity.value,
-                    "action_if_exists": action_if_exists,
-                    **additional_data
-                }
-
-                result = session.update_one({
-                    "internal_axon_id": entities_candidate['internal_axon_id'],
-                    "tags": {
-                        "$elemMatch":
-                            {
-                                "name": name,
-                                "plugin_unique_name": self.plugin_unique_name,
-                                "type": tag_type
-                            }
-                    }
-                }, {
-                    "$set": {
-                        "tags.$": tag_data
-                    }
-                })
-
-                if result.matched_count != 1:
-                    msg = f"tried to update tag {tag_data}. " \
-                          f"expected matched_count == 1 but got {result.matched_count}"
-                    logger.error(msg)
-                    raise TagDeviceError(msg)
-            elif self.plugin_name == "gui" and tag_type == 'label' and tag_type is False:
-                # Gui is a special plugin. It can delete any label it wants (even if it has come from
-                # another service)
-
-                result = session.update_one({
-                    "internal_axon_id": entities_candidate['internal_axon_id'],
-                    "tags": {
-                        "$elemMatch":
-                            {
-                                "name": name,
-                                "type": "label"
-                            }
-                    }
-                }, {
-                    "$set": {
-                        "tags.$.data": False
-                    }
-                })
-
-                if result.matched_count != 1:
-                    msg = f"tried to update label {tag}. expected matched_count == 1 but got {result.matched_count}"
-                    logger.error(msg)
-                    raise TagDeviceError(msg)
-
-            else:
-                tag_data = {
-                    'association_type': 'Tag',
-                    'associated_adapters': associated_adapters,
-                    "name": name,
-                    "data": data,
-                    "type": tag_type,
-                    "entity": entity.value,
-                    "action_if_exists": action_if_exists,
-                    **additional_data
-                }
-
-                result = session.update_one(
-                    {"internal_axon_id": entities_candidate['internal_axon_id']},
-                    {
-                        "$addToSet": {
-                            "tags": tag_data
-                        }
-                    })
-
-                if result.modified_count != 1:
-                    msg = f"tried to add tag {tag_data}. expected modified_count == 1 but got {result.modified_count}"
-                    logger.error(msg)
-                    raise TagDeviceError(msg)
-        return entities_candidates_list
+        return response
 
     def _tag(self, entity: EntityType, identity_by_adapter, name, data, tag_type, action_if_exists,
              client_used,
-             additional_data) -> List[dict]:
+             additional_data):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
@@ -1436,333 +1315,54 @@ class PluginBase(Configurable, Feature):
         :param client_used: an optional parameter to indicate client_used. This is important since we show this in
                             the gui (we can know where the data came from)
         :param additional_data: additional data to the dict sent to the aggregator
-        :return: List of affected entities
+        :return:
         """
 
         assert action_if_exists == "replace" or (action_if_exists == "update" and tag_type == "adapterdata")
-        additional_data = additional_data or {}
+
+        tag_data = {
+            'association_type': 'Tag',
+            'associated_adapters': identity_by_adapter,
+            "name": name,
+            "data": data,
+            "type": tag_type,
+            "entity": entity.value,
+            "action_if_exists": action_if_exists,
+            **additional_data
+        }
 
         if client_used is not None:
             assert type(client_used) == str
-            additional_data['client_used'] = client_used
+            tag_data['client_used'] = client_used
 
-        return self.__perform_tag(entity, identity_by_adapter, name, data, tag_type, action_if_exists, additional_data)
+        # Since datetime is often passed here, and it is not serializable, we use json_util.default
+        # That automatically serializes it as a mongodb date object.
+        response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
+                                              data=json.dumps(tag_data, default=json_util.default))
+        if response.status_code != 200:
+            logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+            logger.error(tag_data)
+            raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
 
-    @mongo_retry()
-    def link_adapters(self, entity: EntityType, correlation: CorrelationResult):
-        """
-        Performs a correlation between the entities given by 'correlation'
-        :param entity: The entity type to use
-        :param correlation: The information of the correlation - see definition of CorrelationResult
-        """
-        _entities_db = self._entity_db_map[entity]
-        with _entities_db.start_session() as session:
-            try:
-                with session.start_transaction():
-                    entities_candidates = list(session.find({"$or": [
-                        {
-                            'adapters': {
-                                '$elemMatch': {
-                                    PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
-                                    'data.id': associated_id
-                                }
-                            }
-                        }
-                        for associated_plugin_unique_name, associated_id in correlation.associated_adapters
-                    ]}))
+        return response
 
-                    if len(entities_candidates) == 0:
-                        raise CorrelateException(f"No entities given or all entities given don't exist. "
-                                                 f"Associated adapters: {correlation.associated_adapters}")
-                    # in this case, we need to link (i.e. "merge") all entities_candidates
-                    # if there's only one, then the link is either associated only to
-                    # one entity (which is as irrelevant as it gets)
-                    # or all the entities are already linked. In any case, if a real merge isn't done
-                    # it means someone made a mistake.
-                    if len(entities_candidates) != 2:
-                        logger.error(f"{len(entities_candidates)} != 2, entities_candidates: {entities_candidates}"
-                                     f" and associated_adapters {correlation.associated_adapters}")
-                        raise CorrelateException(f'Link with wrong number of devices {len(associated_adapters)}')
+    def add_many_labels_to_entity(self, entity: EntityType, identity_by_adapter, labels, are_enabled=True):
+        """ Tag many devices with many tags. if is_enabled = False, the labels are grayed out."""
+        return self._tag_many(entity, identity_by_adapter, labels, are_enabled, "label", "replace")
 
-                    collected_adapter_entities = [axonius_entity['adapters'] for axonius_entity in entities_candidates]
-                    all_unique_adapter_entities_data = [v for d in collected_adapter_entities for v in d]
+    def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True, additional_data={}):
+        """ A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out."""
+        return self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None, additional_data)
 
-                    # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
-                    # a tag is the same tag, if it has the same plugin_unique_name and name.
-                    def keyfunc(tag):
-                        return tag['plugin_unique_name'], tag['name']
-
-                    # first, lets get all tags and have them sorted. This will make the same tags be consecutive.
-                    all_tags = sorted((t for dc in entities_candidates for t in dc['tags']), key=keyfunc)
-                    # now we have the same tags ordered consecutively. so we want to group them, so that we
-                    # would have duplicates of the same tag in their identity key.
-                    all_tags = groupby(all_tags, keyfunc)
-                    # now we have them grouped by, lets select only the one which is the newest.
-                    tags_for_new_device = {tag_key: max(duplicated_tags, key=lambda tag: tag['accurate_for_datetime'])
-                                           for tag_key, duplicated_tags
-                                           in all_tags}
-                    internal_axon_id = uuid.uuid4().hex
-
-                    # now, let us delete all other AxoniusDevices
-                    session.delete_many({'$or':
-                                         [
-                                             {'internal_axon_id': axonius_entity['internal_axon_id']}
-                                             for axonius_entity in entities_candidates
-                                         ]
-                                         })
-                    session.insert_one({
-                        "internal_axon_id": internal_axon_id,
-                        "accurate_for_datetime": datetime.now(),
-                        "adapters": all_unique_adapter_entities_data,
-                        ADAPTERS_LIST_LENGTH: len(set([x[PLUGIN_NAME] for x in all_unique_adapter_entities_data])),
-                        "tags": list(tags_for_new_device.values())  # Turn it to a list
-                    })
-            except CorrelateException as e:
-                logger.exception("Unlink logic exception")
-                raise
-        self._request_db_rebuild(sync=False,
-                                 internal_axon_ids=[x['internal_axon_id'] for x in entities_candidates])
-
-    @mongo_retry()
-    def unlink_adapter(self, entity: EntityType, plugin_unique_name: str, adapter_id: str):
-        """
-        Unlinks a specific adapter from its axonius device
-        :param entity: The entity type to use
-        :param plugin_unique_name: The plugin unique name of the given adapter
-        :param adapter_id: The ID of the given adapt
-        """
-        _entities_db = self._entity_db_map[entity]
-        with _entities_db.start_session() as session:
-            with session.start_transaction():
-                self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session)
-
-    @staticmethod
-    def __perform_unlink_with_session(adapter_id: str, plugin_unique_name: str,
-                                      session, entity_to_split=None):
-        """
-        Perform an unlink given a session on a particular adapter entity
-        :param adapter_id: the id of the adapter to unlink
-        :param plugin_unique_name: the plugin unique name of the adapter
-        :param session: the session to use, this also implies the DB to use
-        :param entity_to_split: if not none, uses this as the entity (optimization)
-        :return:
-        """
-        entity_to_split = entity_to_split or session.find_one({
-            'adapters': {
-                '$elemMatch': {
-                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                    'data.id': adapter_id
-                }
-            }
-        })
-        if not entity_to_split:
-            raise CorrelateException(f"Could not find given entity {plugin_unique_name}:{adapter_id}")
-        if len(entity_to_split['adapters']) == 1:
-            raise CorrelateException("Only one adapter entity in axonius entity, can't split that")
-        internal_axon_id = uuid.uuid4().hex
-        adapter_to_extract = [x for x in entity_to_split['adapters'] if
-                              x[PLUGIN_UNIQUE_NAME] == plugin_unique_name and
-                              x['data']['id'] == adapter_id]
-        if len(adapter_to_extract) != 1:
-            raise CorrelateException(f'Weird entity: {entity_to_split}')
-        new_axonius_entity = {
-            "internal_axon_id": internal_axon_id,
-            "accurate_for_datetime": datetime.now(),
-            "adapters": adapter_to_extract,
-            "tags": []
-        }
-        # figure out which adapters should stay on the current entity (axonius_entity_to_split - remaining adapters)
-        # and those that should move to the new axonius entity
-        remaining_adapters = set(x[PLUGIN_UNIQUE_NAME] for x in entity_to_split['adapters']) - \
-            {adapter_to_extract[0][PLUGIN_UNIQUE_NAME]}
-        # figure out for each tag G (in the current entity, i.e. axonius_entity_to_split)
-        # whether any of G.associated_adapters is in the `associated_adapters`, i.e.
-        # whether G should be a part of the new axonius entity.
-        # clarification: G should be a part of the new axonius entity if any of G.associated_adapters
-        # is also part of the new axonius entity
-        for tag in entity_to_split['tags']:
-            for tag_plugin_unique_name, tag_adapter_id in tag['associated_adapters']:
-                if tag_plugin_unique_name == plugin_unique_name and tag_adapter_id == adapter_id:
-                    newtag = dict(tag)
-                    # if the tags moves/copied to the new entity, it should 'forget' it's old
-                    # associated adapters, because most of the them stay in the old device,
-                    # and so the new G.associated_adapters are the associated_adapters
-                    # that are also part of the new axonius entity
-                    newtag['associated_adapters'] = [tag_plugin_unique_name, tag_adapter_id]
-                    new_axonius_entity['tags'].append(newtag)
-        # remove the adapters one by one from the DB, and also keep track in memory
-        adapter_entities_left = list(entity_to_split['adapters'])
-        for adapter_to_remove_from_old in new_axonius_entity['adapters']:
-            session.update_many({'internal_axon_id': entity_to_split['internal_axon_id']},
-                                {
-                                    "$pull": {
-                                        'adapters': {
-                                            PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
-                                                PLUGIN_UNIQUE_NAME],
-                                            'data.id': adapter_to_remove_from_old['data']['id']
-                                        }
-                                    }
-            })
-            adapter_entities_left.remove(adapter_to_remove_from_old)
-        # generate a list of (unique_plugin_name, id) from the adapter entities left
-        adapter_entities_left_by_id = [
-            [adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']]
-            for adapter
-            in adapter_entities_left
-        ]
-        # the old entity might and might not keep the tag:
-        # if the tag contains an associated_adapter that is also part of the old entity
-        # - then this tag is also associated with the old entity
-        # if it does not
-        # - this this tag is removed from the old entity
-        # so now we generate a list of all tags that must be removed from the old entity
-        # a tag will be removed if all of its associated_adapters are not in any of the
-        # adapter entities left in the old device, i.e. all of its associated_adapters have moved
-        pull_those = [tag_from_old
-                      for tag_from_old
-                      in entity_to_split['tags']
-                      if all(assoc_adapter not in adapter_entities_left_by_id
-                             for assoc_adapter
-                             in tag_from_old['associated_adapters'])]
-        set_query = {
-            ADAPTERS_LIST_LENGTH: len(set(remaining_adapters))
-        }
-        if pull_those:
-            pull_query = {
-                'tags': {
-                    "$or": [
-                        {
-                            PLUGIN_UNIQUE_NAME: pull_this_tag[PLUGIN_UNIQUE_NAME],
-                            "name": pull_this_tag['name']
-                        }
-                        for pull_this_tag
-                        in pull_those
-                    ]
-
-                }
-            }
-            full_query = {
-                "$pull": pull_query,
-                "$set": set_query
-            }
-        else:
-            full_query = {
-                "$set": set_query
-            }
-        session.update_many({'internal_axon_id': entity_to_split['internal_axon_id']},
-                            full_query)
-        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(
-            set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
-        session.insert_one(new_axonius_entity)
-
-    def __archive_axonius_device(self, plugin_unique_name, device_id, db_to_use, session=None):
-        """
-        Finds the axonius device with the given plugin_unique_name and device id,
-        assumes that the axonius device has only this single adapter device.
-
-        If you want to delete an adapter entity use delete_adapter_entity
-
-        writes the device to the archive db, then deletes it
-        """
-        axonius_device = db_to_use.find_one_and_delete({
-            'adapters': {
-                '$elemMatch': {
-                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                    'data.id': device_id
-                }
-            }
-        }, session=session)
-        if axonius_device is None:
-            logger.error(f"Tried to archive nonexisting device: {plugin_unique_name}: {device_id}")
-            return False
-
-        axonius_device['archived_at'] = datetime.utcnow()
-        self.aggregator_db_connection['old_device_archive'].insert_one(axonius_device, session=session)
-        return True
-
-    @mongo_retry()
-    def delete_adapter_entity(self, entity: EntityType, plugin_unique_name: str, adapter_id: str):
-        """
-        Delete an adapter entity from the DB
-        :param entity: The entity type to use
-        :param plugin_unique_name: The plugin unique name of the given adapter
-        :param adapter_id: The ID of the given adapt
-        """
-        _entities_db = self._entity_db_map[entity]
-        with _entities_db.start_session() as session:
-            with session.start_transaction():
-                axonius_entity = session.find_one({
-                    'adapters': {
-                        '$elemMatch': {
-                            PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                            'data.id': adapter_id
-                        }
-                    }
-                })
-                if not axonius_entity:
-                    return  # deleting an empty adapter shouldn't be hard
-
-                # if the condition below isn't met it means
-                # that the current adapterentity is the last adapter in the axoniusentity
-                # in which case - there is no reason to unlink it, just to delete it
-                if len(axonius_entity['adapters']) > 1:
-                    self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session,
-                                                       entity_to_split=axonius_entity)
-                self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db, session)
-
-    def add_many_labels_to_entity(self, entity: EntityType, identity_by_adapter, labels, are_enabled=True,
-                                  rebuild: bool = True) -> List[dict]:
-        """
-        Tag many devices with many tags. if is_enabled = False, the labels are grayed out.
-        :param rebuild: Whether or not to trigger a rebuild afterwards
-        :return: List of affected entities
-        """
-        def perform_many_tags():
-            for label in labels:
-                for specific_identity in identity_by_adapter:
-                    yield from self.add_label_to_entity(entity, [specific_identity], label, are_enabled, rebuild=False)
-        result = list(perform_many_tags())
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
-        return result
-
-    def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True, additional_data={},
-                            rebuild: bool = True) -> List[dict]:
-        """
-        A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out.
-        :param rebuild: Whether or not to trigger a rebuild afterwards
-        :return: List of affected entities
-        """
-        result = self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None, additional_data)
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
-        return result
-
-    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data={},
-                           rebuild: bool = True) -> List[dict]:
-        """
-        A shortcut to __tag with type "data"
-        :param rebuild: Whether or not to trigger a rebuild afterwards
-        :return: List of affected entities
-        """
-        result = self._tag(entity, identity_by_adapter, name, data, "data", "replace", None, additional_data)
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
-        return result
+    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data={}):
+        """ A shortcut to __tag with type "data" """
+        return self._tag(entity, identity_by_adapter, name, data, "data", "replace", None, additional_data)
 
     def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data,
-                                  action_if_exists="replace", client_used=None, additional_data={},
-                                  rebuild: bool = True) -> List[dict]:
-        """
-        A shortcut to __tag with type "adapterdata"
-        :param rebuild: Whether or not to trigger a rebuild afterwards
-        :return: List of affected entities
-        """
-        result = self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
-                           action_if_exists, client_used, additional_data)
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
-        return result
+                                  action_if_exists="replace", client_used=None, additional_data={}):
+        """ A shortcut to __tag with type "adapterdata" """
+        return self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
+                         action_if_exists, client_used, additional_data)
 
     @add_rule("update_config", methods=['POST'], should_authenticate=False)
     def update_config(self):

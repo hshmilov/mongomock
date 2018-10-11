@@ -1,10 +1,9 @@
 import re
 import logging
 from axonius.correlator_engine_base import CorrelatorEngineBase
-from axonius.correlator_base import does_entity_have_field
+from axonius.correlator_base import CorrelationReason, does_entity_have_field
 
 from axonius.entities import EntityType
-from axonius.types.correlation import CorrelationReason
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

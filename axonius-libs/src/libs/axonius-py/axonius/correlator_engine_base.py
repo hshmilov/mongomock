@@ -1,15 +1,15 @@
-import itertools
 import logging
-from abc import ABC, abstractmethod
-from typing import Iterable, List, NewType, Tuple
-
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
-from axonius.types.correlation import CorrelationReason, CorrelationResult
-from axonius.utils.parsing import pair_comparator, parameter_function
-from funcy import pairwise
 
 logger = logging.getLogger(f'axonius.{__name__}')
+from typing import List, NewType, Tuple, Iterable
+from abc import ABC, abstractmethod
 
+import itertools
+from funcy import pairwise
+
+from axonius.correlator_base import CorrelationResult, CorrelationReason
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME
+from axonius.utils.parsing import pair_comparator, parameter_function
 
 adapter_device = NewType('adapter_device', dict)
 device_pair = NewType('DevicePair', Tuple)
@@ -156,7 +156,11 @@ class CorrelatorEngineBase(ABC):
 
         bucket = [adapters_to_correlate[0]]
         pair_number = 0
+        num_of_pairs = len(adapters_to_correlate)
+        print_count = max(int(float(num_of_pairs) / 100), 100)
         for a, b in pairwise(adapters_to_correlate):
+            if pair_number % print_count == 0:
+                logger.info(f"Correlating outer bucket of #pair: {pair_number} out of {num_of_pairs}")
             if all(compare(a, b) for compare in bucket_insertion_comparators):
                 bucket.append(b)
             else:

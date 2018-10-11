@@ -1,33 +1,34 @@
-import concurrent.futures
 import logging
-import threading
-import time
-from datetime import datetime
 from typing import List
 
-import pymongo
-import requests
-from axonius.adapter_base import is_plugin_adapter
-from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
-                                          AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME,
-                                          SYSTEM_SCHEDULER_PLUGIN_NAME)
-from axonius.devices import deep_merge_only_dict
-from axonius.mixins.triggerable import Triggerable
-from axonius.plugin_base import EntityType, PluginBase, return_error
-from axonius.utils.files import get_local_config_file
-from axonius.utils.json import from_json
-from axonius.utils.threading import LazyMultiLocker
+from flask import request
 from funcy import chunks
-from pymongo.errors import CollectionInvalid
-
-from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 
 logger = logging.getLogger(f'axonius.{__name__}')
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
+from datetime import datetime, timedelta
+from itertools import groupby
+import concurrent.futures
 
+import pymongo
+import requests
+import threading
+import uuid
+import time
+
+from aggregator.exceptions import AdapterOffline, ClientsUnavailable
+from axonius.adapter_base import is_plugin_adapter
+from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
+from axonius.utils.parsing import get_entity_id_for_plugin_name
+from axonius.mixins.triggerable import Triggerable
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, \
+    ADAPTERS_LIST_LENGTH, PLUGIN_NAME
+from axonius.utils.threading import LazyMultiLocker
+from axonius.utils.files import get_local_config_file
+from axonius.utils.json import from_json
+from axonius.devices import deep_merge_only_dict
 
 get_devices_job_name = "Get device job"
 
@@ -138,6 +139,26 @@ aggregation_stages_for_entity_view = [
 ]
 
 
+def get_unique_name_from_plugin_unique_name_and_id(unique_plugin_name, _id):
+    return f"{unique_plugin_name}{_id}"
+
+
+def get_unique_name_from_device(parsed_data) -> str:
+    """
+    Returns a string that UUIDs a parsed adapter device
+    :param parsed_data: parsed adapter device
+    :return:
+    """
+    return get_unique_name_from_plugin_unique_name_and_id(parsed_data[PLUGIN_UNIQUE_NAME], parsed_data['data']['id'])
+
+
+def _is_tag_valid(tag):
+    """
+    A valid tag is a tag that has a `name` and `type` and they are both string
+    """
+    return isinstance(tag.get('name'), str) and isinstance(tag.get('type'), str)
+
+
 class AggregatorService(PluginBase, Triggerable):
     # This is the amount of delay we should wait before performing a full db rebuild again and again,
     # to introduce some latency over entity_db so other processes can take place
@@ -176,20 +197,6 @@ class AggregatorService(PluginBase, Triggerable):
             for entity in EntityType
         }
 
-        try:
-            # devices are inserted to this collection only via transactions on the 'clean devices'
-            # it's impossible to create collections (even implicitly using insert) withing a transaction
-            # https://docs.mongodb.com/manual/core/transactions/
-            # > Operations that affect the database catalog, such as creating or dropping a collection or an index,
-            # > are not allowed in multi-document transactions.
-            # > For example, a multi-document transaction cannot include an insert operation
-            # > that would result in the creation of a new collection. See Restricted Operations.
-            # for this reason, we create the collection ahead of time
-            self.aggregator_db_connection.create_collection('old_device_archive')
-        except CollectionInvalid:
-            # if the collection already exists - that's OK
-            pass
-
     def insert_indexes(self):
         """
         Insert useful indexes.
@@ -212,8 +219,6 @@ class AggregatorService(PluginBase, Triggerable):
             db.create_index([(f'specific_data.adapter_properties', pymongo.ASCENDING)])
             # this is used for when you want to see a single snapshot in time
             db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)])
-            # this is commonly filtered by
-            db.create_index([(f'adapters', pymongo.ASCENDING)])
             # this is commonly sorted by
             db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)])
 
@@ -532,6 +537,332 @@ class AggregatorService(PluginBase, Triggerable):
 
         except Exception as e:
             logger.exception('Getting devices from all requested adapters failed.')
+
+    def _do_plugin_push(self, sent_plugin, should_update_view=False):
+        """
+        :return: '' if on success, else error string
+        """
+        association_type = sent_plugin.get('association_type')
+        associated_adapters = sent_plugin.get('associated_adapters')
+        entity = sent_plugin.get('entity')
+
+        if entity not in [EntityType.Devices.value, EntityType.Users.value]:
+            return return_error("Acceptable values for entity are: 'devices', 'users'")
+
+        if association_type not in ['Tag', 'Multitag', 'Link', 'Unlink']:
+            return "Acceptable values for association_type are: 'Tag', 'Multitag', 'Link', 'Unlink'"
+        if not isinstance(associated_adapters, list):
+            return "associated_adapters must be a list"
+
+        if association_type == 'Tag':
+            # If a tag is associated with more than one adapter we will simply search for devices that have one of them.
+            # But still we will be able to store these adapters in the "associated_adapters" field in the db.
+            if len(associated_adapters) == 0:
+                return "Tag must be associated with at least one adapter"
+            if not _is_tag_valid(sent_plugin):
+                return "tag name and type must be provided as a string"
+
+        if association_type == 'Multitag':
+            if not isinstance(sent_plugin.get('tags'), list):
+                return "A multitag must have a list of tags in 'tags'"
+            if any(not _is_tag_valid(tag) for tag in sent_plugin['tags']):
+                return "All tags in 'tags' must be valid tags, such as they have 'name' and 'type' as string"
+
+        # user doesn't send this
+        sent_plugin['accurate_for_datetime'] = datetime.now()
+
+        # we might not trust the sender on this
+        sent_plugin[PLUGIN_UNIQUE_NAME], sent_plugin['plugin_name'] = self.get_caller_plugin_name()
+
+        # Get the specific lock we want
+        entity = EntityType(entity)
+        db_lock = self.__db_locks[entity]
+        entities_db = self._entity_db_map[entity]
+
+        # this lock is commented out because it should actually be an A-B lock
+        # and having a regular lock is causing too many performance issues
+        # so we prefer having slight inconsistencies with the view instead of performance issues
+        # see https://axonius.atlassian.net/browse/AX-2059
+        # with self.__rebuild_db_view_lock[entity]:
+
+        with db_lock.get_lock(
+                [get_unique_name_from_plugin_unique_name_and_id(name, associated_id) for name, associated_id in
+                 associated_adapters]):
+            # now let's update our db
+
+            # figure out all axonius entities that at least one of its adapters are in the
+            # given plugin's association
+            entities_candidates = list(entities_db.find({"$or": [
+                {
+                    'adapters': {
+                        '$elemMatch': {
+                            PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
+                            'data.id': associated_id
+                        }
+                    }
+                }
+                for associated_plugin_unique_name, associated_id in associated_adapters
+            ]}))
+
+            if len(entities_candidates) == 0:
+                return f"No entities given or all entities given don't exist. " \
+                       f"Associated adapters: {associated_adapters}"
+
+            if association_type == 'Tag':
+                if len(entities_candidates) != 1:
+                    # it has been checked that at most 1 device was provided (if len(associated_adapters) != 1)
+                    # then if it's not 1, its definitely 0
+                    return "A tag must be associated with just one adapter, the entity provided is unavailable"
+                # take (assumed single) key from candidates
+                entities_candidate = entities_candidates[0]
+
+                if sent_plugin.get('type') == "adapterdata":
+                    relevant_adapter = [x for x in entities_candidate['adapters']
+                                        if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
+                    assert relevant_adapter, "Couldn't find adapter in axon device"
+                    sent_plugin['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
+
+                self._update_entity_with_tag(sent_plugin, entities_candidate, entities_db)
+            elif association_type == 'Multitag':
+                for device in entities_candidates:
+                    # here we tag all adapter_devices per axonius device candidate
+                    new_sent_plugin = dict(sent_plugin)
+                    del new_sent_plugin['tags']
+                    new_sent_plugin['associated_adapters'] = [
+                        (adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id'])
+                        for adapter_device in device['adapters']
+                    ]
+
+                    for tag in sent_plugin['tags']:
+                        self._update_entity_with_tag({**new_sent_plugin, **tag}, device, entities_db)
+            elif association_type == 'Link':
+                # in this case, we need to link (i.e. "merge") all entities_candidates
+                # if there's only one, then the link is either associated only to
+                # one entity (which is as irrelevant as it gets)
+                # or all the entities are already linked. In any case, if a real merge isn't done
+                # it means someone made a mistake.
+                if len(entities_candidates) < 2:
+                    return f'Found less than two candidates, got {len(entities_candidates)}'
+
+                if len(associated_adapters) != 2:
+                    return f'Link with wrong number of devices {len(associated_adapters)}'
+
+                if associated_adapters[0] == associated_adapters[1]:
+                    return f'Got link of the same device {associated_adapters}'
+
+                self._link_entities(entities_candidates, entities_db)
+            elif association_type == 'Unlink':
+                if len(entities_candidates) != 1:
+                    return f"All associated_adapters in an unlink operation must be from the same Axonius entity, in your case, they're from {len(entities_candidates)} entities."
+                entity_to_split = entities_candidates[0]
+
+                if len(entity_to_split['adapters']) == len(associated_adapters):
+                    return "You can't remove all devices from an entity, that'll be unfair."
+
+                self._unlink_entities(associated_adapters, entity_to_split, entities_db)
+            if should_update_view:
+                self._rebuild_entity_view(entity, [x['internal_axon_id'] for x in entities_candidates])
+
+        # raw == parsed for plugin_data
+        self._save_parsed_in_db(sent_plugin)  # save in parsed too
+
+        return ""
+
+    @add_rule("plugin_push", methods=["POST"])
+    def plugin_push(self):
+        """
+        Digests 'Link', 'Unlink' and 'Tag' requests from plugin
+        Link - links two or more adapter devices/users
+        Unlink - unlinks exactly two adapter devices/users
+        Tag - adds a tag to an adapter devices/users
+        Refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/86310913/Devices+DB+Correlation+Process for more
+        :return:
+        """
+        # if ?rebuild=True/False is passed than this request will rebuild the db
+        rebuild = request.args.get('rebuild', 'True') == 'True'
+        sent_plugin = self.get_request_data_as_object()
+        if sent_plugin is None:
+            return return_error("Invalid data sent", 400)
+        res = self._do_plugin_push(sent_plugin, should_update_view=rebuild)
+        if res != '':
+            logger.warning(f'plugin push failed {res}')
+            return return_error(res)
+
+        return ''
+
+    @add_rule("multi_plugin_push", methods=["POST"])
+    def multi_plugin_push(self):
+        # if ?rebuild=True/False is passed than this request will rebuild the db
+        rebuild = request.args.get('rebuild', 'True') == 'True'
+        sent_plugin = self.get_request_data_as_object()
+        should_rebuild_all = len(sent_plugin) > 50
+        logger.info(f"Handling {len(sent_plugin)} pushes with rebuild = {rebuild}")
+        results = [self._do_plugin_push(d, should_update_view=rebuild and not should_rebuild_all) for d in sent_plugin]
+        if should_rebuild_all and rebuild:
+            for entity_type in EntityType:
+                self._rebuild_entity_view(entity_type)
+        if any(x != "" for x in results):
+            logger.info(f"Error handling {len(sent_plugin)} pushes {[x for x in results if x != '']}")
+            return return_error("Errors took place", additional_data=[x for x in results if x != ''])
+
+        logger.info(f"Finished handling {len(sent_plugin)} pushes")
+        return ""
+
+    def _unlink_entities(self, associated_adapters, axonius_entity_to_split, entities_db):
+        """
+        Unlinks the associated_adapters from axonius_entity_to_split
+        :param associated_adapters: List of tuples, where each tuple is of form [unique_plugin_name, id]
+        :param axonius_entity_to_split: An axnoius entity, with all tags and adapters
+        :param entities_db: the relevant collection - i.e. devices_db or users_db
+        """
+        # we already tested that all adapters in data_sent are indeed from the single
+        # entity we found, so the ids will match, so we don't have to check that.
+        # We're building a new entity that has all the associated_adapters given from
+        # the old axonius entity, and at the same time deleting from the old entity.
+        internal_axon_id = uuid.uuid4().hex
+        new_axonius_entity = {
+            "internal_axon_id": internal_axon_id,
+            "accurate_for_datetime": datetime.now(),
+            "adapters": [],
+            "tags": []
+        }
+        remaining_adapters = []
+
+        # figure out which adapters should stay on the current entity (axonius_entity_to_split - remaining adapters)
+        # and those that should move to the new axonius entity
+        for adapter_entity in axonius_entity_to_split['adapters']:
+            candidate = get_entity_id_for_plugin_name(associated_adapters,
+                                                      adapter_entity[PLUGIN_UNIQUE_NAME])
+            if candidate is not None and candidate == adapter_entity['data']['id']:
+                new_axonius_entity['adapters'].append(adapter_entity)
+            else:
+                remaining_adapters.append(adapter_entity[PLUGIN_NAME])
+
+        # figure out for each tag G (in the current entity, i.e. axonius_entity_to_split)
+        # whether any of G.associated_adapters is in the `associated_adapters`, i.e.
+        # whether G should be a part of the new axonius entity.
+        # clarification: G should be a part of the new axonius entity if any of G.associated_adapters
+        # >>>>>>>>>>>>>> is also part of the new axonius entity
+        for tag in axonius_entity_to_split['tags']:
+            for tag_plugin_unique_name, tag_adapter_id in tag['associated_adapters']:
+                candidate = get_entity_id_for_plugin_name(associated_adapters, tag_plugin_unique_name)
+                if candidate is not None and candidate == tag_adapter_id:
+                    newtag = dict(tag)
+                    # if the tags moves/copied to the new entity, it should 'forget' it's old
+                    # associated adapters, because most of the them stay in the old device,
+                    # and so the new G.associated_adapters are the associated_adapters
+                    # that are also part of the new axonius entity
+                    newtag['associated_adapters'] = list(x
+                                                         for x
+                                                         in associated_adapters
+                                                         if x in newtag['associated_adapters'])
+                    new_axonius_entity['tags'].append(newtag)
+
+        # remove the adapters one by one from the DB, and also keep track in memory
+        adapter_entities_left = list(axonius_entity_to_split['adapters'])
+        for adapter_to_remove_from_old in new_axonius_entity['adapters']:
+            entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
+                                    {
+                                        "$pull": {
+                                            'adapters': {
+                                                PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
+                                                    PLUGIN_UNIQUE_NAME],
+                                                'data.id': adapter_to_remove_from_old['data']['id']
+                                            }
+                                        }
+            })
+            adapter_entities_left.remove(adapter_to_remove_from_old)
+
+        # generate a list of (unique_plugin_name, id) from the adapter entities left
+        adapter_entities_left_by_id = [
+            [adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']]
+            for adapter
+            in adapter_entities_left
+        ]
+
+        # the old entity might and might not keep the tag:
+        # if the tag contains an associated_adapter that is also part of the old entity
+        # - then this tag is also associated with the old entity
+        # if it does not
+        # - this this tag is removed from the old entity
+
+        # so now we generate a list of all tags that must be removed from the old entity
+        # a tag will be removed if all of its associated_adapters are not in any of the
+        # adapter entities left in the old device, i.e. all of its associated_adapters have moved
+        pull_those = [tag_from_old
+                      for tag_from_old
+                      in axonius_entity_to_split['tags']
+                      if all(assoc_adapter not in adapter_entities_left_by_id
+                             for assoc_adapter
+                             in tag_from_old['associated_adapters'])]
+
+        set_query = {
+            ADAPTERS_LIST_LENGTH: len(set(remaining_adapters))
+        }
+        if pull_those:
+            pull_query = {
+                'tags': {
+                    "$or": [
+                        {
+                            PLUGIN_UNIQUE_NAME: pull_this_tag[PLUGIN_UNIQUE_NAME],
+                            "name": pull_this_tag['name']
+                        }
+                        for pull_this_tag
+                        in pull_those
+                    ]
+
+                }
+            }
+            full_query = {
+                "$pull": pull_query,
+                "$set": set_query
+            }
+        else:
+            full_query = {
+                "$set": set_query
+            }
+        entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
+                                full_query)
+        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
+        entities_db.insert_one(new_axonius_entity)
+
+    def _link_entities(self, entities_candidates, entities_db):
+        """
+        Link all given axonius entities, assuming 2 are given
+        """
+        collected_adapter_entities = [axonius_entity['adapters'] for axonius_entity in entities_candidates]
+        all_unique_adapter_entities_data = [v for d in collected_adapter_entities for v in d]
+
+        # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
+        # a tag is the same tag, if it has the same plugin_unique_name and name.
+        def keyfunc(tag):
+            return tag['plugin_unique_name'], tag['name']
+
+        # first, lets get all tags and have them sorted. This will make the same tags be consecutive.
+        all_tags = sorted((t for dc in entities_candidates for t in dc['tags']), key=keyfunc)
+        # now we have the same tags ordered consecutively. so we want to group them, so that we
+        # would have duplicates of the same tag in their identity key.
+        all_tags = groupby(all_tags, keyfunc)
+        # now we have them groupedby, lets select only the one which is the newest.
+        tags_for_new_device = {tag_key: max(duplicated_tags, key=lambda tag: tag['accurate_for_datetime'])
+                               for tag_key, duplicated_tags
+                               in all_tags}
+        internal_axon_id = uuid.uuid4().hex
+
+        # now, let us delete all other AxoniusDevices
+        entities_db.delete_many({'$or':
+                                 [
+                                     {'internal_axon_id': axonius_entity['internal_axon_id']}
+                                     for axonius_entity in entities_candidates
+                                 ]
+                                 })
+        entities_db.insert_one({
+            "internal_axon_id": internal_axon_id,
+            "accurate_for_datetime": datetime.now(),
+            "adapters": all_unique_adapter_entities_data,
+            ADAPTERS_LIST_LENGTH: len(set([x[PLUGIN_NAME] for x in all_unique_adapter_entities_data])),
+            "tags": list(tags_for_new_device.values())  # Turn it to a list
+        })
 
     def _save_data_from_adapters(self, adapter_unique_name):
         """

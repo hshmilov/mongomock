@@ -16,8 +16,7 @@ class QcoreMongo(object):
         else:
             host = 'localhost'
 
-        self.connection = MongoClient(host=host, replicaset='axon-cluster', retryWrites=True, username='ax_user',
-                                      password='ax_pass')
+        self.connection = MongoClient(host=host, username='ax_user', password='ax_pass')
         self._table = self.connection[DB_NAME]['PUMPS']
 
     @property

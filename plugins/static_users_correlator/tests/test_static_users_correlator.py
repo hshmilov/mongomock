@@ -1,8 +1,8 @@
 import itertools
 import uuid
 
+from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.types.correlation import CorrelationResult
 from static_users_correlator.engine import StaticUserCorrelatorEngine
 
 

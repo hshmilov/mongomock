@@ -1,4 +1,6 @@
+import os
 import pymongo
+import subprocess
 
 from axonius.plugin_base import EntityType
 from services.docker_service import DockerService
@@ -22,56 +24,30 @@ class MongoService(DockerService):
         return [(DOCKER_PORTS[self.container_name], 27017)]
 
     @property
-    def max_allowed_memory(self):
-        return 12 * 1024  # 12GB
-
-    @property
     def image(self):
         return 'mongo:4.0'
 
-    def start(self, mode='',
-              allow_restart=False,
-              rebuild=False,
-              *args, **kwargs):
-        # TODO: Figure out how NOT to rebuild mongo everytime :)
-        rebuild = True
-
-        super().start(mode, allow_restart, rebuild, *args, **kwargs)
-
-        self.wait_for_service()
-        print("Mongo master is online")
-
-        self.run_command_in_container("mongo /docker-entrypoint-initdb.d/configure_replica_set.js")
-        print("Finished setting up mongo")
-
-    @property
-    def _additional_parameters(self):
-        return ['mongod',
-                '--keyFile', '/docker-entrypoint-initdb.d/mongodb.key',
-                '--replSet', 'axon-cluster'
-                ]
-
-    def get_dockerfile(self, mode=''):
-        return f"""
-    FROM mongo:4.0
-    
-    COPY docker-entrypoint-initdb.d/* /docker-entrypoint-initdb.d/
-    RUN chmod 600 /docker-entrypoint-initdb.d/*
-    RUN chown mongodb:mongodb /docker-entrypoint-initdb.d/*
-    """[1:]
-
-    def get_main_file(self):
-        return ''
-
     @property
     def volumes(self):
-        return [f'{self.container_name}_data:/data/db']
+        return [f'{self.container_name}_data:/data/db',
+                '{0}:/docker-entrypoint-initdb.d'.format(os.path.join(self.service_dir, 'docker-entrypoint-initdb.d'))]
 
     @property
     def environment(self):
         return ['MONGO_INITDB_ROOT_USERNAME=ax_user',
                 'MONGO_INITDB_ROOT_PASSWORD=ax_pass',
                 'MONGO_INITDB_DATABASE=core']
+
+    def get_dockerfile(self, mode=''):
+        return None
+
+    def build(self, mode='', runner=None):
+        docker_pull = ['docker', 'pull', self.image]
+        if runner is None:
+            print(' '.join(docker_pull))
+            subprocess.check_output(docker_pull, cwd=self.service_dir)
+        else:
+            runner.append_single(self.container_name, docker_pull, cwd=self.service_dir)
 
     def remove_image(self):
         pass  # We never want to remove this static image...

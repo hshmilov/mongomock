@@ -31,6 +31,7 @@ class EntitiesNamespace(object):
         self.add_data = functools.partial(plugin_base.add_data_to_entity, entity)
         self.add_adapterdata = functools.partial(plugin_base.add_adapterdata_to_entity, entity)
         self.tag = functools.partial(plugin_base._tag, entity)
+        self.tag_many = functools.partial(plugin_base._tag_many, entity)
 
     def get(self, mongo_filter=None, _id=None, internal_axon_id=None, data=None, identity_tuple=None):
         """

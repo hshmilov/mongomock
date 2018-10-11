@@ -73,13 +73,6 @@ def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixtur
     time.sleep(10)
     scheduler.wait_for_scheduler(True)
 
-    # TODO: This is flaky as hell
-    # Could be fixed as part of AX-2139
-    time.sleep(10)
-    scheduler.start_research()
-    time.sleep(10)
-    scheduler.wait_for_scheduler(True)
-
     gui.login_user(DEFAULT_USER)
     assert gui.get_devices_count().content == b'50'
 
