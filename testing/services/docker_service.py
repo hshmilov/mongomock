@@ -1,6 +1,7 @@
 import os
 import subprocess
 from abc import abstractmethod
+from typing import Iterable
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -62,6 +63,13 @@ class DockerService(AxonService):
     def environment(self):
         return []
 
+    @property
+    def max_allowed_memory(self) -> int:
+        """
+        Max allowed memory in megabytes
+        """
+        return None
+
     def get_dockerfile(self, mode=''):
         return f'''
 FROM axonius/axonius-libs
@@ -96,6 +104,15 @@ else:
     def docker_network(self):
         return 'axonius'
 
+    @property
+    def _additional_parameters(self) -> Iterable[str]:
+        """
+        Virtual by design
+        Add more parameters to the docker up command at the end
+        :return:
+        """
+        return []
+
     def start(self,
               mode='',
               allow_restart=False,
@@ -111,6 +128,13 @@ else:
         logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
 
         docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
+
+        max_allowed_memory = self.max_allowed_memory
+        if max_allowed_memory:
+            docker_up += [f'--memory={max_allowed_memory}m',
+                          '--oom-kill-disable',  # don't kill my container
+                          '--memory-swappiness=0',  # we don't need swap
+                          f'--memory-swap={max_allowed_memory}m']  # no access to swap either
 
         publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
         if mode != 'prod' or self.override_exposed_port or expose_port:
@@ -135,6 +159,8 @@ else:
             docker_up.extend(extra_flags)
 
         docker_up.append(self.image)
+
+        docker_up += self._additional_parameters
 
         if self.get_is_container_up(True):
             if allow_restart:

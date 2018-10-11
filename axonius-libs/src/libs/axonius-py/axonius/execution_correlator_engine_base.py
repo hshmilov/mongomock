@@ -1,16 +1,19 @@
 import logging
+from collections import OrderedDict
+from datetime import datetime, timedelta
+
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.correlator_base import (UnsupportedOS, WarningResult,
+                                     figure_actual_os)
+from axonius.correlator_engine_base import CorrelatorEngineBase
+from axonius.types.correlation import CorrelationReason, CorrelationResult
+from promise import Promise
 
 logger = logging.getLogger(f'axonius.{__name__}')
 """
 ExecutionCorrelationEngineBase.py: A base class that implements execution based correlation
 """
-from collections import OrderedDict
-from datetime import timedelta, datetime
-from promise import Promise
 
-from axonius.correlator_base import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os, CorrelationReason
-from axonius.correlator_engine_base import CorrelatorEngineBase
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 """
 Timeout until stop waiting for execution results

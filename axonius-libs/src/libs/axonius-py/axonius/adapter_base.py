@@ -14,12 +14,12 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 import func_timeout
 from bson import ObjectId
-from flask import jsonify, request, make_response
+from flask import jsonify, request
 
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
+from axonius.consts.plugin_consts import (PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME)
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.mixins.configurable import Configurable
@@ -223,29 +223,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         }
         return entity_db.find(dbfilter)
 
-    def __archive_axonius_device(self, plugin_unique_name, device_id, db_to_use):
-        """
-        Finds the axonius device with the given plugin_unique_name and device id,
-        assumes that the axonius device has only this single adapter device.
-
-        writes the device to the archive db, then deletes it
-        """
-        axonius_device = db_to_use.find_one_and_delete({
-            'adapters': {
-                '$elemMatch': {
-                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                    'data.id': device_id
-                }
-            }
-        })
-        if axonius_device is None:
-            logger.error(f"Tried to archive nonexisting device: {plugin_unique_name}: {device_id}")
-            return False
-
-        axonius_device['archived_at'] = datetime.utcnow()
-        self.aggregator_db_connection['old_device_archive'].insert_one(axonius_device)
-        return True
-
     def __clean_entity(self, age_cutoff, entity_type: EntityType):
         """
         Removes entities from given type from a given age cutoff
@@ -271,32 +248,14 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                                    adapter_entities_to_delete):
         counter = 0
         for index, entity_to_remove in enumerate(adapter_entities_to_delete):
-            if index < len(axonius_entity['adapters']) - 1:
-                logger.info(f"Unlinking entity {entity_to_remove}")
-                # if the above condition isn't met it means
-                # that the current entity is the last one (or even the only one)
-                # if it is in fact the only one there's no Unlink to do: the whole axonius device is gone
-                response = self.request_remote_plugin('plugin_push?rebuild=False', AGGREGATOR_PLUGIN_NAME, 'post', json={
-                    "plugin_type": "Plugin",
-                    "data": {
-                        'Reason': 'The device is too old so it is going to be deleted'
-                    },
-                    "associated_adapters": [
-                        entity_to_remove
-                    ],
-                    "association_type": "Unlink",
-                    "entity": entity_type.value
-                })
-                if response.status_code != 200:
-                    logger.error(f"Unlink failed for {entity_to_remove}," +
-                                 "not removing the device for consistency." +
-                                 f"Error: {response.status_code}, {str(response.content)}")
-
-                    continue
-
-            logger.info(f"Deleting axonius device {entity_to_remove}")
-            if self.__archive_axonius_device(*entity_to_remove, db_to_use):
+            logger.debug(f"Deleting entity {entity_to_remove}")
+            try:
+                self.delete_adapter_entity(entity_type, *entity_to_remove)
                 counter += 1
+            except Exception:
+                logger.exception(f"Error while unlink")
+                continue
+
         return counter
 
     def clean_db(self):

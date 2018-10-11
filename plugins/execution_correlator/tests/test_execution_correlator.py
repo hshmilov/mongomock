@@ -2,17 +2,19 @@
 This is a default test we do just to check that our testing system works.
 The following will be run by pytest.
 """
-import pytest
-
-# we're actually testing ExecutionCorrelatorEngineBase here
-from axonius.execution_correlator_engine_base import _find_contradictions, UNAVAILABLE_CMD_OUTPUT
-from execution_correlator.engine import ExecutionCorrelatorEngine
-import execution_correlator.engine as CE
 import sys
+
+import pytest
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.correlator_base import WarningResult
+# we're actually testing ExecutionCorrelatorEngineBase here
+from axonius.execution_correlator_engine_base import (UNAVAILABLE_CMD_OUTPUT,
+                                                      _find_contradictions)
+from axonius.types.correlation import CorrelationReason, CorrelationResult
 from promise import Promise
 
-from axonius.correlator_base import CorrelationResult, WarningResult, CorrelationReason
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+import execution_correlator.engine as CE
+from execution_correlator.engine import ExecutionCorrelatorEngine
 
 
 def correlate(devices_db, executor=None, cmds=None, parse_results=None):

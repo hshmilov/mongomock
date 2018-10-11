@@ -25,6 +25,13 @@ CHUNK_SIZE = 1024
 MAX_INSTANCES_OF_SAME_PLUGIN = 100
 
 
+def set_mongo_parameter(connection, name, value):
+    connection['admin'].command({
+        'setParameter': 1,
+        name: value
+    })
+
+
 class CoreService(PluginBase, Configurable):
     def __init__(self, **kwargs):
         """ Initialize all needed configurations
@@ -86,6 +93,16 @@ class CoreService(PluginBase, Configurable):
                                     id='clean_offline_plugins',
                                     max_instances=1)
         self.cleaner_thread.start()
+
+        with self._get_db_connection() as connection:
+            # this command sets mongo's query space to be larger default
+            # which allows for faster queries using the RAM alone
+            # set to max size mongo allows
+            set_mongo_parameter(connection, 'internalQueryExecMaxBlockingSortBytes',
+                                2 * 1024 * 1024 * 1024 - 1)
+
+            # we want slightly more time for transactions
+            set_mongo_parameter(connection, 'maxTransactionLockRequestTimeoutMillis', 20)
 
     def clean_offline_plugins(self):
         """Thread for cleaning offline plugin.

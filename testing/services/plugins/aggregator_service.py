@@ -49,45 +49,6 @@ class AggregatorService(PluginService):
         self.rebuild_views()
         return response
 
-    def add_label(self, name, unique_plugin_name, adapter_id, entity):
-        # This code has to be the same as plugin_base.devices.add_label
-        response = requests.post(
-            self.req_url + "/plugin_push", headers={API_KEY_HEADER: self.api_key}, json={
-                "association_type": "Tag",
-                "associated_adapters": [
-                    (unique_plugin_name, adapter_id)
-                ],
-                "name": name,
-                "data": True,  # is enabled
-                "type": "label",
-                "entity": entity
-            })
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-                                            f"{str(response.content)}"
-        return response
-
-    def link(self, associated_adapters, entity):
-        response = requests.post(
-            self.req_url + "/plugin_push", headers={API_KEY_HEADER: self.api_key}, json={
-                "association_type": "Link",
-                "associated_adapters": associated_adapters,
-                "entity": entity
-            })
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-                                            f"{str(response.content)}"
-        return response
-
-    def unlink(self, associated_adapters, entity):
-        response = requests.post(
-            self.req_url + "/plugin_push", headers={API_KEY_HEADER: self.api_key}, json={
-                "association_type": "Unlink",
-                "associated_adapters": associated_adapters,
-                "entity": entity
-            })
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-                                            f"{str(response.content)}"
-        return response
-
     def rebuild_views(self, internal_axon_ids: List[str] = None):
         url = f'/trigger/rebuild_entity_view?priority={bool(internal_axon_ids)}'
         return requests.post(self.req_url + url, headers={API_KEY_HEADER: self.api_key},
