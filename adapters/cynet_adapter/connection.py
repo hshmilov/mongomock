@@ -34,7 +34,10 @@ class CynetConnection(RESTConnection):
         :return: the response
         :rtype: dict
         """
-        response = self._post('sql/runQuery', body_params='select * from maint.hostsingroups', use_json_in_body=False,
+        yield from self.__do_query('select * from indicators.hosts')
+
+    def __do_query(self, query):
+        response = self._post('sql/runQuery', body_params=query, use_json_in_body=False,
                               use_json_in_response=False)
 
         tables = json.loads(response.decode('utf-8'))['tables']

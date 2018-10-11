@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_date
 from cynet_adapter.connection import CynetConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -103,18 +104,22 @@ class CynetAdapter(AdapterBase):
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('id')
-                hostname = device_raw.get('hostname')
-                if not device_id:
+                hostname = device_raw.get('hostName')
+                # Ofri saw wierd entities with no hostname and IDs. These are not real devices.
+                if not device_id or not hostname:
                     logger.warning(f'No id of device {device_raw}')
                     continue
                 device.id = device_id + (hostname or '')
                 device.hostname = hostname
+                device.last_seen = parse_date(device_raw.get('lastScan'))
                 try:
-                    ip = device_raw.get('ip')
+                    ip = device_raw.get('lastIP')
                     if ip:
                         device.add_nic(None, [str(ipaddress.ip_address(int(ip)))])
                 except Exception:
                     logger.exception(f'Problem getting IP for cynet device {device_raw}')
+                device.figure_os(device_raw.get('osVersion'))
+
                 device.set_raw(device_raw)
                 yield device
             except Exception:
