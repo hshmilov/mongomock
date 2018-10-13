@@ -13,7 +13,7 @@ promise==2.1
 pyasn1==0.3.7
 ldap3==2.3
 dnspython==1.15.0
-boto3==1.5.7
+boto3==1.9.22
 namedlist==1.7
 paramiko==2.3.1
 pyVmomi==6.5.0.2017.5.post1
