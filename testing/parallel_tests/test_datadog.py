@@ -1,5 +1,6 @@
 # we need fixture so ignore unused
 # pylint: disable=W0611
+import pytest
 from services.adapters.datadog_service import (DatadogService, datadog_fixture)
 from test_credentials.test_datadog_credentials import (SOME_DEVICE_ID,
                                                        client_details)
@@ -26,3 +27,7 @@ class TestDatadogAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('No test environment.')
+    def test_fetch_devices(self):
+        pass

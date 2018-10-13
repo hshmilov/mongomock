@@ -107,7 +107,7 @@ class CylanceAdapter(AdapterBase):
                 if device_id is None or device_id == '':
                     logger.warning(f'No id of device {device_raw}')
                     continue
-                device.id = device_id
+                device.id = device_id + (device_raw.get('host_name') or '')
                 device.figure_os((device_raw.get('operatingSystem') or '') + ' ' + (device_raw.get('os_version') or ''))
                 hostname = device_raw.get('host_name') or ''
                 try:

@@ -6,4 +6,4 @@ client_details = {
     "tid": "815282d5-9fa2-4fe7-baad-b229e79179ae"
 }
 
-SOME_DEVICE_ID = '2002948d-383b-410a-9c4e-e9e38794e08d'
+SOME_DEVICE_ID = '2002948d-383b-410a-9c4e-e9e38794e08dEC2AMAZ-V8E9DHF.TestDomain.test'

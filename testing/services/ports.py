@@ -18,6 +18,7 @@ DOCKER_PORTS = {
     'qcore-adapter':                    5015,
     'qcore-mediator':                   5016,
     'careful-execution-correlator':     5039,
+    'bitdefender-adapter':              5044,
     'core':                             5050,
     'softlayer-adapter':                5090,
     'sophos-adapter':                   5092,

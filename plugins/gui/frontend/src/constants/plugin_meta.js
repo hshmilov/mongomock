@@ -203,6 +203,10 @@ export const pluginMeta = {
 		title: 'Juniper Junos',
 		description: 'The Juniper Junos Adapter connects to Juniper switches and routers.'
 	},
+    bitdefender_adapter: {
+        title: 'Bitdefender GravityZone - BETA',
+        description: 'Bitdefender GravityZone Business Security uses machine learning and heuristics to offer protection against malware, phishing, ransomware, exploits and zero-days.'
+    },
     bomgar_adapter: {
         title: 'Bomgar Remote Support',
         description: 'Bomgar Remote Support allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile devices.'
