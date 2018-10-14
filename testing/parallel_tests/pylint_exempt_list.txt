@@ -202,8 +202,6 @@ adapters/sccm_adapter/consts.py
 adapters/sccm_adapter/service.py
 adapters/secdo_adapter/connection.py
 adapters/secdo_adapter/service.py
-adapters/sentinelone_adapter/connection.py
-adapters/sentinelone_adapter/service.py
 adapters/service_now_adapter/service.py
 adapters/softlayer_adapter/connection.py
 adapters/softlayer_adapter/exceptions.py
