@@ -727,7 +727,7 @@ def get_serial(adapter_device):
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
     if asset:
-        return asset.split('.')[0].lower()
+        return asset.split('.')[0].lower().strip()
     return None
 
 
