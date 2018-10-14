@@ -263,7 +263,8 @@ class DeviceAdapter(SmartJsonClass):
     related_ips = Field(DeviceAdapterRelatedIps, "Related Ips")
     pc_type = Field(str, "PC Type", enum=["Unspecified", "Desktop", "Laptop or Tablet", "Workstation",
                                           "Enterprise Server", "SOHO Server", "Appliance PC", "Performance Server",
-                                          "Maximum"])
+                                          "Maximum", "Mobile"])
+    physical_location = Field(str, 'Physical Location')
     number_of_processes = Field(int, "Number Of Processes")
     hard_drives = ListField(DeviceAdapterHD, "Hard Drives")
     cpus = ListField(DeviceAdapterCPU, "CPUs")

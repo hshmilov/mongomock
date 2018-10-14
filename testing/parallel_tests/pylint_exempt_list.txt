@@ -23,6 +23,7 @@ adapters/cylance_adapter/service.py
 adapters/desktop_central_adapter/connection.py
 adapters/desktop_central_adapter/service.py
 adapters/divvycloud_adapter/service.py
+adapters/dropbox_adapter/service.py
 adapters/duo_adapter/service.py
 adapters/ensilo_adapter/connection.py
 adapters/ensilo_adapter/service.py

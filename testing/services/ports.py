@@ -97,6 +97,7 @@ DOCKER_PORTS = {
     'static-analysis':                  6037,
     'alibaba-adapter':                  6038,
     'datadog-adapter':                  6041,
+    'dropbox-adapter':                  6042,
     'mongo':                            27017,
 }
 
