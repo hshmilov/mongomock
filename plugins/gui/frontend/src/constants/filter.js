@@ -18,7 +18,7 @@ const equals = {
 }
 const contains = {
 	pattern: '{field} == regex("{val}", "i")',
-	notPattern: '{field} == regex("^(?!.*{val})", "i")'
+	notPattern: 'NOT [{field} == regex("{val}", "i")]'
 }
 const numerical = {
 	'equals': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
@@ -55,7 +55,7 @@ export const compOps = {
 	},
 	'ip': {
 		'subnet': {
-			pattern: '({field}_raw >= {val} and {field}_raw <= {val})',
+			pattern: '{field}_raw == match({"$gte": {val}, "$lte": {val}})',
 			notPattern: '({field}_raw < {val} or {field}_raw > {val})'
 		},
 		equals,

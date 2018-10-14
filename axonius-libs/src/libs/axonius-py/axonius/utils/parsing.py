@@ -1051,14 +1051,16 @@ def parse_filter(filter_str):
             # Return only the negation of list of queries
             return {'$nor': nor_queries}
         # Remove redundant 'and' in the beginning or end of the remaining filter
-        leading_and = re.match(r'^\s*and\s*', filter_str)
-        if leading_and:
-            filter_str = filter_str.replace(leading_and.group(0), '')
-        trailing_and = re.match(r'(.*)\s+and\s*$', filter_str)
-        if trailing_and:
-            filter_str = trailing_and.group(1)
+        leading_op = re.match(r'^\s*(and|or)\s*', filter_str)
+        op = 'and'
+        if leading_op:
+            filter_str = filter_str.replace(leading_op.group(0), '')
+            op = leading_op.group(1)
+        trailing_op = re.match(r'(.*)\s+(and|or)\s*$', filter_str)
+        if trailing_op:
+            filter_str = trailing_op.group(1)
         # Return query combining the remaining query as well as negation of list of queries
-        return {'$and': [pql.find(filter_str), {'$nor': nor_queries}]}
+        return {f'${op}': [pql.find(filter_str), {'$nor': nor_queries}]}
 
     return pql.find(filter_str)
 
