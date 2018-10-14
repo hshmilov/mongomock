@@ -23,6 +23,10 @@ RUN apt-get update && \
 
 RUN /bin/bash -c 'echo -e "[FreeTDS]\nDescription=FreeTDS Driver\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" > /etc/odbcinst.ini'
 
+# Install AWS dependencies
+RUN curl -o /usr/bin/aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator && \
+    chmod +x /usr/bin/aws-iam-authenticator
+
 # Install more gui dependencies.
 
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
