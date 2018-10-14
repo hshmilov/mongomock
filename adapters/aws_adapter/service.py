@@ -85,8 +85,8 @@ class AWSTagKeyValue(SmartJsonClass):
 
 
 class AWSIPRule(SmartJsonClass):
-    from_port = Field(str, 'From Port')
-    to_port = Field(str, 'To Port')
+    from_port = Field(int, 'From Port')
+    to_port = Field(int, 'To Port')
     ip_protocol = Field(str, 'IP Protocol')
     ip_ranges = ListField(str, 'CIDR')
 
@@ -506,33 +506,41 @@ class AwsAdapter(AdapterBase):
                     try:
                         for security_group in device_raw.get('SecurityGroups'):
                             def __make_ip_rules_list(ip_pemissions_list):
+                                ip_rules = []
                                 if not isinstance(ip_pemissions_list, list):
                                     return None
                                 for ip_pemission in ip_pemissions_list:
                                     if not isinstance(ip_pemission, dict):
                                         continue
-                                    from_port = str(ip_pemission.get('FromPort')) \
-                                        if ip_pemission.get('FromPort') else None
-                                    to_port = str(ip_pemission.get('ToPort')) if ip_pemission.get('ToPort') else None
+                                    from_port = int(ip_pemission.get('FromPort')) \
+                                        if ip_pemission.get('FromPort') is not None else None
+                                    to_port = int(ip_pemission.get('ToPort')) \
+                                        if ip_pemission.get('ToPort') is not None else None
                                     ip_protocol = str(ip_pemission.get('IpProtocol')) \
                                         if ip_pemission.get('IpProtocol') else None
-                                    ip_ranges_raw = (ip_pemission.get('IpRanges') or []).extend(
-                                        ip_pemission.get('Ipv6Ranges') or [])
+                                    if ip_protocol == '-1':
+                                        ip_protocol = 'Any'
+                                    ip_ranges_raw = ip_pemission.get('IpRanges') or []
+                                    ip_ranges_raw_v6 = ip_pemission.get('Ipv6Ranges') or []
+                                    ip_ranges_raw += ip_ranges_raw_v6
                                     ip_ranges = []
                                     for ip_range_raw in ip_ranges_raw:
                                         ip_ranges.append((ip_range_raw.get('CidrIp') or '') +
                                                          (ip_range_raw.get('CidrIpv6') or '') +
                                                          '_Description:' + (ip_range_raw.get('Description') or ''))
-                                    return AWSIPRule(from_port=from_port,
-                                                     to_port=to_port,
-                                                     ip_protocol=ip_protocol,
-                                                     ip_ranges=ip_ranges)
+                                    ip_rules.append(AWSIPRule(from_port=from_port,
+                                                              to_port=to_port,
+                                                              ip_protocol=ip_protocol,
+                                                              ip_ranges=ip_ranges))
+                                return ip_rules
                             security_group_raw = security_group_dict.get(security_group.get('GroupId'))
-
-                            device.add_aws_security_group(name=security_group.get('GroupName'),
-                                                          outbound=__make_ip_rules_list(
-                                                              security_group_raw.get('IpPermissionsEgress')),
-                                                          inbound=__make_ip_rules_list(security_group_raw.get('IpPermissions')))
+                            if security_group_raw and isinstance(security_group_raw, dict):
+                                device.add_aws_security_group(name=security_group.get('GroupName'),
+                                                              outbound=__make_ip_rules_list(
+                                                                  security_group_raw.get('IpPermissionsEgress')),
+                                                              inbound=__make_ip_rules_list(security_group_raw.get('IpPermissions')))
+                            else:
+                                device.add_aws_security_group(name=security_group.get('GroupName'))
                     except Exception:
                         logger.exception(f'Problem getting security groups at {device_raw}')
                     device.cloud_id = device_raw['InstanceId']
