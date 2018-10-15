@@ -12,7 +12,7 @@ export const SET_ALLOWED_DATES = 'SET_ALLOWED_DATES'
 export const constants = {
 	state: {
 		constants: {},
-		first_historical_date: {},
+		firstHistoricalDate: {},
 		allowedDates: {}
 	},
 	mutations: {
@@ -23,8 +23,8 @@ export const constants = {
 		},
 		[ SET_FIRST_HISTORICAL_DATE ] (state, payload) {
 			if (payload.data) {
-				state.first_historical_date = new Date(payload.data)
-				state.first_historical_date.setDate(state.first_historical_date.getDate() - 1);
+				state.firstHistoricalDate = new Date(payload.data)
+				state.firstHistoricalDate.setDate(state.firstHistoricalDate.getDate() - 1);
 			}
 		},
 		[ SET_ALLOWED_DATES ] (state, payload) {

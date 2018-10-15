@@ -7,11 +7,13 @@
             <div @click="removeView(index)" class="x-btn link" v-if="index > 0">x</div><div v-else></div>
         </template>
         <a @click="addView" class="x-btn light grid-span3" :class="{ disabled: hasMaxViews }" :title="addBtnTitle">+</a>
-        <label>Show Results From</label>
-        <div class="line-range grid-span2">
-            <x-date-edit v-model="config.datefrom" />
-            <label>to</label>
-            <x-date-edit v-model="config.dateto" />
+        <div class="line-range grid-span3">
+            <input type="radio" v-model="rangeType" value="constant" />
+            <label>Show Results From Range of Dates</label>
+            <template v-if="rangeType === 'constant'">
+                <x-date-edit v-model="config.datefrom" :show-time="false" :limit="firstDateLimit" placeholder="from" />
+                <x-date-edit v-model="config.dateto" :show-time="false" :limit="firstDateLimit" placeholder="to" />
+            </template>
         </div>
     </div>
 </template>
@@ -22,18 +24,31 @@
     import xDateEdit from '../../../components/controls/string/DateEdit.vue'
     import ChartMixin from './chart'
 
+    import { mapState } from 'vuex'
+
     const dashboardView = { name: '', entity: '' }
     export default {
         name: "x-chart-timeline",
         mixins: [ ChartMixin ],
         components: { xSelect, xSelectSymbol, xDateEdit },
         props: { value: {}, views: { required: true }, entities: { required: true } },
+        computed: {
+            ...mapState({
+                firstHistoricalDate(state) {
+                    return state.constants.firstHistoricalDate
+                }
+            }),
+            firstDateLimit() {
+                return [{ type: 'fromto', from: this.firstHistoricalDate, to: new Date()}]
+            }
+        },
         data() {
             return {
                 config: {
                     views: [ { ...dashboardView } ],
                     datefrom: null, dateto: null
                 },
+                rangeType: 'constant',
                 max: 3
             }
         },
@@ -56,10 +71,10 @@
 <style lang="scss">
     .x-chart-metric {
         .line-range {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 20px 240px auto auto;
             .cov-vue-date {
-                width: 240px;
+                width: 200px;
                 .cov-datepicker {
                     width: calc(100% - 4px);
                 }

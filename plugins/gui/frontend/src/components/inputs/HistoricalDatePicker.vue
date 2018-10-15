@@ -26,7 +26,7 @@
         computed: {
             ...mapState({
                 firstHistoricalDate(state) {
-                    return state.constants.first_historical_date
+                    return state.constants.firstHistoricalDate
                 }
             }),
             showingHistorical() {
