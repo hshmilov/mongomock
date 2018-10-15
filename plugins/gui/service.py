@@ -20,6 +20,8 @@ import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+
 from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
@@ -37,6 +39,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           TROUBLESHOOTING_SETTING)
 from axonius.consts.scheduler_consts import Phases, ResearchPhases, StateLevels
 from axonius.email_server import EmailServer
+from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, return_error
@@ -2674,8 +2677,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 entity = EntityType(query['entity'])
                 view_filter = self._find_filter_by_name(entity, query['name'])
                 if view_filter:
-                    logger.info(f'Executing filter {view_filter} on entity {entity.value}')
-                    view_parsed = parse_filter(view_filter['query']['filter'])
+                    query_filter = view_filter['query']['filter']
+                    log_metric(logger, 'query.report', f'<{query_filter}> in entity {entity.value}')
+                    view_parsed = parse_filter(query_filter)
                     views.append({
                         **query,
                         'count': self._entity_views_db_map[entity].count_documents(view_parsed)
@@ -2755,6 +2759,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @stoppable
     def _on_trigger(self):
+        self.dump_metrics()
         with self._get_db_connection() as db_connection:
             schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
             if schemas['config']['generate_report'] is True:
@@ -3044,6 +3049,28 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         config_to_set[MAINTENANCE_SETTINGS][ANALYTICS_SETTING] = support_access_on
         config_to_set[MAINTENANCE_SETTINGS][TROUBLESHOOTING_SETTING] = support_access_on
         self._update_plugin_config(CORE_UNIQUE_NAME, 'CoreService', config_to_set)
+
+    def dump_metrics(self):
+        try:
+            adapter_devices = self._adapter_data(EntityType.Devices)
+            adapter_users = self._adapter_data(EntityType.Users)
+
+            log_metric(logger, 'system.gui.users', self.__users_collection.count_documents({}))
+            log_metric(logger, 'system.devices.seen', adapter_devices['seen'])
+            log_metric(logger, 'system.devices.unique', adapter_devices['unique'])
+
+            log_metric(logger, 'system.users.seen', adapter_users['seen'])
+            log_metric(logger, 'system.users.unique', adapter_users['unique'])
+
+            def dump_per_adapter(mapping, subtype):
+                counters = mapping['counters']
+                for counter in counters:
+                    log_metric(logger, f'adapter.{subtype}.{counter["name"]}', counter['value'])
+
+            dump_per_adapter(adapter_devices, 'devices')
+            dump_per_adapter(adapter_users, 'users')
+        except Exception:
+            logger.exception('Failed to dump metrics')
 
     @gui_add_rule_logged_in('metadata', methods=['GET'], required_permissions={Permission(PermissionType.Settings,
                                                                                           PermissionLevel.ReadOnly)})

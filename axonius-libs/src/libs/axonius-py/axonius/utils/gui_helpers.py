@@ -17,6 +17,7 @@ from axonius.adapter_base import AdapterProperty
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import parse_filter
@@ -128,7 +129,7 @@ def filtered():
             try:
                 filter_expr = request.args.get('filter')
                 if filter_expr and filter_expr != '':
-                    logger.debug(f'Parsing filter: {filter_expr}')
+                    log_metric(logger, 'query.gui', filter_expr)
                     filter_obj = parse_filter(filter_expr)
             except Exception as e:
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
