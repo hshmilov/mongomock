@@ -3,7 +3,7 @@ import requests
 import os
 
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS, VERSION_COLLECTION
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, VERSION_COLLECTION
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
@@ -136,7 +136,8 @@ class PluginService(DockerService):
         :param conf_name: The class name of the config to return
         :return: the config or None
         """
-        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS].find_one({'config_name': conf_name})
+        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
+                                                                                                 'config_name': conf_name})
         if config_bulk:
             return config_bulk.get('config')
         return None
@@ -151,13 +152,14 @@ class PluginService(DockerService):
         :param value
         :return: the config or None
         """
-        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS].find_one({'config_name': conf_name})
+        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
+                                                                                                 'config_name': conf_name})
         config_bulk = config_bulk['config']
         config_bulk[specific_key] = value
-        self.db.client[self.unique_name][CONFIGURABLE_CONFIGS].update_one({'config_name': conf_name},
-                                                                          {"$set":
-                                                                           {f"config."
-                                                                            f"{specific_key}": value}})
+        self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].update_one({'config_name': conf_name},
+                                                                                     {"$set":
+                                                                                      {f"config."
+                                                                                       f"{specific_key}": value}})
         response = requests.post(self.req_url + "/update_config", headers={API_KEY_HEADER: self.api_key})
         response.raise_for_status()
 

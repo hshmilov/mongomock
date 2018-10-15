@@ -1,6 +1,6 @@
 import requests
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 
 
@@ -28,7 +28,7 @@ class CoreService(PluginService):
         return self.register()
 
     def set_execution_config(self, enabled):
-        self.db.get_collection('core', CONFIGURABLE_CONFIGS).update_one(
+        self.db.get_collection('core', CONFIGURABLE_CONFIGS_COLLECTION).update_one(
             {'config_name': 'CoreService'},
             {'$set': {'config.execution_settings.enabled': enabled}}
         )

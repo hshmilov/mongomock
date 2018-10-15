@@ -19,6 +19,8 @@
         watch: {
 			message() {
 				this.left = ''
+                clearTimeout(this.timer)
+                this.timer = setTimeout(() => this.$emit('done'), this.timeout)
             }
         },
         methods: {
@@ -28,7 +30,7 @@
         },
         mounted() {
 			if (this.timed) {
-			    setTimeout(() => this.$emit('done'), this.timeout)
+			    this.timer = setTimeout(() => this.$emit('done'), this.timeout)
             }
             this.left = this.getLeftPos()
         },

@@ -16,9 +16,10 @@
         </thead>
         <tbody>
             <tr v-for="item in data" @click="clickRow(item[idField])" :id="item[idField]"
-                class="x-row" :class="{ clickable: clickRowHandler }">
+                class="x-row" :class="{ clickable: clickRowHandler && !readOnly.includes(item[idField]) }">
                 <td v-if="value" class="w-14">
-                    <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected" />
+                    <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected"
+                                :read-only="readOnly.includes(item[idField])" />
                 </td>
                 <td v-for="field in fields" nowrap>
                     <component :is="field.type" :schema="field" :value="processDataValue(item, field)" />
@@ -48,7 +49,7 @@
         components: { xCheckbox, string, integer, number, bool, file, array },
         props: {
 			fields: {}, data: {}, pageSize: {}, sort: {}, idField: { default: 'id' }, value: {},
-            clickRowHandler: {}, clickColHandler: {}
+            clickRowHandler: {}, clickColHandler: {}, readOnly: { type: Array, default: () => {return []} }
         },
         computed: {
 		    ids() {
@@ -71,7 +72,7 @@
         },
         methods: {
 			clickRow(id) {
-				if (!this.clickRowHandler) return
+				if (!this.clickRowHandler || this.readOnly.includes(id)) return
 
                 this.clickRowHandler(id)
             },
@@ -89,7 +90,7 @@
             updateAllSelected() {
 				let input = {ids: []}
 				if (this.allSelected) {
-					this.selected = [ ...this.ids ]
+					this.selected = [ ...this.ids.filter(id => !this.readOnly.includes(id)) ]
                     input.included = false
                 } else {
 					this.selected = []

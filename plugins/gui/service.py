@@ -28,7 +28,7 @@ from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           ANALYTICS_SETTING,
-                                          CONFIGURABLE_CONFIGS,
+                                          CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
                                           DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
@@ -36,13 +36,15 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           SYSTEM_SETTINGS,
-                                          TROUBLESHOOTING_SETTING)
+                                          TROUBLESHOOTING_SETTING,
+                                          NOTES_DATA_TAG)
 from axonius.consts.scheduler_consts import Phases, ResearchPhases, StateLevels
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, return_error
+from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.thread_stopper import stoppable
 from axonius.types.ssl_state import SSLState
@@ -69,6 +71,7 @@ from gui.consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
                         ChartViews, ResearchStatus)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
+from uuid import uuid4
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -426,6 +429,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DATA #
     ########
 
+    def _fetch_historical_entity(self, entity_type: EntityType, entity_id, history_date: datetime = None):
+        return self._get_appropriate_view(history_date, entity_type). \
+            find_one(get_historized_filter(
+                {
+                    'internal_axon_id': entity_id
+                },
+                history_date))
+
     def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[], history_date: datetime = None):
         """
         Retrieve or delete device by the given id, from current devices DB or update it
@@ -442,12 +453,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 len([category for category in advanced_fields if category in field]) == 0,
                 generic_field_names)
 
-        entity = self._get_appropriate_view(history_date, entity_type). \
-            find_one(get_historized_filter(
-                {
-                    'internal_axon_id': entity_id
-                },
-                history_date))
+        entity = self._fetch_historical_entity(entity_type, entity_id, history_date)
         if entity is None:
             return return_error("Entity ID wasn't found", 404)
         # Specific is returned as is, to show all adapter datas.
@@ -748,6 +754,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def disable_device(self):
         return self._disable_entity(EntityType.Devices)
 
+    @gui_add_rule_logged_in('devices/<device_id>/notes', methods=['PUT', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
+    def device_notes(self, device_id):
+        return self._entity_notes(EntityType.Devices, device_id)
+
+    @gui_add_rule_logged_in("devices/<device_id>/notes/<note_id>", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadWrite)})
+    def device_notes_update(self, device_id, note_id):
+        return self._entity_notes_update(EntityType.Devices, device_id, note_id)
+
     #########
     # USER #
     #########
@@ -830,6 +847,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                              ReadOnlyJustForGet)})
     def user_labels(self):
         return self._entity_labels(self.users_db_view, self.users)
+
+    @gui_add_rule_logged_in('users/<user_id>/notes', methods=['PUT', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
+    def user_notes(self, user_id):
+        return self._entity_notes(EntityType.Users, user_id)
+
+    @gui_add_rule_logged_in("devices/<user_id>/notes/<note_id>", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             PermissionLevel.ReadWrite)})
+    def user_notes_update(self, user_id, note_id):
+        return self._entity_notes_update(EntityType.Devices, user_id, note_id)
 
     ###########
     # ADAPTER #
@@ -1230,7 +1258,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         plugin_data = {}
         schemas = list(db_connection[plugin_unique_name]['config_schemas'].find())
-        configs = list(db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS].find())
+        configs = list(db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find())
         for schema in schemas:
             associated_config = [c for c in configs if c['config_name'] == schema['config_name']]
             if not associated_config:
@@ -1279,7 +1307,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return ""
         if request.method == 'GET':
             with self._get_db_connection() as db_connection:
-                config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS]
+                config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION]
                 schema_collection = db_connection[plugin_unique_name]['config_schemas']
                 return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
                                 'schema': schema_collection.find_one({'config_name': config_name})['schema']})
@@ -1310,7 +1338,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param config_to_set:
         """
         with self._get_db_connection() as db_connection:
-            config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS]
+            config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION]
             config_collection.replace_one(filter={
                 'config_name': config_name
             },
@@ -3039,7 +3067,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param support_access_on:
         :return:
         """
-        config_document = self._get_collection(CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME).find_one({
+        config_document = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).find_one({
             'config_name': 'CoreService'
         })
         if not config_document:
@@ -3080,6 +3108,90 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         return jsonify(self.metadata)
+
+    ####################
+    # User Notes #
+    ####################
+
+    def _entity_notes(self, entity_type: EntityType, entity_id):
+        """
+        Method for fetching, creating or deleting the notes for a specific entity, by the id given in the rule
+
+        :param entity_type:  Type of entity in subject
+        :param entity_id:    ID of the entity to handle notes of
+        :param history_date: Date that the data should be fetched for
+        :return:             GET, list of notes for the entity
+        """
+        entity_doc = self._fetch_historical_entity(entity_type, entity_id, None)
+        if not entity_doc:
+            logger.error(f'No entity found with internal_axon_id = {entity_id}')
+            return return_error(f'No entity found with internal_axon_id = {entity_id}', 400)
+
+        entity_obj = AXONIUS_ENTITY_BY_CLASS[entity_type](self, entity_doc)
+        notes_list = entity_obj.get_data_by_name(NOTES_DATA_TAG)
+        if notes_list is None:
+            notes_list = []
+
+        if request.method == 'GET':
+            return jsonify(notes_list)
+
+        if request.method == 'PUT':
+            note_obj = self.get_request_data_as_object()
+            note_obj['user_name'] = session.get('user')['user_name']
+            note_obj['accurate_for_datetime'] = datetime.now()
+            note_obj['uuid'] = str(uuid4())
+            notes_list.append(note_obj)
+            entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
+            return jsonify(note_obj)
+
+        if request.method == 'DELETE':
+            note_ids_list = self.get_request_data_as_object()
+            if not session.get('user').get('admin'):
+                # Validate all notes requested to be removed belong to user
+                current_user = session.get('user')['user_name']
+                for note in notes_list:
+                    if note['uuid'] in note_ids_list and note['user_name'] != current_user:
+                        logger.error('Only Administrator can remove another user\'s Note')
+                        return return_error('Only Administrator can remove another user\'s Note', 400)
+            remaining_notes_list = []
+            for note in notes_list:
+                if note['uuid'] not in note_ids_list:
+                    remaining_notes_list.append(note)
+            entity_obj.add_data(NOTES_DATA_TAG, remaining_notes_list, action_if_exists='merge')
+            return ''
+
+    def _entity_notes_update(self, entity_type: EntityType, entity_id, note_id):
+        """
+        Update the content of a specific note attached to a specific entity.
+        This operation will update accurate_for_datetime.
+        If this is called by an Administrator for a note of another user, the user_name will be changed too.
+
+        :param entity_type:
+        :param entity_id:
+        :param note_id:
+        :return:
+        """
+        entity_doc = self._fetch_historical_entity(entity_type, entity_id, None)
+        if not entity_doc:
+            logger.error(f'No entity found with internal_axon_id = {entity_id}')
+            return return_error('No entity found for selected ID', 400)
+
+        entity_obj = AXONIUS_ENTITY_BY_CLASS[entity_type](self, entity_doc)
+        notes_list = entity_obj.get_data_by_name(NOTES_DATA_TAG)
+        note_doc = next(x for x in notes_list if x['uuid'] == note_id)
+        if not note_doc:
+            logger.error(f'Entity with internal_axon_id = {entity_id} has no note at index = {note_id}')
+            return return_error('Selected Note cannot be found for the Entity', 400)
+
+        current_user = session.get('user')
+        if current_user['user_name'] != note_doc['user_name'] and not current_user.get('admin'):
+            return return_error('Only Administrator can edit another user\'s Note', 400)
+
+        note_doc['note'] = self.get_request_data_as_object()['note']
+        note_doc['user_name'] = current_user['user_name']
+        note_doc['accurate_for_datetime'] = datetime.now()
+        entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
+        return jsonify(note_doc)
 
     @property
     def plugin_subtype(self):

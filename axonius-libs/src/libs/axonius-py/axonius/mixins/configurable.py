@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Iterable, Tuple
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -69,7 +69,7 @@ class Configurable(object):
         """
         Fetch all configs from the DB and update the classes
         """
-        configs = self._get_collection(CONFIGURABLE_CONFIGS)
+        configs = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION)
 
         for inheritor in type(self).__recurse_tree(type(self)):
             if not does_method_belongs_to_class(inheritor._db_config_schema, inheritor):
@@ -143,7 +143,7 @@ class Configurable(object):
         Updates DB with the schema and default configs (if no other config exists)
         """
         schemas = self._get_collection("config_schemas")
-        configs = self._get_collection(CONFIGURABLE_CONFIGS)
+        configs = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION)
         for config_class, config_schema, config_default in self.__get_all_configs_and_defaults():
             old_schema = schemas.find_one_and_replace(filter={
                 'config_name': config_class.__name__,

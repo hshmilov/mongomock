@@ -843,10 +843,16 @@ class AggregatorService(PluginBase, Triggerable):
         # now we have the same tags ordered consecutively. so we want to group them, so that we
         # would have duplicates of the same tag in their identity key.
         all_tags = groupby(all_tags, keyfunc)
-        # now we have them groupedby, lets select only the one which is the newest.
-        tags_for_new_device = {tag_key: max(duplicated_tags, key=lambda tag: tag['accurate_for_datetime'])
-                               for tag_key, duplicated_tags
-                               in all_tags}
+
+        # Now we have them groupedby, lets select only the one which is the newest.
+        tags_for_new_device = {}
+        for tag_key, duplicated_tags in all_tags:
+            current_tags = list(duplicated_tags)
+            tags_for_new_device[tag_key] = max(current_tags, key=lambda tag: tag['accurate_for_datetime'])
+            # The data tag with action 'merge' should aggregate all the data from merge adapter entities
+            if tags_for_new_device[tag_key]['action_if_exists'] == 'merge':
+                tags_for_new_device[tag_key]['data'] = [item for tag in current_tags for item in tag['data']]
+
         internal_axon_id = uuid.uuid4().hex
 
         # now, let us delete all other AxoniusDevices

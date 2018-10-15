@@ -6,6 +6,7 @@ import {
 	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT,
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
+    UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
 	UPDATE_REMOVED_DATA_VIEW, UPDATE_SYSTEM_CONFIG
 } from './mutations'
 
@@ -42,7 +43,9 @@ export const requestApi = ({commit}, payload) => {
 	return new Promise((resolve, reject) => axios(request_config)
 		.then((response) => {
 			if (payload.type) {
-				commit(payload.type, {rule: payload.rule, fetching: false, data: response.data, ...payload.payload})
+				commit(payload.type, {
+					rule: payload.rule, fetching: false, data: response.data, ...payload.payload
+				})
 			}
 			resolve(response)
 		})
@@ -66,7 +69,7 @@ export const requestApi = ({commit}, payload) => {
 }
 
 export const getModule = (state, payload) => {
-	if (!payload || !payload.module) return false
+	if (!payload || !payload.module) return null
 	if (payload.section && state[payload.section]) {
 		return state[payload.section][payload.module]
 	} else if (!payload.section) {
@@ -328,6 +331,39 @@ export const fetchDataByID = ({state, dispatch}, payload) => {
 		type: UPDATE_DATA_BY_ID,
 		payload
 	})
+}
+
+export const SAVE_DATA_NOTE = 'SAVE_DATA_NOTE'
+export const saveDataNote = ({state, dispatch}, payload) => {
+    if (!getModule(state, payload)) return
+    if (!payload.entityId) return
+    let rule = `${payload.module}/${payload.entityId}/notes`
+    let method = 'PUT'
+    if (payload.noteId) {
+        rule = `${rule}/${payload.noteId}`
+        method = 'POST'
+    }
+    return dispatch(REQUEST_API, {
+        rule, method,
+		data: {
+            note: payload.note
+		},
+        type: UPDATE_SAVED_DATA_NOTE,
+        payload
+    })
+}
+
+export const REMOVE_DATA_NOTE = 'REMOVE_DATA_NOTE'
+export const removeDataNote = ({state, dispatch}, payload) => {
+    if (!getModule(state, payload)) return
+    if (!payload.entityId || !payload.noteIdList) return
+    return dispatch(REQUEST_API, {
+        rule: `${payload.module}/${payload.entityId}/notes`,
+        method: 'DELETE',
+        data: payload.noteIdList,
+        type: UPDATE_REMOVED_DATA_NOTE,
+		payload
+    })
 }
 
 export const RUN_ACTION = 'RUN_ACTION'

@@ -6,7 +6,7 @@ import subprocess
 import time
 from datetime import datetime, timedelta
 
-from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS,
+from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
@@ -378,7 +378,7 @@ class AxoniusService():
         return short_name[:-len('_service.py')]
 
     def set_system_settings(self, settings_dict):
-        settings = self.db.get_collection(self.gui.unique_name, CONFIGURABLE_CONFIGS)
+        settings = self.db.get_collection(self.gui.unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
         settings.update_one(filter={"config_name": "GuiService"},
                             update={"$set": {f"config.{SYSTEM_SETTINGS}": settings_dict}})
 
@@ -387,6 +387,6 @@ class AxoniusService():
         views.insert_one(view_params)
 
     def set_research_rate(self, rate):
-        settings = self.db.get_collection(self.scheduler.unique_name, CONFIGURABLE_CONFIGS)
+        settings = self.db.get_collection(self.scheduler.unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
         settings.update_one(filter={"config_name": "SystemSchedulerService"},
                             update={"$set": {"config.system_research_rate": rate}})

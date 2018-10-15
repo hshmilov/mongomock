@@ -3,9 +3,12 @@
         <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
         <div class="x-table-header">
-            <div class="x-title">
+            <div class="x-title" v-if="title">
                 <div>{{ title }}</div>
                 <div v-if="count !== undefined" class="count">({{ count }})</div>
+            </div>
+            <div v-else>
+                <x-search-input v-model="searchValue" @input="$emit('search', $event)" placeholder="Search Notes..." />
             </div>
             <div class="error">{{error}}</div>
             <div class="x-actions"><slot name="actions"/></div>
@@ -18,13 +21,19 @@
 
 <script>
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+    import xSearchInput from '../inputs/SearchInput.vue'
 
 	export default {
 		name: 'x-actionable-table',
-        components: { PulseLoader },
+        components: { PulseLoader, xSearchInput },
 		props: {
-			title: { required: true }, loading: { default: false }, count: { }, error: {}
+			title: { }, loading: { default: false }, count: { }, error: {}
 		},
+        data() {
+		    return {
+		        searchValue: ''
+            }
+        },
         mounted() {
 			this.$refs.greatTable.focus()
         }

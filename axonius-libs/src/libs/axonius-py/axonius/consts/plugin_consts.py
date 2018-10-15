@@ -1,7 +1,8 @@
-PLUGIN_UNIQUE_NAME = 'plugin_unique_name'
-PLUGIN_NAME = 'plugin_name'
+# PATHS #
 VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
+METADATA_PATH = '/home/axonius/shared_readonly_files/__build_metadata'
 
+# SERVICES #
 CORE_UNIQUE_NAME = 'core'
 AGGREGATOR_PLUGIN_NAME = 'aggregator'
 GUI_NAME = 'gui'
@@ -9,17 +10,20 @@ STATIC_CORRELATOR_PLUGIN_NAME = 'static_correlator'
 SYSTEM_SCHEDULER_PLUGIN_NAME = 'system_scheduler'
 DEVICE_CONTROL_PLUGIN_NAME = 'device_control'
 
+# FIELDS #
 ADAPTERS_LIST_LENGTH = 'adapter_list_length'
+PLUGIN_UNIQUE_NAME = 'plugin_unique_name'
+PLUGIN_NAME = 'plugin_name'
+NOTES_DATA_TAG = 'Notes'
 
-GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
-
-METADATA_PATH = '/home/axonius/shared_readonly_files/__build_metadata'
-
+# SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'
 MAINTENANCE_SETTINGS = 'maintenance_settings'
 ANALYTICS_SETTING = 'analytics'
 TROUBLESHOOTING_SETTING = 'troubleshooting'
 
-CONFIGURABLE_CONFIGS = 'configurable_configs'
+# COLLECTIONS #
+CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
 DASHBOARD_COLLECTION = 'dashboard'
 VERSION_COLLECTION = 'version'
+GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'

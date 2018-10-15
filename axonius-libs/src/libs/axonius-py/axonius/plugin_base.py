@@ -44,7 +44,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
                                           MAINTENANCE_SETTINGS,
                                           ANALYTICS_SETTING,
-                                          CONFIGURABLE_CONFIGS,
+                                          CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME, GUI_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           TROUBLESHOOTING_SETTING,
@@ -993,7 +993,8 @@ class PluginBase(Configurable, Feature):
             logger.exception(f"Timeout for {client_name} on {self.plugin_unique_name}")
             raise adapter_exceptions.AdapterException(f"Fetching has timed out")
 
-    def __do_save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType, should_log_info=True) -> int:
+    def __do_save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType,
+                                   should_log_info=True) -> int:
         """
         Saves all given data from adapter (devices, users) into the DB for the given client name
         :return: Device count saved
@@ -1318,7 +1319,8 @@ class PluginBase(Configurable, Feature):
         :return:
         """
 
-        assert action_if_exists == "replace" or (action_if_exists == "update" and tag_type == "adapterdata")
+        assert action_if_exists == "replace" or (action_if_exists == "update" and tag_type == "adapterdata") or (
+            action_if_exists == 'merge' and tag_type == 'data')
 
         tag_data = {
             'association_type': 'Tag',
@@ -1354,9 +1356,10 @@ class PluginBase(Configurable, Feature):
         """ A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out."""
         return self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None, additional_data)
 
-    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data={}):
+    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data={},
+                           action_if_exists='replace'):
         """ A shortcut to __tag with type "data" """
-        return self._tag(entity, identity_by_adapter, name, data, "data", "replace", None, additional_data)
+        return self._tag(entity, identity_by_adapter, name, data, "data", action_if_exists, None, additional_data)
 
     def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data,
                                   action_if_exists="replace", client_used=None, additional_data={}):
@@ -1503,7 +1506,7 @@ class PluginBase(Configurable, Feature):
     # and making sure you don't break a setting somebody else uses.
 
     def __renew_global_settings_from_db(self):
-        config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS].find_one(
+        config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
             {'config_name': 'CoreService'})['config']
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
@@ -1520,7 +1523,7 @@ class PluginBase(Configurable, Feature):
 
         self._maintenance_settings = config[MAINTENANCE_SETTINGS]
 
-        self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS].update_one(
+        self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].update_one(
             filter={'config_name': 'CoreService'}, update={"$set": {"config": config}})
 
         logger.info(self._maintenance_settings)

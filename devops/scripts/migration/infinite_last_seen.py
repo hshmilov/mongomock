@@ -1,4 +1,4 @@
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
 from services.axonius_service import AxoniusService
 
 
@@ -10,7 +10,7 @@ def main():
         instance = cls()
         try:
             unique_name = instance.unique_name
-            configs = ax.db.client[unique_name][CONFIGURABLE_CONFIGS]
+            configs = ax.db.client[unique_name][CONFIGURABLE_CONFIGS_COLLECTION]
 
             configs.update_one(filter={'config_name': 'AdapterBase'},
                                update={'$set': {'config.last_fetched_threshold_hours': 0,

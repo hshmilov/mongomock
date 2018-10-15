@@ -35,7 +35,7 @@ class EntitiesNamespace(object):
 
     def get(self, mongo_filter=None, _id=None, internal_axon_id=None, data=None, identity_tuple=None):
         """
-        Rerutns a list of entities from the entity view by one of the params conditions.
+        Returns a list of entities from the entity view by one of the params conditions.
         if more than one is provided, the preferred order is by the order of args.
         :param str mongo_filter: a mongo filter, e.g. {"internal_axon_id": "123"}
         :param str _id: an id (str)
@@ -48,7 +48,7 @@ class EntitiesNamespace(object):
         """
 
         db = self.plugin_base._entity_views_db_map[self.entity]
-        entity_object = axonius_entity_by_entity_type[self.entity]
+        entity_object = AXONIUS_ENTITY_BY_CLASS[self.entity]
 
         if mongo_filter is not None:
             final_mongo_filter = mongo_filter
@@ -160,6 +160,10 @@ class AxoniusEntity(object):
     def internal_axon_id(self):
         return self.data['internal_axon_id']
 
+    @property
+    def generic_data(self):
+        return self.data['generic_data']
+
     def __get_all_identities(self):
         return [(plugin["plugin_unique_name"], plugin["data"]["id"])
                 for plugin in self.data['specific_data'] if plugin.get('type') == 'entitydata']
@@ -194,7 +198,7 @@ class AxoniusEntity(object):
 
         return self.plugin_base.add_label_to_entity(self.entity, identity_by_adapter, label, is_enabled)
 
-    def add_data(self, name, data, identity_by_adapter=None):
+    def add_data(self, name, data, identity_by_adapter=None, action_if_exists='replace'):
         """
         adds a data to that device.
         :param str name: the name of the data
@@ -208,7 +212,8 @@ class AxoniusEntity(object):
         if identity_by_adapter is None:
             identity_by_adapter = self.__get_all_identities()
 
-        return self.plugin_base.add_data_to_entity(self.entity, identity_by_adapter, name, data)
+        return self.plugin_base.add_data_to_entity(self.entity, identity_by_adapter, name, data,
+                                                   action_if_exists=action_if_exists)
 
     def add_adapterdata(self, data, identity_by_adapter=None, action_if_exists="replace", client_used=None):
         """
@@ -271,6 +276,18 @@ class AxoniusEntity(object):
         # return the promise.
         return self.plugin_base.request_action(name, self.internal_axon_id, data)
 
+    def get_data_by_name(self, name):
+        """
+        Search through the list of 'data' tags for the one with requested name.
+
+        :param name: Name of 'data' tag to search for.
+        :return: The 'data' content of the found tag or None, if not found.
+        """
+        for generic_data_item in self.generic_data:
+            if generic_data_item.get('name') and generic_data_item['name'] == name:
+                return generic_data_item.get('data')
+        return None
+
 
 class AxoniusDevice(AxoniusEntity):
     """
@@ -290,7 +307,7 @@ class AxoniusUser(AxoniusEntity):
         super().__init__(plugin_base, EntityType.Users, entity_in_db)
 
 
-axonius_entity_by_entity_type = {
+AXONIUS_ENTITY_BY_CLASS = {
     EntityType.Devices: AxoniusDevice,
     EntityType.Users: AxoniusUser
 }

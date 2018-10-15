@@ -127,7 +127,6 @@ class ReportsService(PluginBase, Triggerable):
                                'triggered': 0,
                                'name': report_data['name'],
                                'severity': report_data['severity'],
-                               # 'ticket_email': report_data.get('ticket_email', ''),
                                'period': report_data['period'],
                                'last_triggered': report_data.get('last_triggered', None)
                                }

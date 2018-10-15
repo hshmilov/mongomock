@@ -2,6 +2,10 @@
     <transition name="modal" @after-enter="$emit('enter')" @after-leave="$emit('leave')">
         <div class="modal-wrapper">
             <div :class="`modal-container w-${size}`">
+                <div class="modal-header" v-if="title">
+                    <div class="title">{{ title }}</div>
+                    <button class="x-btn link" @click="$emit('close')">x</button>
+                </div>
                 <div class="modal-body">
                     <slot name="body" @submit="$emit('confirm')">
                         Are you sure?
@@ -23,7 +27,7 @@
 	export default {
 		name: 'modal',
         props: { approveText: { default: 'OK' }, approveId: {}, dismissText: { default: 'Cancel' },
-            disabled: {default: false}, size: {default: 'xl'} },
+            disabled: {default: false}, size: {default: 'xl'}, title: {} },
         methods: {
 			onApprove() {
 				if (this.disabled) return
@@ -54,6 +58,17 @@
             border-radius: 2px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
             z-index: 1001;
+            .modal-header {
+                display: flex;
+                border-bottom: 1px solid $grey-2;
+                padding: 0 24px 12px;
+                margin: 0 -24px 24px -24px;
+                .title {
+                    flex: 1 0 auto;
+                    font-weight: 500;
+                    font-size: 16px;
+                }
+            }
             .modal-body {
                 padding: 0;
                 margin-bottom: 24px;

@@ -1,0 +1,207 @@
+<template>
+    <div class="x-entity-notes">
+        <div class="header">
+            <x-search-input v-model="searchValue" placeholder="Search Notes..." />
+            <div class="actions">
+                <button class="x-btn link" v-if="selectedNotes && selectedNotes.length" @click="removeNotes">Remove</button>
+                <button class="x-btn" @click="readOnly? undefined : createNote()" :class="{disabled: readOnly}">+ Note</button>
+            </div>
+        </div>
+        <x-table :data="noteData" :fields="noteSchema" :sort="sort" id-field="uuid" v-model="readOnly? undefined : selectedNotes"
+                 :click-row-handler="readOnly? undefined : editNote" :click-col-handler="sortNotes" :read-only="readOnlyNotes" />
+        <x-modal v-if="noteModal.active" approve-text="Save" @confirm="saveNote" @close="closeNoteModal"
+                 :title="noteModalTitle">
+            <template slot="body">
+                <textarea v-model="noteModal.note" class="text-input" rows="4" placeholder="Enter your note..."></textarea>
+            </template>
+        </x-modal>
+        <x-toast v-if="toastMessage" :message="toastMessage" @done="remoteToast" />
+    </div>
+</template>
+
+<script>
+    import xSearchInput from '../inputs/SearchInput.vue'
+    import xTable from '../schema/SchemaTable.vue'
+    import xModal from '../popover/Modal.vue'
+    import xToast from '../popover/Toast.vue'
+
+    import { mapState, mapActions } from 'vuex'
+    import { SAVE_DATA_NOTE, REMOVE_DATA_NOTE } from '../../store/actions'
+
+    export default {
+        name: 'x-data-entity-notes',
+        components: { xSearchInput, xTable, xModal, xToast },
+        props: {
+            module: { required: true }, entityId: { required: true }, data: { required: true },
+            readOnly: { default: false }
+        },
+        computed: {
+            ...mapState({
+                currentUser(state) {
+                    return {
+                        name: state.auth.data['user_name'], admin: state.auth.data['admin']
+                    }
+                }
+            }),
+            noteData() {
+                return this.data.filter(item => {
+                    if (!this.searchValue) return true
+                    let lowerSearchValue = this.searchValue.toLowerCase()
+                    return this.noteSchema.find(field => {
+                        if (field.type === 'string' && field.format === 'date-time') {
+                            return new Date(item[field.name]).toISOString().replace(/(T|Z)/g, ' ').includes(lowerSearchValue)
+                        }
+                        return item[field.name].toLowerCase().includes(lowerSearchValue)
+                    })
+                }).sort((a, b) => {
+                    if (!this.sort.field) return 0
+
+                    let valA = a[this.sort.field].toUpperCase()
+                    let valB = b[this.sort.field].toUpperCase()
+                    if (valA < valB) {
+                        return this.sort.desc? -1 : 1
+                    }
+                    if (valA > valB) {
+                        return this.sort.desc? 1 : -1
+                    }
+                    return 0
+                })
+            },
+            noteById() {
+                return this.noteData.reduce((map, item) => {
+                    map[item.uuid] = item
+                    return map
+                }, {})
+            },
+            noteSchema() {
+                return [
+                    { name: 'note', title: 'Note', type: 'string'},
+                    { name: 'user_name', title: 'User Name', type: 'string'},
+                    { name: 'accurate_for_datetime', title: 'Last Updated', type: 'string', format: 'date-time'}
+                ]
+            },
+            noteModalTitle() {
+                if (this.noteModal.id) {
+                    return 'Edit note'
+                } else {
+                    return 'Add new note'
+                }
+            },
+            readOnlyNotes() {
+                if (this.currentUser.admin) return []
+                return this.noteData
+                    .filter(note => note['user_name'] !== this.currentUser.name)
+                    .map(note => note.uuid)
+            }
+        },
+        data() {
+            return {
+                searchValue: '',
+                sort: {
+                    field: 'accurate_for_datetime',
+                    desc: false
+                },
+                selectedNotes: [],
+                noteModal: {
+                    active: false,
+                    id: '',
+                    note: ''
+                },
+                toastMessage: ''
+            }
+        },
+        methods: {
+            ...mapActions({ saveDataNote: SAVE_DATA_NOTE, removeDataNote: REMOVE_DATA_NOTE }),
+            createNote() {
+                this.noteModal.active = true
+            },
+            editNote(noteId) {
+                if (this.selectedNotes.length) return
+                this.noteModal.active = true
+                this.noteModal.id = noteId
+                this.noteModal.note = this.noteById[noteId].note
+            },
+            removeNotes() {
+                this.responseWrapper(this.removeDataNote({
+                    module: this.module,
+                    entityId: this.entityId,
+                    noteIdList: this.selectedNotes
+                }).then(() => {
+                    this.toastMessage = 'Notes were removed'
+                    this.selectedNotes = []
+                }))
+            },
+            saveNote() {
+                this.responseWrapper(this.saveDataNote({
+                    module: this.module,
+                    entityId: this.entityId,
+                    noteId: this.noteModal.id,
+                    note: this.noteModal.note
+                }).then(() => {
+                    this.toastMessage = (this.noteModal.id ? 'Existing note was edited' : 'New note was created')
+                    this.closeNoteModal()
+                }))
+            },
+            responseWrapper(promise) {
+                promise.catch(response => {
+                    if (response.status === 400 && response.data) {
+                        // Some problem with the operation - usually permissions issue
+                        this.toastMessage = response.data.message
+                    } else {
+                        // Last resort - should not happen to user!
+                        this.toastMessage = 'Operation could not be performed. Check your logs.'
+                    }
+                })
+            },
+            remoteToast() {
+                this.toastMessage = ''
+            },
+            closeNoteModal() {
+                this.noteModal.active = false
+                this.noteModal.id = ''
+                this.noteModal.note = ''
+            },
+            sortNotes(fieldName) {
+                if (this.sort.field !== fieldName) {
+                    this.sort.desc = true
+                    this.sort.field = fieldName
+                } else if (this.sort.desc) {
+                    this.sort.desc = false
+                } else {
+                    this.sort.desc = true
+                    this.sort.field = ''
+                }
+            }
+        }
+    }
+</script>
+
+<style lang="scss">
+    .x-entity-notes {
+        .header {
+            display: flex;
+            margin-bottom: 12px;
+            .search-input {
+                width: 400px;
+            }
+            .actions {
+                flex: 1 0 auto;
+                display: flex;
+                justify-content: flex-end;
+            }
+        }
+        .x-striped-table {
+            th:nth-child(3), th:nth-child(4) {
+                width: 160px;
+            }
+            td:nth-child(2) {
+                white-space: pre-line;
+            }
+        }
+        .modal-body {
+            .text-input {
+                width: calc(100% - 6px);
+            }
+        }
+    }
+</style>

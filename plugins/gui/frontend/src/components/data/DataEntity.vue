@@ -32,13 +32,16 @@
             <tab v-for="item in entityGenericAdvancedSpecial" :title="item.title" :id="item.name" :key="item.name">
                 <x-schema-calendar v-if="item.schema.format && item.schema.format === 'calendar'" :data="item.data" />
             </tab>
-            <tab title="Extended Data" id="extended" key="extended" v-if="entity.generic.data.length">
+            <tab title="Extended Data" id="extended" key="extended" v-if="entityExtendedData.length">
                 <tabs :vertical="true">
-                    <tab v-for="item, i in entity.generic.data" :title="item.name" :id="`data_${i}`" :key="`data_${i}`"
+                    <tab v-for="item, i in entityExtendedData" :title="item.name" :id="`data_${i}`" :key="`data_${i}`"
                          :selected="!i">
                         <x-custom-data :data="item.data"/>
                     </tab>
                 </tabs>
+            </tab>
+            <tab title="Notes" id="notes" key="notes">
+                <x-data-entity-notes :module="module" :entity-id="entityId" :data="entityNotes" :read-only="history !== undefined" />
             </tab>
             <tab title="Tags" id="tags" key="tags">
                 <div @click="activateTag" class="x-btn link tag-edit" :class="{ disabled: readOnly }">Edit Tags</div>
@@ -55,14 +58,15 @@
 </template>
 
 <script>
-	import Tabs from '../../components/tabs/Tabs.vue'
-	import Tab from '../../components/tabs/Tab.vue'
-	import xSchemaList from '../../components/schema/SchemaList.vue'
+    import Tabs from '../../components/tabs/Tabs.vue'
+    import Tab from '../../components/tabs/Tab.vue'
+    import xSchemaList from '../../components/schema/SchemaList.vue'
     import xSchemaTable from '../schema/SchemaTable.vue'
     import xSchemaCalendar from '../schema/SchemaCalendar.vue'
-	import xCustomData from '../../components/schema/CustomData.vue'
-	import xTagModal from '../../components/popover/TagModal.vue'
-	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+    import xCustomData from '../../components/schema/CustomData.vue'
+    import xTagModal from '../../components/popover/TagModal.vue'
+    import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+    import xDataEntityNotes from './DataEntityNotes.vue'
 
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { SINGLE_ADAPTER } from '../../store/getters'
@@ -75,7 +79,9 @@
     }
 	export default {
 		name: 'x-data-entity',
-        components: { Tabs, Tab, xSchemaList, xSchemaTable, xSchemaCalendar, xCustomData, xTagModal, PulseLoader },
+        components: {
+		    Tabs, Tab, xSchemaList, xSchemaTable, xSchemaCalendar, xCustomData, xTagModal, PulseLoader, xDataEntityNotes
+        },
         props: { module: { required: true }, readOnly: { default: false } },
 		data () {
 			return {
@@ -147,6 +153,14 @@
 					return item
 				})
 			},
+            entityExtendedData() {
+                return this.entity.generic.data.filter(item => item.name !== 'Notes')
+            },
+            entityNotes() {
+                let notes = this.entity.generic.data.find(item => item.name === 'Notes')
+                if (!notes) return []
+                return notes.data
+            },
             loading() {
             	return (!this.fields || !this.fields.generic || !this.fields.schema)
                     || (!this.entity || this.entity.internal_axon_id !== this.entityId)

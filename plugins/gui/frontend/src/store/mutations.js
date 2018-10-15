@@ -173,6 +173,39 @@ export const updateDataByID = (state, payload) => {
 	}
 }
 
+export const UPDATE_SAVED_DATA_NOTE = 'UPDATE_SAVED_DATA_NOTE'
+export const updateSavedDataNote = (state, payload) => {
+    let module = getModule(state, payload)
+    if (!payload.fetching && !payload.error) {
+        let notes = module.current.data.generic.data.find(item => item.name === 'Notes')
+        if (payload.noteId) {
+            notes.data = notes.data.map((item) => {
+                if (item.uuid === payload.noteId) {
+                    return { ...item, ...payload.data }
+                }
+                return item
+            })
+        } else {
+			if (!notes) {
+				notes = {
+					name: 'Notes', data: []
+				}
+				module.current.data.generic.data.push(notes)
+			}
+            notes.data.push(payload.data)
+        }
+    }
+}
+
+export const UPDATE_REMOVED_DATA_NOTE = 'UPDATE_REMOVED_DATA_NOTE'
+export const updateRemovedDataNote = (state, payload) => {
+    let module = getModule(state, payload)
+    if (!payload.fetching && !payload.error) {
+        let notes = module.current.data.generic.data.find(item => item.name === 'Notes')
+        notes.data = notes.data.filter(note => !payload.noteIdList.includes(note.uuid))
+    }
+}
+
 export const UPDATE_SYSTEM_CONFIG = 'UPDATE_SYSTEM_CONFIG'
 export const updateSystemConfig = (state, payload) => {
 	state.configuration.fetching = payload.fetching
