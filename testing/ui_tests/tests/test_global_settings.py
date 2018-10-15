@@ -1,5 +1,7 @@
-from ui_tests.tests.ui_test_base import TestBase
+from axonius.utils.wait import wait_until
+from services.plugins.gui_service import GuiService
 from services.standalone_services.smtp_server import SMTPService
+from ui_tests.tests.ui_test_base import TestBase
 
 INVALID_EMAIL_HOST = 'dada...$#@'
 
@@ -40,3 +42,20 @@ class TestGlobalSettings(TestBase):
         with smtp_service.contextmanager():
             self.settings_page.click_save_button()
             self.settings_page.find_saved_successfully_toaster()
+
+    def test_maintenance_endpoints(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        gui_service = GuiService()
+
+        assert gui_service.troubleshooting().strip() == b'true'
+        toggle = self.settings_page.find_remote_support_toggle()
+        assert self.settings_page.is_toggle_selected(toggle)
+
+        self.settings_page.set_remote_support_toggle(make_yes=False)
+        self.settings_page.save_and_wait_for_toaster()
+        wait_until(lambda: gui_service.troubleshooting().strip() == b'false')
+
+        self.settings_page.set_remote_support_toggle(make_yes=True)
+        self.settings_page.save_and_wait_for_toaster()
+        wait_until(lambda: gui_service.troubleshooting().strip() == b'true')
