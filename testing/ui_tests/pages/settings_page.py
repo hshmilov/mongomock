@@ -8,9 +8,9 @@ class SettingsPage(Page):
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
-    REMOTE_SUPPORT_LABEL = 'Remote Support - Warning: turning off this feature prevents Axonius from'\
-                           '                             updating the system and can lead'\
-                           ' to slower issue resolution time.'\
+    REMOTE_SUPPORT_LABEL = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
+                           '                             updating the system and can lead' \
+                           ' to slower issue resolution time.' \
                            '                             Note: anonymized analytics must be enabled for remote support'
     USE_SYSLOG_LABEL = 'Use syslog'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
@@ -19,6 +19,11 @@ class SettingsPage(Page):
     EMAIL_HOST_ID = 'smtpHost'
     SYSLOG_HOST = 'syslogHost'
     SYSLOG_PORT = 'syslogPort'
+    USE_FRESH_SERVICE = 'Use FreshService'
+    FRESH_SERVICE_DOMAIN = 'domain'
+    FRESH_SERVICE_API_KEY = 'api_key'
+    FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'
+    USE_EXECUTION = 'Execution Enabled'
 
     @property
     def url(self):
@@ -62,6 +67,12 @@ class SettingsPage(Page):
     def find_syslog_toggle(self):
         return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
 
+    def find_fresh_service_toggle(self):
+        return self.find_checkbox_by_label(self.USE_FRESH_SERVICE)
+
+    def find_exection_toggle(self):
+        return self.find_checkbox_by_label(self.USE_EXECUTION)
+
     def set_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()
         self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
@@ -82,6 +93,15 @@ class SettingsPage(Page):
     def fill_email_host(self, host):
         self.fill_text_field_by_element_id(self.EMAIL_HOST_ID, host)
 
+    def fill_fresh_service_domain(self, domain):
+        self.fill_text_field_by_element_id(self.FRESH_SERVICE_DOMAIN, domain)
+
+    def fill_fresh_service_api_key(self, key):
+        self.fill_text_field_by_element_id(self.FRESH_SERVICE_API_KEY, key)
+
+    def fill_fresh_service_email(self, email):
+        self.fill_text_field_by_element_id(self.FRESH_SERVICE_ADMIN_EMAIL, email)
+
     def find_email_port_error(self):
         return self.find_element_by_text('\'Port\' has an illegal value')
 
@@ -90,6 +110,21 @@ class SettingsPage(Page):
 
     def get_email_host(self):
         return self.driver.find_element_by_id(self.EMAIL_HOST_ID).get_attribute('value')
+
+    def get_syslog_port(self):
+        return self.driver.find_element_by_id(self.SYSLOG_PORT).get_attribute('value')
+
+    def get_syslog_host(self):
+        return self.driver.find_element_by_id(self.SYSLOG_HOST).get_attribute('value')
+
+    def get_fresh_service_domain(self):
+        return self.driver.find_element_by_id(self.FRESH_SERVICE_DOMAIN).get_attribute('value')
+
+    def get_fresh_service_api_key(self):
+        return self.driver.find_element_by_id(self.FRESH_SERVICE_API_KEY).get_attribute('value')
+
+    def get_fresh_service_email(self):
+        return self.driver.find_element_by_id(self.FRESH_SERVICE_ADMIN_EMAIL).get_attribute('value')
 
     def find_email_connection_failure_toaster(self, host):
         return self.find_toaster(f'Could not connect to mail server "{host}"')
