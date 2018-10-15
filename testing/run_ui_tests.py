@@ -21,7 +21,7 @@ def main():
     # selenium_service = SeleniumService()
     cmd = 'docker run -d --name=grid ' \
           f'-p {DOCKER_PORTS["selenium-hub"]}:24444 -p {DOCKER_PORTS["selenium-vnc"]}:25900 -e TZ="Asia/Jerusalem" ' \
-          '-v /dev/shm:/dev/shm --privileged --network=axonius elgalu/selenium'
+          '-v /dev/shm:/dev/shm --privileged --link=gui:marxonius.com --network=axonius elgalu/selenium'
     subprocess.Popen(shlex.split(cmd)).communicate()
     cmd = 'docker exec grid wait_all_done 30s'
     subprocess.Popen(shlex.split(cmd)).communicate()

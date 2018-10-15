@@ -6,20 +6,20 @@ import pytest
 from selenium import webdriver
 
 from axonius.plugin_base import EntityType
-from services.ports import DOCKER_PORTS
 from services.axonius_service import get_service
+from services.ports import DOCKER_PORTS
 from test_credentials.test_gui_credentials import DEFAULT_USER
+from ui_tests.pages.adapters_page import AdaptersPage
+from ui_tests.pages.alert_page import AlertPage
 from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.my_account_page import MyAccountPage
+from ui_tests.pages.notification_page import NotificationPage
+from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
-from ui_tests.pages.report_page import ReportPage
-from ui_tests.pages.alert_page import AlertPage
-from ui_tests.pages.adapters_page import AdaptersPage
-from ui_tests.pages.notification_page import NotificationPage
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -60,6 +60,11 @@ class TestBase:
         self.axonius_system.get_notifications_db().remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
+
+    def change_base_url(self, new_url):
+        old_base_url = self.base_url
+        self.base_url = new_url
+        self.driver.get(self.driver.current_url.replace(old_base_url, new_url))
 
     def setup_method(self, method):
         self._initialize_driver()

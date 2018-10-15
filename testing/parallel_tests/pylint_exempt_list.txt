@@ -522,7 +522,6 @@ testing/test_credentials/test_nessus_credentials.py
 testing/test_credentials/test_nessus_csv_credentials.py
 testing/test_credentials/test_nexpose_credentials.py
 testing/test_credentials/test_observeit_credentials.py
-testing/test_credentials/test_okta_credentials.py
 testing/test_credentials/test_openstack_credentials.py
 testing/test_credentials/test_oracle_vm_credentials.py
 testing/test_credentials/test_puppet_credentials.py

@@ -14,6 +14,7 @@ class SettingsPage(Page):
                            '                             Note: anonymized analytics must be enabled for remote support'
     USE_SYSLOG_LABEL = 'Use syslog'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
+    OKTA_LOGINS_LABEL = 'Allow Okta logins'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
     SYSLOG_HOST = 'syslogHost'
@@ -99,8 +100,17 @@ class SettingsPage(Page):
     def find_allow_ldap_logins_toggle(self):
         return self.find_checkbox_by_label(self.LDAP_LOGINS_LABEL)
 
+    def find_allow_okta_logins_toggle(self):
+        return self.find_checkbox_by_label(self.OKTA_LOGINS_LABEL)
+
     def fill_dc_address(self, dc_address):
         self.fill_text_field_by_element_id('dc_address', dc_address)
+
+    def fill_okta_login_details(self, client_id, client_secret, url, gui_url):
+        self.fill_text_field_by_element_id('client_id', client_id)
+        self.fill_text_field_by_element_id('client_secret', client_secret)
+        self.fill_text_field_by_element_id('url', url)
+        self.fill_text_field_by_element_id('gui_url', gui_url)
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))

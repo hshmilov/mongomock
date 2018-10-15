@@ -109,6 +109,7 @@ class Page:
         element.send_keys(Keys.LEFT_CONTROL, 'a')
         element.send_keys(Keys.BACKSPACE)
         element.send_keys(Keys.LEFT_ALT, Keys.BACKSPACE)
+        element.clear()
 
     def fill_text_field_by_element_id(self, element_id, value, context=None, last_field=False):
         return self.fill_text_field_by(By.ID, element_id, value, context, last_field=last_field)

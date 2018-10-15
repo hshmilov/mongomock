@@ -1,4 +1,4 @@
-from ui_tests.pages.page import Page, BUTTON_TYPE_A
+from ui_tests.pages.page import BUTTON_TYPE_A, Page
 
 
 class LoginPage(Page):
@@ -9,6 +9,11 @@ class LoginPage(Page):
     WRONG_USERNAME_OR_PASSWORD_MESSAGE = 'Wrong user name or password'
     DISABLED_BUTTON_XPATH = './/button[@class=\'x-btn disabled\' and .//text()=\'Login\']'
     LOGIN_WITH_LDAP_BUTTON_CLASS = 'x-btn link'
+    LOGIN_WITH_OKTA_BUTTON_CLASS = 'x-btn link'
+    OKTA_LOGIN_PASSWORD_ID = 'okta-signin-password'
+    OKTA_LOGIN_USERNAME_ID = 'okta-signin-username'
+    OKTA_URL = 'marxonius.com'
+    OKTA_SUBMIT_BUTTON_ID = 'okta-signin-submit'
 
     @property
     def root_page_css(self):
@@ -52,6 +57,17 @@ class LoginPage(Page):
                           call_space=False,
                           button_type=BUTTON_TYPE_A,
                           button_class=self.LOGIN_WITH_LDAP_BUTTON_CLASS)
+
+    def click_login_with_okta(self):
+        self.click_button('Login with Okta',
+                          call_space=False,
+                          button_type=BUTTON_TYPE_A,
+                          button_class=self.LOGIN_WITH_OKTA_BUTTON_CLASS)
+
+    def fill_okta_client_login_details(self, login_details):
+        self.wait_for_element_present_by_id(self.OKTA_LOGIN_USERNAME_ID)
+        self.fill_text_field_by_element_id(self.OKTA_LOGIN_USERNAME_ID, login_details['username'])
+        self.fill_text_field_by_element_id(self.OKTA_LOGIN_PASSWORD_ID, login_details['password'])
 
     def fill_domain(self, domain):
         self.fill_text_field_by_element_id(self.LOGIN_DOMAIN_ID, domain)
