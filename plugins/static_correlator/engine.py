@@ -19,7 +19,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_domain, get_domain, get_cloud_data, compare_clouds,
                                    is_azuread_or_ad_and_have_name, get_ad_name_or_azure_display_name,
                                    compare_ad_name_or_azure_display_name, get_last_used_users, compare_last_used_users,
-                                   compare_asset_hosts, get_asset_or_host, is_deep_security_adapter,
+                                   compare_asset_hosts, get_asset_or_host, is_deep_security_adapter_not_localhost,
                                    ips_do_not_contradict, is_illusive_adapter, is_linux, is_splunk_vpn)
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -160,7 +160,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [is_deep_security_adapter],
+                                      [is_deep_security_adapter_not_localhost],
                                       [],
                                       {'Reason': 'They have the same hostname and one is DeepSecurity'},
                                       CorrelationReason.StaticAnalysis)

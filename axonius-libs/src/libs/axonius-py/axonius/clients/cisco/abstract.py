@@ -16,6 +16,13 @@ class CiscoDevice(DeviceAdapter):
     # (by querying arp, cdp, dhcp tables, or by adding the client itself).
     fetch_proto = Field(str, 'Fetch Protocol', enum=['ARP', 'CDP', 'DHCP', 'CLIENT', 'PRIME_CLIENT'])
     reachability = Field(str, 'Reachability')
+    ad_domainName = Field(str, 'AD Domain Name')
+    ap_ip_address = Field(str, 'AP IP Address')
+    ap_mac_address = Field(str, 'AP MAC Address')
+    ap_name = Field(str, 'AP Name')
+    auth_algo = Field(str, 'Authentication Algorithm')
+    nac_state = Field(str, 'NAC State')
+    wireless_vlan = Field(str, 'Wireless Vlan')
 
 
 class AbstractCiscoClient:

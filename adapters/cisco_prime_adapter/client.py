@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 import requests
 
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from axonius.utils import json
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -60,7 +61,7 @@ class CiscoPrimeClient:
         logger.info(f'Creating session using {self._username}')
         try:
             self._sess = requests.Session()
-            resp = self.get('/webacs/api/v2/data.json')
+            resp = self.get('/webacs/api/v2/data.json', timeout=DEFAULT_TIMEOUT)
         except CiscoPrimeException as e:
             raise ClientConnectionException(f'Invalid creds for api test')
         except Exception as e:
@@ -70,6 +71,63 @@ class CiscoPrimeClient:
     def disconnect(self):
         self._sess.close()
         self._sess = None
+
+    def get_prime_clients(self):
+        first_result = 0
+        total_clients = 1
+        number_of_failed_response = 0
+
+        # Check that self.connect() called
+        if self._sess is None:
+            raise CiscoPrimeException('Unable to get instace list without session')
+
+        while first_result < total_clients:
+            response = self._get_prime_clients(first_result)
+            if not response:
+                logger.warning(f'Skipping empty result {first_result}')
+
+                if number_of_failed_response > 3:
+                    logger.error('Failed more then 3 times to get devices from server - giving up')
+                    break
+
+                number_of_failed_response += 1
+                continue
+
+            response = response['queryResponse']
+
+            # Parse number of devices only if we in  the first response
+            if first_result == 0:
+                total_clients = int(response['@count'])
+                logger.info(f'total number of client = {total_clients}')
+
+            if not response['entity']:
+                logger.error('Got empty entity list - giving up')
+                break
+
+            first_result += len(response['entity'])
+
+            # Now fetch full info of the device and yield it
+            for entity in response['entity']:
+                # validate that the device contains inventory
+                device = entity.get('clientDetailsDTO', '')
+                if device:
+                    yield device
+
+    def _get_prime_clients(self, first_result,  max_results=100):
+        try:
+            response = self.get(
+                f'/webacs/api/v2/data/ClientDetails.json'
+                f'?.full=true&.firstResult={first_result}&.maxResults={max_results}').json()
+        except Exception as e:
+            logger.exception(f'Got exception while getting devices {first_result} {max_results}')
+            return {}
+
+        if not json.is_valid(response, {'queryResponse': '@count'},
+                             {'queryResponse': 'entity'}):
+            logger.warning(f'Got invalid json {response}')
+            return {}
+
+        return response
 
     def _get_devices(self, first_result=0, max_results=100):
         try:
@@ -93,7 +151,8 @@ class CiscoPrimeClient:
         Requires active session.
         :return: json that contains a list of the devices
         """
-
+        for prime_client in self.get_prime_clients():
+            yield 'client', prime_client
         first_result = 0
         total_devices = 1
         number_of_failed_response = 0
@@ -132,7 +191,7 @@ class CiscoPrimeClient:
                 # validate that the device contains inventory
                 device = entity.get('inventoryDetailsDTO', '')
                 if device:
-                    yield device
+                    yield 'cisco', device
 
     @staticmethod
     def get_nics(device):

@@ -577,8 +577,10 @@ def is_snow_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'service_now_adapter'
 
 
-def is_deep_security_adapter(adapter_device):
-    return adapter_device.get('plugin_name') == 'deep_security_adapter'
+def is_deep_security_adapter_not_localhost(adapter_device):
+    return (adapter_device.get('plugin_name') == 'deep_security_adapter') and \
+           (not adapter_device.get('data').get('hostname') or
+            'localhost' not in adapter_device.get('data').get('hostname').strip().lower())
 
 
 def is_sccm_or_ad(adapter_device):
@@ -720,7 +722,7 @@ def get_asset_name(adapter_device):
 
 def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
-    if serial and serial.upper().strip() != 'INVALID':
+    if serial and serial.upper().strip() != 'INVALID' and 'VMWARE' not in serial.upper().strip():
         return serial
 
 

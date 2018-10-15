@@ -92,10 +92,11 @@ class CiscoPrimeAdapter(AdapterBase):
     def __query_devices_by_client(self, session):
         arp_table = []
         tasks = []
-        for device in session.get_devices():
-            type_, raw_device = ('cisco', device)
+        for type_, raw_device in session.get_devices():
             yield (type_, raw_device)
 
+            if type_ == 'client':
+                continue
             try:
                 creds = session.get_credentials(raw_device)
                 if not creds:
@@ -128,7 +129,7 @@ class CiscoPrimeAdapter(AdapterBase):
                     yield ('neighbor', entry)
 
         except Exception as e:
-            logger.exception(f'Got exception while getting async data from: {raw_device}')
+            logger.exception(f'Got exception while getting async data')
 
     def _query_devices_by_client(self, client_name, client_data):
         session = client_data
@@ -213,6 +214,47 @@ class CiscoPrimeAdapter(AdapterBase):
 
         return device
 
+    def create_prime_client_device(self, raw_device):
+        device = self._new_device_adapter()
+        device_id = raw_device.get('@id')
+        if device_id:
+            device_id = str(device_id)
+        device_uuid = raw_device.get('@uuid')
+        if not device_id and not device_uuid:
+            logger.warning(f'Bad device with no ID {raw_device}')
+            return None
+        mac_address = raw_device.get('macAddress')
+        device.id = '_'.join([item or '' for item in [device_id, device_uuid, mac_address]])
+        try:
+            ip_address = (raw_device.get('ipAddress') or {})
+            if isinstance(ip_address, dict):
+                ip_address = ip_address.get('address')
+            else:
+                ip_address = None
+            ips = [ip_address] if ip_address else None
+            device.add_nic(mac_address, ips)
+            device.wireless_vlan = raw_device.get('vlanName') or raw_device.get('vlan')
+        except Exception:
+            logger.exception(f'Problem getting NIC for {raw_device}')
+        device.hostname = raw_device.get('hostname')
+        try:
+            device.ad_domainName = raw_device.get('adDomainName')
+            ap_ip_address = raw_device.get('apIpAddress')
+            if isinstance(ap_ip_address, dict):
+                device.ap_ip_address = ap_ip_address.get('address')
+            device.ap_mac_address = raw_device.get('apMacAddress')
+            device.ap_name = raw_device.get('apName')
+            device.auth_algo = raw_device.get('authenticationAlgorithm')
+        except Exception:
+            logger.exception(f'Problem getting AP info for {raw_device}')
+        device.nac_state = raw_device.get('nacState')
+        try:
+            device.last_used_users = (raw_device.get('userName') or '').split(',')
+        except Exception:
+            logger.exception(f'Problem getting users for {raw_device}')
+        device.set_raw(raw_device)
+        return device
+
     def _parse_raw_data(self, devices_raw_data):
         instances = []
         for raw_device in devices_raw_data:
@@ -224,6 +266,10 @@ class CiscoPrimeAdapter(AdapterBase):
                         yield device
                 elif type_ == 'neighbor':
                     instances.append(raw_device)
+                elif type_ == 'client':
+                    device = self.create_prime_client_device(raw_device)
+                    if device:
+                        yield device
                 else:
                     raise ValueError(f'invalid type {type_}')
             except Exception:
