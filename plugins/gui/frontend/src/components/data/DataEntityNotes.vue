@@ -3,16 +3,19 @@
         <div class="header">
             <x-search-input v-model="searchValue" placeholder="Search Notes..." />
             <div class="actions">
-                <button class="x-btn link" v-if="selectedNotes && selectedNotes.length" @click="removeNotes">Remove</button>
+                <button class="x-btn link" v-if="selectedNotes && selectedNotes.length" @click="confirmRemoveNotes">Remove</button>
                 <button class="x-btn" @click="readOnly? undefined : createNote()" :class="{disabled: readOnly}">+ Note</button>
             </div>
         </div>
         <x-table :data="noteData" :fields="noteSchema" :sort="sort" id-field="uuid" v-model="readOnly? undefined : selectedNotes"
                  :click-row-handler="readOnly? undefined : editNote" :click-col-handler="sortNotes" :read-only="readOnlyNotes" />
-        <x-modal v-if="noteModal.active" approve-text="Save" @confirm="saveNote" @close="closeNoteModal"
+        <x-modal v-if="removeNoteModal.active" @confirm="removeNotes" @close="closeRemoveNotesModal">
+            <div slot="body">You are about to remove {{selectedNotes.length}} notes. Are you sure?</div>
+        </x-modal>
+        <x-modal v-if="configNoteModal.active" approve-text="Save" @confirm="saveNote" @close="closeConfigNoteModal"
                  :title="noteModalTitle">
             <template slot="body">
-                <textarea v-model="noteModal.note" class="text-input" rows="4" placeholder="Enter your note..."></textarea>
+                <textarea v-model="configNoteModal.note" class="text-input" rows="4" placeholder="Enter your note..."></textarea>
             </template>
         </x-modal>
         <x-toast v-if="toastMessage" :message="toastMessage" @done="remoteToast" />
@@ -81,7 +84,7 @@
                 ]
             },
             noteModalTitle() {
-                if (this.noteModal.id) {
+                if (this.configNoteModal.id) {
                     return 'Edit note'
                 } else {
                     return 'Add new note'
@@ -102,10 +105,13 @@
                     desc: false
                 },
                 selectedNotes: [],
-                noteModal: {
+                configNoteModal: {
                     active: false,
                     id: '',
                     note: ''
+                },
+                removeNoteModal: {
+                    active: false
                 },
                 toastMessage: ''
             }
@@ -113,13 +119,19 @@
         methods: {
             ...mapActions({ saveDataNote: SAVE_DATA_NOTE, removeDataNote: REMOVE_DATA_NOTE }),
             createNote() {
-                this.noteModal.active = true
+                this.configNoteModal.active = true
             },
             editNote(noteId) {
                 if (this.selectedNotes.length) return
-                this.noteModal.active = true
-                this.noteModal.id = noteId
-                this.noteModal.note = this.noteById[noteId].note
+                this.configNoteModal.active = true
+                this.configNoteModal.id = noteId
+                this.configNoteModal.note = this.noteById[noteId].note
+            },
+            confirmRemoveNotes() {
+                this.removeNoteModal.active = true
+            },
+            closeRemoveNotesModal() {
+                this.removeNoteModal.active = false
             },
             removeNotes() {
                 this.responseWrapper(this.removeDataNote({
@@ -129,18 +141,24 @@
                 }).then(() => {
                     this.toastMessage = 'Notes were removed'
                     this.selectedNotes = []
+                    this.closeRemoveNotesModal()
                 }))
             },
             saveNote() {
                 this.responseWrapper(this.saveDataNote({
                     module: this.module,
                     entityId: this.entityId,
-                    noteId: this.noteModal.id,
-                    note: this.noteModal.note
+                    noteId: this.configNoteModal.id,
+                    note: this.configNoteModal.note
                 }).then(() => {
-                    this.toastMessage = (this.noteModal.id ? 'Existing note was edited' : 'New note was created')
-                    this.closeNoteModal()
+                    this.toastMessage = (this.configNoteModal.id ? 'Existing note was edited' : 'New note was created')
+                    this.closeConfigNoteModal()
                 }))
+            },
+            closeConfigNoteModal() {
+                this.configNoteModal.active = false
+                this.configNoteModal.id = ''
+                this.configNoteModal.note = ''
             },
             responseWrapper(promise) {
                 promise.catch(response => {
@@ -155,11 +173,6 @@
             },
             remoteToast() {
                 this.toastMessage = ''
-            },
-            closeNoteModal() {
-                this.noteModal.active = false
-                this.noteModal.id = ''
-                this.noteModal.note = ''
             },
             sortNotes(fieldName) {
                 if (this.sort.field !== fieldName) {

@@ -41,7 +41,8 @@
                 </tabs>
             </tab>
             <tab title="Notes" id="notes" key="notes">
-                <x-data-entity-notes :module="module" :entity-id="entityId" :data="entityNotes" :read-only="history !== undefined" />
+                <x-data-entity-notes :module="module" :entity-id="entityId" :data="entityNotes"
+                                     :read-only="readOnly || history !== undefined" />
             </tab>
             <tab title="Tags" id="tags" key="tags">
                 <div @click="activateTag" class="x-btn link tag-edit" :class="{ disabled: readOnly }">Edit Tags</div>

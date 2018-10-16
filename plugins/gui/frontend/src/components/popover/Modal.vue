@@ -4,7 +4,7 @@
             <div :class="`modal-container w-${size}`">
                 <div class="modal-header" v-if="title">
                     <div class="title">{{ title }}</div>
-                    <button class="x-btn link" @click="$emit('close')">x</button>
+                    <button class="x-btn link" @click="$emit('close')" v-if="dismissable">x</button>
                 </div>
                 <div class="modal-body">
                     <slot name="body" @submit="$emit('confirm')">
@@ -27,7 +27,7 @@
 	export default {
 		name: 'modal',
         props: { approveText: { default: 'OK' }, approveId: {}, dismissText: { default: 'Cancel' },
-            disabled: {default: false}, size: {default: 'xl'}, title: {} },
+            disabled: {default: false}, size: {default: 'xl'}, title: {}, dismissable: { default: false } },
         methods: {
 			onApprove() {
 				if (this.disabled) return
