@@ -99,6 +99,7 @@ DOCKER_PORTS = {
     'datadog-adapter':                  6041,
     'dropbox-adapter':                  6042,
     'mongo':                            27017,
+    'mongo-slave':                      27018,
 }
 
 assert len(set(DOCKER_PORTS.values())) == len(DOCKER_PORTS)

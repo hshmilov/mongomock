@@ -15,6 +15,7 @@ class ParallelTestsRunner(ParallelRunner):
             if extra_flags:
                 args = f"{args} {extra_flags}"
             args = f"{args} --junitxml=reporting/{test_case}.xml {file}".split(' ')
+            print(f'adding {file} to run!')
             self.append_single(test_case, args, **kwargs)
 
 

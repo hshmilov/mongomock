@@ -8,16 +8,8 @@ DB_NAME = 'QCORE_DB'
 
 class QcoreMongo(object):
 
-    def __init__(self):
-
-        # hack that allows me to deal with proper mongo creds propagation later
-        if os.environ.get('DOCKER') == 'true':
-            host = 'mongo'
-        else:
-            host = 'localhost'
-
-        self.connection = MongoClient(host=host, username='ax_user', password='ax_pass')
-        self._table = self.connection[DB_NAME]['PUMPS']
+    def __init__(self, connection):
+        self._table = connection[DB_NAME]['PUMPS']
 
     @property
     def table(self):

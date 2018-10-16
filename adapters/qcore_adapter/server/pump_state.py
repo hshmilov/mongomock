@@ -1,5 +1,7 @@
 import time
 
+from axonius.plugin_base import PluginBase
+
 from qcore_adapter.protocol.build_helpers import response_builder
 from qcore_adapter.protocol.consts import PUMP_SERIAL, CLINICAL_STATUS, INFUSIONS
 from qcore_adapter.protocol.qtp.qdp.clinical.clinical_enums import InfusionEvent
@@ -17,7 +19,7 @@ DISCONNECTS = 'disconnects'
 
 class PumpState(object):
     def __init__(self, registration: QtpMessage, send_func):
-        self.db = QcoreMongo()
+        self.db = QcoreMongo(PluginBase.Instance._get_db_connection())
         self.pump_info = registration.get_field('pump_info')
         self.serial = registration.get_field(PUMP_SERIAL)
         self.id = str(self.serial)

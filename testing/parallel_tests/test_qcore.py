@@ -38,7 +38,7 @@ class TestQcoreAdapter(AdapterTestBase):
         pump = QcoreFakePump()
         pump.send_registration()
         pump.send_connectivity_update()
-        qcore_db = QcoreMongo()
+        qcore_db = QcoreMongo(self.axonius_system.db.client)
 
         try_until_not_thrown(10, 10, lambda: len(list(qcore_db.all_pumps)) > 0)
 

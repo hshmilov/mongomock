@@ -1,9 +1,10 @@
 import logging
 from itertools import combinations
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
-from axonius.correlator_base import (CorrelationReason, has_hostname, has_name, has_mac, has_last_used_users,
-                                     has_serial, has_cloud_id, has_ad_or_azure_name)
+from axonius.correlator_base import has_hostname, has_name, has_mac, has_last_used_users, has_serial, has_cloud_id, \
+    has_ad_or_azure_name
 from axonius.correlator_engine_base import CorrelatorEngineBase
+from axonius.types.correlation import CorrelationReason
 from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_device_normalized_hostname,
                                    compare_hostname, compare_macs,

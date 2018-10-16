@@ -142,7 +142,7 @@ class QcoreAdapter(AdapterBase):
         device.inf_total_bag_volume_delivered = [tbag / 1000. for tbag in merged['total_bag_volume_delivered']]
 
     def _query_devices_by_client(self, client_name, client_data):
-        qcore_mongo = QcoreMongo()
+        qcore_mongo = QcoreMongo(self._get_db_connection())
         return list(qcore_mongo.all_pumps)
 
     def _clients_schema(self):

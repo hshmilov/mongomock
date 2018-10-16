@@ -22,7 +22,7 @@ echo "Finished integration tests"
 
 echo "Start parallel tests"
 cd ./testing
-timeout 1800 python3 run_parallel_tests.py parallel_tests/test_\*.py
+timeout 3600 python3 run_parallel_tests.py parallel_tests/test_\*.py
 if [ $? -ne 0 ]
 then
   echo "parallel tests failed"

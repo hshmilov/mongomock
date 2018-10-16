@@ -20,7 +20,7 @@ import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+from axonius.utils.threading import run_and_forget
 
 from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -229,12 +229,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.__all_sessions = {}
         self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
 
-        # this command sets mongo's query space to be larger default
-        # which allows for faster queries using the RAM alone
-        self._get_db_connection()['admin'].command({
-            'setParameter': 1,
-            'internalQueryExecMaxBlockingSortBytes': 2 * 1024 * 1024 * 1024 - 1  # max size mongo allows
-        })
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
         self._elk_addr = self.config['gui_specific']['elk_addr']
@@ -586,43 +580,46 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         all_labels = set()
-        with self._get_db_connection() as db_connection:
-            if request.method == 'GET':
-                for current_device in db.find({'$or': [{'labels': {'$exists': False}}, {'labels': {'$ne': []}}]},
-                                              projection={'labels': 1}):
-                    all_labels.update(current_device['labels'])
-                return jsonify(all_labels)
+        if request.method == 'GET':
+            for current_device in db.find({'$or': [{'labels': {'$exists': False}}, {'labels': {'$ne': []}}]},
+                                          projection={'labels': 1}):
+                all_labels.update(current_device['labels'])
+            return jsonify(all_labels)
 
-            # Now handling POST and DELETE - they determine if the label is an added or removed one
-            entities_and_labels = self.get_request_data_as_object()
-            if not entities_and_labels.get('entities'):
-                return return_error("Cannot label entities without list of entities.", 400)
-            if not entities_and_labels.get('labels'):
-                return return_error("Cannot label entities without list of labels.", 400)
+        # Now handling POST and DELETE - they determine if the label is an added or removed one
+        entities_and_labels = self.get_request_data_as_object()
+        if not entities_and_labels.get('entities'):
+            return return_error("Cannot label entities without list of entities.", 400)
+        if not entities_and_labels.get('labels'):
+            return return_error("Cannot label entities without list of labels.", 400)
+        entities_from_db = db.find(
+            filter={
+                'internal_axon_id':
+                    {
+                        '$in': entities_and_labels['entities']
+                    }
+            },
+            projection={
+                f'specific_data.{PLUGIN_UNIQUE_NAME}': 1,
+                f'specific_data.data.id': 1
+            })
+        # TODO: Figure out exactly what we want to tag and how, AX-2183
+        entities = [(entity['specific_data'][0][PLUGIN_UNIQUE_NAME],
+                     entity['specific_data'][0]['data']['id']) for entity in entities_from_db]
+        try:
+            namespace.add_many_labels(entities, labels=entities_and_labels['labels'],
+                                      are_enabled=request.method == 'POST')
+        except Exception as e:
+            logger.exception(f"Tagging did not complete")
+            return return_error(f'Tagging did not complete. First error: {e}', 400)
 
-            entities = [db.find_one({'internal_axon_id': entity_id})['specific_data'][0]
-                        for entity_id in entities_and_labels['entities']]
-            entities = [(entity[PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
-
-            response = namespace.add_many_labels(entities, labels=entities_and_labels['labels'],
-                                                 are_enabled=request.method == 'POST')
-
-            if response.status_code != 200:
-                logger.error(f"Tagging did not complete. First {response.json()}")
-                return_error(f'Tagging did not complete. First error: {response.json()}', 400)
-
-            return '', 200
+        return '', 200
 
     def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, internal_axon_ids: Iterable[str]):
         internal_axon_ids = list(internal_axon_ids)
-        self._entity_db_map[entity_type].update_many({'internal_axon_id': {
+        self._entity_db_map[entity_type].delete_many({'internal_axon_id': {
             "$in": internal_axon_ids
-        }},
-            {
-                "$set": {
-                    "adapters.$[].pending_delete": True
-                }
-        })
+        }})
         self._request_db_rebuild(sync=True, internal_axon_ids=internal_axon_ids)
 
         return '', 200
@@ -1048,6 +1045,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if client_from_db:
                     # this is the "client_id" - i.e. AD server or AWS Access Key
                     local_client_id = client_from_db['client_id']
+                    entities_to_rebuild = []
                     for entity_type in EntityType:
                         res = self._entity_db_map[entity_type].update_many(
                             {
@@ -1079,10 +1077,81 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                 }
                             ]
                         )
+
+                        to_rebuild = list(self._entity_db_map[entity_type].find(
+                            {
+                                'adapters': {
+                                    '$elemMatch': {
+                                        "$and": [
+                                            {
+                                                PLUGIN_NAME: plugin_name
+                                            },
+                                            {
+                                                # and the device must be from this adapter
+                                                "client_used": local_client_id
+                                            }
+                                        ]
+                                    }
+                                }
+                            },
+                            projection={'internal_axon_id': 1}
+                        ))
+
                         logger.info(f"Set pending_delete on {res.modified_count} axonius entities "
-                                    f"(or some adapters in them)" +
-                                    f"from {res.matched_count} matches")
-                    self._request_db_rebuild(sync=True)
+                                    f"(or some adapters in them) n" +
+                                    f"from {res.matched_count} matches, rebuilding {len(to_rebuild)} entities")
+
+                        if not to_rebuild:
+                            continue
+
+                        def async_delete_entities():
+                            entities_to_delete = self._entity_db_map[entity_type].find(
+                                {
+                                    'adapters': {
+                                        '$elemMatch': {
+                                            "$and": [
+                                                {
+                                                    PLUGIN_NAME: plugin_name
+                                                },
+                                                {
+                                                    # and the device must be from this adapter
+                                                    "client_used": local_client_id
+                                                }
+                                            ]
+                                        }
+                                    }
+                                },
+                                projection={
+                                    'adapters.client_used': True,
+                                    'adapters.data.id': True,
+                                    f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+                                    f'adapters.{PLUGIN_NAME}': True,
+                                })
+                            with ThreadPool(5) as pool:
+                                def delete_adapters(entity):
+                                    try:
+                                        for adapter in entity['adapters']:
+                                            if adapter.get('client_used') == local_client_id and \
+                                                    adapter[PLUGIN_NAME] == plugin_name:
+                                                logger.debug("deleting " + adapter['data']['id'])
+                                                self.delete_adapter_entity(entity_type, adapter[PLUGIN_UNIQUE_NAME],
+                                                                           adapter['data']['id'])
+                                    except Exception as e:
+                                        logger.exception(e)
+
+                                pool.map_async(delete_adapters, entities_to_delete).get()
+
+                            self._request_db_rebuild(sync=True)
+
+                        # while we can quickly mark all adapters to be pending_delete
+                        # we still want to run a background task to delete them
+                        run_and_forget(async_delete_entities)
+
+                        entities_to_rebuild += to_rebuild
+
+                    if entities_to_rebuild:
+                        self._request_db_rebuild(sync=True,
+                                                 internal_axon_ids=[x['internal_axon_id'] for x in entities_to_rebuild])
 
         if request.method == 'PUT':
             client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
