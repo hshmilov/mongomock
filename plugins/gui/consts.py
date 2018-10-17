@@ -30,6 +30,31 @@ class ChartFuncs(Enum):
     count = auto()
 
 
+class ChartRangeTypes(Enum):
+    """
+    Possible types of a timeframe range for the timeline chart
+    """
+    absolute = auto()
+    relative = auto()
+
+
+class ChartRangeUnits(Enum):
+    """
+    Possible units for defining a relative timeframe
+    """
+    day = auto()
+    week = auto()
+    month = auto()
+    year = auto()
+
+
+RANGE_UNIT_DAYS = {
+    ChartRangeUnits.week: 7,
+    ChartRangeUnits.month: 30,
+    ChartRangeUnits.year: 365
+}
+
+
 class ResearchStatus(Enum):
     """
     Possible status for research usability - could take time to start / stop so we want to keep the user posted

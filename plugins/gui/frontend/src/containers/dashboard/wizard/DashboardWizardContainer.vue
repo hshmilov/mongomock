@@ -4,12 +4,12 @@
         <h3>Create a Dashboard Chart</h3>
         <div class="dashboard-wizard">
             <!-- Select metric to be tested by chart -->
-            <label>Chart Metric</label>
+            <label>Chart metric</label>
             <x-select :options="metricOptions" v-model="dashboard.metric" placeholder="by..." id="metric"
                       @input="advanceState = true" />
             <!-- Select method of presenting the data of the chart -->
             <template v-if="dashboard.metric">
-                <label>Chart Presentation</label>
+                <label>Chart presentation</label>
                 <div class="dashboard-view">
                     <template v-for="view in availableViews">
                         <input :id="view" type="radio" :value="view" v-model="dashboard.view" />

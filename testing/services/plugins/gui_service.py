@@ -22,6 +22,8 @@ class GuiService(PluginService):
             self._update_schema_version_1()
         if self.db_schema_version < 2:
             self._update_schema_version_2()
+        if self.db_schema_version < 3:
+            self._update_schema_version_3()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -54,6 +56,15 @@ class GuiService(PluginService):
             self.db_schema_version = 1
         except Exception as e:
             print(f'Could not upgrade gui db to version 1. Details: {e}')
+
+    def _get_all_dashboard(self):
+        return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find({})
+
+    def _replace_all_dashboard(self, dashboard_list):
+        dashboard = self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION)
+        dashboard.delete_many({})
+        if len(dashboard_list) > 0:
+            dashboard.insert(dashboard_list)
 
     def __perform_schema_2(self):
         """
@@ -114,14 +125,41 @@ class GuiService(PluginService):
 
         self.db_schema_version = 2
 
-    def _get_all_dashboard(self):
-        return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find({})
+    def _update_schema_version_3(self):
+        """
+        This upgrade adapts the configuration of the 'timeline' chart to have a range that could be absolute dates,
+        or a period relative to the view time, instead of the current datefrom and dateto
 
-    def _replace_all_dashboard(self, dashboard_list):
-        dashboard = self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION)
-        dashboard.delete_many({})
-        if len(dashboard_list) > 0:
-            dashboard.insert(dashboard_list)
+        :return:
+        """
+        print('upgrade to schema 3')
+        try:
+            preceding_charts = []
+            for chart in self._get_all_dashboard():
+                try:
+                    # Chart defined with a metric other than timeline or already in new structure, can be added as is
+                    if chart.get('metric', '') != 'timeline' or not chart.get('config') or chart['config'].get('range'):
+                        preceding_charts.append(chart)
+                    else:
+                        preceding_charts.append({
+                            'metric': chart['metric'],
+                            'view': chart['view'],
+                            'name': chart['name'],
+                            'config': {
+                                'views': chart['config']['views'],
+                                'timeframe': {
+                                    'type': 'absolute',
+                                    'from': chart['config']['datefrom'],
+                                    'to': chart['config']['dateto']
+                                }
+                            }
+                        })
+                except Exception as e:
+                    print(f'Could not upgrade chart {chart["name"]}. Details: {e}')
+            self._replace_all_dashboard(preceding_charts)
+            self.db_schema_version = 3
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 3. Details: {e}')
 
     @property
     def exposed_ports(self):

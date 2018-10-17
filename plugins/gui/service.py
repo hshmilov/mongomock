@@ -67,8 +67,8 @@ from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
                         EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE,
-                        SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics,
-                        ChartViews, ResearchStatus)
+                        SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics, ChartViews,
+                        ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from uuid import uuid4
@@ -2464,9 +2464,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 {'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
         return [{'name': name, 'value': count, 'view': base_view, 'module': entity.value}]
 
-    def _fetch_chart_timeline(self, _: ChartViews, views, datefrom, dateto):
+    def _fetch_chart_timeline(self, _: ChartViews, views, timeframe):
         """
-        Fetch and count results for each view from given views, per day in given range of datefrom to dateto.
+        Fetch and count results for each view from given views, per day in given timeframe.
+        Timeframe can be either:
+        - Absolute - defined by a start and end date to fetch between
+        - Relative - defined by a unit (days, weeks, months, years) and an amount, to fetch back from now
         Create for each view a sequence of points that represent the count for each day in the range.
 
         :param views: List of view for which to fetch results over timeline
@@ -2474,16 +2477,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param dateTo: Date to fetch up to
         :return:
         """
-        logger.info(f'Gathering data between {datefrom} and {dateto}')
-        try:
-            dateto = parse_date(dateto)
-            datefrom = parse_date(datefrom)
-        except Exception:
-            logger.exception('Given date to or from is invalid')
+        date_from, date_to = self._parse_range_timeline(timeframe)
+        if not date_from or not date_to:
             return None
 
-        scale = [(datefrom + timedelta(i)) for i in range((dateto - datefrom).days + 1)]
-        lines = list(self._fetch_view_timeline(views, datefrom, dateto))
+        scale = [(date_from + timedelta(i)) for i in range((date_to - date_from).days + 1)]
+        lines = list(self._fetch_view_timeline(views, date_from, date_to))
         return [
             ['Day'] + [{
                 'label': line['title'],
@@ -2491,6 +2490,39 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             } for line in lines],
             *[[day] + [line['points'].get(day.strftime('%m/%d/%Y')) for line in lines] for day in scale]
         ]
+
+    def _parse_range_timeline(self, timeframe):
+        """
+        Timeframe dict includes choice of range for the timeline chart.
+        It can be absolute and include a date to start and to end the series,
+        or relative and include a unit and count to fetch back from moment of request.
+
+        :param timeframe:
+        :return:
+        """
+        try:
+            range_type = ChartRangeTypes[timeframe['type']]
+        except KeyError:
+            logger.error(f'Unexpected timeframe type {timeframe["type"]}')
+            return None, None
+        if range_type == ChartRangeTypes.absolute:
+            logger.info(f'Gathering data between {timeframe["from"]} and {timeframe["to"]}')
+            try:
+                date_to = parse_date(timeframe['to'])
+                date_from = parse_date(timeframe['from'])
+            except ValueError:
+                logger.exception('Given date to or from is invalid')
+                return None, None
+        else:
+            logger.info(f'Gathering data from {timeframe["count"]} {timeframe["unit"]} back')
+            date_to = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            try:
+                range_unit = ChartRangeUnits[timeframe['unit']]
+            except KeyError:
+                logger.error(f'Unexpected timeframe unit {timeframe["unit"]} for reltaive chart')
+                return None, None
+            date_from = date_to - timedelta(days=timeframe['count'] * RANGE_UNIT_DAYS[range_unit])
+        return date_from, date_to
 
     def _fetch_view_timeline(self, views, date_from, date_to):
         date_ranges = list(_get_date_ranges(date_from, date_to))

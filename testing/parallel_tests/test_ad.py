@@ -1,5 +1,6 @@
 import time
 import pytest
+from flaky import flaky
 from retrying import retry
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
@@ -251,6 +252,7 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(15, 10, check_execute_binary_results)
 
+    @flaky(max_runs=2)
     def test_ad_execute_shell_by_device_control(self, device_control_fixture):
         # TODO: We should have a parallel test for device control but this is complicated now.
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]

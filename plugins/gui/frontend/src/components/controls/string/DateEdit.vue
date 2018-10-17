@@ -110,7 +110,7 @@
                     }
                 }
                 .cov-date-box {
-                    height: 240px;
+                    height: 200px;
                     .cov-picker-box {
                         padding: 0;
                         height: 240px;
@@ -121,8 +121,13 @@
                                 font-weight: 200 !important;
                             }
                         }
-                        .day.checked {
-                            background-color: $theme-orange !important;
+                        .day {
+                            &.checked {
+                                background-color: $theme-orange !important;
+                            }
+                            &.passive-day:not() {
+                                color: $grey-4;
+                            }
                         }
                     }
                 }
