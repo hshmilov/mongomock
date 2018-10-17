@@ -43,13 +43,13 @@ def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associa
 
 
 def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=None, serial=None,
-                   tag_data=None, last_seen=None, domain=None):
+                   tag_data=None, last_seen=None, domain=None, device_id=None, more_params=None):
     if last_seen is None:
         last_seen = datetime.datetime.now()
     last_seen = last_seen.replace(tzinfo=None)
     generated_unique_name = str(uuid.uuid1()) if plugin_name is None else plugin_name + "0"
     generate_name = str(uuid.uuid1()) if plugin_name is None else plugin_name
-    generated_id = str(uuid.uuid1())
+    generated_id = device_id if device_id else str(uuid.uuid1())
     val = {
         'tags': [],
         'adapters': [
@@ -63,11 +63,16 @@ def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=
                     NETWORK_INTERFACES_FIELD: network_interfaces,
                     'device_serial': serial,
                     'last_seen': last_seen,
-                    'domain': 'domain'
+                    'domain': domain
                 }
             }
         ],
     }
+    # Updating other user defined params
+    more_params = more_params if more_params is not None else []
+    for (param_name, param_data) in more_params:
+        val['adapters'][0]['data'][param_name] = param_data
+    # Updating tag data
     if tag_data:
         val['tags'] = [get_raw_tag(generated_unique_name, generate_name, generated_id, *data) for data in tag_data]
     return val
@@ -111,6 +116,7 @@ def assert_correlation(result, adapter1, adapter2):
 
 def assert_success(results, device_list, reason, intended):
     intended_correlations = 0
+    last_correlation_result = ''
     for result in results:
         if result.data['Reason'] == reason:
             intended_correlations += 1
@@ -123,7 +129,10 @@ def assert_success(results, device_list, reason, intended):
                 except AssertionError:
                     pass
             assert correlation_success
-    assert intended_correlations == intended
+        else:
+            if result.data['Reason']:
+                last_correlation_result = result.data['Reason']
+    assert intended_correlations == intended, f"last correlation result: {last_correlation_result}"
 
 
 def test_rule_domain_hostname_correlation():
@@ -633,6 +642,82 @@ def test_contradiction_rules_per_hostname():
     device1 = get_raw_device(serial="Some serial", hostname="A")
     device2 = get_raw_device(serial="Some serial", hostname="B")
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same serial', 0)
+
+
+def test_rule_correlate_cloud_instances():
+    device1 = get_raw_device(more_params=[("cloud_provider", "SomeCloudProvider"), ("cloud_id", "SomeCloudId")])
+    device2 = get_raw_device(more_params=[("cloud_provider", "someCloudProvider"), ("cloud_id", "someCloudId")])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They are the same cloud instance', 1)
+
+
+def test_rule_correlate_ad_sccm_id():
+    device1 = get_raw_device(plugin_name='active_directory_adapter', device_id='SomeDeviceId')
+    device2 = get_raw_device(plugin_name='sccm_adapter', device_id='SomeDeviceId')
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same ID and one is AD and the '
+                                                                      'second is SCCM', 1)
+
+
+def test_rule_correlate_ad_azure_ad():
+    device1 = get_raw_device(plugin_name='active_directory_adapter', device_id='SomeDeviceId',
+                             more_params=[("ad_name", "ofir")])
+    device2 = get_raw_device(plugin_name='azure_ad_adapter', device_id='SomeDeviceId',
+                             more_params=[("azure_display_name", "Ofir")])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same display name', 1)
+
+
+def test_rule_correlate_with_juniper():
+    device1 = get_raw_device(plugin_name='junos_adapter', device_id='SomeDeviceId',
+                             more_params=[("name", "ofir")])
+    device2 = get_raw_device(plugin_name='juniper_adapter', device_id='SomeDeviceId',
+                             more_params=[("name", "Ofir"), ('device_type', 'Juniper Space Device')])
+    assert_success(correlate([device1, device2]), [device1, device2], 'Juniper devices with same asset name', 1)
+
+
+def test_rule_correlate_hostname_user():
+    device1 = get_raw_device(plugin_name='junos_adapter', device_id='SomeDeviceId', hostname="Ofir",
+                             more_params=[("last_used_users", ["ofir"])])
+    device2 = get_raw_device(plugin_name='juniper_adapter', device_id='SomeDeviceId', hostname="ofir",
+                             more_params=[("last_used_users", ["Ofir"]), ('device_type', 'Juniper Space Device')])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and LastUsedUser', 1)
+
+
+def test_rule_correlate_asset_host():
+    device1 = get_raw_device(plugin_name='aws_adapter', device_id='SomeDeviceId',
+                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}],
+                             more_params=[("name", "Ofir")])
+    device2 = get_raw_device(plugin_name='esx_adapter', device_id='SomeDeviceId',
+                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}],
+                             more_params=[("name", "Ofir"), ('device_type', 'Juniper Space Device')])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same Asset name', 1)
+
+
+def test_rule_correlate_hostname_deep_security():
+    device1 = get_raw_device(plugin_name='deep_security_adapter', device_id='SomeDeviceId', hostname="ofir",
+                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}],
+                             more_params=[("name", "Ofir")])
+    device2 = get_raw_device(plugin_name='esx_adapter', device_id='SomeDeviceId', hostname="ofir",
+                             more_params=[("name", "Ofir"), ('device_type', 'Juniper Space Device')])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname '
+                                                                      'and one is DeepSecurity', 1)
+
+
+def test_rule_correlate_ip_linux_illusive():
+    device1 = get_raw_device(plugin_name='illusive_adapter', device_id='SomeDeviceId',
+                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}], os={'type': 'linux'})
+    device2 = get_raw_device(plugin_name='esx_adapter', device_id='SomeDeviceId', hostname="ofir",
+                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}], os={'type': 'linux'})
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same IP one is Illusive '
+                                                                      'and They are Linux', 1)
+
+
+def test_rule_correlate_splunk_vpn_hostname():
+    device1 = get_raw_device(plugin_name='splunk_adapter', device_id='SomeDeviceId', hostname="ofir",
+                             more_params=[("splunk_source", "VPN")])
+    device2 = get_raw_device(plugin_name='splunk_adapter', device_id='SomeDeviceId2', hostname="ofir",
+                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}], os={'type': 'linux'},
+                             more_params=[("splunk_source", "VPN")])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same Normalized hostname '
+                                                                      'and both are Splunk VPN', 1)
 
 
 if __name__ == '__main__':

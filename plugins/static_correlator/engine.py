@@ -242,7 +242,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_asset_name],
                                       [is_junos_space_device],
                                       [],
-                                      {'Reason': 'They have same asset name'},
+                                      {'Reason': 'Juniper devices with same asset name'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_ad_sccm_id(self, adapters_to_correlate):
@@ -306,7 +306,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same IP one is Illusive and They are Linux'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_splunk_vpn_hostName(self, adapters_to_correlate):
+    def _correlate_splunk_vpn_hostname(self, adapters_to_correlate):
         logger.info('Starting to correlate on Splunk VPN')
         filtered_adapters_list = filter(is_splunk_vpn, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
@@ -368,7 +368,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         yield from self._correlate_ip_linux_illusive(adapters_to_correlate)
 
-        yield from self._correlate_splunk_vpn_hostName(adapters_to_correlate)
+        yield from self._correlate_splunk_vpn_hostname(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:
