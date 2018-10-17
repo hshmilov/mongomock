@@ -6,6 +6,7 @@ class SettingsPage(Page):
     DEFAULT_SCHEDULE_RATE = '12'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
+    ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
     REMOTE_SUPPORT_LABEL = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
@@ -38,6 +39,9 @@ class SettingsPage(Page):
 
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
+
+    def click_about(self):
+        self.driver.find_element_by_css_selector(self.ABOUT_CSS).click()
 
     def get_save_button(self):
         return self.get_special_button('Save')

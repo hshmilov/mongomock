@@ -8,6 +8,7 @@ from services.axonius_service import get_service
 import subprocess
 
 CORTEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
 
 
 def main(command):
@@ -82,7 +83,7 @@ def system_entry_point(args):
         print(parser.usage())
         sys.exit(1)
 
-    metadata_path = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
+    metadata_path = METADATA_PATH
 
     if not os.path.isfile(metadata_path):
         with open(metadata_path, 'wb') as f:
