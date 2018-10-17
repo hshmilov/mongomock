@@ -237,6 +237,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
             self._run_plugins('Correlator')
 
+            self._request_db_rebuild(sync=True)
+
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins('Post-Correlation')
 
