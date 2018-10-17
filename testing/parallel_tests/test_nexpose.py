@@ -2,7 +2,7 @@ import pytest
 from flaky import flaky
 from services.adapters.nexpose_service import NexposeService, nexpose_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_nexpose_credentials import *
+from test_credentials.test_nexpose_credentials import client_details, SOME_DEVICE_ID, FETCHED_DEVICE_EXAMPLE
 
 
 class TestNexposeAdapter(AdapterTestBase):
@@ -12,11 +12,11 @@ class TestNexposeAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return nexpose_details['host']
+        return client_details['host']
 
     @property
     def some_client_details(self):
-        return nexpose_details
+        return client_details
 
     @property
     def some_device_id(self):

@@ -493,8 +493,6 @@ testing/test_credentials/test_azure_credentials.py
 testing/test_credentials/test_bigfix_credentials.py
 testing/test_credentials/test_blackberry_uem_credentials.py
 testing/test_credentials/test_carbonblack_defense_credentials.py
-testing/test_credentials/test_carbonblack_protection_credentials.py
-testing/test_credentials/test_carbonblack_response_credentials.py
 testing/test_credentials/test_chef_credentials.py
 testing/test_credentials/test_cisco_credentials.py
 testing/test_credentials/test_cisco_meraki_credentials.py
@@ -507,20 +505,16 @@ testing/test_credentials/test_eset_credentials.py
 testing/test_credentials/test_esx_credentials.py
 testing/test_credentials/test_fireeye_hx_credentials.py
 testing/test_credentials/test_forcepoint_csv_credentials.py
-testing/test_credentials/test_fortigate_credentials.py
 testing/test_credentials/test_gce_credentials.py
 testing/test_credentials/test_google_mdm_credentials.py
 testing/test_credentials/test_gotoassist_credentials.py
 testing/test_credentials/test_hyper_v_credentials.py
 testing/test_credentials/test_infinite_sleep_credentials.py
-testing/test_credentials/test_infoblox_credentials.py
-testing/test_credentials/test_jamf_credentials.py
 testing/test_credentials/test_kaseya_credentials.py
 testing/test_credentials/test_minerva_credentials.py
 testing/test_credentials/test_mobileiron_credentials.py
 testing/test_credentials/test_nessus_credentials.py
 testing/test_credentials/test_nessus_csv_credentials.py
-testing/test_credentials/test_nexpose_credentials.py
 testing/test_credentials/test_observeit_credentials.py
 testing/test_credentials/test_openstack_credentials.py
 testing/test_credentials/test_oracle_vm_credentials.py
@@ -530,7 +524,6 @@ testing/test_credentials/test_qualys_scans_credentials.py
 testing/test_credentials/test_sccm_credentials.py
 testing/test_credentials/test_secdo_credentials.py
 testing/test_credentials/test_sentinelone_credentials.py
-testing/test_credentials/test_service_now_credentials.py
 testing/test_credentials/test_solarwinds_orion_credentials.py
 testing/test_credentials/test_splunk_credentials.py
 testing/test_credentials/test_symantec_altiris_credentials.py

@@ -1,7 +1,7 @@
 client_details = {
-    "CarbonblackProtection_Domain": "https://10.0.2.120",
-    "apikey": "F56CC06E-4613-4D97-B7FD-F1324B1B5A45",
-    "verify_ssl": False
+    'CarbonblackProtection_Domain': 'https://10.0.2.120',
+    'apikey': 'F51837F6-B855-492C-9132-BEC1D93330C0',   # Read-only credentials
+    'verify_ssl': False
 }
 
-SOME_DEVICE_ID = '1TESTDOMAIN\WIN-76F9735PMOJ'
+SOME_DEVICE_ID = '1TESTDOMAIN\\WIN-76F9735PMOJ'

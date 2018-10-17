@@ -2,13 +2,13 @@
 # Readonly credentials only for System Configuration created especially for the adapter and
 # The dhcp_lease time is a week in seconds (as defaulted in our router).
 # The ssl cert of our router is not signed so verify_ssl is False.
-fortigate_details = {
-    "host": "192.168.10.1",
-    "port": "443",
-    "username": "adapter",
-    "password": "IAmDeanSysMan1@",
-    "verify_ssl": False,
-    "dhcp_lease_time": 604800
+client_details = {
+    'host': '192.168.10.1',
+    'port': '443',
+    'username': 'axonius-readonly',
+    'password': 'Password2',
+    'verify_ssl': False,
+    'dhcp_lease_time': 604800
 }
 
 SOME_DEVICE_ID = 'a4:e9:75:78:fc:c3'.upper()
