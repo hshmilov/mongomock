@@ -20,7 +20,6 @@ BUILDS_DEMO_VM_TYPE = "Demo-VM"
 AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
-INSTANCE_TYPE = "t2.xlarge"
 PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
 PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
@@ -34,8 +33,8 @@ S3_BUCKET_NAME_FOR_OVA = "axonius-releases"
 S3_ACCELERATED_ENDPOINT = "http://s3-accelerate.amazonaws.com"
 S3_EXPORT_URL_TIMEOUT = 604700  # a week to use it before we generate a new one.
 
-DB_HOSTNAME = "builds.axonius.lan"
-REDIS_HOSTNAME = "builds.axonius.lan"
+BUILDS_HOST = 'builds-local.axonius.lan'
+EXTERNAL_BUILDS_HOST = 'builds.in.axonius.com'
 
 NUMBER_OF_TEST_INSTANCES_AVAILABLE = 5
 
@@ -57,14 +56,15 @@ class BuildsManager(object):
 
     def __init__(self):
         """Initialize the object."""
-        self.db = MongoClient(DB_HOSTNAME).builds  # This just connects to localhost
+        self.db = MongoClient(BUILDS_HOST).builds  # This just connects to localhost
         self.ec2 = boto3.resource("ec2")  # This assumes we have the credentials already set-up.
 
         self.ec2_client = boto3.client("ec2")
         self.s3_client = boto3.client("s3")
         self.ecr_client = boto3.client("ecr")
 
-        self.redis_client = redis.StrictRedis(host=REDIS_HOSTNAME)
+        # Not Used
+        # self.redis_client = redis.StrictRedis(host=BUILDS_HOST)
 
     def postImageDetails(self, repositoryName, imageDigest, forms):
         """
@@ -214,6 +214,9 @@ class BuildsManager(object):
 
         return list(export_tasks)
 
+    def update_last_user_interaction_time(self, ec2_id):
+        self.db.instances.update_one({"ec2_id": ec2_id}, {"$set": {"last_user_interaction": datetime.datetime.now()}})
+
     def getInstances(self, ec2_id=None, vm_type=BUILDS_INSTANCE_VM_TYPE):
         """Return the different aws instances & our internal db."""
         if ec2_id is None:
@@ -296,32 +299,36 @@ class BuildsManager(object):
         """
         Gets a new already-made test instance, creates a new one immediately.
         """
+        raise NotImplementedError('Unused')
 
-        while self.redis_client.llen('test_instances') < (NUMBER_OF_TEST_INSTANCES_AVAILABLE + 1):
-            instance_id = self.add_instance(
-                'AutoTest_{0}'.format(random.randint(1, 10000)),
-                'Builds-System',
-                'Created automatically for automatic tests',
-                'AutoTests',
-                "#!/bin/bash\n"
-                "set -x\n"
-                "exec 1>/install.log 2>&1\n"
-                "echo ubuntu:12345678 | chpasswd\n"
-                "sed -i.bak 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config\n"
-                "sed -i.bak 's/127\.0\.1\.1.*/127.0.1.1\t'`hostname`'/' /etc/hosts\n"    # surpress 'sudo: unable to resolve host'
-                "service ssh restart\n"
-            )['instance_id']
+        # The fllowing code is commented out because in this version of builds we are not using auto-created vm's,
+        # but there is a high probability we will use this in the future.
 
-            self.redis_client.lpush('test_instances', instance_id)
+        # while self.redis_client.llen('test_instances') < (NUMBER_OF_TEST_INSTANCES_AVAILABLE + 1):
+        #     instance_id = self.add_instance(
+        #         'AutoTest_{0}'.format(random.randint(1, 10000)),
+        #         'Builds-System',
+        #         'Created automatically for automatic tests',
+        #         'AutoTests',
+        #         "#!/bin/bash\n"
+        #         "set -x\n"
+        #         "exec 1>/install.log 2>&1\n"
+        #         "echo ubuntu:12345678 | chpasswd\n"
+        #         "sed -i.bak 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config\n"
+        #         # surpress 'sudo: unable to resolve host'
+        #         "sed -i.bak 's/127\.0\.1\.1.*/127.0.1.1\t'`hostname`'/' /etc/hosts\n"
+        #         "service ssh restart\n"
+        #     )['instance_id']
+        #
+        #     self.redis_client.lpush('test_instances', instance_id)
+        #
+        # instance_id = self.redis_client.rpop('test_instances').decode('utf-8')
+        #
+        # return {"instance_id": instance_id}
 
-        instance_id = self.redis_client.rpop('test_instances').decode('utf-8')
-
-        return {"instance_id": instance_id}
-
-    def add_instance(self, name, owner, configuration_code, fork, branch,
-                     public=False,
-                     image_id=IMAGE_ID, instance_type=INSTANCE_TYPE,
-                     key_name=KEY_NAME, subnet_id=PRIVATE_SUBNET_ID, vm_type=BUILDS_INSTANCE_VM_TYPE):
+    def add_instance(self, name, owner, ec2_type, configuration_code, fork, branch,
+                     public=False, image_id=IMAGE_ID, key_name=KEY_NAME, subnet_id=PRIVATE_SUBNET_ID,
+                     vm_type=BUILDS_INSTANCE_VM_TYPE):
         """As the name suggests, make a new instance."""
 
         # Give names to our instance and volume
@@ -344,7 +351,7 @@ class BuildsManager(object):
         termination_protection = False if vm_type == BUILDS_INSTANCE_VM_TYPE else True
 
         args = {
-            "ImageId": image_id, "InstanceType": instance_type, "KeyName": key_name,
+            "ImageId": image_id, "InstanceType": ec2_type, "KeyName": key_name,
             "MinCount": 1, "MaxCount": 1, "SubnetId": subnet_id,
             "TagSpecifications": tags_specifications,
             "UserData": configuration_code,
@@ -373,8 +380,11 @@ class BuildsManager(object):
             self.ec2_client.associate_address(AllocationId=allocation['AllocationId'], InstanceId=instance_id)
             elastic_ip_id = allocation['AllocationId']
 
+        owner_full_name, owner_slack_id = owner
+
         self.db.instances.insert_one({"name": name,
-                                      "owner": owner,
+                                      "owner": owner_full_name,
+                                      "owner_slack_id": owner_slack_id,
                                       "configuration_name": "Constant",
                                       "configuration_code": configuration_code,
                                       "ec2_id": instance_id,
@@ -384,12 +394,35 @@ class BuildsManager(object):
                                       "fork": fork,
                                       "branch": branch})
 
+        self.update_last_user_interaction_time(instance_id)
         return {"instance_id": instance_id}  # Return new list of vms
+
+    def changeBotMonitoringStatus(self, ec2_id, status):
+        """ Change the bot monitoring status of this instance"""
+        self.db.instances.update_one({"ec2_id": ec2_id}, {"$set": {"bot_monitoring": status}})
+        self.update_last_user_interaction_time(ec2_id)
+        return status
+
+    def set_instance_metadata(self, ec2_id, namespace, metadata):
+        self.db.instances.update_one(
+            {
+                "ec2_id": ec2_id
+            },
+            {
+                "$set":
+                    {
+                        namespace: metadata
+                    }
+            }
+        )
+
+        return True
 
     def terminateInstance(self, ec2_id):
         """Delete an instance by its id."""
         # If that's a test vm then remove it from the list
-        self.redis_client.lrem('test_instances', 0, ec2_id)
+        # Unused
+        # self.redis_client.lrem('test_instances', 0, ec2_id)
 
         self.ec2_client.modify_instance_attribute(InstanceId=ec2_id, DisableApiTermination={'Value': False})
 
@@ -405,16 +438,19 @@ class BuildsManager(object):
             waiter.wait(InstanceIds=[instance['ec2_id']])
             self.ec2_client.release_address(AllocationId=elastic_ip_address_id)
         # deleted = self.db.instances.delete_one({"ec2_id": ec2_id})
+        self.update_last_user_interaction_time(ec2_id)
         return True
 
     def stopInstance(self, ec2_id):
         """Delete an instance by its id."""
         self.ec2.instances.filter(InstanceIds=[ec2_id]).stop()
+        self.update_last_user_interaction_time(ec2_id)
         return True
 
     def startInstance(self, ec2_id):
         """Delete an instance by its id."""
         self.ec2.instances.filter(InstanceIds=[ec2_id]).start()
+        self.update_last_user_interaction_time(ec2_id)
         return True
 
     def export_ova(self, version, owner, fork, branch, client_name, comments):
@@ -448,10 +484,13 @@ class BuildsManager(object):
 
         channel.exec_command(' ; '.join(commands))
 
+        owner_full_name, owner_slack_id = owner
+
         db_json = dict()
         db_json['_id'] = export_id
         db_json['version'] = version
-        db_json['owner'] = owner
+        db_json['owner'] = owner_full_name
+        db_json['owner_slack_id'] = owner_slack_id
         db_json['fork'] = fork
         db_json['branch'] = branch
         db_json['client_name'] = client_name

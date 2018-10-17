@@ -38,8 +38,9 @@
                 <!--<li id='menu_link_5' role="presentation"><a id="vm_images_link" href="#vm_images" onclick="return changeMenu(this);">Images</a></li>-->
 
               </ul>
-            <h3 class="text-muted">Axonius Builds</h3>
-            A tool to help create Axonius systems and manage our CI process.
+            <h3 class="text-muted"><img src = "static/images/logo.png" style="width: 40px; vertical-align: sub;"/>
+                <span>Axonius Builds</span></h3>
+            Hello, {{username}}! <a href="/logout">Logout</a>
         </div>
         <div class="container hidden_container" id="vm_configurations">
             <div class="row">
@@ -183,6 +184,7 @@
                         </div>
                 </div>
             </div>
+            <!--
             <div class="row">
                 <div class="col-md-12">
                     <div class="panel panel-primary">
@@ -202,6 +204,7 @@
                     </div>
                 </div>
             </div>
+            -->
         </div>
     </div>
     </div>
@@ -261,6 +264,7 @@
                         </div>
                 </div>
             </div>
+            <!--
             <div class="row">
                 <div class="col-md-12">
                     <div class="panel panel-primary">
@@ -280,6 +284,7 @@
                     </div>
                 </div>
             </div>
+            -->
         </div>
     </div>
     </div>
@@ -350,66 +355,65 @@
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="new_instance_modal_title">Create a new instance</h4>
               </div>
-              <div class="modal-body">
-                Fill in these details:<br>
+              <div class="modal-body form-group">
                 <table class='new_instance_table'>
                     <tr>
-                        <td>Name</td>
+                        <td width="20%">Name</td>
                         <td>
-                            <input type='text' placeholder='Name' id='new_vm_name'/>
-                        </td>&nbsp;
-                        <td>&nbsp;Owner</td>
-                        <td>
-                            <input type='text' placeholder='Owner' id='new_vm_owner'/>
+                            <input class="form-control" type='text' placeholder='Name' id='new_vm_name'/>
                         </td>
                     </tr>
                     <tr>
-                        <td>By Branch or Release</td>
+                        <td width="20%">Instance Type</td>
                         <td>
-                            <input type="radio" name="fork_or_release" value="Branch" checked="checked" onchange="new_instance_by_release_code_change(this.value)">Branch<br>
+                            <select class="form-control" id="new_vm_ec2_instance_type">
+                                <option value="normal"> Normal (t2.medium)</option>
+                                <option value="strong"> Strong (t2.xlarge)</option>
+                            </select>
                         </td>
+                    </tr>
+                    <tr>
+                        <td width="20%">Branch or Release</td>
                         <td>
-                            <input type="radio" name="fork_or_release" value="Release" onchange="new_instance_by_release_code_change(this.value)">Release<br>
+                            <input style="width: 30px" type="radio" name="fork_or_release" value="Branch" checked="checked" onchange="new_instance_by_release_code_change(this.value)">
+                            Branch &nbsp;
+                            <input style="width: 30px" type="radio" name="fork_or_release" value="Release" onchange="new_instance_by_release_code_change(this.value)">
+                            Release
                         </td>
                     </tr>
                     <tr id="new_instance_fork_and_branch_select_cell">
-                        <td>Fork & Branch</td>
+                        <td width="20%">Fork & Branch</td>
                         <td>
-                            <select id='new_vm_fork' onchange="new_instance_modal_fork_change(this.value, 1)">
-                                <option>Loading...</option>
-                            </select>
-                        </td>
-                        <td>Branch</td>
-                        <td>
-                            <select id='new_vm_branch' onchange="new_instance_modal_branch_change(this.value)">
-                                <option>Loading...</option>
-                            </select>
+                            <div class="content row">
+                                <div class="col-xs-6">
+                                <select class="form-control" id='new_vm_fork' onchange="new_instance_modal_fork_change(this.value, 1)">
+                                    <option>Loading...</option>
+                                </select>
+                                </div>
+                                <div class="col-xs-6">
+                                <select class="form-control" id='new_vm_branch' onchange="new_instance_modal_branch_change(this.value)">
+                                    <option>Loading...</option>
+                                </select>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     <tr id="new_instance_release_select_cell" hidden="hidden">
-                        <td>Release</td>
+                        <td width="20%">Release</td>
                         <td>
-                            <select id='new_vm_release' onchange="new_instance_modal_branch_change(this.value, 'axonius/cortex')">
-                                <!--<option>Loading...</option>-->
+                            <select class="form-control" id='new_vm_release' onchange="new_instance_modal_branch_change(this.value, 'axonius/cortex')">
                             </select>
                         </td>
                     </tr>
                     <tr>
-                        <td>Public</td>
+                        <td width="20%">Configurations</td>
                         <td>
-                            <input type='checkbox' placeholder='Public' id='new_vm_public'/>
-                        </td>
-                    </tr>
-                    <tr id="set_credentials_cell">
-                        <td>Set Credentials</td>
-                        <td>
-                            <input type='checkbox' placeholder='Public' id='new_vm_set_credentials' checked/>
-                        </td>
-                    </tr>
-                    <tr id="do_not_run_axonius_cell">
-                        <td>Create Empty Server</td>
-                        <td>
-                            <input type='checkbox' placeholder='Public' id='new_vm_empty_server'/>
+                            <div id="new_vm_empty_server_label">
+                                <input style="width: 20px" type="checkbox" id='new_vm_empty_server' onclick="empty_server_checkbox(this.checked)"/> Just run an empty server
+                            </div>
+                            <div id='new_vm_set_credentials_label'>
+                                <input style="width: 20px" type="checkbox" checked id='new_vm_set_credentials' /> Set Credentials on init
+                            </div>
                         </td>
                     </tr>
                     <!--<tr id="new_instance_configuration_cell">-->
@@ -429,18 +433,13 @@
                         <!--</td>-->
                     <!--</tr>-->
                     <tr id="new_instance_adapters_cell">
-                        <tr>
-                            <td></td>
-                            <td><b>By choosing "ALL" the rest of the choices will be excluded.</b></td>
-                        </tr>
-                        <tr>
-                            <td>Adapters</td>
-                            <td colspan="2">
-                                <select id="new_vm_adapters_options" multiple style='width: 100%; height: 60vh;'>
-                                    <option value="All">ALL</option>
-                                </select>
-                            </td>
-                        </tr>
+                        <td width="20%">Adapters</td>
+                        <td>
+                            <b>By choosing "ALL" the rest of the choices will be excluded.</b><br>
+                            <select class="form-control" id="new_vm_adapters_options" multiple style='width: 100%; height: 40vh;'>
+                                <option value="All">ALL</option>
+                            </select>
+                        </td>
                     </tr>
                 </table>
               </div>

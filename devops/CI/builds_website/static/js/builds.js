@@ -22,6 +22,9 @@
     var github_token = "githubreadonly@axonius.com:3Zc0kRElHCzhHbM1u0LX";
 
     /* Global functions */
+    function capitalize_str(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
     function update_panel(panel_id, data) {
         /* Takes a panel id and an array of arrays representing the data, and updates it.
 
@@ -77,7 +80,7 @@
                 else {
                     var input = $("<input>").attr("type", "text").attr("value", field["value"]);
                 }
-                input.addClass("modal-input").attr("name", field['name']).attr("placeholder", field['name']);
+                input.addClass("modal-input").addClass("form-control").attr("name", field['name']).attr("placeholder", field['name']);
                 if (field["disabled"] == true) {
                     input.attr("disabled", "true");
                 }
@@ -184,13 +187,15 @@
 
                 let public_link = ("elastic_ip_id" in db && db.elastic_ip_id !== '') ? "<a href='https://" + ec2.public_ip_address  + "' target='_blank'>https://" + ec2.public_ip_address + "</a>": '';
 
+                // Capitalize owner name
+                db["owner"] = capitalize_str(db["owner"])
+
                 // Push all of the data
                 data.push(parseInt(i) + 1);
                 data.push(db["name"]);
-                data.push(db['configuration_name'])
+                data.push(ec2['instance_type'])
                 data.push(db["owner"]);
                 data.push(ip_link);
-                data.push(public_link);
                 if (instance_and_system_status === "ok" || instance_and_system_status === undefined) {
                     data.push(ec2["state"]);
                 }
@@ -230,8 +235,7 @@
             ["Fork", ("fork" in inst['db']) ? inst['db']['fork'] : ""],
             ["Branch", ("branch" in inst['db']) ? inst['db']['branch'] : ""],
             ["Date Created", inst['db']['date']],
-            ["Comments", (inst['db']['comments']) ? inst['db']['comments'].replace("\n", "<br>") : ""],
-            ["Metadata", ""]        // Link to our CI system build link
+            ["Comments", (inst['db']['comments']) ? inst['db']['comments'].replace("\n", "<br>") : ""]
         ];
 
         var actions_data = [];  // if its termianted or shutting down we still provide an empty array to update_panel.
@@ -252,6 +256,19 @@
              else {
                  actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start the instance?", function (yes_function) { return start_instance(yes_function, inst['ec2']['id']);})]);
              }
+
+             var bot_monitoring = inst['db']['bot_monitoring'];
+
+            if (bot_monitoring == "false"){
+                actions_data.unshift(["Enable Bot Monitoring",
+                    wrap_modal_with_td("Are you sure you want to enable the bot monitoring?", function(yes_function) { return enable_bot_monitoring(yes_function, inst['ec2']['id']);})
+                ]);
+            }
+            else {
+                actions_data.unshift(["Disable Bot Monitoring",
+                    wrap_modal_with_td("Are you sure you want to disable the bot monitoring?", function(yes_function) { return disable_bot_monitoring(yes_function, inst['ec2']['id']);})
+                ]);
+            }
         }
 
         var instance_info_and_actions_data = instance_info_data.concat(actions_data);
@@ -260,6 +277,7 @@
         update_panel("tbody_instance_info", instance_info_and_actions_data);
 
         // update the configuration info because its a little bit different (needs colspan)
+        /*
         var tci = $("#tbody_configuration_info").html("");
         $("<tr>").append($("<td>").text("Manifest File")).append($("<td>").append($("<a>").attr("target", "_blank").attr("href", "/instances/" + inst['ec2']['id'] + "/manifest").text("Click here"))).appendTo(tci);
         $("<tr>").append($("<td>").text("Configuration Name")).append($("<td>").text(inst['db']['configuration_name'])).appendTo(tci);
@@ -269,6 +287,7 @@
         $('pre code').each(function(i, block) {
             hljs.highlightBlock(block);
         });
+        */
 
     }
     function update_demo_details(i) {
@@ -327,6 +346,7 @@
         update_panel("tbody_demo_info", vm_info_data);
         update_panel("tbody_demo_instance_info", instance_info_and_actions_data);
 
+        /*
         // update the configuration info because its a little bit different (needs colspan)
         var tci = $("#tbody_configuration_info").html("");
         $("<tr>").append($("<td>").text("Manifest File")).append($("<td>").append($("<a>").attr("target", "_blank").attr("href", "/instances/" + inst['ec2']['id'] + "/manifest").text("Click here"))).appendTo(tci);
@@ -337,6 +357,7 @@
         $('pre code').each(function(i, block) {
             hljs.highlightBlock(block);
         });
+        */
 
     }
     function start_instance(always_function, instance_id) {
@@ -371,6 +392,29 @@
             .fail(exception_modal)
             .always(always_function);
     }
+
+    function disable_bot_monitoring(always_function, instance_id) {
+        console.log("Disabling bot monitoring for " + instance_id);
+        $.ajax({url: "/instances/" + instance_id + "/bot_monitoring", type: "POST", data: {'status': false}})
+            .done(function(data) {
+                current_instances = data["current"];
+                update_instance_view(current_demo_details_i);
+            })
+            .fail(exception_modal)
+            .always(always_function);
+    }
+
+    function enable_bot_monitoring(always_function, instance_id) {
+        console.log("Enabling bot monitoring for " + instance_id);
+        $.ajax({url: "/instances/" + instance_id + "/bot_monitoring", type: "POST", data: {'status': true}})
+            .done(function(data) {
+                current_instances = data["current"];
+                update_instance_view(current_demo_details_i);
+            })
+            .fail(exception_modal)
+            .always(always_function);
+    }
+
     function get_credentials(demo_ip, fork, branch) {
         console.log("getting credentials " + demo_ip);
         let credentials_list = [];
@@ -433,11 +477,10 @@
         let data = {};
         data["action"] = "export";
         data["version"] = fields[0].value;
-        data["owner"] = fields[1].value;
-        data["fork"] = fields[2].value;
-        data["branch"] = fields[3].value;
-        data["client_name"] = fields[4].value;
-        data["comments"] = fields[5].value;
+        data["fork"] = fields[1].value;
+        data["branch"] = fields[2].value;
+        data["client_name"] = fields[3].value;
+        data["comments"] = fields[4].value;
 
         $.ajax({url: "/exports", type: "POST", data: data})
             .done(function(data) {
@@ -450,12 +493,16 @@
             .fail(exception_modal)
             .always(always_function);
     }
+    function empty_server_checkbox(is_empty_server) {
+        $("#new_vm_adapters_options").prop("disabled", is_empty_server);
+        $("#new_vm_set_credentials").prop("disabled", is_empty_server);
+    }
     function add_instance_modal() {
         instance_vm_type = "instance";
         // $("#new_instance_configuration_cell").show();
         // $("#new_instance_configuration_code_cell").show();
         // $("#new_instance_adapters_cell").hide();
-        $("#do_not_run_axonius_cell").show();
+        $("#new_vm_empty_server_label").show();
         $('#new_instance_modal').modal();
     }
     function add_demo_modal() {
@@ -463,13 +510,12 @@
         // $("#new_instance_configuration_cell").hide();
         // $("#new_instance_configuration_code_cell").hide();
         // $("#new_instance_adapters_cell").show();
-        $("#do_not_run_axonius_cell").hide();
+        $("#new_vm_empty_server_label").hide();
         $('#new_instance_modal').modal();
     }
     function add_export_modal() {
         new_modal("Export", export_instance, [
                 {"name": "Version Name/Number"},
-                {"name": "Owner"},
                 {"name": "Fork", "value": "axonius"},
                 {"name": "Branch", "value": "develop"},
                 {"name": "Client Name"},
@@ -507,7 +553,7 @@
     function load_release_list(page_number) {
         var select = $("#new_vm_release");
 
-        $.ajax({url: "https://api.github.com/repos/axonius/cortex/tags",
+        $.ajax({url: "https://api.github.com/repos/axonius/cortex/tags?page=" + page_number,
             type: "GET",
             beforeSend: function (xhr) {
                 var token_hash = "Basic " + btoa(github_token);
@@ -517,15 +563,16 @@
                 data.forEach(function (i) {
                         select.append($("<option>").attr("value", i.name).text(i.name));
                 });
+
+                if (data.length !== 0) {
+                    load_release_list(page_number + 1);
+                }
             })
             .fail(exception_modal)
     }
     function load_fork_list() {
         var select = $("#new_vm_fork").html("");
-
-
         select.append($("<option>").attr("value", "axonius/cortex").text("axonius/cortex"));
-        new_instance_modal_fork_change("axonius/cortex", 1);
         $.ajax({url: "https://api.github.com/repos/axonius/cortex/forks",
             type: "GET",
             beforeSend: function (xhr) {
@@ -540,28 +587,7 @@
                 new_instance_modal_change_configuration_code(0);
             }).fail(exception_modal)
     }
-    function new_demo_modal_release_change(release_name) {
-        var select = $("#new_vm_branch");
-        if (page_number === 1) {
-            select.html("");
-        }
-        $.ajax({
-            url: "https://api.github.com/repos/" + fork_name + "/branches?page=" + page_number,
-            type: "GET",
-            beforeSend: function (xhr) {
-                var token_hash = "Basic " + btoa(github_token);
-                xhr.setRequestHeader('Authorization', token_hash);
-            }
-        }).done(function (data) {
-            data.forEach(function (i) {
-                select.append($("<option>").attr("value", i.name).text(i.name));
-            });
-            if (data.length !== 0) {
-                new_instance_modal_fork_change(fork_name, page_number + 1);
-            }
-        })
-            .fail(exception_modal)
-    }
+
     function new_instance_modal_fork_change(fork_name, page_number) {
         var select = $("#new_vm_branch");
         if (page_number === 1) {
@@ -583,6 +609,7 @@
                     select.append($("<option>").attr("value", i.name).text(i.name));
                 }
             });
+
             if (data.length !== 0) {
                 new_instance_modal_fork_change(fork_name, page_number + 1);
             }
@@ -592,6 +619,7 @@
         })
             .fail(exception_modal)
     }
+
     function new_instance_modal_branch_change(branch_name, fork_name) {
         if (typeof fork_name === 'undefined') {
             fork_name = $('#new_vm_fork').val();
@@ -620,6 +648,7 @@
         var data = {};
 
         var instance_type = (instance_vm_type === "demo") ? "Demo-VM" : "Builds-VM";
+        var is_public = (instance_vm_type == "demo");
 
         if (code_source === "Release") {
             data["fork"] = 'axonius/cortex';
@@ -631,8 +660,8 @@
         }
 
         data["name"] = $("#new_vm_name")[0].value;
-        data["owner"] = $("#new_vm_owner")[0].value;
-        data["public"] = $("#new_vm_public")[0].checked;
+        data["ec2_type"] = $("#new_vm_ec2_instance_type")[0].value;
+        data["public"] = is_public;
         data["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
         data["empty"] = $("#new_vm_empty_server")[0].checked;
         data["adapters"] = $("#new_vm_adapters_options option:selected").map(function () {
@@ -716,6 +745,9 @@
 
                 var public_link = ("elastic_ip_id" in db && db.elastic_ip_id !== '') ? "<a href='https://" + ec2.public_ip_address  + "' target='_blank'>https://" + ec2.public_ip_address + "</a>": '';
 
+                // Capitalize owner name
+                db["owner"] = capitalize_str(db["owner"])
+
                 // Push all of the data
                 data.push(parseInt(i) + 1);
                 data.push(db["name"]);
@@ -740,6 +772,9 @@
         for (i in current_exports) {
             var export_i = current_exports[i];
             var data = [];
+
+            // Capitalize owner name
+            export_i["owner"] = capitalize_str(export_i["owner"])
 
             // Push all of the data
             data.push(parseInt(i) + 1);
@@ -799,6 +834,10 @@
             var export_i = current_exports_in_progress[i];
             if (show_completed_exports === true || export_i['status'] !== 'completed') {
                 var data = [];
+
+                // Capitalize owner name
+                export_i["owner"] = capitalize_str(export_i["owner"])
+
                 // Push all of the data
                 data.push(parseInt(i) + 1);
                 data.push(export_i["version"]);
@@ -1050,10 +1089,9 @@
 
     /* Initialization and menu */
     $(document).ready(function() {
-
-        load_release_list(1);
         load_fork_list();
         new_instance_modal_fork_change('axonius/cortex', 1);
+        load_release_list(1);
 
         // initialize datatables.
         if (window.location.hash === "") {
@@ -1068,10 +1106,9 @@
             columns: [
                 { title: "#" },
                 { title: "Instance Name" },
-                { title: "Configuration" },
+                { title: "Instance Type" },
                 { title: "Owner" },
                 { title: "Private Address" },
-                { title: "Public Address" },
                 { title: "State" }
             ]
         });
@@ -1113,6 +1150,7 @@
                 { title: "Last Modified" }
             ]
         });
+        /*
 
         $("#images_table").DataTable({
             columns: [
@@ -1134,13 +1172,14 @@
                 { title: "Purpose"},
             ]
         });
+        */
 
-        update_datatable("instances_table", [["1", "Loading...", "", "", "", "", ""]]);
+        update_datatable("instances_table", [["1", "Loading...", "", "", "", ""]]);
         update_datatable("demos_table", [["1", "Loading...", "", "", "", "", ""]]);
         update_datatable("exports_table", [["1", "Loading...", "", "", "", "", "", "", ""]]);
         update_datatable("exports_in_progress_table", [["1", "Loading...", "", "", "", "", "", "", "", ""]]);
-        update_datatable("images_table", [["1", "Loading...", "", "", "", ""]]);
-        update_datatable("configurations_table", [["1", "Loading...", "", "", ""]]);
+        // update_datatable("images_table", [["1", "Loading...", "", "", "", ""]]);
+        // update_datatable("configurations_table", [["1", "Loading...", "", "", ""]]);
 
         // load all data.
         flush_url("/instances?instance_type=Builds-VM", function(data) {
@@ -1174,6 +1213,7 @@
             current_exports_in_progress = data["current"];
             rewrite_exports_in_progress_table();
         });
+        /*
         flush_url("/images", function(data) {
             current_images = data["current"];
             rewrite_images_table();
@@ -1185,6 +1225,7 @@
             rewrite_configurations_table();
             update_configuration_details(0);
         });
+        */
     });
 
     function changeMenu(link) {
