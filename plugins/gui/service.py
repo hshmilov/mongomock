@@ -1362,8 +1362,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                            email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
                                            self._grab_file_contents(email_settings.get(
                                                'smtpKey'), stored_locally=False),
-                                           self._grab_file_contents(email_settings.get('smtpCert'),
-                                                                    stored_locally=False))
+                                           self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False))
                 try:
                     with email_server:
                         # Just to test connection

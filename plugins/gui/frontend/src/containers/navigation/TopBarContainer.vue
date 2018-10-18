@@ -253,9 +253,11 @@
                         border-radius: 16px;
                         display: flex;
                         align-items: center;
-                        padding: 0 12px;
+                        padding: 0 16px 0 12px;
                         line-height: 32px;
-                        width: 136px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        box-shadow: none;
                         .svg-fill {
                             fill: $grey-1;
                             margin-right: 8px;

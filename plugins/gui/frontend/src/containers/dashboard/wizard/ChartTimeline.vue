@@ -6,9 +6,10 @@
         <template v-for="view, index in config.views">
             <x-select-symbol :options="entities" v-model="view.entity" type="icon" placeholder="Module..."/>
             <x-select :options="views[view.entity] || []" :searchable="true" v-model="view.name" placeholder="Query..." />
-            <div @click="removeView(index)" class="x-btn link" v-if="index > 0">x</div><div v-else></div>
+            <div @click="removeView(index)" class="x-btn link" v-if="!isIntersection && index > 0">x</div>
+            <div v-else></div>
         </template>
-        <a @click="addView" class="x-btn light grid-span3" :class="{ disabled: hasMaxViews }" :title="addBtnTitle">+</a>
+        <button @click="addView" class="x-btn light grid-span3" :class="{ disabled: hasMaxViews }" :title="addBtnTitle">+</button>
         <div class="line-range grid-span3">
             <input type="radio" v-model="config.timeframe.type" value="absolute" id="range_absolute" />
             <label for="range_absolute">Show results from range of dates</label>
@@ -110,7 +111,17 @@
                 }
             },
             isIntersection() {
-                this.max = (this.config.intersection)? 2 : 3
+                // Update max allowed queries and required queries
+                if (this.config.intersection) {
+                    this.max = 2
+                    if (this.config.views.length < 2) {
+                        this.config.views.push({ ...dashboardView })
+                    } else if (this.config.views.length > 2) {
+                        this.config.views.splice(2)
+                    }
+                } else {
+                    this.max = 3
+                }
             }
         },
         methods: {

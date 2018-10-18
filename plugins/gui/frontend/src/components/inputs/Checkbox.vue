@@ -93,9 +93,9 @@
                 left: -999em;
             }
             &:after {
-                width: 4px;
-                height: 9px;
-                top: -1px;
+                width: 6px;
+                height: 10px;
+                top: 0;
                 left: 3px;
                 border: 2px solid transparent;
                 border-top: 0;

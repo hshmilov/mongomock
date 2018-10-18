@@ -9,6 +9,7 @@
                            @input="onInput" :api-upload="apiUpload" ref="itemChild" :read-only="readOnly" />
             </x-type-wrap>
         </div>
+        <button v-if="!isOrderedObject" class="x-btn light" @click.prevent="addNewItem">+</button>
     </div>
 </template>
 
@@ -32,7 +33,6 @@
         },
         data() {
         	return {
-				data: { ...this.value },
                 needsValidation: false
             }
         },
@@ -46,6 +46,13 @@
             validate(silent) {
             	if (!this.$refs.itemChild) return
                 this.$refs.itemChild.forEach(item => item.validate(silent))
+            },
+            addNewItem() {
+                this.data[Object.keys(this.data).length] = this.schema.items.items.reduce((map, field) => {
+                    map[field.name] = field.default || null
+                    return map
+                }, {})
+                this.onInput()
             }
         },
         watch: {
