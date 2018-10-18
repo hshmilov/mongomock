@@ -1,5 +1,9 @@
 import pytest
 
+# Browsers
+CHROME = 'chrome'
+FIREFOX = 'firefox'
+
 
 def pytest_addoption(parser):
     def add_option(param_name, **kwargs):
@@ -9,6 +13,7 @@ def pytest_addoption(parser):
     add_option('local-browser', action='store_true', default=False, help='Run with local-browser')
     add_option('sanity', action='store_true', default=False, help='Run only sanity tests')
     add_option('teardown-keep-db', action='store_true', default=False, help='Keep the DB at teardown')
+    add_option('browser', action='store', default=CHROME, help='Choose browser')
 
 
 def pytest_collection_modifyitems(config, items):

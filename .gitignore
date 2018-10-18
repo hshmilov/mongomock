@@ -323,6 +323,7 @@ nvd_current_state.json
 
 # Selenium
 *chromedriver.exe
+*geckodriver.exe
 testing/screenshots/*
 testing/upgrade/*/screenshots/
 testing/upgrade/*/screenshots/

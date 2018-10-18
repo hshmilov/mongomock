@@ -5,6 +5,7 @@ from datetime import datetime
 import pytest
 from selenium import webdriver
 
+import conftest
 from axonius.plugin_base import EntityType
 from services.axonius_service import get_service
 from services.ports import DOCKER_PORTS
@@ -29,12 +30,35 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class TestBase:
     def _initialize_driver(self):
         if pytest.config.option.local_browser:
-            self.driver = webdriver.Chrome()
+            self.driver = self._get_local_browser()
             self.base_url = 'https://127.0.0.1'
         else:
             self.driver = webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
-                                           desired_capabilities=webdriver.DesiredCapabilities.CHROME)
+                                           desired_capabilities=self._get_desired_capabilities())
             self.base_url = 'https://gui'
+
+    @staticmethod
+    def _get_desired_capabilities():
+        if pytest.config.option.browser == conftest.CHROME:
+            return webdriver.DesiredCapabilities.CHROME
+        if pytest.config.option.browser == conftest.FIREFOX:
+            ff_profile = webdriver.FirefoxProfile()
+            ff_profile.set_preference('security.insecure_field_warning.contextual.enabled', False)
+            ff_profile.set_preference('security.insecure_password.ui.enabled', False)
+            ff_opts = webdriver.firefox.options.Options()
+            ff_opts.profile = ff_profile
+            ff_caps = ff_opts.to_capabilities()
+            ff_caps.update(webdriver.DesiredCapabilities.FIREFOX)
+            return ff_caps
+        raise AssertionError('Invalid browser selected')
+
+    @staticmethod
+    def _get_local_browser():
+        if pytest.config.option.browser == conftest.CHROME:
+            return webdriver.Chrome()
+        if pytest.config.option.browser == conftest.FIREFOX:
+            return webdriver.Firefox()
+        raise AssertionError('Invalid browser selected')
 
     def _save_screenshot(self, method, text=''):
         if not self.driver:
