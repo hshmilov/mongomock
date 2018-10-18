@@ -286,14 +286,14 @@ class TestAlert(TestBase):
     def test_notification_sanity(self):
         self.create_notifications(2)
 
-        assert self.notification_page.get_count() == 2
+        self.notification_page.wait_for_count(2)
 
         # Double click to open and close
         self.notification_page.click_notification_peek()
         self.notification_page.click_notification_peek()
 
-        assert self.notification_page.get_count() == 0, \
-            'Notification expected to be zeroed After clicking on peek'
+        self.notification_page.wait_for_count(0, 'Notification expected to be zeroed After clicking on peek')
+
         assert len(self.notification_page.get_peek_notifications()) == 2
 
         self.notification_page.click_notification_peek()
@@ -305,7 +305,8 @@ class TestAlert(TestBase):
     def test_notification_peek_count(self):
         """ test that when we add more 6 notifications, we get only 6 in notification peek"""
         self.create_notifications(7)
-        assert self.notification_page.get_count() == 7
+        self.notification_page.wait_for_count(7)
+
         assert len(self.notification_page.get_peek_notifications()) == 6
 
     def test_single_notification(self):

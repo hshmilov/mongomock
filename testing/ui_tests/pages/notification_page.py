@@ -3,6 +3,8 @@ import logging
 from typing import List
 from urllib.parse import urljoin
 
+from retrying import retry
+
 from ui_tests.pages.page import Page
 from axonius.utils.wait import wait_until
 
@@ -63,6 +65,10 @@ class NotificationPage(Page):
         assert len(elements) == 1, 'Multiple notification badge candidates found'
 
         return int(elements[0].text)
+
+    @retry(stop_max_attempt_number=100, wait_fixed=100)
+    def wait_for_count(self, assert_count: int, msg='assertion failed'):
+        assert self.get_count() == assert_count, msg
 
     def get_peek_notifications(self):
         self.click_notification_peek()
