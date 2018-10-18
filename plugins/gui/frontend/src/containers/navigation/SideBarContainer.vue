@@ -134,6 +134,9 @@
         }
         > .x-nested-nav > .x-nested-nav-item {
             border-left: 2px solid transparent;
+            > .item-link {
+                width: 58px;
+            }
             &.active {
                 border-left: 2px solid $theme-orange;
             }

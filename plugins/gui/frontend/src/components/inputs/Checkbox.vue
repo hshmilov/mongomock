@@ -77,8 +77,8 @@
             }
         }
         .x-checkbox-container {
-            width: 12px;
-            height: 12px;
+            width: 16px;
+            height: 16px;
             position: relative;
             border-radius: 2px;
             border: 2px solid $grey-3;

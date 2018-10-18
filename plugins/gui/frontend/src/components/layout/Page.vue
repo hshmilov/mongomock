@@ -36,13 +36,12 @@
         padding: 12px 24px 24px 264px;
         position: relative;
         margin-top: 60px;
-        width: calc(100vw - 288px);
-        height: calc(100vh - 84px);
+        width: 100vw;
+        height: calc(100vh - 60px);
         &.collapse {
             display: flex;
             flex-direction: column;
             padding-left: 84px;
-            width: calc(100vw - 108px);
         }
         > .x-header {
             display: flex;

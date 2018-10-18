@@ -11,25 +11,25 @@
         </div>
         <ul class="bar-nav">
             <li class="nav-item" v-if="isDashboardWrite">
-                <a v-if="researchStatusLocal === 'starting'" class="item-link research-link disabled">
+                <button v-if="researchStatusLocal === 'starting'" class="item-link research-link disabled">
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20" />
                     <div>Initiating...</div>
-                </a>
-                <a v-else-if="researchStatusLocal === 'stopping'" @click="stopResearchNow"
+                </button>
+                <button v-else-if="researchStatusLocal === 'stopping'" @click="stopResearchNow"
                    class="item-link research-link disabled">
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20" />
                     <div>Stopping...</div>
-                </a>
-                <a v-else-if="researchStatusLocal !== 'running'" @click="startResearchNow"
+                </button>
+                <button v-else-if="researchStatusLocal !== 'running'" @click="startResearchNow"
                    class="item-link research-link" id="run_research">
                     <svg-icon name="action/start" :original="true" height="20" />
                     <div>Discover Now</div>
-                </a>
-                <a v-else-if="researchStatusLocal === 'running'" @click="stopResearchNow"
+                </button>
+                <button v-else-if="researchStatusLocal === 'running'" @click="stopResearchNow"
                    class="item-link research-link" id="stop_research">
                     <svg-icon name="action/stop" :original="true" height="20" />
                     <div>Stop Discovery</div>
-                </a>
+                </button>
             </li>
             <li class="nav-item">
                 <a class="item-link">

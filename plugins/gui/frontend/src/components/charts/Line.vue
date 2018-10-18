@@ -46,7 +46,10 @@
                     tooltip: {
                         textStyle: {
                             fontSize: 12
-                        }
+                        },
+                        showColorCode: true,
+                        ignoreBounds: true,
+                        isHtml: true
                     },
                     interpolateNulls: true
                 }

@@ -2,10 +2,10 @@
     <router-link tag="li" :to="disabled? {}: link" :id="id" @click.native="onClick"
                  class="x-nested-nav-item" :class="{ disabled }"
                  :active-class="activeClass" :exact-active-class="exactActiveClass">
-        <a class="item-link" :title="disabled? undefined : name">
+        <button class="item-link" :title="disabled? undefined : name">
             <svg-icon v-if="icon" :name="`navigation/${icon}`" width="24" :original="true" />
             <span>{{ name }}</span>
-        </a>
+        </button>
         <slot/>
     </router-link>
 </template>
@@ -57,6 +57,9 @@
             display: block;
             white-space: nowrap;
             letter-spacing: 2px;
+            font-size: 14px;
+            background-color: $theme-black;
+            border: 0;
             .svg-icon {
                 transition: all ease-in 0.2s;
                 margin-right: 10px;
@@ -75,7 +78,9 @@
             }
         }
         &:not(.disabled):hover, &.active {
-            >.item-link {  color: $theme-orange;  }
+            >.item-link {
+                color: $theme-orange;
+            }
             .svg-icon {
                 .svg-fill {  fill: $theme-orange;  }
                 .svg-stroke {  stroke: $theme-orange;  }
@@ -110,6 +115,7 @@
             .item-link span {
                 transition: all ease-in 0.2s;
                 opacity: 0;
+                line-height: 20px;
             }
             .x-nested-nav.collapse {
                 display: none;

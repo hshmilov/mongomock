@@ -1,6 +1,8 @@
 <template>
     <div class="x-chart-metric">
-        <h5 class="grid-span3">Select up to {{ max }} queries for comparison:</h5>
+        <md-switch v-model="config.intersection" class="md-primary">{{ isIntersection? 'Intersection' : 'Comparison'}}</md-switch>
+        <h5 class="grid-span3" v-if="isIntersection">Select a base query and another one to intersect with it:</h5>
+        <h5 class="grid-span3" v-else>Select up to {{ max }} queries for comparison:</h5>
         <template v-for="view, index in config.views">
             <x-select-symbol :options="entities" v-model="view.entity" type="icon" placeholder="Module..."/>
             <x-select :options="views[view.entity] || []" :searchable="true" v-model="view.name" placeholder="Query..." />
@@ -38,7 +40,8 @@
     export default {
         name: "x-chart-timeline",
         mixins: [ ChartMixin ],
-        components: { xSelect, xSelectSymbol, xDateEdit },
+        components: {
+            xSelect, xSelectSymbol, xDateEdit },
         props: { value: {}, views: { required: true }, entities: { required: true } },
         computed: {
             ...mapState({
@@ -72,6 +75,9 @@
             isRangeAbsolute() {
                 return this.config.timeframe.type === 'absolute'
             },
+            isIntersection() {
+                return this.config.intersection
+            },
             absoluteRangeValid() {
                 return this.config.timeframe.from != null && this.config.timeframe.to !== null
             },
@@ -85,7 +91,8 @@
                     views: [ { ...dashboardView } ],
                     timeframe: {
                         type: 'absolute', from: null, to: null
-                    }
+                    },
+                    intersection: false
                 },
                 max: 3
             }
@@ -101,6 +108,9 @@
                         type: 'relative', unit: 'day', count: 7
                     }
                 }
+            },
+            isIntersection() {
+                this.max = (this.config.intersection)? 2 : 3
             }
         },
         methods: {

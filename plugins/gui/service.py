@@ -2464,7 +2464,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 {'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
         return [{'name': name, 'value': count, 'view': base_view, 'module': entity.value}]
 
-    def _fetch_chart_timeline(self, _: ChartViews, views, timeframe):
+    def _fetch_chart_timeline(self, _: ChartViews, views, timeframe, intersection=False):
         """
         Fetch and count results for each view from given views, per day in given timeframe.
         Timeframe can be either:
@@ -2482,7 +2482,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return None
 
         scale = [(date_from + timedelta(i)) for i in range((date_to - date_from).days + 1)]
-        lines = list(self._fetch_view_timeline(views, date_from, date_to))
+        date_ranges = list(_get_date_ranges(date_from, date_to))
+        if intersection:
+            lines = list(self._intersect_timeline_lines(views, date_ranges))
+        else:
+            lines = list(self._compare_timeline_lines(views, date_ranges))
+        if not lines:
+            return None
+
         return [
             ['Day'] + [{
                 'label': line['title'],
@@ -2524,48 +2531,73 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             date_from = date_to - timedelta(days=timeframe['count'] * RANGE_UNIT_DAYS[range_unit])
         return date_from, date_to
 
-    def _fetch_view_timeline(self, views, date_from, date_to):
-        date_ranges = list(_get_date_ranges(date_from, date_to))
+    def _compare_timeline_lines(self, views, date_ranges):
         for view in views:
             if not view.get('name'):
                 continue
             entity = EntityType(view['entity'])
             base_view = self._find_filter_by_name(entity, view['name'])
-            base_query = parse_filter(base_view['query']['filter'])
-
-            def aggregate_for_date_range(args):
-                rangefrom, rangeto = args
-                return self._historical_entity_views_db_map[entity].aggregate([
-                    {
-                        '$match': {
-                            '$and': [
-                                base_query, {
-                                    'accurate_for_datetime': {
-                                        '$lte': datetime.combine(rangeto, datetime.min.time()),
-                                        '$gte': datetime.combine(rangefrom, datetime.min.time())
-                                    }
-                                }
-                            ]
-                        }
-                    }, {
-                        '$group': {
-                            '_id': '$accurate_for_datetime',
-                            'count': {
-                                '$sum': 1
-                            }
-                        }
-                    }
-                ])
-
-            points = {}
-            for results in self.__aggregate_thread_pool.map_async(aggregate_for_date_range, date_ranges).get():
-                for item in results:
-                    # _id here is the grouping id, so in fact it is accurate_for_datetime
-                    points[item['_id'].strftime('%m/%d/%Y')] = item.get('count', 0)
             yield {
                 'title': view['name'],
-                'points': points
+                'points': self._fetch_timeline_points(entity, parse_filter(base_view['query']['filter']), date_ranges)
             }
+
+    def _intersect_timeline_lines(self, views, date_ranges):
+        if len(views) != 2 or not views[0].get('name'):
+            logger.error(f'Unexpected number of views for performing intersection {len(views)}')
+            return None
+        entity = EntityType(views[0]['entity'])
+        base_query = {}
+        if views[0].get('name'):
+            base_query = parse_filter(self._find_filter_by_name(entity, views[0]['name'])['query']['filter'])
+        yield {
+            'title': views[0]['name'],
+            'points': self._fetch_timeline_points(entity, base_query, date_ranges)
+        }
+        intersecting_view = self._find_filter_by_name(entity, views[1]['name'])
+        intersecting_query = parse_filter(intersecting_view['query']['filter'])
+        if base_query:
+            intersecting_query = {
+                '$and': [
+                    base_query, intersecting_query
+                ]
+            }
+        yield {
+            'title': f'{views[0]["name"]} and {views[1]["name"]}',
+            'points': self._fetch_timeline_points(entity, intersecting_query, date_ranges)
+        }
+
+    def _fetch_timeline_points(self, entity_type: EntityType, match_query, date_ranges):
+        def aggregate_for_date_range(args):
+            range_from, range_to = args
+            return self._historical_entity_views_db_map[entity_type].aggregate([
+                {
+                    '$match': {
+                        '$and': [
+                            match_query, {
+                                'accurate_for_datetime': {
+                                    '$lte': datetime.combine(range_to, datetime.min.time()),
+                                    '$gte': datetime.combine(range_from, datetime.min.time())
+                                }
+                            }
+                        ]
+                    }
+                }, {
+                    '$group': {
+                        '_id': '$accurate_for_datetime',
+                        'count': {
+                            '$sum': 1
+                        }
+                    }
+                }
+            ])
+
+        points = {}
+        for results in self.__aggregate_thread_pool.map_async(aggregate_for_date_range, date_ranges).get():
+            for item in results:
+                # _id here is the grouping id, so in fact it is accurate_for_datetime
+                points[item['_id'].strftime('%m/%d/%Y')] = item.get('count', 0)
+        return points
 
     @gui_add_rule_logged_in("dashboard/<dashboard_id>", methods=['DELETE'],
                             required_permissions={Permission(PermissionType.Dashboard,

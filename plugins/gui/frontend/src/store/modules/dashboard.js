@@ -69,7 +69,7 @@ export const dashboard = {
 			}
 		},
 		[ UPDATE_REMOVED_DASHBOARD ] (state, dashboardId) {
-			state.charts.data = state.charts.data.filter(dashboard => dashboard.uuid != dashboardId)
+			state.charts.data = state.charts.data.filter(dashboard => dashboard.uuid !== dashboardId)
 		},
 		[ UPDATE_DASHBOARD_FIRST_USE] (state, payload) {
             state.firstUse.fetching = payload.fetching
