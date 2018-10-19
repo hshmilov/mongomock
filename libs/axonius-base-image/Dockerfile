@@ -6,7 +6,7 @@ ENV HOME /home/axonius
 
 # Install dependencies and configure the rest of the things we need.
 RUN apt-get update && \
-    apt-get install -y ssh git \
+    apt-get install -y ssh git libxmlsec1-dev \
     supervisor software-properties-common python-software-properties freetds-dev freetds-bin unixodbc-dev tdsodbc && \
     add-apt-repository ppa:jonathonf/python-3.6 && \
     apt-get update && \
