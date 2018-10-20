@@ -41,3 +41,10 @@ class TestGeneralSettings(TestBase):
         self.settings_page.click_global_settings()
 
         assert self.settings_page.is_toggle_selected(self.settings_page.find_exection_toggle())
+
+    def test_scheduler_settings(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_lifecycle_settings()
+
+        assert self.settings_page.is_toggle_selected(
+            self.settings_page.find_should_history_be_gathered_toggle()) is False

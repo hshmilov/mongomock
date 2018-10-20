@@ -64,3 +64,11 @@ class TestPrepareGlobalSettings(TestBase):
 
         self.settings_page.click_toggle_button(self.settings_page.find_exection_toggle(), make_yes=True)
         self.settings_page.save_and_wait_for_toaster()
+
+    def test_scheduler_settings(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_lifecycle_settings()
+
+        self.settings_page.click_toggle_button(self.settings_page.find_should_history_be_gathered_toggle(),
+                                               make_yes=False)
+        self.settings_page.save_and_wait_for_toaster()

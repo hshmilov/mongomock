@@ -38,3 +38,48 @@ class SystemSchedulerService(PluginService):
         scheduler_state = self.current_state().json()
         state = scheduler_state['state']
         assert (state[StateLevels.Phase.name] == Phases.Stable.name) == is_scheduler_at_rest
+
+    def _migrade_db(self):
+        super()._migrade_db()
+        if self.db_schema_version < 1:
+            self._update_schema_version_1()
+
+    def _update_schema_version_1(self):
+        print('upgrade to schema 1')
+        try:
+            config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
+            current_config = config_collection.find_one({
+                'config_name': 'SystemSchedulerService'
+            })
+            if not current_config:
+                print('No config present - continue')
+                return
+
+            current_config = current_config.get('config')
+            if not current_config:
+                print(f'Weird config - continue ({current_config})')
+                return
+
+            system_research_rate = current_config.get('system_research_rate', 12)
+            save_history = current_config.get('save_history', True)
+
+            config_collection.replace_one(
+                {
+                    'config_name': 'SystemSchedulerService'
+                },
+                {
+                    'config_name': 'SystemSchedulerService',
+                    'config': {
+                        'discovery_settings': {
+                            'system_research_rate': system_research_rate,
+                            'save_history': save_history
+                        }
+                    }
+                }
+            )
+
+        except Exception as e:
+            print(f'Exception while upgrading scheduler db to version 1. Details: {e}')
+        finally:
+            print('Upgraded system scheduler to version 1')
+            self.db_schema_version = 2

@@ -6,6 +6,7 @@ class SettingsPage(Page):
     DEFAULT_SCHEDULE_RATE = '12'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
+    LIFECYCLE_SETTINGS_CSS = 'li#research-settings-tab'
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
@@ -25,6 +26,7 @@ class SettingsPage(Page):
     FRESH_SERVICE_API_KEY = 'api_key'
     FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'
     USE_EXECUTION = 'Execution Enabled'
+    HISTORY_GATHERED = 'Should history be gathered'
 
     @property
     def url(self):
@@ -36,6 +38,9 @@ class SettingsPage(Page):
 
     def click_global_settings(self):
         self.driver.find_element_by_css_selector(self.GLOBAL_SETTINGS_CSS).click()
+
+    def click_lifecycle_settings(self):
+        self.driver.find_element_by_css_selector(self.LIFECYCLE_SETTINGS_CSS).click()
 
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
@@ -76,6 +81,9 @@ class SettingsPage(Page):
 
     def find_exection_toggle(self):
         return self.find_checkbox_by_label(self.USE_EXECUTION)
+
+    def find_should_history_be_gathered_toggle(self):
+        return self.find_checkbox_by_label(self.HISTORY_GATHERED)
 
     def set_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()
