@@ -21,8 +21,6 @@ class ExecutionCorrelatorService(CorrelatorBase):
                                                              get_remote_plugin_correlation_cmds,
                                                              parse_correlation_results)
 
-        self.trigger_activate_if_needed()
-
     def _correlate(self, entities: list):
         if not self._execution_enabled:
             return []

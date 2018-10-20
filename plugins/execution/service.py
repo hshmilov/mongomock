@@ -1,4 +1,7 @@
 import logging
+
+from axonius.consts.plugin_subtype import PluginSubtype
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 from bson import json_util
@@ -33,10 +36,6 @@ class ExecutionService(PluginBase):
 
         # Threadpool for creating new actions
         self._actions_thread_pool = LoggedThreadPoolExecutor(max_workers=20)
-
-    @property
-    def plugin_subtype(self):
-        return "execution"
 
     def _restore_actions_from_db(self):
         """ Restores actions from db.
@@ -437,5 +436,5 @@ class ExecutionService(PluginBase):
         return jsonify({'action_id': action_id})
 
     @property
-    def plugin_subtype(self):
-        return "Execution"
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.Execution

@@ -2,12 +2,6 @@
     <x-page title="Settings" class="settings">
         <tabs ref="tabs" @click="determineState">
             <tab title="Lifecycle Settings" id="research-settings-tab" :selected="true">
-                <h3>Discovery Phase</h3>
-                <div class="research-settings-schedule">
-                    <label class="label">Next Scheduled Time:</label>
-                    <x-date-edit :value="nextDiscoverySchedule" @input="scheduleDiscovery" :limit="limit"
-                                 :disabled="isReadOnly" id="research_time "/>
-                </div>
                 <div class="tab-settings">
                     <template v-if="schedulerSettings">
                         <x-schema-form :schema="schedulerSettings.schema" v-model="schedulerSettings.config"
@@ -130,10 +124,6 @@
         },
         computed: {
             ...mapState({
-                nextDiscoverySchedule(state) {
-                    let tempDate = new Date(parseInt(state.dashboard.lifecycle.data.nextRunTime) * 1000)
-                    return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
-                },
                 constants(state) {
                     return state.constants.constants
                 },
@@ -158,17 +148,9 @@
                     return state.configurable.gui.GuiService
                 }
             }),
-            limit() {
-                let now = new Date()
-                now.setDate(now.getDate() - 1)
-                return [{
-                    type: 'fromto',
-                    from: now
-                }]
-            },
             validResearchRate() {
                 if (!this.schedulerSettings.config) return 12
-                return this.validNumber(this.schedulerSettings.config.system_research_rate)
+                return this.validNumber(this.schedulerSettings.config.discovery_settings.system_research_rate)
             },
             supportAccessEndTime() {
                 if (!this.coreSettings.config || !this.coreSettings.config.maintenance_settings.analytics) {
@@ -276,21 +258,6 @@
                     "enum": permissionTypes,
                     "default": "Restricted",
                 }
-            },
-            scheduleDiscovery(scheduleDate) {
-                scheduleDate = new Date(scheduleDate)
-                scheduleDate.setMinutes(scheduleDate.getMinutes() + scheduleDate.getTimezoneOffset())
-                this.fetchData({
-                    rule: 'research_phase',
-                    method: 'POST',
-                    data: {
-                        timestamp: `${scheduleDate.toLocaleDateString()} ${scheduleDate.toLocaleTimeString()}`
-                    }
-                }).then(response => {
-                    this.createToast(response)
-                }).catch(error => {
-                    this.createToast(error)
-                })
             },
             saveGlobalSettings() {
                 if (!this.coreComplete || this.isReadOnly) return
@@ -473,9 +440,6 @@
         }
         .tab-settings .schema-form .array {
             grid-template-columns: 1fr;
-        }
-        .research-settings-schedule {
-            display: grid;
         }
         .global-settings-access {
             display: grid;

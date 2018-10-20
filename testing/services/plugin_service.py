@@ -203,7 +203,7 @@ class AdapterService(PluginService):
         return from_json(response.content)
 
     def trigger_clean_db(self):
-        response = requests.post(self.req_url + "/clean_devices", headers={API_KEY_HEADER: self.api_key})
+        response = requests.post(self.req_url + "/trigger/clean_devices", headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, str(response)
         return from_json(response.content)

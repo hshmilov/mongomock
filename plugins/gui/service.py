@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 from typing import Iterable, Tuple
+from uuid import uuid4
 
 import gridfs
 import ldap3
@@ -20,7 +21,6 @@ import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
-from axonius.utils.threading import run_and_forget
 
 from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -33,27 +33,31 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           MAINTENANCE_SETTINGS, METADATA_PATH,
-                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          NOTES_DATA_TAG, PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           SYSTEM_SETTINGS,
-                                          TROUBLESHOOTING_SETTING,
-                                          NOTES_DATA_TAG)
+                                          TROUBLESHOOTING_SETTING)
+from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import Phases, ResearchPhases, StateLevels
 from axonius.email_server import EmailServer
+from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, return_error
-from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.thread_stopper import stoppable
 from axonius.types.ssl_state import SSLState
 from axonius.utils import gui_helpers
 from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.utils.files import create_temp_file, get_local_config_file
-from axonius.utils.gui_helpers import beautify_user_entry, PermissionType, Permission, \
-    PermissionLevel, deserialize_db_permissions, check_permissions, ReadOnlyJustForGet, get_historized_filter
+from axonius.utils.gui_helpers import (Permission, PermissionLevel,
+                                       PermissionType, ReadOnlyJustForGet,
+                                       beautify_user_entry, check_permissions,
+                                       deserialize_db_permissions,
+                                       get_historized_filter)
 from axonius.utils.parsing import bytes_image_to_base64, parse_filter
+from axonius.utils.threading import run_and_forget
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
@@ -71,7 +75,6 @@ from gui.consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
                         ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
-from uuid import uuid4
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -259,7 +262,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._job_scheduler.start()
 
         self.metadata = self.load_metadata()
-        self._activate('execute')
         self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
         self._set_first_time_use()
 
@@ -977,12 +979,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
             response.raise_for_status()
             logger.info(f"Requesting {adapter_unique_name} to fetch data from newly added client {client_id}")
-            response = self.request_remote_plugin(f"insert_to_db?client_name={client_id}",
-                                                  adapter_unique_name, method='PUT')
+            response = self.request_remote_plugin(f"trigger/insert_to_db",
+                                                  adapter_unique_name, method='POST',
+                                                  json={
+                                                      'client_name': client_id
+                                                  })
             logger.info(f"{adapter_unique_name} finished fetching data for {client_id}")
             if not (response.status_code == 400 and response.json()['message'] == 'Gracefully stopped'):
                 response.raise_for_status()
-                response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
+                response = self.request_remote_plugin('trigger/execute?blocking=False',
+                                                      SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                                      'POST')
                 response.raise_for_status()
         except Exception:
             # if there's no aggregator, there's nothing we can do
@@ -997,7 +1004,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return self._upload_file(adapter_unique_name)
 
     def _upload_file(self, plugin_unique_name):
-        import gridfs
         field_name = request.form.get('field_name')
         if not field_name:
             return return_error("Field name must be specified", 401)
@@ -1098,7 +1104,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         ))
 
                         logger.info(f"Set pending_delete on {res.modified_count} axonius entities "
-                                    f"(or some adapters in them) n" +
+                                    f"(or some adapters in them) " +
                                     f"from {res.matched_count} matches, rebuilding {len(to_rebuild)} entities")
 
                         if not to_rebuild:
@@ -2661,25 +2667,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
 
         return jsonify({
-            'sub_phases': sub_phases, 'next_run_time': run_time_response.text, 'status': nice_state.name
+            'sub_phases': sub_phases,
+            'next_run_time': run_time_response.text,
+            'status': nice_state.name
         })
-
-    @gui_add_rule_logged_in("dashboard/lifecycle_rate", methods=['GET', 'POST'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             ReadOnlyJustForGet)})
-    def system_lifecycle_rate(self):
-        """
-
-        """
-        if self.get_method() == 'GET':
-            response = self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
-            return response.content
-        elif self.get_method() == 'POST':
-            response = self.request_remote_plugin(
-                'research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST',
-                json=self.get_request_data_as_object())
-            logger.info(f"response code: {response.status_code} response crap: {response.content}")
-            return ''
 
     def _adapter_data(self, entity_type: EntityType):
         """
@@ -2782,18 +2773,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
-        scheduled_time = request.get_json(silent=True) or {}
-        logger.info(f'Scheduling Research Phase to: {scheduled_time.get("timestamp", "Now!")}')
-        if scheduled_time.get('timestamp'):
-            response = self.request_remote_plugin(
-                'trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=scheduled_time)
-        else:
-            response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
+        response = self.request_remote_plugin('trigger/execute?blocking=False', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
         if response.status_code != 200:
-            message = f'Could not schedule research phase to: {scheduled_time.get("timestamp", "Now!")}'
-            logger.error(message)
-            return return_error(message, response.status_code)
+            logger.error('Error in running research phase')
+            return return_error('Error in running research phase', response.status_code)
 
         return ''
 
@@ -2853,7 +2837,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 found_report = adapter_reports_db['report'].find_one({"name": "report"}) or {}
                 adapter_clients_report = found_report.get('data', {})
             except Exception:
-                logger.exception(f"Error contacting the report db for adapter {adapter_unique_name}")
+                logger.exception(f"Error contacting the report db for adapter {adapter_unique_name} {adapter}")
 
             adapter_data.append({'name': adapter['title'], 'queries': views, 'views': adapter_clients_report})
         return adapter_data
@@ -2917,30 +2901,19 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")
         return views_data
 
-    @stoppable
-    def _on_trigger(self):
-        self.dump_metrics()
-        with self._get_db_connection() as db_connection:
-            schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
-            if schemas['config']['generate_report'] is True:
-                return self.generate_new_report_offline()
-            else:
-                return
-
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
             logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
-        else:
-            return self._on_trigger()
+        self.generate_new_report_offline()
 
     def generate_new_report_offline(self):
-        '''
+        """
         Generates a new version of the report as a PDF file and saves it to the db
         (this method is NOT an endpoint)
 
         :return: "Success" if successful, error if there is an error
-        '''
+        """
 
         try:
             logger.info("Rendering Report.")
@@ -3016,13 +2989,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                          attachment_filename=report_path)
 
     def _get_existing_executive_report(self):
-        with self._get_db_connection() as db_connection:
-            schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
-            if schemas['config']['generate_report'] is False:
-                self.generate_new_report_offline()
+        report = self._get_collection("reports").find_one({'filename': 'most_recent_report'})
+        if not report:
+            self.generate_new_report_offline()
 
-            uuid = self._get_collection("reports").find_one({'filename': 'most_recent_report'})['uuid']
-            report_path = f'/tmp/axonius-report_{datetime.now()}.pdf'
+        uuid = report['uuid']
+        report_path = f'/tmp/axonius-report_{datetime.now()}.pdf'
+        with self._get_db_connection() as db_connection:
             with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_content:
                 open(report_path, 'wb').write(report_content.read())
                 return report_path
@@ -3326,8 +3299,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify(note_doc)
 
     @property
-    def plugin_subtype(self):
-        return "Post-Correlation"
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.PostCorrelation
 
     @property
     def system_collection(self):

@@ -85,7 +85,7 @@ class SimpleWaitableTriggerableImplementedMock(WaitableTriggerableImplementedMoc
 @retry(wait_fixed=20,
        stop_max_delay=2000)
 def verify_state(triggerable, state, job_name):
-    res = triggerable.get_trigger_activatable_state(job_name)
+    res = triggerable._get_state(job_name)
     assert res == state, f"Not equal {res} and {state}"
     return True
 
@@ -97,40 +97,20 @@ def retry_assert_equal(a, b):
 
 
 def runall():
-    test_trigger_disabled()
     test_trigger_activated()
     test_double_trigger()
     test_double_trigger_with_failure()
-
-
-def test_trigger_disabled():
-    lock = Lock()
-    job_name = 'ds'
-    x = SimpleWaitableTriggerableImplementedMock({job_name: lock})
-    response = x._trigger(job_name)
-    assert response == ''
-    retry_assert_equal(x.counter, 0)
-
-    assert verify_state(x, {
-        "state": "Disabled",
-        "last_error": ""
-    }, job_name)
-    retry_assert_equal(x.counter, 0)
 
 
 def test_trigger_activated():
     lock = Lock()
     job_name = 'ds'
     x = SimpleWaitableTriggerableImplementedMock({job_name: lock})
-    response = x._activate(job_name)
-    assert response == ''
     x._trigger(job_name)
-    assert x.get_trigger_activatable_state(job_name) == {
+    assert x._get_state(job_name) == {
         "state": "Scheduled",
         "last_error": ""
     }
-    assert len(list(x._get_collection("config").find(
-        {"trigger_activate_job": job_name, "trigger_activate_state": True}))) == 1
     retry_assert_equal(x.counter, 1)
 
 
@@ -138,9 +118,8 @@ def test_double_trigger():
     lock = Lock()
     job_name = 'ds'
     x = SimpleWaitableTriggerableImplementedMock({job_name: lock})
-    x._activate(job_name)
     x._trigger(job_name)
-    assert x.get_trigger_activatable_state(job_name) == {
+    assert x._get_state(job_name) == {
         "state": "Scheduled",
         "last_error": ""
     }
@@ -172,23 +151,24 @@ def test_double_trigger_with_failure():
     job_name = 'ds'
     caught_exception = False
     x = FailingWaitableTriggerableImplementedMock({job_name: lock}, [False, True])
-    x._activate(job_name)
     try:
         x._trigger(job_name)
     except Exception:
+        logger.exception(f"Exception: {e}")
         caught_exception = True
 
     assert not caught_exception
     caught_exception = False
 
-    assert x.get_trigger_activatable_state(job_name) == {
+    assert x._get_state(job_name) == {
         "state": "Scheduled",
         "last_error": ""
     }
     retry_assert_equal(x.counter, 1)
     try:
         x._trigger(job_name)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Exception: {e}")
         caught_exception = True
 
     assert not caught_exception

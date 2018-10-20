@@ -24,6 +24,6 @@ def mongo_retry():
     > In addition to the single retry behavior provided by the MongoDB drivers,
     > applications should take measures to handle "UnknownTransactionCommitResult" errors during transaction commits.
     """
-    return retry(wait_fixed=10,
-                 stop_max_delay=1000,
+    return retry(wait_fixed=5,
+                 stop_max_delay=5000,
                  retry_on_exception=retry_if_mongo_error)

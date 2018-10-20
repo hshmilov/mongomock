@@ -3,8 +3,6 @@ import { REQUEST_API } from '../actions'
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE'
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE'
 
-export const UPDATE_LIFECYCLE_RATE = 'UPDATE_LIFECYCLE_RATE'
-
 export const FETCH_DISCOVERY_DATA = 'FETCH_DISCOVERY_DATA'
 export const UPDATE_DISCOVERY_DATA = 'UPDATE_DISCOVERY_DATA'
 
@@ -86,13 +84,6 @@ export const dashboard = {
 				type: UPDATE_LIFECYCLE
 			})
 		},
-        [ UPDATE_LIFECYCLE_RATE ] ({dispatch}) {
-            return dispatch(REQUEST_API, {
-                rule: 'dashboard/lifecycle',
-                type: UPDATE_LIFECYCLE,
-                method: 'POST'
-            })
-        },
 		[ FETCH_DISCOVERY_DATA ] ({ dispatch, state }, payload) {
 			if (!payload || !payload.module || !state.dataDiscovery[payload.module]) return
 			return dispatch(REQUEST_API, {

@@ -5,6 +5,8 @@ from typing import Iterable, Tuple, Dict
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
+from axonius.consts.plugin_subtype import PluginSubtype
+
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import DeviceAdapter
@@ -58,14 +60,6 @@ class StaticAnalysisService(PluginBase, Triggerable):
             name='update_nvd_db',
             id='update_nvd_db_thread',
             max_instances=1)
-        self.__scheduler.add_job(
-            func=self.__start_analysis,
-            trigger=IntervalTrigger(hours=NVD_DB_UPDATE_HOURS),
-            name='start_analysis',
-            id='start_analysis',
-            max_instances=1)
-        self.__scheduler.start()
-        self._activate('execute')
 
     def __update_nvd_db(self):
         try:
@@ -79,16 +73,13 @@ class StaticAnalysisService(PluginBase, Triggerable):
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
             raise ValueError('The only job name supported is execute')
-        logger.info('scheduling analysis')
-        self.__scheduler.get_job('start_analysis').modify(next_run_time=datetime.now())
+        self.__start_analysis()
 
     def __start_analysis(self):
-        logger.info('Started analysis')
         try:
             self.__analyze_cves()
         except Exception:
             logger.exception('Exception while trying to analyze cves')
-        logger.info('Finished analysis')
 
     def __analyze_cves(self):
         """
@@ -238,3 +229,7 @@ class StaticAnalysisService(PluginBase, Triggerable):
             except Exception:
                 logger.exception(
                     f'Exception while searching for vuln for {software_vendor}:{software_name}:{software_version}')
+
+    @property
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.PostCorrelation

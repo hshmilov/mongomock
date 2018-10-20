@@ -18,7 +18,7 @@ class SystemSchedulerService(PluginService):
 
     def start_research(self):
         response = requests.post(
-            self.req_url + "/trigger/execute", headers={API_KEY_HEADER: self.api_key})
+            self.req_url + "/trigger/execute?blocking=False", headers={API_KEY_HEADER: self.api_key})
         assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
                                             f"{str(response.content)}"
         return response

@@ -4,11 +4,10 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from threading import RLock
 
-from axonius.thread_stopper import stoppable, StopThreadException
-
 from axonius.mixins.feature import Feature
-from axonius.plugin_base import add_rule, return_error
+from axonius.plugin_base import add_rule
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.thread_stopper import StopThreadException, stoppable
 from axonius.utils.threading import run_in_executor_helper
 from flask import jsonify, request
 from promise import Promise
@@ -24,23 +23,16 @@ class TriggerStates(Enum):
     def _generate_next_value_(name, *args):
         return name
 
-    """
-    Plugin was triggered and haven't finished working yet
-    """
+    # Plugin was triggered and haven't finished working yet
     Triggered = auto()
-    """
-    Plugin finished the last trigger, or wasn't triggered at all, 
-    """
+
+    # Plugin finished the last trigger, or wasn't triggered at all,
     Scheduled = auto()
-    """
-    The trigger is disabled.
-    """
-    Disabled = auto()
 
 
 class Triggerable(Feature, ABC):
     """
-    Defined a plugin that may be "triggered" to do something
+    Defined a plugin that may be 'triggered' to do something
     """
 
     def __init__(self, *args, **kwargs):
@@ -49,37 +41,11 @@ class Triggerable(Feature, ABC):
         self.__state = {}
         # this executor executes the trigger function
         self.__executor = LoggedThreadPoolExecutor(max_workers=20)
-        self.__last_error = ""
-        self._default_activity = False
-
-    def trigger_activate_if_needed(self):
-        docs = self._get_collection("config").find({'trigger_activate_job': {'$exists': 1}})
-        for doc in docs:
-            job_name = doc['trigger_activate_job']
-            job_state = doc['trigger_activate_state']
-            logger.info(f'Trigger activate job {job_name}: state is {job_state}')
-            if job_state is True:
-                self._activate(job_name)
-
-    def __trigger_activate_save_to_db(self):
-        """
-        Saves the state into the db.
-        :return:
-        """
-
-        for job_name, state in self.__state.items():
-            self._get_collection('config').update(
-                {'trigger_activate_job': job_name},
-                {
-                    'trigger_activate_job': job_name,
-                    'trigger_activate_state': bool(state.get('active', False))
-                },
-                upsert=True
-            )
+        self.__last_error = ''
 
     @classmethod
     def specific_supported_features(cls) -> list:
-        return ["Triggerable"]
+        return ['Triggerable']
 
     @abstractmethod
     def _triggered(self, job_name: str, post_json: dict, *args):
@@ -97,77 +63,35 @@ class Triggerable(Feature, ABC):
             return self._triggered(*args, **kwargs)
         except StopThreadException:
             # promises can't accept a StopThreadException
-            raise Exception("Stopped")
+            raise Exception('Stopped')
+
+    def _get_state(self, job_name: str):
+        """
+        See get_triggerable_state
+        :param job_name:
+        :return:
+        """
+        with self.__trigger_lock:
+            state = self._get_state_or_default(job_name).copy()
+
+        if state['triggered']:
+            state_name = TriggerStates.Triggered.name
+        else:
+            state_name = TriggerStates.Scheduled.name
+
+        return {
+            # normalize states to Triggered and Scheduled
+            'state': state_name,
+            'last_error': state['last_error']
+        }
 
     @add_rule('trigger_state/<job_name>')
-    def get_trigger_activatable_state(self, job_name: str):
+    def get_triggerable_state(self, job_name: str):
         """
         Get whether plugin state and last error.
         :return:
         """
-        if job_name != 'execute':
-            state = self.__state.get(job_name)
-            if state is None:
-                return return_error("Job name not found", 404)
-        else:
-            state = self._get_state_or_default(job_name)
-
-        with state['lock']:
-            state_name = TriggerStates.Disabled.name
-
-            if state['triggered']:
-                state_name = TriggerStates.Triggered.name
-            elif state['active']:
-                state_name = TriggerStates.Scheduled.name
-
-            return jsonify({
-                # normalize states to Triggered and Scheduled
-                "state": state_name,
-                "last_error": state['last_error']
-            })
-
-    @add_rule('trigger_activate/<job_name>', methods=['POST'])
-    def activate(self, job_name):
-        """
-        Activate the trigger job.
-        :param job_name: the job to activate.
-        :return:
-        """
-        return self._activate(job_name)
-
-    def _activate(self, job_name):
-        """
-        Activate the trigger job.
-        :param job_name: the job to activate.
-        :return:
-        """
-        job_state = self._get_state_or_default(job_name)
-        # Flipping current active state.
-        job_state['active'] = True
-        logger.info(f'Trigger job {job_name} has been activated.')
-        self.__trigger_activate_save_to_db()
-        return ''
-
-    @add_rule('trigger_deactivate/<job_name>', methods=['POST'])
-    def deactivate(self, job_name):
-        """
-        Deactivate the trigger job.
-        :param job_name: the job to Deactivate.
-        :return:
-        """
-        return self._deactivate(job_name)
-
-    def _deactivate(self, job_name):
-        """
-        Deactivate the trigger job.
-        :param job_name: the job to Deactivate.
-        :return:
-        """
-        job_state = self._get_state_or_default(job_name)
-        # Flipping current active state.
-        job_state['active'] = False
-        logger.info(f'Trigger job {job_name} has been deactivated.')
-        return ''
+        return jsonify(self._get_state(job_name))
 
     def _get_state_or_default(self, job_name):
         """
@@ -179,9 +103,9 @@ class Triggerable(Feature, ABC):
                                        {
                                            'triggered': False,
                                            'scheduled': False,
+                                           'cancel_scheduled': False,
                                            'promise': None,
-                                           'active': self._default_activity,
-                                           'last_error': "",
+                                           'last_error': '',
                                            'lock': RLock()
                                        }
                                        )
@@ -198,41 +122,42 @@ class Triggerable(Feature, ABC):
         # use with caution!
         # priority assumes blocking
         priority = request.args.get('priority', 'False') == 'True'
-        logger.info(f"Triggered {job_name} " +
-                    ('blocking' if blocking else 'unblocked') + " with " +
+        logger.info(f'Triggered {job_name} ' +
+                    ('blocking' if blocking else 'unblocked') + ' with ' +
                     ('prioritized' if priority else 'unprioritized') +
-                    f" from {self.get_caller_plugin_name()}")
-        return self._trigger(job_name, blocking, priority)
+                    f' from {self.get_caller_plugin_name()}')
+        return self._trigger(job_name, blocking, priority, request.get_json(silent=True))
 
-    def _trigger(self, job_name, blocking=True, priority=False):
+    def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None):
         if priority:
-            self._triggered_facade(job_name, request.get_json(silent=True))
-            return ''
+            return self._triggered_facade(job_name, post_json) or ''
 
         with self.__trigger_lock:
             job_state = self._get_state_or_default(job_name)
 
         # having a lock per job allows more efficient parallelization
         with job_state['lock']:
-            self.__perform_trigger(job_name, job_state)
+            self.__perform_trigger(job_name, job_state, post_json)
 
         if blocking:
-            if job_state['promise']:
-                Promise.wait(job_state['promise'])
+            promise = job_state['promise']
+            if promise:
+                Promise.wait(promise)
+                if promise.is_rejected:
+                    logger.exception(promise.value)
+                    return 'Error has occurred', 500
+                return promise.value or ''
         return ''
 
-    def __perform_trigger(self, job_name, job_state):
+    def __perform_trigger(self, job_name, job_state, post_json=None):
         """
         Actually perform the job, assumes locks
         :return:
         """
         if job_state['scheduled']:
-            # it's already triggered and scheduled
+            logger.info(f'job is already scheduled, {job_state}')
             return ''
-
-        if not job_state['active']:
-            return ''
-            # return return_error(f"{job_name} trigger is disabled.", 403)
+        job_state['cancel_scheduled'] = False
 
         # If a plugin was triggered and then triggered again.
         # This is good for cases when a single trigger is enough but an event may happen while
@@ -247,7 +172,7 @@ class Triggerable(Feature, ABC):
                 if not job_state['scheduled']:
                     job_state['triggered'] = False
                 job_state['scheduled'] = False
-                logger.info("Successfully triggered")
+                logger.info('Successfully triggered')
                 return arg
 
         def on_failed(err):
@@ -259,15 +184,37 @@ class Triggerable(Feature, ABC):
                 job_state['scheduled'] = False
                 return err
 
-        to_run = functools.partial(self._triggered_facade, job_name, request.get_json(silent=True))
+        def to_run(*args, **kwargs):
+            with job_state['lock']:
+                is_to_be_canceled = job_state['cancel_scheduled']
+                job_state['cancel_scheduled'] = False
+
+            if not is_to_be_canceled:
+                return self._triggered_facade(job_name, post_json, *args, **kwargs)
+
         if job_state['triggered']:
             job_state['scheduled'] = True
-            job_state['promise'] = job_state['promise'].then(to_run)
+            job_state['promise'] = job_state['promise'].then(lambda x: Promise(functools.partial(run_in_executor_helper,
+                                                                                                 self.__executor,
+                                                                                                 to_run)))
 
         else:
             job_state['triggered'] = True
             job_state['promise'] = Promise(functools.partial(run_in_executor_helper,
                                                              self.__executor,
                                                              to_run))
-        job_state['promise'].then(did_fulfill=on_success,
-                                  did_reject=on_failed)
+        job_state['promise'] = job_state['promise'].then(did_fulfill=on_success,
+                                                         did_reject=on_failed)
+
+    def _unschedule(self, job_name: str = 'execute'):
+        """
+        In case you want to cancel a scheduled job and doesn't allow any new scheduled jobs until
+        the current job finishes
+        :param job_name: the job to schedule, e.g. 'execute'
+        """
+        with self.__trigger_lock:
+            job_state = self._get_state_or_default(job_name)
+
+        with job_state['lock']:
+            job_state['scheduled'] = True
+            job_state['cancel_scheduled'] = True

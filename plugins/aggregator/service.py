@@ -12,6 +12,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME)
+from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, return_error
@@ -167,13 +168,6 @@ class AggregatorService(PluginBase, Triggerable):
         # Setting up db
         self.insert_indexes()
 
-        # insertion and link/unlink lock
-        self.fetch_lock = {}
-
-        self._activate('fetch_filtered_adapters')
-
-        self._default_activity = True
-
         # the last time the DB has been rebuilt
         self.__last_full_db_rebuild = {
             entity: datetime.utcnow()
@@ -262,7 +256,10 @@ class AggregatorService(PluginBase, Triggerable):
             raise ClientsUnavailable()
         for client_name in clients:
             try:
-                data = self.request_remote_plugin(f'insert_to_db?client_name={client_name}', adapter, method='PUT')
+                data = self.request_remote_plugin(f'trigger/insert_to_db', adapter, method='POST',
+                                                  json={
+                                                      'client_name': client_name
+                                                  })
             except Exception as e:
                 # request failed
                 logger.exception(f"{repr(e)}")
@@ -328,7 +325,6 @@ class AggregatorService(PluginBase, Triggerable):
                 return self.__rebuild_partial_view(from_db, to_db, internal_axon_ids)
 
         with self.__rebuild_and_wait_db_view_lock[entity_type]:
-
             # this is an expensive routine, and this may be called a lot,
             last_rebuild = self.__last_full_db_rebuild[entity_type]
             seconds_ago = (datetime.utcnow() - last_rebuild).total_seconds()
@@ -353,6 +349,7 @@ class AggregatorService(PluginBase, Triggerable):
                 logger.info("Performance: starting drop temp collection")
                 tmp_collection.drop()
                 logger.info("Performance: finished")
+
             self.__last_full_db_rebuild[entity_type] = datetime.utcnow()
 
     def _save_entity_views_to_historical_db(self, entity_type: EntityType, now):
@@ -431,7 +428,8 @@ class AggregatorService(PluginBase, Triggerable):
         adapters = adapters.json()
 
         if job_name == 'clean_db':
-            return self._clean_db_devices_from_adapters(job_name, adapters.values())
+            self._clean_db_devices_from_adapters(adapters.values())
+            return
         elif job_name == 'fetch_filtered_adapters':
             adapters = _filter_adapters_by_parameter(post_json, adapters)
         elif job_name == 'save_history':
@@ -450,93 +448,85 @@ class AggregatorService(PluginBase, Triggerable):
 
         logger.debug("Fetching from registered adapters = {}".format(adapters))
 
-        return self._fetch_data_from_adapters(job_name, adapters)
+        return self._fetch_data_from_adapters(adapters)
 
     def _request_clean_db_from_adapter(self, plugin_unique_name):
         """
         calls /clean_devices on the given adapter unique name
         :return:
         """
-        response = self.request_remote_plugin(f'clean_devices', plugin_unique_name, method='POST')
+        response = self.request_remote_plugin(f'trigger/clean_devices', plugin_unique_name, method='POST')
         if response.status_code != 200:
             logger.warning(f"Failed cleaning db with adapter {plugin_unique_name}. " +
                            f"Reason: {str(response.content)}")
-            return None
-        return from_json(response.content)
 
-    def _clean_db_devices_from_adapters(self, job_name, current_adapters):
+    def _clean_db_devices_from_adapters(self, current_adapters):
         """ Function for cleaning the devices db.
 
         This function runs on all adapters and requests them to clean the db from their devices.
         """
         try:
-            with self.fetch_lock.setdefault(job_name, threading.RLock()):
-                futures_for_adapter = {}
+            futures_for_adapter = {}
 
-                # let's add jobs for all adapters
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    num_of_adapters_to_fetch = len(current_adapters)
-                    for adapter in current_adapters:
-                        if not is_plugin_adapter(adapter['plugin_type']):
-                            # This is not an adapter, not running
-                            num_of_adapters_to_fetch -= 1
-                            continue
+            # let's add jobs for all adapters
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                num_of_adapters_to_fetch = len(current_adapters)
+                for adapter in current_adapters:
+                    if not is_plugin_adapter(adapter['plugin_type']):
+                        # This is not an adapter, not running
+                        num_of_adapters_to_fetch -= 1
+                        continue
 
-                        futures_for_adapter[executor.submit(
-                            self._request_clean_db_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
+                    futures_for_adapter[executor.submit(
+                        self._request_clean_db_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
 
-                    for future in concurrent.futures.as_completed(futures_for_adapter):
-                        try:
-                            num_of_adapters_to_fetch -= 1
-                            future.result()
-                            logger.info(f"Finished adapter number {num_of_adapters_to_fetch}")
-                        except Exception as err:
-                            logger.exception("An exception was raised while trying to get a result.")
+                for future in concurrent.futures.as_completed(futures_for_adapter):
+                    try:
+                        num_of_adapters_to_fetch -= 1
+                        future.result()
+                        logger.info(f"Finished adapter number {num_of_adapters_to_fetch}")
+                    except Exception as err:
+                        logger.exception("An exception was raised while trying to get a result.")
 
-                logger.info("Finished cleaning all device data.")
-
-                return ''  # raw_detailed_devices
+            logger.info("Finished cleaning all device data.")
 
         except Exception as e:
-            logger.exception(f'Getting devices from all requested adapters failed, {repr(e)}')
+            logger.exception(f'Getting devices from all adapters failed, adapters = {current_adapters}. {repr(e)}')
 
-    def _fetch_data_from_adapters(self, job_name, current_adapters=None):
+    def _fetch_data_from_adapters(self, current_adapters):
         """ Function for fetching devices from adapters.
 
         This function runs on all the received adapters and in a different thread fetches all of them.
         """
         try:
-            with self.fetch_lock.setdefault(job_name, threading.RLock()):
-                futures_for_adapter = {}
+            futures_for_adapter = {}
 
-                # let's add jobs for all adapters
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    num_of_adapters_to_fetch = len(current_adapters)
-                    for adapter in current_adapters:
-                        if not is_plugin_adapter(adapter['plugin_type']):
-                            # This is not an adapter, not running
-                            num_of_adapters_to_fetch -= 1
-                            continue
+            # let's add jobs for all adapters
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                num_of_adapters_to_fetch = len(current_adapters)
+                for adapter in current_adapters:
+                    if not is_plugin_adapter(adapter['plugin_type']):
+                        # This is not an adapter, not running
+                        num_of_adapters_to_fetch -= 1
+                        continue
 
-                        futures_for_adapter[executor.submit(
-                            self._save_data_from_adapters, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
+                    futures_for_adapter[executor.submit(
+                        self._save_data_from_adapters, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
 
-                    for future in concurrent.futures.as_completed(futures_for_adapter):
-                        try:
-                            num_of_adapters_to_fetch -= 1
-                            future.result()
-                            # notify the portion of adapters left to fetch, out of total required
-                            self._notify_adapter_fetch_devices_finished(
-                                futures_for_adapter[future], num_of_adapters_to_fetch / len(current_adapters))
-                        except Exception as err:
-                            logger.exception("An exception was raised while trying to get a result.")
+                for future in concurrent.futures.as_completed(futures_for_adapter):
+                    try:
+                        num_of_adapters_to_fetch -= 1
+                        future.result()
+                        # notify the portion of adapters left to fetch, out of total required
+                        self._notify_adapter_fetch_devices_finished(
+                            futures_for_adapter[future], num_of_adapters_to_fetch / len(current_adapters))
+                    except Exception as err:
+                        logger.exception("An exception was raised while trying to get a result.")
 
-                logger.info("Finished getting all device data.")
-
-                return ''  # raw_detailed_devices
+            logger.info("Finished getting all device data.")
 
         except Exception as e:
-            logger.exception('Getting devices from all requested adapters failed.')
+            logger.exception(f'Getting devices from all requested adapters failed. {current_adapters}')
 
     def _save_data_from_adapters(self, adapter_unique_name):
         """
@@ -657,8 +647,8 @@ class AggregatorService(PluginBase, Triggerable):
                 raise ValueError(msg)
 
     @property
-    def plugin_subtype(self):
-        return "Core"
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.Core
 
     def _notify_adapter_fetch_devices_finished(self, adapter_name, portion_of_adapters_left):
         self.request_remote_plugin('sub_phase_update', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json={

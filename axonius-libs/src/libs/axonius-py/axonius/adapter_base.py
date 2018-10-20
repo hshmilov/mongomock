@@ -13,24 +13,25 @@ from threading import Event, RLock, Thread
 from typing import Any, Dict, Iterable, List, Tuple
 
 import func_timeout
-from bson import ObjectId
-from flask import jsonify, request
-
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import (PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME)
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
+from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.thread_stopper import stoppable, StopThreadException, call_with_stoppable
+from axonius.thread_stopper import (StopThreadException, call_with_stoppable,
+                                    stoppable)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.threading import timeout_iterator
+from bson import ObjectId
+from flask import jsonify, request
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -67,7 +68,7 @@ class AdapterProperty(Enum):
     UserManagement = auto()
 
 
-class AdapterBase(PluginBase, Configurable, Feature, ABC):
+class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
     """
     Base abstract class for all adapters
     Terminology:
@@ -235,8 +236,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 old_adapter_entities = self.__extract_old_entities_from_axonius_device(axonius_entity,
                                                                                        age_cutoff)
                 futures.append(r.submit(self.__unlink_and_delete_entity,
-                                        axonius_entity,
-                                        db_to_use,
                                         entity_type,
                                         old_adapter_entities))
 
@@ -244,7 +243,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         self._request_db_rebuild(sync=False)
         return deleted_entities_count
 
-    def __unlink_and_delete_entity(self, axonius_entity, db_to_use, entity_type,
+    def __unlink_and_delete_entity(self, entity_type,
                                    adapter_entities_to_delete):
         counter = 0
         for index, entity_to_remove in enumerate(adapter_entities_to_delete):
@@ -273,15 +272,12 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         self._request_db_rebuild(sync=False)
         return {EntityType.Devices.value: devices_cleaned, EntityType.Users.value: users_cleaned}
 
-    @stoppable
-    @add_rule("clean_devices", methods=["POST"])
-    def clean_devices(self):
-        """
-        Find and delete devices that are old and remove them.
-        This should only be called when fetching is not in progress.
-        :return:
-        """
-        return to_json(self.clean_db())
+    def _triggered(self, job_name: str, post_json: dict, *args):
+        if job_name == 'insert_to_db':
+            client_name = post_json and post_json.get('client_name')
+            return self.insert_data_to_db(client_name)
+        elif job_name == 'clean_devices':
+            return to_json(self.clean_db())
 
     @add_rule('devices', methods=['GET'])
     def devices_callback(self):
@@ -292,17 +288,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
            GET - Finds all available devices, and returns them
         """
         return jsonify(dict(self._query_data(EntityType.Devices)))
-
-    @add_rule('devices_by_name', methods=['GET'])
-    def devices_by_client(self):
-        """ /devices_by_name?name= Query adapter to fetch all available devices from a specific client.
-        An "available" device is a device that is registered with the adapter source.
-
-        Accepts:
-           GET - Finds all available devices from a specific client, and returns them
-        """
-        client_name = request.args.get('name')
-        return to_json(self._get_data_by_client(client_name, EntityType.Devices))
 
     # Users
     @add_rule('users', methods=['GET'])
@@ -372,22 +357,9 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
         return []
 
-    @add_rule('users_by_name', methods=['GET'])
-    def users_by_name(self):
-        """ /users_by_name?name= Query adapter to fetch all available users from a specific client.
-        An "available" users is a device that is registered with the adapter source.
-
-        Accepts:
-           GET - Finds all available users from a specific client, and returns them
-        """
-        client_name = request.args.get('name')
-        return to_json(self._get_data_by_client(client_name, EntityType.Users))
-
     # End of users
 
-    @stoppable
-    @add_rule('insert_to_db', methods=['PUT'])
-    def insert_data_to_db(self):
+    def insert_data_to_db(self, client_name: str = None):
         """
         /insert_to_db?client_name=(None or Client name)
 
@@ -415,7 +387,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
         self.__last_fetch_time = current_time
 
-        client_name = request.args.get('client_name')
         if client_name:
             devices_count = self._save_data_from_plugin(
                 client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
@@ -888,13 +859,13 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         skipped_count = 0
         last_seen_cutoff, _ = self.__device_time_cutoff()
         devices_ids = []
-        should_check_for_unique_ids = self.plugin_subtype == adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE
+        should_check_for_unique_ids = self.plugin_subtype == PluginSubtype.AdapterBase
 
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
 
             # All scanners should have this automatically
-            if self.plugin_subtype == adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE:
+            if self.plugin_subtype == PluginSubtype.ScannerAdapter:
                 parsed_device.scanner = True
 
             if should_check_for_unique_ids:
@@ -1138,8 +1109,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         return adapter_consts.ADAPTER_PLUGIN_TYPE
 
     @property
-    def plugin_subtype(self):
-        return adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.AdapterBase
 
     def __device_time_cutoff(self) -> Tuple[date, date]:
         """

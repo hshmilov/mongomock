@@ -1,25 +1,27 @@
-import logging
-
-logger = logging.getLogger(f'axonius.{__name__}')
 # Standard modules
 import concurrent.futures
-from collections import Iterable
-import threading
 import datetime
-from bson.objectid import ObjectId
-from flask import jsonify
+import logging
+import threading
+from collections import Iterable
 
-from axonius.entities import EntityType
-from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, GUI_SYSTEM_CONFIG_COLLECTION, \
-    GUI_NAME
 from axonius.consts import report_consts
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, GUI_NAME,
+                                          GUI_SYSTEM_CONFIG_COLLECTION,
+                                          PLUGIN_UNIQUE_NAME)
+from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_stopper import stoppable
-from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_filter
 from axonius.utils import gui_helpers
+from axonius.utils.files import get_local_config_file
 from axonius.utils.json import to_json
+from axonius.utils.parsing import parse_filter
+from bson.objectid import ObjectId
+from flask import jsonify
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ReportsService(PluginBase, Triggerable):
@@ -28,11 +30,6 @@ class ReportsService(PluginBase, Triggerable):
                         report query result changes. """
 
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
-
-        # Set's a sample rate to check the saved queries.
-        self._report_check_lock = threading.RLock()
-
-        self._activate('execute')
 
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
@@ -198,20 +195,17 @@ class ReportsService(PluginBase, Triggerable):
 
         This function runs thread for each report it needs to check and/or generate.
         """
-        with self._report_check_lock:
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future_for_report_checks = {
-                    executor.submit(self._check_current_query_result, report_data): report_data['view'] for report_data
-                    in self._get_collection('reports').find()}
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_for_report_checks = {
+                executor.submit(self._check_current_query_result, report_data): report_data['view'] for report_data
+                in self._get_collection('reports').find()}
 
-                for future in concurrent.futures.as_completed(future_for_report_checks):
-                    try:
-                        future.result()
-                        logger.info(f'{future_for_report_checks[future]} finished checking reports.')
-                    except Exception:
-                        logger.exception("Failed to check report generation.")
-
-        return ''
+            for future in concurrent.futures.as_completed(future_for_report_checks):
+                try:
+                    future.result()
+                    logger.info(f'{future_for_report_checks[future]} finished checking reports.')
+                except Exception:
+                    logger.exception("Failed to check report generation.")
 
     def _check_triggers(self, result_difference, above, below):
         """ Checks what did actually triggered against the saved and current results.
@@ -684,5 +678,5 @@ class ReportsService(PluginBase, Triggerable):
             raise
 
     @property
-    def plugin_subtype(self):
-        return "Post-Correlation"
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.PostCorrelation

@@ -1,6 +1,7 @@
 import logging
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_subtype import PluginSubtype
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -58,18 +59,9 @@ class GeneralInfoService(PluginBase, Triggerable):
     def __init__(self, *args, **kargs):
         super().__init__(get_local_config_file(__file__), *args, **kargs)
 
-        self.work_lock = threading.RLock()
-        self.is_enabled = False  # Are we enabled?
         self._execution_manager_lock = threading.Lock()  # This is not an RLock. it can be acquired only once.
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests
-        self._number_of_triggers = 0
         self.subplugins_list = []
-
-        general_info_sync_enabled = self.config['DEFAULT']['general_info_sync_enabled'].lower()
-        assert general_info_sync_enabled in ['true', 'false']
-        self._general_info_sync_enabled = general_info_sync_enabled.strip().lower() == 'true'
-
-        self._activate('execute')
 
     def _triggered(self, job_name: str, post_json: dict, *args):
         """
@@ -80,15 +72,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
 
-        self._number_of_triggers = self._number_of_triggers + 1
-        if self._number_of_triggers == 1 and self._general_info_sync_enabled is True:
-            # first trigger is blocking.
-            logger.info(f"Running gather_general_info sync (number of triggers: {self._number_of_triggers})")
-            self._gather_general_info()
-        else:
-            # Run it in a different thread
-            logger.info(f"Running gather_general_info async (number of triggers: {self._number_of_triggers})")
-            threading.Thread(target=self._run_gather_general_info_async).start()
+        self._gather_general_info()
 
     @property
     def number_of_active_execution_requests(self):
@@ -111,17 +95,6 @@ class GeneralInfoService(PluginBase, Triggerable):
         with self._execution_manager_lock:
             self._number_of_active_execution_requests_var = value
 
-    def _run_gather_general_info_async(self):
-        """
-        Simply runs _get_pm_status but also try/excepts it to log everything.
-        :return:
-        """
-
-        try:
-            self._gather_general_info()
-        except Exception:
-            logger.exception("Run gather_general_info asynchronously: Got an exception.")
-
     @stoppable
     def _gather_general_info(self):
         """
@@ -130,29 +103,17 @@ class GeneralInfoService(PluginBase, Triggerable):
         """
         if not self._execution_enabled:
             logger.info(f"Execution is disabled, not continuing")
-            return []
+            return
+
         logger.info("Gathering General info started.")
-        acquired = False
-        try:
-            acquired = self.work_lock.acquire(False)
-            if acquired:
-                logger.debug("acquired work lock")
 
-                # First, gather general info about devices
-                self._gather_windows_devices_general_info()
+        # First, gather general info about devices
+        self._gather_windows_devices_general_info()
 
-                # Second, go over all devices we have, and try to associate them with users.
-                self._associate_users_with_devices()
+        # Second, go over all devices we have, and try to associate them with users.
+        self._associate_users_with_devices()
 
-                logger.info("Finished gathering info & associating users for all devices")
-
-            else:
-                msg = "General info was called and is already taking place, try again later"
-                logger.error(msg)
-                raise RuntimeError(msg)
-        finally:
-            if acquired:
-                self.work_lock.release()
+        logger.info("Finished gathering info & associating users for all devices")
 
     def _gather_windows_devices_general_info(self):
         """
@@ -626,19 +587,6 @@ class GeneralInfoService(PluginBase, Triggerable):
         except Exception:
             logger.exception("Exception in failure.")
 
-    @add_rule('run', methods=['POST'], should_authenticate=False)
-    def run_now(self):
-        if self.scheduler is None:
-            self.start_activatable()
-
-        else:
-            jobs = self.scheduler.get_jobs()
-            reset_job = next(job for job in jobs if job.name == 'general_info')
-            reset_job.modify(next_run_time=datetime.now())
-            self.scheduler.wakeup()
-
-        return ""
-
     @property
-    def plugin_subtype(self):
-        return "Post-Correlation"
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.PostCorrelation

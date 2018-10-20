@@ -1,8 +1,8 @@
 import functools
 import time
 import logging
+
 from axonius.plugin_base import PluginBase, return_error, add_rule
-from axonius.mixins.triggerable import Triggerable
 from axonius.utils.files import get_local_config_file, get_random_uploaded_path_name
 from axonius.utils.parsing import get_exception_string
 from axonius.entities import AxoniusDevice
@@ -13,21 +13,9 @@ MAX_TRIES_FOR_EXECUTION_REQUEST = 3
 SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS = 120
 
 
-class DeviceControlService(PluginBase, Triggerable):
+class DeviceControlService(PluginBase):
     def __init__(self, *args, **kargs):
         super().__init__(get_local_config_file(__file__), *args, **kargs)
-        self._activate('execute')
-
-    def _triggered(self, job_name: str, post_json: dict, *args):
-        """
-        Returns any errors as-is.
-        :return:
-        """
-        if job_name != 'execute':
-            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
-            return return_error("Got bad trigger request for non-existent job", 400)
-
-        return ''
 
     @add_rule('run_action', methods=['POST'])
     def run_action(self):

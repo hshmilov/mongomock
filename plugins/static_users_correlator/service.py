@@ -10,7 +10,6 @@ class StaticUsersCorrelatorService(CorrelatorBase):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
         self._correlation_engine = StaticUserCorrelatorEngine()
-        self._activate('execute')
 
     def _correlate(self, entities: list):
         return self._correlation_engine.correlate(entities)

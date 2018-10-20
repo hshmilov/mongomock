@@ -1,5 +1,7 @@
 import logging
 
+from axonius.consts.plugin_subtype import PluginSubtype
+
 logger = logging.getLogger(f'axonius.{__name__}')
 """
 ScannerAdapterBase is an abstract class all scanner adapters should inherit from.
@@ -15,7 +17,7 @@ from axonius.mixins.feature import Feature
 
 from axonius.thread_stopper import stoppable
 from axonius.adapter_base import AdapterBase
-from axonius.consts.adapter_consts import IGNORE_DEVICE, SCANNER_ADAPTER_PLUGIN_SUBTYPE, ADAPTER_PLUGIN_TYPE
+from axonius.consts.adapter_consts import IGNORE_DEVICE, ADAPTER_PLUGIN_TYPE
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.utils.parsing import pair_comparator, is_different_plugin, parameter_function, normalize_adapter_device, \
@@ -282,8 +284,8 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
         return ADAPTER_PLUGIN_TYPE
 
     @property
-    def plugin_subtype(self):
-        return SCANNER_ADAPTER_PLUGIN_SUBTYPE
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.ScannerAdapter
 
     @classmethod
     def specific_supported_features(cls) -> list:

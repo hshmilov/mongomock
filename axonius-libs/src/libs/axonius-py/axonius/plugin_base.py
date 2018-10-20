@@ -26,6 +26,7 @@ import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 # bson is requirement of mongo and its not recommended to install it manually
+from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from bson import ObjectId, json_util
 from flask import Flask, jsonify, request
@@ -134,7 +135,7 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
         def actual_wrapper(self, *args, **kwargs):
             """This wrapper will catch every exception.
 
-            This wrapper will always cath exceptions from add_data_to_entitythe decorated func. In that case, we return
+            This wrapper will always cath exceptions from the decorated func. In that case, we return
             the exception name with the Exception string.
             In case of exception, a detailed traceback will be sent to log
             """
@@ -549,7 +550,7 @@ class PluginBase(Configurable, Feature):
         register_doc = {
             "plugin_name": self.plugin_name,
             "plugin_type": self.plugin_type,
-            "plugin_subtype": self.plugin_subtype,
+            "plugin_subtype": self.plugin_subtype.value,
             "plugin_port": self.port,
             "is_debug": is_debug_attached(),
             "supported_features": list(self.supported_features)
@@ -985,11 +986,8 @@ class PluginBase(Configurable, Feature):
         return "Plugin"
 
     @property
-    def plugin_subtype(self):
-        # TODO: This is bad, since pre-correlation plugins are being constantly triggered by the system scheduler
-        # TODO: for "execute" trigger. but PluginBase isn't triggerable! so we better make it also triggerable
-        # TODO: and make it not do anything.
-        return "Pre-Correlation"
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.NotRunning
 
     def _save_data_from_plugin(self, client_name, *args, **kwargs) -> int:
         """

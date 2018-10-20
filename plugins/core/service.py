@@ -158,7 +158,7 @@ class CoreService(PluginBase, Configurable):
         final_url = uritools.uricompose(scheme='https', host=data['plugin_ip'], port=data['plugin_port'],
                                         path=data['path'])
 
-        return requests.request(method=method, url=final_url, timeout=2, **kwargs)
+        return requests.request(method=method, url=final_url, timeout=5, **kwargs)
 
     def _check_plugin_online(self, plugin_unique_name):
         """ Function for checking if a plugin is online.

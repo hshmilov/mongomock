@@ -12,7 +12,6 @@ class StaticCorrelatorService(CorrelatorBase):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
         self._correlation_engine = StaticCorrelatorEngine()
-        self._activate('execute')
 
     def get_entities_from_ids(self, entities_ids=None):
         if entities_ids is None:

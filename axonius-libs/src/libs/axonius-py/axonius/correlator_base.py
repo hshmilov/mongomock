@@ -4,6 +4,7 @@ import threading
 from abc import ABC, abstractmethod
 from multiprocessing.dummy import Pool as ThreadPool
 
+from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import (MAC_FIELD,
                                             NETWORK_INTERFACES_FIELD, OS_FIELD)
 from axonius.entities import EntityType
@@ -105,8 +106,6 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._correlation_lock = threading.RLock()
-
     @classmethod
     def specific_supported_features(cls) -> list:
         return ["Correlator"]
@@ -123,16 +122,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         entities_to_correlate = None
         if post_json is not None:
             entities_to_correlate = list(post_json)
-        acquired = False
-        try:
-            acquired = self._correlation_lock.acquire(False)
-            if acquired:
-                self.__correlate(entities_to_correlate)
-            else:
-                raise RuntimeError("Correlation is already taking place, try again later")
-        finally:
-            if acquired:
-                self._correlation_lock.release()
+        self.__correlate(entities_to_correlate)
 
     def get_entities_from_ids(self, entities_ids=None):
         """
@@ -174,20 +164,12 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
                 self.create_notification(result.title, result.content, result.notification_type)
                 return
 
-        pool.map_async(process_correlation_result, self._correlate_with_lock(entities_to_correlate))
+        pool.map_async(process_correlation_result, self._correlate(entities_to_correlate))
         logger.info("Waiting for correlation")
         pool.close()
         pool.join()
         logger.info("Done!")
         self._request_db_rebuild(sync=False)
-
-    def _correlate_with_lock(self, entities: list):
-        """
-        Some primitive filters
-        Just calls _correlate with a lock
-        """
-        with self._correlation_lock:
-            return self._correlate(entities)
 
     @property
     @abstractmethod
@@ -208,5 +190,5 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         pass
 
     @property
-    def plugin_subtype(self):
-        return "Correlator"
+    def plugin_subtype(self) -> PluginSubtype:
+        return PluginSubtype.Correlator
