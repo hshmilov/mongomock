@@ -202,7 +202,7 @@ def install_requirements():
 def start_axonius():
     print_state('Starting up axonius system')
     from devops.axonius_system import main
-    main('system up --all --prod --exclude diagnostics'.split())
+    main('system up --all --prod --exclude nimbul diagnostics'.split())
     print_state('System is up')
 
     print_state('Starting discovery')

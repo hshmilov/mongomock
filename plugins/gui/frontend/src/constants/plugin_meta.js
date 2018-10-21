@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    nimbul_adapter: {
+        title: 'Nimbul',
+        description: 'Nimbul is a custom cloud infrastructure management solution developed by the New York Times.'
+    },
     dropbox_adapter: {
         title: 'Dropbox - BETA',
         description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud and client software.'

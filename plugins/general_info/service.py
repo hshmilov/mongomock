@@ -44,8 +44,6 @@ MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 60 * 10
 
 
 class GeneralInfoService(PluginBase, Triggerable):
-    # Do note that this block of code (additional fields handling) was copied from the JSON Adapter.
-    # When we add this to DeviceAdapter for it to be able to support additional fields we would change this here.
 
     class MyDeviceAdapter(DeviceAdapter):
 

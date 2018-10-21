@@ -99,6 +99,7 @@ DOCKER_PORTS = {
     'alibaba-adapter':                  6038,
     'datadog-adapter':                  6041,
     'dropbox-adapter':                  6042,
+    'nimbul-adapter':                   6043,
     'mongo':                            27017,
     'mongo-slave':                      27018,
 }
