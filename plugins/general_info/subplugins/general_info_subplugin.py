@@ -27,7 +27,7 @@ class GeneralInfoSubplugin(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_wmi_smb_commands(self):
+    def get_wmi_smb_commands():
         """
         Returns the wmi commands needed to understand the result.
         :return: a list of strings, each string is a wmi query.

@@ -143,12 +143,12 @@ class DeepSecurityAdapter(AdapterBase):
                     if '__' in key:
                         del device_raw[key]
                 device_id = device_raw.get('ID')
+                hostname_or_ip = device_raw.get('name')
                 if not device_id:
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
-                device.id = device_id
+                device.id = str(device_id) + '_' + (hostname_or_ip or '')
                 device.name = device_raw.get('displayName')
-                hostname_or_ip = device_raw.get('name')
                 try:
                     ip = str(ipaddress.ip_address(hostname_or_ip))
                     device.add_nic(None, [ip])

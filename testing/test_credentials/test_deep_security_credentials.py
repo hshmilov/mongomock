@@ -5,4 +5,4 @@ client_details = {
     'password': 'Wtl4cj4yg0Z3n4GkzbBQ'
 }
 
-SOME_DEVICE_ID = '203'
+SOME_DEVICE_ID = '203_18.218.81.124'

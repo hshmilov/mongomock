@@ -487,7 +487,7 @@ class AwsAdapter(AdapterBase):
                         device.add_aws_ec2_tag(key=key, value=value)
                         device.add_key_value_tag(key, value)
                     device.instance_type = device_raw['InstanceType']
-                    device.key_name = device_raw['KeyName']
+                    device.key_name = device_raw.get('KeyName')
                     if device_raw.get('VpcId') is not None:
                         device.vpc_id = device_raw['VpcId']
                     if device_raw.get('VPC') is not None:

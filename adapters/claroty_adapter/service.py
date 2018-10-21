@@ -57,11 +57,8 @@ class ClarotyAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        try:
-            client_data.connect()
+        with client_data:
             yield from client_data.get_device_list()
-        finally:
-            client_data.close()
 
     @staticmethod
     def _clients_schema():
@@ -107,12 +104,13 @@ class ClarotyAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device_id = device_raw.get('id') or ''
+                device_id = device_raw.get('id')
                 if not device_id:
                     logger.error(f'Problem getting id for {device_raw}')
                     continue
-                device.id = str(device_id)
-                device.name = device_raw.get('name')
+                name = device_raw.get('name')
+                device.id = str(device_id) + (name or '')
+                device.name = name
                 try:
                     ips = (device_raw.get('ipv4') or [])
                 except Exception:

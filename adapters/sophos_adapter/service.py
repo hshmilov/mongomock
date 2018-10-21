@@ -103,13 +103,13 @@ class SophosAdapter(AdapterBase):
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw['id']
+                device_info = device_raw.get('info') or {}
                 if not device_id:
                     logger.warning(f'Bad device with no id {device_id}')
                     continue
-                device.id = device_id + (device_raw.get('name') or '')
-                device.name = device_raw.get('name')
-                device_info = device_raw.get('info') or {}
                 hostname = device_info.get('fqdn') or device_info.get('computer_name')
+                device.id = device_id + '_' + (device_raw.get('name') or '') + '_' + (hostname or '')
+                device.name = device_raw.get('name')
                 if hostname and hostname.endswith('.local'):
                     hostname = hostname[:-len('.local')]
                 device.hostname = hostname

@@ -129,7 +129,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                         continue
 
                     if mac:
-                        device_id = mac + device_type
+                        device_id = (hostname or '') + '_' + mac + device_type
                     else:
                         device_id = hostname + device_type
 

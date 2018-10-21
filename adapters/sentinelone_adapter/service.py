@@ -109,7 +109,7 @@ class SentineloneAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=R0912
+    # pylint: disable=R0912,R0915
     def _create_device_v1(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -165,6 +165,17 @@ class SentineloneAdapter(AdapterBase):
                 device.total_physical_memory = int((hardware_information.get('total_memory') or 0)) / 1024.0
             except Exception:
                 logger.exception(f'Problem with adding memory to {device_raw}')
+            try:
+                device.last_used_users = (device_raw.get('last_logged_in_user_name') or '').split(',')
+                for user_raw in device_raw.get('users') or []:
+                    try:
+                        device.add_users(username=user_raw.get('name'),
+                                         user_sid=user_raw.get('sid'),
+                                         last_use_date=parse_date(user_raw.get('login_time')))
+                    except Exception:
+                        logging.exception(f'Problem getting user for {user_raw}')
+            except Exception:
+                logging.exception(f'Problem getting users for {device_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:

@@ -20,7 +20,7 @@ from axonius.adapter_exceptions import (ClientConnectionException,
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import (IpResolveError, LdapException,
                                              NoClientError)
-from axonius.clients.ldap.ldap_connection import (LDAP_ACCOUNTDISABLE,
+from axonius.clients.ldap.ldap_connection import (LDAP_ACCOUNTDISABLE, LDAP_ACCOUNT_LOCKOUT,
                                                   LdapConnection)
 from axonius.consts.adapter_consts import (DEVICES_DATA, DNS_RESOLVE_STATUS,
                                            IPS_FIELDNAME,
@@ -106,6 +106,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
     class MyUserAdapter(UserAdapter, ADEntity):
         user_managed_objects = ListField(str, "AD User Managed Objects")
+        user_account_control = Field(int, 'User Account Control')
+        account_lockout = Field(bool, "Account Lockout")
 
     def __init__(self):
 
@@ -516,9 +518,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 # http://jackstromberg.com/2013/01/useraccountcontrol-attributeflag-values/
                 user_account_control = user_raw.get("userAccountControl")
                 if user_account_control is not None and type(user_account_control) == int:
+                    user.user_account_control = user_account_control
                     user.password_never_expires = bool(user_account_control & LDAP_DONT_EXPIRE_PASSWORD)
                     user.password_not_required = bool(user_account_control & LDAP_PASSWORD_NOT_REQUIRED)
                     user.account_disabled = bool(user_account_control & LDAP_ACCOUNTDISABLE)
+                    user.account_lockout = bool(user_account_control & LDAP_ACCOUNT_LOCKOUT)
 
                 # I'm afraid this could cause exceptions, lets put it in try/except.
                 try:

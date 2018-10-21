@@ -41,7 +41,7 @@ class GceAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
-        return auth_file['client_id']
+        return auth_file['client_id'] + '_' + auth_file['project_id']
 
     def _test_reachability(self, client_config):
         raise NotImplementedError()

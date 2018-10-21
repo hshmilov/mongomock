@@ -149,7 +149,9 @@ class InfobloxAdapter(AdapterBase):
                 except Exception:
                     hostname = None
 
-                if mac_address:
+                if mac_address and hostname:
+                    device.id = f'mac_{mac_address}_host_{hostname}'
+                elif mac_address:
                     device.id = f'mac_{mac_address}'
                 elif hostname:
                     device.id = f'host_{hostname}'

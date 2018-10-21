@@ -7,4 +7,4 @@ client_details = {
     'verify_ssl': True
 }
 
-SOME_DEVICE_ID = 'ef1322c1-3631-249f-9a77-ff521cec4d87WIN-D14VSGS3C0G'
+SOME_DEVICE_ID = 'ef1322c1-3631-249f-9a77-ff521cec4d87_WIN-D14VSGS3C0G_WIN-D14VSGS3C0G.TestDomain.test'

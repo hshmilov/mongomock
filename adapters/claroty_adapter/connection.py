@@ -14,7 +14,7 @@ class ClarotyConnection(RESTConnection):
                                                              'Accept': 'application/json'}, **kwargs)
 
     def _connect(self):
-        if self._username is not None and self._password is not None:
+        if self._username and self._password:
             response = self._post('auth/authenticate', body_params={'username': self._username,
                                                                     'password': self._password})
             if 'token' not in response:

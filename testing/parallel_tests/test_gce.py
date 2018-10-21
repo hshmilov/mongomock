@@ -15,7 +15,7 @@ class TestGceAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return service_json_data['client_id']
+        return service_json_data['client_id'] + '_' + service_json_data['project_id']
 
     @property
     def some_client_details(self):

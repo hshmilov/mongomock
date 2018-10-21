@@ -177,6 +177,10 @@ class ScannerCorrelatorBase(object):
         :param parsed_device: parsed device
         :return: (plugin_unique_name, id)
         """
+        # if a scanner has a hostname or macs this will act as its ID
+        my_macs = set(extract_all_macs(parsed_device['data'].get('network_interfaces')))
+        hostname = get_hostname(parsed_device)
+
         parsed_device_copy = copy.deepcopy(parsed_device)  # Deepcopy to prevent changes on parsed device
         parsed_device_copy = normalize_adapter_device(parsed_device_copy)
         self_correlation = self._find_correlation_with_self(parsed_device_copy)
@@ -216,11 +220,11 @@ class ScannerCorrelatorBase(object):
                 # of self correlation
                 parsed_device['data']['id'] = newest_device['data']['id']
                 return None
+            if not my_macs and not hostname:
+                # If we have no mac or hostname we should not use the original id, due to complex scenarios
+                # that have been seen by ofri, in which wrong correlations can occur. Thus we generate a new id.
+                parsed_device['data']['id'] = uuid.uuid4().hex
             return remote_correlation
-
-        # if a scanner has a hostname or macs this will act as its ID
-        my_macs = set(extract_all_macs(parsed_device['data'].get('network_interfaces')))
-        hostname = get_hostname(parsed_device)
 
         # the device has only a fake ID and no correlations - ignore it
         return None if my_macs or hostname or device_has_id else IGNORE_DEVICE

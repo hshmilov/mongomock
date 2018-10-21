@@ -1930,6 +1930,7 @@ class PluginBase(Configurable, Feature):
         self._should_use_axr = config['execution_settings']['should_use_axr']
         self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
         self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
+        self._reg_check_exists = config['execution_settings']['reg_check_exists']
         self._syslog_settings = config['syslog_settings']
         self._service_now_settings = config['service_now_settings']
         self._fresh_service_settings = config['fresh_service_settings']
@@ -2127,6 +2128,12 @@ class PluginBase(Configurable, Feature):
                             "title": "Patch Management Using SMB (Online)",
                             "type": "bool",
                             "required": True
+                        },
+                        {
+                            'name': 'reg_check_exists',
+                            "title": "Reg Key To Check",
+                            "type": "string",
+                            "required": True,
                         }
                     ],
                     "name": "execution_settings",
@@ -2191,7 +2198,8 @@ class PluginBase(Configurable, Feature):
                 "enabled": False,
                 "should_use_axr": False,
                 "pm_rpc_enabled": False,
-                "pm_smb_enabled": False
+                "pm_smb_enabled": False,
+                'reg_check_exists': None,
             },
             "syslog_settings": {
                 "enabled": False,
