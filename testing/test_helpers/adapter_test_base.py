@@ -2,10 +2,15 @@
 import os
 import sys
 import uuid
+import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from flaky import flaky
+
+from axonius.consts import adapter_consts
+from axonius.utils.wait import wait_until
+from test_helpers.log_tester import LogTester
 
 try:
     import axonius
@@ -69,6 +74,10 @@ class AdapterTestBase:
     def user_alive_thresh_last_fetched(self):
         return self.adapter_service.get_configurable_config('AdapterBase')['user_last_fetched_threshold_hours']
 
+    @property
+    def log_tester(self):
+        return LogTester(self.adapter_service.log_path)
+
     def set_minimum_time_until_next_fetch(self, value):
         return self.adapter_service.set_configurable_config('AdapterBase', 'minimum_time_until_next_fetch', value)
 
@@ -102,6 +111,7 @@ class AdapterTestBase:
     @flaky(max_runs=2)
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
+        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_SUCCESS_LINE), 10))
         self.axonius_system.assert_device_aggregated(
             self.adapter_service, [(self.some_client_id, self.some_device_id)])
 
@@ -408,3 +418,10 @@ class AdapterTestBase:
                                          }).status_code == 200
         assert len(get_users_by_id(self.adapter_service.plugin_name, out_id)) == 0
         self.adapter_service.trigger_clean_db()
+
+    def test_bad_client(self):
+        try:
+            self.adapter_service.add_client(FAKE_CLIENT_DETAILS)
+        except AssertionError:
+            pass  # some adapters return 200, and some an error
+        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_FAILURE_LINE), 10))

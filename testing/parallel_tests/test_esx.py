@@ -1,5 +1,9 @@
+import re
 import pytest
 
+
+from axonius.consts import adapter_consts
+from axonius.utils.wait import wait_until
 from esx_adapter.service import EsxAdapter
 from services.adapters.esx_service import EsxService, esx_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -29,7 +33,7 @@ class TestEsxAdapter(AdapterTestBase):
         for client, some_device_id in client_details:
             client = dict(client)
             self.adapter_service.add_client(client)
-
+            wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_SUCCESS_LINE), 10))
             client_id = "{}/{}".format(client['host'], client['user'])
             client_details_to_send.append((client_id, some_device_id))
         self.axonius_system.assert_device_aggregated(self.adapter_service, client_details_to_send)
@@ -49,3 +53,15 @@ class TestEsxAdapter(AdapterTestBase):
     def test_check_reachability(self):
         assert self.adapter_service.is_client_reachable(self.some_client_details)
         assert not self.adapter_service.is_client_reachable(FAKE_CLIENT_DETAILS)
+
+    def test_bad_client(self):
+        # testing specifically for valid but unreachable client
+        bad_client = dict(client_details[0][0])
+        bad_client['host'] = 'totally_not_an_esx_host'
+
+        self.adapter_service.add_client(bad_client)
+
+        # make sure we passed the parse creds
+        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape('Unable to access vCenter'), 10))
+        # make sure log is written
+        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_FAILURE_LINE), 10))

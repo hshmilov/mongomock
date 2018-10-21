@@ -26,3 +26,7 @@ class TestJsonFileAdapter(AdapterTestBase):
     @pytest.mark.skip("No reachability test")
     def test_check_reachability(self):
         pass
+
+    @pytest.mark.skip("Irrelevant test for this adapter")
+    def test_bad_client(self):
+        pass

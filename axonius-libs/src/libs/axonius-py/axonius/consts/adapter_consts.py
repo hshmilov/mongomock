@@ -9,3 +9,7 @@ DNS_RESOLVE_STATUS = DNSResolvableDevice.dns_resolve_status.name
 IPS_FIELDNAME = "ips"
 NETWORK_INTERFACES_FIELDNAME = "network_interfaces"
 DEVICES_DATA = 'devices_data'
+
+# LOGS
+LOG_CLIENT_SUCCESS_LINE = 'New client added (success)'
+LOG_CLIENT_FAILURE_LINE = 'New client added (failure)'

@@ -473,15 +473,21 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
            PUT (expects client data) - Adds a new client, or updates existing one, according to given data.
                                        Uniqueness compared according to _get_client_id value.
         """
-        success_line = 'New client added (success)'
-        failure_line = 'New client added (failure)'
+        success_line = adapter_consts.LOG_CLIENT_SUCCESS_LINE
+        failure_line = adapter_consts.LOG_CLIENT_FAILURE_LINE
         with self._clients_lock:
             if self.get_method() == 'PUT':
                 client_config = request.get_json(silent=True)
                 if not client_config:
                     logger.info(f'{failure_line} - invalid client')
                     return return_error("Invalid client")
-                client_id = self._get_client_id(client_config)
+
+                try:
+                    client_id = self._get_client_id(client_config)
+                except Exception:
+                    logger.info(f'{failure_line} - invalid client id')
+                    return return_error('Failed to get client id')
+
                 add_client_result = self._add_client(client_config)
                 if not add_client_result:
                     logger.info(f'{failure_line} - {client_id}')

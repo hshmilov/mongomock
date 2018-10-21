@@ -119,6 +119,10 @@ class PluginService(DockerService):
     def unique_name(self):
         return self.vol_conf.unique_name
 
+    @property
+    def log_path(self):
+        return os.path.join(self.log_dir, f'{self.unique_name}.axonius.log')
+
     def generate_debug_template(self):
         name = self.adapter_name.replace("-", "_") if isinstance(self, AdapterService) else self.package_name
         ports = '\n'.join([py_charm_debug_port_template.format(host_port=host_port, internal_port=internal_port)
