@@ -58,7 +58,6 @@ def test_system_is_up(axonius_fixture):
         service.wait_for_service()
 
 
-@pytest.mark.skip('AX-2237')
 def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixture, Stresstest_fixture):
     scheduler = axonius_fixture.scheduler
     gui = axonius_fixture.gui
@@ -69,20 +68,15 @@ def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixtur
     assert len(StresstestScanner_fixture.clients()) == 1
     assert len(Stresstest_fixture.clients()) == 1
 
-    time.sleep(10)
     scheduler.start_research()
-    time.sleep(10)
-    scheduler.wait_for_scheduler(True)
-
-    # TODO: This is flaky as hell
-    # Could be fixed as part of AX-2139
-    time.sleep(10)
-    scheduler.start_research()
-    time.sleep(10)
+    time.sleep(1)
     scheduler.wait_for_scheduler(True)
 
     gui.login_user(DEFAULT_USER)
-    assert gui.get_devices_count().content == b'50'
+    devices = gui.get_devices(params={
+        'filter': 'adapters == \'stresstest_scanner_adapter\' and adapters == \'stresstest_adapter\''
+    }).json()
+    assert len(devices) == 50
 
 
 def test_stop_research(axonius_fixture, infinite_sleep_fixture):

@@ -229,6 +229,10 @@ class AxoniusService():
 
         try_until_not_thrown(30, 1, assert_aggregator_registered)
 
+        # let's wait until all other plugins are up as well
+        # this is not the best solution but at least it works
+        time.sleep(30)
+
     @staticmethod
     def _get_docker_service(type_name, name):
         module = importlib.import_module(f"services.{type_name}.{name.lower()}_service")

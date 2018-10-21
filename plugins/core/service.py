@@ -136,7 +136,7 @@ class CoreService(PluginBase, Configurable):
                 for delete_key, delete_value in delete_list:
                     delete_candidate = self.online_plugins.get(delete_key)
                     if delete_candidate is delete_value:
-                        logger.info("Plugin {0} didnt answer, deleting "
+                        logger.info("Plugin {0} didn't answer, deleting "
                                     "from online plugins list".format(delete_candidate))
                         del self.online_plugins[delete_key]
 
@@ -218,8 +218,13 @@ class CoreService(PluginBase, Configurable):
                 # In our online list
                 unique_name = request.args.get('unique_name')
                 if unique_name in self.online_plugins:
-                    if api_key == self.online_plugins[unique_name]['api_key']:
+                    actual_api_key = self.online_plugins[unique_name]['api_key']
+                    if api_key == actual_api_key:
                         return 'OK'
+                    else:
+                        logger.error(f'Plugin {unique_name} gave wrong API key - {api_key} != {actual_api_key}')
+                else:
+                    logger.error(f'Plugin does not exist - {unique_name}')
                 # If we reached here than plugin is not registered, returning error
                 return return_error('Plugin not registered', 404)
 
