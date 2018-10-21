@@ -149,7 +149,6 @@ class TestAlert(TestBase):
         finally:
             json_service.start_and_wait()
 
-    @pytest.mark.skip('AX-2136')
     def test_increasing(self):
         json_service = JsonFileService()
         json_service.take_process_ownership()
