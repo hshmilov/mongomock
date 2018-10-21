@@ -55,9 +55,21 @@ export const dashboard = {
 		[ UPDATE_DASHBOARD ] (state, payload) {
 			state.charts.fetching = payload.fetching
 			state.charts.error = payload.error
-			if (payload.data) {
-				state.charts.data = payload.data
-			}
+			if (!payload.data) {
+                return
+            }
+            if (!state.charts.data.length) {
+                state.charts.data = payload.data
+            } else {
+                payload.data.forEach((item, index) => {
+                    if (payload.skip + index < state.charts.data.length) {
+                        state.charts.data[payload.skip + index] = item
+                    } else {
+                        state.charts.data.push(item)
+                    }
+                })
+                state.charts.data = [ ...state.charts.data ]
+            }
 		},
 		[ UPDATE_DASHBOARD_COVERAGE ] (state, payload) {
 			state.coverage.fetching = payload.fetching
@@ -92,11 +104,27 @@ export const dashboard = {
 				payload
 			})
 		},
-		[ FETCH_DASHBOARD ] ({dispatch}) {
+		[ FETCH_DASHBOARD ] ({dispatch}, payload) {
+			if (!payload) {
+			    payload = {}
+            }
+            if (!payload.skip) {
+			    payload.skip = 0
+            }
+            if (!payload.limit) {
+			    payload.limit = 2
+            }
 			return dispatch(REQUEST_API, {
-				rule: 'dashboard',
-				type: UPDATE_DASHBOARD
-			})
+				rule: `dashboard?skip=${payload.skip}&limit=${payload.limit}`,
+				type: UPDATE_DASHBOARD,
+                payload
+			}).then(response => {
+                if (response.data && response.data.length == payload.limit) {
+                    dispatch(FETCH_DASHBOARD, { ...payload,
+                        skip: payload.skip + payload.limit
+                    })
+                }
+            })
 		},
 		[ SAVE_DASHBOARD ] ({dispatch}, payload) {
 			return dispatch(REQUEST_API, {

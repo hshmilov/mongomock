@@ -9,7 +9,7 @@
                 <th v-for="field in fields" nowrap :class="{sortable: clickColHandler}"
                     @click="clickCol(field.name)" @keyup.enter.stop="clickCol(field.name)">
 
-                    <img v-if="field.logo" class="logo" :src="`/src/assets/images/logos/${field.logo}.png`" height="20">
+                    <img v-if="field.logo" class="logo md-image" :src="`/src/assets/images/logos/${field.logo}.png`" height="20">
                     {{ field.title }}<div v-if="clickColHandler" :class="`x-sort ${sortClass(field.name)}`"></div>
                 </th>
             </tr>

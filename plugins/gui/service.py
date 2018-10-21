@@ -2105,12 +2105,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             dates[entity_type.value] = {x.date().isoformat(): x.isoformat() for x in entity_dates}
         return jsonify(dates)
 
+    @gui_helpers.paginated()
     @gui_add_rule_logged_in("dashboard", methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              ReadOnlyJustForGet)})
-    def get_dashboard(self):
+    def get_dashboard(self, skip, limit):
         if request.method == 'GET':
-            return jsonify(self._get_dashboard())
+            return jsonify(self._get_dashboard(skip, limit))
 
         # Handle 'POST' request method - save dashboard configuration
         dashboard_data = self.get_request_data_as_object()
@@ -2124,7 +2125,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error('Error saving dashboard chart', 400)
         return str(update_result.upserted_id)
 
-    def _get_dashboard(self):
+    def _get_dashboard(self, skip=0, limit=0):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
         fetch devices_db_view with their view. Amount of results is mapped to each views' name, under 'data' key,
@@ -2135,7 +2136,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         logger.info("Getting dashboard")
-        for dashboard in self._get_collection('dashboard').find(filter_archived()):
+        for dashboard in self._get_collection('dashboard').find(filter=filter_archived(), skip=skip, limit=limit):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):

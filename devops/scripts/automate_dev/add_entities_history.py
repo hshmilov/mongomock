@@ -13,7 +13,7 @@ def main():
         try:
             entities_number = randint(1, 100)
             entities = list(history_db.find().skip(previous_entities_number).limit(entities_number))
-            previous_entities_number = entities_number
+            previous_entities_number += entities_number
             for entity in entities:
                 del entity['_id']
                 entity['accurate_for_datetime'] = datetime.now() - timedelta(day)
