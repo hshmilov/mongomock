@@ -1,4 +1,6 @@
 from services.standalone_services.syslog_server import SyslogService
+from test_credentials.test_ad_credentials import ad_client1_details
+from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 from ui_tests.tests.ui_test_base import TestBase
 from upgrade.consts import EmailSettings, FreshServiceSettings
 
@@ -71,4 +73,21 @@ class TestPrepareGlobalSettings(TestBase):
 
         self.settings_page.click_toggle_button(self.settings_page.find_should_history_be_gathered_toggle(),
                                                make_yes=False)
+        self.settings_page.save_and_wait_for_toaster()
+
+    def test_gui_settings(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_gui_settings()
+        self.settings_page.wait_for_spinner_to_end()
+
+        self.settings_page.set_single_adapter_checkbox(make_yes=True)
+
+        toggle = self.settings_page.find_allow_okta_logins_toggle()
+        self.settings_page.click_toggle_button(toggle)
+        self.settings_page.fill_okta_login_details(**OKTA_LOGIN_DETAILS)
+
+        toggle = self.settings_page.find_allow_ldap_logins_toggle()
+        self.settings_page.click_toggle_button(toggle)
+        self.settings_page.fill_dc_address(ad_client1_details['dc_name'])
+
         self.settings_page.save_and_wait_for_toaster()

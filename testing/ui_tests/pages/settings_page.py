@@ -28,6 +28,11 @@ class SettingsPage(Page):
     FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'
     USE_EXECUTION = 'Execution Enabled'
     HISTORY_GATHERED = 'Should history be gathered'
+    DC_ADDRESS = 'dc_address'
+    SINGLE_ADAPTER_VIEW = 'Use Single Adapter View'
+    ALLOW_GOOGLE_LOGINS = 'Allow Google logins'
+    GOOGLE_CLIENT_ID = 'Google client id'
+    GOOGLE_EMAIL_OF_ADMIN = 'Email of an admin account to impersonate'
 
     @property
     def url(self):
@@ -158,13 +163,50 @@ class SettingsPage(Page):
         return self.find_checkbox_by_label(self.OKTA_LOGINS_LABEL)
 
     def fill_dc_address(self, dc_address):
-        self.fill_text_field_by_element_id('dc_address', dc_address)
+        self.fill_text_field_by_element_id(self.DC_ADDRESS, dc_address)
 
     def fill_okta_login_details(self, client_id, client_secret, url, gui_url):
         self.fill_text_field_by_element_id('client_id', client_id)
         self.fill_text_field_by_element_id('client_secret', client_secret)
         self.fill_text_field_by_element_id('url', url)
         self.fill_text_field_by_element_id('gui_url', gui_url)
+
+    def get_dc_address(self):
+        return self.driver.find_element_by_id(self.DC_ADDRESS).get_attribute('value')
+
+    def get_okta_login_details(self):
+        return {
+            'client_id': self.driver.find_element_by_id('client_id').get_attribute('value'),
+            'client_secret': self.driver.find_element_by_id('client_secret').get_attribute('value'),
+            'url': self.driver.find_element_by_id('url').get_attribute('value'),
+            'gui_url': self.driver.find_element_by_id('gui_url').get_attribute('value')
+        }
+
+    def set_single_adapter_checkbox(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.SINGLE_ADAPTER_VIEW)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
+    def get_single_adapter_checkbox(self):
+        return self.is_toggle_selected(self.find_checkbox_by_label(self.SINGLE_ADAPTER_VIEW))
+
+    def set_google_clients_login(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.ALLOW_GOOGLE_LOGINS)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
+    def get_google_clients_login(self):
+        return self.is_toggle_selected(self.find_checkbox_by_label(self.ALLOW_GOOGLE_LOGINS))
+
+    def set_google_client_id(self, text):
+        self.fill_text_field_by_element_id(self.GOOGLE_CLIENT_ID, text)
+
+    def get_google_client_id(self):
+        return self.driver.find_element_by_id(self.GOOGLE_CLIENT_ID).get_attribute('value')
+
+    def set_google_email_account(self, text):
+        self.fill_text_field_by_element_id(self.GOOGLE_EMAIL_OF_ADMIN, text)
+
+    def get_google_email_account(self):
+        return self.driver.find_element_by_id(self.GOOGLE_EMAIL_OF_ADMIN).get_attribute('value')
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
