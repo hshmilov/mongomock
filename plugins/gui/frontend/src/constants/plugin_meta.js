@@ -11,6 +11,10 @@ export const pluginMeta = {
         title: 'DivvyCloud',
         description: 'DivvyCloud offers security, compliance, and governance guardrails for public and private cloud infrastructures.'
     },
+    zabbix_adapter: {
+        title: 'Zabbix - BETA',
+        description: 'Zabbix is an open source monitoring software tool for networks, servers, virtual machines and cloud services.'
+    },
     cisco_amp_adapter: {
         title: 'Cisco Advanced Malware Protection - BETA',
         description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'

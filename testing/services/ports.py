@@ -69,6 +69,7 @@ DOCKER_PORTS = {
     'cynet-adapter':                    5910,
     'illusive-adapter':                 5911,
     'cisco-adapter':                    6001,
+    'zabbix-adapter':                   6005,
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,
     'ensilo-adapter':                   6013,
