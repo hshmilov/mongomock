@@ -1,1 +1,0 @@
-docker exec gui bash -c "rm /home/axonius/app/master_password"

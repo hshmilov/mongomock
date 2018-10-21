@@ -7,6 +7,7 @@ class SettingsPage(Page):
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     LIFECYCLE_SETTINGS_CSS = 'li#research-settings-tab'
+    MANAGE_USERS_CSS = 'li#user-settings-tab'
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
@@ -41,6 +42,12 @@ class SettingsPage(Page):
 
     def click_lifecycle_settings(self):
         self.driver.find_element_by_css_selector(self.LIFECYCLE_SETTINGS_CSS).click()
+
+    def click_manage_users_settings(self):
+        self.driver.find_element_by_css_selector(self.MANAGE_USERS_CSS).click()
+
+    def get_all_users_from_users_and_roles(self):
+        return (x.text for x in self.driver.find_elements_by_css_selector('.user-details-title'))
 
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()

