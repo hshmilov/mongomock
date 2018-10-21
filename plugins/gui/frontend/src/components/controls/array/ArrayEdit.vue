@@ -2,7 +2,8 @@
     <div class="array">
         <h4 v-if="schema.title" :title="schema.description || ''" class="array-header"
             :id="schema.name">{{ schema.title }}</h4>
-        <div v-for="item in shownSchemaItems" class="item">
+        <div v-for="(item, index) in shownSchemaItems" class="item">
+            <div v-if="!isOrderedObject" class="x-btn link" @click="removeItem(index)">x</div>
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
                 <component :is="item.type" :schema="item" v-model="data[item.name]" @validate="onValidate"
@@ -53,6 +54,10 @@
                     return map
                 }, {})
                 this.onInput()
+            },
+            removeItem(index) {
+                delete this.data[index]
+                this.onInput()
             }
         },
         watch: {
@@ -88,6 +93,9 @@
             .index {
                 display: inline-block;
                 vertical-align: top;
+            }
+            .x-btn.link {
+                text-align: right;
             }
         }
     }
