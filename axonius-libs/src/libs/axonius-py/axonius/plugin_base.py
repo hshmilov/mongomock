@@ -1931,7 +1931,7 @@ class PluginBase(Configurable, Feature):
         self._should_use_axr = config['execution_settings']['should_use_axr']
         self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
         self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
-        self._reg_check_exists = config['execution_settings']['reg_check_exists']
+        self._reg_check_exists = config['execution_settings'].get('reg_check_exists')
         self._syslog_settings = config['syslog_settings']
         self._service_now_settings = config['service_now_settings']
         self._fresh_service_settings = config['fresh_service_settings']
