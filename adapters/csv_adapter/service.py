@@ -96,7 +96,7 @@ class CsvAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         csv_data, csv_name, csv_mac, csv_serial, csv_os, csv_field1, csv_field2, csv_field3 = raw_data
         if csv_serial not in csv_data.fieldnames and csv_mac not in csv_data.fieldnames:
-            logger.error(f"Bad fields names{str(raw_data.fieldnames)}")
+            logger.error(f"Bad fields names{str(csv_data.fieldnames)}")
             raise GetDevicesError("Strong identifier is missing (MAC/Serial)")
         for device_raw in csv_data:
             try:
