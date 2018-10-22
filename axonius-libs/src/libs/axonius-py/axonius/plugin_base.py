@@ -360,6 +360,7 @@ class PluginBase(Configurable, Feature):
 
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
+        AXONIUS_REST.url_map.strict_slashes = False     # makes routing to "page" and "page/" the same.
         self.wsgi_app = AXONIUS_REST
 
         for section in self.config.sections():

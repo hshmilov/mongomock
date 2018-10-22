@@ -1,0 +1,44 @@
+{
+    "strict": true,
+    "debug": false,
+    "sp": {
+        "entityId": "https://<sp_domain>/metadata/",
+        "assertionConsumerService": {
+            "url": "https://<sp_domain>/?acs",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+        },
+        "singleLogoutService": {
+            "url": "https://<sp_domain>/?sls",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        },
+        "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
+        "x509cert": "",
+        "privateKey": ""
+    },
+
+    "idp": {
+        "entityId": "https://localhost/metadata/",
+        "singleSignOnService": {
+            "url": "https://localhost/?sso",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        },
+        "x509cert": ""
+    },
+
+    "organization": {
+        "en-US": {
+            "name": "Axonius",
+            "displayname": "Axonius",
+            "url": "https://www.axonius.com"
+        }
+    },
+
+    "security": {
+        "wantMessagesSigned": false,
+        "wantAssertionsSigned": false,
+        "wantAssertionsEncrypted": false,
+        "wantNameId": false,
+        "wantNameIdEncrypted": false,
+        "wantAttributeStatement": false
+    }
+}

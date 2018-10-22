@@ -10,12 +10,13 @@ d<template>
                 <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="onValidate"
                                @submit="onLogin" :error="auth.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
-                <div v-if="oktaConfig.enabled || ldapConfig.enabled || googleConfig.enabled" class="t-center mt-12">Or</div>
+                <div v-if="oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled || googleConfig.enabled" class="t-center mt-12">Or</div>
                 <div class="login-options">
-                    <a @click="onOktaLogin" v-if="oktaConfig.enabled" class="x-btn link">Login with Okta</a>
-                    <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" class="x-btn link">Login with LDAP</a>
+                    <a @click="onOktaLogin" v-if="oktaConfig.enabled" id="okta_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with Okta</a>
+                    <a @click="onSamlLogin" v-if="samlConfig.enabled" id="saml_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with {{ samlConfig.idp_name }}</a>
+                    <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" id="ldap_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with LDAP</a>
                     <google-login v-if="googleConfig.enabled" :client_id="googleConfig.client_id"
-                                  v-on:success="onGoogleSignIn" />
+                                  v-on:success="onGoogleSignIn" :class="{'grid-span2': singleLoginMethod}"/>
                 </div>
             </div>
         </div>
@@ -69,6 +70,9 @@ d<template>
                     ], required: ['user_name', 'domain', 'password']
                 }
             },
+            singleLoginMethod() {
+			    return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled + this.googleConfig.enabled) === 1
+            }
 
         },
         data() {
@@ -89,6 +93,9 @@ d<template>
                     complete: false,
                 },
                 oktaConfig: {
+                    enabled: false
+                },
+                samlConfig: {
                     enabled: false
                 },
                 ldapConfig: {
@@ -134,6 +141,9 @@ d<template>
                 });
                 x.token.getWithRedirect({responseType: 'code'})
             },
+            onSamlLogin() {
+                window.location.href = '/api/login/saml'
+            },
             toggleLdapLogin() {
                 this.ldapData.active = !this.ldapData.active
             },
@@ -146,6 +156,7 @@ d<template>
             this.getLoginSettings().then(response => {
                 if (response.status === 200) {
                     this.oktaConfig = response.data.okta
+                    this.samlConfig = response.data.saml
                     this.ldapConfig = response.data.ldap
                     this.googleConfig = response.data.google
                 }
@@ -157,6 +168,8 @@ d<template>
 <style lang="scss">
     .login-container {
         background: url('/src/assets/images/general/login_bg.png');
+        background-size: cover;
+        background-position: center bottom;
         height: 100vh;
         padding-top: 20vh;
         .login {

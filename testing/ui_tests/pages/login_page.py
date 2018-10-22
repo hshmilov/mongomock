@@ -1,4 +1,4 @@
-from ui_tests.pages.page import BUTTON_TYPE_A, Page
+from ui_tests.pages.page import Page
 
 
 class LoginPage(Page):
@@ -53,16 +53,10 @@ class LoginPage(Page):
         return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH)
 
     def click_login_with_ldap(self):
-        self.click_button('Login with LDAP',
-                          call_space=False,
-                          button_type=BUTTON_TYPE_A,
-                          button_class=self.LOGIN_WITH_LDAP_BUTTON_CLASS)
+        self.driver.find_element_by_id('ldap_login_link').click()
 
     def click_login_with_okta(self):
-        self.click_button('Login with Okta',
-                          call_space=False,
-                          button_type=BUTTON_TYPE_A,
-                          button_class=self.LOGIN_WITH_OKTA_BUTTON_CLASS)
+        self.driver.find_element_by_id('okta_login_link').click()
 
     def fill_okta_client_login_details(self, login_details):
         self.wait_for_element_present_by_id(self.OKTA_LOGIN_USERNAME_ID)

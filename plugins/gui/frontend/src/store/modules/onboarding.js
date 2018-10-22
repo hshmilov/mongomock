@@ -567,12 +567,26 @@ export const onboarding = {
 					id: 'okta_login_settings', title: 'LOGIN WITH OKTA', align: 'top',
 					content: 'If you use Okta, you can log in to Axonius by entering Okta details.',
 					actions: [
+						{ title: 'Next', state: 'google' }
+					]
+				},
+				'google': {
+					id: 'google_login_settings', title: 'LOGIN WITH Google', align: 'top',
+					content: 'If you use Google (G-Suite), you can log in to Axonius by entering G-Suite settings.',
+					actions: [
 						{ title: 'Next', state: 'ldap' }
 					]
 				},
 				'ldap': {
 					id: 'ldap_login_settings', title: 'LOGIN WITH LDAP', align: 'top',
 					content: 'If you use LDAP, you can log in to Axonius by entering LDAP user details.',
+					actions: [
+						{ title: 'Next', state: 'saml' }
+					]
+				},
+				'saml': {
+					id: 'saml_login_settings', title: 'LOGIN WITH SAML', align: 'top',
+					content: 'If you use an identity provider that supports SAML, you can log in to Axonius by entering SAML settings.',
 					actions: [
 						{ title: 'Next', state: 'dashboard' }
 					]
