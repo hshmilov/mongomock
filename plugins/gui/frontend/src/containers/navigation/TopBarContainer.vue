@@ -258,6 +258,7 @@
                         font-size: 14px;
                         cursor: pointer;
                         box-shadow: none;
+                        border: 0;
                         .svg-fill {
                             fill: $grey-1;
                             margin-right: 8px;

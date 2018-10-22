@@ -1039,32 +1039,27 @@ def parse_filter(filter_str):
         # Find next sequence
         matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
 
-    # Handle predefined sequence representing negation of a complete filter, expected to be inside []
     matches = re.search('NOT\s*\[(.*)\]', filter_str)
-    nor_queries = []
     while matches:
-        # Parse and add the filter to a list that will be negated
-        nor_queries.append(pql.find(matches.group(1)))
-        # Remove it from the filter
-        filter_str = filter_str.replace(matches.group(0), '')
+        filter_str = filter_str.replace(matches.group(0), f'not {matches.group(1)}')
         matches = re.search('NOT\s*\[(.*)\]', filter_str)
-    if nor_queries:
-        if not filter_str:
-            # Return only the negation of list of queries
-            return {'$nor': nor_queries}
-        # Remove redundant 'and' in the beginning or end of the remaining filter
-        leading_op = re.match(r'^\s*(and|or)\s*', filter_str)
-        op = 'and'
-        if leading_op:
-            filter_str = filter_str.replace(leading_op.group(0), '')
-            op = leading_op.group(1)
-        trailing_op = re.match(r'(.*)\s+(and|or)\s*$', filter_str)
-        if trailing_op:
-            filter_str = trailing_op.group(1)
-        # Return query combining the remaining query as well as negation of list of queries
-        return {f'${op}': [pql.find(filter_str), {'$nor': nor_queries}]}
 
-    return pql.find(filter_str)
+    return translate_filter_not(pql.find(filter_str))
+
+
+def translate_filter_not(filter_obj):
+
+    if isinstance(filter_obj, dict):
+        translated_filter_obj = {}
+        for key, value in filter_obj.items():
+            if isinstance(value, dict) and '$not' in value:
+                translated_filter_obj['$nor'] = [{key: translate_filter_not(value['$not'])}]
+            else:
+                translated_filter_obj[key] = translate_filter_not(value)
+        return translated_filter_obj
+    if isinstance(filter_obj, list):
+        return [translate_filter_not(item) for item in filter_obj]
+    return filter_obj
 
 
 def remove_duplicates_by_reference(seq):

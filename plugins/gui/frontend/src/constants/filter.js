@@ -18,7 +18,7 @@ const equals = {
 }
 const contains = {
 	pattern: '{field} == regex("{val}", "i")',
-	notPattern: 'NOT [{field} == regex("{val}", "i")]'
+	notPattern: 'not {field} == regex("{val}", "i")'
 }
 const numerical = {
 	'equals': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},

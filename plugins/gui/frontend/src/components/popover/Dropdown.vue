@@ -93,7 +93,7 @@
             border-radius: 4px;
             box-shadow: $popup-shadow;
             &.expand {
-                width: calc(100% - 24px);
+                width: 100%;
             }
         }
     }

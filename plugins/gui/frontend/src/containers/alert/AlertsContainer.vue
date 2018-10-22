@@ -75,10 +75,15 @@
 
 
 <style lang="scss">
-    .x-alerts.disabled {
-        .x-striped-table .clickable:hover {
-            cursor: default;
-            box-shadow: none;
+    .x-alerts {
+        .x-data-table {
+            height: 100%;
+        }
+        .disabled {
+            .x-striped-table .clickable:hover {
+                cursor: default;
+                box-shadow: none;
+            }
         }
     }
 </style>

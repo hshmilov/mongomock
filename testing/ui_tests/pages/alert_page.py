@@ -66,7 +66,7 @@ class AlertPage(EntitiesPage):
 
     def click_save_button(self):
         # Ugly but will do for now
-        button = self.driver.find_elements_by_css_selector('a.x-btn')[1]
+        button = self.driver.find_elements_by_css_selector('button.x-btn')[1]
         assert button.text == 'Save'
         button.click()
 

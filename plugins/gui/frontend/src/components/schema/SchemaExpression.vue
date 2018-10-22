@@ -14,9 +14,8 @@
             <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length"
                       placeholder="func..." :id="first? 'query_op': undefined" class="x-select-comp" />
             <template v-if="showValue">
-                <component :is="valueSchema.type" :schema="valueSchema" v-model="expression.value"
-                           class="fill expression-value" :class="{'grid-span2': !fieldOpsList.length}"
-                           :id="first? 'query_value': undefined" />
+                <component :is="valueSchema.type" :schema="valueSchema" v-model="expression.value" class="expression-value"
+                           :class="{'grid-span2': !fieldOpsList.length}" :id="first? 'query_value': undefined" />
             </template>
             <template v-else>
                 <!-- No need for value, since function is boolean, not comparison -->
@@ -182,7 +181,7 @@
 					return ''
 				} else if (this.fieldSchema.format === 'predefined' && this.expression.not) {
 					// Expression with some existing query is negated by a preceding NOT
-					cond = `NOT [{val}]`
+					cond = `not {val}`
                 }
 
 				let val = this.processedValue ? this.processedValue : this.expression.value
@@ -246,14 +245,15 @@
 <style lang="scss">
     .expression {
         display: grid;
-        grid-template-columns: 60px 30px 30px 240px 90px auto 30px 30px;
+        grid-template-columns: 56px 30px 30px 240px 80px auto 30px 30px;
         grid-template-rows: 40px;
         justify-items: stretch;
         align-items: center;
         grid-gap: 8px;
         margin-bottom: 20px;
         select, input:not([type=checkbox]) {
-            height: 26px;
+            height: 30px;
+            width: 100%;
         }
         .checkbox-label {
             margin-bottom: 0;

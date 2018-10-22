@@ -120,8 +120,8 @@
                 <div class="footer">
                     <div class="error-text">{{ error || '&nbsp;' }}</div>
                     <div class="actions" id="alert_save">
-                        <a class="x-btn link" @click="returnToAlerts">Cancel</a>
-                        <a class="x-btn" :class="{disabled: !complete}" @click="saveAlert">Save</a>
+                        <button class="x-btn link" @click="returnToAlerts">Cancel</button>
+                        <button class="x-btn" :class="{disabled: !complete}" @click="saveAlert">Save</button>
                     </div>
                 </div>
             </form>
