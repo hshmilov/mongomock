@@ -220,3 +220,14 @@ class Triggerable(Feature, ABC):
                 return  # not running - nothing to cancel
             job_state['scheduled'] = True
             job_state['cancel_scheduled'] = True
+
+    def _restore_to_running_state(self, job_name: str = 'execute'):
+        """
+        Sometimes the thread responsible on running your trigger messes up
+        This might mean that your state will always be `running` or some sort
+        :param job_name: the job to restore to default
+        """
+        with self.__trigger_lock:
+            old_state = self.__state.pop(job_name, None)
+        if old_state:
+            logger.warning(f'Restored triggered on {old_state}')

@@ -385,10 +385,11 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 try:
                     _wait_for_stable()
                 except Exception:
-                    logger.exception('Couldn\'t stop plugins for more than a 100 seconds - forcing stop')
+                    logger.exception('Couldn\'t stop plugins for more than a while - forcing stop')
                     self.current_phase = scheduler_consts.Phases.Stable
                     self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
                     logger.info(f'{self.current_phase} and {self.state}')
+                    self._restore_to_running_state()
                 else:
                     logger.info("Finished waiting for stable")
 
