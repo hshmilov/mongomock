@@ -1889,6 +1889,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     logger.info(f'SAML Login failure, attributes are {attributes}')
                     raise ValueError(f'Error! SAML identity provider did not respond with attribute "name"')
 
+                if isinstance(name_id, list) and len(name_id) == 1:
+                    # the "name" attribute can come back as a list with one string. If that is the case
+                    # lets just make things look nicer.
+                    name_id = name_id[0]
+
                 self.__exteranl_login_successful('saml',
                                                  name_id,
                                                  given_name or name_id,
