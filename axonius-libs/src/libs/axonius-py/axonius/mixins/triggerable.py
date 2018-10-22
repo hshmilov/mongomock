@@ -216,5 +216,7 @@ class Triggerable(Feature, ABC):
             job_state = self._get_state_or_default(job_name)
 
         with job_state['lock']:
+            if not job_state['triggered']:
+                return  # not running - nothing to cancel
             job_state['scheduled'] = True
             job_state['cancel_scheduled'] = True
