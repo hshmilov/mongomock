@@ -22,11 +22,21 @@
                 date: this.value
             }
         },
-        props: ['value'],
+        props: ['value', 'module'],
         computed: {
             ...mapState({
                 firstHistoricalDate(state) {
-                    return state.constants.firstHistoricalDate
+                    let historicalDate = null
+                    if (this.module) {
+                        historicalDate = state.constants.firstHistoricalDate[this.module]
+                    } else {
+                        historicalDate = Object.values(state.constants.firstHistoricalDate).reduce((a, b) => {
+                            return (a < b) ? a : b
+                        }, null)
+                    }
+                    historicalDate = new Date(historicalDate)
+                    historicalDate.setDate(historicalDate.getDate() - 1)
+                    return historicalDate
                 }
             }),
             showingHistorical() {

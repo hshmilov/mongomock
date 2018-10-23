@@ -2236,15 +2236,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def first_historical_date(self):
-        dates = [self._historical_entity_views_db_map[entity_type].find_one({},
-                                                                            sort=[('accurate_for_datetime', 1)],
-                                                                            projection=['accurate_for_datetime'])
-                 for entity_type in EntityType]
-        minimum_date = min(
-            (d['accurate_for_datetime']
-             for d in dates
-             if d), default=None)
-        return jsonify(minimum_date)
+        dates = {}
+        for entity_type in EntityType:
+            historical_for_entity = self._historical_entity_views_db_map[entity_type].find_one({}, sort=[(
+                'accurate_for_datetime', 1)], projection=['accurate_for_datetime'])
+            if historical_for_entity:
+                dates[entity_type.value] = historical_for_entity['accurate_for_datetime']
+
+        return jsonify(dates)
 
     @gui_add_rule_logged_in('get_allowed_dates', required_permissions=[Permission(PermissionType.Dashboard,
                                                                                   PermissionLevel.ReadOnly)])

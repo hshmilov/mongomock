@@ -23,8 +23,7 @@ export const constants = {
 		},
 		[ SET_FIRST_HISTORICAL_DATE ] (state, payload) {
 			if (payload.data) {
-				state.firstHistoricalDate = new Date(payload.data)
-				state.firstHistoricalDate.setDate(state.firstHistoricalDate.getDate() - 1);
+				state.firstHistoricalDate = payload.data
 			}
 		},
 		[ SET_ALLOWED_DATES ] (state, payload) {

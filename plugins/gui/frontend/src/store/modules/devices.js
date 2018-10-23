@@ -17,6 +17,8 @@ export const devices = {
 		},
 		labels: { data: [], fetching: false, error: ''},
 
-		current: {fetching: false, data: {}, error: ''}
+		current: {fetching: false, data: {}, error: ''},
+
+
 	}
 }
