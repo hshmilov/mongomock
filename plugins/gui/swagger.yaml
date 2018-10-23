@@ -505,9 +505,9 @@ definitions:
       triggers:
         type: "object"
         example:
-          increase: false
-          decrease: false
-          no_change: true
+          every_discovery: true
+          new_entities: false
+          previous_entities: false
           above: 0
           below: 0
         properties: {}
@@ -539,9 +539,9 @@ definitions:
       name: "name"
       id: "new"
       triggers:
-        increase: false
-        decrease: false
-        no_change: true
+        every_discovery: true
+        new_entities: false
+        previous_entities: false
         above: 0
         below: 0
       actions:

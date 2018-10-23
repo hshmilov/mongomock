@@ -37,9 +37,9 @@ class TestAlert(TestBase):
 
     def create_outputting_notification_alert(self, alert_name=ALERT_NAME, alert_query=COMMON_ALERT_QUERY):
         self.create_basic_alert(alert_name, alert_query)
-        self.alert_page.check_increased()
-        self.alert_page.check_decreased()
-        self.alert_page.check_not_changed()
+        self.alert_page.check_new()
+        self.alert_page.check_previous()
+        self.alert_page.check_every_discovery()
         self.alert_page.check_push_system_notification()
         self.alert_page.click_save_button()
         self.alert_page.wait_for_spinner_to_end()
@@ -81,6 +81,7 @@ class TestAlert(TestBase):
         self.create_outputting_notification_alert()
 
         self.base_page.run_discovery()
+        self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_NAME)
         old_length = len(self.notification_page.get_peek_notifications())
 
@@ -97,9 +98,9 @@ class TestAlert(TestBase):
 
     def test_invalid_input(self):
         self.create_basic_alert()
-        self.alert_page.check_increased()
-        self.alert_page.fill_increased(-5)
-        value = self.alert_page.get_increased_value()
+        self.alert_page.check_above()
+        self.alert_page.fill_above(-5)
+        value = self.alert_page.get_above_value()
         assert value == '5'
 
     def test_alert_changing_triggers(self):
@@ -110,7 +111,7 @@ class TestAlert(TestBase):
         self.alert_page.wait_for_spinner_to_end()
         self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
         self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
-        self.alert_page.check_not_changed()
+        self.alert_page.check_every_discovery()
         self.alert_page.check_push_system_notification()
         self.alert_page.click_save_button()
 
@@ -122,9 +123,9 @@ class TestAlert(TestBase):
         self.alert_page.edit_alert(ALERT_CHANGE_NAME)
         self.alert_page.wait_for_spinner_to_end()
         # uncheck Not Changed
-        self.alert_page.check_not_changed()
-        self.alert_page.check_decreased()
-        self.alert_page.fill_decreased_value(1)
+        self.alert_page.check_every_discovery()
+        self.alert_page.check_below()
+        self.alert_page.fill_below_value(1)
         self.alert_page.click_save_button()
 
         self.base_page.run_discovery()
@@ -141,7 +142,6 @@ class TestAlert(TestBase):
             result = db.update_one({'adapters.data.test_alert_change': 5},
                                    {'$set': {'adapters.$.data.test_alert_change': 4}})
             assert result.modified_count == 1
-
             self.base_page.run_discovery()
             # make sure it is now 2
             self.notification_page.verify_amount_of_notifications(2)
@@ -149,7 +149,7 @@ class TestAlert(TestBase):
         finally:
             json_service.start_and_wait()
 
-    def test_increasing(self):
+    def test_new(self):
         json_service = JsonFileService()
         json_service.take_process_ownership()
         try:
@@ -161,7 +161,7 @@ class TestAlert(TestBase):
             self.alert_page.wait_for_spinner_to_end()
             self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
             self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
-            self.alert_page.check_increased()
+            self.alert_page.check_new()
             self.alert_page.check_push_system_notification()
             self.alert_page.click_save_button()
 
@@ -182,7 +182,7 @@ class TestAlert(TestBase):
         self.alert_page.wait_for_spinner_to_end()
         self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
         self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
-        self.alert_page.check_not_changed()
+        self.alert_page.check_every_discovery()
         self.alert_page.check_push_system_notification()
         self.alert_page.click_save_button()
 
@@ -223,7 +223,7 @@ class TestAlert(TestBase):
         self.alert_page.wait_for_spinner_to_end()
         self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
         self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
-        self.alert_page.check_decreased()
+        self.alert_page.check_previous()
         self.alert_page.check_push_system_notification()
         self.alert_page.click_save_button()
 
@@ -233,9 +233,9 @@ class TestAlert(TestBase):
         self.alert_page.wait_for_table_to_load()
         self.alert_page.edit_alert(ALERT_CHANGE_NAME)
         self.alert_page.wait_for_spinner_to_end()
-        # uncheck Decreased
-        self.alert_page.check_decreased()
-        self.alert_page.check_not_changed()
+        # uncheck Below
+        self.alert_page.check_previous()
+        self.alert_page.check_every_discovery()
         self.alert_page.click_save_button()
 
         self.base_page.run_discovery()
@@ -261,9 +261,9 @@ class TestAlert(TestBase):
             self.create_basic_alert()
 
             # check all trigger causes so it will always jump
-            self.alert_page.check_not_changed()
-            self.alert_page.check_increased()
-            self.alert_page.check_decreased()
+            self.alert_page.check_every_discovery()
+            self.alert_page.check_new()
+            self.alert_page.check_previous()
 
             self.alert_page.check_push_system_notification()
 

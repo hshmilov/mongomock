@@ -1,3 +1,4 @@
+# XXX: do not import from axonius libs here
 import requests
 
 AXONIUS_URL = "https://localhost"
@@ -6,6 +7,13 @@ AXONIUS_API = f"{AXONIUS_URL}/api/V1"
 
 USERNAME = "admin"
 PASSWORD = "Password"
+
+TRIGGERS_DEFAULT_VALUES = {'every_discovery': False,
+                           'new_entities': False,
+                           'previous_entities': False,
+                           'above': 0,
+                           'below': 0,
+                           }
 
 
 def get_devices():
@@ -854,8 +862,11 @@ def put_alert():
     # send_emails
     # create_notification
     # tag_entities
+    trigger_dict = TRIGGERS_DEFAULT_VALUES
+    trigger_dict['above'] = 1
+
     data = {"id": "new", "name": "Test Alert",
-            "triggers": {"increase": True, "decrease": False, "no_change": False, "above": 0, "below": 0},
+            "triggers": trigger_dict,
             "actions": [{"type": "create_notification"}], "view": "Not Local Users", "viewEntity": "users",
             "retrigger": True, "triggered": False, "severity": "warning"}
 

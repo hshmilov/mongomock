@@ -1,5 +1,5 @@
 <template>
-    <div class="x-checkbox" :class="{'x-checked': checked, disabled: readOnly}" :id="id"
+    <div class="x-checkbox" :class="{'x-checked': checked, disabled: readOnly}" :id="id" :title="title"
          @click.stop="$refs.checkbox.click()" @keyup.enter.stop="$refs.checkbox.click()">
         <div class="x-checkbox-container" :class="{'x-checkbox-semi': semi}">
             <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox" :disabled="readOnly">
@@ -13,7 +13,7 @@
 		name: 'x-checkbox',
         props: {
 		    data: {}, value: {default: 'on'}, label: {}, semi: {default: false}, id: {},
-            readOnly: { default: false }
+            readOnly: { default: false }, title: {}
         },
         model: {
 			prop: 'data',

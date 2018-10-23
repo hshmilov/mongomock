@@ -15,12 +15,12 @@ const newAlert = {
 	id: 'new',
 	name: '',
 	triggers: {
-		increase: false,
-		decrease: false,
-		no_change: false,
-		above: 0,
-		below: 0
-	},
+         every_discovery: false,
+         new_entities: false,
+         previous_entities: false,
+         above: 0,
+         below: 0,
+    },
 	actions: [],
 	view: '',
 	viewEntity: '',

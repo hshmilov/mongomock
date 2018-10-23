@@ -12,6 +12,7 @@ class AlertPage(EntitiesPage):
     EDIT_ALERT_XPATH = '//div[@title=\'{alert_name}\']'
     SELECT_SAVED_QUERY_TEXT_CSS = 'div.trigger-text'
     SEVERITY_WARNING_RADIO = '#SeverityWarning'
+    SCROLL_CONTAINER = '.x-body'
 
     @property
     def url(self):
@@ -32,7 +33,7 @@ class AlertPage(EntitiesPage):
 
     def click_send_an_email(self):
         element = self.find_element_by_text('Send an Email')
-        self.scroll_into_view(element)
+        self.scroll_into_view(element, self.SCROLL_CONTAINER)
         element.click()
 
     def find_missing_email_server_notification(self):
@@ -41,23 +42,29 @@ class AlertPage(EntitiesPage):
     def check_alert_checkbox(self, text):
         self.find_element_by_text(text).click()
 
-    def check_increased(self):
-        self.check_alert_checkbox('Increased')
+    def check_new(self):
+        self.check_alert_checkbox('New entities were added to query result')
 
-    def check_decreased(self):
-        self.check_alert_checkbox('Decreased')
+    def check_previous(self):
+        self.check_alert_checkbox('Previous entities were subtracted from query results')
 
-    def check_not_changed(self):
-        self.check_alert_checkbox('Not Changed')
+    def check_above(self):
+        self.check_alert_checkbox('The number of query results is above')
 
-    def fill_decreased_value(self, value):
+    def check_below(self):
+        self.check_alert_checkbox('The number of query results is below')
+
+    def check_every_discovery(self):
+        self.check_alert_checkbox('Every discovery cycle')
+
+    def fill_below_value(self, value):
         self.fill_text_field_by_element_id('TriggerBelow', value)
 
     def check_push_system_notification(self):
         self.check_alert_checkbox('Push a system notification')
 
     def check_notify_syslog(self):
-        self.check_alert_checkbox('Notify Syslog')
+        self.check_alert_checkbox('Notify syslog')
 
     def select_saved_query(self, text):
         self.driver.find_element_by_css_selector(self.SELECT_SAVED_QUERY_CSS).click()
@@ -79,10 +86,10 @@ class AlertPage(EntitiesPage):
     def choose_severity_warning(self):
         self.driver.find_element_by_css_selector(self.SEVERITY_WARNING_RADIO).click()
 
-    def fill_increased(self, value):
+    def fill_above(self, value):
         self.fill_text_field_by_element_id(self.INCREASE_ID, value)
 
-    def get_increased_value(self):
+    def get_above_value(self):
         return self.driver.find_element_by_id(self.INCREASE_ID).get_attribute('value')
 
     def edit_alert(self, alert_name):

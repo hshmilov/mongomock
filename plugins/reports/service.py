@@ -5,6 +5,9 @@ import logging
 import threading
 from collections import Iterable
 
+from bson.objectid import ObjectId
+from flask import jsonify
+
 from axonius.consts import report_consts
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
@@ -18,10 +21,44 @@ from axonius.utils import gui_helpers
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import to_json
 from axonius.utils.parsing import parse_filter
-from bson.objectid import ObjectId
-from flask import jsonify
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+def query_result_sort_by_id(result: list) -> dict:
+    """ Re order query result to dict with id as key.
+        Note that multiple ids may point to the same entity """
+    ret = {}
+    for r in result:
+        for specific_data in r['specific_data']:
+            ret[specific_data['data']['id']] = r
+    return ret
+
+
+def query_result_diff_by_id(result_by_id1: dict, result_by_id2: dict) -> list:
+    """ Get difference between (sorted by id) query result1 and result2.
+        We only add unique entities because the result dict may have multiple
+        ids that point to the same entity """
+
+    diff = []
+    for id_ in result_by_id1.keys() - result_by_id2.keys():
+        if result_by_id1[id_] not in diff:
+            diff.append(result_by_id1[id_])
+    return diff
+
+
+def query_result_diff(current_result: list, last_result: list)-> dict:
+    """ get the current query result and last query result and create and returns
+        a dict "diff_dict" that store the added entities and the removed entities """
+
+    diff_dict = {diff_type: [] for diff_type in report_consts.TRIGGERS_DIFF_TYPES}
+    current_result = query_result_sort_by_id(current_result)
+    last_result = query_result_sort_by_id(last_result)
+
+    diff_dict['added'] = query_result_diff_by_id(current_result, last_result)
+    diff_dict['removed'] = query_result_diff_by_id(last_result, current_result)
+
+    return diff_dict
 
 
 class ReportsService(PluginBase, Triggerable):
@@ -31,14 +68,26 @@ class ReportsService(PluginBase, Triggerable):
 
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
+        self._actions = {
+            'create_service_now_computer': self._handle_action_create_service_now_computer,
+            'fresh_service_incident': self._handle_action_create_fresh_service_incident,
+            'create_service_now_incident': self._handle_action_create_service_now_incident,
+            'carbonblack_isolate': self._handle_action_carbonblack_isolate,
+            'carbonblack_unisolate': self._handle_action_carbonblack_unisolate,
+            'notify_syslog': self._handle_action_notify_syslog,
+            'send_emails': self._handle_action_send_emails,
+            'create_notification': self._handle_action_create_notification,
+            'tag_all_entities': self._handle_action_tag_all_entities,
+            'tag_entities': self._handle_action_tag_entities,
+        }
+
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
-            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
-            return return_error("Got bad trigger request for non-existent job", 400)
-        else:
-            return self._create_reports()
+            logger.error(f'Got bad trigger request for non-existent job: {job_name}')
+            return return_error('Got bad trigger request for non-existent job', 400)
+        return self._handle_reports()
 
-    @add_rule("reports/<report_id>", methods=['GET', 'DELETE', 'POST'])
+    @add_rule('reports/<report_id>', methods=['GET', 'DELETE', 'POST'])
     def report_by_id(self, report_id):
         """The specific rest reports endpoint.
 
@@ -51,25 +100,25 @@ class ReportsService(PluginBase, Triggerable):
                 requested_report = self._get_collection('reports').find_one({'_id': ObjectId(report_id)})
                 return jsonify(requested_report) if requested_report is not None else return_error(
                     'A reports with that id was not found.', 404)
-            elif self.get_method() == 'DELETE':
+            if self.get_method() == 'DELETE':
                 return self._remove_report(report_id)
-            elif self.get_method() == 'POST':
+            if self.get_method() == 'POST':
                 report_data = self.get_request_data_as_object()
                 report_data['last_triggered'] = self._get_collection('reports').find_one(
-                    {"_id": ObjectId(report_data['id'])}).get('last_triggered', None)
+                    {'_id': ObjectId(report_data['id'])}).get('last_triggered', None)
                 delete_response = self._remove_report(report_id)
                 if delete_response[1] == 404:
                     return return_error('A reports with that ID was not found.', 404)
                 report_data['_id'] = report_id
                 self._add_report(report_data)
                 return '', 200
-
+            raise ValueError
         except ValueError:
             message = 'Expected JSON, got something else...'
             logger.exception(message)
             return return_error(message, 400)
 
-    @add_rule("reports", methods=['PUT', 'GET', 'DELETE'])
+    @add_rule('reports', methods=['PUT', 'GET', 'DELETE'])
     def report(self):
         """The Rest reports endpoint.
 
@@ -90,14 +139,37 @@ class ReportsService(PluginBase, Triggerable):
         try:
             if self.get_method() == 'PUT':
                 return self._add_report(self.get_request_data_as_object())
-            elif self.get_method() == 'GET':
+            if self.get_method() == 'GET':
                 return jsonify(self._get_collection('reports').find())
-            elif self.get_method() == 'DELETE':
+            if self.get_method() == 'DELETE':
                 return self._remove_report(self.get_request_data_as_object())
+            raise ValueError
         except ValueError:
             message = 'Expected JSON, got something else...'
             logger.exception(message)
             return return_error(message, 400)
+
+    @staticmethod
+    def _get_trigger_description(report_data_triggers, triggers):
+        """ Creates a readable message for the different actions.
+
+        :param dict report_data_triggers: The data of this trigger event. example it my be {'above': '3'}
+        :param set triggers: The actually triggered triggers. it may be ['above']
+        :return:
+        """
+        first_trigger = triggers[0]
+        first_trigger_data = report_data_triggers.get(first_trigger, '')
+        return report_consts.TRIGGERS_TO_DESCRIPTION[first_trigger].format(first_trigger_data)
+
+    @staticmethod
+    def validate_triggers(report_data):
+        """ check that the given triggers in report_data are valid.
+            raise ValueError if not """
+        for trigger_key, trigger_value in report_data['triggers'].items():
+            if trigger_key not in report_consts.TRIGGERS_DEFAULT_VALUES:
+                raise ValueError(f'Invalid trigger "{trigger_key}" provided')
+            if not isinstance(trigger_value, type(report_consts.TRIGGERS_DEFAULT_VALUES[trigger_key])):
+                raise ValueError(f'Invalid value for trigger "{trigger_key}"')
 
     def _add_report(self, report_data):
         """Adds a reports on a query.
@@ -113,6 +185,8 @@ class ReportsService(PluginBase, Triggerable):
             current_query_result = self.get_view_results(report_data['view'], EntityType(report_data['viewEntity']))
             if current_query_result is None:
                 return return_error('Aggregator is down, please try again later.', 404)
+
+            self.validate_triggers(report_data)
 
             report_resource = {'report_creation_time': datetime.datetime.now(),
                                'triggers': report_data['triggers'],
@@ -135,6 +209,10 @@ class ReportsService(PluginBase, Triggerable):
             insert_result = self._get_collection('reports').insert_one(report_resource)
             logger.info('Added query to reports list')
             return str(insert_result.inserted_id), 201
+        except ValueError as e:
+            message = str(e)
+            logger.exception(message)
+            return return_error(message, 400)
         except KeyError as e:
             message = 'The query reports request is missing data. Details: {0}'.format(str(e))
             logger.exception(message)
@@ -190,95 +268,61 @@ class ReportsService(PluginBase, Triggerable):
         """
         self._get_collection('reports').replace_one({'_id': report_data['_id']}, report_data, upsert=True)
 
-    def _create_reports(self):
-        """Checks and generate reports if needed.
-
-        This function runs thread for each report it needs to check and/or generate.
+    def _handle_reports(self):
+        """
+            For each report that was added to the system,
+            if triggered execute it action (for example push notification) .
+            This function runs thread for each report handle.
         """
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future_for_report_checks = {
-                executor.submit(self._check_current_query_result, report_data): report_data['view'] for report_data
-                in self._get_collection('reports').find()}
+                executor.submit(self._handle_report, report_data): report_data['view']
+                for report_data in self._get_collection('reports').find()}
 
             for future in concurrent.futures.as_completed(future_for_report_checks):
                 try:
                     future.result()
                     logger.info(f'{future_for_report_checks[future]} finished checking reports.')
                 except Exception:
-                    logger.exception("Failed to check report generation.")
+                    logger.exception('Failed to check report generation.')
 
-    def _check_triggers(self, result_difference, above, below):
-        """ Checks what did actually triggered against the saved and current results.
+        return ''
 
-        :param result_difference: The result difference.
-        :param above: The trigger increased above value
-        :param below: The trigger decreased below value.
+    @staticmethod
+    def _get_triggered_reports(current_result, diff_dict, requested_triggers):
+        """
+        get the actual list of reports that was triggered this cycle
+
+        :param diff_dict: dict that represent the changes between last cycle and this one.
+        :param requested_triggers: the user defined triggers
         :return: A set of triggered trigger names.
         """
-        applied_triggers = set()
+        triggers = requested_triggers
+        triggered = list()
 
         # If there was change
-        if len(result_difference) > 0:
-            increased_by = 0
-            decreased_by = 0
-            for diff_type, device in result_difference:
-                if diff_type == report_consts.Triggers.Increase.name:
-                    increased_by += 1
-                else:
-                    decreased_by += 1
+        if triggers.get('every_discovery'):
+            triggered.append('every_discovery')
 
-            if increased_by > 0:
-                if int(above) > 0:
-                    if increased_by >= int(above):
-                        # If Increased above
-                        applied_triggers.add(report_consts.Triggers.Above.name)
-                else:
-                    # If Increase
-                    applied_triggers.add(report_consts.Triggers.Increase.name)
-            elif decreased_by > 0:
-                if int(below) > 0:
-                    if decreased_by >= int(below):
-                        # If Decreased below
-                        applied_triggers.add(report_consts.Triggers.Below.name)
-                else:
-                    # If Decrease
-                    applied_triggers.add(report_consts.Triggers.Decrease.name)
-        else:
-            applied_triggers.add(report_consts.Triggers.No_Change.name)
+        if triggers.get('new_entities') and diff_dict['added']:
+            triggered.append('new_entities')
 
-        return applied_triggers
+        if triggers.get('previous_entities') and diff_dict['removed']:
+            triggered.append('previous_entities')
 
-    def _parse_triggers(self, triggers):
-        """ Goes over the report trigger settings and creates a set of requested trigger names.
+        if triggers.get('above') and len(current_result) > triggers.get('above'):
+            triggered.append('above')
 
-        :param dict triggers: The report trigger settings.
-        :return:
-        """
-        required_triggers = set()
+        if triggers.get('below') and len(current_result) < triggers.get('below'):
+            triggered.append('below')
 
-        if triggers['increase']:
-            required_triggers.add(report_consts.Triggers.Increase.name)
-
-        if int(triggers['above']) > 0:
-            required_triggers.remove(report_consts.Triggers.Increase.name)
-            required_triggers.add(report_consts.Triggers.Above.name)
-
-        if triggers['decrease']:
-            required_triggers.add(report_consts.Triggers.Decrease.name)
-
-        if int(triggers['below']) > 0:
-            required_triggers.remove(report_consts.Triggers.Decrease.name)
-            required_triggers.add(report_consts.Triggers.Below.name)
-
-        if triggers['no_change']:
-            required_triggers.add(report_consts.Triggers.No_Change.name)
-
-        return required_triggers
+        return triggered
 
     def _generate_query_link(self, entity_type, view_name):
         # Getting system config from the gui.
         system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME).find_one({'type': 'server'}) or {}
-        return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?view={view_name}"
+        return 'https://{}/{}?view={}'.format(
+            system_config.get('server_name', 'localhost'), entity_type, view_name)
 
     def _handle_action_create_service_now_computer(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):
@@ -293,7 +337,7 @@ class ReportsService(PluginBase, Triggerable):
         current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']),
                                                projection=service_now_projection)
         if current_result is None:
-            logger.info("Skipping reports trigger because there were no current results.")
+            logger.info('Skipping reports trigger because there were no current results.')
             return
 
         for entry in current_result:
@@ -324,12 +368,12 @@ class ReportsService(PluginBase, Triggerable):
                 if manufacturer_raw is None:
                     manufacturer_raw = data_from_adapter.get('device_manufacturer')
             # Make sure that we have name
-            if name_raw is None:
-                if asset_name_raw is None:
-                    continue
-                else:
-                    # If we don't have hostname we use asset name
-                    name_raw = asset_name_raw
+            if name_raw is None and asset_name_raw is None:
+                continue
+
+            # If we don't have hostname we use asset name
+            name_raw = name_raw if name_raw else asset_name_raw
+
             self.create_service_now_computer(name=name_raw,
                                              mac_address=mac_address_raw,
                                              ip_address=ip_address_raw,
@@ -341,21 +385,21 @@ class ReportsService(PluginBase, Triggerable):
                                                      action_data=None):
 
         # create an html of the description
-        description_text = report_consts.REPORT_CONTENT.format(name=report_data['name'],
-                                                               query=report_data['view'],
-                                                               num_of_triggers=report_data['triggered'],
-                                                               trigger_message=self._parse_action_content(
-            report_data['triggers'], triggered),
-            num_of_current_devices=current_num_of_devices,
-            old_results_num_of_devices=len(report_data['result']),
-            query_link=self._generate_query_link(
-            report_data['view_entity'],
-            report_data['view']))
+        description = report_consts.REPORT_CONTENT
+        description = description.format(name=report_data['name'],
+                                         query=report_data['view'],
+                                         num_of_triggers=report_data['triggered'],
+                                         trigger_message=self._get_trigger_description(report_data['triggers'],
+                                                                                       triggered),
+                                         num_of_current_devices=current_num_of_devices,
+                                         old_results_num_of_devices=len(report_data['result']),
+                                         query_link=self._generate_query_link(report_data['view_entity'],
+                                                                              report_data['view']))
 
         logger.info(f'Print the report data: {report_data}')
 
         # pass into fresh service the name of the alert, the html of the description and the priority
-        self.create_fresh_service_incident(subject=report_data.get('name'), description=description_text, email=action_data,
+        self.create_fresh_service_incident(subject=report_data.get('name'), description=description, email=action_data,
                                            priority=report_consts.FRESH_SERVICE_PRIORITY.get('medium'))
 
     def _handle_action_create_service_now_incident(self, report_data, triggered, trigger_data, current_num_of_devices,
@@ -369,7 +413,7 @@ class ReportsService(PluginBase, Triggerable):
         log_message = report_consts.REPORT_CONTENT.format(name=report_data['name'],
                                                           query=report_data['view'],
                                                           num_of_triggers=report_data['triggered'],
-                                                          trigger_message=self._parse_action_content(
+                                                          trigger_message=self._get_trigger_description(
                                                               report_data['triggers'], triggered),
                                                           num_of_current_devices=current_num_of_devices,
                                                           old_results_num_of_devices=len(report_data['result']),
@@ -389,7 +433,7 @@ class ReportsService(PluginBase, Triggerable):
         current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']),
                                                projection=cb_projection)
         if current_result is None:
-            logger.info("Skipping reports trigger because there were no current results.")
+            logger.info('Skipping reports trigger because there were no current results.')
             return
         for entry in current_result:
             if 'carbonblack_response_adapter' not in entry['adapters']:
@@ -436,7 +480,7 @@ class ReportsService(PluginBase, Triggerable):
         log_message = report_consts.REPORT_CONTENT.format(name=report_data['name'],
                                                           query=report_data['view'],
                                                           num_of_triggers=report_data['triggered'],
-                                                          trigger_message=self._parse_action_content(
+                                                          trigger_message=self._get_trigger_description(
                                                               report_data['triggers'], triggered),
                                                           num_of_current_devices=current_num_of_devices,
                                                           old_results_num_of_devices=len(report_data['result']),
@@ -473,9 +517,9 @@ class ReportsService(PluginBase, Triggerable):
         if mail_sender:
             email = mail_sender.new_email(
                 report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']),
-                action_data.get("emailList", []))
+                action_data.get('emailList', []))
 
-            if action_data.get("sendDeviceCSV", False):
+            if action_data.get('sendDeviceCSV', False):
                 query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
                     'name': report_data['view']})
                 parsed_query_filter = parse_filter(query['view']['query']['filter'])
@@ -487,16 +531,16 @@ class ReportsService(PluginBase, Triggerable):
                                                      db_connection,
                                                      EntityType(report_data['view_entity']))
 
-                email.add_attachment("Axonius Entity Data.csv", csv_string.getvalue().encode('utf-8'), "text/csv")
+                email.add_attachment('Axonius Entity Data.csv', csv_string.getvalue().encode('utf-8'), 'text/csv')
 
             email.send(report_consts.REPORT_CONTENT_HTML.format(
                 name=report_data['name'], query=report_data['view'], num_of_triggers=report_data['triggered'],
-                trigger_message=self._parse_action_content(report_data['triggers'], triggered),
+                trigger_message=self._get_trigger_description(report_data['triggers'], triggered),
                 num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
                 old_results_num_of_devices=len(report_data['result']),
                 query_link=self._generate_query_link(report_data['view_entity'], report_data['view'])))
         else:
-            logger.info("Email cannot be sent because no email server is configured")
+            logger.info('Email cannot be sent because no email server is configured')
 
     def _handle_action_create_notification(self, report_data, triggered, trigger_data, current_num_of_devices,
                                            action_data=None):
@@ -511,7 +555,7 @@ class ReportsService(PluginBase, Triggerable):
                                  report_consts.REPORT_CONTENT.format(name=report_data['name'],
                                                                      query=report_data['view'],
                                                                      num_of_triggers=report_data['triggered'],
-                                                                     trigger_message=self._parse_action_content(
+                                                                     trigger_message=self._get_trigger_description(
                                                                          report_data['triggers'], triggered),
                                                                      num_of_current_devices=current_num_of_devices,
                                                                      old_results_num_of_devices=len(
@@ -528,7 +572,7 @@ class ReportsService(PluginBase, Triggerable):
         current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']),
                                                projection=tag_projection)
         if current_result is None:
-            logger.info("Skipping reports trigger because there were no current results.")
+            logger.info('Skipping reports trigger because there were no current results.')
             return
         entities = []
         for entity in current_result:
@@ -545,90 +589,43 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
-        entity_db = f"{report_data['view_entity']}_db_view"
+        entity_db = f'{report_data["view_entity"]}_db_view'
         entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
 
         entities = []
-        for entity in trigger_data:
-            db_entity = entities_collection.find_one({'_id': ObjectId(entity[1]['_id'])})
+        for entity in trigger_data['added']:
+            db_entity = entities_collection.find_one({'_id': ObjectId(entity['_id'])})
             if db_entity is not None:
                 for adapter_data in db_entity['specific_data']:
                     entities.append((adapter_data[PLUGIN_UNIQUE_NAME], adapter_data['data']['id']))
             else:
-                logger.warning(f"Couldn't find entity to tag. {entity}")
+                logger.warning(f'Couldn\'t find entity to tag. {entity}')
 
         self.add_many_labels_to_entity(EntityType(report_data['view_entity']), entities, [action_data])
 
-    def _parse_action_content(self, triggers_data, triggered_triggers):
-        """ Creates a readable message for the different actions.
-
-        :param dict triggers_data: The data of this trigger event.
-        :param set triggered_triggers: The actually triggered triggers.
-        :return:
-        """
-        if report_consts.Triggers.Increase.name in triggered_triggers:
-            return f'shown an Increase for the specified saved query'
-
-        if report_consts.Triggers.Above.name in triggered_triggers:
-            return f'shown an increase of above {triggers_data[report_consts.Triggers.Above.name.lower()]} for the specified saved query'
-
-        if report_consts.Triggers.Decrease.name in triggered_triggers:
-            return f'shown a decrease for the specified saved query'
-
-        if report_consts.Triggers.Below.name in triggered_triggers:
-            return f'shown a decrease of below {triggers_data[report_consts.Triggers.Above.name.lower()]} for the specified saved query'
-
-        if report_consts.Triggers.No_Change.name in triggered_triggers:
-            return f'stayed the same'
+    def _call_actions(self, report_data, triggers, result_difference,  current_result):
+        if report_data['retrigger'] or report_data['triggered'] == 0:
+            report_data['triggered'] += 1
+            for action in report_data['actions']:
+                try:
+                    # get the action function to run.
+                    current_action_handle = self._actions[action['type']]
+                    current_action_handle(report_data, triggers, result_difference,
+                                          len(current_result), action.get('data'))
+                except Exception as e:
+                    logger.exception(
+                        f'Error - {e} - performing action {action} with parameters '
+                        f'{report_data, triggers, result_difference} '
+                        f'{(len(current_result) if isinstance(current_result, Iterable) else current_result)}')
+            self.update_report(report_data)
 
     @stoppable
-    def _check_current_query_result(self, report_data):
-        """This function checks if a specific report should be generated.
-
-        This function checks the reports triggers and executes the actions if needed.
-
-        :param dict report_data: All the report information.
+    def _handle_report(self, report_data):
         """
-
-        def _diff(current_result, old_result):
-            diff = list()
-            for result in current_result:
-                any_result_match = False
-                for current_adapter_data in result['specific_data']:
-                    if any(current_adapter_data['data']['id'] == adapter_data['data']['id'] for
-                           current_device in old_result for adapter_data in current_device['specific_data']):
-                        any_result_match = True
-                        break
-                if not any_result_match:
-                    diff.append((report_consts.Triggers.Increase.name, result))
-
-            for result in old_result:
-                any_result_match = False
-                for old_adapter_data in result['specific_data']:
-                    if any(old_adapter_data['data']['id'] == adapter_data['data']['id'] for
-                           current_device in current_result for adapter_data in current_device['specific_data']):
-                        any_result_match = True
-                        break
-                if not any_result_match:
-                    diff.append((report_consts.Triggers.Decrease.name, result))
-            return diff
-
-        def _trigger_watch(triggers, result_difference):
-            if report_data['retrigger'] or report_data['triggered'] == 0:
-                report_data['triggered'] += 1
-                for action in report_data['actions']:
-                    try:
-                        # get the action function to run.
-                        current_action_handle = getattr(self, f"_handle_action_{action['type']}")
-                        current_action_handle(report_data, triggers, result_difference,
-                                              len(current_result), action.get('data'))
-                    except Exception:
-                        logger.exception(
-                            f'Error performing action {action} with parameters '
-                            f'{report_data, triggers, result_difference} '
-                            f'{(len(current_result) if isinstance(current_result, Iterable) else current_result)}')
-                self.update_report(report_data)
-
+        Check if report that was added to the system is triggered,
+        and execute it action (for example push notification).
+        :param dict report_data: the report data that the user added.
+        """
         try:
             report_period = report_data.get('period', 'all')
             if report_period != 'all':
@@ -636,13 +633,13 @@ class ReportsService(PluginBase, Triggerable):
                     if report_period == 'weekly' and report_data['last_triggered'] + datetime.timedelta(
                             days=7) >= datetime.datetime.now():
                         return
-                    elif report_period == 'daily' and report_data['last_triggered'] + datetime.timedelta(
+                    if report_period == 'daily' and report_data['last_triggered'] + datetime.timedelta(
                             days=1) >= datetime.datetime.now():
                         return
 
-            current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))
-            if current_result is None:
-                logger.info("Skipping reports trigger because there were no current results.")
+            current_query_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))
+            if current_query_result is None:
+                logger.info('Skipping reports trigger because there were no current results.')
                 return
             retrigger = report_data['retrigger']
 
@@ -650,31 +647,35 @@ class ReportsService(PluginBase, Triggerable):
                 # If this is the first time we are running this report (the 'result' is not set), set it for next time
                 # this happens after axonius system upgrade (where we only save the report and not the result, since
                 # it is going to change completely anyway...)
-                self._get_collection('reports').update_one({"_id": report_data['_id']},
-                                                           {"$set": {"result": current_result}})
+                self._get_collection('reports').update_one({'_id': report_data['_id']},
+                                                           {'$set': {'result': current_query_result}})
                 return
 
-            result_difference = _diff(current_result, report_data['result'])
-            # Checks to see what was triggered against the requested trigger list.
-            intersection = self._check_triggers(result_difference,
-                                                report_data['triggers']['above'],
-                                                report_data['triggers']['below']) & self._parse_triggers(
-                report_data['triggers'])
-            if len(intersection) > 0:
+            last_query_result = report_data['result']
+            # Get the difference from last cycle
+            query_difference = query_result_diff(current_query_result, last_query_result)
 
-                _trigger_watch(intersection, result_difference)
+            # Get the actual report triggered list
+            triggered = self._get_triggered_reports(current_query_result, query_difference,
+                                                    report_data['triggers'])
+            logger.debug(f'Triggered with {triggered}, requested {report_data["triggers"]}'
+                         f'query_diffrence = {query_difference}'
+                         f'current_query_result = {current_query_result}')
+            if triggered:
+                self._call_actions(report_data, triggered, query_difference, current_query_result)
 
                 # Update last triggered.
                 report_data['last_triggered'] = datetime.datetime.now()
 
                 if retrigger:
-                    report_data['result'] = current_result
+                    report_data['result'] = current_query_result
                     self.update_report(report_data)
 
         except Exception as e:
-            logger.exception(
-                "Thread {0} encountered error: {1}. Repeated errors like this could be a race condition of a deleted reports.".format(
-                    threading.current_thread(), str(e)))
+            error_message = 'Thread {0} encountered error: {1}.'\
+                'Repeated errors like this could be a race condition of a deleted reports.'.format(
+                    threading.current_thread(), str(e))
+            logger.exception(error_message)
             raise
 
     @property
