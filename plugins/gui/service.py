@@ -1980,9 +1980,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return ""
 
     @gui_helpers.paginated()
-    @gui_add_rule_logged_in("authusers", methods=['GET', 'POST'],
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             ReadOnlyJustForGet)})
+    @gui_add_rule_logged_in("authusers", methods=['GET', 'POST'])
     def authusers(self, limit, skip):
         """
         View users or change user password
