@@ -48,7 +48,7 @@
         },
         methods: {
             confirmPickDate() {
-                if (!this.allowedDates[this.date]) {
+                if (this.allowedDates && !this.allowedDates[this.date]) {
                     this.$emit('error', `No history for ${this.date}`)
                     this.date = ''
                 }

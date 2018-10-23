@@ -226,7 +226,7 @@
 			if (!this.fields || !this.fields.generic) {
 				this.fetchDataFields({ module: this.module })
 			}
-			if (!this.entity || this.entity.internal_axon_id !== this.entityId) {
+			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entity.accurate_for_datetime !== this.history) {
 				this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
 			} else {
 				this.delayInitTourState = true

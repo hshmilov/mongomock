@@ -121,7 +121,7 @@
                     <div class="error-text">{{ error || '&nbsp;' }}</div>
                     <div class="actions" id="alert_save">
                         <button class="x-btn link" @click="returnToAlerts">Cancel</button>
-                        <button class="x-btn" :class="{disabled: !complete}" @click="saveAlert">Save</button>
+                        <button class="x-btn" :class="{disabled: !complete}" @click.prevent="saveAlert">Save</button>
                     </div>
                 </div>
             </form>
