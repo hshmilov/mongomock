@@ -25,14 +25,8 @@ from retrying import retry
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-# Dict between plugin names that could run async and their respectful "pretty" names
-ASYNCABLE_PLUGINS = {
-    'general_info': 'General Info',
-    'pm_status': 'PM Status'
-}
-
 # Plugins that should always run async
-ALWAYS_ASYNC_PLUGINS = ['static_analysis']
+ALWAYS_ASYNC_PLUGINS = ['static_analysis', 'general_info', 'pm_status']
 
 
 class SystemSchedulerService(PluginBase, Triggerable, Configurable):
@@ -81,14 +75,6 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
     def _on_config_update(self, config):
         logger.info(f'Loading SystemScheduler config: {config}')
 
-        self.__plugin_settings = config['plugin_settings']
-
-        for plugin_name in ALWAYS_ASYNC_PLUGINS:
-            self.__plugin_settings[plugin_name] = {
-                'enabled': True,
-                'sync': False
-            }
-
         self.__system_research_rate = float(config['discovery_settings']['system_research_rate'])
         logger.info(f'Setting research rate to: {self.__system_research_rate}')
         scheduler = getattr(self, '_research_phase_scheduler', None)
@@ -125,31 +111,6 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                     'name': 'discovery_settings',
                     'title': 'Discovery Settings',
                     'type': 'array'
-                },
-                {
-                    'items': [
-                        {
-                            'items': [
-                                {
-                                    'name': 'enabled',
-                                    'title': f'Use {pretty_name} plugin',
-                                    'type': 'bool'
-                                },
-                                {
-                                    'name': 'sync',
-                                    'title': 'Wait until the plugin finished before continuing',
-                                    'type': 'bool'
-                                }
-                            ],
-                            'required': ['enabled', 'sync'],
-                            'name': f'{name}',
-                            'title': f'{pretty_name} Plugin Settings',
-                            'type': 'array'
-                        } for name, pretty_name in ASYNCABLE_PLUGINS.items()
-                    ],
-                    'type': 'array',
-                    'name': 'plugin_settings',
-                    'title': 'Specific Plugin Settings'
                 }
             ],
             'type': 'array'
@@ -161,14 +122,6 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             'discovery_settings': {
                 'system_research_rate': 12,
                 'save_history': True
-            },
-            'plugin_settings': {
-                name: {
-                    'enabled': True,
-                    'sync': False
-                }
-                for name
-                in ASYNCABLE_PLUGINS
             }
         }
 
@@ -296,14 +249,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             Performs trigger/execute according to what we want
             :param plugin: the plugin dict as returned from /register
             """
-            blocking = True
-            plugin_settings = self.__plugin_settings.get(plugin[PLUGIN_NAME])
-            if plugin_settings:
-                if not plugin_settings['enabled']:
-                    return
-                if not plugin_settings['sync']:
-                    blocking = False
-
+            blocking = plugin[PLUGIN_NAME] not in ALWAYS_ASYNC_PLUGINS
             self._run_blocking_request(
                 f'trigger/execute?blocking={blocking}',
                 plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
