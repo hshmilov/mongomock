@@ -21,7 +21,7 @@
             <input type="radio" v-model="config.timeframe.type" value="relative" id="range_relative" />
             <label for="range_relative">Show results in the last</label>
             <template v-if="!isRangeAbsolute">
-                <input type="number" value="config.timeframe.count" @input="updateTimeframeCount" >
+                <input type="number" v-model.number="config.timeframe.count" @keypress="validateNumber" >
                 <x-select :options="relativeRangeUnits" v-model="config.timeframe.unit" placeholder="Units" />
             </template>
             <div class="grid-span2" v-else ></div>
@@ -125,8 +125,14 @@
             }
         },
         methods: {
-            updateTimeframeCount(value) {
-               this.config.timeframe.count = parseInt(value.data)
+            validateNumber(keyEvent) {
+                keyEvent = (keyEvent) ? keyEvent : window.event
+                let charCode = (keyEvent.which) ? keyEvent.which : keyEvent.keyCode
+                if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                    keyEvent.preventDefault()
+                } else {
+                    return true
+                }
             },
             removeView(index) {
                 this.config.views = this.config.views.filter((item, i) => i !== index)

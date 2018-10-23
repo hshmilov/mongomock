@@ -49,6 +49,7 @@ class ChartRangeUnits(Enum):
 
 
 RANGE_UNIT_DAYS = {
+    ChartRangeUnits.day: 1,
     ChartRangeUnits.week: 7,
     ChartRangeUnits.month: 30,
     ChartRangeUnits.year: 365

@@ -40,7 +40,7 @@ export const compOps = {
 			notPattern: 'not {field} == size({val})'
 		},
 		'exists': {
-			pattern: '({field} == exists(true) and {field} > [])',
+			pattern: '({field} == exists(true) and {field} != [])',
 			notPattern: '({field} == exists(false) or {field} == [])'
 		}
 	},
