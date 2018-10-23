@@ -37,6 +37,9 @@
                     historicalDate = new Date(historicalDate)
                     historicalDate.setDate(historicalDate.getDate() - 1)
                     return historicalDate
+                },
+                allowedDates(state) {
+                    return state.constants.allowedDates[this.module]
                 }
             }),
             showingHistorical() {
@@ -45,6 +48,10 @@
         },
         methods: {
             confirmPickDate() {
+                if (!this.allowedDates[this.date]) {
+                    this.$emit('error', `No history for ${this.date}`)
+                    this.date = ''
+                }
                 this.$emit('input', this.date)
             },
             clearDate() {

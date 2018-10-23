@@ -1,6 +1,6 @@
 <template>
     <div class="x-data-entities">
-        <x-historical-date-picker v-model="historical" :module="module" />
+        <x-historical-date-picker v-model="historical" :module="module" @error="$emit('error', $event)" />
         <x-data-query :module="module" :read-only="isReadOnly" />
         <x-data-table :module="module" id-field="internal_axon_id" ref="table" @click-row="configEntity"
                       v-model="isReadOnly? undefined: selected" @data="$emit('data', $event)">
