@@ -3056,6 +3056,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if job_name != 'execute':
             logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
+        self.dump_metrics()
         self.generate_new_report_offline()
 
     def generate_new_report_offline(self):
