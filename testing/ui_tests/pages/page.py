@@ -174,13 +174,17 @@ class Page:
                      partial_class=False,
                      ignore_exc=False,
                      with_confirmation=False,
-                     context=None):
+                     context=None,
+                     should_scroll_into_view=True):
         button = self.get_button(text,
                                  button_type=button_type,
                                  button_class=button_class,
                                  partial_class=partial_class,
                                  context=context)
-        self.scroll_into_view(button)
+
+        if should_scroll_into_view:
+            self.scroll_into_view(button)
+
         if call_space:
             button.send_keys(Keys.SPACE)
         else:

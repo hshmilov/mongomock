@@ -211,6 +211,12 @@ class SettingsPage(Page):
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
 
+    def click_start_remote_access(self):
+        text = '''
+                            Start
+                        '''
+        self.click_button(text, button_class='x-btn right', should_scroll_into_view=False)
+
     def save_and_wait_for_toaster(self):
         self.click_save_button()
         self.wait_for_toaster('Saved Successfully.')

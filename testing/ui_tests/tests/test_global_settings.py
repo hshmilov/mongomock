@@ -1,6 +1,7 @@
 from axonius.utils.wait import wait_until
 from services.plugins.gui_service import GuiService
 from services.standalone_services.smtp_server import SMTPService
+from test_helpers.log_tester import LogTester
 from ui_tests.tests.ui_test_base import TestBase
 
 INVALID_EMAIL_HOST = 'dada...$#@'
@@ -59,3 +60,13 @@ class TestGlobalSettings(TestBase):
         self.settings_page.set_remote_support_toggle(make_yes=True)
         self.settings_page.save_and_wait_for_toaster()
         wait_until(lambda: gui_service.troubleshooting().strip() == b'true')
+
+    def test_remote_access_log(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        self.settings_page.wait_for_spinner_to_end()
+
+        self.settings_page.click_start_remote_access()
+        wait_until(
+            lambda: LogTester('../logs/gui/gui.axonius.log').is_pattern_in_log(
+                '(Creating a stop job for the time|Job already existing - updating its run time to)', 10))
