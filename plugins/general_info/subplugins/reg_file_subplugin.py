@@ -17,11 +17,14 @@ class CheckReg(GeneralInfoSubplugin):
 
     @staticmethod
     def get_wmi_smb_commands():
-        reg_list = [f'reg query {CheckReg.__reg_check_exists} /ve'] if CheckReg.__reg_check_exists else []
+        reg_list = [f'reg query "{CheckReg.__reg_check_exists}" /ve'] if CheckReg.__reg_check_exists else []
         return smb_shell_commands(reg_list)
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
+        if not CheckReg.__reg_check_exists:
+            return True
+
         if not is_wmi_answer_ok(result[0]):
             return False
         try:

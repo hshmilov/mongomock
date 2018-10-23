@@ -104,7 +104,10 @@ def _describe_vpcs_from_client(ec2_client):
         vpc_tags = dict()
 
         for vpc_tag_raw in (vpc_raw.get('Tags') or []):
-            vpc_tags[vpc_tag_raw['Key']] = vpc_tag_raw['Value']
+            try:
+                vpc_tags[vpc_tag_raw['Key']] = vpc_tag_raw['Value']
+            except Exception:
+                logger.exception(f'Error while parsing vpc tag {vpc_tag_raw}')
 
         vpc_dict[vpc_id] = vpc_tags.get('Name')
 
@@ -379,7 +382,10 @@ class AwsAdapter(AdapterBase):
                         subnet_id = subnet_raw['SubnetId']
                         subnet_tags = dict()
                         for subnet_tag_raw in (subnet_raw.get('Tags') or []):
-                            subnet_tags[subnet_tag_raw['Key']] = subnet_tag_raw['Value']
+                            try:
+                                subnet_tags[subnet_tag_raw['Key']] = subnet_tag_raw['Value']
+                            except Exception:
+                                logger.exception(f'problem parsing {subnet_tag_raw}')
 
                         subnets_dict[subnet_id] = {
                             'name': subnet_tags.get('Name'),
@@ -961,7 +967,10 @@ class AwsAdapter(AdapterBase):
                                 for attachment in attachments:
                                     details_dict = dict()
                                     for det in attachment.get('details'):
-                                        details_dict[det['name']] = det['value']
+                                        try:
+                                            details_dict[det['name']] = det['value']
+                                        except Exception:
+                                            logger.exception(f'problem parsing ecs fargate attachment {det}')
 
                                     device_subnet_id = details_dict.get('subnetId')
                                     network_interface_id = details_dict.get('networkInterfaceId')
