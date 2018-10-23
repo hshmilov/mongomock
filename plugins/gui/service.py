@@ -2970,7 +2970,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 view_filter = self._find_filter_by_name(entity, query['name'])
                 if view_filter:
                     query_filter = view_filter['query']['filter']
-                    log_metric(logger, 'query.report', f'<{query_filter}> in entity {entity.value}')
+                    log_metric(logger, 'query.report', query_filter)
                     view_parsed = parse_filter(query_filter)
                     views.append({
                         **query,

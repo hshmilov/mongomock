@@ -25,6 +25,9 @@ class CheckReg(GeneralInfoSubplugin):
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
+        adapterdata_device.reg_key_exists = []
+        adapterdata_device.reg_key_not_exists = []
+
         if not CheckReg.__reg_check_exists:
             return True
         got_ok = True
