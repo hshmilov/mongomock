@@ -88,8 +88,8 @@ export const pluginMeta = {
         description: 'FireEye Endpoint Security (HX) proactively inspects, analyzes, and contains known and unknown threats at any endpoint.'
     },
     aws_adapter: {
-        title: 'Amazon Elastic',
-        description: 'The ECS/EC2 adapter includes both the high-performance container orchestration service that supports Docker containers and containerized applications on AWS as well as the EC2 instances themselves.'
+        title: 'Amazon Web Services (AWS)',
+        description: 'The ECS/EKS/EC2 adapter includes the high-performance container orchestration service that supports Docker containers and containerized applications on AWS, Kubernetes Management Infrastructure Across Multiple AWS Zones, as well as the EC2 instances themselves.'
     },
     jamf_adapter: {
         title: 'Jamf Pro',

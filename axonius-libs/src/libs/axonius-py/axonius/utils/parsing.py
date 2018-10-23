@@ -455,7 +455,7 @@ def parse_date(datetime_to_parse):
     try:
         if type(datetime_to_parse) == datetime.datetime:
             # sometimes that happens too
-            return datetime_to_parse
+            return datetime_to_parse.astimezone(datetime.timezone.utc)
         datetime_to_parse = str(datetime_to_parse)
         d = dateutil.parser.parse(datetime_to_parse).astimezone(datetime.timezone.utc)
 

@@ -125,14 +125,6 @@ class DeviceAdapterHD(SmartJsonClass):
     file_system = Field(str, "Filesystem")
 
 
-class DeviceAdapterContainer(SmartJsonClass):
-    """ A definition for containers that a device is running on. """
-    name = Field(str, "Container Name")
-    last_status = Field(str, "Last Status of Container")
-    network_interfaces = ListField(DeviceAdapterNetworkInterface, "Container Network Interfaces")
-    container_arn = Field(str, "AWS ECS Container ARN")  # Only for AWS ECS Containers
-
-
 class DeviceAdapterCPU(SmartJsonClass):
     """ A definition for cpu's """
 
@@ -285,7 +277,6 @@ class DeviceAdapter(SmartJsonClass):
     organizational_unit = ListField(str, "Organizational Unit")
     security_patch_level = Field(datetime.datetime, "Security Patch Level")
     scanner = Field(bool, 'Scanner')
-    containers = ListField(DeviceAdapterContainer, "Containers")
     tags = ListField(DeviceTagKeyValue, "Tags")
     cloud_provider = Field(str, "Cloud Provider")
     cloud_id = Field(str, "Cloud ID")
@@ -317,33 +308,6 @@ class DeviceAdapter(SmartJsonClass):
         self._raw_data = raw_data
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
-
-    def add_container(self, name=None, last_status=None, network_interfaces=None, containerArn=None):
-        """ Adds a container field to the device. Added when we implemented an adapter for Amazon ECS, more fields
-            may be added as we create adapters for more containers. """
-        container = DeviceAdapterContainer()
-        if name is not None:
-            container.name = name
-        if last_status is not None:
-            container.last_status = last_status
-        if network_interfaces is not None:
-            new_network_interfaces = []
-            for network_interface in network_interfaces:
-                new_network_interface = DeviceAdapterNetworkInterface()
-                if network_interface.get('name') is not None:
-                    new_network_interface.name = network_interface.get('name')
-                if network_interface.get('mac') is not None:
-                    new_network_interface.mac = network_interface.get('mac')
-                if network_interface.get('manufacturer') is not None:
-                    new_network_interface.manufacturer = network_interface.get('manufacturer')
-                if network_interface.get('ip') is not None:
-                    # Assuming a container can only have one ip
-                    new_network_interface.ips = [network_interface.get('ip')]
-                new_network_interfaces.append(new_network_interface)
-            container.network_interfaces = new_network_interfaces
-        if containerArn is not None:
-            container.container_arn = containerArn
-        self.containers.append(container)
 
     def set_related_ips(self, ips):
         related_ips = DeviceAdapterRelatedIps()

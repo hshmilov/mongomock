@@ -1,26 +1,32 @@
 from test_helpers.machines import PROXY_IP, PROXY_PORT
 
-US_EAST_2_ECS_NODE_ID = '17a679c2-105c-4d0f-90d7-8645ded69f58'
+US_EAST_1_ECS_FARGATE_NODE_ID = 'arn:aws:ecs:us-east-1:405773942477:task/75fb42ed-565b-44f0-b2dd-1f8cc53463ac'
 US_EAST_2_EC2_BUILDS_MACHINE_ID = 'i-0ec91cae8a42be974'
-US_EAST_1_EKS_NODE_ID = 'i-0738869e8672dbea0'
+US_EAST_1_EKS_NODE_ID = 'i-02380686d4ee7e12e'
+
+# The following IAM account is:
+# arn:aws:iam::405773942477:user/Axonius-Readonly
+# ec2:Describe*,ecs:Describe*,eks:Describe*,eks:List*,ecs:List*,ec2:Get*
+EC2_ECS_EKS_READONLY_ACCESS_KEY_ID = 'AKIAIQIF42V5LZG4EARQ'
+EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY = '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'
 
 # client details with ids
 client_details = [
     ({
-        "aws_access_key_id": "AKIAJOCJ5PGEAR6LNIFQ",
-        "aws_secret_access_key": "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",
+        "aws_access_key_id": EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+        "aws_secret_access_key": EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY,
         "region_name": "us-east-2",
         'get_all_regions': False
     }, US_EAST_2_EC2_BUILDS_MACHINE_ID),
-    # currently unavailable
-    # ({
-    #     "aws_access_key_id": "AKIAIBY62ONL7NKPY2ZA",
-    #     "aws_secret_access_key": "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",
-    #     "region_name": "us-east-2"
-    # }, US_EAST_2_ECS_NODE_ID)
     ({
-        "aws_access_key_id": "AKIAJNIRAK5MDDHPSLTQ",
-        "aws_secret_access_key": "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",
+        "aws_access_key_id": EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+        "aws_secret_access_key": EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY,
+        "region_name": "us-east-1",
+        'get_all_regions': False
+    }, US_EAST_1_ECS_FARGATE_NODE_ID),
+    ({
+        "aws_access_key_id": EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+        "aws_secret_access_key": EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY,
         "region_name": "us-east-1",
         'get_all_regions': False
     }, US_EAST_1_EKS_NODE_ID)

@@ -1,22 +1,27 @@
 import logging
 import os
 import re
+import base64
+import subprocess
+import json
+import functools
+import datetime
 
 import boto3
+import kubernetes
 import botocore.exceptions
 from botocore.config import Config
-from kubernetes import client, config
 
-from aws_adapter.consts import EKS_YAML_FILE
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (AdapterException,
                                         ClientConnectionException,
                                         CredentialErrorException)
-from axonius.devices.device_adapter import (DeviceAdapter,
-                                            DeviceRunningState)
+from axonius.devices.device_adapter import DeviceAdapterNetworkInterface, DeviceRunningState
+from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -29,6 +34,7 @@ GET_ALL_REGIONS = 'get_all_regions'
 REGIONS_NAMES = ['us-west-2', 'us-west-1', 'us-east-2', 'us-east-1', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1',
                  'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'cn-north-1', 'eu-central-1', 'eu-west-1',
                  'eu-west-2', 'eu-west-3', 'sa-east-1', 'us-gov-west-1']
+PAGE_NUMBER_FLOOD_PROTECTION = 9000
 
 
 '''
@@ -45,6 +51,24 @@ POWER_STATE_MAP = {
     'shutting-down': DeviceRunningState.ShuttingDown,
     'stopping': DeviceRunningState.ShuttingDown,
 }
+
+
+def get_paginated_next_token_api(func):
+    next_token = None
+    page_number = 0
+
+    while page_number < PAGE_NUMBER_FLOOD_PROTECTION:
+        page_number += 1
+        if next_token:
+            result = func(nextToken=next_token)
+        else:
+            result = func()
+
+        yield result
+
+        next_token = result.get('nextToken')
+        if not next_token:
+            break
 
 
 def _describe_images_from_client_by_id(ec2_client, amis):
@@ -72,10 +96,20 @@ def _describe_vpcs_from_client(ec2_client):
     :param ec2_client: the client (boto3.client('ec2'))
     :return dict: vpc-id -> vpc
     """
-    described_images = ec2_client.describe_vpcs()
+    described_vpcs = ec2_client.describe_vpcs()
+    vpc_dict = {}
+
+    for vpc_raw in described_vpcs['Vpcs']:
+        vpc_id = vpc_raw['VpcId']
+        vpc_tags = dict()
+
+        for vpc_tag_raw in (vpc_raw.get('Tags') or []):
+            vpc_tags[vpc_tag_raw['Key']] = vpc_tag_raw['Value']
+
+        vpc_dict[vpc_id] = vpc_tags.get('Name')
 
     # make a dictionary from ami key to the value
-    return {vpc['VpcId']: vpc for vpc in described_images['Vpcs']}
+    return vpc_dict
 
 
 class AWSTagKeyValue(SmartJsonClass):
@@ -98,32 +132,31 @@ class AWSSecurityGroup(SmartJsonClass):
 
 
 class AwsAdapter(AdapterBase):
-    class MyDeviceAdapter(DeviceAdapter):
+    class MyDeviceAdapter(DeviceOrContainerAdapter):
         account_tag = Field(str, 'Account Tag')
-        aws_region = Field(str, 'AWS Region')
+        aws_region = Field(str, 'Region')
+        aws_availability_zone = Field(str, 'Availability Zone')
+        aws_device_type = Field(str, 'Device Type (EC2/ECS/EKS)', enum=['EC2', 'ECS', 'EKS'])
+        security_groups = ListField(AWSSecurityGroup, 'Security Groups')
+
         # EC2-specific fields
         public_ip = Field(str, 'Public IP')
-        aws_tags = ListField(AWSTagKeyValue, 'AWS EC2 Tags')
-        instance_type = Field(str, 'AWS EC2 Instance Type')
-        key_name = Field(str, 'AWS EC2 Key Name')
-        vpc_id = Field(str, 'AWS EC2 VPC Id')
-        vpc_name = Field(str, 'AWS EC2 VPC Name')
+        aws_tags = ListField(AWSTagKeyValue, 'Tags')
+        instance_type = Field(str, 'Instance Type')
+        key_name = Field(str, 'Key Name')
         monitoring_state = Field(str, 'Monitoring State')
-        security_groups = ListField(AWSSecurityGroup, 'Security Groups')
-        # ECS-specific fields
-        subnet_id = Field(str, 'AWS ECS SubnetId')
-        cluster_arn = Field(str, 'AWS ECS Cluster Arn')
-        cluster_name = Field(str, 'AWS ECS \ EKS Cluster Name')
-        task_arn = Field(str, 'AWS ECS Task Arn')
-        task_definition_arn = Field(str, 'AWS ECS Task Definition Arn')
-        last_status = Field(str, 'AWS ECS Task: Last Status')
-        desired_status = Field(str, 'AWS ECS Task: Desired Status')
-        launch_type = Field(str, 'AWS ECS Launch Type')
-        cpu_units = Field(str, 'AWS ECS CPU Units')
-        connectivity = Field(str, 'AWS ECS Connectivity')
-        ecs_group = Field(str, 'AWS ECS Group')
-        hs_memory = Field(str, 'AWS ECS Hard/Soft Memory')
-        ecs_platform_version = Field(str, 'AWS ECS Platform Version')
+
+        # VPC Generic Fields
+        subnet_id = Field(str, 'Subnet Id')
+        subnet_name = Field(str, 'Subnet Name')
+        vpc_id = Field(str, 'VPC Id')
+        vpc_name = Field(str, 'VPC Name')
+
+        # ECS / EKS specific fields
+        container_instance_arn = Field(str, 'Task ContainerInstance ID/ARN')
+        ecs_device_type = Field(str, 'ECS Launch Type', enum=['Fargate', 'EC2'])
+        ecs_ec2_instance_id = Field(str, "ECS EC2 Instance ID")
+        ecs_ami_id = Field(str, "ECS Host Ami-ID")
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -147,7 +180,7 @@ class AwsAdapter(AdapterBase):
                 raise ClientConnectionException('No region was chosen')
             regions_clients_dict[client_config[REGION_NAME]] = self._connect_client_by_region(client_config)
             return regions_clients_dict
-        # This varialbe will be false if all the regions will raise exception
+        # This variable will be false if all the regions will raise exception
         client_ok = False
         region_success = []
         for region_name in REGIONS_NAMES:
@@ -261,6 +294,8 @@ class AwsAdapter(AdapterBase):
                     boto3_clients['ecs'] = boto3_client_ecs
                 if errors.get('eks') is None:
                     boto3_clients['eks'] = boto3_client_eks
+                # Store the credentials in the client_config as well as we need them in the future for token generation
+                boto3_clients['credentials'] = client_config
             return boto3_clients
         except botocore.exceptions.BotoCoreError as e:
             message = 'Error creating AWS client for account {0}, reason: {1}'.format(
@@ -314,31 +349,49 @@ class AwsAdapter(AdapterBase):
                     described_images = _describe_images_from_client_by_id(ec2_client_data, amis)
                 except Exception:
                     described_images = {}
-                    logger.exception('Couldn\'t describe aws images')
+                    logger.exception('Could not describe aws images')
 
                 try:
                     described_vpcs = _describe_vpcs_from_client(ec2_client_data)
                 except Exception:
                     described_vpcs = {}
-                    logger.exception('Couldn\'t describe aws vpcs')
+                    logger.exception('Could not describe aws vpcs')
 
                 # add image and vpc information to each instance
                 for reservation in reservations:
                     for instance in reservation['Instances']:
                         instance['DescribedImage'] = described_images.get(instance['ImageId'])
-                        instance['VPC'] = described_vpcs.get(instance.get('VpcId'))
 
-                raw_data['ec2'] = reservations
                 security_groups_dict = dict()
                 try:
-                    security_groups_raw = ec2_client_data.describe_security_groups()['SecurityGroups']
-                    for security_group in security_groups_raw:
-                        if security_group.get('GroupId'):
-                            security_groups_dict[security_group.get('GroupId')] = security_group
+                    for security_group_raw_answer in get_paginated_next_token_api(
+                            ec2_client_data.describe_security_groups):
+                        for security_group in security_group_raw_answer['SecurityGroups']:
+                            if security_group.get('GroupId'):
+                                security_groups_dict[security_group.get('GroupId')] = security_group
 
                 except Exception:
-                    logger.exception(f'Problemg getting security_groups')
+                    logger.exception(f'Problem getting security_groups')
+
+                subnets_dict = dict()
+                try:
+                    for subnet_raw in ec2_client_data.describe_subnets()['Subnets']:
+                        subnet_id = subnet_raw['SubnetId']
+                        subnet_tags = dict()
+                        for subnet_tag_raw in (subnet_raw.get('Tags') or []):
+                            subnet_tags[subnet_tag_raw['Key']] = subnet_tag_raw['Value']
+
+                        subnets_dict[subnet_id] = {
+                            'name': subnet_tags.get('Name'),
+                            'vpc_id': subnet_raw.get('VpcId')
+                        }
+                except Exception:
+                    logger.exception(f'could not parse subnets')
+
+                raw_data['ec2'] = reservations
+                raw_data['vpcs'] = described_vpcs
                 raw_data['security_groups'] = security_groups_dict
+                raw_data['subnets'] = subnets_dict
             except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
                     botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
                 raise CredentialErrorException(repr(e))
@@ -347,31 +400,74 @@ class AwsAdapter(AdapterBase):
         # Checks whether client_data contains ECS data
         if client_data.get('ecs') is not None:
             try:
+                raw_data['ecs'] = []
                 ecs_client_data = client_data.get('ecs')
-                clusters_raw = ecs_client_data.list_clusters()
-                clusters = clusters_raw.get('clusterArns')
-                while clusters_raw.get('nextToken'):
-                    clusters_raw = ecs_client_data.list_clusters(nextToken=clusters_raw.get('nextToken'))
-                    clusters += clusters_raw.get('clusterArns')
 
-                tasks_data = []
-                for cluster in clusters:
+                # First, list active clusters. We set the pagination by ourselves since we have to describe these
+                # clusters to see which is currently active, and list_clusters has a limit of 100.
+
+                clusters = dict()
+                for clusters_raw in get_paginated_next_token_api(
+                        functools.partial(ecs_client_data.list_clusters, maxResults=100)):
+                    for cluster in ecs_client_data.describe_clusters(clusters=clusters_raw['clusterArns'])['clusters']:
+                        try:
+                            if cluster['status'].lower() == 'active':
+                                clusters[cluster['clusterArn']] = cluster
+                        except Exception:
+                            logger.exception(f'Error parsing cluster {cluster}')
+
+                for cluster_arn, cluster_data in clusters.items():
+                    # Tasks can run on Fargate or on ec2. We have to get all info about ec2 instances beforehand. the maximum
+                    # number describe_container_instances can query is 100, by their API.
                     try:
-                        tasks = ecs_client_data.list_tasks(cluster=cluster)
-                        task_arns = tasks.get('taskArns')
-                        if task_arns:
-                            cluster_tasks_data = ecs_client_data.describe_tasks(cluster=cluster, tasks=task_arns)
-                            cluster_tasks_data = cluster_tasks_data.get('tasks')
-                            tasks_data.extend(cluster_tasks_data)
-                    except Exception:
-                        logger.exception(f'Couldn\'t get tasks in cluster {cluster}')
+                        container_instances = dict()
+                        for containers_instances_raw in get_paginated_next_token_api(
+                                functools.partial(ecs_client_data.list_container_instances, maxResults=100,
+                                                  cluster=cluster_arn)):
+                            for container_instance in \
+                                    ecs_client_data.describe_container_instances(
+                                        cluster=cluster_arn,
+                                        containerInstances=containers_instances_raw['containerInstanceArns']
+                                    )['containerInstances']:
+                                container_instance_arn = container_instance.get('containerInstanceArn')
+                                if container_instance_arn:
+                                    container_instances[container_instance_arn] = container_instance
 
-                raw_data['ecs'] = tasks_data
+                        # Services has limit of 10, its the only one.
+                        services = dict()
+                        for services_raw in get_paginated_next_token_api(
+                                functools.partial(ecs_client_data.list_services, maxResults=10, cluster=cluster_arn)
+                        ):
+                            for service_raw in ecs_client_data.describe_services(
+                                    cluster=cluster_arn,
+                                    services=services_raw['serviceArns'])['services']:
+                                service_name = service_raw.get('serviceName')
+                                if service_name:
+                                    services[service_name] = service_raw
+
+                        # Next, we list all tasks in this cluster. Like before, describe_tasks is limited to 100 so we set
+                        # the pagination to this.
+                        all_tasks = []
+                        for tasks_arns_raw in get_paginated_next_token_api(
+                                functools.partial(ecs_client_data.list_tasks, maxResults=100, cluster=cluster_arn)):
+                            all_tasks = \
+                                ecs_client_data.describe_tasks(
+                                    cluster=cluster_arn, tasks=tasks_arns_raw['taskArns'])['tasks']
+
+                        # Finally just append everything into this cluster containers
+                        raw_data['ecs'].append((cluster_data, container_instances, services, all_tasks))
+                    except Exception:
+                        logger.exception(f'Problem parsing cluster {cluster_arn} with data {cluster_data}')
             except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
                     botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
                 raise CredentialErrorException(repr(e))
             except botocore.exceptions.BotoCoreError as e:
                 raise AdapterException(repr(e))
+            except Exception:
+                raw_data['ecs'] = {}
+                # We do not raise an exception here since this could be a networking exception or a programming
+                # exception and we do not want the whole adapter to crash.
+                logger.exception('Error while parsing ecs')
         # Checks whether client_data contains EKS data
         if client_data.get('eks') is not None:
             try:
@@ -391,22 +487,61 @@ class AwsAdapter(AdapterBase):
                         if response.get('cluster', {}).get('status') != 'ACTIVE':
                             logger.info(f'Non active cluster {cluster}')
                             continue
-                        # This opens the file for writing. If it exists, it deletes it first
-                        endpoint = response['cluster'].get('endpoint')
-                        ca_cert = response['cluster'].get('certificateAuthority').get('data')
-                        cluster_name = response['cluster'].get('name')
-                        user_path = os.path.expanduser('~')
-                        with open(os.path.join(user_path, f'kubectl{cluster}.config'), 'w') as f:
-                            f.write(EKS_YAML_FILE.format(endpoint=endpoint, ca_cert=ca_cert, preferences='{}',
-                                                         cluster_name=cluster_name))
-                        # Configs can be set in Configuration class directly or using helper utility
-                        config.load_kube_config(config_file=os.path.join(user_path, f'kubectl{cluster}.config'))
-                        v1 = client.CoreV1Api()
-                        ret = v1.list_pod_for_all_namespaces(watch=False)
-                        raw_data['ecs'][cluster_name] = ret.items
-                    except Exception:
-                        logger.exception(f'Couldn\'t get descriptions in cluster {cluster}')
 
+                        endpoint = response['cluster']['endpoint']
+                        ca_cert = response['cluster']['certificateAuthority']['data']
+                        cluster_name = response['cluster']['name']
+
+                        # We must get the token from the aws-iam-authenticator binary
+                        my_env = os.environ.copy()
+                        my_env['AWS_ACCESS_KEY_ID'] = client_data['credentials'][AWS_ACCESS_KEY_ID]
+                        my_env['AWS_SECRET_ACCESS_KEY'] = client_data['credentials'][AWS_SECRET_ACCESS_KEY]
+
+                        aws_iam_authenticator_process = subprocess.Popen(
+                            ['aws-iam-authenticator', 'token', '-i', cluster_name],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            env=my_env
+                        )
+
+                        # This should be almost immediate, we put here 30 just to be sure.
+                        try:
+                            stdout, stderr = aws_iam_authenticator_process.communicate(timeout=30)
+                        except subprocess.TimeoutExpired:
+                            aws_iam_authenticator_process.kill()
+                            raise ValueError(f'Maximum timeout reached for aws-iam-authenticator')
+
+                        if aws_iam_authenticator_process.returncode != 0:
+                            raise ValueError(f'error: aws-iam-authenticator return code is '
+                                             f'{aws_iam_authenticator_process.returncode}, '
+                                             f'stdout: {stdout}\nstderr: {stderr}')
+
+                        api_token = json.loads(stdout.strip())
+
+                        try:
+                            api_token = api_token['status']['token']
+                        except Exception:
+                            raise ValueError(f'Wrong response: {api_token}')
+
+                        # Now we have to write the ca cert to the disk to be able to pass this to kubernetes
+                        ca_cert_path = os.path.join(os.path.expanduser('~'), f'{cluster_name}_ca_cert')
+                        with open(ca_cert_path, 'wb') as f:
+                            f.write(base64.b64decode(ca_cert))
+
+                        try:
+                            configuration = kubernetes.client.Configuration()
+                            configuration.host = endpoint
+                            configuration.ssl_ca_cert = ca_cert_path
+                            configuration.api_key['authorization'] = 'Bearer ' + api_token
+
+                            v1 = kubernetes.client.CoreV1Api(kubernetes.client.ApiClient(configuration))
+                            ret = v1.list_pod_for_all_namespaces(watch=False)
+                            raw_data['eks'][cluster_name] = (response['cluster'], ret.items)
+                        finally:
+                            os.remove(ca_cert_path)
+
+                    except Exception:
+                        logger.exception(f'Could not get cluster info for {cluster}')
             except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
                     botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
                 raise CredentialErrorException(repr(e))
@@ -472,15 +607,22 @@ class AwsAdapter(AdapterBase):
 
     def _parse_raw_data_region(self, devices_raw_data, region):
         account_tag = devices_raw_data.get('account_tag')
+        subnets_by_id = devices_raw_data.get('subnets')
+        vpcs_by_id = devices_raw_data.get('vpcs')
+        security_group_dict = devices_raw_data.get('security_groups')
+
+        ec2_id_to_ips = dict()
+
         # Checks whether devices_raw_data contains EC2 data
         if devices_raw_data.get('ec2') is not None:
             ec2_devices_raw_data = devices_raw_data.get('ec2')
-            security_group_dict = devices_raw_data.get('security_groups')
+
             for reservation in ec2_devices_raw_data:
                 for device_raw in reservation.get('Instances', []):
                     device = self._new_device_adapter()
                     device.aws_region = region
                     device.account_tag = account_tag
+                    device.aws_device_type = 'EC2'
                     device.hostname = device_raw.get('PublicDnsName')
                     tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
                     for key, value in tags_dict.items():
@@ -488,17 +630,21 @@ class AwsAdapter(AdapterBase):
                         device.add_key_value_tag(key, value)
                     device.instance_type = device_raw['InstanceType']
                     device.key_name = device_raw.get('KeyName')
-                    if device_raw.get('VpcId') is not None:
-                        device.vpc_id = device_raw['VpcId']
-                    if device_raw.get('VPC') is not None:
-                        vpc_tags_dict = {i['Key']: i['Value'] for i in device_raw['VPC'].get('Tags', {})}
-                        if vpc_tags_dict.get('Name') is not None:
-                            device.vpc_name = vpc_tags_dict.get('Name')
+                    vpc_id = device_raw.get('VpcId')
+                    if vpc_id and isinstance(vpc_id, str):
+                        vpc_id = vpc_id.lower()
+                        device.vpc_id = vpc_id
+                        device.vpc_name = vpcs_by_id.get(vpc_id)
+                    subnet_id = device_raw.get('SubnetId')
+                    if subnet_id:
+                        device.subnet_id = subnet_id
+                        device.subnet_name = (subnets_by_id.get(subnet_id) or {}).get('name')
                     device.name = tags_dict.get('Name', '')
                     device.figure_os(device_raw['DescribedImage'].get('Description', '')
                                      if device_raw['DescribedImage'] is not None
                                      else device_raw.get('Platform'))
-                    device.id = device_raw['InstanceId']
+                    device_id = device_raw['InstanceId']
+                    device.id = device_id
                     try:
                         device.monitoring_state = (device_raw.get('Monitoring') or {}).get('State')
                     except Exception:
@@ -533,119 +679,328 @@ class AwsAdapter(AdapterBase):
                                                               ip_protocol=ip_protocol,
                                                               ip_ranges=ip_ranges))
                                 return ip_rules
+
                             security_group_raw = security_group_dict.get(security_group.get('GroupId'))
                             if security_group_raw and isinstance(security_group_raw, dict):
                                 device.add_aws_security_group(name=security_group.get('GroupName'),
                                                               outbound=__make_ip_rules_list(
                                                                   security_group_raw.get('IpPermissionsEgress')),
-                                                              inbound=__make_ip_rules_list(security_group_raw.get('IpPermissions')))
+                                                              inbound=__make_ip_rules_list(
+                                                                  security_group_raw.get('IpPermissions')))
                             else:
                                 device.add_aws_security_group(name=security_group.get('GroupName'))
                     except Exception:
                         logger.exception(f'Problem getting security groups at {device_raw}')
                     device.cloud_id = device_raw['InstanceId']
                     device.cloud_provider = 'AWS'
+
+                    ec2_ips = []
                     for iface in device_raw.get('NetworkInterfaces', []):
+                        ec2_ips = [addr.get('PrivateIpAddress') for addr in iface.get('PrivateIpAddresses', [])]
+
                         assoc = iface.get('Association')
                         if assoc is not None:
                             public_ip = assoc.get('PublicIp')
                             if public_ip:
                                 device.public_ip = public_ip
-                                device.add_nic(iface.get('MacAddress'), [public_ip])
-                        device.add_nic(iface.get('MacAddress'), [addr.get('PrivateIpAddress')
-                                                                 for addr in iface.get('PrivateIpAddresses', [])])
+                                ec2_ips.append(public_ip)
+
+                        device.add_nic(iface.get('MacAddress'), ec2_ips)
+
+                    if ec2_ips:
+                        ec2_id_to_ips[device_id] = ec2_ips
                     device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                              DeviceRunningState.Unknown)
-                    device.set_raw(device_raw)
-                    yield device
-        # Checks whether devices_raw_data contains EKS data
-        if devices_raw_data.get('eks') is not None:
-            eks_devices_raw_data = devices_raw_data.get('eks')
-            for cluster_name, cluster_data in eks_devices_raw_data.items():
-                try:
-                    device = self._new_device_adapter()
-                    device.aws_region = region
-                    device.account_tag = account_tag
-                    device.cluster_name = cluster_name
-                    for pod_raw in cluster_data:
-                        try:
-                            network_interfaces = []
-                            nic = dict()
-                            nic['ip'] = pod_raw.status.pod_ip
-                            network_interfaces.append(nic)
-                            device.add_container(name=pod_raw.metadata.namespace + '_' + pod_raw.item.metadata.name,
-                                                 network_interfaces=network_interfaces)
-                        except Exception:
-                            logger.exception(f'Problem with device raw {str(pod_raw)}')
-                    device.set_raw({})
-                    yield device
-                except Exception:
-                    logger.exception(f'Problem with {cluster_name}')
 
-        # Checks whether devices_raw_data contains ECS data
-        if devices_raw_data.get('ecs') is not None:
-            ecs_devices_raw_data = devices_raw_data.get('ecs')
-            for device_raw in ecs_devices_raw_data:
-                try:
-                    device = self._new_device_adapter()
-                    device.aws_region = region
-                    device.account_tag = account_tag
-                    attachments = device_raw.get('attachments')
-                    if attachments:
-                        try:
-                            # There should only be one set of attachments, so attachments is really a list of length 1
-                            attachment = attachments[0]
-                            if attachment:
-                                device.id = attachment['id']  # We want to fail if we don't have an ID
-                                device.subnet_id = attachment.get('details')[0]['value']
-                                network_interface_id = attachment.get('details')[1]['value']
-                                mac_address = attachment.get('details')[2]['value']
-                                private_ip = attachment.get('details')[3]['value']
-                                device.add_nic(mac=mac_address, ips=[private_ip], name=network_interface_id)
-                        except Exception:
-                            logger.exception(f'Failed to get attachment data for {device_raw}')
-                            continue
-                    try:
-                        cluster_arn = device_raw.get('clusterArn')
-                        if cluster_arn is not None:
-                            device.cluster_arn = cluster_arn
-                            cluster_name = cluster_arn.split('/')[1]
-                            device.cluster_name = cluster_name
-                    except Exception:
-                        logger.exception(f'Failed to get cluster data for {device_raw}')
-                    task_arn = device_raw.get('taskArn')
-                    if task_arn:
-                        device.task_arn = task_arn
-                        device.name = task_arn.split('/')[1] if len(task_arn.split('/')) > 1 else None
-                    device.task_definition_arn = device_raw.get('taskDefinitionArn')
-                    device.last_status = device_raw.get('lastStatus')
-                    device.desired_status = device_raw.get('desiredStatus')
-                    device.cpu_units = device_raw.get('cpu')
-                    device.launch_type = device_raw.get('launchType')
-                    device.connectivity = device_raw.get('connectivity')
-                    device.ecs_group = device_raw.get('group')
-                    device.hs_memory = device_raw.get('memory')
-                    device.ecs_platform_version = device_raw.get('platformVersion')
-                    try:
-                        containers = device_raw.get('containers')
-                        if containers is not None:
-                            for container in containers:
-                                network_interfaces = []
-                                for network_interface in container.get('networkInterfaces'):
-                                    nic = dict()
-                                    nic['name'] = network_interface.get('attachmentId')
-                                    nic['ip'] = network_interface.get('privateIpv4Address')
-                                    network_interfaces.append(nic)
-                                device.add_container(name=container.get('name'),
-                                                     last_status=container.get('lastStatus'),
-                                                     network_interfaces=network_interfaces,
-                                                     containerArn=container.get('containerArn'))
-                    except Exception:
-                        logger.exception('Failed to load containers.')
                     device.set_raw(device_raw)
                     yield device
-                except Exception as e:
-                    logger.exception(f'ERROR: problem loading {device_raw}. Reason: {e}')
+
+        try:
+            if devices_raw_data.get('eks') is not None:
+                for cluster_name, cluster_data in devices_raw_data['eks'].items():
+                    eks_raw_data, kub_raw_data = cluster_data
+                    vpc_id = (eks_raw_data.get('resourcesVpcConfig') or {}).get('vpcId')
+                    if isinstance(vpc_id, str):
+                        vpc_id = vpc_id.lower()
+
+                    for pod_raw in kub_raw_data:
+                        try:
+                            pod_raw = pod_raw.to_dict()
+                            pod_spec = (pod_raw.get('spec') or {})
+                            pod_status = (pod_raw.get('status') or {})
+                            containers_specs = pod_spec.get('containers') or []
+                            for container_index, container_raw in enumerate((pod_status.get('container_statuses') or [])):
+                                try:
+                                    device = self._new_device_adapter()
+                                    device_id = container_raw.get('container_id')
+                                    if not device_id:
+                                        logger.error(f'Error, container with no id: {container_raw}')
+                                        continue
+
+                                    device.id = device_id
+
+                                    device.aws_region = region
+                                    device.account_tag = account_tag
+                                    device.aws_device_type = 'EKS'
+                                    device.set_instance_or_node(container_instance_name=(
+                                        pod_raw.get('spec') or {}).get('node_name'))
+                                    device.vpc_id = vpc_id
+                                    device.vpc_name = vpcs_by_id.get(vpc_id)
+                                    device.cluster_name = cluster_name
+                                    device.cluster_id = eks_raw_data.get('arn')
+                                    device.name = container_raw.get('name')
+
+                                    device.container_image = container_raw.get('image_id') or container_raw.get('image')
+
+                                    container_state = container_raw.get('state') or {}
+                                    container_state = container_state.get('running') or \
+                                        container_state.get('terminated') or \
+                                        container_state.get('waiting')
+
+                                    if container_state.get('running'):
+                                        device.container_last_status = 'running'
+                                    elif container_state.get('terminated'):
+                                        device.container_last_status = 'terminated'
+                                    elif container_state.get('waiting'):
+                                        device.container_last_status = 'waiting'
+
+                                    container_spec = {}
+                                    if len(containers_specs) > container_index:
+                                        container_spec = containers_specs[container_index]
+
+                                    container_ports = container_spec.get('ports') or []
+                                    for container_port_configuration in container_ports:
+                                        device.add_network_binding(
+                                            container_port=container_port_configuration.get('container_port'),
+                                            host_port=container_port_configuration.get('host_port'),
+                                            name=container_port_configuration.get('name'),
+                                            protocol=container_port_configuration.get('protocol')
+                                        )
+
+                                    if pod_status.get('pod_ip'):
+                                        device.add_nic(ips=[pod_status.get('pod_ip')])
+                                    device.set_raw({
+                                        'container_status': container_raw,
+                                        'container_spec': container_spec,
+                                        'pod': pod_raw
+                                    })
+                                    yield device
+                                except Exception:
+                                    logger.exception(f'Error parsing container in pod: {container_raw}. bypassing')
+                        except Exception:
+                            logger.exception(f'Problem parsing eks pod: {pod_raw}')
+        except Exception:
+            logger.exception(f'Problem parsing eks data {devices_raw_data.get("eks")}')
+
+        try:
+            # clusters contains a list of cluster dicts, each one of them
+            # contains the raw data of the cluster, its services, its instances, and its tasks.
+            # we start with parsing the instances, then tasks.
+
+            clusters = devices_raw_data.get('ecs') or []
+            for cluster_raw in clusters:
+                cluster_data, container_instances, services, all_tasks = cluster_raw
+
+                for task_raw in all_tasks:
+                    launch_type = task_raw.get('launchType')
+                    if not launch_type:
+                        logger.error(f'Error! ECS Task with no launch type!')
+                        continue
+                    launch_type = str(launch_type).lower()
+
+                    task_group = task_raw.get('group')
+                    if isinstance(task_group, str) and task_group.startswith('service:'):
+                        task_service = services.get(task_group[len('service:'):])
+                    else:
+                        task_service = None
+
+                    for container_raw in (task_raw.get('containers') or []):
+                        device = self._new_device_adapter()
+                        container_id = container_raw.get('containerArn')
+                        if not container_id:
+                            logger.error(f'Error, container does not have id! {container_raw}')
+                            continue
+
+                        device.id = container_id
+                        device.aws_device_type = 'ECS'
+                        device.aws_region = region
+                        device.account_tag = account_tag
+                        device.name = container_raw.get('name')
+                        device.cluster_id = cluster_data.get('clusterArn')
+                        device.cluster_name = cluster_data.get('clusterName')
+                        device.container_last_status = container_raw.get('lastStatus')
+
+                        # Parse network interfaces
+                        for network_interface in (container_raw.get('networkInterfaces') or []):
+                            try:
+                                ipv4_addr = network_interface.get('privateIpv4Address')
+                                if isinstance(ipv4_addr, str):
+                                    ipv4_addr = [ipv4_addr]
+
+                                device.add_nic(
+                                    name=network_interface.get('attachmentId'),
+                                    ips=ipv4_addr
+                                )
+                            except Exception:
+                                logger.exception(f'Problem parsing network interface {network_interface}')
+
+                        for network_binding in (container_raw.get('networkBindings') or []):
+                            device.add_network_binding(
+                                bind_ip=network_binding.get('bindIP'),
+                                container_port=network_binding.get('containerPort'),
+                                host_port=network_binding.get('hostPort'),
+                                protocol=network_binding.get('protocol')
+                            )
+
+                        # Parse Task
+                        try:
+                            try:
+                                connectivity_at = parse_date(task_raw.get('connectivityAt'))
+                            except Exception:
+                                connectivity_at = None
+                                logger.exception(f'Could not parse connectivityAt of {task_raw}')
+                            try:
+                                created_at = parse_date(task_raw.get('createdAt'))
+                            except Exception:
+                                created_at = None
+                                logger.exception(f'Could not parse createdAt')
+
+                            task_arn = task_raw.get('taskArn')
+                            task_definition_arn = task_raw.get('taskDefinitionArn')
+                            task_name = (task_arn.split('/')[1] if len(task_arn.split('/')) > 1 else task_arn)
+                            task_definition_name = task_definition_arn.split('/')[1] \
+                                if len(task_definition_arn.split('/')) > 1 else task_definition_arn
+
+                            device.set_task_or_pod(
+                                connectivity_at=connectivity_at,
+                                created_at=created_at,
+                                connectivity=task_raw.get('connectivity'),
+                                cpu_units=task_raw.get('cpu'),
+                                desired_status=task_raw.get('desiredStatus'),
+                                task_group=task_group,
+                                task_health_status=task_raw.get('healthStatus'),
+                                task_last_status=task_raw.get('lastStatus'),
+                                task_launch_type=launch_type,
+                                task_memory_in_mb=task_raw.get('memory'),
+                                task_name=task_name,
+                                task_id=task_arn,
+                                task_definition_id=task_definition_arn,
+                                task_definition_name=task_definition_name,
+                                platform_version=task_raw.get('platformVersion')
+                            )
+                        except Exception:
+                            logger.exception(f'Error setting task for container, task is {task_raw}')
+
+                        # Parse Service
+                        if task_service:
+                            try:
+                                device.set_service(
+                                    service_name=task_service.get('serviceName'),
+                                    service_id=task_service.get('serviceArn'),
+                                    service_status=task_service.get('status')
+                                )
+                            except Exception:
+                                logger.exception(f'Error setting service for container, service is {task_service}')
+
+                        # Parse specific info for ec2/fargate
+                        device_vpc_id = None
+                        device_subnet_id = None
+
+                        container_instance_raw_data = {}
+                        if launch_type == 'ec2':
+                            device.ecs_device_type = 'EC2'
+                            container_instance_arn = task_raw.get('containerInstanceArn')
+                            if container_instance_arn:
+                                container_instance_raw_data = container_instances.get(container_instance_arn) or {}
+                                try:
+                                    ecs_ec2_instance_id = container_instance_raw_data.get('ec2InstanceId')
+                                    device.ecs_ec2_instance_id = ecs_ec2_instance_id
+                                    device.set_instance_or_node(
+                                        container_instance_id=container_instance_arn,
+                                    )
+
+                                    for attribute in container_instance_raw_data.get('attributes'):
+                                        attribute_name = attribute.get('name')
+                                        attribute_value = attribute.get('value')
+
+                                        if not isinstance(attribute_name, str) or not isinstance(attribute_value, str):
+                                            continue
+
+                                        attribute_name = attribute_name.lower()
+                                        if attribute_name == 'ecs.ami-id':
+                                            device.ecs_ami_id = attribute_value
+
+                                        elif attribute_name == 'ecs.vpd-id':
+                                            device_vpc_id = attribute_value
+
+                                        elif attribute_name == 'ecs.subnet-id':
+                                            device_subnet_id = attribute_value
+
+                                        elif attribute_name == 'ecs.availability-zone':
+                                            device.aws_availability_zone = attribute_value
+
+                                        elif attribute_name == 'ecs.instance-type':
+                                            device.instance_type = attribute_value
+
+                                        elif attribute_name == 'ecs.os-type':
+                                            device.figure_os(attribute_value)
+
+                                    # we have no info of the ip of the container in ec2. we have to get all the ip's
+                                    # of this ec2 instance from the ec2 data.
+                                    ec2_ips = ec2_id_to_ips.get(ecs_ec2_instance_id)
+                                    if ec2_ips:
+                                        device.add_nic(ips=ec2_ips)
+                                except Exception:
+                                    logger.exception(f'Problem parsing specific info for ec2, container instance is '
+                                                     f'{container_instance_raw_data}')
+                        elif launch_type == 'fargate':
+                            device.ecs_device_type = 'Fargate'
+                            try:
+                                attachments = task_raw.get('attachments') or []
+                                attachments = [t for t in attachments if t.get('type') == 'ElasticNetworkInterface']
+                                for attachment in attachments:
+                                    details_dict = dict()
+                                    for det in attachment.get('details'):
+                                        details_dict[det['name']] = det['value']
+
+                                    device_subnet_id = details_dict.get('subnetId')
+                                    network_interface_id = details_dict.get('networkInterfaceId')
+                                    mac_address = details_dict.get('macAddress')
+                                    private_ip = details_dict.get('privateIPv4Address')
+
+                                    if private_ip:
+                                        private_ip = [private_ip]
+
+                                    device.add_nic(mac=mac_address, ips=private_ip, name=network_interface_id)
+                            except Exception:
+                                logger.exception(f'Error while parsing Fargate attachments!')
+                        else:
+                            logger.error(f'Error! ECS Task with unrecognized launch type {launch_type}')
+                            continue
+
+                        if device_subnet_id:
+                            device.subnet_id = device_subnet_id
+                            subnet_info = (subnets_by_id.get(device_subnet_id) or {})
+                            if subnet_info:
+                                device.subnet_name = subnet_info.get('name')
+                                vpc_id = subnet_info.get('vpc_id')
+                                if vpc_id:
+                                    device_vpc_id = vpc_id
+                        if device_vpc_id:
+                            device.vpc_id = device_vpc_id
+                            device.vpc_name = vpcs_by_id.get(vpc_id)
+
+                        device.set_raw(
+                            {
+                                'task_raw': task_raw,
+                                'container_raw': container_raw,
+                                'service': task_service,
+                                'container_instance': container_instance_raw_data
+                            }
+                        )
+                        yield device
+        except Exception:
+            logger.exception(f'Problem parsing ecs data {devices_raw_data.get("ecs")}')
 
     def _correlation_cmds(self):
         """
