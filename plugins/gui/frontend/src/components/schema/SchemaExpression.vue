@@ -181,7 +181,7 @@
 					return ''
 				} else if (this.fieldSchema.format === 'predefined' && this.expression.not) {
 					// Expression with some existing query is negated by a preceding NOT
-					cond = `not {val}`
+					cond = `not ({val})`
                 }
 
 				let val = this.processedValue ? this.processedValue : this.expression.value

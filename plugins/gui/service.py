@@ -2427,7 +2427,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             child2_query = parse_filter(child2_filter)
 
             # Child1 + Parent - Intersection
-            child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and NOT [{child2_filter}]'
+            child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and not ({child2_filter})'
             data.append({'name': intersecting[0], 'value': data_collection.count_documents({
                 '$and': base_queries + [
                     child1_query,
@@ -2448,7 +2448,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     'module': entity.value})
 
             # Child2 + Parent - Intersection
-            child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and NOT [{child1_filter}]'
+            child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
             data.append({'name': intersecting[1], 'value': data_collection.count_documents({
                 '$and': base_queries + [
                     child2_query,
@@ -2461,7 +2461,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         remainder = 1 - sum([x['value'] for x in data])
         child2_or = f' or ({child2_filter})' if child2_filter else ''
         return [{'name': base or 'ALL', 'value': remainder, 'remainder': True, 'view': {
-            **base_view, 'query': {'filter': f'{base_filter}NOT [({child1_filter}){child2_or}]'}
+            **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
         }, 'module': entity.value}, *data]
 
     def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):
