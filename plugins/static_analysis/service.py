@@ -60,6 +60,7 @@ class StaticAnalysisService(PluginBase, Triggerable):
             name='update_nvd_db',
             id='update_nvd_db_thread',
             max_instances=1)
+        self.__scheduler.start()
 
     def __update_nvd_db(self):
         try:
@@ -191,13 +192,13 @@ class StaticAnalysisService(PluginBase, Triggerable):
 
                 if not all(isinstance(x, str) for x in (software_vendor, software_name, software_version)):
                     # Sometimes, that happens.
-                    logger.error(f'Error: installed software contains not strings: {installed_software}')
+                    logger.error(f'Error: installed software contains not strings: {software}')
                     continue
 
                 if not software_name or not software_version:
                     # Sometimes, that also happens.
                     # do note that we allow empty software_vendor as some adapters do not give it.
-                    logger.error(f'Error: installed software contains name/version empty strings: {installed_software}')
+                    logger.debug(f'Error: installed software contains name/version empty strings: {software}')
                     continue
 
                 if 'microsoft' in software_vendor.lower() and 'office' in software_name.lower():
