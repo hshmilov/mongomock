@@ -2132,9 +2132,19 @@ class PluginBase(Configurable, Feature):
                         },
                         {
                             'name': 'reg_check_exists',
-                            "title": "Reg Key To Check",
-                            "type": "string",
+                            "title": "Validated Registry Keys",
+                            "type": "array",
                             "required": True,
+                            'items': {
+                                'type': 'array',
+                                'items': [
+                                    {
+                                        'type': 'string',
+                                        'name': 'key_name',
+                                        'title': 'Reg Key Name'
+                                    }
+                                ]
+                            }
                         }
                     ],
                     "name": "execution_settings",

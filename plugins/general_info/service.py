@@ -55,7 +55,8 @@ class GeneralInfoService(PluginBase, Triggerable):
         ad_bad_config_lm_compatibility_level = Field(int, 'Bad Config - Compatibility Level')
         ad_bad_config_disabled_domain_creds = Field(int, 'Bad Config - Disabled Domain Creds')
         ad_bad_config_secure_boot = Field(int, 'Bad Config - Secure Boot')
-        reg_check_exists = Field(bool, 'Reg Key Existence Check')
+        reg_key_not_exists = ListField(str, 'Validated Registry Keys - Not Existing')
+        reg_key_exists = ListField(str, 'Validated Registry Keys - Existing')
 
     class MyUserAdapter(UserAdapter):
         pass
