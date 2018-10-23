@@ -111,6 +111,7 @@
                 }
                 .cov-date-box {
                     height: 200px;
+                    overflow: hidden;
                     .cov-picker-box {
                         padding: 0;
                         height: 240px;

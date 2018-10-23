@@ -8,12 +8,12 @@ def main():
     ax = AxoniusService()
     entity_type = sys.argv[1] if len(sys.argv) > 1 else 'devices'
     history_db = ax.db.client['aggregator'][f'historical_{entity_type}_db_view']
-    previous_entities_number = 0
-    for day in range(60):
+    entity_count = ax.db.client['aggregator'][f'{entity_type}_db_view'].count_documents({})
+    for day in range(1, 60):
         try:
-            entities_number = randint(1, 100)
-            entities = list(history_db.find().skip(previous_entities_number).limit(entities_number))
-            previous_entities_number += entities_number
+            entities_limit = randint(entity_count - 8, entity_count)
+            entities_skip = randint(0, entity_count - entities_limit)
+            entities = list(history_db.find().skip(entities_skip).limit(entities_limit))
             for entity in entities:
                 del entity['_id']
                 entity['accurate_for_datetime'] = datetime.now() - timedelta(day)
