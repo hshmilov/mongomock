@@ -39,8 +39,8 @@ class SystemSchedulerService(PluginService):
         state = scheduler_state['state']
         assert (state[StateLevels.Phase.name] == Phases.Stable.name) == is_scheduler_at_rest
 
-    def _migrade_db(self):
-        super()._migrade_db()
+    def _migrate_db(self):
+        super()._migrate_db()
         if self.db_schema_version < 1:
             self._update_schema_version_1()
 

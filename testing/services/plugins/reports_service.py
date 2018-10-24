@@ -5,8 +5,8 @@ class ReportsService(PluginService):
     def __init__(self):
         super().__init__('reports')
 
-    def _migrade_db(self):
-        super()._migrade_db()
+    def _migrate_db(self):
+        super()._migrate_db()
         if self.db_schema_version < 1:
             self._update_schema_version_1()
 

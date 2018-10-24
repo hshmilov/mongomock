@@ -8,10 +8,9 @@
                                        @validate="updateSchedulerValidity" :read-only="isReadOnly"
                                        api-upload="adapters/system_scheduler"/>
                         <div class="place-right">
-                            <button class="x-btn"
+                            <button class="x-btn" id="research-settings-save"
                                     :class="{ disabled: !schedulerComplete || !validResearchRate || isReadOnly }"
-                                    @click="saveSchedulerSettings">Save
-                            </button>
+                                    @click="saveSchedulerSettings">Save</button>
                         </div>
                     </template>
                 </div>
@@ -22,18 +21,15 @@
                         <x-schema-form :schema="coreSettings.schema" @validate="updateCoreValidity"
                                        :read-only="isReadOnly" v-model="coreSettings.config" api-upload="adapters/core"/>
                         <div class="place-right">
-                            <button class="x-btn" :class="{ disabled: !coreComplete || isReadOnly }"
-                                    @click="saveGlobalSettings">Save
-                            </button>
+                            <button class="x-btn" id="global-settings-save" :class="{ disabled: !coreComplete || isReadOnly }"
+                                    @click="saveGlobalSettings">Save</button>
                         </div>
                         <h4>Remote Support Control</h4>
                         <div class="global-settings-access">
                             <label for="support_access">Temporary Remote Support (hours):</label>
                             <input type="number" v-model="supportAccess.duration" id="support_access"
                                    :disabled="isReadOnly"/>
-                            <button @click="startSupportAccess" class="x-btn right" :class="{ disabled: isReadOnly }">
-                                Start
-                            </button>
+                            <button @click="startSupportAccess" class="x-btn right" :class="{ disabled: isReadOnly }">Start</button>
                             <template v-if="supportAccessEndTime">
                                 <div>Will stop at:</div>
                                 <div>{{ supportAccessEndTime.toLocaleDateString() }} {{
@@ -53,9 +49,8 @@
                                        :read-only="isReadOnly"
                                        v-model="guiSettings.config" api-upload="adapters/gui"/>
                         <div class="place-right">
-                            <button class="x-btn" :class="{ disabled: !guiComplete || isReadOnly }"
-                                    @click="saveGuiSettings">Save
-                            </button>
+                            <button class="x-btn" id="gui-settings-save" :class="{ disabled: !guiComplete || isReadOnly }"
+                                    @click="saveGuiSettings">Save</button>
                         </div>
                     </template>
                 </div>
@@ -77,8 +72,7 @@
                         <template v-if="!user.admin">
                             <x-schema-form :schema="permissionSchema" v-model="user.permissions"
                                            :read-only="isReadOnly"/>
-                            <button class="x-btn link" :class="{ disabled: isReadOnly }" @click="savePermissions(user)">
-                                Save
+                            <button class="x-btn link" id="user-settings-save" :class="{ disabled: isReadOnly }" @click="savePermissions(user)">Save
                             </button>
                         </template>
                     </div>

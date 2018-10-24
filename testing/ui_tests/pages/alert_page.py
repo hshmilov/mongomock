@@ -1,4 +1,5 @@
 from ui_tests.pages.entities_page import EntitiesPage
+from ui_tests.pages.page import X_BODY
 
 
 class AlertPage(EntitiesPage):
@@ -12,7 +13,6 @@ class AlertPage(EntitiesPage):
     EDIT_ALERT_XPATH = '//div[@title=\'{alert_name}\']'
     SELECT_SAVED_QUERY_TEXT_CSS = 'div.trigger-text'
     SEVERITY_WARNING_RADIO = '#SeverityWarning'
-    SCROLL_CONTAINER = '.x-body'
 
     @property
     def url(self):
@@ -33,7 +33,7 @@ class AlertPage(EntitiesPage):
 
     def click_send_an_email(self):
         element = self.find_element_by_text('Send an Email')
-        self.scroll_into_view(element, self.SCROLL_CONTAINER)
+        self.scroll_into_view(element, X_BODY)
         element.click()
 
     def find_missing_email_server_notification(self):

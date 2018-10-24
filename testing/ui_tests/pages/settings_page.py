@@ -1,4 +1,4 @@
-from ui_tests.pages.page import Page
+from ui_tests.pages.page import Page, X_BODY
 
 
 class SettingsPage(Page):
@@ -33,6 +33,7 @@ class SettingsPage(Page):
     ALLOW_GOOGLE_LOGINS = 'Allow Google logins'
     GOOGLE_CLIENT_ID = 'Google client id'
     GOOGLE_EMAIL_OF_ADMIN = 'Email of an admin account to impersonate'
+    SAVE_BUTTON_TEXT = 'Save\n                        '
 
     @property
     def url(self):
@@ -70,6 +71,21 @@ class SettingsPage(Page):
     def click_save_button(self):
         self.get_save_button().click()
 
+    def click_save_global_settings(self):
+        self.click_generic_save_button('global-settings-save')
+
+    def click_save_lifecycle_settings(self):
+        self.click_generic_save_button('research-settings-save')
+
+    def click_save_gui_settings(self):
+        self.click_generic_save_button('gui-settings-save')
+
+    def click_save_manage_users_settings(self):
+        self.click_generic_save_button('user-settings-save')
+
+    def click_generic_save_button(self, button_id):
+        self.click_button_by_id(button_id, scroll_into_view_container=X_BODY)
+
     def fill_schedule_rate(self, text):
         self.fill_text_field_by_element_id(self.SCHEDULE_RATE_ID, text)
 
@@ -91,7 +107,7 @@ class SettingsPage(Page):
     def find_fresh_service_toggle(self):
         return self.find_checkbox_by_label(self.USE_FRESH_SERVICE)
 
-    def find_exection_toggle(self):
+    def find_execution_toggle(self):
         return self.find_checkbox_by_label(self.USE_EXECUTION)
 
     def find_should_history_be_gathered_toggle(self):
@@ -212,10 +228,7 @@ class SettingsPage(Page):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
 
     def click_start_remote_access(self):
-        text = '''
-                            Start
-                        '''
-        self.click_button(text, button_class='x-btn right', should_scroll_into_view=False)
+        self.click_button('Start', button_class='x-btn right', scroll_into_view_container=X_BODY)
 
     def save_and_wait_for_toaster(self):
         self.click_save_button()

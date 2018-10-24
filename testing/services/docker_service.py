@@ -121,7 +121,7 @@ else:
               show_print=True,
               expose_port=False,
               extra_flags=None):
-        self._migrade_db()
+        self._migrate_db()
         assert mode in ('prod', '')
         assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
 
@@ -133,8 +133,7 @@ else:
         if max_allowed_memory:
             docker_up += [f'--memory={max_allowed_memory}m',
                           '--oom-kill-disable',  # don't kill my container
-                          '--memory-swappiness=0',  # we don't need swap
-                          f'--memory-swap={max_allowed_memory}m']  # no access to swap either
+                          '--memory-swappiness=0']  # we don't need swap
 
         publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
         if mode != 'prod' or self.override_exposed_port or expose_port:
@@ -332,7 +331,7 @@ else:
         except TimeoutException:
             raise TimeoutException(f'Service {self.container_name} failed to start')
 
-    def _migrade_db(self):
+    def _migrate_db(self):
         """
         This is called right before running the docker.
         This is a good place to put any DB upgrades.

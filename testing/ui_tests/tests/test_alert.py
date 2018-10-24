@@ -71,7 +71,7 @@ class TestAlert(TestBase):
         self.settings_page.click_global_settings()
         toggle = self.settings_page.find_send_emails_toggle()
         self.settings_page.click_toggle_button(toggle, make_yes=False)
-        self.settings_page.click_save_button()
+        self.settings_page.click_save_global_settings()
 
         self.create_basic_alert()
         self.alert_page.click_send_an_email()

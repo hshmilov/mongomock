@@ -59,6 +59,7 @@ return (function(el, container){
 BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-btn'
 BUTTON_TYPE_A = 'a'
+X_BODY = '.x-body'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
@@ -166,25 +167,21 @@ class Page:
                 return elem
         return None
 
-    def click_button(self,
-                     text,
-                     call_space=True,
-                     button_type=BUTTON_DEFAULT_TYPE,
-                     button_class=BUTTON_DEFAULT_CLASS,
-                     partial_class=False,
-                     ignore_exc=False,
-                     with_confirmation=False,
-                     context=None,
-                     should_scroll_into_view=True):
-        button = self.get_button(text,
-                                 button_type=button_type,
-                                 button_class=button_class,
-                                 partial_class=partial_class,
-                                 context=context)
+    def click_button_by_id(self,
+                           button_id,
+                           **kwargs):
+        button = self.driver.find_element_by_id(button_id)
+        return self.handle_button(button, **kwargs)
 
+    def handle_button(self,
+                      button,
+                      call_space=True,
+                      ignore_exc=False,
+                      with_confirmation=False,
+                      should_scroll_into_view=True,
+                      scroll_into_view_container=None):
         if should_scroll_into_view:
-            self.scroll_into_view(button)
-
+            self.scroll_into_view(button, window=scroll_into_view_container)
         if call_space:
             button.send_keys(Keys.SPACE)
         else:
@@ -196,6 +193,21 @@ class Page:
         if with_confirmation:
             raise NotImplementedError
         return button
+
+    def click_button(self,
+                     text,
+                     button_type=BUTTON_DEFAULT_TYPE,
+                     button_class=BUTTON_DEFAULT_CLASS,
+                     partial_class=False,
+                     context=None,
+                     **kwargs):
+        button = self.get_button(text,
+                                 button_type=button_type,
+                                 button_class=button_class,
+                                 partial_class=partial_class,
+                                 context=context)
+
+        return self.handle_button(button, **kwargs)
 
     def scroll_into_view(self, element, window=None):
         try:
@@ -349,7 +361,7 @@ class Page:
         if (make_yes and not is_selected) or (not make_yes and is_selected):
             try:
                 if scroll_to_toggle:
-                    self.scroll_into_view(toggle, '.x-body')
+                    self.scroll_into_view(toggle, X_BODY)
                 toggle.click()
                 return True
             except WebDriverException:

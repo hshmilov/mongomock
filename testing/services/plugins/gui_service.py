@@ -16,8 +16,8 @@ class GuiService(PluginService):
     def wait_for_service(self, *args, **kwargs):
         super().wait_for_service(*args, **kwargs)
 
-    def _migrade_db(self):
-        super()._migrade_db()
+    def _migrate_db(self):
+        super()._migrate_db()
         if self.db_schema_version < 1:
             self._update_schema_version_1()
         if self.db_schema_version < 2:
