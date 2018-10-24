@@ -27,7 +27,7 @@ class ServiceNowConnection(RESTConnection):
         tables_devices = []
         users_table = []
         try:
-            users_table = list(self.__get_devices_from_table(USERS_TABLE, number_of_offsets=5))
+            users_table = list(self.__get_devices_from_table(USERS_TABLE))
         except Exception:
             logger.exception(f'Problem getting users')
         users_table_dict = dict()
@@ -46,16 +46,18 @@ class ServiceNowConnection(RESTConnection):
         if not number_of_offsets:
             number_of_offsets = self.__number_of_offsets
         number_of_exception = 0
-        for sysparm_offset in range(0, number_of_offsets):
+        for sysparam_offset in range(0, number_of_offsets):
             try:
                 table_results_paged = self._get(f'table/{str(table_name)}', url_params={'sysparm_limit':
                                                                                         self.__offset_size,
-                                                                                        'sysparm_offset': sysparm_offset * self.__offset_size})
+                                                                                        'sysparm_offset': sysparam_offset * self.__offset_size})
                 if len(table_results_paged.get('result', [])) == 0:
                     break
+                if sysparam_offset % 20 == 0:
+                    logger.info(f'Got to offfset {sysparam_offset}')
                 yield from table_results_paged.get('result', [])
             except Exception:
-                logger.exception(f'Got exception in offset {sysparm_offset} with table {table_name}')
+                logger.exception(f'Got exception in offset {sysparam_offset} with table {table_name}')
                 number_of_exception += 1
                 if number_of_exception >= 3:
                     break

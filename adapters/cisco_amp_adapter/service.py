@@ -1,6 +1,7 @@
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.utils.parsing import parse_date
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
@@ -19,6 +20,7 @@ class CiscoAmpAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         connector_version = Field(str, 'Connector Version')
         external_ip = Field(str, 'External IP')
+        policy_name = Field(str, 'Policy Name')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -89,6 +91,7 @@ class CiscoAmpAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=R1702, R0912
     def _parse_raw_data(self, devices_raw_data):
         """
         Parse through all of the relevant data from the v1/computers data
@@ -123,12 +126,25 @@ class CiscoAmpAdapter(AdapterBase):
 
                 device.external_ip = raw_device_data.get('external_ip')
                 network_addresses = raw_device_data.get('network_addresses', [])
+                try:
+                    device.last_seen = parse_date(raw_device_data.get('last_seen'))
+                except Exception:
+                    logging.exception(f'Problem getting last seen for {raw_device_data}')
+                try:
+                    device.policy_name = (raw_device_data.get('policy') or {}).get('name')
+                except Exception:
+                    logging.exception(f'Problem getting policy for {raw_device_data}')
                 if isinstance(network_addresses, list):
                     for entry in network_addresses:
                         try:
-                            mac = entry.get('mac', '')
-                            ip = entry.get('ip') or ''
-                            device.add_nic(mac=mac, ips=ip.split(','))
+                            mac = entry.get('mac')
+                            ip = entry.get('ip')
+                            if ip:
+                                ips = ip.split(',')
+                            else:
+                                ips = None
+                            if ips or mac:
+                                device.add_nic(mac=mac, ips=ips)
                         except Exception:
                             logger.exception(f'Incurred an error adding network address for {raw_device_data}')
 

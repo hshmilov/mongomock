@@ -430,35 +430,50 @@ class AwsAdapter(AdapterBase):
                         for containers_instances_raw in get_paginated_next_token_api(
                                 functools.partial(ecs_client_data.list_container_instances, maxResults=100,
                                                   cluster=cluster_arn)):
-                            for container_instance in \
-                                    ecs_client_data.describe_container_instances(
-                                        cluster=cluster_arn,
-                                        containerInstances=containers_instances_raw['containerInstanceArns']
-                                    )['containerInstances']:
-                                container_instance_arn = container_instance.get('containerInstanceArn')
-                                if container_instance_arn:
-                                    container_instances[container_instance_arn] = container_instance
+                            try:
+                                containerInstanceArns = containers_instances_raw['containerInstanceArns']
+                                if containerInstanceArns:
+                                    for container_instance in \
+                                            ecs_client_data.describe_container_instances(
+                                                cluster=cluster_arn,
+                                                containerInstances=containerInstanceArns
+                                            )['containerInstances']:
+                                        container_instance_arn = container_instance.get('containerInstanceArn')
+                                        if container_instance_arn:
+                                            container_instances[container_instance_arn] = container_instance
+                            except Exception:
+                                logger.exception(f'Problem in describe container instances {containers_instances_raw} ')
 
                         # Services has limit of 10, its the only one.
                         services = dict()
                         for services_raw in get_paginated_next_token_api(
                                 functools.partial(ecs_client_data.list_services, maxResults=10, cluster=cluster_arn)
                         ):
-                            for service_raw in ecs_client_data.describe_services(
-                                    cluster=cluster_arn,
-                                    services=services_raw['serviceArns'])['services']:
-                                service_name = service_raw.get('serviceName')
-                                if service_name:
-                                    services[service_name] = service_raw
+                            try:
+                                service_arns = services_raw['serviceArns']
+                                if service_arns:
+                                    for service_raw in ecs_client_data.describe_services(
+                                            cluster=cluster_arn,
+                                            services=service_arns)['services']:
+                                        service_name = service_raw.get('serviceName')
+                                        if service_name:
+                                            services[service_name] = service_raw
+                            except Exception:
+                                logger.exception(f'Problem describe_services for {services_raw}')
 
                         # Next, we list all tasks in this cluster. Like before, describe_tasks is limited to 100 so we set
                         # the pagination to this.
                         all_tasks = []
                         for tasks_arns_raw in get_paginated_next_token_api(
                                 functools.partial(ecs_client_data.list_tasks, maxResults=100, cluster=cluster_arn)):
-                            all_tasks = \
-                                ecs_client_data.describe_tasks(
-                                    cluster=cluster_arn, tasks=tasks_arns_raw['taskArns'])['tasks']
+                            try:
+                                task_arns = tasks_arns_raw['taskArns']
+                                if task_arns:
+                                    all_tasks += \
+                                        ecs_client_data.describe_tasks(
+                                            cluster=cluster_arn, tasks=task_arns)['tasks']
+                            except Exception:
+                                logger.exception(f'Problem describing tasks {tasks_arns_raw}')
 
                         # Finally just append everything into this cluster containers
                         raw_data['ecs'].append((cluster_data, container_instances, services, all_tasks))

@@ -36,13 +36,13 @@ class CiscoAMPConnection(RESTConnection):
         :return: list of all devices.
         """
         try:
-            raw_data = self._get('/v1/computers', url_params={'offset': 0, 'limit': consts.DEVICES_PER_PAGE})
+            raw_data = self._get('v1/computers', url_params={'offset': 0, 'limit': consts.DEVICES_PER_PAGE})
             yield from raw_data.get('data', [])
         except Exception:
             logger.exception(f'Incurred an error making a get request of v1/computers')
             raise RESTException('Incurred an error making a request for results and items per page')
 
-        results = raw_data.get('results')
+        results = (raw_data.get('metadata') or {}).get('results')
         if results:
             devices_total = results.get('total')
         else:
@@ -52,7 +52,7 @@ class CiscoAMPConnection(RESTConnection):
 
         while devices_total > count and consts.MAX_NUMBER_OF_DEVICES > count:
             try:
-                raw_data = self._get('/v1/computers', url_params={'offset': count, 'limit': consts.DEVICES_PER_PAGE})
+                raw_data = self._get('v1/computers', url_params={'offset': count, 'limit': consts.DEVICES_PER_PAGE})
                 yield from raw_data.get('data', [])
             except Exception:
                 logger.exception(f'Incurred an error making a get request of v1/computers')

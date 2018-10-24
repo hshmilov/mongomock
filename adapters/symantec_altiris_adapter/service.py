@@ -30,8 +30,11 @@ class SymantecAltirisAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
+            server = client_config[consts.ALTIRIS_HOST]
+            if server.startswith('https://'):
+                server = server[len('https://'):]
             connection = MSSQLConnection(database=client_config.get(consts.ALTIRIS_DATABASE, consts.DEFAULT_ALTIRIS_DATABASE),
-                                         server=client_config[consts.ALTIRIS_HOST],
+                                         server=server,
                                          port=client_config.get(consts.ALTIRIS_PORT, consts.DEFAULT_ALTIRIS_PORT),
                                          devices_paging=self.devices_fetched_at_a_time, tds_version='7.3')
             connection.set_credentials(username=client_config[consts.USER],

@@ -31,6 +31,8 @@ class ArubaAPI:
         :type insecure: bool
         :default insecure: False
         """
+        if device.startswith('https://'):
+            device = device[len('https://'):]
         self.device = device
         self.port = port
         self.username = username

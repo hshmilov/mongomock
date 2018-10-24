@@ -31,6 +31,7 @@ class NimbulAdapter(AdapterBase):
                                           apikey=client_config['token'])
             with connection:
                 pass
+            return connection
         except Exception as e:
             # pylint: disable=W1202
             logger.error('Failed to connect to client {0}'.format(

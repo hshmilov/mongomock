@@ -18,7 +18,6 @@ adapters/chef_adapter/service.py
 adapters/cisco_meraki_adapter/connection.py
 adapters/cisco_meraki_adapter/exceptions.py
 adapters/cisco_meraki_adapter/service.py
-adapters/csv_adapter/service.py
 adapters/cylance_adapter/service.py
 adapters/desktop_central_adapter/connection.py
 adapters/desktop_central_adapter/service.py

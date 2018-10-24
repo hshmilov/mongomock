@@ -20,7 +20,7 @@ export const pluginMeta = {
         description: 'Zabbix is an open source monitoring software tool for networks, servers, virtual machines and cloud services.'
     },
     cisco_amp_adapter: {
-        title: 'Cisco Advanced Malware Protection - BETA',
+        title: 'Cisco Advanced Malware Protection',
         description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'
     },
     claroty_adapter: {
