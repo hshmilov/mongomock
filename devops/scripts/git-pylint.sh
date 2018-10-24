@@ -10,6 +10,7 @@ PEP=0
 EXIT=1
 PARALLEL=0
 DELETE=0
+ADDED_ONLY=0
 
 function usage {
     echo "usage: git-pylint [-a] [-p] [-d] [P] [-r] [-h]"
@@ -18,6 +19,7 @@ function usage {
     echo "-d --delete           Auto delete files from exemptfile when needed"
     echo "-P --pep              Run autopep8 before checking with pylint"
     echo "-r --all-flags        Use all flags"
+    echo "-o --only-added       Only check added file, ignore modified"
     exit 0
 }
 for i in "$@"
@@ -41,6 +43,10 @@ case $i in
     ;;
     -P|--pep)
     PEP=1
+    shift
+    ;;
+    -o|--only-added)
+    ADDED_ONLY=1
     shift
     ;;
     -r|--all-falgs)
@@ -82,8 +88,13 @@ if [ $PARALLEL -eq 1 ]; then
     fi
 fi
 
+if [ $ADDED_ONLY -eq 1 ]; then
+    GIT_FILES=`git diff --cached --name-only --diff-filter=d`
+else
+    GIT_FILES=`git diff --cached --name-only --diff-filter=d; git diff --name-only --diff-filter=d; git ls-files --other --exclude-standard`
+fi
 
-for file in `git diff --cached --name-only --diff-filter=d; git diff --name-only --diff-filter=d; git ls-files --other --exclude-standard`; do 
+for file in $GIT_FILES; do
     if [ ${file: -3} == ".py" ]; then
 
         # handle pep

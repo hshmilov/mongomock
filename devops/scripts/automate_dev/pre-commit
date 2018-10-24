@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# To add this hook please run
+# cp ./devops/scripts/automate_dev/pre-commit ./.git/hooks/pre-commit
+DIR=$(dirname ${BASH_SOURCE[0]})
+GIT_PYLINT=$DIR/../../devops/scripts/git-pylint.sh
+
+if $GIT_PYLINT -P -d -o 2>&1 | tee /dev/stderr | grep -q "[-]"
+then
+    echo "Git-Pylint Failed :( Commit Aborted";
+    exit 1;
+else
+    echo Git-Pylint Success!;
+    exit 0;
+fi
