@@ -259,6 +259,7 @@
                 })
             }
             getDashboardData().then(() => {
+                if (this._isDestroyed) return
             	if (!this.isEmptySystem) this.nextState('dashboard')
                 if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count

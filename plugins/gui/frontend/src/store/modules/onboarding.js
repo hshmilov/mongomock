@@ -27,7 +27,7 @@ export const onboarding = {
 			current: '',
 			defs: {
 				'adapters': {
-					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right',
+					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right', fixed: true,
 					content: 'Axonius uses Adapters to collect and correlate device and user information from your systems.'
 				},
 				'activeDirectory': {
@@ -42,7 +42,7 @@ export const onboarding = {
 					content: 'This adapter can connect to any server you have credentials for.\nClick to fill them in.'
 				},
 				'saveServer': {
-					id: 'save_server', title: 'SAVE CREDENTIALS', align: 'right',
+					id: 'save_server', title: 'SAVE CREDENTIALS', align: 'right', fixed: true,
 					content: 'Fill in all required fields, then click to connect the server.',
 				},
 				'successServer': {
@@ -57,7 +57,7 @@ export const onboarding = {
 					content: 'The red exclamation icon indicates that a connection to the server could not be established.\nClick to view the error and try again.',
 				},
 				'backAdapters': {
-					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right',
+					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right', fixed: true,
 					content: 'Click to review your Adapters.'
 				},
 				'network': {
@@ -395,7 +395,7 @@ export const onboarding = {
 					]
 				},
 				'devices': {
-					id: 'devices', title: 'SEE YOUR DEVICES', align: 'right',
+					id: 'devices', title: 'SEE YOUR DEVICES', align: 'right', fixed: true,
 					content: 'Click to see all devices that were found and correlated.'
 				},
 				'bestDevice': {
@@ -414,7 +414,7 @@ export const onboarding = {
 					]
 				},
 				'backDevices': {
-					id: 'devices', title: 'DEVICES', align: 'right',
+					id: 'devices', title: 'DEVICES', align: 'right', fixed: true,
 					content: 'Click to see your devices.'
 				},
 				'query': {
@@ -457,7 +457,7 @@ export const onboarding = {
 					content: 'Here you see the query you saved as well as predefined queries. Select any query to see the results.'
 				},
 				'alerts': {
-					id: 'alerts', title: 'DEFINE ALERTS', align: 'right', queue: 'devices',
+					id: 'alerts', title: 'DEFINE ALERTS', align: 'right', queue: 'devices', fixed: true,
 					content: 'Alerts monitor results of queries and take action.'
 				},
 				'alertNew': {
@@ -592,7 +592,7 @@ export const onboarding = {
 					]
 				},
 				'dashboard': {
-					id: 'dashboard', title: 'DASHBOARD', align: 'right',
+					id: 'dashboard', title: 'DASHBOARD', align: 'right', fixed: true,
 					content: 'The Axonius dashboard gives a system-wide snapshot.'
 				},
 				'dashboardManaged': {
@@ -607,7 +607,7 @@ export const onboarding = {
 					content: 'Click to see unmanaged devices.'
 				},
 				'dashboardBack': {
-					id: 'dashboard', title: 'DASHBOARD', align: 'right',
+					id: 'dashboard', title: 'DASHBOARD', align: 'right', fixed: true,
 					content: 'Click to return to the dashboard.'
 				},
 				'dashboardWizard': {
@@ -653,7 +653,7 @@ export const onboarding = {
 					]
 				},
 				'reports': {
-					id: 'reports', title: 'REPORTING', align: 'right',
+					id: 'reports', title: 'REPORTING', align: 'right', fixed: true,
 					content: 'Reports let you schedule an email with an executive summary.'
 				},
 				'reportsSchedule': {

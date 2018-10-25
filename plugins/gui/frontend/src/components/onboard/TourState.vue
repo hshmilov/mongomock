@@ -63,7 +63,7 @@
                 let selfHeight = this.$el.offsetHeight
                 let selfWidth = this.$el.offsetWidth
 				if (!this.alignElement) {
-					this.position = { left: `calc(50vw - ${selfWidth/2 - 60}px)`, top: '24vh' }
+					this.position = { left: `calc(50vw - ${selfWidth/2}px)`, top: '24vh' }
 					return
 				}
                 this.alignElement.scrollIntoView(false)
@@ -90,10 +90,14 @@
 				}
             },
             calcOffsetTop(element) {
-            	if (element.offsetParent == null) {
-            		return element.offsetTop
+            	if (element == null) {
+            		return 0
                 }
-                return element.offsetTop + this.calcOffsetTop(element.offsetParent)
+                let offset = element.offsetTop + this.calcOffsetTop(element.offsetParent)
+                if (this.currentState.fixed) {
+                    offset -= parseInt(window.getComputedStyle(element, null).getPropertyValue('padding-top'))
+                }
+                return offset
             },
             calcScrollTop(element) {
             	if (this.currentState.fixed) return 0
