@@ -5,6 +5,9 @@ NEW_PASSWORD = 'NewPassword!'
 BAD_USERNAME = 'BadUsername'
 BAD_PASSWORD = 'BadPassword'
 VALID_EMAIL = 'lalala@lalala.com'
+
+GUI_LOG_PATH = '../logs/gui/gui.axonius.log'
+
 RESTRICTED_USERNAME = 'RestrictedUser'
 FIRST_NAME = 'FirstName'
 LAST_NAME = 'LastName'

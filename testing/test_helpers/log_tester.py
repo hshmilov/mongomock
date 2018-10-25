@@ -1,4 +1,5 @@
 import re
+import json
 
 
 class LogTester:
@@ -15,3 +16,27 @@ class LogTester:
             data = f.readlines()
             recent = data[-min(lines_lookback, len(data)):]
             return any(re.search(pattern, line) is not None for line in recent)
+
+    def is_metric_in_log(self, metric_name, value, lines_lookback=0):
+        """
+        Check is a certain metric is present in log
+        :param metric_name: Value of metric_name field
+        :param value: regex pattern for value, or exact value otherwise
+        :param lines_lookback: number of lines to go back in log
+        :return: True iff the metric was present in the log
+        """
+        with open(self.filepath) as f:
+            data = f.readlines()
+            recent = data[-min(lines_lookback, len(data)):]
+            for line in recent:
+                as_dict = json.loads(line)
+
+                def is_value_match(actual, expected):
+                    if isinstance(expected, str):
+                        return re.search(expected, str(actual)) is not None
+                    return actual == expected
+
+                if as_dict['message'] == 'METRIC':
+                    if as_dict['metric_name'] == metric_name and is_value_match(as_dict['value'], value):
+                        return True
+        return False
