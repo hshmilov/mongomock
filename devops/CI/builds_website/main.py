@@ -139,7 +139,6 @@ def export_url(key):
 
 
 @app.route('/exports/<export_identifier>/status', methods=['POST', 'GET'])
-@authorize
 def set_export_status(export_identifier):
     """Returns a link for a exported ova. Expects to get the key name in the post request."""
 
