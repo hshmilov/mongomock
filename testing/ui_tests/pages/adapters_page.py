@@ -40,3 +40,11 @@ class AdaptersPage(EntitiesPage):
 
     def click_adapter(self, adapter_name):
         self.click_button(adapter_name, button_class='title', button_type='div', call_space=False)
+
+    def click_new_server(self):
+        self.click_button_by_id('new_server')
+
+    def assert_screen_is_restricted(self):
+        self.switch_to_page()
+        self.find_element_by_text('You do not have permission to access the Adapters screen')
+        self.click_ok_button()

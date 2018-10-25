@@ -422,3 +422,6 @@ class Page:
 
     def safe_refresh(self):
         self.driver.get(self.driver.current_url)
+
+    def click_ok_button(self):
+        self.click_button('OK')

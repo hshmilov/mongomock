@@ -33,7 +33,8 @@ class SettingsPage(Page):
     ALLOW_GOOGLE_LOGINS = 'Allow Google logins'
     GOOGLE_CLIENT_ID = 'Google client id'
     GOOGLE_EMAIL_OF_ADMIN = 'Email of an admin account to impersonate'
-    SAVE_BUTTON_TEXT = 'Save\n                        '
+    READ_ONLY_PERMISSION = 'Read only'
+    RESTRICTED_PERMISSION = 'Restricted'
 
     @property
     def url(self):
@@ -51,6 +52,25 @@ class SettingsPage(Page):
 
     def click_manage_users_settings(self):
         self.driver.find_element_by_css_selector(self.MANAGE_USERS_CSS).click()
+
+    def click_new_user(self):
+        self.click_button('+ New User')
+
+    def fill_new_user_details(self, username, password, first_name=None, last_name=None):
+        self.fill_text_field_by_element_id('user_name', username)
+        self.fill_text_field_by_element_id('password', password)
+        if first_name:
+            self.fill_text_field_by_element_id('first_name', first_name)
+        if last_name:
+            self.fill_text_field_by_element_id('last_name', last_name)
+
+    def click_create_user(self):
+        self.click_button('Create User')
+
+    def create_new_user(self, username, password, first_name=None, last_name=None):
+        self.click_new_user()
+        self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name)
+        self.click_create_user()
 
     def get_all_users_from_users_and_roles(self):
         return (x.text for x in self.driver.find_elements_by_css_selector('.user-details-title'))
@@ -233,3 +253,22 @@ class SettingsPage(Page):
     def save_and_wait_for_toaster(self):
         self.click_save_button()
         self.wait_for_toaster('Saved Successfully.')
+
+    def assert_screen_is_restricted(self):
+        self.driver.find_element_by_css_selector('li.nav-item.disabled #settings')
+
+    def select_permissions(self, label_text, permission):
+        self.driver.find_element_by_xpath(
+            f'//div[child::label[text()=\'{label_text}\']]').find_element_by_css_selector('div.trigger-text').click()
+        self.fill_text_field_by_css_selector('input.input-value', permission)
+        self.driver.find_element_by_css_selector('div.x-select-option').click()
+
+    @staticmethod
+    def get_permission_labels():
+        labels = ('Adapters Permissions',
+                  'Devices Permissions',
+                  'Users Permissions',
+                  'Alerts Permissions',
+                  'Reports Permissions',
+                  'Settings Permissions')
+        return labels

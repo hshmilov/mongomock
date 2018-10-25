@@ -10,7 +10,6 @@ class MyAccountPage(Page):
     PASSWORD_CHANGED_TOASTER = 'Password changed'
     GIVEN_PASSWORD_IS_WRONG_TOASTER = 'Given password is wrong'
     PASSWORDS_DONT_MATCH_TOASTER = 'Passwords don\'t match'
-    SAVE_BUTTON_TEXT = 'Save'
 
     @property
     def url(self):

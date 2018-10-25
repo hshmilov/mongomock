@@ -25,8 +25,11 @@ class AlertPage(EntitiesPage):
     def click_new_alert(self):
         self.wait_for_spinner_to_end()
         self.wait_for_element_present_by_text(self.NEW_ALERT_BUTTON)
-        self.find_element_by_text(self.NEW_ALERT_BUTTON).click()
+        self.find_new_alert_button().click()
         self.wait_for_table_to_load()
+
+    def find_new_alert_button(self):
+        return self.find_element_by_text(self.NEW_ALERT_BUTTON)
 
     def fill_alert_name(self, name):
         self.fill_text_field_by_element_id(self.ALERT_NAME_ID, name)
@@ -97,3 +100,8 @@ class AlertPage(EntitiesPage):
 
     def get_saved_query_text(self):
         return self.driver.find_element_by_css_selector(self.SELECT_SAVED_QUERY_TEXT_CSS).get_attribute('title')
+
+    def assert_screen_is_restricted(self):
+        self.switch_to_page()
+        self.find_element_by_text('You do not have permission to access the Alerts screen')
+        self.click_ok_button()

@@ -84,6 +84,7 @@ class TestBase:
         self.axonius_system.get_notifications_db().remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
+        self.axonius_system.get_system_users_db().remove({'user_name': {'$nin': ['_axonius', 'admin']}})
 
     def change_base_url(self, new_url):
         old_base_url = self.base_url
@@ -121,6 +122,14 @@ class TestBase:
         self.alert_page = AlertPage(**params)
         self.adapters_page = AdaptersPage(**params)
         self.notification_page = NotificationPage(**params)
+
+    def get_all_screens(self):
+        screens = (self.devices_page,
+                   self.users_page,
+                   self.alert_page,
+                   self.adapters_page,
+                   self.report_page)
+        return screens
 
     def login(self):
         self.driver.get(self.base_url)

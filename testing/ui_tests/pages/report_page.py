@@ -27,3 +27,8 @@ class ReportPage(EntitiesPage):
 
     def find_email_sent_toaster(self):
         self.find_toaster('Email with executive report was sent.')
+
+    def assert_screen_is_restricted(self):
+        self.switch_to_page()
+        self.find_element_by_text('You do not have permission to access the Reports screen')
+        self.click_ok_button()
