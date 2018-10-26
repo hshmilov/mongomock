@@ -1,9 +1,11 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
 
+import time
 import logging
 
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
+from axonius.profiling.memory import asizeof
 
 logger = logging.getLogger(f'axonius.{__name__}')
 import ipaddress
@@ -112,6 +114,9 @@ SIZE_OF_IPV6_ENTRY_IN_BYTES = 16
 IPV4_ENTRY_PREFIX = struct.pack("<HH", SIZE_OF_IPV4_ENTRY_IN_BYTES, DNS_TYPE_A).decode("utf")
 IPV6_ENTRY_PREFIX = struct.pack("<HH", SIZE_OF_IPV6_ENTRY_IN_BYTES, DNS_TYPE_AAAA).decode("utf")
 
+# the maximum nesting level of a group (ancestors a group can have)
+MAXIMUM_NESTING_LEVEL = 150
+
 
 class LdapConnection(object):
     """Class responsible for creating an ldap connection.
@@ -154,6 +159,7 @@ class LdapConnection(object):
         self._connect_to_server()
 
         self.extra_sessions = {}
+        self.__ldap_groups = {}
 
     def get_session(self, name):
         """
@@ -628,14 +634,29 @@ class LdapConnection(object):
 
         users_generator = self._ldap_search(search_filter)
         users_count = 0
+        get_users_start = time.time()
         for user in users_generator:
-            user['axonius_extended'] = {"maxPwdAge": self.domain_properties['maxPwdAge']}
+            user['axonius_extended'] = {
+                "maxPwdAge": self.domain_properties['maxPwdAge'],
+                'member_of_full': list(self.get_nested_groups_for_object({'memberOf': user.get('memberOf') or []}))
+            }
 
             users_count = users_count + 1
-            if users_count % 100 == 0:
+            if users_count % 1000 == 0:
                 logger.info(f"Got {users_count} users so far")
+                logger.info(f'Approximate size in memory so far for ldap groups: '
+                            f'{asizeof(self.__ldap_groups)/(1024**2)} mb')
 
             yield dict(user)
+
+        logger.info(f"Finished with {users_count} users.")
+        logger.info(f'Finished getting all users & their groups, recursively. time: {time.time()- get_users_start}')
+        logger.info(f'Approximate size in memory so far for ldap groups: '
+                    f'{asizeof(self.__ldap_groups)/(1024**2)} mb')
+
+        # There is no use in saving all of the data, we want to reduce memory & we want to fetch this again in the next
+        # cycle.
+        self.__ldap_groups = {}
 
     def get_dns_records(self, name=None):
         """
@@ -794,6 +815,83 @@ class LdapConnection(object):
             logger.exception(f"Can't fetch user of user {username}")
             pass
         return None
+
+    def __get_nested_groups_for_group(self, group_dn: str, nesting_level=0) -> set:
+        """
+        Takes a group DN and gets all the groups it is a member of, recursively.
+        :param group_dn: the distinguished name of the group
+        :param nesting_level: an inner parameter that is used like a 'call stack' to prevent infinite call which
+                              will lead to stack exhaustion.
+        :return: a set of the nested groups it is a member of.
+        """
+        try:
+            if nesting_level >= MAXIMUM_NESTING_LEVEL:
+                logger.error(f'Error! nesting level reached to {nesting_level}, is there a circle? '
+                             f'stopping to prevent stack exhausiton.')
+                return set()
+
+            if not self.__ldap_groups:
+                logger.info(f'Initializing LDAP groups for the first time')
+                groups = self._ldap_search("(objectClass=group)", attributes=["memberOf", "distinguishedName"])
+                for group in groups:
+                    init_group_dn = group.get('distinguishedName')
+                    group_member_of = group.get('memberOf')
+
+                    if not init_group_dn:
+                        logger.error(f'Error, found group with no DN, continuing')
+                        continue
+
+                    if isinstance(group_member_of, str):
+                        group_member_of = [group_member_of]
+
+                    self.__ldap_groups[init_group_dn] = {'search_mode': False}
+                    if group_member_of:
+                        self.__ldap_groups[init_group_dn]['member_of'] = group_member_of
+
+                logger.info(f'Initiated LDAP groups successfully. number of groups: {len(self.__ldap_groups)}')
+
+            group_object = self.__ldap_groups.get(group_dn)
+            if not group_object:
+                logger.error(f'Error! group {group_dn} is not found in our dict, this should never happen!')
+                return set()
+
+            member_of_full = group_object.get('member_of_full')
+            if member_of_full is None:      # if not member_of_full will not work here, since sometimes its just set()
+                if group_object.get('search_mode') is True:
+                    return set()
+                group_object['search_mode'] = True
+                # we need to calculate it.
+                member_of = group_object.get('member_of') or []
+                member_of_full = set()
+
+                for member_of_group_dn in member_of:
+                    member_of_full.add(member_of_group_dn)
+                    member_of_full.update(self.__get_nested_groups_for_group(member_of_group_dn, nesting_level + 1))
+
+                group_object['search_mode'] = False
+                # Only the first level of search can guarantee it got everything
+                if nesting_level == 0:
+                    self.__ldap_groups[group_dn]['member_of_full'] = member_of_full
+
+            return member_of_full
+        except Exception:
+            logger.exception(f'Could not get nested groups for group {group_dn}')
+            return set()
+
+    def get_nested_groups_for_object(self, ad_object):
+        try:
+            groups = set()
+            ad_object_member_of = ad_object.get('memberOf') or []
+            if isinstance(ad_object_member_of, str):
+                ad_object_member_of = [ad_object_member_of]
+            for mo in ad_object_member_of:
+                groups.add(mo)
+                groups.update(self.__get_nested_groups_for_group(mo))
+
+            return groups
+        except Exception:
+            logger.error(f'Error while getting nested groups for ad object {ad_object}')
+            return set()
 
     # Statistics
     def get_report_statistics(self):

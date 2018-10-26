@@ -1748,6 +1748,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
             needed_group = ldap_login["group_cn"]
             if needed_group:
+                # This does not check for nested groups. see AX-2339
                 groups = user.get('memberOf', [])
                 if not any((f'CN={needed_group}' in group) for group in groups):
                     return return_error(f"The provided user is not in the group {needed_group}")

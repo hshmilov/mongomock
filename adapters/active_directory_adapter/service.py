@@ -538,6 +538,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 except Exception:
                     logger.exception(f"Exception while setting thumbnailPhoto for user {user.id}.")
 
+                # full member of
+                try:
+                    user.member_in_groups = get_member_of_list_from_memberof(user_raw.get('memberOf'))
+                    user.member_in_groups_including_nested = get_member_of_list_from_memberof(
+                        (user_raw.get('axonius_extended') or {}).get('member_of_full')
+                    )
+                except Exception:
+                    logger.exception(f'Exception while parsing user groups')
+
                 # User Personal Details
                 user.user_title = user_raw.get("title")
                 user.user_department = user_raw.get("department")

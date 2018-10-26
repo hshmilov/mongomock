@@ -25,7 +25,7 @@ def ldap_connection():
                           bytes([]), True, True)
 
 
-def test_users(ldap_connection: LdapConnection):
+def test_users_and_full_memberof(ldap_connection: LdapConnection):
     users = list(ldap_connection.get_users_list())
 
     users_dict = {}
@@ -42,6 +42,14 @@ def test_users(ldap_connection: LdapConnection):
 
     # assert there is at least one disabled device
     assert has_disabled_user is True
+
+    # assert memberof
+    groups = ldap_connection.get_nested_groups_for_object(users_dict['avidor'])
+    # Currently, Hierarchy is "Avidor" <- "R&D" <- "Circular-Tower" <- "Tel Aviv" <- "Israel"
+    # Another hierarchy is "Avidor" <- "AWS Admins" <- "Cloud Team"
+    assert any(True if "Israel" in group else False for group in groups)
+    assert any(True if "Cloud Team" in group else False for group in groups)
+    assert not any(True if "VA Team" in group else False for group in groups)
 
 
 def test_devices(ldap_connection: LdapConnection):
