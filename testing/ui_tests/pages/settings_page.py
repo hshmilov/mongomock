@@ -35,6 +35,7 @@ class SettingsPage(Page):
     GOOGLE_EMAIL_OF_ADMIN = 'Email of an admin account to impersonate'
     READ_ONLY_PERMISSION = 'Read only'
     RESTRICTED_PERMISSION = 'Restricted'
+    SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
 
     @property
     def url(self):
@@ -190,7 +191,10 @@ class SettingsPage(Page):
         return self.find_toaster(f'Could not connect to mail server "{host}"')
 
     def find_saved_successfully_toaster(self):
-        return self.find_toaster('Saved Successfully.')
+        return self.find_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
+
+    def wait_for_saved_successfully_toaster(self):
+        self.wait_for_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
 
     def find_allow_ldap_logins_toggle(self):
         return self.find_checkbox_by_label(self.LDAP_LOGINS_LABEL)
@@ -252,7 +256,7 @@ class SettingsPage(Page):
 
     def save_and_wait_for_toaster(self):
         self.click_save_button()
-        self.wait_for_toaster('Saved Successfully.')
+        self.wait_for_saved_successfully_toaster()
 
     def assert_screen_is_restricted(self):
         self.driver.find_element_by_css_selector('li.nav-item.disabled #settings')
