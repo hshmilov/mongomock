@@ -419,6 +419,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_entity.figure_out_delegation_policy(raw_data.get("userAccountControl"),
                                                raw_data.get("msDS-AllowedToDelegateTo"))
 
+        # full member of
+        try:
+            ad_entity.ad_member_of_full = get_member_of_list_from_memberof(
+                (raw_data.get('axonius_extended') or {}).get('member_of_full')
+            )
+        except Exception:
+            logger.exception(f'Exception while parsing user groups')
+
         # If pwdLastSet is 0 (which is, in date time, 1/1/1601) then it means the password must change now.
         # is_date_real checks if the date is a "special" date like 1/1/1601 and if it is - the date is not real,
         # which means its 0.
@@ -537,15 +545,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         user.image = bytes_image_to_base64(thumbnail_photo)
                 except Exception:
                     logger.exception(f"Exception while setting thumbnailPhoto for user {user.id}.")
-
-                # full member of
-                try:
-                    user.member_in_groups = get_member_of_list_from_memberof(user_raw.get('memberOf'))
-                    user.member_in_groups_including_nested = get_member_of_list_from_memberof(
-                        (user_raw.get('axonius_extended') or {}).get('member_of_full')
-                    )
-                except Exception:
-                    logger.exception(f'Exception while parsing user groups')
 
                 # User Personal Details
                 user.user_title = user_raw.get("title")

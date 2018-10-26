@@ -62,9 +62,6 @@ class UserAdapter(SmartJsonClass):
     first_name = Field(str, "First Name")
     last_name = Field(str, "Last Name")
 
-    member_in_groups = Field(str, "Groups membership (memberOf)")
-    member_in_groups_including_nested = Field(str, "All Groups membership(nested memberOf)")
-
     required = ['id', 'username']
 
     def __init__(self, user_fields: typing.MutableSet[str], user_raw_fields: typing.MutableSet[str]):

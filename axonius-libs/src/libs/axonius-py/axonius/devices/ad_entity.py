@@ -63,6 +63,7 @@ class ADEntity(object):
     ad_password_last_set = Field(datetime.datetime, 'AD pwdLastSet')
     ad_cn = Field(str, "AD Common Name (CN)")
     ad_member_of = ListField(str, "AD memberOf")
+    ad_member_of_full = ListField(str, "AD memberOf (nested full list)")
     ad_usn_changed = Field(int, "AD uSNChanged")
     ad_usn_created = Field(int, "AD uSNCreated")
     ad_when_changed = Field(datetime.datetime, "AD whenChanged")
