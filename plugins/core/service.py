@@ -94,6 +94,9 @@ class CoreService(PluginBase, Configurable):
                                     max_instances=1)
         self.cleaner_thread.start()
 
+        # pool for global config updates
+        self.__config_updater_pool = ThreadPool(30)
+
         with self._get_db_connection() as connection:
             # this command sets mongo's query space to be larger default
             # which allows for faster queries using the RAM alone
@@ -435,15 +438,14 @@ class CoreService(PluginBase, Configurable):
 
         :return dict: Dictionary containing plugin ip, plugin port and api key to use.
         """
-        if plugin_unique_name not in self.online_plugins:
+        candidate_plugin = self.online_plugins.get(plugin_unique_name)
+        if not candidate_plugin:
             # Try to find plugin by name and not by unique name
             candidate_plugin = next((plugin for plugin in self.online_plugins.values()
                                      if plugin['plugin_name'] == plugin_unique_name), None)
             if not candidate_plugin:
                 # Plugin is not in the online list
                 raise PluginNotFoundError()
-        else:
-            candidate_plugin = self.online_plugins[plugin_unique_name]
 
         unique_plugin = candidate_plugin[PLUGIN_UNIQUE_NAME]
 
@@ -468,8 +470,7 @@ class CoreService(PluginBase, Configurable):
 
         online_plugins = self.online_plugins.keys()
         if online_plugins:
-            pool = ThreadPool(len(online_plugins))
-            pool.map_async(update_plugin, online_plugins)
+            self.__config_updater_pool.map_async(update_plugin, online_plugins)
 
     @classmethod
     def _db_config_schema(cls) -> dict:

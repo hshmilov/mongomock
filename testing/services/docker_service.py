@@ -132,8 +132,7 @@ else:
         max_allowed_memory = self.max_allowed_memory
         if max_allowed_memory:
             docker_up += [f'--memory={max_allowed_memory}m',
-                          '--oom-kill-disable',  # don't kill my container
-                          '--memory-swappiness=0']  # we don't need swap
+                          '--oom-kill-disable']  # don't kill my container
 
         publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
         if mode != 'prod' or self.override_exposed_port or expose_port:

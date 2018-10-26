@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
-import json
 import argparse
 import time
+from datetime import datetime
 
 from axonius.consts.scheduler_consts import Phases
 from services.plugins.system_scheduler_service import SystemSchedulerService
@@ -20,17 +20,20 @@ def main(should_wait=False, seconds=WAIT_TIMEOUT):
         waited = 10
         time.sleep(waited)  # because for some reason it takes time to change phase (AX-1832)
         while True:
-            state = system_scheduler.current_state().json()
+            try:
+                state = system_scheduler.current_state().json()
 
-            # this API has changed it signature over 1.10->1.11, therefore this code should support both
-            if 'state' in state:
-                state = state['state']
+                # this API has changed it signature over 1.10->1.11, therefore this code should support both
+                if 'state' in state:
+                    state = state['state']
 
-            state = state['Phase']
-            if state == Phases.Stable.name:
-                print('System phase stable')
-                return
-            print(f'System phase {state}')
+                state = state['Phase']
+                if state == Phases.Stable.name:
+                    print('System phase stable')
+                    return
+                print(f'System phase {state} at {datetime.now()}')
+            except Exception:
+                print(f'Error on {repr{e}} discover_now')
             time.sleep(3)
             waited += 3
             if waited > seconds:
