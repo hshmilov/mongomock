@@ -86,16 +86,22 @@
 			},
 			fieldOps () {
 				if (!this.fieldSchema || !this.fieldSchema.type) return {}
-                let ops = (this.fieldSchema.type === 'array')? compOps['array'] : {}
-				let schema = (this.fieldSchema.type === 'array')? this.fieldSchema.items : this.fieldSchema
+				let isArray = this.fieldSchema.type === 'array'
+                let ops = isArray? compOps['array'] : {}
+				let schema = isArray? this.fieldSchema.items : this.fieldSchema
                 if (schema.enum && schema.format !== 'predefined') {
                     ops = { ...ops, equals: compOps[schema.type].equals }
                 } else if (schema.format) {
-					ops = { ...ops, ...compOps[schema.format] }
+                    ops = { ...ops, ...compOps[schema.format] }
                 } else {
 					ops = { ...ops, ...compOps[schema.type] }
                 }
-
+                if (isArray && ops.exists) {
+                    ops.exists = {
+                        pattern: `(${ops.exists.pattern} and {field} != [])`,
+                        notPattern: `(${ops.exists.pattern} or {field} == [])`
+                    }
+                }
 				return ops
 			},
 			fieldOpsList () {

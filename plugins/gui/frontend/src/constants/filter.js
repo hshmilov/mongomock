@@ -9,8 +9,16 @@ export const expression =  {
 }
 
 const exists = {
-	pattern: '({field} == exists(true) and {field} != "")',
-	notPattern: '({field} == exists(false) or {field} == "")'
+	pattern: '({field} == exists(true) and not {field} == type(10))',
+	notPattern: '({field} == exists(false) or {field} == type(10))'
+}
+const exists_str = {
+	pattern: `(${exists.pattern} and {field} != '')`,
+	notPattern: `(${exists.notPattern} or {field} == '')`
+}
+const exists_array = {
+    pattern: `(${exists.pattern} and {field} != [])`,
+    notPattern: `(${exists.notPattern} or {field} != [])`
 }
 const equals = {
 	pattern: '{field} == "{val}"',
@@ -23,7 +31,8 @@ const contains = {
 const numerical = {
 	'equals': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
 	'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
-	'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'}
+	'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'},
+	exists
 }
 const date = {
 	'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
@@ -31,7 +40,8 @@ const date = {
 	'days': {
 		pattern: '{field} >= date("NOW - {val}d")',
 		notPattern: '{field} < date("NOW - {val}d")'
-	}
+	},
+	exists
 }
 export const compOps = {
 	'array': {
@@ -39,10 +49,7 @@ export const compOps = {
 			pattern: '{field} == size({val})',
 			notPattern: 'not {field} == size({val})'
 		},
-		'exists': {
-			pattern: '({field} == exists(true) and {field} != [])',
-			notPattern: '({field} == exists(false) or {field} == [])'
-		}
+		exists: exists_array
 	},
 	'date-time': {
 		...date
@@ -67,14 +74,15 @@ export const compOps = {
 			pattern: '{field} == regex(":")',
 			notPattern: '{field} == regex("^(?!.*:)")'
 		},
-		exists
+		exists: exists_str
 	},
 	'tag': {
 		contains,
-		equals
+		equals,
+		exists: exists_str
 	},
 	'image': {
-		exists
+		exists: exists_str
 	},
 	'string': {
 		contains,
@@ -87,7 +95,7 @@ export const compOps = {
 			pattern: '{field} == regex("{val}$", "i")',
 			notPattern: '{field} == regex("^(?!{val})$", "i")'
 		},
-		exists
+        exists: exists_str
 	},
 	'bool': {
 		'true': {pattern: '{field} == true', notPattern: '{field} == false'},
