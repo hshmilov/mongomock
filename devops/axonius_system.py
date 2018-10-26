@@ -98,7 +98,7 @@ def system_entry_point(args):
     if args.exclude:
         for name in args.exclude:
             if name not in args.services and name not in args.adapters:
-                raise ValueError(f'Excluded name {name} not found')
+                raise ValueError(f'Excluded name {name} not found in {args.services} and {args.adapters}')
         args.services = [name for name in args.services if name not in args.exclude]
         args.adapters = [name for name in args.adapters if name not in args.exclude]
 

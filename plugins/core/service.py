@@ -98,6 +98,11 @@ class CoreService(PluginBase, Configurable):
         self.__config_updater_pool = ThreadPool(30)
 
         with self._get_db_connection() as connection:
+            # this makes sure we're consistent on the version we assume and run on
+            connection['admin'].command({
+                'setFeatureCompatibilityVersion': '4.0'
+            })
+
             # this command sets mongo's query space to be larger default
             # which allows for faster queries using the RAM alone
             # set to max size mongo allows
@@ -323,6 +328,9 @@ class CoreService(PluginBase, Configurable):
                 doc['plugin_name'] = plugin_name
                 doc['plugin_ip'] = request.remote_addr
                 doc['plugin_port'] = plugin_port
+                doc['plugin_subtype'] = plugin_subtype
+                doc['plugin_type'] = plugin_type
+                doc['supported_features'] = supported_features
 
             # The next section is trying to find plugins with same ip address and port. If there are such we have
             # a major problem since the core cant access both of the plugins.

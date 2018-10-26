@@ -9,7 +9,6 @@ RUN mkdir /home/axonius/logs
 
 # At this point we have openresty, python3, and axonius-libs installed.
 # Lets set up configuration files to have our final https server running.
-COPY src/config/uwsgi.ini ./config/uwsgi.ini
 COPY src/app/main.py ./app/main.py
 COPY src/config/supervisord.conf /etc/supervisor/supervisord.conf
 COPY src/config/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf

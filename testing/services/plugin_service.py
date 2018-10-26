@@ -32,6 +32,7 @@ class PluginService(DockerService):
             self.service_class_name += 'Service'
         self.plugin_name = os.path.basename(self.service_dir)
         self.db = MongoService()
+        self.__cached_api_key = None
 
     @property
     def volumes_override(self):
@@ -113,7 +114,10 @@ class PluginService(DockerService):
 
     @property
     def api_key(self):
-        return self.vol_conf.api_key
+        if self.__cached_api_key is not None:
+            return self.__cached_api_key
+        self.__cached_api_key = self.vol_conf.api_key
+        return self.__cached_api_key
 
     @property
     def unique_name(self):

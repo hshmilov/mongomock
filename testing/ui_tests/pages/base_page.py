@@ -1,6 +1,6 @@
 from ui_tests.pages.page import Page
 
-DISCOVERY_TIMEOUT = 600
+DISCOVERY_TIMEOUT = 5000
 
 
 class BasePage(Page):

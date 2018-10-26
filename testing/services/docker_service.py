@@ -52,7 +52,8 @@ class DockerService(AxonService):
             f'{self.container_name}_data:/home/axonius',
             f'{self.log_dir}:/home/axonius/logs',
             f'{self.uploaded_files_dir}:/home/axonius/uploaded_files',
-            f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro'
+            f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro',
+            f'{self.cortex_root_dir}/axonius-libs/src/config/uwsgi.ini:/home/axonius/config/uwsgi.ini',
         ]
 
     @property
@@ -286,7 +287,12 @@ else:
 
         p = subprocess.Popen(['docker', 'exec', self.container_name, 'cat', file_path],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (out, err) = p.communicate()
+        try:
+            (out, err) = p.communicate(timeout=60)
+        except subprocess.TimeoutExpired as e:
+            p.terminate()
+            print(f'Got timeout expired on {file_path} - {e}')
+            raise
 
         if p.returncode != 0:
             raise DockerException('Failed to run \'cat\' on docker {0}'.format(self.container_name))
@@ -302,7 +308,7 @@ else:
         """
         p = subprocess.Popen(['docker', 'exec', self.container_name, 'bash', '-c', command],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (out, err) = p.communicate()
+        (out, err) = p.communicate(timeout=60)
 
         if p.returncode != 0:
             raise DockerException('Failed to run {0} on docker {1}'.format(command, self.container_name))

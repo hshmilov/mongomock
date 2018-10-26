@@ -15,7 +15,8 @@ source testing/test_credentials/docker_login.sh
 echo "#### Creating venv done"
 
 echo "#### Creating installer"
-./pyrun.sh ./deployment/make.py --version ${version}  --rebuild --pull --exclude traiana_lab_machines json_file qcore stresstest_scanner stresstest infinite_sleep &> logs/create_installer.log
+# also exluding bomgar and careful_execution_correlator because it is particularly slow
+./pyrun.sh ./deployment/make.py --version ${version}  --rebuild --pull --exclude traiana_lab_machines bomgar json_file qcore stresstest_scanner stresstest infinite_sleep careful_execution_correlator &> logs/create_installer.log
 mv ${installer_name} ${install_dir}/
 echo "#### Installer created"
 
@@ -57,3 +58,5 @@ cd testing
 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/after_upgrade
 cd ..
 echo "#### After upgrade tests done"
+./clean_dockers.sh
+echo "#### After upgrade stop all"
