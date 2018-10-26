@@ -331,7 +331,6 @@ class AdapterTestBase:
 
         assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id).status_code == 200
         our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
-        out_client_id = self.some_client_id
 
         devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)[0]
         assert set(devices_response['adapters']) == {self.adapter_service.plugin_name}
@@ -340,7 +339,8 @@ class AdapterTestBase:
                                          params={
                                              'deleteEntities': 'True'
                                          }).status_code == 200
-        assert len(get_devices_by_id(self.adapter_service.plugin_name, out_id)) == 0
+        res = get_devices_by_id(self.adapter_service.plugin_name, out_id)
+        assert len(res) == 0
         self.adapter_service.trigger_clean_db()
 
     def test_removing_adapter_creds_with_users(self):

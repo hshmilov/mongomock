@@ -148,12 +148,9 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
             with self._clients_lock:
                 event.set()
                 try:
-                    # self._clients might be replaced at any moment when POST /clients is received
-                    # so it must be used cautiously
-                    self._clients = {}
                     for client in configured_clients:
                         # client id from DB not sent to verify it is updated
-                        self._add_client(client['client_config'], str(client['_id']))
+                        self._add_client(client['client_config'], client['_id'])
                 except Exception:
                     logger.exception('Error while loading clients from config')
                     if blocking:
@@ -528,7 +525,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 logger.info("No connected client {0} to remove".format(client_id))
             return '', 200
 
-    def _write_client_to_db(self, client_id, client_config, status, error_msg):
+    def _write_client_to_db(self, client_id, client_config, status, error_msg, upsert=True):
         if client_id is not None:
             logger.info(f"Updating new client status in db - {status}. client id: {client_id}")
             return self._clients_collection.replace_one({'client_id': client_id},
@@ -536,17 +533,18 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                                                          'client_config': client_config,
                                                          'status': status,
                                                          'error': error_msg},
-                                                        upsert=True)
+                                                        upsert=upsert)
         else:
             return None
 
-    def _add_client(self, client_config: dict, object_id=None):
+    def _add_client(self, client_config: dict, object_id=None, new_client=True):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
         Add created connection to adapter's clients dict, under generated key.
 
         :param client_config: Credential values representing a client of the adapter
         :param object_id: The mongo object id
+        :param new_client: If this is a recycled client (i.e. from _prepare_parsed_clients_config) or a new one
         :return: Mongo id of created \ updated document (updated should be the given client_unique_id)
 
         assumes self._clients_lock is locked by the current thread
@@ -557,28 +555,35 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         try:
             client_id = self._get_client_id(client_config)
-            self._write_client_to_db(client_id, client_config, status, error_msg)  # Writing initial client to db
+            # Writing initial client to db
+            res = self._write_client_to_db(client_id, client_config, status, error_msg, upsert=new_client)
+            if res.matched_count == 0 and not new_client:
+                logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
+                return
             status = "error"  # Default is error
             self._clients[client_id] = self.__connect_client_facade(client_config)
             # Got here only if connection succeeded
             status = "success"
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
             error_msg = str(e.args[0] if e.args else '')
-            id_for_log = client_id if client_id else (object_id if object_id else '')
+            id_for_log = client_id if client_id else str(object_id or '')
             logger.exception(f"Got error while handling client {id_for_log} - possibly compliance problem with schema.")
             if client_id in self._clients:
                 del self._clients[client_id]
 
-        result = self._write_client_to_db(client_id, client_config, status, error_msg)
+        result = self._write_client_to_db(client_id, client_config, status, error_msg, upsert=False)
         if result is None and object_id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
             result = self._clients_collection.update_one(
-                {'_id': ObjectId(object_id)}, {'$set': {'status': status}})
+                {'_id': object_id}, {'$set': {'status': status}})
         elif result is None:
             # No way of updating other than logs and no return value
             logger.error("Not updating client since no DB id and no client id exist")
             return None
+        elif res.matched_count == 0 and not new_client:
+            logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
+            return
 
         # Verifying update succeeded and returning the matched id and final status
         if result.modified_count:
