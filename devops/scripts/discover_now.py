@@ -32,8 +32,8 @@ def main(should_wait=False, seconds=WAIT_TIMEOUT):
                     print('System phase stable')
                     return
                 print(f'System phase {state} at {datetime.now()}')
-            except Exception:
-                print(f'Error on {repr{e}} discover_now')
+            except Exception as e:
+                print(f'Error on {repr(e)} discover_now')
             time.sleep(3)
             waited += 3
             if waited > seconds:
