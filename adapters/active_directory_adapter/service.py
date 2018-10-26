@@ -553,6 +553,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 user.user_managed_objects = user_raw.get("managedObjects")
                 user.user_telephone_number = user_raw.get("telephoneNumber")
                 user.user_country = user_raw.get("co")
+                user.first_name = user_raw.get('givenName')
+                user.last_name = user_raw.get('sn')
+                user.employee_id = user_raw.get('employeeID')
+                user.employee_number = user_raw.get('employeeNumber')
+                user.employee_type = user_raw.get('employeeType')
 
                 user.set_raw(user_raw)
                 yield user

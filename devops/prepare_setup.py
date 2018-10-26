@@ -29,5 +29,8 @@ if __name__ == '__main__':
     assert runner.wait_for_all() == 0
 
     # build
-    runner.append_single('system', safe_run_bash(['./axonius.sh', 'system', 'build', '--all', '--prod', '--hard']))
+    runner.append_single(
+        'system',
+        safe_run_bash(['./axonius.sh', 'system', 'build', '--all', '--prod', '--hard', '--yes-hard'])
+    )
     assert runner.wait_for_all() == 0

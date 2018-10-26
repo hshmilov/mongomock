@@ -16,7 +16,7 @@ def main(command):
 {name} [-h] {system,adapter,service} [<args>]
        {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]
-       {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--build-libs]
+       {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
     parser.add_argument('target', choices=['system', 'adapter', 'service', 'ls'])
@@ -76,6 +76,8 @@ def system_entry_point(args):
                         help='Expose db port outside of this machine.')
     parser.add_argument('--version-name', default='',
                         help='Puts the version name in generated metadata.')
+    parser.add_argument('--rebuild-libs', action='store_true', default=False, help='Rebuild axonius-libs first')
+    parser.add_argument('--yes-hard', default=False, action='store_true')
 
     try:
         args = parser.parse_args(args)
@@ -103,15 +105,15 @@ def system_entry_point(args):
         args.adapters = [name for name in args.adapters if name not in args.exclude]
 
     axonius_system.take_process_ownership()
-    if args.pull_base_image:
-        assert args.mode in ('up', 'build')
-        args.hard = True
     if args.hard:
         assert args.mode in ('up', 'build')
+        assert args.yes_hard is True, "--hard will delete all of your volumes! if you are sure, pass --yes-hard"
         args.rebuild = True
+    if args.pull_base_image or args.rebuild_libs:
+        assert args.mode in ('up', 'build')
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image)
-        axonius_system.build_libs(args.hard)
+        axonius_system.build_libs(args.rebuild_libs)
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         axonius_system.create_network()
@@ -138,7 +140,7 @@ def system_entry_point(args):
 
 def service_entry_point(target, args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--build-libs]
+{name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('name')
     parser.add_argument('mode', choices=['up', 'down', 'build'])
@@ -146,8 +148,9 @@ def service_entry_point(target, args):
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
     parser.add_argument('--hard', action='store_true', default=False, help='Removes old volume')
-    parser.add_argument('--build-libs', action='store_true', default=False,
-                        help='Rebuild Image after rebuilding axonius-libs and remove old volume')
+    parser.add_argument('--pull-base-image', action='store_true', default=False, help='Pull base image before rebuild')
+    parser.add_argument('--rebuild-libs', action='store_true', default=False, help='Rebuild axonius-libs first')
+    parser.add_argument('--yes-hard', default=False, action='store_true')
 
     try:
         args = parser.parse_args(args)
@@ -164,13 +167,13 @@ def service_entry_point(target, args):
         services.append(args.name)
 
     axonius_system = get_service()
-    if args.build_libs:
-        assert args.mode in ('up', 'build')
-        axonius_system.build_libs(rebuild=True)
-        args.hard = True
     if args.hard:
         assert args.mode in ('up', 'build')
+        assert args.yes_hard is True, "--hard will delete all of your volumes! if you are sure, pass --yes-hard"
         args.rebuild = True
+    if args.mode in ('up', 'build'):
+        axonius_system.pull_base_image(args.pull_base_image)
+        axonius_system.build_libs(args.rebuild_libs)
     if args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, 'prod' if args.prod else '', args.restart, args.rebuild,

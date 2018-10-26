@@ -1704,8 +1704,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error("Okta login is disabled", 400)
         claims = try_connecting_using_okta(okta_settings)
         if claims:
+            # Notice! If you change the first parameter, then our CURRENT customers will have their
+            # users re-created next time they log in. This is bad! If you change this, please change
+            # the upgrade script as well.
             self.__exteranl_login_successful(
-                'okta',
+                'okta',     # Look at the comment above
                 claims['email'],
                 claims.get('given_name', ''),
                 claims.get('family_name', '')
@@ -1766,7 +1769,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             except Exception:
                 logger.exception(f"Exception while setting thumbnailPhoto for user {user_name}")
 
-            self.__exteranl_login_successful('ldap',
+            # Notice! If you change the first parameter, then our CURRENT customers will have their
+            # users re-created next time they log in. This is bad! If you change this, please change
+            # the upgrade script as well.
+            self.__exteranl_login_successful('ldap',    # look at the comment above
                                              user.get('displayName') or user_name,
                                              user.get('givenName') or '',
                                              user.get('sn') or '',
@@ -1895,7 +1901,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     # lets just make things look nicer.
                     name_id = name_id[0]
 
-                self.__exteranl_login_successful('saml',
+                # Notice! If you change the first parameter, then our CURRENT customers will have their
+                # users re-created next time they log in. This is bad! If you change this, please change
+                # the upgrade script as well.
+                self.__exteranl_login_successful('saml',    # look at the comment above
                                                  name_id,
                                                  given_name or name_id,
                                                  surname or '',
@@ -1957,7 +1966,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     return return_error(f"You're not in the allowed group {google_creds['allowed_group']}")
 
             # ID token is valid. Get the user's Google Account ID from the decoded token.
-            self.__exteranl_login_successful('google',
+            # Notice! If you change the first parameter, then our CURRENT customers will have their
+            # users re-created next time they log in. This is bad! If you change this, please change
+            # the upgrade script as well.
+            self.__exteranl_login_successful('google',  # look at the comment above
                                              idinfo.get('name') or 'unamed',
                                              idinfo.get('given_name') or 'unamed',
                                              idinfo.get('family_name') or 'unamed',

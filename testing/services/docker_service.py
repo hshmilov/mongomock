@@ -9,6 +9,7 @@ from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
+from axonius.utils.debug import COLOR
 
 
 class DockerService(AxonService):
@@ -178,7 +179,9 @@ else:
             self.remove_volume()
 
         # print(' '.join(docker_up))
-        print(f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.')
+        print(f'{COLOR.get("light_green", "<")}'
+              f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.'
+              f'{COLOR.get("reset", ">")}')
         subprocess.check_call(docker_up, cwd=self.service_dir, stdout=subprocess.PIPE)
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
@@ -259,6 +262,9 @@ else:
 
     def remove_container(self, remove_volumes=False):
         # --volumes will remove only non-named volumes
+        if remove_volumes is True:
+            print(f'{COLOR.get("red", "<")}Deleting volume of container {self.container_name}...'
+                  f'{COLOR.get("reset", ">")}')
         subprocess.call(['docker', 'rm', '--force', self.container_name] + (['--volumes'] if remove_volumes else []),
                         cwd=self.service_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -267,6 +273,8 @@ else:
             print(f'Container {self.container_name} still in use, skipping remove data volume '
                   f'\'{self.container_name}_data\'')
             return  # docker volume rm will fail otherwise...
+        print(f'{COLOR.get("red", "<")}Deleting volume of container {self.container_name}...'
+              f'{COLOR.get("reset", ">")}')
         subprocess.call(['docker', 'volume', 'rm', f'{self.container_name}_data'], cwd=self.service_dir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
