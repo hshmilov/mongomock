@@ -28,9 +28,9 @@
                     return state.explorer
                 },
                 entitiesRestricted(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Devices === 'Restricted' ||
-                        state.auth.data.permissions.Users === 'Restricted'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Devices === 'Restricted' || user.permissions.Users === 'Restricted'
                 },
             }),
             searchValue: {

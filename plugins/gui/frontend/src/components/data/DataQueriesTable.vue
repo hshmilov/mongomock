@@ -36,8 +36,9 @@
                 	return state[this.module].views.saved.data
                 },
                 isAlertsWrite(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Alerts === 'ReadWrite' || state.auth.data.admin
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Alerts === 'ReadWrite' || user.admin
                 }
             }),
             filteredQueries() {

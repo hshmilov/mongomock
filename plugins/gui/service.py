@@ -1617,10 +1617,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
             return return_error("remember_me isn't boolean", 401)
-        user_from_db = self.__users_collection.find_one({
+        user_from_db = self.__users_collection.find_one(filter_archived({
             'user_name': user_name,
             'source': 'internal'  # this means that the user must be a local user and not one from an external service
-        })
+        }))
         if user_from_db is None:
             logger.info(f"Unknown user {user_name} tried logging in")
             return return_error("Wrong user name or password", 401)
@@ -1675,10 +1675,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if source != 'internal' and password:
             password = bcrypt.hash(password)
 
-        user = self.__users_collection.find_one({
+        match_user = {
             'user_name': username,
             'source': source
-        })
+        }
+        user = self.__users_collection.find_one(filter_archived(match_user))
         if not user:
             user = {
                 'user_name': username,
@@ -1694,7 +1695,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'api_secret': secrets.token_urlsafe()
             }
             user['permissions'][PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
-            self.__users_collection.insert_one(user)
+            self.__users_collection.replace_one(match_user, user, upsert=True)
+            user = self.__users_collection.find_one(filter_archived(match_user))
         return user
 
     @gui_helpers.add_rule_unauth("okta-redirect")
@@ -2003,12 +2005,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         if request.method == 'GET':
             return jsonify(beautify_user_entry(n) for n in
-                           self.__users_collection.find(
+                           self.__users_collection.find(filter_archived(
                                {
                                    'user_name': {
                                        '$ne': self.ALTERNATIVE_USER['user_name']
                                    }
-                               }).sort(
+                               })).sort(
                                [
                                    ('_id', pymongo.ASCENDING)
                                ])
@@ -2021,17 +2023,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return return_error("Login to your user first")
             if not bcrypt.verify(post_data['old_password'], user['password']):
                 return return_error("Given password is wrong")
-            self.__users_collection.update({'user_name': user['user_name']},
+            self.__users_collection.update({'user_name': user['user_name'], 'source': user['source']},
                                            {
                                                "$set": {
                                                    'password': bcrypt.hash(post_data['new_password'])
                                                }
             })
-            self.__invalidate_sessions(user['user_name'])
-            self.__users_collection.find_one({'user_name': user['user_name']})
+            self.__invalidate_sessions(user['user_name'], user['source'])
+            self.__users_collection.find_one({'user_name': user['user_name'], 'source': user['source']})
             return "", 200
 
-    @gui_add_rule_logged_in("edit_foreign_user", methods=['POST', 'PUT'],
+    @gui_add_rule_logged_in("edit_foreign_user", methods=['POST', 'PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Settings,
                                                              PermissionLevel.ReadWrite)})
     def edit_foreign_user(self):
@@ -2040,23 +2042,32 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         post_data = self.get_request_data_as_object()
         if request.method == 'POST':
-            self.__users_collection.update({'user_name': post_data['user_name']},
+            self.__users_collection.update({'user_name': post_data['user_name'], 'source': post_data['source']},
                                            {
                                                "$set": {
                                                    'permissions': post_data['permissions']
                                                }
             })
-            self.__invalidate_sessions(post_data['user_name'])
+            self.__invalidate_sessions(post_data['user_name'], post_data['source'])
             return ""
         elif request.method == 'PUT':
             post_data['password'] = bcrypt.hash(post_data['password'])
-            if self.__users_collection.find_one({
+            if self.__users_collection.find_one(filter_archived({
                 'user_name': post_data['user_name'],
                 'source': 'internal'
-            }):
+            })):
                 return return_error("User already exists", 400)
             self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
                                                picname=None, source='internal', password=post_data['password'])
+            return ""
+        elif request.method == 'DELETE':
+            self.__users_collection.update({'user_name': post_data['user_name'], 'source': post_data['source']},
+                                           {
+                                               "$set": {
+                                                   'archived': True
+                                               }
+            })
+            self.__invalidate_sessions(post_data['user_name'], post_data['source'])
             return ""
 
     @gui_helpers.add_rule_unauth("get_constants")
@@ -2074,7 +2085,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         constants['permission_types'] = dictify_enum(PermissionType)
         return jsonify(constants)
 
-    def __invalidate_sessions(self, user_name: str):
+    def __invalidate_sessions(self, user_name: str, source: str):
         """
         Invalidate all sessions for this user except the current one
         :param user_name: username to invalidate all sessions for
@@ -2086,7 +2097,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             d = v.get('d')
             if not d:
                 continue
-            if d.get('user') and d['user'].get('user_name') == user_name:
+            if d.get('user') and d['user'].get('user_name') == user_name and d['user'].get('source') == source:
                 d['user'] = None
 
     @gui_add_rule_logged_in("get_api_key", methods=['GET', 'POST'])
@@ -2097,14 +2108,21 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'POST':
             new_token = secrets.token_urlsafe()
             new_api_key = secrets.token_urlsafe()
-            self.__users_collection.update({'user_name': session['user']['user_name']},
-                                           {
-                                               "$set": {
-                                                   'api_key': new_api_key,
-                                                   'api_secret': new_token
-                                               }
-            })
-        api_data = self.__users_collection.find_one({'user_name': session['user']['user_name']})
+            self.__users_collection.update(
+                {
+                    'user_name': session['user']['user_name'],
+                    'source': session['user']['source']
+                },
+                {
+                    "$set": {
+                        'api_key': new_api_key,
+                        'api_secret': new_token
+                    }
+                }
+            )
+        api_data = self.__users_collection.find_one(
+            {'user_name': session['user']['user_name'], 'source': session['user']['source']}
+        )
         return jsonify({
             'api_key': api_data['api_key'],
             'api_secret': api_data['api_secret']

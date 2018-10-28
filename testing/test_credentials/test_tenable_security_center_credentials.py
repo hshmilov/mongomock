@@ -5,5 +5,5 @@ client_details = {
     "verify_ssl": False
 }
 
-FETCHED_DEVICE_EXAMPLE = {'hostname': 'iad30s09-in-f161.1e100.net'}
-HOST_NAME_EXAMLPE = 'iad30s09-in-f161.1e100.net'
+FETCHED_DEVICE_EXAMPLE = {'hostname': 'apache2-rank.charles-pickney.dreamhost.com'}
+HOST_NAME_EXAMLPE = 'apache2-rank.charles-pickney.dreamhost.com'

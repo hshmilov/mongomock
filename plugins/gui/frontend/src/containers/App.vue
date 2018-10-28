@@ -42,7 +42,7 @@
         computed: {
             ...mapState({
                 userName(state) {
-                	return state.auth.data.user_name
+                	return state.auth.currentUser.data.user_name
                 }
             }),
             isDev() {

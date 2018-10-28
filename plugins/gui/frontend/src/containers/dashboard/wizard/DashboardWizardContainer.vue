@@ -69,8 +69,8 @@
                     return state['dashboard']
                 },
                 availableModules(state) {
-                    if (!state.auth.data) return {}
-                    let permissions = state.auth.data.permissions
+                    if (!state.auth.currentUser.data) return {}
+                    let permissions = state.auth.currentUser.data.permissions
                     return entities.filter(entity => {
                         return permissions[entity.title] !== 'Restricted'
                     }).map(entity => entity.name)

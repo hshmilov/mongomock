@@ -72,8 +72,10 @@
                         <template v-if="!user.admin">
                             <x-schema-form :schema="permissionSchema" v-model="user.permissions"
                                            :read-only="isReadOnly"/>
-                            <button class="x-btn link" id="user-settings-save" :class="{ disabled: isReadOnly }" @click="savePermissions(user)">Save
-                            </button>
+                            <button class="x-btn link" id="user-settings-remove" :class="{ disabled: isReadOnly }"
+                                    @click="confirmRemoveUser(user)">Remove</button>
+                            <button class="x-btn link" id="user-settings-save" :class="{ disabled: isReadOnly }"
+                                    @click="savePermissions(user)">Save</button>
                         </template>
                     </div>
                 </div>
@@ -87,6 +89,13 @@
         <modal v-if="createUserActive" @close="closeNewUserForm" @confirm="saveNewUser" approve-text="Create User">
             <div slot="body">
                 <x-schema-form :schema="newUserSchema" v-model="userForm"/>
+            </div>
+        </modal>
+        <modal v-if="userToRemove" @close="closeRemoveUser" @confirm="saveRemoveUser" approve-text="Remove User">
+            <div slot="body">
+                <div>You are about to remove the user {{ userToRemove.user_name }}.</div>
+                <div>This user will no longer be able to login to the system.</div>
+                <div>Are you sure?</div>
             </div>
         </modal>
         <x-toast v-if="message" :message="message" @done="removeToast"/>
@@ -107,7 +116,7 @@
     import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/configurable";
     import {REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE} from '../../store/actions'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
-    import {CHANGE_PERMISSIONS, GET_ALL_USERS, CREATE_USER} from "../../store/modules/auth"
+    import {CHANGE_PERMISSIONS, GET_ALL_USERS, CREATE_USER, REMOVE_USER} from "../../store/modules/auth"
 
     export default {
         name: 'settings-container',
@@ -122,12 +131,13 @@
                     return state.constants.constants
                 },
                 isReadOnly(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Settings === 'ReadOnly'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Settings === 'ReadOnly'
                 },
                 isAdmin(state) {
-                    if (!state.auth.data) return false
-                    return state.auth.data.admin
+                    if (!state.auth.currentUser.data) return false
+                    return state.auth.currentUser.data.admin
                 },
                 schedulerSettings(state) {
                     if (!state.configurable.system_scheduler) return null
@@ -140,6 +150,9 @@
                 guiSettings(state) {
                     if (!state.configurable.gui) return null
                     return state.configurable.gui.GuiService
+                },
+                users(state) {
+                    return state.auth.allUsers.data
                 }
             }),
             validResearchRate() {
@@ -213,14 +226,14 @@
                     duration: 24,
                     endTime: null
                 },
-                users: [],
                 createUserActive: false,
                 userForm: {
                     user_name: '',
                     password: '',
                     first_name: '',
                     last_name: ''
-                }
+                },
+                userToRemove: null
             }
         },
         methods: {
@@ -235,7 +248,8 @@
                 loadPluginConfig: LOAD_PLUGIN_CONFIG,
                 getAllUsers: GET_ALL_USERS,
                 setPermissions: CHANGE_PERMISSIONS,
-                createUser: CREATE_USER
+                createUser: CREATE_USER,
+                removeUser: REMOVE_USER
             }),
             validNumber(value) {
                 if (value === undefined || isNaN(value) || value <= 0) {
@@ -374,21 +388,37 @@
                 this.closeNewUserForm()
                 this.createUser(this.userForm).then(response => {
                     this.createToast(response)
-                    this.getAllUsers().then(response => {
-                        if (response.status === 200) {
-                            this.users = response.data
-                        }
-                    })
+                    this.getAllUsers()
                 }).catch(error => {
                     this.createToast(error.response)
                 })
             },
             savePermissions(user) {
                 if (this.isReadOnly) return
-                this.setPermissions({user_name: user.user_name, permissions: user.permissions}).then(response => {
+                this.setPermissions({
+                    user_name: user.user_name, source: user.source, permissions: user.permissions
+                }).then(response => {
                     this.createToast(response)
                 })
 
+            },
+            confirmRemoveUser(user) {
+                this.userToRemove = user
+            },
+            saveRemoveUser() {
+                this.removeUser({
+                    user_name: this.userToRemove.user_name,
+                    source: this.userToRemove.source
+                }).then(response => {
+                    this.createToast(response)
+                    this.getAllUsers()
+                }).catch(error => {
+                    this.createToast(error.response)
+                })
+                this.userToRemove = null
+            },
+            closeRemoveUser() {
+                this.userToRemove = null
             }
         },
         created() {
@@ -411,11 +441,7 @@
                     this.systemInfo = response.data
                 }
             })
-            this.getAllUsers().then(response => {
-                if (response.status === 200) {
-                    this.users = response.data
-                }
-            })
+            this.getAllUsers()
             this.getSupportAccess()
             this.changeState({name: 'research-settings-tab'})
         },

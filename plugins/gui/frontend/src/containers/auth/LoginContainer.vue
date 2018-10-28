@@ -1,5 +1,5 @@
 d<template>
-    <div class="login-container" v-if="!auth.data.user_name && !auth.fetching">
+    <div class="login-container" v-if="!auth.currentUser.data.user_name && !auth.currentUser.fetching">
         <div class="login">
             <div class="header">
                 <svg-icon name="logo/logo" height="36" :original="true"></svg-icon>
@@ -8,7 +8,7 @@ d<template>
             <div class="body">
                 <h3 class="title">Login</h3>
                 <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="onValidate"
-                               @submit="onLogin" :error="auth.error"/>
+                               @submit="onLogin" :error="auth.currentUser.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
                 <div v-if="oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled || googleConfig.enabled" class="t-center mt-12">Or</div>
                 <div class="login-options">
@@ -25,7 +25,7 @@ d<template>
                 <div class="show-space">
                     <h2>Login with LDAP</h2>
                     <x-schema-form :schema="ldapSchema" v-model="ldapData.credentials" @input="initError"
-                                   @validate="onValidateLDAP" @submit="onLdapLogin" :error="auth.error"/>
+                                   @validate="onValidateLDAP" @submit="onLdapLogin" :error="auth.currentUser.error"/>
                 </div>
             </div>
             <div slot="footer">

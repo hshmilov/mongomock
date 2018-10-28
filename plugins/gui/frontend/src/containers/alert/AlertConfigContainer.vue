@@ -159,8 +159,8 @@
                 alertData: state => state.alert.current.data,
                 alerts: state => state.alert.content.data,
                 availableModules(state) {
-                    if (!state.auth.data) return {}
-                    let permissions = state.auth.data.permissions
+                    if (!state.auth.currentUser.data) return {}
+                    let permissions = state.auth.currentUser.data.permissions
                     return entities.filter(entity => {
                         return permissions[entity.name] !== 'Restricted'
                     }).map(module => module.name)

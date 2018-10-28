@@ -106,20 +106,24 @@
                     return state.dashboard.firstUse.data
                 },
                 isReadOnly(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Dashboard === 'ReadOnly'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Dashboard === 'ReadOnly'
                 },
                 isDevicesEdit(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Devices === 'ReadWrite' || state.auth.data.admin
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Devices === 'ReadWrite' || user.admin
                 },
                 isDevicesRestricted(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Devices === 'Restricted'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Devices === 'Restricted'
                 },
                 isUsersRestricted(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Users === 'Restricted'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Users === 'Restricted'
                 }
             }),
             lifecycle() {

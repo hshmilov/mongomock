@@ -57,7 +57,10 @@
         computed: {
             ...mapState({
                 userName(state) {
-                    return state.auth.data.user_name
+                    return state.auth.currentUser.data.user_name
+                },
+                userSource(state) {
+                    return state.auth.currentUser.data.source
                 }
             }),
             passwordFormSchema() {
@@ -103,6 +106,7 @@
                 }
                 this.changePassword({
                     'user_name': this.userName,
+                    'source': this.userSource,
                     'old_password': this.passwordForm.currentPassword,
                     'new_password': this.passwordForm.newPassword
                 }).then(() => {

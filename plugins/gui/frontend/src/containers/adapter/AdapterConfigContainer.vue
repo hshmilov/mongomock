@@ -88,8 +88,9 @@
 					return state.adapter.currentAdapter
                 },
                 isReadOnly(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Adapters === 'ReadOnly'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Adapters === 'ReadOnly'
                 }
 			}),
 			adapterId () {

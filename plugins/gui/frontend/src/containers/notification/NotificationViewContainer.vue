@@ -25,8 +25,9 @@
                     return state.notifications
                 },
                 isReadOnly(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Dashboard === 'ReadOnly'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Dashboard === 'ReadOnly'
                 }
             }),
 			notificationId () {

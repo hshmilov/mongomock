@@ -84,12 +84,14 @@
                 	return state.onboarding.tourStates.active
 				},
                 isSettingsRestricted(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Settings === 'Restricted'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Settings === 'Restricted'
                 },
                 isDashboardWrite(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Dashboard === 'ReadWrite' || state.auth.data.admin
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Dashboard === 'ReadWrite' || user.admin
                 }
             }),
             mailSettingsTip: {

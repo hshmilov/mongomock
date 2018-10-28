@@ -33,8 +33,9 @@
 					}
                 },
                 isReadOnly(state) {
-                    if (!state.auth.data || !state.auth.data.permissions) return true
-                    return state.auth.data.permissions.Users === 'ReadOnly'
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Users === 'ReadOnly'
                 }
             })
         }

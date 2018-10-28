@@ -46,12 +46,12 @@
         computed: mapState({
             userDetails(state) {
                 return {
-                    name: `${state.auth.data.first_name} ${state.auth.data.last_name}`,
-                    pic: state.auth.data.pic_name
+                    name: `${state.auth.currentUser.data.first_name} ${state.auth.currentUser.data.last_name}`,
+                    pic: state.auth.currentUser.data.pic_name
                 }
             },
             userPermissions(state) {
-                return state.auth.data.permissions
+                return state.auth.currentUser.data.permissions
             },
             collapseSidebar(state) {
                 return state.interaction.collapseSidebar

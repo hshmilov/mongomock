@@ -42,7 +42,7 @@
             ...mapState({
                 currentUser(state) {
                     return {
-                        name: state.auth.data['user_name'], admin: state.auth.data['admin']
+                        name: state.auth.currentUser.data['user_name'], admin: state.auth.currentUser.data['admin']
                     }
                 }
             }),

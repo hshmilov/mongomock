@@ -10,34 +10,42 @@ export const INIT_USER = 'INIT_USER'
 export const INIT_ERROR = 'INIT_ERROR'
 export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS'
 export const GET_ALL_USERS = 'GET_ALL_USERS'
+export const UPDATE_ALL_USERS = 'UPDATE_ALL_USERS'
 export const CHANGE_PASSWORD = 'CHANGE_PASSWORD'
 export const CHANGE_PERMISSIONS = 'CHANGE_PERMISSIONS'
 export const CREATE_USER = 'CREATE_USER'
+export const REMOVE_USER = 'REMOVE_USER'
 
 
 export const auth = {
 	state: {
-		fetching: false,
-		data: { },
-		error: ''
+		currentUser: { fetching: false, data: { }, error: '' },
+		allUsers: { fetching: false, data: { }, error: '' }
 	},
 	mutations: {
 		[ SET_USER ] (state, payload) {
-			state.fetching = payload.fetching
-			state.error = payload.error
+			state.currentUser.fetching = payload.fetching
+			state.currentUser.error = payload.error
 			if (payload.data) {
-				state.data = { ...payload.data }
+				state.currentUser.data = { ...payload.data }
 			}
 		},
 		[ INIT_USER ] (state, payload) {
-			state.fetching = payload.fetching
-			state.error = payload.error
-			if (!state.fetching) {
-				state.data = {}
+			state.currentUser.fetching = payload.fetching
+			state.currentUser.error = payload.error
+			if (!state.currentUser.fetching) {
+				state.currentUser.data = {}
 			}
 		},
 		[ INIT_ERROR ] (state) {
-			state.error = ''
+			state.currentUser.error = ''
+		},
+		[ UPDATE_ALL_USERS ] (state, payload) {
+            state.allUsers.fetching = payload.fetching
+            state.allUsers.error = payload.error
+            if (payload.data) {
+                state.allUsers.data = [ ...payload.data ]
+            }
 		}
 	},
 	actions: {
@@ -138,7 +146,7 @@ export const auth = {
 				type: INIT_USER
 			}).then(() => {
 				// this is needed because google login only works from top page
-            	if (window.location.pathname != '/') window.location.pathname = '/'
+				if (window.location.pathname !== '/') window.location.pathname = '/'
 			})
 		},
 		[ GET_ALL_USERS ] ({dispatch}) {
@@ -147,13 +155,14 @@ export const auth = {
 			 */
 			return dispatch(REQUEST_API, {
 				rule: 'authusers',
+				type: UPDATE_ALL_USERS
 			})
 		},
 		[ CHANGE_PASSWORD ] ({dispatch, commit}, payload) {
 			/*
 				Request from server to login a user according to its Google token id
 			 */
-			if (!payload || !payload.user_name || !payload.old_password || !payload.new_password) {
+			if (!payload || !payload.user_name || !payload.old_password || !payload.new_password || !payload.source) {
 				return
 			}
 			return dispatch(REQUEST_API, {
@@ -162,11 +171,11 @@ export const auth = {
 				data: payload
 			})
 		},
-		[ CHANGE_PERMISSIONS ] ({dispatch, commit}, payload) {
+		[ CHANGE_PERMISSIONS ] ({ dispatch }, payload) {
 			/*
-				Request from server to login a user according to its Google token id
+				Request from server to change permissions for an existing user
 			 */
-			if (!payload || !payload.user_name || !payload.permissions) {
+			if (!payload || !payload.user_name || !payload.permissions || !payload.source) {
 				return
 			}
 			return dispatch(REQUEST_API, {
@@ -175,9 +184,9 @@ export const auth = {
 				data: payload
 			})
 		},
-		[ CREATE_USER ] ({dispatch, commit}, payload) {
+		[ CREATE_USER ] ({ dispatch }, payload) {
 			/*
-				Request from server to login a user according to its Google token id
+				Request from server to login a add a new user
 			 */
 			if (!payload || !payload.user_name) {
 				return
@@ -187,6 +196,19 @@ export const auth = {
 				method: 'PUT',
 				data: payload
 			})
+		},
+		[ REMOVE_USER ] ({ dispatch }, payload) {
+            /*
+                Request from server to remove a user
+             */
+            if (!payload || !payload.user_name) {
+                return
+            }
+            return dispatch(REQUEST_API, {
+                rule: 'edit_foreign_user',
+                method: 'DELETE',
+                data: payload
+            })
 		}
 	}
 }
