@@ -7,6 +7,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.service_now.consts import *
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 from axonius.fields import Field
 from axonius.plugin_base import add_rule, return_error
 from axonius.utils.files import get_local_config_file
@@ -15,6 +16,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ServiceNowAdapter(AdapterBase):
+    class MyUserAdapter(UserAdapter):
+        snow_source = Field(str, 'ServiceNow Source')
+        snow_roles = Field(str, 'Roles')
+
     class MyDeviceAdapter(DeviceAdapter):
         table_type = Field(str, 'Table Type')
         class_name = Field(str, 'Class Name')
@@ -55,6 +60,9 @@ class ServiceNowAdapter(AdapterBase):
         """
         with client_data:
             yield from client_data.get_device_list()
+
+    def _query_users_by_client(self, key, data):
+        yield from data.get_user_list()
 
     def _clients_schema(self):
         """
@@ -132,6 +140,31 @@ class ServiceNowAdapter(AdapterBase):
                 if success is True:
                     return '', 200
         return 'Failure', 400
+
+    def _parse_users_raw_data_hook(self, raw_users):
+        for user_raw in raw_users:
+            try:
+                user = self._new_user_adapter()
+                sys_id = user_raw.get('sys_id')
+                if not sys_id:
+                    logger.warning(f'Bad user with no id {user_raw}')
+                    continue
+                user.id = sys_id
+                user.mail = user_raw.get('email')
+                user.employee_number = user_raw.get('employee_number')
+                user.user_country = user_raw.get('country')
+                user.first_name = user_raw.get('first_name')
+                user.last_name = user_raw.get('last_name')
+                user.username = user_raw.get('user_name')
+                user.user_title = user_raw.get('title')
+                user.user_manager = user.get('manager_full')
+                user.snow_source = user_raw.get('source')
+                user.snow_roles = user_raw.get('roles')
+                user.user_telephone_number = user_raw.get('phone')
+                user.set_raw(user_raw)
+                yield user
+            except Exception:
+                logger.exception(f'Problem getting user {user_raw}')
 
     def _parse_raw_data(self, devices_raw_data):
         for table_devices_data in devices_raw_data:

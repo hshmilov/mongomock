@@ -48,7 +48,8 @@ class CiscoMerakiAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = CiscoMerakiConnection(domain=client_config["CiscoMeraki_Domain"], apikey=client_config["apikey"],
-                                               verify_ssl=client_config["verify_ssl"])
+                                               verify_ssl=client_config["verify_ssl"],
+                                               vlan_exclude_list=client_config.get('vlan_exclude_list'))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -93,6 +94,11 @@ class CiscoMerakiAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    'name': 'vlan_exclude_list',
+                    'title': 'Vlan Exclude List',
+                    'type': 'string'
                 }
             ],
             "required": [

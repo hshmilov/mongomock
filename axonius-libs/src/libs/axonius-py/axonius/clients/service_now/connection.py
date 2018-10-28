@@ -1,10 +1,11 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-from axonius.clients.service_now.consts import *
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.consts import report_consts
 from axonius.clients.service_now import consts
+from axonius.consts import report_consts
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ServiceNowConnection(RESTConnection):
@@ -12,6 +13,7 @@ class ServiceNowConnection(RESTConnection):
         """ Initializes a connection to ServiceNow using its rest API
 
         """
+        self.__users_table = dict()
         self.__number_of_offsets = consts.NUMBER_OF_OFFSETS
         self.__offset_size = consts.OFFSET_SIZE
         super().__init__(url_base_prefix='api/now/', *args, **kwargs)
@@ -23,21 +25,30 @@ class ServiceNowConnection(RESTConnection):
         else:
             raise RESTException('No user name or password')
 
+    def get_user_list(self):
+        for user in self.__users_table.values():
+            user_to_yield = user.copy()
+            if user.get('manager'):
+                user_to_yield['manager_full'] = self.__users_table.get(user.get('manager'))
+            yield user_to_yield
+
     def get_device_list(self):
         tables_devices = []
         users_table = []
         try:
-            users_table = list(self.__get_devices_from_table(USERS_TABLE))
+            users_table = list(self.__get_devices_from_table(consts.USERS_TABLE))
         except Exception:
             logger.exception(f'Problem getting users')
         users_table_dict = dict()
         for user in users_table:
-            users_table_dict[user.get('sys_id') or ''] = user
-        for table_details in TABLES_DETAILS:
+            if user.get('sys_id'):
+                users_table_dict[user.get('sys_id')] = user
+        self.__users_table = users_table_dict
+        for table_details in consts.TABLES_DETAILS:
             new_table_details = table_details.copy()
-            table_devices = {DEVICES_KEY: self.__get_devices_from_table(table_details[TABLE_NAME_KEY])}
+            table_devices = {consts.DEVICES_KEY: self.__get_devices_from_table(table_details[consts.TABLE_NAME_KEY])}
             new_table_details.update(table_devices)
-            new_table_details[USERS_TABLE_KEY] = users_table_dict
+            new_table_details[consts.USERS_TABLE_KEY] = users_table_dict
             tables_devices.append(new_table_details)
 
         return tables_devices
@@ -48,9 +59,9 @@ class ServiceNowConnection(RESTConnection):
         number_of_exception = 0
         for sysparam_offset in range(0, number_of_offsets):
             try:
-                table_results_paged = self._get(f'table/{str(table_name)}', url_params={'sysparm_limit':
-                                                                                        self.__offset_size,
-                                                                                        'sysparm_offset': sysparam_offset * self.__offset_size})
+                table_results_paged = self._get(f'table/{str(table_name)}',
+                                                url_params={'sysparm_limit': self.__offset_size,
+                                                            'sysparm_offset': sysparam_offset * self.__offset_size})
                 if len(table_results_paged.get('result', [])) == 0:
                     break
                 if sysparam_offset % 20 == 0:

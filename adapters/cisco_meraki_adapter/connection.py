@@ -7,7 +7,7 @@ from cisco_meraki_adapter.exceptions import CiscoMerakiAlreadyConnected, CiscoMe
 
 
 class CiscoMerakiConnection(object):
-    def __init__(self, domain, apikey, verify_ssl):
+    def __init__(self, domain, apikey, verify_ssl, vlan_exclude_list=None):
         """ Initializes a connection to CiscoMeraki using its rest API
 
         :param str domain: domain address for CiscoMeraki
@@ -26,6 +26,10 @@ class CiscoMerakiConnection(object):
         self.verify_ssl = verify_ssl
         self.headers = {'Accept': 'application/json', 'charset': 'utf-8',
                         'Content-Type': 'application/json', 'X-Cisco-Meraki-API-Key': self.apikey}
+        self._vlan_exclude_list = None
+        if vlan_exclude_list and isinstance(vlan_exclude_list, str):
+            self._vlan_exclude_list = [vlan_str.strip()
+                                       for vlan_str in vlan_exclude_list.split(',') if vlan_str.strip()]
 
     def _get_url_request(self, request_name):
         """ Builds and returns the full url for the request
@@ -125,6 +129,9 @@ class CiscoMerakiConnection(object):
                 # Take clients from the last 48 hours
                 clients_device_raw = self._get("devices/" + str(serial) + "/clients?timespan=" + str(86400 * 2))
                 for client_raw in clients_device_raw:
+                    if self._vlan_exclude_list and isinstance(self._vlan_exclude_list, list) and \
+                            device.get('name') in self._vlan_exclude_list:
+                        continue
                     client_raw["associated_device"] = serial
                     client_raw['name'] = device.get('name')
                     client_raw["address"] = device.get("address")
