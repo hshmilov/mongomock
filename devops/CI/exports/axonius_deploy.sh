@@ -10,4 +10,4 @@ cd cortex
 source venv/bin/activate
 chmod u+x ./testing/test_credentials/docker_login.sh
 ./testing/test_credentials/docker_login.sh
-python3 ./deployment/make.py --version $build_name  --rebuild --pull --exclude execution_correlator careful_execution_correlator traiana_lab_machines json_file qcore stresstest_scanner stresstest infinite_sleep
+python3 ./deployment/make.py --version $build_name  --rebuild --pull --exclude careful_execution_correlator traiana_lab_machines json_file qcore stresstest_scanner stresstest infinite_sleep

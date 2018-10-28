@@ -16,7 +16,7 @@ echo "#### Creating venv done"
 
 echo "#### Creating installer"
 # also exluding bomgar and careful_execution_correlator because it is particularly slow
-./pyrun.sh ./deployment/make.py --version ${version}  --rebuild --pull --exclude traiana_lab_machines bomgar json_file qcore stresstest_scanner stresstest infinite_sleep execution_correlator careful_execution_correlator &> logs/create_installer.log
+./pyrun.sh ./deployment/make.py --version ${version}  --rebuild --pull --exclude traiana_lab_machines bomgar json_file qcore stresstest_scanner stresstest infinite_sleep careful_execution_correlator &> logs/create_installer.log
 mv ${installer_name} ${install_dir}/
 echo "#### Installer created"
 
