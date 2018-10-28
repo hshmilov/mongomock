@@ -73,12 +73,7 @@ class JamfConnection(object):
 
         if self.auth is None:
             raise JamfConnectionError(f"Username and password is None")
-        response = self.get("accounts")
-
-        # the only case where we get 200 and no accounts is if the domain is not the Jamf one
-        # i.e. someone lied in the domain and somehow the page <domain>/JSSResource/accounts exists
-        if 'accounts' not in response:
-            raise JamfConnectionError(str(response))
+        self.get(consts.COMPUTERS_URL)
 
     def __del__(self):
         self.logout()
@@ -300,7 +295,7 @@ class JamfConnection(object):
 
         return devices
 
-    def get_devices(self, should_fetch_department=False):
+    def get_devices(self, should_fetch_department=False, should_fetch_policies=True):
         """ Returns a list of all agents
         :return: the response
         :rtype: list of computers and phones
@@ -312,12 +307,11 @@ class JamfConnection(object):
             device_list_name=consts.COMPUTERS_DEVICE_LIST_NAME,
             device_type=consts.COMPUTER_DEVICE_TYPE,
             should_fetch_department=should_fetch_department)
-
-        self.threaded_get_policy_history(computers)
-
+        if should_fetch_policies:
+            self.threaded_get_policy_history(computers)
+        yield from computers
         mobile_devices = self.threaded_get_devices(
             url=consts.MOBILE_DEVICE_URL,
             device_list_name=consts.MOBILE_DEVICE_LIST_NAME,
             device_type=consts.MOBILE_DEVICE_TYPE)
-
-        return computers + mobile_devices
+        yield from mobile_devices

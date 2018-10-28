@@ -9,7 +9,7 @@ class FortigateService(AdapterService):
         super().__init__('fortigate')
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope='module', autouse=True)
 def fortigate_fixture(request):
     service = FortigateService()
     initialize_fixture(request, service)

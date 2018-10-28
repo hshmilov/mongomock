@@ -432,7 +432,6 @@ testing/services/adapters/eset_service.py
 testing/services/adapters/esx_service.py
 testing/services/adapters/fireeye_hx_service.py
 testing/services/adapters/forcepoint_csv_service.py
-testing/services/adapters/fortigate_service.py
 testing/services/adapters/gce_service.py
 testing/services/adapters/google_mdm_service.py
 testing/services/adapters/gotoassist_service.py

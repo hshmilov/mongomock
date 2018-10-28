@@ -13,7 +13,10 @@ class CheckReg(GeneralInfoSubplugin):
         initialization.
         """
         super().__init__(*args, **kwargs)
-        CheckReg.__reg_check_exists = [key.get('key_name') for key in reg_check_exists.values() if key]
+        if reg_check_exists:
+            CheckReg.__reg_check_exists = [key.get('key_name') for key in reg_check_exists.values() if key]
+        else:
+            CheckReg.__reg_check_exists = []
 
     @staticmethod
     def get_wmi_smb_commands():

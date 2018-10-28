@@ -7,6 +7,7 @@ from axonius.adapter_exceptions import (ClientConnectionException,
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_mac
 from fortigate_adapter import consts
@@ -15,7 +16,7 @@ from fortigate_adapter.client import FortigateClient
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class FortigateAdapter(AdapterBase):
+class FortigateAdapter(AdapterBase, Configurable):
     """
     Connects axonius to Fortigate devices
     """
@@ -56,11 +57,6 @@ class FortigateAdapter(AdapterBase):
                     'title': 'Virtual Domain',
                     'type': 'string'
                 },
-                {
-                    'name': consts.DHCP_LEASE_TIME,
-                    'title': 'DHCP Lease Time (In Seconds)',
-                    'type': 'integer'
-                },
                 {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
                     'name': consts.VERIFY_SSL,
                     'title': 'Verify SSL',
@@ -76,7 +72,7 @@ class FortigateAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        dhcp_lease_time = devices_raw_data.get(consts.DHCP_LEASE_TIME, consts.DEFAULT_DHCP_LEASE_TIME)
+
         for current_interface in devices_raw_data.get('results', []):
             try:
                 for raw_device in current_interface.get('list',
@@ -100,7 +96,7 @@ class FortigateAdapter(AdapterBase):
                         # would let us know when the dhcp lease occurred which we would use as last_seen.
                         try:
                             device.last_seen = datetime.datetime.fromtimestamp(
-                                last_seen) - datetime.timedelta(seconds=dhcp_lease_time)
+                                last_seen) - datetime.timedelta(seconds=self.__dhcp_lease_time)
                         except Exception:
                             logger.exception(f'Problem getting last seen for device {raw_device}')
                         device.interface = raw_device.get('interface')
@@ -139,3 +135,29 @@ class FortigateAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network, AdapterProperty.Firewall]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': consts.DHCP_LEASE_TIME,
+                    'title': 'DHCP Lease Time (In Seconds)',
+                    'type': 'integer'
+                }
+            ],
+            'required': [
+                'onsts.DHCP_LEASE_TIME'
+            ],
+            'pretty_name': 'Fortigate Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            consts.DHCP_LEASE_TIME: consts.DEFAULT_DHCP_LEASE_TIME,
+        }
+
+    def _on_config_update(self, config):
+        self.__dhcp_lease_time = config[consts.DHCP_LEASE_TIME]

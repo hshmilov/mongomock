@@ -151,6 +151,10 @@ class LdapConnection(object):
         self.ca_file_data_param = ca_file_data
         self.cert_file_param = cert_file
         self.private_key_param = private_key
+        if (ca_file_data or cert_file or private_key) and not (ca_file_data and cert_file and private_key):
+            ca_file_data = None
+            cert_file = None
+            private_key = None
 
         self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
         self.__cert_file = create_temp_file(cert_file) if cert_file else None

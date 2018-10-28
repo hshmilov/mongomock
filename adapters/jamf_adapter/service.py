@@ -79,7 +79,7 @@ class JamfAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the Jamf Server
         """
-        return client_data.get_devices(self.__fetch_department)
+        return client_data.get_devices(self.__fetch_department, self.__should_fetch_policies)
 
     def _clients_schema(self):
         """
@@ -417,10 +417,16 @@ class JamfAdapter(AdapterBase, Configurable):
                     "name": "fetch_department",
                     "title": "Should Find Department Of Users",
                     "type": "bool"
+                },
+                {
+                    'name': 'should_fetch_policies',
+                    'type': 'bool',
+                    'title': 'Should Fetch Policies'
                 }
             ],
             "required": [
                 "fetch_department",
+                'should_fetch_policies'
             ],
             "pretty_name": "Jamf Configuration",
             "type": "array"
@@ -430,8 +436,10 @@ class JamfAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             "fetch_department": False,
+            'should_fetch_policies': True
         }
 
     def _on_config_update(self, config):
         logger.info(f"Loading Jamf config: {config}")
         self.__fetch_department = config['fetch_department']
+        self.__should_fetch_policies = config['should_fetch_policies']

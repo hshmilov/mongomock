@@ -3593,7 +3593,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         {
                             "name": "client_secret",
                             "title": "Okta application client secret",
-                            "type": "string"
+                            "type": "string",
+                            'format': 'password'
                         },
                         {
                             "name": "url",

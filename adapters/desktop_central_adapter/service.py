@@ -33,8 +33,10 @@ class DesktopCentralAdapter(AdapterBase):
         try:
             connection = DesktopCentralConnection(domain=client_config['domain'],
                                                   verify_ssl=client_config['verify_ssl'],
-                                                  username=client_config['username'], password=client_config['password'],
-                                                  url_base_prefix='api/1.0', headers={'Content-Type': 'application/json'},
+                                                  username=client_config['username'],
+                                                  password=client_config['password'],
+                                                  url_base_prefix='api/1.0',
+                                                  headers={'Content-Type': 'application/json'},
                                                   https_proxy=client_config.get('https_proxy'),
                                                   http_proxy=client_config.get('http_proxy'),
                                                   port=client_config.get('port', consts.DEFAULT_PORT),
@@ -125,11 +127,11 @@ class DesktopCentralAdapter(AdapterBase):
 
                 device = self._new_device_adapter()
                 property_none_list = []
-                for property in device_raw:
-                    if device_raw[property] == '--':
-                        property_none_list.append(property)
-                for property in property_none_list:
-                    del device_raw[property]
+                for device_property in device_raw:
+                    if device_raw[device_property] == '--':
+                        property_none_list.append(device_property)
+                for device_property in property_none_list:
+                    del device_raw[device_property]
                 if 'resource_id' not in device_raw:
                     logger.info(f'No Desktop Central device Id for {str(device_raw)}')
                     continue

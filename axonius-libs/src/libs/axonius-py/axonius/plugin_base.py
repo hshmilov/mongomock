@@ -1487,7 +1487,8 @@ class PluginBase(Configurable, Feature):
                     if len(entities_candidates) != 2:
                         logger.error(f"{len(entities_candidates)} != 2, entities_candidates: {entities_candidates}"
                                      f" and associated_adapters {correlation.associated_adapters}")
-                        raise CorrelateException(f'Link with wrong number of devices {len(associated_adapters)}')
+                        raise CorrelateException(f'Link with wrong number of devices '
+                                                 f'{len(correlation.associated_adapters)}')
 
                     collected_adapter_entities = [axonius_entity['adapters'] for axonius_entity in entities_candidates]
                     all_unique_adapter_entities_data = [v for d in collected_adapter_entities for v in d]

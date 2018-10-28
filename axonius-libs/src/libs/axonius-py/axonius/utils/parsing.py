@@ -211,6 +211,11 @@ def figure_out_os(s):
             if dist.lower() in s:
                 distribution = dist.replace("Windows ", "").replace("Windows", "").replace("Win", "")
                 break
+    elif 'android' in s:
+        os_type = 'Android'
+        version = mobile_version.findall(s)
+        if len(version):
+            distribution = version[0]
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
         linux_distributions = [ubuntu_full, "Ubuntu", "Red Hat", "Debian", "Fedora"]
@@ -241,11 +246,6 @@ def figure_out_os(s):
                     distribution = version[0]
     elif any(x in s for x in ios_names):
         os_type = 'iOS'
-        version = mobile_version.findall(s)
-        if len(version):
-            distribution = version[0]
-    elif 'android' in s:
-        os_type = 'Android'
         version = mobile_version.findall(s)
         if len(version):
             distribution = version[0]

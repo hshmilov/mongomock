@@ -24,6 +24,3 @@ class NimbulConnection(RESTConnection):
     def get_user_list(self):
         for user in self._get('users'):
             yield 'user', user
-
-        for user in self._get('apps'):
-            yield 'app', user
