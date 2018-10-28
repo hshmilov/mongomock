@@ -1,6 +1,12 @@
 #!/bin/bash
 # Simple Script to run pylint only on untracked or modified files, print the first one that failed
-
+EXCLUDE_PATHS=(devops
+               logs
+               venv
+               usr
+               .idea
+               .git
+               .venv)
 
 DIR=$(dirname ${BASH_SOURCE[0]})
 PYLINTRC=$DIR/../../pylintrc.txt
@@ -95,7 +101,19 @@ else
 fi
 
 for file in $GIT_FILES; do
-    if [ ${file: -3} == ".py" ]; then
+    skip=false
+    if  [ ${#file} -gt 3 ] && [ ${file: -3} == ".py" ]; then
+
+        for path in ${EXCLUDE_PATHS[*]}; do
+            if [[ $file == $path* ]]; then
+                skip=true;
+                echo "[*] $file in exempt_path $path - skipped"
+            fi
+        done
+
+        if $skip; then 
+            continue
+        fi
 
         # handle pep
         if [ $PEP -eq 1 ]; then

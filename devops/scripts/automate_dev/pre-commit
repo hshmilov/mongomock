@@ -5,7 +5,7 @@
 DIR=$(dirname ${BASH_SOURCE[0]})
 GIT_PYLINT=$DIR/../../devops/scripts/git-pylint.sh
 
-if $GIT_PYLINT -P -d -o 2>&1 | tee /dev/stderr | grep -q "[-]"
+if $GIT_PYLINT -P -d -o 2>&1 | tee /dev/stderr | grep -q "\[-\]"
 then
     echo "Git-Pylint Failed :( Commit Aborted";
     exit 1;
