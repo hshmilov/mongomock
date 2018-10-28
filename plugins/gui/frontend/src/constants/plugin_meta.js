@@ -93,7 +93,7 @@ export const pluginMeta = {
     },
     jamf_adapter: {
         title: 'Jamf Pro',
-        description: 'Jamf Pro is an enterprise mobility management (EMM) tool that provides unified endpoint management for Apple devices.'
+        description: 'Jamf Pro is an enterprise mobility management (EMM) tool that provides unified endpoint management for Apple devices.'
     },
     carbonblack_defense_adapter: {
         title: 'Carbon Black Cb Defense',
@@ -161,7 +161,7 @@ export const pluginMeta = {
     },
     esx_adapter: {
         title: 'VMware ESXi',
-        description: 'VMware ESXi is an enterprise-class, type-1 hypervisor for deploying and serving virtual computers. '
+        description: 'VMware ESXi is an enterprise-class, type-1 hypervisor for deploying and serving virtual computers.'
     },
     cisco_adapter: {
         title: 'Cisco',
@@ -169,7 +169,7 @@ export const pluginMeta = {
     },
     eset_adapter: {
         title: 'ESET Endpoint Security',
-        description: 'ESET Endpoint Security is an anti-malware suite for Windows with web filter, firewall, and USB drive and botnet protection.'
+        description: 'ESET Endpoint Security is an anti-malware suite for Windows with web filter, firewall, and USB drive and botnet protection.'
     },
     traiana_lab_machines_adapter: {
         title: 'Traiana Lab Machines',
@@ -177,7 +177,7 @@ export const pluginMeta = {
     },
     fortigate_adapter: {
         title: 'Fortinet FortiGate',
-        description: 'Fortniet FortiGate Next-Generation firewall provides high performance, multilayered validated security and visibility for end-to-end protection across the entire enterprise network'
+        description: 'Fortniet FortiGate Next-Generation firewall provides high performance, multilayered validated security and visibility for end-to-end protection across the entire enterprise network'
     },
     qcore_adapter: {
         title: 'Qcore',
@@ -185,11 +185,11 @@ export const pluginMeta = {
     },
     sccm_adapter: {
         title: 'Microsoft SCCM',
-        description: 'Microsoft System Center Configuration Manager (SCCM) uses on-premises Configuration Manager or Microsoft Exchange to manage PCs, servers, and devices. '
+        description: 'Microsoft System Center Configuration Manager (SCCM) uses on-premises Configuration Manager or Microsoft Exchange to manage PCs, servers, and devices.'
     },
     desktop_central_adapter: {
         title: 'ManageEngine Desktop Central',
-        description: 'ManageEngine Desktop Central is a desktop management and mobile device management software for managing desktops in LAN and across WAN and mobile devices from a central location.'
+        description: 'ManageEngine Desktop Central is a desktop management and mobile device management software for managing desktops in LAN and across WAN and mobile devices from a central location.'
     },
     forcepoint_csv_adapter: {
         title: 'Forcepoint Web Security Endpoint',
@@ -197,7 +197,7 @@ export const pluginMeta = {
     },
     csv_adapter: {
         title: 'CSV Serials',
-        description: 'The CSV Serials Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
+        description: 'The CSV Serials Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
     },
     mobileiron_adapter: {
         title: 'MobileIron EMM',
@@ -209,12 +209,12 @@ export const pluginMeta = {
     },
     juniper_adapter: {
         title: 'Juniper Junos Space',
-        description: 'Juniper Junos Space Network Management Platform automates management of Juniper’s switching, routing, and security devices.'
+        description: 'Juniper Junos Space Network Management Platform automates management of Juniper\'s switching, routing, and security devices.'
     },
-	junos_adapter: {
-		title: 'Juniper Junos',
-		description: 'The Juniper Junos Adapter connects to Juniper switches and routers.'
-	},
+    junos_adapter: {
+        title: 'Juniper Junos',
+        description: 'The Juniper Junos Adapter connects to Juniper switches and routers.'
+    },
     bitdefender_adapter: {
         title: 'Bitdefender GravityZone - BETA',
         description: 'Bitdefender GravityZone Business Security uses machine learning and heuristics to offer protection against malware, phishing, ransomware, exploits and zero-days.'

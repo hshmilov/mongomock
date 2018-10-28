@@ -16,6 +16,8 @@ Basically we do the following things:
     -> create adapters/<adapter_name>_adapter/config.ini
     -> create adapters/<adapter_name>_adapter/service.py
         -> AUTOADAPTER - implement schema, fetch devices, etc
+    -> create adapters/<adapter_name>_adapter/client_id.py
+        -> AUTOADAPTER - implement get_client_id
 
 -> create testing/test_credentials/test_<adapter_name>_credentials.py
     -> AUTOADAPTER - add client_details example
@@ -64,6 +66,7 @@ def get_action_table(adapter_name: str) -> OrderedDict:
         f'adapters/{adapter_name}_adapter/__init__.py': (not_exists_validator, adapter_init_action),
         f'adapters/{adapter_name}_adapter/config.ini': (not_exists_validator, config_ini_action),
         f'adapters/{adapter_name}_adapter/service.py': (not_exists_validator, service_action),
+        f'adapters/{adapter_name}_adapter/client_id.py': (not_exists_validator, client_id_action),
         f'testing/test_credentials/test_{adapter_name}_credentials.py': (not_exists_validator, creds_action),
         f'testing/services/adapters/{adapter_name}_service.py': (not_exists_validator, test_service_action),
         f'testing/parallel_tests/test_{adapter_name}.py': (not_exists_validator, parallel_tests_action),
@@ -77,7 +80,6 @@ def not_exists_validator(filename: str, _):
     ''' validate that filename isn't exists in cortex dir
         :raise: ValidateError on failure'''
 
-    filename = os.path.join(get_cortex_dir(), filename)
     if os.path.exists(filename):
         raise ValidateError(f'File {filename} already exists')
 
@@ -86,9 +88,8 @@ def description_validator(filename: str, adapter_name: str):
     ''' Validate that there is no description for the given adapter_name
         :raise: ValidateError on failure'''
 
-    filename = os.path.join(get_cortex_dir(), filename)
-    file_data = open(filename, 'rb').read()
-    if f'{adapter_name}_adapter'.encode() in file_data:
+    file_data = open(filename, 'r', encoding='utf-8').read()
+    if f'{adapter_name}_adapter' in file_data:
         raise ValidateError(f'Description for "{adapter_name}" already defined in {filename}')
 
 
@@ -96,8 +97,7 @@ def port_validator(filename: str, adapter_name: str):
     ''' Validate that there is no port for the given adapter_name
         :raise: ValidateError on failure'''
 
-    filename = os.path.join(get_cortex_dir(), filename)
-    file_data = open(filename, 'r').read()
+    file_data = open(filename, 'r', encoding='utf-8').read()
     if f'{adapter_name}_adapter' in file_data:
         raise ValidateError(f'port for "{adapter_name}" already defined in {filename}')
 
@@ -109,7 +109,6 @@ def description_action(filename: str, adapter_name: str):
     new_description = "    %s_adapter: {\n        title: 'AUTOADAPTER',\n        description: 'AUTOADAPTER'\n    },\n" % (
         adapter_name, )
 
-    filename = os.path.join(get_cortex_dir(), filename)
     lines = open(filename, 'r', encoding='utf-8').readlines()
 
     for i, line in enumerate(lines):
@@ -131,20 +130,17 @@ def image_action(filename: str, adapter_name: str):
 
     placeholder = f"AUTOADAPTER - replace this file with logo for {adapter_name}"
 
-    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(placeholder)
 
 
 def adapter_dir_action(filename: str, _):
     ''' Create the base directory for the adapter '''
-    filename = os.path.join(get_cortex_dir(), filename)
     os.makedirs(filename)
 
 
 def adapter_init_action(filename: str, _):
     ''' Create __init__.py file for the adapter '''
-    filename = os.path.join(get_cortex_dir(), filename)
     open(filename, 'w').close()
 
 
@@ -159,7 +155,6 @@ host = 0.0.0.0
 port = 443
 core_address = https://core"""
 
-    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -169,12 +164,14 @@ def service_action(filename: str, adapter_name: str):
     template = \
         """
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
 
+from %s_adapter.client_id import get_client_id
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.adapter_exceptions import ClientConnectionException
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class %sAdapter(AdapterBase):
@@ -185,7 +182,7 @@ class %sAdapter(AdapterBase):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return 'AUTOADAPTER - you should return the id (for example: client_config["hostname"])'
+        return get_client_id(client_config)
 
     def _test_reachability(self, client_config):
         'AUTOADAPTER - add code that tests client reachability'
@@ -204,12 +201,12 @@ class %sAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "items": [
+            'items': [
                 'AUTOADAPTER - add items'
             ],
-            "required": [
+            'required': [
             ],
-            "type": "array"
+            'type': 'array'
         }
 
     def create_device(self, raw_device_data):
@@ -229,8 +226,16 @@ class %sAdapter(AdapterBase):
     def adapter_properties(cls):
         'AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets]
-""" % (capitalize_adapter_name(adapter_name), )
-    filename = os.path.join(get_cortex_dir(), filename)
+""" % (adapter_name, capitalize_adapter_name(adapter_name))
+    with open(filename, 'w') as file_:
+        file_.write(template)
+
+
+def client_id_action(filename: str, _):
+    template = \
+        """def get_client_id(client_config):
+    return 'AUTOADAPTER - you should return the id (for example: client_config["hostname"])'
+"""
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -243,7 +248,6 @@ def creds_action(filename: str, _):
 
 SOME_DEVICE_ID = 'AUTOADAPTER - give one device_id that should return from the above client'
 """
-    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -268,7 +272,6 @@ def {adapter_name}_fixture(request):
     initialize_fixture(request, service)
     return service
 """
-    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -279,7 +282,7 @@ def parallel_tests_action(filename: str, adapter_name: str):
         f"""from services.adapters.{adapter_name}_service import {capitalize_adapter_name(adapter_name)}Service, {adapter_name}_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_{adapter_name}_credentials import *
-from {adapter_name}_adapter.service import {capitalize_adapter_name(adapter_name)}Adapter
+from {adapter_name}_adapter.client_id import get_client_id
 import pytest
 
 
@@ -290,7 +293,7 @@ class Test{capitalize_adapter_name(adapter_name)}Adapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return {capitalize_adapter_name(adapter_name)}Adapter._get_client_id(None, client_details)
+        return get_client_id(client_details)
 
     @property
     def some_client_details(self):
@@ -300,7 +303,6 @@ class Test{capitalize_adapter_name(adapter_name)}Adapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 """
-    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -309,8 +311,7 @@ def ports_action(filename: str, adapter_name: str):
     ''' Appends port to the ports file '''
     regex = r".*'(.*?)':.*(\D.*?),.*"
 
-    filename = os.path.join(get_cortex_dir(), filename)
-    lines = open(filename, 'r').readlines()
+    lines = open(filename, 'r', encoding='utf-8').readlines()
     mongoline = None
     highest_port = 0
 
@@ -363,6 +364,7 @@ def validate_files(adapter_name: str):
     are about to create. """
 
     for filename, (validator, _) in get_action_table(adapter_name).items():
+        filename = os.path.join(get_cortex_dir(), filename)
         validator(filename, adapter_name)
 
 
@@ -370,6 +372,7 @@ def create_files(adapter_name: str):
     """ create needed files """
 
     for filename, (_, action) in get_action_table(adapter_name).items():
+        filename = os.path.join(get_cortex_dir(), filename)
         action(filename, adapter_name)
 
 
