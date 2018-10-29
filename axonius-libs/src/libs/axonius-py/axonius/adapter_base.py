@@ -478,7 +478,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 if not client_config:
                     logger.info(f'{failure_line} - invalid client')
                     return return_error("Invalid client")
-
+                logger.info(f'Starting to add client {client_config}')
                 try:
                     client_id = self._get_client_id(client_config)
                 except Exception:
@@ -511,6 +511,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         :return:
         """
         with self._clients_lock:
+            logger.info(f'Deleting client {client_unique_id}')
             client = self._clients_collection.find_one_and_delete({'_id': ObjectId(client_unique_id)})
             if client is None:
                 return '', 204

@@ -1097,12 +1097,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'DELETE':
             plugin_name = self.get_plugin_by_name(adapter_unique_name)[PLUGIN_NAME]
             delete_entities = request.args.get('deleteEntities', False)
+            logger.info(f'Delete request for {plugin_name} [{adapter_unique_name}]'
+                        f' and delete entities - {delete_entities}, client_id: {client_id}')
             if delete_entities:
                 client_from_db = self._get_collection('clients', adapter_unique_name). \
                     find_one({'_id': ObjectId(client_id)})
                 if client_from_db:
                     # this is the "client_id" - i.e. AD server or AWS Access Key
                     local_client_id = client_from_db['client_id']
+                    logger.info(f'client from db: {client_from_db}')
                     entities_to_rebuild = []
                     for entity_type in EntityType:
                         res = self._entity_db_map[entity_type].update_many(
@@ -1162,29 +1165,30 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         if not to_rebuild:
                             continue
 
-                        def async_delete_entities():
-                            entities_to_delete = self._entity_db_map[entity_type].find(
-                                {
-                                    'adapters': {
-                                        '$elemMatch': {
-                                            "$and": [
-                                                {
-                                                    PLUGIN_NAME: plugin_name
-                                                },
-                                                {
-                                                    # and the device must be from this adapter
-                                                    "client_used": local_client_id
-                                                }
-                                            ]
-                                        }
+                        entities_to_pass_to_be_deleted = list(self._entity_db_map[entity_type].find(
+                            {
+                                'adapters': {
+                                    '$elemMatch': {
+                                        "$and": [
+                                            {
+                                                PLUGIN_NAME: plugin_name
+                                            },
+                                            {
+                                                # and the device must be from this adapter
+                                                "client_used": local_client_id
+                                            }
+                                        ]
                                     }
-                                },
-                                projection={
-                                    'adapters.client_used': True,
-                                    'adapters.data.id': True,
-                                    f'adapters.{PLUGIN_UNIQUE_NAME}': True,
-                                    f'adapters.{PLUGIN_NAME}': True,
-                                })
+                                }
+                            },
+                            projection={
+                                'adapters.client_used': True,
+                                'adapters.data.id': True,
+                                f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+                                f'adapters.{PLUGIN_NAME}': True,
+                            }))
+
+                        def async_delete_entities(entity_type, entities_to_delete):
                             with ThreadPool(5) as pool:
                                 def delete_adapters(entity):
                                     try:
@@ -1203,7 +1207,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
                         # while we can quickly mark all adapters to be pending_delete
                         # we still want to run a background task to delete them
-                        run_and_forget(async_delete_entities)
+                        run_and_forget(lambda: async_delete_entities(entity_type, entities_to_pass_to_be_deleted))
 
                         entities_to_rebuild += to_rebuild
 
