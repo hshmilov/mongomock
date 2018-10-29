@@ -29,7 +29,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from bson import ObjectId, json_util
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, has_request_context, session
 from funcy import chunks
 from namedlist import namedtuple
 from promise import Promise
@@ -51,7 +51,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORE_UNIQUE_NAME, GUI_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           TROUBLESHOOTING_SETTING,
-                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME)
+                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, X_UI_USER, X_UI_USER_SOURCE)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
@@ -360,7 +360,7 @@ class PluginBase(Configurable, Feature):
 
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
-        AXONIUS_REST.url_map.strict_slashes = False     # makes routing to "page" and "page/" the same.
+        AXONIUS_REST.url_map.strict_slashes = False  # makes routing to "page" and "page/" the same.
         self.wsgi_app = AXONIUS_REST
 
         for section in self.config.sections():
@@ -667,6 +667,12 @@ class PluginBase(Configurable, Feature):
             url = '{0}/{1}/{2}'.format(self.core_address,
                                        plugin_unique_name, resource)
 
+        if has_request_context():
+            user = session.get('user', {}).get('user_name')
+            user_source = session.get('user', {}).get('source')
+            headers[X_UI_USER] = user
+            headers[X_UI_USER_SOURCE] = user_source
+
         return requests.request(method, url, headers=headers, **kwargs)
 
     def _request_db_rebuild(self, sync=True, internal_axon_ids: List[str] = None):
@@ -675,6 +681,7 @@ class PluginBase(Configurable, Feature):
         :param sync: whether or not you want to wait until it ends
         :param internal_axon_ids: if you want to rebuild only a part of the db, give the internal_axon_ids here
         """
+
         def make_request():
             axon_ids = internal_axon_ids
             if axon_ids and len(axon_ids) > 50000:

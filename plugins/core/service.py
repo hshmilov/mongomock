@@ -17,7 +17,7 @@ from multiprocessing.pool import ThreadPool
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
 from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
 
@@ -412,6 +412,8 @@ class CoreService(PluginBase, Configurable):
             'x-api-key': url_data['api_key'],
             'x-unique-plugin-name': calling_plugin[PLUGIN_UNIQUE_NAME],
             'x-plugin-name': calling_plugin['plugin_name'],
+            X_UI_USER: request.headers.get(X_UI_USER),
+            X_UI_USER_SOURCE: request.headers.get(X_UI_USER_SOURCE)
         }
         copy_headers = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding']
         headers.update({h: request.headers[h] for h in copy_headers if request.headers.get(h, '') != ''})

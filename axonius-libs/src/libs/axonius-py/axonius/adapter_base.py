@@ -16,7 +16,7 @@ import func_timeout
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.mixins.configurable import Configurable
@@ -470,8 +470,10 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
            PUT (expects client data) - Adds a new client, or updates existing one, according to given data.
                                        Uniqueness compared according to _get_client_id value.
         """
-        success_line = adapter_consts.LOG_CLIENT_SUCCESS_LINE
-        failure_line = adapter_consts.LOG_CLIENT_FAILURE_LINE
+        ui_user = request.headers.get(X_UI_USER)
+        source = request.headers.get(X_UI_USER_SOURCE)
+        success_line = f'{ui_user}[{source}]: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
+        failure_line = f'{ui_user}[{source}]: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
         with self._clients_lock:
             if self.get_method() == 'PUT':
                 client_config = request.get_json(silent=True)

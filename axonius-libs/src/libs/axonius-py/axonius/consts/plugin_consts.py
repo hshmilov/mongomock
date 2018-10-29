@@ -27,3 +27,6 @@ CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
 DASHBOARD_COLLECTION = 'dashboard'
 VERSION_COLLECTION = 'version'
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
+
+X_UI_USER = 'x-ui-user'
+X_UI_USER_SOURCE = 'x-ui-user-source'

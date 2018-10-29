@@ -1,6 +1,7 @@
 import json_log_formatter
 from datetime import datetime
 import inspect
+from flask import has_request_context, session
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
@@ -50,6 +51,16 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                         extra['location'] = f"{extra['filename']}:{extra['funcName']}:{extra['lineNumber']}"
 
                         break
+
+                if has_request_context():
+                    user = session.get('user', {}).get('user_name')
+                    if user:
+                        extra['ui_user'] = user
+
+                    source = session.get('user', {}).get('source')
+                    if source:
+                        extra['ui_user_source'] = source
+
             except Exception:
                 pass
         except Exception:
