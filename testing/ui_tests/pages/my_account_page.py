@@ -49,3 +49,12 @@ class MyAccountPage(Page):
 
     def wait_for_passwords_dont_match_toaster(self):
         self.wait_for_toaster(self.PASSWORDS_DONT_MATCH_TOASTER)
+
+    def change_password(self, current, new1, new2, wait_for=None):
+        self.click_change_admin_password()
+        self.fill_current_password(current)
+        self.fill_new_password(new1)
+        self.fill_confirm_password(new2)
+        self.click_save_button()
+        if wait_for:
+            wait_for()

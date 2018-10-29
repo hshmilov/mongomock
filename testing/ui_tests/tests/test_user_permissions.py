@@ -33,7 +33,7 @@ class TestUserPermissions(TestBase):
                                            ui_consts.FIRST_NAME,
                                            ui_consts.LAST_NAME)
 
-        self.settings_page.wait_for_toaster('User created.')
+        self.settings_page.wait_for_user_created_toaster()
 
         for label in self.settings_page.get_permission_labels():
             self.settings_page.select_permissions(label, self.settings_page.READ_ONLY_PERMISSION)
@@ -73,3 +73,42 @@ class TestUserPermissions(TestBase):
         self.users_page.click_row()
         with pytest.raises(NoSuchElementException):
             self.devices_page.add_new_tag(ui_consts.TAG_NAME)
+
+    def test_new_user_change_password(self):
+        self.settings_page.switch_to_page()
+
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.create_new_user(ui_consts.RESTRICTED_USERNAME,
+                                           ui_consts.NEW_PASSWORD,
+                                           ui_consts.FIRST_NAME,
+                                           ui_consts.LAST_NAME)
+
+        self.settings_page.wait_for_user_created_toaster()
+
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=ui_consts.NEW_PASSWORD)
+
+        self.my_account_page.switch_to_page()
+        self.my_account_page.change_password(
+            ui_consts.NEW_PASSWORD,
+            self.password,
+            self.password,
+            self.my_account_page.wait_for_password_changed_toaster)
+
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=self.password)
+        self.my_account_page.switch_to_page()
+
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=self.username, password=self.password)
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.click_remove_user()
+        self.settings_page.click_confirm_remove_user()
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=self.password)
+        assert self.login_page.wait_for_invalid_login_message()

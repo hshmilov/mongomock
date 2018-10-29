@@ -196,6 +196,12 @@ class SettingsPage(Page):
     def wait_for_saved_successfully_toaster(self):
         self.wait_for_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
 
+    def wait_for_user_created_toaster(self):
+        self.wait_for_toaster('User created.')
+
+    def wait_for_user_permissions_saved_toaster(self):
+        self.wait_for_toaster('User permissions saved.')
+
     def find_allow_ldap_logins_toggle(self):
         return self.find_checkbox_by_label(self.LDAP_LOGINS_LABEL)
 
@@ -276,3 +282,9 @@ class SettingsPage(Page):
                   'Reports',
                   'Settings')
         return labels
+
+    def click_remove_user(self):
+        self.click_button_by_id('user-settings-remove')
+
+    def click_confirm_remove_user(self):
+        self.click_button('Remove User')
