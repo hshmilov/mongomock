@@ -70,3 +70,4 @@ dsp3==0.1rc34
 kubernetes==7.0.0
 oci==2.0.5
 python3-saml==1.4.1
+cachetools==2.1.0
