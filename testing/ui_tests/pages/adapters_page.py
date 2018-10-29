@@ -11,6 +11,8 @@ class AdaptersPage(EntitiesPage):
     ROOT_PAGE_CSS = 'li#adapters.x-nested-nav-item'
     SEARCH_TEXTBOX_CSS = 'div.search-input > input.input-value'
     TABLE_ROW_CLASS = 'table-row'
+    RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
+    ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.configuration>a'
 
     @property
     def url(self):
@@ -43,6 +45,15 @@ class AdaptersPage(EntitiesPage):
 
     def click_new_server(self):
         self.click_button_by_id('new_server')
+
+    def click_advanced_settings(self):
+        self.find_element_by_text('Advanced Settings').click()
+
+    def save_advanced_settings(self):
+        self.driver.find_element_by_css_selector(self.ADVANCED_SETTINGS_SAVE_BUTTON_CSS).click()
+
+    def check_rt_adapter(self):
+        self.driver.find_element_by_css_selector(self.RT_CHECKBOX_CSS).click()
 
     def assert_screen_is_restricted(self):
         self.switch_to_page()

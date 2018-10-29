@@ -128,6 +128,25 @@ class Triggerable(Feature, ABC):
                     f' from {self.get_caller_plugin_name()}')
         return self._trigger(job_name, blocking, priority, request.get_json(silent=True))
 
+    @add_rule('wait/<job_name>', methods=['GET'])
+    def wait_for_job(self, job_name):
+        """
+        If a certain job is running, this waits for it to finish, and returns the last return value
+        :param job_name: The job to wait for
+        """
+        logger.info(f'Waiting for {job_name} from {self.get_caller_plugin_name()}')
+        with self.__trigger_lock:
+            job_state = self._get_state_or_default(job_name)
+
+        promise = job_state['promise']
+        if promise:
+            Promise.wait(promise)
+            if promise.is_rejected:
+                logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
+                return 'Error has occurred', 500
+            return promise.value or ''
+        return ''
+
     def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None):
         if priority:
             return self._triggered_facade(job_name, post_json) or ''
@@ -144,7 +163,7 @@ class Triggerable(Feature, ABC):
             if promise:
                 Promise.wait(promise)
                 if promise.is_rejected:
-                    logger.exception(promise.value)
+                    logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
                     return 'Error has occurred', 500
                 return promise.value or ''
         return ''

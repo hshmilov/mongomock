@@ -9,11 +9,15 @@ import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from axonius.consts.plugin_consts import PLUGIN_NAME
+from axonius.adapter_base import AdapterBase
+
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
+    STATIC_CORRELATOR_PLUGIN_NAME, CORE_UNIQUE_NAME
+from axonius.consts.scheduler_consts import SchedulerState
 
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts import plugin_consts, scheduler_consts
+from axonius.consts import plugin_consts, scheduler_consts, adapter_consts
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
@@ -38,7 +42,11 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         # whether or not stopping sequence has initiated
         self.__stopping_initiated = False
 
-        self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
+        self.state = SchedulerState()
+
+        # this lock is held while the system performs a rt process or a process that musn't run in parallel
+        # to fetching or correlation
+        self.__realtime_lock = threading.Lock()
 
         # This lock is held while the system is trying to stop
         self.__stopping_lock = threading.Lock()
@@ -52,13 +60,20 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                                                max_instances=1)
         self._research_phase_scheduler.start()
 
+        self.__realtime_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(1)})
+        self.__realtime_scheduler.add_job(func=self.__run_realtime_adapters,
+                                          trigger=IntervalTrigger(seconds=30),
+                                          next_run_time=datetime.now(),
+                                          max_instances=1)
+        self.__realtime_scheduler.start()
+
     @add_rule('state', should_authenticate=False)
     def get_state(self):
         """
         Get plugin state.
         """
         return jsonify({
-            'state': self.state,
+            'state': self.state._asdict(),
             'stopping': self.__stopping_initiated
         })
 
@@ -75,6 +90,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
     def _on_config_update(self, config):
         logger.info(f'Loading SystemScheduler config: {config}')
 
+        self.__constant_alerts = config['discovery_settings']['constant_alerts']
         self.__system_research_rate = float(config['discovery_settings']['system_research_rate'])
         logger.info(f'Setting research rate to: {self.__system_research_rate}')
         scheduler = getattr(self, '_research_phase_scheduler', None)
@@ -107,6 +123,12 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                             'type': 'bool',
                             'required': True
                         },
+                        {
+                            'name': 'constant_alerts',
+                            'title': 'Should alerts be triggered all the time',
+                            'type': 'bool',
+                            'required': True
+                        }
                     ],
                     'name': 'discovery_settings',
                     'title': 'Discovery Settings',
@@ -121,7 +143,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         return {
             'discovery_settings': {
                 'system_research_rate': 12,
-                'save_history': True
+                'save_history': True,
+                'constant_alerts': False
             }
         }
 
@@ -135,7 +158,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         logger.info(
             f'{self.get_caller_plugin_name()} notified that {received_update["adapter_name"]} finished fetching data.'
             f' {received_update["portion_of_adapters_left"]} left.')
-        self.state[scheduler_consts.StateLevels.SubPhaseStatus.name] = received_update['portion_of_adapters_left']
+        with self.__realtime_lock:
+            self.state.SubPhaseStatus = received_update['portion_of_adapters_left']
         return ''
 
     def _triggered(self, job_name: str, post_json: dict, *args):
@@ -159,7 +183,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         A context manager that enters research phase if it's not already under way.
         :return:
         """
-        if self.state[scheduler_consts.StateLevels.Phase.name] is scheduler_consts.Phases.Research.name:
+        if self.state.Phase is scheduler_consts.Phases.Research:
             raise PhaseExecutionException(
                 f'{scheduler_consts.Phases.Research.name} is already executing.')
         if self.__stopping_initiated:
@@ -167,8 +191,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             return
         else:
             # Change current phase
-            logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
             self.current_phase = scheduler_consts.Phases.Research
+            logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
             try:
                 yield
             except StopThreadException:
@@ -176,9 +200,9 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             except BaseException:
                 logger.exception(f'Failed {scheduler_consts.Phases.Research.name} Phase.')
             finally:
-                self.current_phase = scheduler_consts.Phases.Stable
                 logger.info(f'Back to {scheduler_consts.Phases.Stable} Phase.')
-                self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
+                self.current_phase = scheduler_consts.Phases.Stable
+                self.state = SchedulerState()
 
     @stoppable
     def __start_research(self):
@@ -188,14 +212,21 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         """
 
         def _change_subphase(subphase: scheduler_consts.ResearchPhases):
-            self.state[scheduler_consts.StateLevels.SubPhase.name] = subphase.name
+            with self.__realtime_lock:
+                self.state.SubPhase = subphase
             logger.info(f'Started Subphase {subphase}')
 
         with self._start_research():
-            self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
+            self.state.Phase = scheduler_consts.Phases.Research
+            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
+
+            try:
+                # this is important and is described at https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
+                self.request_remote_plugin('wait/execute', 'reports')
+            except Exception as e:
+                logger.exception(f'Failed waiting for alerts before cycle {e}')
 
             # Fetch Devices Data.
-            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
             self._run_aggregator_phase(PluginSubtype.AdapterBase)
 
             # Fetch Scanners Data.
@@ -204,6 +235,15 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
             # Clean old devices.
             _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
+
+            for adapter in self.__get__all_adapters():
+                try:
+                    # this is important and is described at
+                    # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
+                    self.request_remote_plugin('wait/insert_to_db', adapter[PLUGIN_UNIQUE_NAME])
+                except Exception as e:
+                    logger.exception(f'Failed waiting for adapter cycle {e}')
+
             self._run_cleaning_phase()
 
             # Run Pre Correlation plugins.
@@ -227,6 +267,84 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             self._request_db_rebuild(sync=True)
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
 
+    def __get__all_adapters(self):
+        with self._get_db_connection() as db_connection:
+            return list(db_connection[CORE_UNIQUE_NAME]['configs'].find({
+                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+            }
+            ))
+
+    def __get_all_realtime_adapters(self):
+        with self._get_db_connection() as db_connection:
+            for adapter in self.__get__all_adapters():
+                config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
+                    'config_name': AdapterBase.__name__
+                })
+                if config:
+                    config = config.get('config')
+                    if config:
+                        if config.get('realtime_adapter'):
+                            yield adapter
+
+    def __run_realtime_adapters(self):
+        """
+        Triggers realtime adapters and correlations as long as a cycle hasn't taken place
+        :return:
+        """
+        with self.__realtime_lock:
+            try:
+                if self.state.SubPhase is None:
+                    # Not in cycle - can do all
+                    should_trigger_plugins = True
+                    should_fetch_rt_adapter = True
+
+                elif self.state.SubPhase in [scheduler_consts.ResearchPhases.Fetch_Devices,
+                                             scheduler_consts.ResearchPhases.Fetch_Scanners]:
+                    # In cycle and fetching entities - no alerts for consistency
+                    should_trigger_plugins = False
+                    should_fetch_rt_adapter = True
+
+                else:
+                    # In cycle and after fetching entities - can't do anything for consistency
+                    should_trigger_plugins = False
+                    should_fetch_rt_adapter = False
+
+                logger.info(f'RT Cycle, plugins - {should_trigger_plugins} and adapters - {should_fetch_rt_adapter} '
+                            f'state - {self.state}')
+                if should_fetch_rt_adapter:
+                    adapters_to_call = list(self.__get_all_realtime_adapters())
+                    if not adapters_to_call:
+                        logger.info('No adapters to call, not doing anything at all')
+                        return
+
+                    for adapter_to_call in adapters_to_call:
+                        logger.info(f'Fetching from rt adapter {adapter_to_call[PLUGIN_UNIQUE_NAME]}')
+                        try:
+                            self.request_remote_plugin(
+                                'trigger/insert_to_db?blocking=False',
+                                adapter_to_call[PLUGIN_UNIQUE_NAME],
+                                'post')
+                        except Exception as e:
+                            logger.exception(f'Failed triggering {plugin_unique_name} as part of realtime - {e}')
+
+                if should_trigger_plugins:
+                    plugins_to_call = [STATIC_CORRELATOR_PLUGIN_NAME]
+
+                    if self.__constant_alerts:
+                        plugins_to_call.append('reports')
+
+                    for plugin_unique_name in plugins_to_call:
+                        logger.info(f'Executing plugin {plugin_unique_name}')
+                        try:
+                            self.request_remote_plugin(
+                                'trigger/execute?blocking=False',
+                                plugin_unique_name,
+                                'post')
+                        except Exception as e:
+                            logger.exception(f'Failed triggering {plugin_unique_name} as part of realtime - {e}')
+            finally:
+                logger.info('Finished RT cycle')
+
     def _get_plugins(self, plugin_subtype: PluginSubtype):
         """
         Get registered plugins from core, filtered by plugin_subtype.
@@ -244,6 +362,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         :param plugin_subtype: A plugin_subtype to filter.
         :return:
         """
+
         def run_trigger_on_plugin(plugin: dict):
             """
             Performs trigger/execute according to what we want
@@ -305,10 +424,10 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         if response.status_code not in (200, 403):
             logger.exception(
                 f'Executing {args[1]} failed as part of '
-                f'{self.state[scheduler_consts.StateLevels.SubPhase.name]} subphase failed.')
+                f'{self.state.SubPhase} subphase failed.')
             raise PhaseExecutionException(
                 f'Executing {args[1]} failed as part of '
-                f'{self.state[scheduler_consts.StateLevels.SubPhase.name]} subphase failed.')
+                f'{self.state.SubPhase} subphase failed.')
 
     @property
     def plugin_subtype(self) -> PluginSubtype:
@@ -332,9 +451,10 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                     _wait_for_stable()
                 except Exception:
                     logger.exception('Couldn\'t stop plugins for more than a while - forcing stop')
-                    self.current_phase = scheduler_consts.Phases.Stable
-                    self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
-                    logger.info(f'{self.current_phase} and {self.state}')
+                    with self.__realtime_lock:
+                        self.current_phase = scheduler_consts.Phases.Stable
+                        self.state = SchedulerState()
+                        logger.info(f'{self.current_phase} and {self.state}')
                     self._restore_to_running_state()
                 else:
                     logger.info("Finished waiting for stable")

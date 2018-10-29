@@ -1,12 +1,8 @@
 import pytest
 
 # pylint: disable=redefined-outer-name,unused-import
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.consts.scheduler_consts import Phases, StateLevels
 from services.adapters.ad_service import ad_fixture
 from services.adapters.esx_service import esx_fixture
-from test_credentials import test_esx_credentials
-from test_helpers import utils
 
 pytestmark = pytest.mark.sanity
 

@@ -358,8 +358,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
     def insert_data_to_db(self, client_name: str = None):
         """
-        /insert_to_db?client_name=(None or Client name)
-
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
         """
@@ -1192,6 +1190,11 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                     "name": "fetching_timeout",
                     "title": "Timeout for fetching in seconds, on a per entity basis",
                     "type": "number",
+                },
+                {
+                    "name": "realtime_adapter",
+                    "title": "Should this adapter be fetched real time",
+                    "type": "bool",
                 }
             ],
             "required": [
@@ -1209,5 +1212,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
             "user_last_fetched_threshold_hours": cls.DEFAULT_USER_LAST_FETCHED,
             "minimum_time_until_next_fetch": cls.DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH,
             "connect_client_timeout": cls.DEFAULT_CONNECT_CLIENT_TIMEOUT,
-            "fetching_timeout": cls.DEFAULT_FETCHING_TIMEOUT
+            "fetching_timeout": cls.DEFAULT_FETCHING_TIMEOUT,
+            "realtime_adapter": False
         }

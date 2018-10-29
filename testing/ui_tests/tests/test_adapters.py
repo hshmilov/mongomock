@@ -7,6 +7,7 @@ from services.adapters.gotoassist_service import GotoassistService
 JSON_ADAPTER_SEARCH = 'json'
 JSON_ADAPTER_TEXT_FROM_DESCRIPTION = 'formatted'
 JSON_ADAPTER_NAME = 'JSON File'
+JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
 
 
 class TestAdapters(TestBase):

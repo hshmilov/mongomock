@@ -1,6 +1,6 @@
 import requests
 from retrying import retry
-from axonius.consts.scheduler_consts import StateLevels, Phases
+from axonius.consts.scheduler_consts import Phases, SchedulerState
 
 from services.plugin_service import PluginService, API_KEY_HEADER
 
@@ -36,8 +36,8 @@ class SystemSchedulerService(PluginService):
         Waits until scheduler is running or not running or raises
         """
         scheduler_state = self.current_state().json()
-        state = scheduler_state['state']
-        assert (state[StateLevels.Phase.name] == Phases.Stable.name) == is_scheduler_at_rest
+        state = SchedulerState(**scheduler_state['state'])
+        assert (state.Phase == Phases.Stable.name) == is_scheduler_at_rest
 
     def _migrate_db(self):
         super()._migrate_db()

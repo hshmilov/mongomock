@@ -27,6 +27,7 @@ from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
+from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           ANALYTICS_SETTING,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -40,7 +41,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           SYSTEM_SETTINGS,
                                           TROUBLESHOOTING_SETTING)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.scheduler_consts import Phases, ResearchPhases, StateLevels
+from axonius.consts.scheduler_consts import Phases, ResearchPhases, SchedulerState
 from axonius.email_server import EmailServer
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.logging.metric_helper import log_metric
@@ -79,7 +80,6 @@ from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
-
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -253,7 +253,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
 
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
-        self.wsgi_app.config['SECRET_KEY'] = self.api_key   # a secret key which is used in sessions created by flask
+        self.wsgi_app.config['SECRET_KEY'] = self.api_key  # a secret key which is used in sessions created by flask
 
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
@@ -935,8 +935,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection() as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({
-                'plugin_type': {'$in': ['Adapter', 'ScannerAdapter']}}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            adapters_from_db = db_connection[CORE_UNIQUE_NAME]['configs'].find(
+                {
+                    'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+                }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:
                 adapter_name = adapter[PLUGIN_UNIQUE_NAME]
@@ -1751,7 +1753,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             # users re-created next time they log in. This is bad! If you change this, please change
             # the upgrade script as well.
             self.__exteranl_login_successful(
-                'okta',     # Look at the comment above
+                'okta',  # Look at the comment above
                 claims['email'],
                 claims.get('given_name', ''),
                 claims.get('family_name', '')
@@ -1815,7 +1817,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             # Notice! If you change the first parameter, then our CURRENT customers will have their
             # users re-created next time they log in. This is bad! If you change this, please change
             # the upgrade script as well.
-            self.__exteranl_login_successful('ldap',    # look at the comment above
+            self.__exteranl_login_successful('ldap',  # look at the comment above
                                              user.get('displayName') or user_name,
                                              user.get('givenName') or '',
                                              user.get('sn') or '',
@@ -1947,7 +1949,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 # Notice! If you change the first parameter, then our CURRENT customers will have their
                 # users re-created next time they log in. This is bad! If you change this, please change
                 # the upgrade script as well.
-                self.__exteranl_login_successful('saml',    # look at the comment above
+                self.__exteranl_login_successful('saml',  # look at the comment above
                                                  name_id,
                                                  given_name or name_id,
                                                  surname or '',
@@ -2937,9 +2939,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error(f"Error fetching status of system scheduler. Reason: {state_response.text}")
 
         state_response = state_response.json()
-        state = state_response['state']
+        state = SchedulerState(**state_response['state'])
         is_stopping = state_response['stopping']
-        is_research = state[StateLevels.Phase.name] == Phases.Research.name
+        is_research = state.Phase == Phases.Research.name
 
         if is_stopping:
             nice_state = ResearchStatus.stopping
@@ -2955,10 +2957,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         sub_phases = []
         found_current = False
         for sub_phase in ResearchPhases:
-            if is_research and sub_phase.name == state[StateLevels.SubPhase.name]:
+            if is_research and sub_phase.name == state.SubPhase:
                 # Reached current status - set complementary of SubPhaseStatus value
                 found_current = True
-                sub_phases.append({'name': sub_phase.name, 'status': 1 - (state[StateLevels.SubPhaseStatus.name] or 1)})
+                sub_phases.append({'name': sub_phase.name, 'status': 1 - (state.SubPhaseStatus or 1)})
             else:
                 # Set 0 or 1, depending if reached current status yet
                 sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})

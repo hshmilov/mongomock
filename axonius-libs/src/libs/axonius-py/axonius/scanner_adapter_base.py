@@ -284,10 +284,6 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
         return raw_data, parsed_data
 
     @property
-    def plugin_type(self):
-        return ADAPTER_PLUGIN_TYPE
-
-    @property
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.ScannerAdapter
 

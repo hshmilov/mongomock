@@ -1,5 +1,7 @@
 from enum import Enum, auto
 
+from namedlist import namedlist
+
 
 class Phases(Enum):
     """
@@ -24,16 +26,11 @@ class ResearchPhases(Enum):
     Save_Historical = auto()
 
 
-class StateLevels(Enum):
-    """
-    Data saved about system's current state including the phase, the sub-phase, if there is one, and its status
-    """
-    Phase = auto()
-    SubPhase = auto()
-    SubPhaseStatus = auto()
+SchedulerState = namedlist('SchedulerState',
+                           [
+                               ('SubPhase', None),
+                               ('SubPhaseStatus', None),
+                               ('Phase', Phases.Stable)],
+                           )
 
-
-SCHEDULER_INIT_STATE = {StateLevels.Phase.name: Phases.Stable.name,
-                        StateLevels.SubPhase.name: None,
-                        StateLevels.SubPhaseStatus.name: None}
 RESEARCH_THREAD_ID = 'phase_thread'

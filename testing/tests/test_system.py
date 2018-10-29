@@ -4,7 +4,6 @@ import time
 import pytest
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
-from axonius.consts.scheduler_consts import StateLevels, Phases
 from services.adapters.infinite_sleep_service import InfiniteSleepService, infinite_sleep_fixture
 from services.adapters.stresstest_scanner_service import StresstestScannerService, StresstestScanner_fixture
 from services.adapters.stresstest_service import StresstestService, Stresstest_fixture

@@ -1,5 +1,7 @@
 import re
 
+from retrying import retry
+
 from ui_tests.pages.page import Page
 
 
@@ -38,6 +40,8 @@ class EntitiesPage(Page):
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
+    ALL_COLUMN_NAMES_CSS = 'thead>tr>th'
+    ALL_ENTITIES_CSS = 'tbody>tr'
 
     @property
     def url(self):
@@ -167,12 +171,37 @@ class EntitiesPage(Page):
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
 
+    # retrying because sometimes the table hasn't fully loaded
+    @retry(wait_fixed=20, stop_max_delay=3000)
+    def get_all_data_proper(self):
+        """
+        Returns a list of dict where each dict is a dict between a field name (i.e. adapter, asset_name) and
+        the respective value
+        """
+        result = []
+        column_names = [x.text for x in self.driver.find_elements_by_css_selector(self.ALL_COLUMN_NAMES_CSS)]
+        all_entities = self.driver.find_elements_by_css_selector(self.ALL_ENTITIES_CSS)
+        for entity in all_entities:
+            if not entity.text.strip():
+                # an empty row represents the end
+                break
+
+            fields_values = entity.find_elements_by_tag_name('td')
+            assert len(fields_values) == len(column_names), 'nonmatching fields'
+            fields_values = [x.find_element_by_tag_name('div') for x in fields_values]
+            fields_values = [x.get_attribute('title') or x.text for x in fields_values]
+            result.append({
+                field_name: field_value
+                for field_name, field_value in zip(column_names, fields_values)
+                if field_name
+            })
+        return result
+
     def is_text_in_coloumn(self, col_name, text):
         return any(text in item for item in self.get_column_data(col_name))
 
     def open_edit_columns(self):
         self.click_button('Edit Columns', partial_class=True)
-        self.wait_for_element_present_by_css(self.TABLE_COLUMNS_MENU_CSS)
 
     def select_column_name(self, col_name):
         self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=col_name)).click()
