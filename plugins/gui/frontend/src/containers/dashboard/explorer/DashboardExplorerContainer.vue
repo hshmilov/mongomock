@@ -5,8 +5,8 @@
     ]">
         <x-explorer-search />
         <div class="explorer-results">
-            <x-data-table v-for="entity in entities" :module="entity.name" section="explorer" :key="entity"
-                          id-field="internal_axon_id" @click-row="configEntity($event, entity.name)">
+            <x-data-table v-for="entity in entities" :key="entity['internal_axon_id']" id-field="internal_axon_id"
+                          :module="entity.name" section="explorer" @click-row="configEntity($event, entity.name)">
                 <template slot="actions">
                     <button class="x-btn link" @click="viewEntities(entity.name)">View in {{ entity.title }}</button>
                 </template>

@@ -298,6 +298,7 @@ def beautify_user_entry(user):
                                                    'last_name',
                                                    'pic_name',
                                                    'permissions',
+                                                   'role_name',
                                                    'admin',
                                                    'source']}
     return user

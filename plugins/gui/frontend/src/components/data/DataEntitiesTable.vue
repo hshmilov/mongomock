@@ -34,7 +34,7 @@
                 isReadOnly(state) {
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
-                    return user.permissions.Users === 'ReadOnly'
+                    return user.permissions[this.module.charAt(0).toUpperCase() + this.module.slice(1)] === 'ReadOnly'
                 },
                 historicalState(state) {
                     return state[this.module].view.historical

@@ -33,7 +33,7 @@ class TestUserPermissions(TestBase):
                                            ui_consts.FIRST_NAME,
                                            ui_consts.LAST_NAME)
 
-        self.settings_page.wait_for_saved_successfully_toaster()
+        self.settings_page.wait_for_toaster('User created.')
 
         for label in self.settings_page.get_permission_labels():
             self.settings_page.select_permissions(label, self.settings_page.READ_ONLY_PERMISSION)

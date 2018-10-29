@@ -258,6 +258,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
         self.__users_collection = self._get_collection('users')
+        self.__roles_collection = self._get_collection('roles')
+        self._add_default_roles()
         current_user = self.__users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
             # User doesn't exist, this must be the installation process
@@ -445,6 +447,29 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if adapter[PLUGIN_UNIQUE_NAME] in plugins_available and db_connection[adapter[PLUGIN_UNIQUE_NAME]][
                         'clients'].count_documents({}):
                     self.__is_system_first_use = False
+
+    def _add_default_roles(self):
+        if self.__roles_collection.find_one({'name': 'Admin'}) is None:
+            # Admin role doesn't exists - let's create it
+            self.__roles_collection.insert_one({
+                'name': 'Admin', 'predefined': True, 'permissions': {
+                    p.name: PermissionLevel.ReadWrite.name for p in PermissionType
+                }
+            })
+        if self.__roles_collection.find_one({'name': 'Read Only User'}) is None:
+            # Admin role doesn't exists - let's create it
+            self.__roles_collection.insert_one({
+                'name': 'Read Only User', 'predefined': True, 'permissions': {
+                    p.name: PermissionLevel.ReadOnly.name for p in PermissionType
+                }
+            })
+        if self.__roles_collection.find_one({'name': 'Restricted User'}) is None:
+            # Admin role doesn't exists - let's create it
+            self.__roles_collection.insert_one({
+                'name': 'Restricted User', 'predefined': True, 'permissions': {
+                    p.name: PermissionLevel.ReadOnly.name for p in PermissionType
+                }
+            })
 
     ########
     # DATA #
@@ -1663,11 +1688,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param remember_me: whether or not to remember the session after the browser has been closed
         :return: None
         """
-        user = self.__create_user_if_doesnt_exist(username, first_name, last_name, picname, source)
+        role_name = None
+        config_doc = self._get_collection('users_config').find_one({})
+        if config_doc and config_doc.get('external_default_role'):
+            role_name = config_doc['external_default_role']
+        user = self.__create_user_if_doesnt_exist(username, first_name, last_name, picname, source, role_name=role_name)
         self.__perform_login_with_user(user, remember_me)
 
     def __create_user_if_doesnt_exist(self, username, first_name, last_name, picname=None, source='internal',
-                                      password=None):
+                                      password=None, role_name=None):
         """
         Create a new user in the system if it does not exist already
         :return: Created user
@@ -1686,15 +1715,27 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'first_name': first_name,
                 'last_name': last_name,
                 'pic_name': picname or self.DEFAULT_AVATAR_PIC,
-                'permissions': {
-                    p.name: PermissionLevel.Restricted.name for p in PermissionType
-                },
                 'source': source,
                 'password': password,
                 'api_key': secrets.token_urlsafe(),
                 'api_secret': secrets.token_urlsafe()
             }
-            user['permissions'][PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
+            if role_name:
+                # Take the permissions set from the defined role
+                role_doc = self.__roles_collection.find_one(filter_archived({
+                    'name': role_name
+                }))
+                if not role_doc or 'permissions' not in role_doc:
+                    logger.error(f'The role {role_name} was not found and default permissions will be used.')
+                else:
+                    user['permissions'] = role_doc['permissions']
+                    user['role_name'] = role_name
+            if 'permissions' not in user:
+                user['permissions'] = {
+                    p.name: PermissionLevel.Restricted.name for p in PermissionType
+                }
+                user['permissions'][PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
+
             self.__users_collection.replace_one(match_user, user, upsert=True)
             user = self.__users_collection.find_one(filter_archived(match_user))
         return user
@@ -2045,7 +2086,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             self.__users_collection.update({'user_name': post_data['user_name'], 'source': post_data['source']},
                                            {
                                                "$set": {
-                                                   'permissions': post_data['permissions']
+                                                   'permissions': post_data['permissions'],
+                                                   'role_name': post_data.get('role_name', '')
                                                }
             })
             self.__invalidate_sessions(post_data['user_name'], post_data['source'])
@@ -2058,7 +2100,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             })):
                 return return_error("User already exists", 400)
             self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
-                                               picname=None, source='internal', password=post_data['password'])
+                                               picname=None, source='internal', password=post_data['password'],
+                                               role_name=post_data.get('role_name'))
             return ""
         elif request.method == 'DELETE':
             self.__users_collection.update({'user_name': post_data['user_name'], 'source': post_data['source']},
@@ -2069,6 +2112,85 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             })
             self.__invalidate_sessions(post_data['user_name'], post_data['source'])
             return ""
+
+    @gui_add_rule_logged_in('roles', methods=['GET', 'PUT', 'POST', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
+    def roles(self):
+        """
+        Service for getting the list of all roles from the DB or creating new roles.
+        Roles' names serve as their unique keys
+
+        :return: GET list of roles with their set of permissions
+        """
+        if request.method == 'GET':
+            return jsonify([gui_helpers.beautify_db_entry(entry) for entry in self.__roles_collection.find(filter_archived())])
+
+        role_data = self.get_request_data_as_object()
+        if 'name' not in role_data:
+            logger.error('Name is required for saving a new role')
+            return return_error('Name is required for saving a new role', 400)
+
+        match_role = {
+            'name': role_data['name']
+        }
+        existing_role = self.__roles_collection.find_one(filter_archived(match_role))
+        if request.method != 'PUT' and not existing_role:
+            logger.error(f'Role by the name {role_data["name"]} was not found')
+            return return_error(f'Role by the name {role_data["name"]} was not found', 400)
+        elif request.method == 'PUT' and existing_role:
+            logger.error(f'Role by the name {role_data["name"]} already exists')
+            return return_error(f'Role by the name {role_data["name"]} already exists', 400)
+
+        match_user_role = {
+            'role_name': role_data['name']
+        }
+        if request.method == 'DELETE':
+            self.__roles_collection.update_one(match_role, {
+                '$set': {
+                    'archived': True
+                }
+            })
+            self.__users_collection.update_many(match_user_role, {
+                '$set': {
+                    'role_name': ''
+                }
+            })
+        else:
+            # Handling 'PUT' and 'POST' similarly - new role may replace an existing, archived one
+            self.__roles_collection.replace_one(match_role, role_data, upsert=True)
+            self.__users_collection.update_many(match_user_role, {
+                '$set': {
+                    'permissions': role_data['permissions']
+                }
+            })
+        return ""
+
+    @gui_add_rule_logged_in('roles/default', methods=['GET', 'POST'],
+                            required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
+    def roles_default(self):
+        """
+        Receives a name of a role that will be assigned by default to every external user created
+
+        :return:
+        """
+        if request.method == 'GET':
+            config_doc = self._get_collection('users_config').find_one({})
+            if not config_doc or 'external_default_role' not in config_doc:
+                return ''
+            return config_doc['external_default_role']
+
+        # Handle POST, the only option left
+        default_role_data = self.get_request_data_as_object()
+        if not default_role_data.get('name'):
+            logger.error('Role name is required in order to set it as a default')
+            return return_error('Role name is required in order to set it as a default')
+        if self.__roles_collection.find_one(filter_archived(default_role_data)) is None:
+            logger.error(f'Role {default_role_data["name"]} was not found and cannot be default')
+            return return_error(f'Role {default_role_data["name"]} was not found and cannot be default')
+        self._get_collection('users_config').replace_one({}, {
+            'external_default_role': default_role_data['name']
+        }, upsert=True)
+        return ''
 
     @gui_helpers.add_rule_unauth("get_constants")
     def get_constants(self):

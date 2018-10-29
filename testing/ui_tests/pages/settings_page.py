@@ -269,10 +269,10 @@ class SettingsPage(Page):
 
     @staticmethod
     def get_permission_labels():
-        labels = ('Adapters Permissions',
-                  'Devices Permissions',
-                  'Users Permissions',
-                  'Alerts Permissions',
-                  'Reports Permissions',
-                  'Settings Permissions')
+        labels = ('Adapters',
+                  'Devices',
+                  'Users',
+                  'Alerts',
+                  'Reports',
+                  'Settings')
         return labels
