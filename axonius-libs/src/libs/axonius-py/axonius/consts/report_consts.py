@@ -8,7 +8,8 @@ ABOVE_DESCRIPTION = 'the number of entities is above {}'
 BELOW_DESCRIPTION = 'the number of entities is below {}'
 
 
-TRIGGERS_DIFF_TYPES = ['last_result', 'added', 'removed']
+TRIGGERS_DIFF_ADDED = 'added'
+TRIGGERS_DIFF_REMOVED = 'removed'
 
 TRIGGERS_TO_DESCRIPTION = {'every_discovery': NO_CHANGE_DESCRIPTION,
                            'new_entities': NEW_ENTITIES_DESCRIPTION,

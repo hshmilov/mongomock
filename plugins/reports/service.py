@@ -13,6 +13,8 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           PLUGIN_UNIQUE_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.consts.report_consts import (TRIGGERS_DIFF_ADDED,
+                                          TRIGGERS_DIFF_REMOVED)
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
@@ -25,13 +27,17 @@ from axonius.utils.parsing import parse_filter
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+def get_ids(query_object: dict) -> list:
+    return [specific_data['data']['id'] for specific_data in query_object['specific_data']]
+
+
 def query_result_sort_by_id(result: list) -> dict:
     """ Re order query result to dict with id as key.
         Note that multiple ids may point to the same entity """
     ret = {}
-    for r in result:
-        for specific_data in r['specific_data']:
-            ret[specific_data['data']['id']] = r
+    for query_object in result:
+        for id_ in get_ids(query_object):
+            ret[id_] = query_object
     return ret
 
 
@@ -42,8 +48,14 @@ def query_result_diff_by_id(result_by_id1: dict, result_by_id2: dict) -> list:
 
     diff = []
     for id_ in result_by_id1.keys() - result_by_id2.keys():
-        if result_by_id1[id_] not in diff:
-            diff.append(result_by_id1[id_])
+        result = result_by_id1[id_]
+        if result in diff:
+            continue
+
+        if any([id_ in result_by_id2.keys() for id_ in get_ids(result)]):
+            continue
+
+        diff.append(result)
     return diff
 
 
@@ -51,12 +63,12 @@ def query_result_diff(current_result: list, last_result: list)-> dict:
     """ get the current query result and last query result and create and returns
         a dict "diff_dict" that store the added entities and the removed entities """
 
-    diff_dict = {diff_type: [] for diff_type in report_consts.TRIGGERS_DIFF_TYPES}
+    diff_dict = {}
     current_result = query_result_sort_by_id(current_result)
     last_result = query_result_sort_by_id(last_result)
 
-    diff_dict['added'] = query_result_diff_by_id(current_result, last_result)
-    diff_dict['removed'] = query_result_diff_by_id(last_result, current_result)
+    diff_dict[TRIGGERS_DIFF_ADDED] = query_result_diff_by_id(current_result, last_result)
+    diff_dict[TRIGGERS_DIFF_REMOVED] = query_result_diff_by_id(last_result, current_result)
 
     return diff_dict
 
@@ -304,10 +316,10 @@ class ReportsService(PluginBase, Triggerable):
         if triggers.get('every_discovery'):
             triggered.append('every_discovery')
 
-        if triggers.get('new_entities') and diff_dict['added']:
+        if triggers.get('new_entities') and diff_dict[TRIGGERS_DIFF_ADDED]:
             triggered.append('new_entities')
 
-        if triggers.get('previous_entities') and diff_dict['removed']:
+        if triggers.get('previous_entities') and diff_dict[TRIGGERS_DIFF_REMOVED]:
             triggered.append('previous_entities')
 
         if triggers.get('above') and len(current_result) > triggers.get('above'):
@@ -593,7 +605,7 @@ class ReportsService(PluginBase, Triggerable):
         entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
 
         entities = []
-        for entity in trigger_data['added']:
+        for entity in trigger_data[TRIGGERS_DIFF_ADDED]:
             db_entity = entities_collection.find_one({'_id': ObjectId(entity['_id'])})
             if db_entity is not None:
                 for adapter_data in db_entity['specific_data']:
