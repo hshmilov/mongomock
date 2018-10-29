@@ -362,6 +362,12 @@
                             break
 					}
 				})
+                if (alert.triggers.below) {
+                    alert.triggers.decrease = true;
+                }
+                if (alert.triggers.above) {
+                    alert.triggers.increase = true;
+                }
                 // Todo: do my fields have to be added to alert
 				this.alert = { ...alert,
                     triggers: { ...alert.triggers },
