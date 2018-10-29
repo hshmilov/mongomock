@@ -5,7 +5,6 @@ import base64
 import subprocess
 import json
 import functools
-import datetime
 
 import boto3
 import kubernetes
@@ -16,7 +15,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (AdapterException,
                                         ClientConnectionException,
                                         CredentialErrorException)
-from axonius.devices.device_adapter import DeviceAdapterNetworkInterface, DeviceRunningState
+from axonius.devices.device_adapter import DeviceRunningState
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
@@ -29,6 +28,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 AWS_ACCESS_KEY_ID = 'aws_access_key_id'
 REGION_NAME = 'region_name'
 AWS_SECRET_ACCESS_KEY = 'aws_secret_access_key'
+AWS_SESSION_TOKEN = 'aws_session_token'
+AWS_CONFIG = 'config'
+ACCOUNT_TAG = 'account_tag'
+ROLES_TO_ASSUME_LIST = 'roles_to_assume_list'
 PROXY = 'proxy'
 GET_ALL_REGIONS = 'get_all_regions'
 REGIONS_NAMES = ['us-west-2', 'us-west-1', 'us-east-2', 'us-east-1', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1',
@@ -138,6 +141,7 @@ class AwsAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceOrContainerAdapter):
         account_tag = Field(str, 'Account Tag')
         aws_region = Field(str, 'Region')
+        aws_source = Field(str, 'Source')    # Specifiy if it is from a user, a role, or what.
         aws_availability_zone = Field(str, 'Availability Zone')
         aws_device_type = Field(str, 'Device Type (EC2/ECS/EKS)', enum=['EC2', 'ECS', 'EKS'])
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
@@ -177,52 +181,148 @@ class AwsAdapter(AdapterBase):
         raise NotImplementedError
 
     def _connect_client(self, client_config):
-        regions_clients_dict = {}
+        # We are going to change client_config throughout the function so copy it first
+        client_config = client_config.copy()
+
+        # Lets start with getting all parameters and validating them.
+        if client_config.get(ROLES_TO_ASSUME_LIST):
+            roles_to_assume_file = self._grab_file_contents(client_config[ROLES_TO_ASSUME_LIST]).decode('utf-8')
+        else:
+            roles_to_assume_file = ''
+        roles_to_assume_list = []
+        roles_temp_credentials = {}
+
+        if (client_config.get(GET_ALL_REGIONS) or False) is True and client_config[REGION_NAME]:
+            raise ClientConnectionException(f'Please specify a region name or select all regions, '
+                                            f'but not both of them')
+
+        # Input validation
+        failed_arns = []
+        pattern = re.compile('^arn:aws:iam::[0-9]+:role\/.*')
+        if roles_to_assume_file:
+            for role_arn in roles_to_assume_file.strip().split(','):
+                role_arn = role_arn.strip()
+                # A role must look like 'arn:aws:iam::[account_id]:role/[name_of_role]
+                # https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#genref-arns
+                if not pattern.match(role_arn):
+                    failed_arns.append(role_arn)
+                roles_to_assume_list.append(role_arn)
+
+        # Handle proxy settings
+        https_proxy = client_config.get(PROXY)
+        if https_proxy:
+            logger.info(f'Setting proxy {https_proxy}')
+            client_config[AWS_CONFIG] = Config(proxies={'https': https_proxy})
+
+        # Check if we have some failures
+        if len(failed_arns) > 0:
+            raise ClientConnectionException(
+                f'Invalid role arns found. Please specify a comma-delimited list of valid role arns. '
+                f'Invalid arns: {", ".join(failed_arns)}')
+
+        # Get all the temporary credentials for this role
+        for role_arn in roles_to_assume_list:
+            try:
+                # for each role, we have to create a new session in which we are logged in with the current IAM
+                # user. if we try to assume two roles one after the other we would have a mixed set of privileges.
+                current_session = boto3.Session(
+                    aws_access_key_id=client_config[AWS_ACCESS_KEY_ID],
+                    aws_secret_access_key=client_config[AWS_SECRET_ACCESS_KEY],
+                )
+                sts_client = current_session.client('sts', config=client_config.get(AWS_CONFIG))
+                assumed_role_object = sts_client.assume_role(
+                    RoleArn=role_arn,
+                    DurationSeconds=60 * 60 * 3,    # 3 hours of a session
+                    RoleSessionName="Axonius"
+                )
+
+                roles_temp_credentials[role_arn] = assumed_role_object['Credentials']
+            except Exception as e:
+                logger.exception(f'Error while assuming role {role_arn}')
+                # We prefer showing this message one by one because we want to show the exception.
+                # If we would have shown all failed roles at once this would be a huge string...
+                raise ClientConnectionException(f'Can not assume role {role_arn}: {str(e)}')
+
+        clients_dict = {}
+
         if (client_config.get(GET_ALL_REGIONS) or False) is False:
             if not client_config.get(REGION_NAME):
                 raise ClientConnectionException('No region was chosen')
-            regions_clients_dict[client_config[REGION_NAME]] = self._connect_client_by_region(client_config)
-            return regions_clients_dict
-        # This variable will be false if all the regions will raise exception
-        client_ok = False
-        region_success = []
-        for region_name in REGIONS_NAMES:
-            try:
-                client_config_region = client_config.copy()
-                client_config_region[REGION_NAME] = region_name
-                regions_clients_dict[region_name] = self._connect_client_by_region(client_config_region)
-                client_ok = True
-                region_success.append(region_name)
-            except Exception:
-                logger.exception(f'Problem with Region {region_name}')
-        if client_ok:
-            regions_success_str = ','.join(region_success)
-            self.create_notification(f'AWS adapter with Access Key: '
-                                     f'{client_config[AWS_ACCESS_KEY_ID]} connection status',
-                                     content=f'AWS adapter with Access Key: '
-                                             f'{client_config[AWS_ACCESS_KEY_ID]} connected successfully '
-                                             f'to these regions: {regions_success_str})')
-            return regions_clients_dict
-        raise ClientConnectionException('All the regions returned error')
 
-    def _connect_client_by_region(self, client_config):
+            input_region_name = str(client_config.get(REGION_NAME)).lower()
+            if input_region_name not in REGIONS_NAMES:
+                raise ClientConnectionException(f'region name {input_region_name} does not exist!')
+            regions_to_pull_from = [input_region_name]
+        else:
+            regions_to_pull_from = REGIONS_NAMES
+
+        # We want to fail only if we failed connecting to everything we can
+        aws_access_key_id = client_config[AWS_ACCESS_KEY_ID]
+        successful_connections = []
+        failed_connections = []
+        for region in regions_to_pull_from:
+            # we need to get the data for this IAM account and for the roles applied.
+            current_client_config = client_config.copy()
+            current_client_config[REGION_NAME] = region
+
+            current_try = f'IAM User {aws_access_key_id} with region {region}'
+            try:
+                clients_dict[f'IAM_User_{aws_access_key_id}_{region}'] = \
+                    self._connect_client_by_source(current_client_config)
+                successful_connections.append(current_try)
+            except Exception as e:
+                logger.exception(f'Problem with iam user for region {region}')
+                failed_connections.append(f'{current_try}: {str(e)}')
+
+            for role_arn, role_credentials in roles_temp_credentials.items():
+                # Note! using the same client_config or current_client_config will result in an error since
+                # we are changing this dict, which is in use by the reuslt of self._connect_client_by_source!
+                # thus, eks for example, could get later different credentials than it needs.
+                # so always have a .copy() here!
+                current_try = f'IAM Role {role_arn} with region {region}'
+                current_client_config = client_config.copy()
+                current_client_config[REGION_NAME] = region
+                current_client_config[AWS_ACCESS_KEY_ID] = role_credentials['AccessKeyId']
+                current_client_config[AWS_SECRET_ACCESS_KEY] = role_credentials['SecretAccessKey']
+                current_client_config[AWS_SESSION_TOKEN] = role_credentials['SessionToken']
+
+                try:
+                    clients_dict[f'IAM_Role_{role_arn}_{region}'] = \
+                        self._connect_client_by_source(current_client_config)
+                    successful_connections.append(current_try)
+                except Exception as e:
+                    logger.exception(f'problem with role {role_arn} for region {region}')
+                    failed_connections.append(f'{current_try}: {str(e)}')
+
+        if len(successful_connections) == 0:
+            # If none has succeeded, its usually when the IAM user has an error. In that case we must show
+            # an error message, but we can not show all of them since this will result in a huge string.
+            # we show the first one which usually indicates the problem.
+            raise ClientConnectionException(f'Failed connecting to aws: {failed_connections[0]}')
+
+        if len(failed_connections) > 0:
+            connections_failures = ', '.join(failed_connections)
+            total_connections = len(successful_connections) + len(failed_connections)
+            self.create_notification(
+                f'AWS Adapter connected to {len(successful_connections)} / {total_connections} successfully.',
+                content=f'Failed connections: {connections_failures}' if len(connections_failures) > 0 else '')
+
+        return clients_dict
+
+    def _connect_client_by_source(self, client_config):
         try:
             params = dict()
             params[REGION_NAME] = client_config[REGION_NAME]
             params[AWS_ACCESS_KEY_ID] = client_config[AWS_ACCESS_KEY_ID]
             params[AWS_SECRET_ACCESS_KEY] = client_config[AWS_SECRET_ACCESS_KEY]
+            params[AWS_CONFIG] = client_config.get(AWS_CONFIG)
+            params[AWS_SESSION_TOKEN] = client_config.get(AWS_SESSION_TOKEN)
 
-            proxies = dict()
-            if PROXY in client_config:
-                logger.info(f'Setting proxy {client_config[PROXY]}')
-                proxies['https'] = client_config[PROXY]
-
-            aws_config = Config(proxies=proxies)
             boto3_client_ec2 = None
             boto3_client_ecs = None
             boto3_client_eks = None
             try:
-                boto3_client_ec2 = boto3.client('ec2', **params, config=aws_config)
+                boto3_client_ec2 = boto3.client('ec2', **params)
             except botocore.exceptions.BotoCoreError as e:
                 message = 'Could not create EC2 client for account {0}, reason: {1}'.format(
                     client_config[AWS_ACCESS_KEY_ID], str(e))
@@ -232,7 +332,7 @@ class AwsAdapter(AdapterBase):
                     client_config[AWS_ACCESS_KEY_ID], str(e))
                 logger.warning(message)
             try:
-                boto3_client_ecs = boto3.client('ecs', **params, config=aws_config)
+                boto3_client_ecs = boto3.client('ecs', **params)
             except botocore.exceptions.BotoCoreError as e:
                 message = 'Could not create ECS client for account {0}, reason: {1}'.format(
                     client_config[AWS_ACCESS_KEY_ID], str(e))
@@ -242,7 +342,7 @@ class AwsAdapter(AdapterBase):
                     client_config[AWS_ACCESS_KEY_ID], str(e))
                 logger.warning(message)
             try:
-                boto3_client_eks = boto3.client('eks', **params, config=aws_config)
+                boto3_client_eks = boto3.client('eks', **params)
             except botocore.exceptions.BotoCoreError as e:
                 message = 'Could not create EKS client for account {0}, reason: {1}'.format(
                     client_config[AWS_ACCESS_KEY_ID], str(e))
@@ -285,12 +385,12 @@ class AwsAdapter(AdapterBase):
             # Tests whether both clients fail the connection test
             # and therefore whether the credentials must be incorrect
             if len(errors) == 3:
-                # I save the errors but not sure how to display them.
-                raise ClientConnectionException('Could not connect to AWS EC2 or ECS or EKS services.')
+                # we have got plenty of errors, lets show at least the ec2 part. this usually means credentials issue.
+                raise ClientConnectionException(f'Could not connect to AWS EC2 or ECS or EKS services: {errors["ec2"]}')
             else:
                 # Stores both EC2 and EKS clients in a dict
-                if client_config.get('account_tag'):
-                    boto3_clients['account_tag'] = client_config.get('account_tag')
+                if client_config.get(ACCOUNT_TAG):
+                    boto3_clients['account_tag'] = client_config.get(ACCOUNT_TAG)
                 if errors.get('ec2') is None:
                     boto3_clients['ec2'] = boto3_client_ec2
                 if errors.get('ecs') is None:
@@ -299,6 +399,7 @@ class AwsAdapter(AdapterBase):
                     boto3_clients['eks'] = boto3_client_eks
                 # Store the credentials in the client_config as well as we need them in the future for token generation
                 boto3_clients['credentials'] = client_config
+                boto3_clients['region'] = params[REGION_NAME]
             return boto3_clients
         except botocore.exceptions.BotoCoreError as e:
             message = 'Error creating AWS client for account {0}, reason: {1}'.format(
@@ -311,17 +412,17 @@ class AwsAdapter(AdapterBase):
         raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
-        parsed_data_regions_dict = {}
-        for region, client_data_region in client_data.items():
+        parsed_data = {}
+        for source, client_data_by_source in client_data.items():
             try:
-                parsed_data_regions_dict[region] = self._query_devices_by_client_by_region(client_data[region])
+                parsed_data[source] = self._query_devices_by_client_by_source(client_data_by_source)
             except Exception:
-                logger.exception(f'Problem querying region {region}')
-        return parsed_data_regions_dict
+                logger.exception(f'Problem querying source {source}')
+        return parsed_data
 
-    def _query_devices_by_client_by_region(self, client_data):
+    def _query_devices_by_client_by_source(self, client_data):
         """
-        Get all AWS (EC2 & EKS) instances from a specific client on a specific region
+        Get all AWS (EC2 & EKS) instances from a specific client
 
         :param str client_name: the name of the client as returned from _get_clients
         :param client_data: The data of the client, as returned from the _parse_clients_data function
@@ -331,6 +432,7 @@ class AwsAdapter(AdapterBase):
         """
         raw_data = {}
         raw_data['account_tag'] = client_data.get('account_tag')
+        raw_data['region'] = client_data.get('region')
         # Checks whether client_data contains EC2 data
         if client_data.get('ec2') is not None:
             try:
@@ -600,7 +702,7 @@ class AwsAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
-                    'name': 'account_tag',
+                    'name': ACCOUNT_TAG,
                     'title': 'Account Tag',
                     'type': 'string'
 
@@ -609,6 +711,12 @@ class AwsAdapter(AdapterBase):
                     'name': PROXY,
                     'title': 'Proxy',
                     'type': 'string'
+                },
+                {
+                    "name": ROLES_TO_ASSUME_LIST,
+                    "title": "Roles to assume",
+                    "description": "A list of roles to assume",
+                    "type": "file"
                 }
             ],
             'required': [
@@ -620,13 +728,14 @@ class AwsAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for region, devices_raw_data_region in devices_raw_data.items():
+        for aws_source, devices_raw_data_by_source in devices_raw_data.items():
             try:
-                yield from self._parse_raw_data_region(devices_raw_data_region, region)
+                yield from self._parse_raw_data_inner(devices_raw_data_by_source, aws_source)
             except Exception:
-                logger.exception(f'Problem parsing data from region {region}')
+                logger.exception(f'Problem parsing data from source {aws_source}')
 
-    def _parse_raw_data_region(self, devices_raw_data, region):
+    def _parse_raw_data_inner(self, devices_raw_data, aws_source):
+        aws_region = devices_raw_data.get('region')
         account_tag = devices_raw_data.get('account_tag')
         subnets_by_id = devices_raw_data.get('subnets')
         vpcs_by_id = devices_raw_data.get('vpcs')
@@ -641,7 +750,8 @@ class AwsAdapter(AdapterBase):
             for reservation in ec2_devices_raw_data:
                 for device_raw in reservation.get('Instances', []):
                     device = self._new_device_adapter()
-                    device.aws_region = region
+                    device.aws_source = aws_source
+                    device.aws_region = aws_region
                     device.account_tag = account_tag
                     device.aws_device_type = 'EC2'
                     device.hostname = device_raw.get('PublicDnsName')
@@ -760,7 +870,8 @@ class AwsAdapter(AdapterBase):
 
                                     device.id = device_id
 
-                                    device.aws_region = region
+                                    device.aws_source = aws_source
+                                    device.aws_region = aws_region
                                     device.account_tag = account_tag
                                     device.aws_device_type = 'EKS'
                                     device.set_instance_or_node(container_instance_name=(
@@ -844,7 +955,8 @@ class AwsAdapter(AdapterBase):
 
                         device.id = container_id
                         device.aws_device_type = 'ECS'
-                        device.aws_region = region
+                        device.aws_source = aws_source
+                        device.aws_region = aws_region
                         device.account_tag = account_tag
                         device.name = container_raw.get('name')
                         device.cluster_id = cluster_data.get('clusterArn')
