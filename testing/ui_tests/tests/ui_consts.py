@@ -13,6 +13,9 @@ FIRST_NAME = 'FirstName'
 LAST_NAME = 'LastName'
 TAG_NAME = 'lalala'
 
+HIDDEN_USER_NAME = '_axonius'
+HIDDEN_USER_NEW_PASSWORD = 'test_pass_2'
+
 
 class EmailSettings:
     port = '25'
