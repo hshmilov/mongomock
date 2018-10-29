@@ -34,6 +34,9 @@ class TestMetrics(TestBase):
             wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter', 10))
             wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter', 10))
 
+            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter', 2))
+            wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter', r'\d+'))
+
             report = re.escape('adapters_data.active_directory_adapter.last_seen >= date("NOW - 7d")')
             wait_until(lambda: tester.is_metric_in_log('query.report', report))
 

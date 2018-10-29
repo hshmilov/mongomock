@@ -33,9 +33,9 @@
                                placeholder="" no-data-text="Type mail addresses..." />
                 </div>
                 <div class="x-section x-btn-container">
-                    <a class="x-btn" :class="{disabled: !valid}" @click="scheduleExecReport">Save</a>
-                    <a class="x-btn inverse" :class="{ disabled: !hasRecipients || disableDownloadReport || isReadOnly }"
-                       @click="testExecReport">Test Now</a>
+                    <button id="save-report" class="x-btn" :class="{disabled: !valid}" @click="scheduleExecReport">Save</button>
+                    <button id="test-report" class="x-btn inverse" :class="{ disabled: !hasRecipients || disableDownloadReport || isReadOnly }"
+                       @click="testExecReport">Test Now</button>
                 </div>
             </div>
         </x-box>

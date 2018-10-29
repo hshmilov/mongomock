@@ -1,8 +1,8 @@
 from ui_tests.tests.ui_test_base import TestBase
-from upgrade.consts import QueriesScreen
+from ui_tests.tests.ui_consts import QueriesScreen
 
 
-class TestSavedQuery(TestBase):
+class TestPrepareSavedQuery(TestBase):
     def test_saved_query(self):
         self.devices_page.switch_to_page()
         self.devices_page.fill_filter(QueriesScreen.query_1)

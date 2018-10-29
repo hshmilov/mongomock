@@ -1,5 +1,5 @@
 from ui_tests.tests.ui_test_base import TestBase
-from upgrade.consts import QueriesScreen
+from ui_tests.tests.ui_consts import QueriesScreen
 
 
 class TestSavedQuery(TestBase):
