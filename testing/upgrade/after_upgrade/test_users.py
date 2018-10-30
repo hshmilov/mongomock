@@ -13,6 +13,7 @@ class TestPrepareUsers(TestBase):
         self.login_page.logout()
 
     def test_restricted_user(self):
+        self.settings_page.switch_to_page()
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.wait_for_spinner_to_end()
