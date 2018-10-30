@@ -2,6 +2,7 @@ import sys
 
 from passlib.hash import bcrypt
 
+from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from services.axonius_service import AxoniusService
 
 
@@ -10,7 +11,7 @@ def main(new_password):
     users_collection = ax.db.gui_users_collection()
     users_collection.update_one(
         {
-            'user_name': '_axonius'
+            'user_name': AXONIUS_USER_NAME
         },
         {
             '$set': {

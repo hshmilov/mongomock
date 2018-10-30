@@ -1,7 +1,6 @@
 import re
 import pytest
 
-
 from axonius.consts import adapter_consts
 from axonius.utils.wait import wait_until
 from esx_adapter.service import EsxAdapter
@@ -9,6 +8,7 @@ from services.adapters.esx_service import EsxService, esx_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
 from test_credentials.test_esx_credentials import *
+from ui_tests.tests.ui_consts import NONE_USER_PATTERN
 
 
 class TestEsxAdapter(AdapterTestBase):
@@ -33,7 +33,8 @@ class TestEsxAdapter(AdapterTestBase):
         for client, some_device_id in client_details:
             client = dict(client)
             self.adapter_service.add_client(client)
-            wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_SUCCESS_LINE), 10))
+            pattern = f'{NONE_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
+            wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(pattern), 10))
             client_id = "{}/{}".format(client['host'], client['user'])
             client_details_to_send.append((client_id, some_device_id))
         self.axonius_system.assert_device_aggregated(self.adapter_service, client_details_to_send)
@@ -64,4 +65,5 @@ class TestEsxAdapter(AdapterTestBase):
         # make sure we passed the parse creds
         wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape('Unable to access vCenter'), 10))
         # make sure log is written
-        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_FAILURE_LINE), 10))
+        pattern = f'{NONE_USER_PATTERN}: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
+        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(pattern), 10))

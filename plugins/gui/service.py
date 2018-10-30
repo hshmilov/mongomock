@@ -39,7 +39,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           SYSTEM_SETTINGS,
-                                          TROUBLESHOOTING_SETTING)
+                                          TROUBLESHOOTING_SETTING, AXONIUS_USER_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import Phases, ResearchPhases, SchedulerState
 from axonius.email_server import EmailServer
@@ -235,7 +235,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     'api_secret': secrets.token_urlsafe()
                     }
 
-    ALTERNATIVE_USER = {'user_name': '_axonius',
+    ALTERNATIVE_USER = {'user_name': AXONIUS_USER_NAME,
                         'password':
                             '$2b$12$HQTyeTlepuCDC.5ZJ0TFo.U9ZUBARAEFU5pjhcnY.GfWaQWydcn8G',
                         'first_name': 'axonius', 'last_name': '',
@@ -266,9 +266,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             # User doesn't exist, this must be the installation process
             self.__users_collection.update({'user_name': 'admin'}, self.DEFAULT_USER, upsert=True)
 
-        alt_user = self.__users_collection.find_one({'user_name': '_axonius'})
+        alt_user = self.__users_collection.find_one({'user_name': AXONIUS_USER_NAME})
         if alt_user is None:
-            self.__users_collection.update({'user_name': '_axonius'}, self.ALTERNATIVE_USER, upsert=True)
+            self.__users_collection.update({'user_name': AXONIUS_USER_NAME}, self.ALTERNATIVE_USER, upsert=True)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')

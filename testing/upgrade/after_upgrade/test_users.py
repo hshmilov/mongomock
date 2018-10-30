@@ -1,6 +1,7 @@
 import pytest
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 
+from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from ui_tests.pages.adapters_page import AdaptersPage
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
@@ -9,7 +10,7 @@ from ui_tests.tests.ui_test_base import TestBase
 class TestPrepareUsers(TestBase):
     def test_hidden_user(self):
         self.login_page.logout()
-        self.login_page.login(ui_consts.HIDDEN_USER_NAME, ui_consts.HIDDEN_USER_NEW_PASSWORD)
+        self.login_page.login(AXONIUS_USER_NAME, ui_consts.HIDDEN_USER_NEW_PASSWORD)
         self.login_page.logout()
 
     def test_restricted_user(self):

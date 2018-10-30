@@ -6,6 +6,7 @@ import pytest
 from selenium import webdriver
 
 import conftest
+from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from axonius.plugin_base import EntityType
 from services.axonius_service import get_service
 from services.ports import DOCKER_PORTS
@@ -84,7 +85,7 @@ class TestBase:
         self.axonius_system.get_notifications_db().remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
-        self.axonius_system.get_system_users_db().remove({'user_name': {'$nin': ['_axonius', 'admin']}})
+        self.axonius_system.get_system_users_db().remove({'user_name': {'$nin': [AXONIUS_USER_NAME, 'admin']}})
 
     def change_base_url(self, new_url):
         old_base_url = self.base_url

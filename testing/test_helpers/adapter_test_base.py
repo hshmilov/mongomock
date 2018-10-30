@@ -1,6 +1,3 @@
-# pylint: disable=unused-import,no-name-in-module,ungrouped-imports
-import os
-import sys
 import uuid
 import re
 from datetime import datetime, timedelta, timezone
@@ -10,20 +7,15 @@ from flaky import flaky
 
 from axonius.consts import adapter_consts
 from axonius.utils.wait import wait_until
-from test_helpers.log_tester import LogTester
-
-try:
-    import axonius
-except (ModuleNotFoundError, ImportError):
-    # if not in path...
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs',
-                                                 'src', 'libs', 'axonius-py')))
 from axonius.plugin_base import EntityType
+from ui_tests.tests.ui_consts import NONE_USER_PATTERN
+
 from services.axonius_service import get_service
 from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from test_helpers.utils import check_conf
+from test_helpers.log_tester import LogTester
 
 
 class AdapterTestBase:
@@ -111,7 +103,8 @@ class AdapterTestBase:
     @flaky(max_runs=2)
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
-        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_SUCCESS_LINE), 10))
+        pattern = f'{NONE_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
+        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(pattern), 10))
         self.axonius_system.assert_device_aggregated(
             self.adapter_service, [(self.some_client_id, self.some_device_id)])
 
@@ -424,4 +417,5 @@ class AdapterTestBase:
             self.adapter_service.add_client(FAKE_CLIENT_DETAILS)
         except AssertionError:
             pass  # some adapters return 200, and some an error
-        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(adapter_consts.LOG_CLIENT_FAILURE_LINE), 10))
+        pattern = f'{NONE_USER_PATTERN}: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
+        wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(pattern), 10))

@@ -28,5 +28,7 @@ DASHBOARD_COLLECTION = 'dashboard'
 VERSION_COLLECTION = 'version'
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
 
+AXONIUS_USER_NAME = '_axonius'
+
 X_UI_USER = 'x-ui-user'
 X_UI_USER_SOURCE = 'x-ui-user-source'
