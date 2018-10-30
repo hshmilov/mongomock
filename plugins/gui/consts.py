@@ -82,3 +82,8 @@ this is a periodic report sent to you by axonius.
 To change the intervals in which the report is being sent or remove yourself from the recipients of this email please enter reporting in Axonius."""
 
 SUPPORT_ACCESS_THREAD_ID = 'support_access_thread'
+
+
+PREDEFINED_ROLE_ADMIN = 'Admin'
+PREDEFINED_ROLE_READONLY = 'Read Only User'
+PREDEFINED_ROLE_RESTRICTED = 'Restricted User'

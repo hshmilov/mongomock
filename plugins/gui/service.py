@@ -74,7 +74,8 @@ from gui.cached_session import CachedSessionInterface
 from gui.consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
                         EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE,
                         SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics, ChartViews,
-                        ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus)
+                        ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus,
+                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_READONLY, PREDEFINED_ROLE_RESTRICTED)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -449,24 +450,24 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     self.__is_system_first_use = False
 
     def _add_default_roles(self):
-        if self.__roles_collection.find_one({'name': 'Admin'}) is None:
+        if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_ADMIN}) is None:
             # Admin role doesn't exists - let's create it
             self.__roles_collection.insert_one({
-                'name': 'Admin', 'predefined': True, 'permissions': {
+                'name': PREDEFINED_ROLE_ADMIN, 'predefined': True, 'permissions': {
                     p.name: PermissionLevel.ReadWrite.name for p in PermissionType
                 }
             })
-        if self.__roles_collection.find_one({'name': 'Read Only User'}) is None:
+        if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_READONLY}) is None:
             # Admin role doesn't exists - let's create it
             self.__roles_collection.insert_one({
-                'name': 'Read Only User', 'predefined': True, 'permissions': {
+                'name': PREDEFINED_ROLE_READONLY, 'predefined': True, 'permissions': {
                     p.name: PermissionLevel.ReadOnly.name for p in PermissionType
                 }
             })
-        if self.__roles_collection.find_one({'name': 'Restricted User'}) is None:
+        if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED}) is None:
             # Admin role doesn't exists - let's create it
             self.__roles_collection.insert_one({
-                'name': 'Restricted User', 'predefined': True, 'permissions': {
+                'name': PREDEFINED_ROLE_RESTRICTED, 'predefined': True, 'permissions': {
                     p.name: PermissionLevel.ReadOnly.name for p in PermissionType
                 }
             })
@@ -3548,9 +3549,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'GET':
             return jsonify(notes_list)
 
+        current_user = f'{session.get("user")["source"]}/{session.get("user")["user_name"]}'
         if request.method == 'PUT':
             note_obj = self.get_request_data_as_object()
-            note_obj['user_name'] = session.get('user')['user_name']
+            note_obj['user_name'] = current_user
             note_obj['accurate_for_datetime'] = datetime.now()
             note_obj['uuid'] = str(uuid4())
             notes_list.append(note_obj)
@@ -3559,9 +3561,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         if request.method == 'DELETE':
             note_ids_list = self.get_request_data_as_object()
-            if not session.get('user').get('admin'):
+            if not session.get('user').get('admin') and session.get('user').get('role_name') != PREDEFINED_ROLE_ADMIN:
                 # Validate all notes requested to be removed belong to user
-                current_user = session.get('user')['user_name']
                 for note in notes_list:
                     if note['uuid'] in note_ids_list and note['user_name'] != current_user:
                         logger.error('Only Administrator can remove another user\'s Note')
@@ -3596,12 +3597,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.error(f'Entity with internal_axon_id = {entity_id} has no note at index = {note_id}')
             return return_error('Selected Note cannot be found for the Entity', 400)
 
-        current_user = session.get('user')
-        if current_user['user_name'] != note_doc['user_name'] and not current_user.get('admin'):
+        current_user = f'{session.get("user")["source"]}/{session.get("user")["user_name"]}'
+        if current_user != note_doc['user_name'] and not session.get('user').get('admin') and \
+                session.get('user').get('role_name') != PREDEFINED_ROLE_ADMIN:
             return return_error('Only Administrator can edit another user\'s Note', 400)
 
         note_doc['note'] = self.get_request_data_as_object()['note']
-        note_doc['user_name'] = current_user['user_name']
+        note_doc['user_name'] = current_user
         note_doc['accurate_for_datetime'] = datetime.now()
         entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
         return jsonify(note_doc)

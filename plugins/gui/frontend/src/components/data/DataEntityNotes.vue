@@ -42,7 +42,8 @@
             ...mapState({
                 currentUser(state) {
                     return {
-                        name: state.auth.currentUser.data['user_name'], admin: state.auth.currentUser.data['admin']
+                        name: `${state.auth.currentUser.data.source}/${state.auth.currentUser.data.user_name}`,
+                        admin: state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin'
                     }
                 }
             }),
@@ -204,7 +205,10 @@
             }
         }
         .x-striped-table {
-            th:nth-child(3), th:nth-child(4) {
+            th:nth-child(3) {
+                width: 200px;
+            }
+            th:nth-child(4) {
                 width: 160px;
             }
             td:nth-child(2) {
