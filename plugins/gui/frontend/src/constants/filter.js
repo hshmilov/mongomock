@@ -18,7 +18,7 @@ const exists_str = {
 }
 const exists_array = {
     pattern: `(${exists.pattern} and {field} != [])`,
-    notPattern: `(${exists.notPattern} or {field} != [])`
+    notPattern: `(${exists.notPattern} or {field} == [])`
 }
 const equals = {
 	pattern: '{field} == "{val}"',
