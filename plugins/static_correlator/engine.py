@@ -1,5 +1,8 @@
 import logging
 from itertools import combinations
+
+from axonius.consts.plugin_consts import PLUGIN_NAME
+
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 from axonius.correlator_base import has_hostname, has_name, has_mac, has_last_used_users, has_serial, has_cloud_id, \
     has_ad_or_azure_name
@@ -377,5 +380,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 # such correlations should have reason == "Logic"
                 logger.error(
                     f'{first_name} correlated to itself, id: \'{first_id}\' and \'{second_id}\' via static analysis')
+                return False
+        return True
+
+    def _bigger_picture_decision(self, first_axonius_device, second_axonius_device,
+                                 first_adapter_device, second_adapter_device) -> bool:
+        # Don't correlate devices that have AD in them but are not correlated according to AD
+        # AX-2107
+        ad_in_first = any(x[PLUGIN_NAME] == 'active_directory' for x in first_axonius_device['adapters'])
+        ad_in_second = any(x[PLUGIN_NAME] == 'active_directory' for x in second_axonius_device['adapters'])
+        if ad_in_first and ad_in_second:
+            if first_adapter_device[PLUGIN_NAME] != 'active_directory' or \
+                    second_adapter_device[PLUGIN_NAME] != 'active_directory':
                 return False
         return True

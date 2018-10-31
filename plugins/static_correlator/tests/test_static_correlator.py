@@ -1,7 +1,7 @@
 import itertools
 import uuid
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 from axonius.types.correlation import CorrelationResult
 from static_correlator.engine import StaticCorrelatorEngine
@@ -562,7 +562,7 @@ def test_no_tag_self_correlation():
     assert_success(correlate([device1]), [device1], 'They have the same MAC', 0)
 
 
-def test_no_tag_self_correlation():
+def test_no_tag_self_correlation2():
     network_interfaces = [{MAC_FIELD: "mymac"}]
 
     # creating a device with 2 adapters (no MAC)
@@ -718,6 +718,83 @@ def test_rule_correlate_splunk_vpn_hostname():
                              more_params=[("splunk_source", "VPN")])
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same Normalized hostname '
                                                                       'and both are Splunk VPN', 1)
+
+
+def test_no_correlation_if_ad_present():
+    device1 = get_raw_device(
+        plugin_name='blat_plugin',
+        hostname="ubuntuLolol",
+        os={'bitness': 32,
+            'distribution': 'Ubuntu',
+            'type': 'Linux'},
+        domain='TEST',
+        network_interfaces=[{MAC_FIELD: 'myma324c',
+                             IPS_FIELD: ['1.1.1.2']}])
+    device1['adapters'].append({
+        PLUGIN_NAME: 'active_directory',
+        PLUGIN_UNIQUE_NAME: 'active_directory_1',
+        'data': {
+            'id': 'lala1'
+        }
+    })
+    device2 = get_raw_device(hostname="ubuntulolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             domain='Test',
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2['adapters'].append({
+        PLUGIN_NAME: 'active_directory',
+        PLUGIN_UNIQUE_NAME: 'active_directory_1',
+        'data': {
+            'id': 'lala2'
+        }
+    })
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and domain', 0)
+
+
+def test_correlation_if_ad_present_and_only_it_gets():
+    device1 = get_raw_device(
+        plugin_name='active_directory',
+        hostname="ubuntuLolol",
+        os={'bitness': 32,
+            'distribution': 'Ubuntu',
+            'type': 'Linux'},
+        domain='TEST',
+        network_interfaces=[{MAC_FIELD: 'myma324c',
+                             IPS_FIELD: ['1.1.1.2']}])
+    device1['adapters'].append({
+        PLUGIN_NAME: 'blat_adapter',
+        PLUGIN_UNIQUE_NAME: 'blat_adapter_1',
+        'data': {
+            'id': 'lala1',
+            'hostname': 'blat',
+            'network_interfaces': [{MAC_FIELD: 'mymac',
+                                    IPS_FIELD: ['1.1.1.1']}]
+        }
+    })
+    device2 = get_raw_device(
+        plugin_name='active_directory',
+        hostname="ubuntulolol",
+        os={'bitness': 32,
+            'distribution': 'Ubuntu',
+            'type': 'Linux'},
+        domain='Test',
+        network_interfaces=[{MAC_FIELD: 'mymac',
+                             IPS_FIELD: ['1.1.1.1']}])
+    device2['adapters'].append({
+        PLUGIN_NAME: 'blat_adapter',
+        PLUGIN_UNIQUE_NAME: 'blat_adapter_1',
+        'data': {
+            'id': 'lala2',
+            'hostname': 'blat',
+            'network_interfaces': [{MAC_FIELD: 'mymac',
+                                    IPS_FIELD: ['1.1.1.1']}]
+        }
+    })
+    res = list(correlate([device1, device2]))
+    assert len(res) == 1
 
 
 if __name__ == '__main__':

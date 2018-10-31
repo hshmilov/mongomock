@@ -234,6 +234,16 @@ class CorrelatorEngineBase(ABC):
         """
         return True
 
+    def _bigger_picture_decision(self, first_axonius_device, second_axonius_device,
+                                 first_adapter_device, second_adapter_device) -> bool:
+        """
+        Virtual by design
+        Allows a correlator to have a second chance to revise it's decision to correlate two entities
+        by looking at the whole axonius entities they come from.
+        :return: Whether or not to allow this correlation
+        """
+        return True
+
     @abstractmethod
     def _raw_correlate(self, entities):
         """
@@ -343,6 +353,12 @@ class CorrelatorEngineBase(ABC):
             if sorted_associated_adapters in correlations_done_already:
                 logger.debug(f"result is the same as old one : {result}")
                 # skip correlations done twice
+                continue
+
+            if not self._bigger_picture_decision(first_axonius_device, second_axonius_device,
+                                                 first_adapter_device, second_adapter_device):
+                logger.debug(f'{first_adapter_device} and {second_adapter_device} won\'t get correlated'
+                             f' while being a part of {first_axonius_device} and {second_axonius_device}')
                 continue
 
             else:
