@@ -89,7 +89,7 @@
             margin-bottom: 12px;
         }
         .adapters-table {
-            height: calc(100vh - 212px);
+            height: calc(100% - 42px);
             overflow: auto;
             .table {
                 border-collapse: separate;
