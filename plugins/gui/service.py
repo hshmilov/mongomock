@@ -482,13 +482,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DATA #
     ########
 
-    def _fetch_historical_entity(self, entity_type: EntityType, entity_id, history_date: datetime = None):
+    def _fetch_historical_entity(self, entity_type: EntityType, entity_id, history_date: datetime = None,
+                                 projection=None):
         return self._get_appropriate_view(history_date, entity_type). \
             find_one(get_historized_filter(
                 {
                     'internal_axon_id': entity_id
                 },
-                history_date))
+                history_date), projection=projection)
 
     def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[], history_date: datetime = None):
         """
@@ -506,9 +507,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 len([category for category in advanced_fields if category in field]) == 0,
                 generic_field_names)
 
-        entity = self._fetch_historical_entity(entity_type, entity_id, history_date)
+        entity = self._fetch_historical_entity(entity_type, entity_id, history_date, projection={
+            'adapters_data': 0
+        })
         if entity is None:
             return return_error("Entity ID wasn't found", 404)
+        for specific in entity['specific_data']:
+            new_raw = {}
+            for k, v in specific['data']['raw'].items():
+                if type(v) != bytes:
+                    new_raw[k] = v
+            specific['data']['raw'] = new_raw
         # Specific is returned as is, to show all adapter datas.
         # Generic fields are divided to basic which are all merged through all adapter datas
         # and advanced, of which the main field is merged and data is given in original structure.
