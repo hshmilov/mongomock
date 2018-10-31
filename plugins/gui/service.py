@@ -74,7 +74,7 @@ from gui.cached_session import CachedSessionInterface
 from gui.consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
                         EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE,
                         SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics, ChartViews,
-                        ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus,
+                        ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus, ROLES_COLLECTION,
                         PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_READONLY, PREDEFINED_ROLE_RESTRICTED)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
@@ -259,7 +259,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
         self.__users_collection = self._get_collection('users')
-        self.__roles_collection = self._get_collection('roles')
+        self.__roles_collection = self._get_collection(ROLES_COLLECTION)
         self._add_default_roles()
         current_user = self.__users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
@@ -458,18 +458,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 }
             })
         if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_READONLY}) is None:
-            # Admin role doesn't exists - let's create it
+            # Read-only role doesn't exists - let's create it
             self.__roles_collection.insert_one({
                 'name': PREDEFINED_ROLE_READONLY, 'predefined': True, 'permissions': {
                     p.name: PermissionLevel.ReadOnly.name for p in PermissionType
                 }
             })
         if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED}) is None:
-            # Admin role doesn't exists - let's create it
+            # Restricted role doesn't exists - let's create it. Everything restricted except the Dashboard.
+            permissions = {
+                p.name: PermissionLevel.Restricted.name for p in PermissionType
+            }
+            permissions[PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
             self.__roles_collection.insert_one({
-                'name': PREDEFINED_ROLE_RESTRICTED, 'predefined': True, 'permissions': {
-                    p.name: PermissionLevel.ReadOnly.name for p in PermissionType
-                }
+                'name': PREDEFINED_ROLE_RESTRICTED, 'predefined': True, 'permissions': permissions
             })
 
     ########

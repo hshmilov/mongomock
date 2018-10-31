@@ -83,7 +83,11 @@ To change the intervals in which the report is being sent or remove yourself fro
 
 SUPPORT_ACCESS_THREAD_ID = 'support_access_thread'
 
+######################
+# User and Roles consts #
+######################
 
+ROLES_COLLECTION = 'roles'
 PREDEFINED_ROLE_ADMIN = 'Admin'
 PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted User'

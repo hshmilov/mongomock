@@ -3,7 +3,9 @@ import requests
 import json
 import os
 
-from axonius.consts.plugin_consts import DASHBOARD_COLLECTION
+from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME
+from gui.consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
+from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
 
 
@@ -24,6 +26,8 @@ class GuiService(PluginService):
             self._update_schema_version_2()
         if self.db_schema_version < 3:
             self._update_schema_version_3()
+        if self.db_schema_version < 4:
+            self._update_schema_version_4()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -160,6 +164,24 @@ class GuiService(PluginService):
             self.db_schema_version = 3
         except Exception as e:
             print(f'Exception while upgrading gui db to version 3. Details: {e}')
+
+    def _update_schema_version_4(self):
+        print('upgrade to schema 4')
+        try:
+            permissions = {
+                p.name: PermissionLevel.Restricted.name for p in PermissionType
+            }
+            permissions[PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
+            self.db.get_collection(GUI_NAME, ROLES_COLLECTION).update_one({
+                'name': PREDEFINED_ROLE_RESTRICTED
+            }, {
+                '$set': {
+                    'permissions': permissions
+                }
+            })
+            self.db_schema_version = 4
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 4. Details: {e}')
 
     @property
     def exposed_ports(self):
