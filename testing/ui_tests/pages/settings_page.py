@@ -36,6 +36,9 @@ class SettingsPage(Page):
     READ_ONLY_PERMISSION = 'Read only'
     RESTRICTED_PERMISSION = 'Restricted'
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
+    SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'
+    SELECT_OPTION_CSS = 'div.x-select-option'
+    PERMISSION_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
 
     @property
     def url(self):
@@ -268,10 +271,17 @@ class SettingsPage(Page):
         self.driver.find_element_by_css_selector('li.nav-item.disabled #settings')
 
     def select_permissions(self, label_text, permission):
-        self.driver.find_element_by_xpath(
-            f'//div[child::label[text()=\'{label_text}\']]').find_element_by_css_selector('div.trigger-text').click()
+        self.driver.find_element_by_xpath(self.PERMISSION_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
+            find_element_by_css_selector('div.trigger-text').\
+            click()
         self.fill_text_field_by_css_selector('input.input-value', permission)
-        self.driver.find_element_by_css_selector('div.x-select-option').click()
+        self.driver.find_element_by_css_selector(self.SELECT_OPTION_CSS).click()
+
+    def get_permissions_text(self, label_text):
+        return self.driver.find_element_by_xpath(
+            self.PERMISSION_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
+            find_element_by_css_selector('div > div').\
+            text
 
     @staticmethod
     def get_permission_labels():
@@ -288,3 +298,24 @@ class SettingsPage(Page):
 
     def click_confirm_remove_user(self):
         self.click_button('Remove User')
+
+    def wait_for_user_removed_toaster(self):
+        self.wait_for_toaster('User removed.')
+
+    def click_roles_button(self):
+        self.click_button_by_id('config-roles')
+
+    def find_default_role(self):
+        return self.driver.find_element_by_css_selector('div.roles-default')
+
+    def assert_default_role_is_restricted(self):
+        self.find_default_role().find_element_by_css_selector('div[title="Restricted User"]')
+
+    def find_role_dropdown(self):
+        return self.driver.find_element_by_css_selector(self.SELECT_ROLE_CSS)
+
+    def assert_placeholder_is_new(self):
+        assert self.find_role_dropdown().find_element_by_css_selector('div.placeholder').text == 'NEW'
+
+    def select_role(self, role_text):
+        self.select_option_without_search(self.SELECT_ROLE_CSS, self.SELECT_OPTION_CSS, role_text)

@@ -76,7 +76,6 @@ class TestUserPermissions(TestBase):
 
     def test_new_user_change_password(self):
         self.settings_page.switch_to_page()
-
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(ui_consts.RESTRICTED_USERNAME,
                                            ui_consts.NEW_PASSWORD,
@@ -108,7 +107,27 @@ class TestUserPermissions(TestBase):
         self.settings_page.click_manage_users_settings()
         self.settings_page.click_remove_user()
         self.settings_page.click_confirm_remove_user()
+
+        self.settings_page.wait_for_user_removed_toaster()
+        usernames = list(self.settings_page.get_all_users_from_users_and_roles())
+        assert ui_consts.RESTRICTED_USERNAME not in usernames
+
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=self.password)
         assert self.login_page.wait_for_invalid_login_message()
+
+    def test_user_roles(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.click_roles_button()
+        self.settings_page.assert_default_role_is_restricted()
+        self.settings_page.assert_placeholder_is_new()
+
+        self.settings_page.select_role('Read Only User')
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
+
+        self.settings_page.select_role('Restricted User')
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION

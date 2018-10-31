@@ -85,12 +85,3 @@ class TestChangePasswordSettings(TestBase):
                                              self.password,
                                              self.password,
                                              self.my_account_page.wait_for_password_changed_toaster)
-
-    def _change_password(self, current, new1, new2, wait_for=None):
-        self.my_account_page.click_change_admin_password()
-        self.my_account_page.fill_current_password(current)
-        self.my_account_page.fill_new_password(new1)
-        self.my_account_page.fill_confirm_password(new2)
-        self.my_account_page.click_save_button()
-        if wait_for:
-            wait_for()
