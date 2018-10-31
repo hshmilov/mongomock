@@ -6,21 +6,20 @@
             <button class="x-btn" :class="{ disabled: readOnly }" id="create-user" @click="openCreateUser">+ New User</button>
         </div>
         <div v-for="user in users" class="user">
-            <div class="user-def">
-                <div class="user-details">
-                    <img :src="user.pic_name" class="user-details-profile"/>
-                    <div>
-                        <div class="user-details-title">{{ user.user_name }}</div>
-                        <div>{{ user.source }}</div>
-                    </div>
-                </div>
-                <div v-if="!user.admin && !isCurrentUser(user)">
-                    <label>User Role</label>
-                    <x-select :options="roleOptions" :searchable="true" placeholder="Custom"
-                              v-model="user.role_name" @input="syncPermissions($event, user)"/>
+            <div class="user-details">
+                <img :src="user.pic_name" class="user-details-profile"/>
+                <div>
+                    <div class="user-details-title">{{ user.user_name }}</div>
+                    <div>{{ user.source }}</div>
                 </div>
             </div>
             <div class="user-permissions" v-if="!user.admin && !isCurrentUser(user)">
+                <div class="user-role">
+                    <label>User Role:</label>
+                    <x-select :options="roleOptions" :searchable="true" placeholder="Custom"
+                              v-model="user.role_name" @input="syncPermissions($event, user)"/>
+                </div>
+                <h5 v-if="user.role_name !== 'Admin'">Permissions</h5>
                 <x-schema-form v-if="user.role_name !== 'Admin'" :schema="permissionSchema" v-model="user.permissions"
                                @input="syncRole(user)" :read-only="readOnly"/>
                 <button class="x-btn link" id="user-settings-remove" :class="{ disabled: readOnly }"
@@ -127,9 +126,9 @@
                         this.permissionSchemeItem('Settings'),
                     ],
                     required: [
-                        'settings', 'adapters', 'users', 'devices', 'alerts', 'dashboard'
+                        'Settings', 'Adapters', 'Users', 'Devices', 'Alerts', 'Dashboard', 'Reports'
                     ],
-                    type: "array"
+                    type: 'array'
                 }
             },
             userSchema() {
@@ -336,25 +335,32 @@
         }
         .user {
             margin-bottom: 24px;
-            .user-def {
-                display: grid;
-                grid-gap: 0 12px;
-                grid-template-columns: 1fr 1fr 1fr;
-                align-items: center;
-                .user-details {
-                    display: flex;
-                    .user-details-profile {
-                        height: 60px;
-                        margin-right: 8px;
-                    }
-                    .user-details-title {
-                        font-weight: 400;
-                        font-size: 16px;
-                    }
+            .user-details {
+                display: flex;
+                .user-details-profile {
+                    height: 60px;
+                    margin-right: 8px;
+                }
+                .user-details-title {
+                    font-weight: 400;
+                    font-size: 16px;
                 }
             }
             .user-permissions {
                 text-align: right;
+                margin-top: 12px;
+                .user-role {
+                    display: flex;
+                    align-items: center;
+                    .x-select {
+                        margin-left: 12px;
+                        text-align: left;
+                    }
+                }
+                h5 {
+                    margin: 12px 0;
+                    text-align: left;
+                }
             }
         }
         .schema-form {
