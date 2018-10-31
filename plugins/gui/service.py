@@ -261,6 +261,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.__users_collection = self._get_collection('users')
         self.__roles_collection = self._get_collection(ROLES_COLLECTION)
         self._add_default_roles()
+        if self._get_collection('users_config').find_one({}) is None:
+            self._get_collection('users_config').insert_one({
+                'external_default_role': PREDEFINED_ROLE_RESTRICTED
+            })
         current_user = self.__users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
             # User doesn't exist, this must be the installation process
