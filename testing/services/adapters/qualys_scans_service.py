@@ -9,7 +9,7 @@ class QualysScansService(AdapterService):
         super().__init__('qualys-scans')
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope='module', autouse=True)
 def qualys_scans_fixture(request):
     service = QualysScansService()
     initialize_fixture(request, service)

@@ -22,7 +22,7 @@ class ArubaAdapter(AdapterBase):
         protocol = Field(str, 'Protocol')
         vlan = Field(str, 'Vlan')
         connect_time = Field(datetime.datetime, 'Connect Time')
-        duration = Field(str, 'Duration')
+        duration = Field(int, 'Duration')
         wifi_vlan = Field(str, 'Wifi Vlan')
         vpn_hostname = Field(str, 'VPN Hostame')
         is_guest_user = Field(bool, 'Is Guest User')
@@ -91,7 +91,6 @@ class ArubaAdapter(AdapterBase):
         if mac in mac_set:
             return None
         mac_set.add(mac)
-        device.id = mac
         lan_ip = device_raw.get('lan_ip')
         lan_ips = device_raw.get('lan_ips')
         ips = [lan_ip] if lan_ip else None
@@ -115,7 +114,12 @@ class ArubaAdapter(AdapterBase):
                 device.connect_time = connect_time
         except Exception:
             logger.exception(f'Problem getting connect time for {device_raw}')
-        device.duration = device_raw.get('duration')
+        try:
+            duration = device_raw.get('duration')
+            if duration:
+                device.duration = int(duration)
+        except Exception:
+            logger.exception(f'Problem adding duration to {device_raw}')
         username = device_raw.get('username')
         try:
             if username and isinstance(username, str):
@@ -128,12 +132,27 @@ class ArubaAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Problem getting os for {device_raw}')
         try:
+            first_name = None
+            second_name = None
             lan_hostname = device_raw.get('lan_hostname')
             lan_hostnames = device_raw.get('lan_hostnames')
             if lan_hostname:
+                first_name = lan_hostname
+                second_name = None
                 device.hostname = lan_hostname
             elif lan_hostnames:
-                device.hostname = lan_hostnames[0]
+                first_name = lan_hostnames[0]
+                second_name = None
+                if len(lan_hostnames) > 1:
+                    second_name = lan_hostnames[1]
+                if first_name:
+                    device.hostname = first_name
+                    if second_name and first_name.lower() != second_name.lower():
+                        device.name = second_name
+                elif second_name:
+                    device.hostname = second_name
+            device.id = (mac or '') + '_' + (first_name or '') + '_' + (second_name or '')
+
         except Exception:
             logger.exception(f'Problem getting hostnames for {device_raw}')
         device.vpn_hostname = device_raw.get('vpn_hostname')

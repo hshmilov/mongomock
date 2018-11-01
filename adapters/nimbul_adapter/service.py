@@ -1,4 +1,4 @@
-
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -8,12 +8,14 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_date
 from nimbul_adapter.connection import NimbulConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class NimbulAdapter(AdapterBase):
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         public_ip = ListField(str, 'Public IPs')
         app_code = Field(str, 'Application Code')
@@ -22,6 +24,12 @@ class NimbulAdapter(AdapterBase):
         cluster_name = Field(str, 'Cluster Name')
         environment_name = Field(str, 'Environment Name')
         subnet_name = Field(str, 'Subnet Name')
+
+        updated_at = Field(datetime.datetime, 'Updated At')
+        launch_date = Field(datetime.datetime, 'Launch Date')
+        last_scanned = Field(datetime.datetime, 'Last Scanned')
+        created_at = Field(datetime.datetime, 'Created At')
+        patch_level = Field(str, 'Patch Level')
 
     class MyUserAdapter(UserAdapter):
         nimbul_source = Field(str, 'Nimbul Source')
@@ -133,6 +141,15 @@ class NimbulAdapter(AdapterBase):
                 device.public_ip = public_ip
         except Exception:
             logger.exception(f'Problem getting ip for {device_raw}')
+        try:
+            device.updated_at = parse_date(device_raw.get('updated_at'))
+            device.launch_date = parse_date(device_raw.get('launch_date'))
+            device.last_scanned = parse_date(device_raw.get('last_scanned'))
+            device.created_at = parse_date(device_raw.get('created_at'))
+            device.patch_level = device_raw.get('patch_level')
+        except Exception:
+            logger.exception(f'Problem at parse date {device_raw}')
+
         device.set_raw(device_raw)
         return device
 

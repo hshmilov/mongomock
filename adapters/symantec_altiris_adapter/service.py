@@ -11,6 +11,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 from axonius.clients.mssql.connection import MSSQLConnection
 import symantec_altiris_adapter.consts as consts
+from axonius.utils.parsing import is_domain_valid
 
 
 class SymantecAltirisAdapter(AdapterBase):
@@ -107,21 +108,26 @@ class SymantecAltirisAdapter(AdapterBase):
                 device = self._new_device_adapter()
                 device.id = device_id
                 domain = device_raw.get('Domain')
+                if not is_domain_valid(domain):
+                    domain = None
+                device.domain = domain
                 server_full_name = device_raw.get('Server')
                 name = device_raw.get('Name')
-                device.name = name
-                device.hostname = server_full_name
+                device.hostname = name
 
-                # The last one is to make sure that the server_full_name actually
-                # includes the full domain name as well as the server name.
-                if domain is not None and server_full_name is not None and len(server_full_name) > len(domain) + len(name):
-                    device.domain = server_full_name[len(name) + 1:]
-                    device.part_of_domain = True
-
-                device.figure_os(device_raw.get('OS Name', '') + ' ' + device_raw.get('OS Version') + ' ' +
-                                 device_raw.get("OS Revision", '') + ' ' + device_raw.get("System Type", ''))
+                device.figure_os((device_raw.get('OS Name') or '') + ' ' + (device_raw.get('OS Version') or '') + ' ' +
+                                 (device_raw.get("OS Revision") or '') + ' ' + (device_raw.get("System Type") or ''))
                 try:
-                    device.add_nic(device_raw.get('MAC Address'), [device_raw.get('IP Address')])
+                    mac = device_raw.get('MAC Address')
+                    if mac is not None and mac.strip() == '':
+                        mac = None
+                    ip = device_raw.get('IP Address')
+                    if ip is None or ip.strip() == '':
+                        ips = None
+                    else:
+                        ips = ip.split(',')
+                    if mac or ips:
+                        device.add_nic(mac, ips)
                 except Exception:
                     logger.exception(f"Caught weird NIC for device id {device_raw}")
                     pass

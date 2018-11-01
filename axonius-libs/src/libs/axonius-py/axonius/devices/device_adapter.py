@@ -131,6 +131,7 @@ class DeviceAdapterCPU(SmartJsonClass):
     name = Field(str, "Description")
     bitness = Field(int, "Bitness", enum=[32, 64])
     cores = Field(int, "Cores")
+    cores_thread = Field(int, 'Threads in core')
     load_percentage = Field(int, "Load Percentage")
     architecture = Field(str, "Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64"])
     ghz = Field(float, "Clockspeed (GHZ)")

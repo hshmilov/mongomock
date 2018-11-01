@@ -28,8 +28,11 @@ class ServiceNowConnection(RESTConnection):
     def get_user_list(self):
         for user in self.__users_table.values():
             user_to_yield = user.copy()
-            if user.get('manager'):
-                user_to_yield['manager_full'] = self.__users_table.get(user.get('manager'))
+            try:
+                if (user.get('manager') or {}).get('value'):
+                    user_to_yield['manager_full'] = self.__users_table.get(user.get('manager').get('value'))
+            except Exception:
+                logger.exception(f'Problem getting manager for user {user}')
             yield user_to_yield
 
     def get_device_list(self):
@@ -39,16 +42,41 @@ class ServiceNowConnection(RESTConnection):
             users_table = list(self.__get_devices_from_table(consts.USERS_TABLE))
         except Exception:
             logger.exception(f'Problem getting users')
+
+        location_table = []
+        try:
+            location_table = list(self.__get_devices_from_table(consts.LOCATIONS_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting location')
+        departments_table = []
+        try:
+            departments_table = list(self.__get_devices_from_table(consts.DEPARTMENTS_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting departments')
+
         users_table_dict = dict()
         for user in users_table:
             if user.get('sys_id'):
                 users_table_dict[user.get('sys_id')] = user
+
+        location_table_dict = dict()
+        for location in location_table:
+            if location.get('sys_id'):
+                location_table_dict[location.get('sys_id')] = location
+
+        department_table_dict = dict()
+        for department in departments_table:
+            if department.get('sys_id'):
+                department_table_dict[department.get('sys_id')] = department
+
         self.__users_table = users_table_dict
         for table_details in consts.TABLES_DETAILS:
             new_table_details = table_details.copy()
             table_devices = {consts.DEVICES_KEY: self.__get_devices_from_table(table_details[consts.TABLE_NAME_KEY])}
             new_table_details.update(table_devices)
             new_table_details[consts.USERS_TABLE_KEY] = users_table_dict
+            new_table_details[consts.LOCATION_TABLE_KEY] = location_table_dict
+            new_table_details[consts.DEPARTMENT_TABLE_KEY] = department_table_dict
             tables_devices.append(new_table_details)
 
         return tables_devices

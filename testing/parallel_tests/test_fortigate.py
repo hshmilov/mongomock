@@ -1,3 +1,5 @@
+
+# pylint: disable=W0611
 from services.adapters.fortigate_service import FortigateService, fortigate_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_fortigate_credentials import client_details, SOME_DEVICE_ID
@@ -19,3 +21,7 @@ class TestFortigateAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @property
+    def some_user_id(self):
+        raise NotImplementedError

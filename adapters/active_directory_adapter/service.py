@@ -489,7 +489,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         if max_pwd_age is not None:
                             user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
                     except Exception:
-                        logger.exception(f"Error parsing max pwd age {max_pwd_age}, is it too large?")
+                        logger.info(f"Error parsing max pwd age {max_pwd_age}, is it too large?")
                 last_logoff = parse_date(user_raw.get("lastLogoff"))
                 if is_date_real(last_logoff):
                     user.last_logoff = last_logoff

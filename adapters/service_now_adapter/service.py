@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -7,15 +8,16 @@ from axonius.clients.rest.exception import RESTException
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.service_now.consts import *
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.users.user_adapter import UserAdapter
 from axonius.fields import Field
 from axonius.plugin_base import add_rule, return_error
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
-
+from axonius.utils.parsing import parse_date
+from axonius.mixins.configurable import Configurable
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ServiceNowAdapter(AdapterBase):
+class ServiceNowAdapter(AdapterBase, Configurable):
     class MyUserAdapter(UserAdapter):
         snow_source = Field(str, 'ServiceNow Source')
         snow_roles = Field(str, 'Roles')
@@ -24,6 +26,12 @@ class ServiceNowAdapter(AdapterBase):
         table_type = Field(str, 'Table Type')
         class_name = Field(str, 'Class Name')
         owner = Field(str, 'Owner')
+        discovery_source = Field(str, 'Discovery Source')
+        last_discovered = Field(datetime.datetime, 'Last Discovered')
+        first_discovered = Field(datetime.datetime, 'First Discovered')
+        snow_location = Field(str, 'Location')
+        snow_department = Field(str, 'Department')
+        assigned_to = Field(str, 'Assigned To')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -62,7 +70,10 @@ class ServiceNowAdapter(AdapterBase):
             yield from client_data.get_device_list()
 
     def _query_users_by_client(self, key, data):
-        yield from data.get_user_list()
+        if self.__fetch_users:
+            yield from data.get_user_list()
+        else:
+            yield from []
 
     def _clients_schema(self):
         """
@@ -141,8 +152,8 @@ class ServiceNowAdapter(AdapterBase):
                     return '', 200
         return 'Failure', 400
 
-    def _parse_users_raw_data_hook(self, raw_users):
-        for user_raw in raw_users:
+    def _parse_users_raw_data(self, raw_data):
+        for user_raw in raw_data:
             try:
                 user = self._new_user_adapter()
                 sys_id = user_raw.get('sys_id')
@@ -155,9 +166,12 @@ class ServiceNowAdapter(AdapterBase):
                 user.user_country = user_raw.get('country')
                 user.first_name = user_raw.get('first_name')
                 user.last_name = user_raw.get('last_name')
-                user.username = user_raw.get('user_name')
+                user.username = user_raw.get('name')
                 user.user_title = user_raw.get('title')
-                user.user_manager = user.get('manager_full')
+                try:
+                    user.user_manager = (user_raw.get('manager_full') or {}).get('name')
+                except Exception:
+                    logger.exception(f'Problem getting manager for {user_raw}')
                 user.snow_source = user_raw.get('source')
                 user.snow_roles = user_raw.get('roles')
                 user.user_telephone_number = user_raw.get('phone')
@@ -169,6 +183,8 @@ class ServiceNowAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for table_devices_data in devices_raw_data:
             users_table_dict = table_devices_data.get(USERS_TABLE_KEY)
+            snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
+            snow_location_table_dict = table_devices_data.get(LOCATION_TABLE_KEY)
             for device_raw in table_devices_data[DEVICES_KEY]:
                 try:
                     device = self._new_device_adapter()
@@ -235,9 +251,58 @@ class ServiceNowAdapter(AdapterBase):
                     except Exception:
                         logger.exception(f'Problem getting hostname in {device_raw}')
                     device.description = device_raw.get('short_description')
+                    try:
+                        snow_department = snow_department_table_dict.get(
+                            (device_raw.get('department') or {}).get('value'))
+                        if snow_department:
+                            device.snow_department = snow_department.get('name')
+                    except Exception:
+                        logger.exception(f'Problem adding assigned_to to {device_raw}')
+
+                    try:
+                        snow_location = snow_location_table_dict.get((device_raw.get('location') or {}).get('value'))
+                        if snow_location:
+                            device.snow_location = snow_location.get('name')
+                    except Exception:
+                        logger.exception(f'Problem adding assigned_to to {device_raw}')
+
+                    try:
+                        assigned_to = users_table_dict.get((device_raw.get('assigned_to') or {}).get('value'))
+                        if assigned_to:
+                            device.assigned_to = assigned_to.get('name')
+                    except Exception:
+                        logger.exception(f'Problem adding assigned_to to {device_raw}')
                     owned_by = users_table_dict.get((device_raw.get('owned_by') or {}).get('value'))
                     if owned_by:
                         device.owner = owned_by.get('name')
+                    try:
+                        device.device_manufacturer = device_raw.get('cpu_manufacturer')
+                        ghz = device_raw.get('cpu_speed')
+                        if ghz:
+                            ghz = int(ghz) / 1024.0
+                        else:
+                            ghz = None
+                        device.add_cpu(name=device_raw.get('cpu_name'),
+                                       cores=int(device_raw.get('cpu_count'))
+                                       if device_raw.get('cpu_count') else None,
+                                       cores_thread=int(device_raw.get('cpu_core_thread'))
+                                       if device_raw.get('cpu_core_thread') else None,
+                                       ghz=ghz)
+                    except Exception:
+                        logger.exception(f'Problem adding cpu stuff to {device_raw}')
+                    try:
+                        device.discovery_source = device_raw.get('discovery_source')
+                        device.first_discovered = parse_date(device_raw.get('first_discovered'))
+                        device.last_discovered = parse_date(device_raw.get('last_discovered'))
+                    except Exception:
+                        logger.exception(f'Problem addding source stuff to {device_raw}')
+                    try:
+                        if device_raw.get('disk_space'):
+                            device.add_hd(total_size=float(device_raw.get('disk_space')))
+                    except Exception:
+                        logger.exception(f'Problem adding disk stuff to {device_raw}')
+                    device.domain = device_raw.get('dns_domain')
+
                     device.set_raw(device_raw)
                     yield device
                 except Exception:
@@ -246,3 +311,29 @@ class ServiceNowAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'fetch_users',
+                    'type': 'bool',
+                    'title': 'Should Fetch Users'
+                }
+            ],
+            "required": [
+                'fetch_users'
+            ],
+            "pretty_name": "ServiceNow Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_users': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_users = config['fetch_users']

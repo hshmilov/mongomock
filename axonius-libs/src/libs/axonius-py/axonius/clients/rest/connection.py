@@ -1,44 +1,48 @@
 import http.client
 import logging
-from typing import Tuple
-
-logger = logging.getLogger(f'axonius.{__name__}')
-from urllib3.util.url import parse_url
-import uritools
-import requests
-import aiohttp
 import math
-import json
-
-from axonius.clients.rest import consts
-from axonius.clients.rest.exception import *
 from abc import ABC, abstractmethod
 from json.decoder import JSONDecodeError
+from typing import Tuple
+
+import aiohttp
+import requests
+import uritools
+from urllib3.util.url import parse_url
+
 from axonius.async.utils import async_request
+from axonius.clients.rest import consts
+from axonius.clients.rest.exception import RESTException, RESTAlreadyConnected, \
+    RESTConnectionError, RESTNotConnected, RESTRequestException
 from axonius.utils.json import from_json
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE = 50
 MAX_REQUESTS_PER_MINUTE = 1000
 
+# pylint: disable=R0902
+
 
 class RESTConnection(ABC):
+    # pylint: disable=R0913
     def __init__(self, domain: str, username: str = None, password: str = None, apikey: str = None,
                  verify_ssl: bool = False,
-                 http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = "/",
+                 http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = '/',
                  session_timeout: Tuple[int, int] = consts.DEFAULT_TIMEOUT,
-                 port: int = None, headers: dict = {}, use_domain_path: bool = False):
+                 port: int = None, headers: dict = None, use_domain_path: bool = False):
         """
         An abstract class that implements backbone logic for accessing RESTful APIs in the manner
         needed by adapters to facilitate device acquiring logic
-        :param domain: The hostname of the api, e.g. "https://facebook.com"
+        :param domain: The hostname of the api, e.g. 'https://facebook.com'
         :param username: if HTTP authentication is required, this will be the username
         :param password: if HTTP authentication is required, this will be the password
         :param apikey: TBD
         :param verify_ssl: passed to `requests` as is
         :param http_proxy: if present, this proxy will be used for HTTP
         :param https_proxy: if present, this proxy will be used for HTTPS
-        :param url_base_prefix: base path for API, e.g. "/api/devices"
+        :param url_base_prefix: base path for API, e.g. '/api/devices'
         :param session_timeout: passed to `requests` as is
         :param port: port to be used with the API
         :param headers: passed to `requests1 as is
@@ -52,10 +56,10 @@ class RESTConnection(ABC):
         self._http_proxy = http_proxy
         self._https_proxy = https_proxy
         self._url_base_prefix = url_base_prefix
-        if not self._url_base_prefix.startswith("/"):
-            self._url_base_prefix = "/" + self._url_base_prefix
-        if not self._url_base_prefix.endswith("/"):
-            self._url_base_prefix = self._url_base_prefix + "/"
+        if not self._url_base_prefix.startswith('/'):
+            self._url_base_prefix = '/' + self._url_base_prefix
+        if not self._url_base_prefix.endswith('/'):
+            self._url_base_prefix = self._url_base_prefix + '/'
         self._session_timeout = session_timeout
         self._port = port
         self._proxies = {}
@@ -63,26 +67,26 @@ class RESTConnection(ABC):
             self._proxies['http'] = http_proxy
         if https_proxy is not None:
             self._proxies['https'] = https_proxy
-        logger.debug(f"Proxies: {self._proxies}")
+        logger.debug(f'Proxies: {self._proxies}')
 
         # We assumes that path starts with / and ends with /
         # Later in the code we will concat url to, and we will check that they don't start with /
         self._url = self.build_url(domain, port, self._url_base_prefix, use_domain_path)
-        self._permanent_headers = headers
+        self._permanent_headers = headers if headers is not None else {}
         self._session_headers = {}
         self._session = None
 
     @staticmethod
-    def build_url(domain: str, port: int = None, url_base_prefix: str = "/", use_domain_path: bool = False):
+    def build_url(domain: str, port: int = None, url_base_prefix: str = '/', use_domain_path: bool = False):
         """
         Parses the domain and composes the uri.
-        :param domain: The hostname of the api, e.g. "https://facebook.com"
+        :param domain: The hostname of the api, e.g. 'https://facebook.com'
         :param port: port to be used with the API
-        :param url_base_prefix: base path for API, e.g. "/api/devices"
+        :param url_base_prefix: base path for API, e.g. '/api/devices'
         :param use_domain_path: If this is true we take the path from the url and not from url_base_prefix
         """
         url_parsed = parse_url(domain)
-        url_scheme = url_parsed.scheme or "https"
+        url_scheme = url_parsed.scheme or 'https'
         url_port = url_parsed.port or port
         if use_domain_path:
             path = url_parsed.path + '/'
@@ -104,7 +108,7 @@ class RESTConnection(ABC):
     def test_reachability(host, port=None, path='/', ssl=True, use_domain_path=False):
         """
         Runs a basic http check to see if the host is reachable.
-        :param host: The hostname of the api, e.g. "https://facebook.com"
+        :param host: The hostname of the api, e.g. 'https://facebook.com'
         :param port: port to be used with the API.
         :param path:
         :param ssl: Should be used with ssl.
@@ -132,7 +136,7 @@ class RESTConnection(ABC):
 
     def _validate_no_connection(self):
         if self._is_connected:
-            raise RESTAlreadyConnected("Already Connected")
+            raise RESTAlreadyConnected('Already Connected')
 
     def close(self):
         """ Closes the connection """
@@ -150,12 +154,12 @@ class RESTConnection(ABC):
         :param request_name: the request name
         :return: the full request url
         """
-        if request_name.startswith("/"):
-            raise RESTException(f"Url with double / : {self._url} AND {request_name}")
+        if request_name.startswith('/'):
+            raise RESTException(f'Url with double / : {self._url} AND {request_name}')
         return uritools.urijoin(self._url, request_name)
 
     def _get(self, *args, **kwargs):
-        return self._do_request("GET", *args, **kwargs)
+        return self._do_request('GET', *args, **kwargs)
 
     @staticmethod
     def _is_async_response_good(response):
@@ -164,7 +168,7 @@ class RESTConnection(ABC):
     def _async_get(self, list_of_requests,
                    chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
                    max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
-        return self._do_async_request("GET", list_of_requests, chunks, max_requests_per_minute)
+        return self._do_async_request('GET', list_of_requests, chunks, max_requests_per_minute)
 
     def _async_get_only_good_response(self, list_of_requests,
                                       chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
@@ -174,23 +178,24 @@ class RESTConnection(ABC):
             if self._is_async_response_good(response):
                 yield response
             else:
-                logger.error(f"Async response returned bad, its {response}")
+                logger.error(f'Async response returned bad, its {response}')
 
     def _post(self, *args, **kwargs):
-        return self._do_request("POST", *args, **kwargs)
+        return self._do_request('POST', *args, **kwargs)
 
     def _async_post(self, list_of_requests,
                     chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
                     max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
-        return self._do_async_request("POST", list_of_requests, chunks, max_requests_per_minute)
+        return self._do_async_request('POST', list_of_requests, chunks, max_requests_per_minute)
 
     def _delete(self, *args, **kwargs):
-        return self._do_request("DELETE", *args, **kwargs)
+        return self._do_request('DELETE', *args, **kwargs)
 
     def _put(self, *args, **kwargs):
-        return self._do_request("PUT", *args, **kwargs)
+        return self._do_request('PUT', *args, **kwargs)
 
-    def _do_request(self, method, name, url_params={}, body_params=None,
+    # pylint: disable=R0912, R0913, R0914
+    def _do_request(self, method, name, url_params=None, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
                     do_digest_auth=False, return_response_raw=False):
         """ Serves a GET request to REST API
@@ -226,7 +231,7 @@ class RESTConnection(ABC):
             auth_dict = None
             if do_basic_auth:
                 if self._username is None or self._password is None:
-                    raise RESTConnectionError("No user name or password")
+                    raise RESTConnectionError('No user name or password')
                 auth_dict = (self._username, self._password)
             if do_digest_auth:
                 auth_dict = requests.auth.HTTPDigestAuth(self._username, self._password)
@@ -247,7 +252,7 @@ class RESTConnection(ABC):
                     rp = response.json()
                 except Exception:
                     rp = str(response.content)
-                message = f"{str(e)}: {rp}"
+                message = f'{str(e)}: {rp}'
             except Exception:
                 message = str(e)
             raise RESTRequestException(message)
@@ -255,12 +260,13 @@ class RESTConnection(ABC):
             try:
                 return response.json()
             except JSONDecodeError as e:
-                raise RESTRequestException(f"Got json error: {str(e)}")
+                raise RESTRequestException(f'Got json error: {str(e)}')
         elif return_response_raw:
             return response
         else:
             return response.content
 
+    # pylint: disable=R0915
     def _do_async_request(self, method, list_of_requests, chunks, max_requests_per_minute):
         """
         makes requests asynchronously. list_of_requests is a dict of parameters you would normally pass to _do_request.
@@ -308,7 +314,7 @@ class RESTConnection(ABC):
             if req.get('do_basic_auth', False) is True:
                 aio_req['auth'] = (self._username, self._password)
             if req.get('do_digest_auth') is not None:
-                raise ValueError(f"Async requests do not support digest auth")
+                raise ValueError(f'Async requests do not support digest auth')
 
             # Take care of headers, timeout and ssl verification
             aio_req['headers'] = self._permanent_headers.copy()
@@ -327,7 +333,7 @@ class RESTConnection(ABC):
 
         # Now that we have built the new requests, try to asynchronously get them.
         for chunk_id in range(int(math.ceil(len(aio_requests) / chunks))):
-            logger.info(f"Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}")
+            logger.info(f'Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}')
             all_answers = async_request(aio_requests[chunks * chunk_id: chunks * (chunk_id + 1)])
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.
@@ -345,9 +351,9 @@ class RESTConnection(ABC):
                         response_object = raw_answer[1]
 
                         response_object.raise_for_status()
-                        if list_of_requests[request_id_absolute].get("return_response_raw", False) is True:
+                        if list_of_requests[request_id_absolute].get('return_response_raw', False) is True:
                             yield response_object
-                        elif list_of_requests[request_id_absolute].get("use_json_in_response", True) is True:
+                        elif list_of_requests[request_id_absolute].get('use_json_in_response', True) is True:
                             yield from_json(answer_text)    # from_json also handles datetime with json.loads doesn't
                         else:
                             yield answer_text
@@ -356,14 +362,15 @@ class RESTConnection(ABC):
                             rp = from_json(answer_text)     # from_json also handles datetime with json.loads doesn't
                         except Exception:
                             rp = str(answer_text)
-                        yield RESTRequestException(f"async error code {e.status} on "
-                                                   f"url {list_of_requests[request_id_absolute]['name']} - {rp}")
+                        error_on = list_of_requests[request_id_absolute]['name']
+                        yield RESTRequestException(f'async error code {e.status} on '
+                                                   f'url {error_on} - {rp}')
                     except Exception as e:
-                        logger.exception(f"Exception while parsing async response for text {answer_text}")
+                        logger.exception(f'Exception while parsing async response for text {answer_text}')
                         yield e
                 else:
-                    msg = f"Got an async response which is not exception or ClientResponse. " \
-                          f"This should never happen! response is {raw_answer}"
+                    msg = f'Got an async response which is not exception or ClientResponse. ' \
+                          f'This should never happen! response is {raw_answer}'
                     logger.error(msg)
                     yield ValueError(msg)
 
@@ -371,5 +378,6 @@ class RESTConnection(ABC):
         self.connect()
         return self
 
+    # pylint: disable=C0103
     def __exit__(self, _type, value, tb):
         self.close()

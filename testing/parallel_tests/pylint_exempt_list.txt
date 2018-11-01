@@ -188,12 +188,6 @@ adapters/qcore_adapter/tests/protocol/qtp/qdp/test_qdp_registration.py
 adapters/qcore_adapter/tests/protocol/qtp/qdp/test_qdp_timesync.py
 adapters/qcore_adapter/tests/protocol/qtp/qdp/test_qdp_update_settings.py
 adapters/qcore_adapter/tests/protocol/qtp/qsu/test_qsu_message.py
-adapters/qualys_adapter/connection.py
-adapters/qualys_adapter/exceptions.py
-adapters/qualys_adapter/service.py
-adapters/qualys_scans_adapter/connection.py
-adapters/qualys_scans_adapter/exceptions.py
-adapters/qualys_scans_adapter/service.py
 adapters/redseal_adapter/client.py
 adapters/redseal_adapter/service.py
 adapters/redseal_adapter/test/use_client.py
@@ -263,7 +257,6 @@ axonius-libs/src/libs/axonius-py/axonius/clients/ldap/exceptions.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/ldap.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/ldap_connection.py
 axonius-libs/src/libs/axonius-py/axonius/clients/mssql/connection.py
-axonius-libs/src/libs/axonius-py/axonius/clients/rest/connection.py
 axonius-libs/src/libs/axonius-py/axonius/clients/rest/exception.py
 axonius-libs/src/libs/axonius-py/axonius/consts/adapter_consts.py
 axonius-libs/src/libs/axonius-py/axonius/consts/email_consts.py
@@ -366,7 +359,6 @@ testing/parallel_tests/test_eset.py
 testing/parallel_tests/test_esx.py
 testing/parallel_tests/test_fireeye_hx.py
 testing/parallel_tests/test_forcepoint_csv.py
-testing/parallel_tests/test_fortigate.py
 testing/parallel_tests/test_gce.py
 testing/parallel_tests/test_google_mdm.py
 testing/parallel_tests/test_gotoassist.py
@@ -388,8 +380,6 @@ testing/parallel_tests/test_openstack.py
 testing/parallel_tests/test_oracle_vm.py
 testing/parallel_tests/test_puppet.py
 testing/parallel_tests/test_qcore.py
-testing/parallel_tests/test_qualys.py
-testing/parallel_tests/test_qualys_scans.py
 testing/parallel_tests/test_redseal.py
 testing/parallel_tests/test_sccm.py
 testing/parallel_tests/test_secdo.py
@@ -453,8 +443,6 @@ testing/services/adapters/openstack_service.py
 testing/services/adapters/oracle_vm_service.py
 testing/services/adapters/puppet_service.py
 testing/services/adapters/qcore_service.py
-testing/services/adapters/qualys_scans_service.py
-testing/services/adapters/qualys_service.py
 testing/services/adapters/redseal_service.py
 testing/services/adapters/sccm_service.py
 testing/services/adapters/secdo_service.py
@@ -514,8 +502,6 @@ testing/test_credentials/test_observeit_credentials.py
 testing/test_credentials/test_openstack_credentials.py
 testing/test_credentials/test_oracle_vm_credentials.py
 testing/test_credentials/test_puppet_credentials.py
-testing/test_credentials/test_qualys_credentials.py
-testing/test_credentials/test_qualys_scans_credentials.py
 testing/test_credentials/test_sccm_credentials.py
 testing/test_credentials/test_secdo_credentials.py
 testing/test_credentials/test_sentinelone_credentials.py

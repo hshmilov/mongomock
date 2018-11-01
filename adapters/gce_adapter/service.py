@@ -1,10 +1,12 @@
 import json
 import logging
+import datetime
 
 from google.oauth2 import service_account
 from googleapiclient import discovery
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import NodeState, Provider
+from axonius.smart_json_class import SmartJsonClass
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -12,6 +14,7 @@ from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
+from axonius.utils.parsing import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -28,15 +31,21 @@ POWER_STATE_MAP = {
 }
 
 
+class GceTag(SmartJsonClass):
+    gce_key = Field(str, 'GCE Key')
+    gce_value = Field(str, 'GCE Value')
+
+
 class GceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         public_ips = ListField(str, 'Public IPs')
         image = Field(str, 'Device image')
         size = Field(str, 'Google Device Size')
-        creation_time_stamp = Field(str, 'Creation Time Stamp')
+        creation_time_stamp = Field(datetime.datetime, 'Creation Time Stamp')
         cluster_name = Field(str, 'GCE Cluster Name')
         cluster_uid = Field(str, 'GCE Cluster Unique ID')
         cluster_location = Field(str, 'GCE Cluster Location')
+        gce_tags = ListField(GceTag, 'GCE Tags')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -132,7 +141,7 @@ class GceAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Problem getting data size for {str(raw_device_data)}')
         try:
-            device.creation_time_stamp = raw_device_data.extra.get('creationTimestamp')
+            device.creation_time_stamp = parse_date(raw_device_data.extra.get('creationTimestamp'))
         except Exception:
             logger.exception(f'Problem getting creation time for {str(raw_device_data)}')
         try:
@@ -143,6 +152,13 @@ class GceAdapter(AdapterBase):
                     device.cluster_uid = item.get('value')
                 elif item.get('key') == 'cluster-location':
                     device.cluster_location = item.get('value')
+                else:
+                    try:
+                        gce_key = item.get('key')
+                        gce_value = item.get('value')
+                        device.gce_tags.append(GceTag(gce_key=gce_key, gce_value=gce_value))
+                    except Exception:
+                        logger.exception(f'Problemg getting extra tags for {raw_device_data}')
         except Exception:
             logger.exception(f'Problem getting cluster info for {str(raw_device_data)}')
 

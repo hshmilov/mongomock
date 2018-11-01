@@ -2,8 +2,7 @@ import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.adapter_exceptions import (ClientConnectionException,
-                                        GetDevicesError)
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
@@ -12,6 +11,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_mac
 from fortigate_adapter import consts
 from fortigate_adapter.client import FortigateClient
+from fortigate_adapter.connection import FortimanagerConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -61,6 +61,11 @@ class FortigateAdapter(AdapterBase, Configurable):
                     'name': consts.VERIFY_SSL,
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': consts.IS_FORTIMANAGER,
+                    'title': 'Is Fortimanger Server',
+                    'type': 'bool'
                 }
             ],
             'required': [
@@ -71,49 +76,65 @@ class FortigateAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
+    def _create_fortios_device(self, raw_device):
+        try:
+            # list, than its a device itself
+            device = self._new_device_adapter()
+            hostname = raw_device.get('hostname')
+            device.hostname = hostname
+            try:
+                mac_address = format_mac(raw_device.get('mac'))
+            except Exception:
+                mac_address = None
+            if not mac_address:
+                logger.warning(f'Bad MAC address at device {raw_device}')
+                return None
+            device.id = mac_address + '_' + (hostname or '')
+            device.add_nic(mac_address, [raw_device.get('ip')] if raw_device.get('ip') else None)
+
+            last_seen = raw_device.get('expire_time')
+            # The DHCP lease time is kept in seconds and by getting the dhcp lease expiry - lease time
+            # would let us know when the dhcp lease occurred which we would use as last_seen.
+            try:
+                device.last_seen = datetime.datetime.fromtimestamp(
+                    last_seen) - datetime.timedelta(seconds=self.__dhcp_lease_time)
+            except Exception:
+                logger.exception(f'Problem getting last seen for device {raw_device}')
+            device.interface = raw_device.get('interface')
+            device.set_raw(raw_device)
+            return device
+        except Exception:
+            logger.exception(f'Problem with device raw {raw_device}')
+            return None
+
+    def _create_fortimanager_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with device raw {device_raw}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
 
-        for current_interface in devices_raw_data.get('results', []):
-            try:
-                for raw_device in current_interface.get('list',
-                                                        [current_interface]):  # If current interface does'nt hold
-                    try:
-                        # list, than its a device itself
-                        device = self._new_device_adapter()
-                        device.hostname = raw_device.get('hostname')
-                        try:
-                            mac_address = format_mac(raw_device.get('mac'))
-                        except Exception:
-                            mac_address = None
-                        if not mac_address:
-                            logger.warning(f'Bad MAC address at device {raw_device}')
-                            continue
-                        device.id = mac_address
-                        device.add_nic(mac_address, [raw_device.get('ip')] if raw_device.get('ip') else None)
-
-                        last_seen = raw_device.get('expire_time')
-                        # The DHCP lease time is kept in seconds and by getting the dhcp lease expiry - lease time
-                        # would let us know when the dhcp lease occurred which we would use as last_seen.
-                        try:
-                            device.last_seen = datetime.datetime.fromtimestamp(
-                                last_seen) - datetime.timedelta(seconds=self.__dhcp_lease_time)
-                        except Exception:
-                            logger.exception(f'Problem getting last seen for device {raw_device}')
-                        device.interface = raw_device.get('interface')
-                        device.set_raw(raw_device)
-                        yield device
-                    except Exception:
-                        logger.exception(f'Problem with device raw {raw_device}')
-            except Exception:
-                logger.exception(f'Problem with interface {str(current_interface)}')
+        for raw_device, device_type in devices_raw_data:
+            device = None
+            if device_type == 'fortios_device':
+                device = self._create_fortios_device(raw_device)
+            if device_type == 'fortimanager_device':
+                device = self._create_fortimanager_device(raw_device)
+            if device:
+                yield device
 
     def _query_devices_by_client(self, client_name, client_data):
-        try:
-            assert isinstance(client_data, FortigateClient)
-            return client_data.get_all_devices()
-        except Exception as err:
-            logger.exception(f'Failed to get all the devices from the client: {client_data}')
-            raise GetDevicesError(f'Failed to get all the devices from the client: {client_data}')
+        client_data, client_type = client_data
+        if client_type == 'fortios':
+            yield from client_data.get_all_devices()
+        if client_type == 'fortimanager':
+            with client_data:
+                yield from client_data.get_device_list()
 
     def _get_client_id(self, client_config):
         return f'{client_config[consts.FORTIGATE_HOST]}:' \
@@ -124,13 +145,30 @@ class FortigateAdapter(AdapterBase, Configurable):
                                                 client_config.get(consts.FORTIGATE_PORT, consts.DEFAULT_FORTIGATE_PORT))
 
     def _connect_client(self, client_config):
-        try:
-            return FortigateClient(**client_config)
-        except Exception as err:
-            logger.exception(
-                f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
-            raise ClientConnectionException(
-                f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
+        if client_config.get(consts.IS_FORTIMANAGER) is True:
+            try:
+                connection = FortimanagerConnection(domain=client_config[consts.FORTIGATE_HOST],
+                                                    verify_ssl=client_config[consts.VERIFY_SSL],
+                                                    username=client_config[consts.USER],
+                                                    password=client_config[consts.PASSWORD],
+                                                    port=client_config.get(consts.FORTIGATE_PORT))
+                with connection:
+                    pass  # check that the connection credentials are valid
+                return connection, 'fortimanager'
+            except Exception as e:
+                message = 'Error connecting to client with domain {0}, reason: {1}'.format(
+                    client_config[consts.FORTIGATE_HOST], str(e))
+                logger.exception(message)
+                raise ClientConnectionException(message)
+
+        else:
+            try:
+                return FortigateClient(**client_config), 'fortios'
+            except Exception as err:
+                logger.exception(
+                    f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
+                raise ClientConnectionException(
+                    f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
 
     @classmethod
     def adapter_properties(cls):

@@ -1492,7 +1492,8 @@ class PluginBase(Configurable, Feature):
                     # or all the entities are already linked. In any case, if a real merge isn't done
                     # it means someone made a mistake.
                     if len(entities_candidates) != 2:
-                        logger.error(f"{len(entities_candidates)} != 2, entities_candidates: {entities_candidates}"
+                        logger.error(f"{len(entities_candidates)} != 2, entities_candidates: "
+                                     f"{str(entities_candidates)[:50]}"
                                      f" and associated_adapters {correlation.associated_adapters}")
                         raise CorrelateException(f'Link with wrong number of devices '
                                                  f'{len(correlation.associated_adapters)}')

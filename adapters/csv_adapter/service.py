@@ -144,10 +144,10 @@ class CsvAdapter(AdapterBase):
             try:
                 user_obj = self._new_user_adapter()
                 username = user_raw.get(display_name)
-                mail = user_raw.get(mail)
+                user_mail = user_raw.get(mail)
                 user_obj.username = username
-                user_obj.mail = mail
-                user_obj.id = (mail or '') + '_' + (username or '')
+                user_obj.mail = user_mail
+                user_obj.id = (user_mail or '') + '_' + (username or '')
                 user_obj.domain = user_raw.get(domain)
                 user_obj.field1 = user_raw.get(csv_field1)
                 user_obj.field2 = user_raw.get(csv_field2)

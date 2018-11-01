@@ -5,6 +5,7 @@ import base64
 import subprocess
 import json
 import functools
+import datetime
 
 import boto3
 import kubernetes
@@ -152,6 +153,8 @@ class AwsAdapter(AdapterBase):
         instance_type = Field(str, 'Instance Type')
         key_name = Field(str, 'Key Name')
         monitoring_state = Field(str, 'Monitoring State')
+        launch_time = Field(datetime.datetime, 'Launch Time')
+        image_id = Field(str, 'AMI (Image) ID')
 
         # VPC Generic Fields
         subnet_id = Field(str, 'Subnet Id')
@@ -163,7 +166,6 @@ class AwsAdapter(AdapterBase):
         container_instance_arn = Field(str, 'Task ContainerInstance ID/ARN')
         ecs_device_type = Field(str, 'ECS Launch Type', enum=['Fargate', 'EC2'])
         ecs_ec2_instance_id = Field(str, "ECS EC2 Instance ID")
-        ecs_ami_id = Field(str, "ECS Host Ami-ID")
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -191,10 +193,6 @@ class AwsAdapter(AdapterBase):
             roles_to_assume_file = ''
         roles_to_assume_list = []
         roles_temp_credentials = {}
-
-        if (client_config.get(GET_ALL_REGIONS) or False) is True and client_config[REGION_NAME]:
-            raise ClientConnectionException(f'Please specify a region name or select all regions, '
-                                            f'but not both of them')
 
         # Input validation
         failed_arns = []
@@ -842,7 +840,11 @@ class AwsAdapter(AdapterBase):
                         ec2_id_to_ips[device_id] = ec2_ips
                     device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                              DeviceRunningState.Unknown)
-
+                    try:
+                        device.launch_time = parse_date(device_raw.get('LaunchTime'))
+                    except Exception:
+                        logger.exception(f'Problem getting launch time for {device_raw}')
+                    device.image_id = device_raw.get('ImageId')
                     device.set_raw(device_raw)
                     yield device
 
@@ -1061,7 +1063,7 @@ class AwsAdapter(AdapterBase):
 
                                         attribute_name = attribute_name.lower()
                                         if attribute_name == 'ecs.ami-id':
-                                            device.ecs_ami_id = attribute_value
+                                            device.image_id = attribute_value
 
                                         elif attribute_name == 'ecs.vpd-id':
                                             device_vpc_id = attribute_value

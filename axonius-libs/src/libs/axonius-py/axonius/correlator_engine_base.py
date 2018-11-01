@@ -184,6 +184,10 @@ class CorrelatorEngineBase(ABC):
         :return: yields a correlation if a pair of devices goes through all the comparators successfully
         """
         for bucket in self._bucket_creator(adapters_to_correlate, sort_order, bucket_insertion_comparators):
+            # This is to prevents massive false correlation
+            if len(bucket) > 100:
+                logger.critical(f'Got a huge bucket this is really bad {len(bucket)}')
+                continue
             if pair_correlation_preconditions:
                 yield from _process_preconditioned_bucket(bucket, pair_correlation_preconditions,
                                                           inner_bucket_comparators, data_dict, reason)

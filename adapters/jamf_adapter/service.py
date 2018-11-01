@@ -440,6 +440,5 @@ class JamfAdapter(AdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
-        logger.info(f"Loading Jamf config: {config}")
         self.__fetch_department = config['fetch_department']
         self.__should_fetch_policies = config['should_fetch_policies']

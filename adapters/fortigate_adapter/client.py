@@ -13,6 +13,8 @@ from fortigate_adapter.consts import (DEFAULT_DHCP_LEASE_TIME,
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+# pylint: disable=C0111, I0021
+
 
 class FortigateClient():
 
@@ -77,4 +79,11 @@ class FortigateClient():
         with self._get_session() as session:
             raw_devices = self._make_request(session, 'get', 'api/v2/monitor/system/dhcp/')
             raw_devices.update({'dhcp_lease_time': self.dhcp_lease_time})
-            return raw_devices
+            for current_interface in (raw_devices.get('results') or []):
+                try:
+                    for raw_device in current_interface.get('list',
+                                                            [current_interface]):  # If current interface does'nt hold
+                        yield raw_device, 'fortios_device'
+                except Exception:
+                    # pylint: disable=W1203
+                    logger.exception(f'Problem with interface {str(current_interface)}')
