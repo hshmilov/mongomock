@@ -38,6 +38,8 @@ class SettingsPage(Page):
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
     SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'
     SELECT_OPTION_CSS = 'div.x-select-option'
+    READ_ONLY_ROLE = 'Read Only User'
+    RESTRICTED_ROLE = 'Restricted User'
 
     @property
     def url(self):
@@ -318,3 +320,21 @@ class SettingsPage(Page):
 
     def select_role(self, role_text):
         self.select_option_without_search(self.SELECT_ROLE_CSS, self.SELECT_OPTION_CSS, role_text)
+
+    def fill_role_name(self, text):
+        self.fill_text_field_by_css_selector('input.name-role', text)
+
+    def save_role(self):
+        self.click_button_by_id('save-role-button')
+
+    def remove_role(self):
+        self.click_button_by_id('remove-role-button')
+
+    def click_done(self):
+        self.click_button('Done')
+
+    def wait_for_role_saved_toaster(self):
+        self.wait_for_toaster('Role saved.')
+
+    def wait_for_role_removed_toaster(self):
+        self.wait_for_toaster('Role removed.')

@@ -124,10 +124,26 @@ class TestUserPermissions(TestBase):
         self.settings_page.assert_default_role_is_restricted()
         self.settings_page.assert_placeholder_is_new()
 
-        self.settings_page.select_role('Read Only User')
+        self.settings_page.select_role(self.settings_page.READ_ONLY_ROLE)
         for label in self.settings_page.get_permission_labels():
             assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
 
-        self.settings_page.select_role('Restricted User')
+        self.settings_page.select_role(self.settings_page.RESTRICTED_ROLE)
         for label in self.settings_page.get_permission_labels():
             assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION
+
+        role_name = 'lalala'
+        self.settings_page.select_role(self.settings_page.READ_ONLY_ROLE)
+        self.settings_page.fill_role_name(role_name)
+        self.settings_page.save_role()
+        self.settings_page.click_done()
+        self.settings_page.wait_for_role_saved_toaster()
+
+        self.settings_page.click_roles_button()
+        self.settings_page.select_role(self.settings_page.RESTRICTED_ROLE)
+        self.settings_page.select_role(role_name)
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
+        self.settings_page.remove_role()
+        self.settings_page.click_done()
+        self.settings_page.wait_for_role_removed_toaster()

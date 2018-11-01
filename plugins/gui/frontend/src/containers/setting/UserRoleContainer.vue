@@ -52,8 +52,8 @@
                 <label>Name</label>
                 <input type="text" class="name-role" v-model="rolesConfig.data.name" />
                 <x-schema-form :schema="permissionSchema" v-model="rolesConfig.data.permissions" :read-only="readOnly"/>
-                <button class="x-btn link" @click="saveRole">Save</button>
-                <button v-if="rolesConfig.selected" class="x-btn link" @click="performRemoveRole">Remove</button>
+                <button id="save-role-button" class="x-btn link" @click="saveRole">Save</button>
+                <button v-if="rolesConfig.selected" id="remove-role-button" class="x-btn link" @click="performRemoveRole">Remove</button>
             </div>
             <div slot="footer">
                 <button class="x-btn" @click="closeRoles">Done</button>
