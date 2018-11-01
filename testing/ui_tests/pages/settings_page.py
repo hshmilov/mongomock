@@ -38,7 +38,6 @@ class SettingsPage(Page):
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
     SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'
     SELECT_OPTION_CSS = 'div.x-select-option'
-    PERMISSION_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
 
     @property
     def url(self):
@@ -271,7 +270,7 @@ class SettingsPage(Page):
         self.driver.find_element_by_css_selector('li.nav-item.disabled #settings')
 
     def select_permissions(self, label_text, permission):
-        self.driver.find_element_by_xpath(self.PERMISSION_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
+        self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
             find_element_by_css_selector('div.trigger-text').\
             click()
         self.fill_text_field_by_css_selector('input.input-value', permission)
@@ -279,7 +278,7 @@ class SettingsPage(Page):
 
     def get_permissions_text(self, label_text):
         return self.driver.find_element_by_xpath(
-            self.PERMISSION_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
+            self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
             find_element_by_css_selector('div > div').\
             text
 

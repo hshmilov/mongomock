@@ -33,3 +33,8 @@ class FreshServiceSettings:
 class QueriesScreen:
     query_1 = 'adapters == size(1)'
     query_1_name = 'test_saved_query_1'
+
+
+class Alerts:
+    alert_name_1 = 'test_alert_1'
+    alert_query_1 = 'Windows Operating System'

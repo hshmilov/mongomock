@@ -72,6 +72,7 @@ SLEEP_INTERVAL = 0.2
 class Page:
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
     CHECKBOX_CSS = 'div.x-checkbox-container'
+    DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
 
     def __init__(self, driver, base_url):
         self.driver = driver

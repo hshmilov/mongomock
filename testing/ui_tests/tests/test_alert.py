@@ -28,15 +28,9 @@ def create_alert_name(number, alert_name=ALERT_NAME):
 
 
 class TestAlert(TestBase):
-    def create_basic_alert(self, alert_name=ALERT_NAME, alert_query=COMMON_ALERT_QUERY):
-        self.alert_page.switch_to_page()
-        self.alert_page.click_new_alert()
-        self.alert_page.wait_for_spinner_to_end()
-        self.alert_page.fill_alert_name(alert_name)
-        self.alert_page.select_saved_query(alert_query)
 
     def create_outputting_notification_alert(self, alert_name=ALERT_NAME, alert_query=COMMON_ALERT_QUERY):
-        self.create_basic_alert(alert_name, alert_query)
+        self.alert_page.create_basic_alert(alert_name, alert_query)
         self.alert_page.check_new()
         self.alert_page.check_previous()
         self.alert_page.check_every_discovery()
@@ -73,7 +67,7 @@ class TestAlert(TestBase):
         self.settings_page.click_toggle_button(toggle, make_yes=False)
         self.settings_page.click_save_global_settings()
 
-        self.create_basic_alert()
+        self.alert_page.create_basic_alert(ALERT_NAME, COMMON_ALERT_QUERY)
         self.alert_page.click_send_an_email()
         self.alert_page.find_missing_email_server_notification()
 
@@ -97,7 +91,7 @@ class TestAlert(TestBase):
         assert old_length == new_length
 
     def test_invalid_input(self):
-        self.create_basic_alert()
+        self.alert_page.create_basic_alert(ALERT_NAME, COMMON_ALERT_QUERY)
         self.alert_page.check_above()
         self.alert_page.fill_above(-5)
         value = self.alert_page.get_above_value()
@@ -258,7 +252,7 @@ class TestAlert(TestBase):
             self.settings_page.click_save_button()
 
             # switch to alerts page
-            self.create_basic_alert()
+            self.alert_page.create_basic_alert(ALERT_NAME, COMMON_ALERT_QUERY)
 
             # check all trigger causes so it will always jump
             self.alert_page.check_every_discovery()

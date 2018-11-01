@@ -2,6 +2,32 @@ from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import X_BODY
 
 
+class Severity:
+    Info = '#SeverityInfo'
+    Warning = '#SeverityWarning'
+    Error = '#SeverityError'
+
+
+class Period:
+    EveryDiscovery = '#EveryPhasePeriod'
+    Daily = '#DailyPeriod'
+    Weekly = '#WeeklyPeriod'
+
+
+class Trigger:
+    EveryDiscoveryCycle = 'Every discovery cycle'
+    NewEntries = 'New entities were added to query results'
+    PreviousEntries = 'Previous entities were subtracted from query results'
+    Above = 'The number of query results is above'
+    Below = 'The number of query results is below'
+
+
+class Action:
+    SendEmail = 'Send an Email'
+    PushNotification = 'Push a system notification'
+    Syslog = 'Notify syslog'
+
+
 class AlertPage(EntitiesPage):
     ALERT_NAME_ID = 'alert_name'
     NEW_ALERT_BUTTON = '+ New Alert'
@@ -12,7 +38,7 @@ class AlertPage(EntitiesPage):
     INCREASE_ID = 'alert_above'
     EDIT_ALERT_XPATH = '//div[@title=\'{alert_name}\']'
     SELECT_SAVED_QUERY_TEXT_CSS = 'div.trigger-text'
-    SEVERITY_WARNING_RADIO = '#SeverityWarning'
+    SEND_AN_EMAIL = 'Send an Email'
 
     @property
     def url(self):
@@ -21,6 +47,9 @@ class AlertPage(EntitiesPage):
     @property
     def root_page_css(self):
         return 'li#alerts.x-nested-nav-item'
+
+    def find_checkbox_by_label(self, text):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
 
     def click_new_alert(self):
         self.wait_for_spinner_to_end()
@@ -35,7 +64,7 @@ class AlertPage(EntitiesPage):
         self.fill_text_field_by_element_id(self.ALERT_NAME_ID, name)
 
     def click_send_an_email(self):
-        element = self.find_element_by_text('Send an Email')
+        element = self.find_element_by_text(Action.SendEmail)
         self.scroll_into_view(element, X_BODY)
         element.click()
 
@@ -46,28 +75,28 @@ class AlertPage(EntitiesPage):
         self.find_element_by_text(text).click()
 
     def check_new(self):
-        self.check_alert_checkbox('New entities were added to query result')
+        self.check_alert_checkbox(Trigger.NewEntries)
 
     def check_previous(self):
-        self.check_alert_checkbox('Previous entities were subtracted from query results')
+        self.check_alert_checkbox(Trigger.PreviousEntries)
 
     def check_above(self):
-        self.check_alert_checkbox('The number of query results is above')
+        self.check_alert_checkbox(Trigger.Above)
 
     def check_below(self):
-        self.check_alert_checkbox('The number of query results is below')
+        self.check_alert_checkbox(Trigger.Below)
 
     def check_every_discovery(self):
-        self.check_alert_checkbox('Every discovery cycle')
+        self.check_alert_checkbox(Trigger.EveryDiscoveryCycle)
 
     def fill_below_value(self, value):
         self.fill_text_field_by_element_id('TriggerBelow', value)
 
     def check_push_system_notification(self):
-        self.check_alert_checkbox('Push a system notification')
+        self.check_alert_checkbox(Action.PushNotification)
 
     def check_notify_syslog(self):
-        self.check_alert_checkbox('Notify syslog')
+        self.check_alert_checkbox(Action.Syslog)
 
     def select_saved_query(self, text):
         self.driver.find_element_by_css_selector(self.SELECT_SAVED_QUERY_CSS).click()
@@ -87,7 +116,10 @@ class AlertPage(EntitiesPage):
         self.find_element_by_text('Remove').click()
 
     def choose_severity_warning(self):
-        self.driver.find_element_by_css_selector(self.SEVERITY_WARNING_RADIO).click()
+        self.driver.find_element_by_css_selector(Severity.Warning).click()
+
+    def choose_period(self, period):
+        self.driver.find_element_by_css_selector(period).click()
 
     def fill_above(self, value):
         self.fill_text_field_by_element_id(self.INCREASE_ID, value)
@@ -105,3 +137,27 @@ class AlertPage(EntitiesPage):
         self.switch_to_page()
         self.find_element_by_text('You do not have permission to access the Alerts screen')
         self.click_ok_button()
+
+    def create_basic_alert(self, alert_name, alert_query):
+        self.switch_to_page()
+        self.click_new_alert()
+        self.wait_for_spinner_to_end()
+        self.fill_alert_name(alert_name)
+        self.select_saved_query(alert_query)
+
+    def is_severity_selected(self, severity):
+        return self.driver.find_element_by_css_selector(severity).is_selected()
+
+    def is_period_selected(self, period):
+        return self.driver.find_element_by_css_selector(period).is_selected()
+
+    def is_action_selected(self, action):
+        element = self.find_checkbox_container_by_label(action)
+        return self.is_toggle_selected(element)
+
+    def is_trigger_selected(self, trigger):
+        element = self.find_checkbox_container_by_label(trigger)
+        return element.get_attribute('class') == 'x-checkbox grid-span2 x-checked'
+
+    def find_checkbox_container_by_label(self, label_text):
+        return self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text))
