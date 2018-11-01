@@ -134,4 +134,4 @@ class TestBase:
 
     def login(self):
         self.driver.get(self.base_url)
-        self.login_page.login(username=self.username, password=self.password)
+        self.login_page.login(username=self.username, password=self.password, remember_me=True)

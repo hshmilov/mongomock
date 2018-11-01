@@ -5,6 +5,7 @@ class LoginPage(Page):
     LOGIN_USERNAME_ID = 'user_name'
     LOGIN_PASSWORD_ID = 'password'
     LOGIN_DOMAIN_ID = 'domain'
+    REMEMBER_ME_INPUT_CSS = '[for=remember_me]+div'
     LOGOUT_CSS = 'a[title="Logout"]'
     WRONG_USERNAME_OR_PASSWORD_MESSAGE = 'Wrong user name or password'
     DISABLED_BUTTON_XPATH = './/button[@class=\'x-btn disabled\' and .//text()=\'Login\']'
@@ -23,9 +24,11 @@ class LoginPage(Page):
     def url(self):
         pass
 
-    def login(self, username, password):
+    def login(self, username, password, remember_me=False):
         self.fill_username(username)
         self.fill_password(password)
+        if remember_me:
+            self.click_remember_me()
         self.click_login_button()
 
     def fill_username(self, username):
@@ -33,6 +36,11 @@ class LoginPage(Page):
 
     def fill_password(self, password):
         self.fill_text_field_by_element_id(self.LOGIN_PASSWORD_ID, password)
+
+    def click_remember_me(self):
+        toggle = self.driver.find_element_by_css_selector(self.REMEMBER_ME_INPUT_CSS)
+        self.click_toggle_button(toggle,
+                                 scroll_to_toggle=False)
 
     def click_login_button(self):
         self.click_button('Login')
