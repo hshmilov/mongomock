@@ -110,6 +110,60 @@ paths:
           description: "Entity ID wasn't found"
       security:
       - axonius_api_auth: []
+  /devices/labels:
+    get:
+      tags:
+      - "Devices"
+      summary: "Get all distinct labels from all devices"
+      description: ""
+      operationId: "getDevicesLabels"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "List of distinct labels"
+      security:
+      - axonius_api_auth: []
+    post:
+      tags:
+      - "Devices"
+      summary: "Add labels to devices"
+      description: ""
+      operationId: "addDevicesLabels"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "List of devices and labels, all labels will be added to all devices"
+        required: true
+        schema:
+          $ref: "#/definitions/Labels_And_Devices"
+      responses:
+        400:
+          description: "Invalid input supplied"
+      security:
+      - axonius_api_auth: []
+    delete:
+      tags:
+      - "Devices"
+      summary: "Removes labels from devices"
+      description: ""
+      operationId: "removeDevicesLabels"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "List of devices and labels, all labels will be removed from all devices"
+        required: true
+        schema:
+          $ref: "#/definitions/Labels_And_Devices"
+      responses:
+        400:
+          description: "Invalid input supplied"
+      security:
+      - axonius_api_auth: []
   /users:
     get:
       tags:
@@ -200,6 +254,60 @@ paths:
           description: "Unauthorized"
         404:
           description: "Entity ID wasn't found"
+      security:
+      - axonius_api_auth: []
+  /users/labels:
+    get:
+      tags:
+      - "Users"
+      summary: "Get all distinct labels from all users"
+      description: ""
+      operationId: "getUsersLabels"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "List of distinct labels"
+      security:
+      - axonius_api_auth: []
+    post:
+      tags:
+      - "Users"
+      summary: "Add labels to users"
+      description: ""
+      operationId: "addUsersLabels"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "List of users and labels, all labels will be added to all users"
+        required: true
+        schema:
+          $ref: "#/definitions/Labels_And_Devices"
+      responses:
+        400:
+          description: "Invalid input supplied"
+      security:
+      - axonius_api_auth: []
+    delete:
+      tags:
+      - "Users"
+      summary: "Removes labels from users"
+      description: ""
+      operationId: "removeUsersLabels"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "List of users and labels, all labels will be removed from all users"
+        required: true
+        schema:
+          $ref: "#/definitions/Labels_And_Devices"
+      responses:
+        400:
+          description: "Invalid input supplied"
       security:
       - axonius_api_auth: []
   /alerts:
@@ -608,3 +716,13 @@ definitions:
       query:
         type: "object"
         properties: {}
+  Labels_And_Devices:
+    properties:
+      entities:
+        type: "array"
+        items:
+          type: "string"
+      labels:
+        type: "array"
+        items:
+          type: "string"

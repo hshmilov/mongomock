@@ -138,6 +138,12 @@ class API:
                                                                   "available_security_patches", "users",
                                                                   "connected_hardware", "local_admins"])
 
+    @api_add_rule("devices/labels", methods=['GET', 'POST', 'DELETE'],
+                  required_permissions={Permission(PermissionType.Devices,
+                                                   ReadOnlyJustForGet)})
+    def api_device_labels(self):
+        return self._entity_labels(self.devices_db_view, self.devices)
+
     #########
     # USERS #
     #########
@@ -172,6 +178,12 @@ class API:
                                                                        PermissionLevel.ReadOnly)})
     def api_user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ["associated_devices"])
+
+    @api_add_rule("users/labels", methods=['GET', 'POST', 'DELETE'],
+                  required_permissions={Permission(PermissionType.Users,
+                                                   ReadOnlyJustForGet)})
+    def api_user_labels(self):
+        return self._entity_labels(self.users_db_view, self.users)
 
     ##########
     # ALERTS #

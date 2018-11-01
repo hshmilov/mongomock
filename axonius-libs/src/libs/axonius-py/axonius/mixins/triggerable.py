@@ -196,7 +196,7 @@ class Triggerable(Feature, ABC):
 
         def on_failed(err):
             with job_state['lock']:
-                logger.error(f'Failed triggering up: {err}')
+                logger.error(f'Failed triggering up: {err}', exc_info=err)
                 job_state['last_error'] = str(repr(err))
                 if not job_state['scheduled']:
                     job_state['triggered'] = False

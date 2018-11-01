@@ -57,7 +57,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
                                        beautify_user_entry, check_permissions,
                                        deserialize_db_permissions,
-                                       get_historized_filter)
+                                       get_historized_filter, get_entity_labels, add_labels_to_entities)
 from axonius.utils.parsing import bytes_image_to_base64, parse_filter
 from axonius.utils.threading import run_and_forget
 from bson import ObjectId
@@ -647,12 +647,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         DELETE Remove old tags from the list of given devices
         :return:
         """
-        all_labels = set()
         if request.method == 'GET':
-            for current_device in db.find({'$or': [{'labels': {'$exists': False}}, {'labels': {'$ne': []}}]},
-                                          projection={'labels': 1}):
-                all_labels.update(current_device['labels'])
-            return jsonify(all_labels)
+            return jsonify(get_entity_labels(db))
 
         # Now handling POST and DELETE - they determine if the label is an added or removed one
         entities_and_labels = self.get_request_data_as_object()
@@ -660,23 +656,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error("Cannot label entities without list of entities.", 400)
         if not entities_and_labels.get('labels'):
             return return_error("Cannot label entities without list of labels.", 400)
-        entities_from_db = db.find(
-            filter={
-                'internal_axon_id':
-                    {
-                        '$in': entities_and_labels['entities']
-                    }
-            },
-            projection={
-                f'specific_data.{PLUGIN_UNIQUE_NAME}': 1,
-                f'specific_data.data.id': 1
-            })
-        # TODO: Figure out exactly what we want to tag and how, AX-2183
-        entities = [(entity['specific_data'][0][PLUGIN_UNIQUE_NAME],
-                     entity['specific_data'][0]['data']['id']) for entity in entities_from_db]
         try:
-            namespace.add_many_labels(entities, labels=entities_and_labels['labels'],
-                                      are_enabled=request.method == 'POST')
+            add_labels_to_entities(db, namespace,
+                                   entities_and_labels['entities'],
+                                   entities_and_labels['labels'],
+                                   request.method == 'DELETE')
         except Exception as e:
             logger.exception(f"Tagging did not complete")
             return return_error(f'Tagging did not complete. First error: {e}', 400)

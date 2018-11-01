@@ -907,3 +907,25 @@ def run_actions():
         requests.post(f"{AXONIUS_API}/actions/deploy", data=data, auth=(USERNAME, PASSWORD))
 
     # Response is status code: 200. The script file was deployed and ran on the devices.
+
+
+def get_all_labels():
+    # This will return a list of strings that are all the labels in the system
+    requests.get(f"{AXONIUS_API}/devices/labels", auth=(USERNAME, PASSWORD))
+    requests.get(f"{AXONIUS_API}/users/labels", auth=(USERNAME, PASSWORD))
+
+
+def add_labels():
+    data = {
+        'entities': ['internal_axon_id1', 'internal_axon_id2'],  # list of internal axon ids
+        'labels': ['labels to add', 'another label']  # list of labels to add
+    }
+    requests.post(f"{AXONIUS_API}/devices/labels", auth=(USERNAME, PASSWORD), data=data)
+
+
+def delete_labels():
+    data = {
+        'entities': ['internal_axon_id1', 'internal_axon_id2'],  # list of internal axon ids
+        'labels': ['labels to add', 'another label']  # list of labels to remove
+    }
+    requests.delete(f"{AXONIUS_API}/devices/labels", auth=(USERNAME, PASSWORD), data=data)

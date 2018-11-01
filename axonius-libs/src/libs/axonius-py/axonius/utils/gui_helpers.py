@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime
 from enum import Enum
-from typing import NamedTuple
+from typing import NamedTuple, Iterable, List
 
 import dateutil
 import pymongo
@@ -681,3 +681,40 @@ def flatten_fields(schema, name='', exclude=[], branched=False):
     if branched:
         schema['branched'] = True
     return [{**schema, 'name': name}]
+
+
+def get_entity_labels(db) -> List[str]:
+    """
+    Find all tags that currently belong to devices, to form a set of current tag values
+    :param db: the entities view db
+    :return: all label strings
+    """
+    return [x for x in db.distinct('labels') if x]
+
+
+def add_labels_to_entities(db, namespace, entities: Iterable[str], labels: Iterable[str], to_delete: bool):
+    """
+    Add new tags to the list of given devices or remove tags from the list of given devices
+    :param db: the entities view db
+    :param namespace: the namespace to use
+    :param entities: list of internal_axon_id to tag
+    :param labels: list of labels to add or remove
+    :param to_delete: whether to remove the labels or to add them
+    """
+    entities_from_db = db.find(
+        filter={
+            'internal_axon_id':
+                {
+                    '$in': entities
+                }
+        },
+        projection={
+            f'specific_data.{PLUGIN_UNIQUE_NAME}': 1,
+            f'specific_data.data.id': 1
+        })
+    # TODO: Figure out exactly what we want to tag and how, AX-2183
+    entities = [(entity['specific_data'][0][PLUGIN_UNIQUE_NAME],
+                 entity['specific_data'][0]['data']['id']) for entity in entities_from_db]
+
+    namespace.add_many_labels(entities, labels=labels,
+                              are_enabled=not to_delete)
