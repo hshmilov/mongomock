@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 from datetime import datetime
 import requests
 import base64
+import time
 
 from axonius.fields import Field
 from axonius.utils.parsing import parse_date
@@ -27,8 +28,7 @@ class JamfPolicy(SmartJsonClass):
 
 
 class JamfConnection(object):
-    def __init__(self, domain, num_of_simultaneous_devices, users_db,
-                 http_proxy=None, https_proxy=None):
+    def __init__(self, domain, users_db, http_proxy=None, https_proxy=None):
         """ Initializes a connection to Jamf using its rest API
 
         :param str domain: domain address for Jamf
@@ -49,7 +49,9 @@ class JamfConnection(object):
         if https_proxy is not None:
             self.proxies['https'] = https_proxy
         logger.info(f"Proxies: {self.proxies}")
-        self.num_of_simultaneous_devices = num_of_simultaneous_devices
+        self.num_of_simultaneous_devices = 0
+        self.__threads_time_sleep = 0
+        self.__should_not_keepalive = False
 
     def set_credentials(self, username, password):
         """ Set the connection credentials
@@ -93,13 +95,17 @@ class JamfConnection(object):
         :param str data: the body of the request
         :return: the service response or raises an exception if it's not 200
         """
+        response = None
         try:
             response = requests.post(self.get_url_request(name), headers=headers,
                                      data=data, proxies=self.proxies, timeout=(5, 30))
             response.raise_for_status()
+            return response.json()
         except Exception as e:
             raise JamfRequestException(str(e))
-        return response.json()
+        finally:
+            if response is not None and self.__should_not_keepalive is True:
+                response.close()
 
     def get(self, name, headers=None):
         """ Serves a POST request to Jamf API
@@ -109,12 +115,16 @@ class JamfConnection(object):
         :return: the service response or raises an exception if it's not 200
         """
         headers = headers or self.headers
+        response = None
         try:
             response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies, timeout=(5, 30))
             response.raise_for_status()
             return Xml2Json(response.text).result
         except Exception as e:
             raise JamfRequestException(str(e))
+        finally:
+            if response is not None and self.__should_not_keepalive is True:
+                response.close()
 
     def _run_in_thread_pool_per_device(self, devices, func):
         logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
@@ -225,6 +235,8 @@ class JamfConnection(object):
         @stoppable
         def get_device(device, device_number):
             try:
+                if self.__threads_time_sleep:
+                    time.sleep(self.__threads_time_sleep)
                 device_id = device['id']
                 device_details = self.get(url + '/id/' + device_id).get(device_type)
                 if should_fetch_department:
@@ -295,11 +307,25 @@ class JamfConnection(object):
 
         return devices
 
-    def get_devices(self, should_fetch_department=False, should_fetch_policies=True):
+    def get_devices(self,
+                    should_fetch_department,
+                    should_fetch_policies,
+                    num_of_simultaneous_devices,
+                    should_not_keepalive,
+                    threads_time_sleep
+                    ):
         """ Returns a list of all agents
         :return: the response
         :rtype: list of computers and phones
         """
+        self.num_of_simultaneous_devices = num_of_simultaneous_devices
+        self.__threads_time_sleep = threads_time_sleep
+        self.__should_not_keepalive = should_not_keepalive
+        if should_not_keepalive is True:
+            self.headers['Connection'] = 'close'
+        else:
+            self.headers.pop('Connection', None)
+
         # Getting all devices at once so no progress is logged
         # alive_hours/24 evaluates to an int on purpose
         computers = self.threaded_get_devices(

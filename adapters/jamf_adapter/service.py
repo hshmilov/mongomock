@@ -44,7 +44,6 @@ class JamfAdapter(AdapterBase, Configurable):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
-        self.num_of_simultaneous_devices = int(self.config["DEFAULT"]["num_of_simultaneous_devices"])
 
     def _get_client_id(self, client_config):
         return client_config['Jamf_Domain']
@@ -56,10 +55,10 @@ class JamfAdapter(AdapterBase, Configurable):
     def _connect_client(self, client_config):
         try:
             connection = JamfConnection(domain=client_config[consts.JAMF_DOMAIN],
-                                        num_of_simultaneous_devices=self.num_of_simultaneous_devices,
                                         users_db=self.users_db,
                                         http_proxy=client_config.get(consts.HTTP_PROXY),
-                                        https_proxy=client_config.get(consts.HTTPS_PROXY))
+                                        https_proxy=client_config.get(consts.HTTPS_PROXY)
+                                        )
             connection.set_credentials(username=client_config[consts.USERNAME],
                                        password=client_config[consts.PASSWORD])
             connection.connect()
@@ -79,7 +78,12 @@ class JamfAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the Jamf Server
         """
-        return client_data.get_devices(self.__fetch_department, self.__should_fetch_policies)
+        return client_data.get_devices(self.__fetch_department,
+                                       self.__should_fetch_policies,
+                                       self.__num_of_simultaneous_devices,
+                                       self.__should_not_keepalive,
+                                       self.__threads_time_sleep
+                                       )
 
     def _clients_schema(self):
         """
@@ -422,11 +426,29 @@ class JamfAdapter(AdapterBase, Configurable):
                     'name': 'should_fetch_policies',
                     'type': 'bool',
                     'title': 'Should Fetch Policies'
+                },
+                {
+                    'name': 'num_of_threads',
+                    'type': 'number',
+                    'title': 'Number of parallel requests to the server'
+                },
+                {
+                    'name': 'should_not_keepalive',
+                    'type': 'bool',
+                    'title': 'Close connections immediately (no keep-alive)'
+                },
+                {
+                    'name': 'threads_time_sleep',
+                    'type': 'number',
+                    'title': 'Seconds to sleep before sending https requests'
                 }
             ],
             "required": [
-                "fetch_department",
-                'should_fetch_policies'
+                'fetch_department',
+                'should_fetch_policies',
+                'num_of_threads',
+                'should_not_keepalive',
+                'threads_time_sleep'
             ],
             "pretty_name": "Jamf Configuration",
             "type": "array"
@@ -435,10 +457,17 @@ class JamfAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            "fetch_department": False,
-            'should_fetch_policies': True
+            'fetch_department': consts.DEFAULT_FETCH_DEPARTMENT,
+            'should_fetch_policies': consts.DEFAULT_SHOULD_FETCH_POLICIES,
+            'num_of_threads': consts.DEFAULT_NUM_OF_THREADS,
+            'should_not_keepalive': consts.DEFAULT_SHOULD_NOT_KEEPALIVE,
+            'threads_time_sleep': consts.DEFAULT_THREADS_TIME_SLEEP
         }
 
     def _on_config_update(self, config):
-        self.__fetch_department = config['fetch_department']
-        self.__should_fetch_policies = config['should_fetch_policies']
+        logger.info(f"Loading Jamf config: {config}")
+        self.__fetch_department = config.get('fetch_department', consts.DEFAULT_FETCH_DEPARTMENT)
+        self.__should_fetch_policies = config.get('should_fetch_policies', consts.DEFAULT_SHOULD_FETCH_POLICIES)
+        self.__num_of_simultaneous_devices = config.get('num_of_threads', consts.DEFAULT_NUM_OF_THREADS)
+        self.__should_not_keepalive = config.get('should_not_keepalive', consts.DEFAULT_SHOULD_NOT_KEEPALIVE)
+        self.__threads_time_sleep = config.get('threads_time_sleep', consts.DEFAULT_THREADS_TIME_SLEEP)
