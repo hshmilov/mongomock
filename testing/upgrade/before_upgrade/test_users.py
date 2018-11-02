@@ -13,7 +13,6 @@ class TestPrepareUsers(TestBase):
         subprocess.run(shlex.split(f'{path_to_script} {ui_consts.HIDDEN_USER_NEW_PASSWORD}'), cwd=cortex_root)
 
     def test_local_user(self):
-        self.login()
         self.settings_page.switch_to_page()
         self.settings_page.wait_for_spinner_to_end()
         self.settings_page.click_manage_users_settings()

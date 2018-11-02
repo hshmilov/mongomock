@@ -9,12 +9,16 @@ from ui_tests.tests.ui_test_base import TestBase
 
 class TestPrepareUsers(TestBase):
     def test_hidden_user(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.wait_for_spinner_to_end()
         self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
         self.login_page.login(AXONIUS_USER_NAME, ui_consts.HIDDEN_USER_NEW_PASSWORD)
         self.login_page.logout()
 
     def test_restricted_user(self):
         self.settings_page.switch_to_page()
+        self.settings_page.wait_for_spinner_to_end()
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.wait_for_spinner_to_end()

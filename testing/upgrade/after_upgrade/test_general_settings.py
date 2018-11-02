@@ -2,7 +2,7 @@ from services.standalone_services.syslog_server import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import EmailSettings, FreshServiceSettings
+from ui_tests.tests.ui_consts import EmailSettings, FreshServiceSettings, Saml
 
 
 class TestGeneralSettings(TestBase):
@@ -59,3 +59,11 @@ class TestGeneralSettings(TestBase):
         assert self.settings_page.get_single_adapter_checkbox()
         assert self.settings_page.get_okta_login_details() == OKTA_LOGIN_DETAILS
         assert self.settings_page.get_dc_address() == ad_client1_details['dc_name']
+
+    def test_saml_settings(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_gui_settings()
+        self.settings_page.wait_for_spinner_to_end()
+
+        assert self.settings_page.is_saml_login_enabled()
+        assert self.settings_page.get_saml_idp() == Saml.idp

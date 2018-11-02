@@ -18,6 +18,7 @@ class SettingsPage(Page):
     USE_SYSLOG_LABEL = 'Use syslog'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     OKTA_LOGINS_LABEL = 'Allow Okta logins'
+    SAML_LOGINS_LABEL = 'Allow SAML-Based logins'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
     SYSLOG_HOST = 'syslogHost'
@@ -26,6 +27,7 @@ class SettingsPage(Page):
     FRESH_SERVICE_DOMAIN = 'domain'
     FRESH_SERVICE_API_KEY = 'api_key'
     FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'
+    SAML_IDP = 'idp_name'
     USE_EXECUTION = 'Execution Enabled'
     HISTORY_GATHERED = 'Should history be gathered'
     DC_ADDRESS = 'dc_address'
@@ -167,6 +169,9 @@ class SettingsPage(Page):
     def fill_fresh_service_email(self, email):
         self.fill_text_field_by_element_id(self.FRESH_SERVICE_ADMIN_EMAIL, email)
 
+    def fill_saml_idp(self, idp):
+        self.fill_text_field_by_element_id(self.SAML_IDP, idp)
+
     def find_email_port_error(self):
         return self.find_element_by_text('\'Port\' has an illegal value')
 
@@ -190,6 +195,9 @@ class SettingsPage(Page):
 
     def get_fresh_service_email(self):
         return self.driver.find_element_by_id(self.FRESH_SERVICE_ADMIN_EMAIL).get_attribute('value')
+
+    def get_saml_idp(self):
+        return self.driver.find_element_by_id(self.SAML_IDP).get_attribute('value')
 
     def find_email_connection_failure_toaster(self, host):
         return self.find_toaster(f'Could not connect to mail server "{host}"')
@@ -338,3 +346,11 @@ class SettingsPage(Page):
 
     def wait_for_role_removed_toaster(self):
         self.wait_for_toaster('Role removed.')
+
+    def set_allow_saml_based_login(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)
+        self.click_toggle_button(toggle, make_yes=make_yes)
+
+    def is_saml_login_enabled(self):
+        toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)
+        return self.is_toggle_selected(toggle)

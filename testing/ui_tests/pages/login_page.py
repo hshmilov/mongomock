@@ -46,6 +46,7 @@ class LoginPage(Page):
         self.click_button('Login')
 
     def logout(self):
+        self.wait_for_element_present_by_css(self.LOGOUT_CSS)
         self.driver.find_element_by_css_selector(self.LOGOUT_CSS).click()
 
     def find_invalid_login_message(self):

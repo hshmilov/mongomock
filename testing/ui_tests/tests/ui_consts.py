@@ -38,3 +38,7 @@ class QueriesScreen:
 class Alerts:
     alert_name_1 = 'test_alert_1'
     alert_query_1 = 'Windows Operating System'
+
+
+class Saml:
+    idp = 'test_idp_1'
