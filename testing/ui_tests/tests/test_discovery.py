@@ -42,6 +42,7 @@ class TestDiscovery(TestBase):
         # delete those devices
         self.axonius_system.get_devices_db().delete_many({})
         self.axonius_system.aggregator.rebuild_views()
+        time.sleep(10)
         self.devices_page.switch_to_page()
         self.devices_page.safe_refresh()
         self.devices_page.wait_for_table_to_load()
@@ -94,6 +95,7 @@ class TestDiscovery(TestBase):
         # delete the devices brought,
         self.axonius_system.get_devices_db().delete_many({})
         self.axonius_system.aggregator.rebuild_views()
+        time.sleep(10)
         self.devices_page.switch_to_page()
         self.devices_page.safe_refresh()
         self.devices_page.wait_for_table_to_load()
