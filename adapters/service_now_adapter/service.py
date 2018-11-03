@@ -32,6 +32,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         snow_location = Field(str, 'Location')
         snow_department = Field(str, 'Department')
         assigned_to = Field(str, 'Assigned To')
+        hardware_status = Field(str, 'hardware_status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -302,6 +303,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem adding disk stuff to {device_raw}')
                     device.domain = device_raw.get('dns_domain')
+                    device.hardware_status = device_raw.get('hardware_status')
 
                     device.set_raw(device_raw)
                     yield device

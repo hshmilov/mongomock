@@ -8,3 +8,6 @@ VDOM = 'vdom'
 DHCP_LEASE_TIME = 'dhcp_lease_time'  # In Seconds
 DEFAULT_DHCP_LEASE_TIME = 604800
 IS_FORTIMANAGER = 'is_fortimanager'
+URL_PATH = 'jsonrpc'
+EXEC_ID = 11
+LOGIN_URL = 'sys/login/user'

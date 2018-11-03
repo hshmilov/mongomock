@@ -5,8 +5,8 @@ from uuid import UUID
 logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 from axonius.clients.mssql.connection import MSSQLConnection
@@ -16,8 +16,9 @@ from axonius.utils.parsing import is_domain_valid
 
 class SymantecAltirisAdapter(AdapterBase):
 
-    class MyDeviceAdapter(DeviceAdapter, ADEntity):
-        pass
+    class MyDeviceAdapter(DeviceAdapter):
+        is_local = Field(bool, 'Is Local')
+        is_managed = Field(bool, 'Is Managed')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -131,14 +132,18 @@ class SymantecAltirisAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f"Caught weird NIC for device id {device_raw}")
                     pass
-                username = device_raw.get('User')
-                if username is not None:
-                    hostname_to_use = server_full_name or name or device_id
-                    device.add_users(username=f"{str(username)}@{hostname_to_use}",
-                                     is_local=domain is not None,
-                                     origin_unique_adapter_name=self.plugin_unique_name,
-                                     origin_unique_adapter_data_id=device.id
-                                     )
+                try:
+                    username = device_raw.get('User')
+                    if username and username.strip():
+                        device.last_used_users = username.split(',')
+                except Exception:
+                    logger.exception(f'Problem adding users to {device_raw}')
+                is_managed = device_raw.get('IsManaged')
+                if is_managed is not None:
+                    device.is_managed = bool(is_managed)
+                is_local = device_raw.get('IsLocal')
+                if is_local is not None:
+                    device.is_local = bool(is_local)
                 device.set_raw(device_raw)
                 yield device
             except Exception:

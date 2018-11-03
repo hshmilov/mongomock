@@ -275,10 +275,11 @@ class JamfAdapter(AdapterBase, Configurable):
                             logger.exception(f"Problem adding cpu {cpu}")
                     device.device_manufacturer = hardware.get('make')
                     try:
-                        device.policies = device_raw['policies']
+                        if self.__should_fetch_policies:
+                            device.policies = device_raw['policies']
 
-                        # Now transform this to dict so that we will put it as raw
-                        device_raw['policies'] = [x.to_dict() for x in device_raw['policies']]
+                            # Now transform this to dict so that we will put it as raw
+                            device_raw['policies'] = [x.to_dict() for x in device_raw['policies']]
                     except Exception:
                         logger.exception(f"Problem adding policies of device raw")
 

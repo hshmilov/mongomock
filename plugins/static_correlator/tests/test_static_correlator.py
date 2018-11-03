@@ -190,7 +190,8 @@ def test_rule_ip_hostname_special_osx():
                                  'type': 'OS X'},
                              network_interfaces=[{MAC_FIELD: 'myma324c',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    device2 = get_raw_device(hostname="ubuntulolol.co.il.local",
+    device2 = get_raw_device(plugin_name='active_directory_adapter',
+                             hostname="ubuntulololwith.co.il.local",
                              os={'bitness': 32,
                                  'distribution': 'Ubuntu',
                                  'type': 'OS X'},

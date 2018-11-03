@@ -18,7 +18,7 @@ class ArubaAdapter(AdapterBase):
 
     #pylint: disable =R0902
     class MyDeviceAdapter(DeviceAdapter):
-        device_type = Field(str, 'Device Type', enum=['Arp Device', 'Client Airwave'])
+        device_type = Field(str, 'Aruba Device Type', enum=['Arp Device', 'Client Airwave'])
         protocol = Field(str, 'Protocol')
         vlan = Field(str, 'Vlan')
         connect_time = Field(datetime.datetime, 'Connect Time')

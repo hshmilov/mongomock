@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -99,6 +100,7 @@ class CylanceAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=R1702,R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -143,7 +145,10 @@ class CylanceAdapter(AdapterBase):
                     logger.exception(f'Problem with adding nic to Cylance device {device_raw}')
                 device.agent_version = device_raw.get('agent_version', '')
                 try:
-                    device.last_seen = parse_date(str(device_raw.get('date_offline', '')))
+                    if device_raw.get('date_offline'):
+                        device.last_seen = parse_date(str(device_raw.get('date_offline')))
+                    else:
+                        device.last_seen = datetime.datetime.now()
                 except Exception:
                     logger.exception(f'Problem getting last seen for {device_raw}')
                 is_safe_raw = device_raw.get('is_safe')

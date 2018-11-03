@@ -48,11 +48,10 @@ class CiscoMerakiAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = CiscoMerakiConnection(domain=client_config["CiscoMeraki_Domain"], apikey=client_config["apikey"],
-                                               verify_ssl=client_config["verify_ssl"],
-                                               vlan_exclude_list=client_config.get('vlan_exclude_list'))
+                                               verify_ssl=client_config["verify_ssl"])
             with connection:
                 pass  # check that the connection credentials are valid
-            return connection
+            return connection, client_config.get('vlan_exclude_list')
         except CiscoMerakiException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['CiscoMeraki_Domain'], str(e))
@@ -68,8 +67,9 @@ class CiscoMerakiAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the CiscoMeraki Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        connection, vlan_exclude_list = client_data
+        with connection:
+            return connection.get_device_list(), vlan_exclude_list
 
     def _clients_schema(self):
         """
@@ -109,7 +109,8 @@ class CiscoMerakiAdapter(AdapterBase):
             "type": "array"
         }
 
-    def _parse_raw_data(self, devices_clients_raw_data):
+    def _parse_raw_data(self, devices_clients_raw_data_exclude):
+        devices_clients_raw_data, vlan_exclude_list = devices_clients_raw_data_exclude
         devices_raw_data = devices_clients_raw_data.get('devices', [])
         clients_raw_date = devices_clients_raw_data.get('clients', [])
         for device_raw in devices_raw_data:
@@ -195,6 +196,8 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.description = client_raw.get("description")
                 device.dns_name = client_raw.get("mdnsName")
                 device.associated_devices = []
+                found_regular_vlan = False
+                found_exclude_vlan = False
                 for associated_device, switch_port, address, network_name, vlan, name, notes, tags in client_raw["associated_devices"]:
                     try:
                         associated_device_object = AssociatedDeviceAdapter()
@@ -203,6 +206,11 @@ class CiscoMerakiAdapter(AdapterBase):
                         associated_device_object.address = address
                         associated_device_object.network_name = network_name
                         associated_device_object.vlan = vlan
+                        if vlan:
+                            if str(vlan) in vlan_exclude_list:
+                                found_exclude_vlan = True
+                            else:
+                                found_regular_vlan = True
                         associated_device_object.name = name
                         associated_device_object.notes = notes
                         associated_device_object.tags = tags
@@ -211,6 +219,8 @@ class CiscoMerakiAdapter(AdapterBase):
                         logger.exception(f"Problem adding associated device"
                                          f" {str(associated_device)} with port {str(switch_port)}")
                 device.set_raw(client_raw)
+                if found_exclude_vlan and not found_regular_vlan:
+                    continue
                 yield device
             except Exception:
                 logger.exception(f"Problem with fetching CiscoMeraki Client {str(client_raw)}")

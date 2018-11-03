@@ -42,7 +42,7 @@ NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
 DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP', '.LOCALHOST']
 # In MacOs hostname of the same computer can return in different shapes,
 # that's why we would like to compare them without these strings
-DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MACBOOK-AIR', 'MACBOOK-AIR'] + \
+DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MBA', '-MACBOOK-AIR', 'MACBOOK-AIR'] + \
                          [f"-MBP-{index}" for index in range(20)] + [f"-MBP-0{index}" for index in range(10)] + ['-AIR', 'AIR'] + \
                          [f"-MACBOOK-PRO-{index}" for index in range(20)] + \
                          [f"-MACBOOK-PRO-0{index}" for index in range(10)] + \
@@ -786,6 +786,14 @@ def normalize_hostname(adapter_data):
         split_hostname = final_hostname.split('.')
         for extension in DEFAULT_MAC_EXTENSIONS:
             split_hostname[0] = remove_trailing(split_hostname[0], extension)
+        if len(split_hostname[0]) == 15 and (adapter_data.get('os') or {}).get('type') == "OS X":
+            if split_hostname[0].endswith('-MB'):
+                split_hostname[0] = remove_trailing(split_hostname[0], '-MB')
+            elif split_hostname[0].endswith('-M'):
+                split_hostname[0] = remove_trailing(split_hostname[0], '-M')
+            elif split_hostname[0].endswith('-'):
+                split_hostname[0] = remove_trailing(split_hostname[0], '-')
+
         return split_hostname
 
 
@@ -901,18 +909,19 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
     """
     def is_os_x(adapter_device):
         return ((adapter_device.get("data") or {}).get("os") or {}).get("type", '') == "OS X"
+
+    def is_in_short_names_adapters_and_long_name(adapter_device):
+        if adapter_device.get('plugin_name') in ['carbonblack_protection_adapter', 'active_directory_adapter'] \
+                and len(get_hostname(adapter_device).split('.')[0]) >= 15 and is_os_x(adapter_device):
+            return True
+        return False
     first_element_only = False
     test_on_first_param_and_first_element = False
     test_on_second_param_and_first_element = False
-    if is_os_x(adapter_device1) and is_os_x(adapter_device2):
-        # Special case for OS-X, in this case we check only the first part of the name list
-        first_element_only = True
-    if adapter_device2.get('plugin_name') == 'carbonblack_protection_adapter' \
-            and len(get_hostname(adapter_device2)) >= 15:
+    if is_in_short_names_adapters_and_long_name(adapter_device2):
         first_element_only = True
         test_on_first_param_and_first_element = True
-    if adapter_device1.get('plugin_name') == 'carbonblack_protection_adapter' \
-            and len(get_hostname(adapter_device1)) >= 15:
+    if is_in_short_names_adapters_and_long_name(adapter_device1):
         first_element_only = True
         test_on_second_param_and_first_element = True
     return compare_normalized_hostnames(adapter_device1.get(NORMALIZED_HOSTNAME),

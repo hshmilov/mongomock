@@ -1,13 +1,11 @@
+import json
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from fortigate_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-URL_PATH = 'jsonrpc'
-RANDOM_ID_1 = '72'
-LOGIN_URL = 'sys/login/user'
 
 
 class FortimanagerConnection(RESTConnection):
@@ -18,15 +16,15 @@ class FortimanagerConnection(RESTConnection):
         if not self._username or not self._password:
             raise RESTException('No username or password')
         body_login = {'method': 'exec',
-                      'params': [{'url': LOGIN_URL,
+                      'params': [{'url': consts.LOGIN_URL,
                                   'data': {'passwd': self._password,
                                            'user': self._username},
                                   'option': None}],
-                      'id': RANDOM_ID_1,
+                      'id': consts.EXEC_ID,
                       'verbose': False,
                       'jsonrpc': '2.0',
                       'session': 1}
-        response = self._post(URL_PATH, body_params=body_login)
+        response = self._post(consts.URL_PATH, body_params=json.dumps(body_login), use_json_in_body=False)
         if 'session' not in response:
             raise RESTException(f'Bad logon got {response["result"]}')
         self._token = response['session']
