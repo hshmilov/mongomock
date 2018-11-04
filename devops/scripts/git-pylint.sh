@@ -25,7 +25,7 @@ function usage {
     echo "-d --delete           Auto delete files from exemptfile when needed"
     echo "-P --pep              Run autopep8 before checking with pylint"
     echo "-r --all-flags        Use all flags"
-    echo "-o --only-added       Only check added file, ignore modified"
+    echo "-o --only-added       Only check added file, ignore modified, re-add them when done"
     exit 0
 }
 for i in "$@"
@@ -119,11 +119,17 @@ for file in $GIT_FILES; do
         if [ $PEP -eq 1 ]; then
             autopep8 --max-line-length 120 --in-place $file
             autopep8 --select=E722 --aggressive --in-place $file
+            if [ $ADDED_ONLY -eq 1 ]; then
+                git add $file
+            fi
         fi
 
         # handle delete 
         if [ $DELETE -eq 1 ]; then
             INEXEMPTCMD="grep -v $file $EXEMPTFILE > $EXEMPTFILE.temp && mv $EXEMPTFILE.temp $EXEMPTFILE && echo [*] Removed $file from excemptfile"
+            if [ $ADDED_ONLY -eq 1 ]; then
+                git add $EXEMPTFILE
+            fi
         else
             INEXEMPTCMD="echo [-] $file in exemptfile"
         fi
