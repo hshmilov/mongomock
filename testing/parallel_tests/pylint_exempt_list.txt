@@ -242,6 +242,7 @@ axonius-libs/src/libs/axonius-py/axonius/background_scheduler.py
 axonius-libs/src/libs/axonius-py/axonius/config_reader.py
 axonius-libs/src/libs/axonius-py/axonius/correlator_base.py
 axonius-libs/src/libs/axonius-py/axonius/correlator_engine_base.py
+axonius-libs/src/libs/axonius-py/axonius/email_server.py
 axonius-libs/src/libs/axonius-py/axonius/entities.py
 axonius-libs/src/libs/axonius-py/axonius/execution_correlator_engine_base.py
 axonius-libs/src/libs/axonius-py/axonius/fields.py

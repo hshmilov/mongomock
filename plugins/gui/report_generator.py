@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(f'axonius.{__name__}')
 from datetime import datetime
-from math import pi, cos, sin, floor
+from math import pi, cos, sin, floor, ceil
 import uuid
 
 from weasyprint import HTML, CSS
@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint.fonts import FontConfiguration
 from cairosvg import svg2png
 
-from axonius.consts.gui_consts import ChartViews
+from gui.consts import ChartViews
 
 GREY_COLOUR = '#DEDEDE'
 

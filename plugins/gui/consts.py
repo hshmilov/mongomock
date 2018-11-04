@@ -76,11 +76,10 @@ EXEC_REPORT_TITLE = 'Axonius Report'
 
 EXEC_REPORT_FILE_NAME = 'Axonius Report.pdf'
 
-EXEC_REPORT_EMAIL_CONTENT = '''Hello,
+EXEC_REPORT_EMAIL_CONTENT = """Hello,
 
 this is a periodic report sent to you by axonius.
-To change the intervals in which the report is being sent or remove yourself from the recipients of this email please 
-enter reporting in Axonius.'''
+To change the intervals in which the report is being sent or remove yourself from the recipients of this email please enter reporting in Axonius."""
 
 SUPPORT_ACCESS_THREAD_ID = 'support_access_thread'
 
@@ -92,5 +91,3 @@ ROLES_COLLECTION = 'roles'
 PREDEFINED_ROLE_ADMIN = 'Admin'
 PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted User'
-
-LOGOS_PATH = '/home/axonius/shared_readonly_files/assets'

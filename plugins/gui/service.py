@@ -71,11 +71,11 @@ from urllib3.util.url import parse_url
 
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
-from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
-                                       EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE,
-                                       SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics, ChartViews,
-                                       ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus, ROLES_COLLECTION,
-                                       PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_READONLY, PREDEFINED_ROLE_RESTRICTED)
+from gui.consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
+                        EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE,
+                        SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics, ChartViews,
+                        ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus, ROLES_COLLECTION,
+                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_READONLY, PREDEFINED_ROLE_RESTRICTED)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth

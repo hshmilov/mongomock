@@ -4,7 +4,7 @@ import json
 import os
 
 from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME
-from axonius.consts.gui_consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
+from gui.consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
 

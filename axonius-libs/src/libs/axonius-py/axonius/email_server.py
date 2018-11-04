@@ -1,15 +1,15 @@
 import logging
-import os
-import smtplib
-import tempfile
-from email.message import EmailMessage
-
-from axonius.consts import email_consts
-
 logger = logging.getLogger(f'axonius.{__name__}')
 
+import os
+import tempfile
+import smtplib
 
-class EmailServer:
+from email.message import EmailMessage
+from axonius.consts import email_consts
+
+
+class EmailServer(object):
 
     def __init__(self, host, port, user=None, password=None, key=None, cert=None, source=None):
         """
@@ -34,13 +34,13 @@ class EmailServer:
         self.key = key if key is not None and key != '' else None
         self.cert = cert if cert is not None and cert != '' else None
         self.source = source
-        self.smtp = None
+        self._smtp = None
 
-    def new_email(self, subject, to_recipients, cc_recipients):
-        return Email(self, subject, to_recipients, cc_recipients)
+    def new_email(self, subject, recipients):
+        return Email(self, subject, recipients)
 
     def __enter__(self):
-        assert self.smtp is None
+        assert self._smtp is None
         try:
             server = smtplib.SMTP(self.host, self.port)
 
@@ -72,37 +72,35 @@ class EmailServer:
                 try:
                     server.starttls()
                 except Exception:
-                    logger.exception('Exception was raised while trying to connect to e-mail server and send e-mail.')
+                    logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
 
             # Try to login if optional.
             if self.user:
                 server.login(self.user, self.password)
         except Exception:
-            logger.exception('Exception was raised while trying to connect to e-mail server and send e-mail.')
+            logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
             raise
-        self.smtp = server
+        self._smtp = server
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.smtp is not None:
+        if self._smtp is not None:
             try:
-                self.smtp.quit()
+                self._smtp.quit()
             except Exception:
-                logger.exception('Exception was raised while trying to quit the e-mail server connection.')
-            self.smtp = None
+                logger.exception("Exception was raised while trying to quit the e-mail server connection.")
+            self._smtp = None
 
 
-class Email:
+class Email(object):
 
-    def __init__(self, server: EmailServer, subject: str, to_recipients: list, cc_recipients: list):
+    def __init__(self, server: EmailServer, subject: str, recipients: list):
         assert isinstance(server, EmailServer)
         assert isinstance(subject, str)
-        assert isinstance(to_recipients, list) and len(to_recipients) > 0
+        assert isinstance(recipients, list) and len(recipients) > 0
         self.server = server
         self.subject = subject
-        self.to_recipients = to_recipients
-        self.cc_recipients = cc_recipients
+        self.recipients = recipients
         self.attachments = {}
-        self.logos_attachments = {}
 
     def add_attachment(self, name: str, data: bytes, mime_type: str):
         assert isinstance(name, str)
@@ -111,28 +109,16 @@ class Email:
         assert isinstance(mime_type, str) and '/' in mime_type
         self.attachments[name] = (data, mime_type)
 
-    def add_logos_attachments(self, data, maintype, subtype, cid):
-        self.logos_attachments[cid] = (data, maintype, subtype)
-
     def add_pdf(self, name: str, data: bytes):
         self.add_attachment(name, data, 'application/pdf')
 
     def send(self, html_content: str):
         assert isinstance(html_content, str)
-
         msg = EmailMessage()
-
         msg['Subject'] = self.subject
         msg['From'] = self.server.source
-        msg['To'] = ', '.join(self.to_recipients)
-        if self.cc_recipients:
-            msg['CC'] = ', '.join(self.cc_recipients)
+        msg['To'] = ", ".join(self.recipients) if len(self.recipients) > 1 else self.recipients[0]
         msg.add_alternative(html_content, subtype='html')
-
-        if self.logos_attachments:
-            for cid, value in self.logos_attachments.items():
-                data, maintype, subtype = value
-                msg.add_attachment(data, maintype=maintype, subtype=subtype, cid=cid)
 
         for name, value in self.attachments.items():
             data, mime = value
@@ -141,7 +127,7 @@ class Email:
 
         try:
             with self.server:
-                self.server.smtp.send_message(msg)
+                self.server._smtp.send_message(msg)
         except Exception:
-            logger.exception('Exception was raised while trying to connect to e-mail server and send e-mail.')
+            logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
             raise

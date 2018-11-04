@@ -69,7 +69,6 @@ module.exports = {
 	resolve: {
 		alias: {
 			'vue$': 'vue/dist/vue.esm.js',
-             Logos: path.resolve(__dirname, '../../../shared_readonly_files/assets/logos/')
 		},
 	},
 	devServer: {

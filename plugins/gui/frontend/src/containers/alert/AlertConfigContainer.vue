@@ -39,7 +39,7 @@
                     <div class="header">Alert trigger</div>
                     <div>Monitor selected query and raise alert whether...</div>
                     <div class="content">
-                        <x-checkbox class="grid-span2" label="Every discovery cycle" v-model="alert.triggers.every_discovery"
+                        <x-checkbox class="grid-span2" label="Every discovery cycle" v-model="alert.triggers.every_discovery" 
                                     title="Trigger alert for each discovery cycle, regardless of results" />
                         <x-checkbox class="grid-span2" label="New entities were added to query results" v-model="alert.triggers.new_entities"
                                     title="For each discovery cycle, trigger alert if the given saved query discovered an entity that wasn't discovered for the same saved query in the previous cycle" />
@@ -103,27 +103,10 @@
                         <div v-if="!actions.syslog"></div>
                         <!-- SYSLOG -->
                         <!-- MAIL -->
-                        <x-checkbox class="grid-span2" label="Send an Email" v-model="actions.mail" @change="checkMailSettings"/>
-                        <div class="mail-config" v-if="actions.mail">
-                            <div class="x-grid">
-                                <label>to:</label>
-                                <vm-select v-model="mailList" no-data-text="Type mail addresses..."
-                                           placeholder="" multiple filterable allow-create :default-first-option="true" />
-                            </div>
-                            <div class="x-grid">
-                                <label>cc:</label>
-                                <vm-select v-model="mailListCC" no-data-text="Type mail addresses..."
-                                           placeholder="" multiple filterable allow-create :default-first-option="true" />
-                            </div>
-                            <div class="x-grid">
-                                <label>subject:</label>
-                                <input type="text" v-model="subject">
-                            </div>
-                            <div class="x-grid">
-                                <x-checkbox label="Query Results Data In a CSV" v-model="sendDevicesCSVToEmail"/>
-                                <x-checkbox label="Changes In Query Results In a CSV" v-model="sendDevicesChangesCSVToEmail"/>
-                            </div>
-                        </div>
+                        <x-checkbox label="Send an Email" v-model="actions.mail" @change="checkMailSettings"/>
+                        <x-checkbox v-if="actions.mail" label="Attach Entity Data CSV" v-model="sendDevicesCSVToEmail"/>
+                        <vm-select v-if="actions.mail" v-model="mailList" no-data-text="Type mail addresses..."
+                                   placeholder="" multiple filterable allow-create :default-first-option="true" />
                         <div v-if="!actions.mail"></div>
                         <!-- MAIL -->
                         <!-- TAGS -->
@@ -282,14 +265,11 @@
                 	notification: false, mail: false, tag: false, tagAll: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false, freshserviceIncident: false
                 },
                 mailList: [],
-                mailListCC: [],
-                subject: '',
                 tagName: '',
                 tagAllName: '',
                 ticketEmail: '',
                 sendAllDevicesToSyslog: false,
                 sendDevicesCSVToEmail: false,
-                sendDevicesChangesCSVToEmail: false,
                 error: '',
                 emptySettings: {
                     'mail': false,
@@ -350,10 +330,7 @@
                         case 'send_emails':
                             this.actions.mail = true
                             this.mailList = action.data.emailList
-                            this.mailListCC = action.data.emailListCC
-                            this.subject = action.data.mailSubject || `Axonius Alert - "${alert.name}" for Query: ${alert.view}`
-                            this.sendDevicesCSVToEmail = action.data.sendDeviceCSV || false
-                            this.sendDevicesChangesCSVToEmail = action.data.sendDevicesChangesCSV || false
+                            this.sendDevicesCSVToEmail = action.data.sendDeviceCSV
                             break
                         case 'tag_entities':
                             this.actions.tag = true
@@ -421,8 +398,7 @@
                 }
                 if (this.actions.mail) {
                     this.alert.actions.push({
-                        type: 'send_emails', data: { mailSubject: this.subject, emailList: this.mailList, emailListCC: this.mailListCC,
-                                                    sendDeviceCSV: this.sendDevicesCSVToEmail, sendDevicesChangesCSV: this.sendDevicesChangesCSVToEmail}
+                        type: 'send_emails', data: { emailList: this.mailList, sendDeviceCSV: this.sendDevicesCSVToEmail}
                     })
                 }
                 if (this.actions.tag) {
@@ -540,9 +516,6 @@
             label {
                 white-space: nowrap;
             }
-        }
-        .mail-config{
-            margin-left: 20px;
         }
         .checkbox.inline.checked {
             display: inline;
