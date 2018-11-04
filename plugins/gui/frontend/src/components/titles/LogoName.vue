@@ -1,6 +1,6 @@
 <template>
     <div class="x-logo-name" :id="name">
-        <img :src="`/src/assets/images/logos/${name}.png`" height="24" class="md-image">
+        <img :src="require(`Logos/${name}.png`)" height="24" class="md-image">
         <div class="title">{{ prettyName }}</div>
     </div>
 </template>
