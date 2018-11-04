@@ -571,7 +571,7 @@ def entity_fields(entity_type: EntityType, core_address, db_connection):
         }],
         'specific': {}
     }
-    plugins_available = requests.get(core_address + '/register').json()
+    plugins_available = PluginBase.Instance.get_available_plugins_from_core()
     exclude_specific_schema = [item['name'] for item in generic_fields.get('items', [])]
     plugins_from_db = list(db_connection['core']['configs'].find({}).
                            sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))

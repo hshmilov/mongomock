@@ -43,7 +43,7 @@
     import { entities } from '../../../constants/entities'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-    import { FETCH_DATA_VIEWS, FETCH_DATA_FIELDS } from '../../../store/actions'
+    import { FETCH_DATA_VIEWS } from '../../../store/actions'
     import { SAVE_DASHBOARD } from '../../../store/modules/dashboard'
     import { NEXT_TOUR_STATE, CHANGE_TOUR_STATE } from '../../../store/modules/onboarding'
     import { GET_DATA_FIELD_BY_PLUGIN } from '../../../store/getters'
@@ -137,7 +137,7 @@
         methods: {
             ...mapMutations({ nextState: NEXT_TOUR_STATE, changeState: CHANGE_TOUR_STATE }),
             ...mapActions({
-                fetchViews: FETCH_DATA_VIEWS, fetchFields: FETCH_DATA_FIELDS, saveDashboard: SAVE_DASHBOARD
+                fetchViews: FETCH_DATA_VIEWS, saveDashboard: SAVE_DASHBOARD
             }),
 			activate() {
 				this.isActive = true
@@ -164,7 +164,6 @@
         created() {
             this.availableModules.forEach(module => {
 				this.fetchViews({ module, type: 'saved' })
-				this.fetchFields({ module })
 			})
 		},
         updated() {

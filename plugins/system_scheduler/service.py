@@ -351,9 +351,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         :param plugin_subtype: A plugin_subtype to filter.
         :return:
         """
-        registered_plugins = requests.get(self.core_address + '/register')
-        registered_plugins.raise_for_status()
-        return [plugin for plugin in registered_plugins.json().values() if
+        registered_plugins = self.get_available_plugins_from_core()
+        return [plugin for plugin in registered_plugins.values() if
                 plugin['plugin_subtype'] == plugin_subtype.value]
 
     def _run_plugins(self, plugin_subtype: PluginSubtype):
@@ -485,7 +484,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         :return: all the currently registered plugins - used when we want to stop everything in the system towards a
                  clean discovery phase
         """
-        plugins_available = requests.get(self.core_address + '/register').json()
+        plugins_available = self.get_available_plugins_from_core()
         for plugin_unique_name in plugins_available:
             yield plugin_unique_name
 

@@ -438,7 +438,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Answer is saved in a private member that is read by the frontend via a designated endpoint.
 
         """
-        plugins_available = requests.get(self.core_address + '/register').json()
+        plugins_available = self.get_available_plugins_from_core()
         self.__is_system_first_use = True
         with self._get_db_connection() as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({
@@ -933,7 +933,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Get all adapters from the core
         :return:
         """
-        plugins_available = requests.get(self.core_address + '/register').json()
+        plugins_available = self.get_available_plugins_from_core()
         with self._get_db_connection() as db_connection:
             adapters_from_db = db_connection[CORE_UNIQUE_NAME]['configs'].find(
                 {
@@ -983,7 +983,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         :return: Dict between unique plugin name of the adapter and their list of features
         """
-        plugins_available = requests.get(self.core_address + '/register').json()
+        plugins_available = self.get_available_plugins_from_core()
         with self._get_db_connection() as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({
                 'plugin_type': {
@@ -1347,7 +1347,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :mongo_filter
         :return: List of plugins with
         """
-        plugins_available = requests.get(self.core_address + '/register').json()
+        plugins_available = self.get_available_plugins_from_core()
         with self._get_db_connection() as db_connection:
             plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
                 [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])

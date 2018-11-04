@@ -71,7 +71,7 @@
 
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { SINGLE_ADAPTER } from '../../store/getters'
-    import { FETCH_DATA_FIELDS, FETCH_DATA_BY_ID } from '../../store/actions'
+    import { FETCH_DATA_BY_ID } from '../../store/actions'
     import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
 
     const lastSeenByModule = {
@@ -179,7 +179,7 @@
         methods: {
             ...mapMutations({ changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE }),
             ...mapActions({
-                fetchDataFields: FETCH_DATA_FIELDS, fetchDataByID: FETCH_DATA_BY_ID
+                fetchDataByID: FETCH_DATA_BY_ID
             }),
 			getAdvancedFieldSchema(field) {
                 let schema = this.fields.schema.generic.items.find(schema => schema.name === field)
@@ -223,9 +223,6 @@
             }
         },
 		created () {
-			if (!this.fields || !this.fields.generic) {
-				this.fetchDataFields({ module: this.module })
-			}
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entity.accurate_for_datetime !== this.history) {
 				this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
 			} else {

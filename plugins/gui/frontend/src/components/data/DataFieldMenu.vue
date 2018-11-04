@@ -24,7 +24,6 @@
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { GET_DATA_FIELD_BY_PLUGIN } from '../../store/getters'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
-    import { FETCH_DATA_FIELDS } from '../../store/actions'
 
 	export default {
 		name: 'x-data-field-menu',
@@ -77,12 +76,10 @@
 			}
         },
         methods: {
-            ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
-            ...mapActions({ fetchFields: FETCH_DATA_FIELDS })
+            ...mapMutations({ updateView: UPDATE_DATA_VIEW })
         },
         created() {
 			this.fieldType = this.firstType
-			this.fetchFields({ module: this.module })
         }
 	}
 </script>

@@ -420,14 +420,7 @@ class AggregatorService(PluginBase, Triggerable):
                         filtered_adapters.remove(current_adapter)
             return filtered_adapters
 
-        adapters = requests.get(self.core_address + '/register')
-
-        if adapters.status_code != 200:
-            logger.error(f"Error getting adapters from core. reason: "
-                         f"{str(adapters.status_code)}, {str(adapters.content)}")
-            return return_error('Could not fetch adapters', 500)
-
-        adapters = adapters.json()
+        adapters = self.get_available_plugins_from_core_uncached()
 
         if job_name == 'clean_db':
             self._clean_db_devices_from_adapters(adapters.values())

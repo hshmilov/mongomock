@@ -20,6 +20,7 @@ from itertools import groupby
 from pathlib import Path
 from typing import Iterable, List
 
+import cachetools
 import func_timeout
 import pymongo
 import requests
@@ -675,6 +676,19 @@ class PluginBase(Configurable, Feature):
 
         return requests.request(method, url, headers=headers, **kwargs)
 
+    def get_available_plugins_from_core_uncached(self):
+        """
+        Uncached version for get_available_plugins_from_core
+        """
+        return requests.get(self.core_address + '/register').json()
+
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
+    def get_available_plugins_from_core(self):
+        """
+        Gets all running plugins from core by querying core/register
+        """
+        return self.get_available_plugins_from_core_uncached()
+
     def _request_db_rebuild(self, sync=True, internal_axon_ids: List[str] = None):
         """
         Requests a db rebuild
@@ -711,6 +725,7 @@ class PluginBase(Configurable, Feature):
                                                                          content=content,
                                                                          seen=False)).inserted_id
 
+    @cachetools.cached(cachetools.TTLCache(maxsize=10, ttl=20))
     def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
@@ -720,7 +735,7 @@ class PluginBase(Configurable, Feature):
         :return: if verify_single: single plugin data or None; if not verify_single: all plugin datas
         """
         # using requests directly so the api key won't be sent, so the core will give a list of the plugins
-        plugins_available = requests.get(self.core_address + '/register').json()
+        plugins_available = self.get_available_plugins_from_core_uncached()
         found_plugins = [x
                          for x
                          in plugins_available.values()

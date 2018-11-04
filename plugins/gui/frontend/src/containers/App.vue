@@ -28,9 +28,10 @@
     import xAccessModal from '../components/popover/AccessModal.vue'
 
     import { GET_USER} from '../store/modules/auth'
-    import { FETCH_SYSTEM_CONFIG } from "../store/actions";
+    import { FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG } from "../store/actions";
     import { FETCH_CONSTANTS, FETCH_FIRST_HISTORICAL_DATE, FETCH_ALLOWED_DATES } from "../store/modules/constants";
 	import { mapState, mapActions } from 'vuex'
+    import { entities } from '../constants/entities'
 	import '../components/icons'
 
 
@@ -43,13 +44,18 @@
             ...mapState({
                 userName(state) {
                 	return state.auth.currentUser.data.user_name
+                },
+                entitiesRestricted(state) {
+                    let user = state.auth.currentUser.data
+                    if (!user || !user.permissions) return true
+                    return user.permissions.Devices === 'Restricted' || user.permissions.Users === 'Restricted'
                 }
             }),
             isDev() {
 				return process.env.NODE_ENV === 'development'
             },
             currentPage() {
-            	return this.$route.fullPath
+                return this.$route.fullPath
             }
 		},
         data() {
@@ -70,13 +76,19 @@
         methods: {
             ...mapActions({
                 getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS,
-                firstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE, allowedDates: FETCH_ALLOWED_DATES
+                firstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE, allowedDates: FETCH_ALLOWED_DATES,
+                fetchDataFields: FETCH_DATA_FIELDS
             }),
             fetchGlobalData() {
 				this.fetchConfig()
                 this.fetchConstants()
                 this.firstHistoricalDate()
                 this.allowedDates()
+                if (!this.entitiesRestricted) {
+                    entities.forEach(entity => {
+                        this.fetchDataFields({module: entity.name})
+                    })
+                }
             },
             notifyAccess(name) {
                 this.blockedComponent = name

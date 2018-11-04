@@ -13,9 +13,8 @@
     import xSearchInput from '../../../components/inputs/SearchInput.vue'
     import xAccessModal from '../../../components/popover/AccessModal.vue'
 
-    import { mapState, mapMutations, mapActions } from 'vuex'
+    import { mapState, mapMutations } from 'vuex'
     import { UPDATE_DATA_VIEW } from '../../../store/mutations'
-    import { FETCH_DATA_FIELDS } from '../../../store/actions'
     import { UPDATE_SEARCH_VALUE } from '../../../store/modules/explorer'
     import { entities } from '../../../constants/entities'
 
@@ -54,9 +53,6 @@
             ...mapMutations({
                 updateDataView: UPDATE_DATA_VIEW, updateSearchValue: UPDATE_SEARCH_VALUE
             }),
-            ...mapActions({
-                fetchDataFields: FETCH_DATA_FIELDS
-            }),
             notifyAccess() {
                 if (!this.entitiesRestricted) return
                 this.blockedComponent = 'Devices and Users Search'
@@ -79,13 +75,6 @@
                     })
                 })
                 this.$emit('click')
-            }
-        },
-        created() {
-            if (!this.entitiesRestricted) {
-                entities.forEach(entity => {
-                    this.fetchDataFields({ module: entity.name })
-                })
             }
         }
     }
