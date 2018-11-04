@@ -8,6 +8,7 @@ class TestDevicesQuery(TestBase):
 
     def test_bad_subnet(self):
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
         self.devices_page.select_query_comp_op('subnet')
