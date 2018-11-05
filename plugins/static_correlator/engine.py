@@ -335,13 +335,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
 
-        # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
-        yield from self._correlate_mac(adapters_to_correlate)
         # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
         yield from self._correlate_with_ad(adapters_to_correlate)
-
-        # Find adapters with the same serial
-        yield from self._correlate_serial(adapters_to_correlate)
 
         # Find adapters that share the same cloud type and cloud id
         yield from self._correlate_cloud_instances(adapters_to_correlate)
@@ -359,8 +354,6 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # juniper correlation is a little more loose - we allow correlation based on asset name alone,
         yield from self._correlate_with_juniper(adapters_to_correlate)
 
-        yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
-
         yield from self._correlate_hostname_domain(adapters_to_correlate)
 
         yield from self._correlate_hostname_user(adapters_to_correlate)
@@ -372,6 +365,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_ip_linux_illusive(adapters_to_correlate)
 
         yield from self._correlate_splunk_vpn_hostname(adapters_to_correlate)
+
+        yield from self._correlate_serial(adapters_to_correlate)
+
+        yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
+        # Find adapters with the same serial
+        # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
+        yield from self._correlate_mac(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

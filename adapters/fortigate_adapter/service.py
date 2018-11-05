@@ -89,7 +89,7 @@ class FortigateAdapter(AdapterBase, Configurable):
             if not mac_address:
                 logger.warning(f'Bad MAC address at device {raw_device}')
                 return None
-            device.id = mac_address + '_' + (hostname or '')
+            device.id = 'fortigate_' + mac_address + '_' + (hostname or '')
             device.add_nic(mac_address, [raw_device.get('ip')] if raw_device.get('ip') else None)
 
             last_seen = raw_device.get('expire_time')

@@ -38,6 +38,7 @@ class GceTag(SmartJsonClass):
 
 class GceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
+        project_id = Field(str, 'Project ID')
         public_ips = ListField(str, 'Public IPs')
         image = Field(str, 'Device image')
         size = Field(str, 'Google Device Size')
@@ -79,16 +80,14 @@ class GceAdapter(AdapterBase):
                 response = request.execute()
                 for project in response['projects']:
                     try:
-                        yield from get_driver(Provider.GCE)(auth_json['client_email'],
-                                                            auth_json['private_key'],
-                                                            project=project.get('projectId')).list_nodes()
+                        for device_raw in get_driver(Provider.GCE)(auth_json['client_email'], auth_json['private_key'], project=project.get('projectId')).list_nodes():
+                            yield device_raw, project.get('projectId')
                     except Exception:
                         logger.exception(f'Problem with project {project}')
                 request = service.projects().list_next(previous_request=request, previous_response=response)
         except Exception:
-            yield from get_driver(Provider.GCE)(auth_json['client_email'],
-                                                auth_json['private_key'],
-                                                project=auth_json['project_id']).list_nodes()
+            for device_raw in get_driver(Provider.GCE)(auth_json['client_email'], auth_json['private_key'], project=auth_json['project_id']).list_nodes():
+                yield device_raw, auth_json['project_id']
 
     def _clients_schema(self):
         return {
@@ -106,11 +105,12 @@ class GceAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def create_device(self, raw_device_data):
+    def create_device(self, raw_device_data, project_id):
         device = self._new_device_adapter()
         device.id = raw_device_data.id
         device.cloud_provider = 'GCP'
         device.cloud_id = device.id
+        device.project_id = project_id
         try:
             device.power_state = POWER_STATE_MAP.get(raw_device_data.state,
                                                      DeviceRunningState.Unknown)
@@ -129,7 +129,11 @@ class GceAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Coudn\'t get ips for {str(raw_device_data)}')
         try:
-            device.public_ips = list(raw_device_data.public_ips)
+            public_ips = raw_device_data.public_ips
+            if public_ips:
+                for ip in public_ips:
+                    if ip:
+                        device.public_ips.append(ip)
         except Exception:
             logger.exception(f'Problem getting public IP for {str(raw_device_data)}')
         try:
@@ -172,9 +176,9 @@ class GceAdapter(AdapterBase):
         return device
 
     def _parse_raw_data(self, devices_raw_data):
-        for raw_device_data in iter(devices_raw_data):
+        for raw_device_data, project_id in iter(devices_raw_data):
             try:
-                device = self.create_device(raw_device_data)
+                device = self.create_device(raw_device_data, project_id)
                 yield device
             except Exception:
                 logger.exception(f'Got exception for raw_device_data: {raw_device_data}')

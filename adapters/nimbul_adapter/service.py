@@ -21,9 +21,18 @@ class NimbulAdapter(AdapterBase):
         app_code = Field(str, 'Application Code')
         app_description = Field(str, 'Application Description')
         app_email = Field(str, 'Application Email')
+        app_permission = Field(str, 'Application Permission')
+        app_slack = Field(str, 'Application Slack Channel')
+        app_team = Field(str, 'Application Team')
+        app_department = Field(str, 'Application Department')
+        app_security_type = Field(str, 'Application Security Type')
+
         cluster_name = Field(str, 'Cluster Name')
         environment_name = Field(str, 'Environment Name')
         subnet_name = Field(str, 'Subnet Name')
+        vpc_name = Field(str, 'VPC Name')
+        volume_snapshot_frequencies = Field(str, 'Volume Snapshot Frequencies')
+        cloud_state = Field(str, 'Cloud State')
 
         updated_at = Field(datetime.datetime, 'Updated At')
         launch_date = Field(datetime.datetime, 'Launch Date')
@@ -59,6 +68,7 @@ class NimbulAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
+            self._app_dict = client_data.get_apps()
             yield from client_data.get_device_list()
 
     def _query_users_by_client(self, key, data):
@@ -81,13 +91,43 @@ class NimbulAdapter(AdapterBase):
             'type': 'array'
         }
 
+    def __add_app_data(self, device, device_raw):
+        try:
+            app_id = device_raw.get('app_id')
+            if not app_id:
+                return
+            app_data = self._app_dict.get(app_id)
+            if not app_data:
+                return
+            device.app_code = app_data.get('code')
+            device.app_email = app_data.get('email')
+            device.app_description = app_data.get('description')
+            device.app_permission = app_data.get('permission')
+            device.app_slack = app_data.get('slack_channel')
+            device.app_team = app_data.get('team')
+            device.app_department = app_data.get('department')
+            device.app_security_type = app_data.get('security_type')
+
+        except Exception:
+            logger.exception(f'Problem adding app data to {device_raw}')
+
     def _create_device_instance(self, device_raw):
         device = self._new_device_adapter()
         if not device_raw.get('instance_id'):
             logger.warning(f'Bad device with no ID {device_raw}')
             return None
         device.id = str(device_raw.get('instance_id'))
+        device.cloud_id = device_raw.get('cloud_id')
+        image_cloud_id = device_raw.get('image_cloud_id')
+        device.volume_snapshot_frequencies = device_raw.get('volume_snapshot_frequencies')
+        if image_cloud_id and image_cloud_id.startswith('ami-'):
+            device.cloud_provider = 'AWS'
         device.hostname = device_raw.get('hostname')
+        vpc_name = device_raw.get('vpc_name')
+        if vpc_name:
+            if vpc_name.startswith('GCP:'):
+                device.cloud_provider = 'GCP'
+            device.vpc_name = vpc_name
         device.app_code = device_raw.get('app_code')
         device.app_description = device_raw.get('app_description')
         device.app_email = device_raw.get('app_email')
@@ -111,11 +151,10 @@ class NimbulAdapter(AdapterBase):
             if public_ip and isinstance(public_ip, str):
                 public_ip = [public_ip]
             if public_ip:
-                device.add_nic(None, public_ip)
                 device.public_ip = public_ip
         except Exception:
             logger.exception(f'Problem getting ip for {device_raw}')
-
+        self.__add_app_data(device, device_raw)
         device.set_raw(device_raw)
         return device
 
@@ -126,6 +165,11 @@ class NimbulAdapter(AdapterBase):
             return None
         device.id = str(device_raw.get('id')) + str(device_raw.get('cloud_uid'))
         device.name = device_raw.get('cloud_uid')
+        device.cloud_id = device_raw.get('cloud_uid')
+        device.cloud_state = device_raw.get('cloud_state')
+        image_cloud_id = device_raw.get('image_cloud_id')
+        if image_cloud_id and image_cloud_id.startswith('ami-'):
+            device.cloud_provider = 'AWS'
         try:
             private_ip = device_raw.get('private_ip_address')
             if private_ip and isinstance(private_ip, str):
@@ -137,7 +181,6 @@ class NimbulAdapter(AdapterBase):
             if public_ip and isinstance(public_ip, str):
                 public_ip = [public_ip]
             if public_ip:
-                device.add_nic(None, public_ip)
                 device.public_ip = public_ip
         except Exception:
             logger.exception(f'Problem getting ip for {device_raw}')
@@ -149,7 +192,7 @@ class NimbulAdapter(AdapterBase):
             device.patch_level = device_raw.get('patch_level')
         except Exception:
             logger.exception(f'Problem at parse date {device_raw}')
-
+        self.__add_app_data(device, device_raw)
         device.set_raw(device_raw)
         return device
 

@@ -98,6 +98,7 @@ class SophosAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -136,8 +137,17 @@ class SophosAdapter(AdapterBase):
                 device.agent_version = device_info.get('softwareVersion')
                 device.description = device_info.get('computer_description')
                 try:
-                    ip_list = (device_info.get('ipAddresses/ipv4') or []) +\
-                              (device_info.get('ipAddresses/ipv6') or [])
+                    ipv4 = device_info.get('ipAddresses/ipv4') or []
+                    if isinstance(ipv4, list):
+                        ipv4 = [ip.strip() for ip in ipv4 if (ip and ip.strip())]
+                    else:
+                        ipv4 = []
+                    ipv6 = device_info.get('ipAddresses/ipv6') or []
+                    if isinstance(ipv6, list):
+                        ipv6 = [ip.strip() for ip in ipv6 if (ip and ip.strip())]
+                    else:
+                        ipv6 = []
+                    ip_list = ipv4 + ipv6
                     if ip_list:
                         device.add_nic(None, ip_list)
                 except Exception:

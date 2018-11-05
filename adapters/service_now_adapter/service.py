@@ -32,7 +32,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         snow_location = Field(str, 'Location')
         snow_department = Field(str, 'Department')
         assigned_to = Field(str, 'Assigned To')
-        hardware_status = Field(str, 'hardware_status')
+        hardware_status = Field(str, 'Hardware Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

@@ -21,6 +21,21 @@ class NimbulConnection(RESTConnection):
         for device in self._get('unmanaged_instances'):
             yield 'unmanaged', device
 
+    def get_apps(self):
+        apps_dict = dict()
+        try:
+            apps = self._get('apps')
+            for app in apps:
+                try:
+                    if app.get('id'):
+                        apps_dict[app.get('id')] = app
+                except Exception:
+                    logger.exception(f'Problem with app {app}')
+            return apps_dict
+        except Exception:
+            logger.exception(f'Problem getting nimubl apps')
+            return apps_dict
+
     def get_user_list(self):
         for user in self._get('users'):
             yield 'user', user

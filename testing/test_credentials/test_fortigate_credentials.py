@@ -11,7 +11,7 @@ client_details = {
     'dhcp_lease_time': 604800
 }
 
-SOME_DEVICE_ID = 'a4:e9:75:78:fc:c3'.upper() + '_' + 'iPad'
+SOME_DEVICE_ID = 'fortigate_' + 'a4:e9:75:78:fc:c3'.upper() + '_' + 'iPad'
 
 FETCHED_DEVICE_EXAMPLE = {
     'ip': '192.168.254.4',

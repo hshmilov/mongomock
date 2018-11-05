@@ -317,24 +317,35 @@ class JamfAdapter(AdapterBase, Configurable):
                     applications = ((device_raw.get('software') or {}).get('applications') or {}).get('application', [])
                 else:
                     try:
-                        last_inventory_update_utc = parse_date(general_info.get('last_inventory_update_utc', ''))
+                        last_inventory_update_utc = parse_date(general_info.get('last_inventory_update_utc'))
                     except Exception:
                         logger.exception(f"Problem handling last inventory update utc")
                         last_inventory_update_utc = None
 
                     try:
-                        lost_location_utc = parse_date((device_raw.get('security') or {}).get('lost_location_utc', ''))
+                        last_enrolled_date_utc = parse_date(general_info.get('last_enrolled_date_utc'))
+                    except Exception:
+                        logger.exception(f"Problem handling last enrolled update utc")
+                        last_enrolled_date_utc = None
+
+                    try:
+                        lost_location_utc = parse_date((device_raw.get('security') or {}).get('lost_location_utc'))
                     except Exception:
                         logger.exception(f"Problem pasring lost location utc")
                         lost_location_utc = None
-
+                    device_last_seen = None
                     if last_inventory_update_utc and lost_location_utc:
-                        device.last_seen = max(last_inventory_update_utc, lost_location_utc)
+                        device_last_seen = max(last_inventory_update_utc, lost_location_utc)
                     elif last_inventory_update_utc:
-                        device.last_seen = last_inventory_update_utc
+                        device_last_seen = last_inventory_update_utc
                     elif lost_location_utc:
-                        device.last_seen = lost_location_utc
-
+                        device_last_seen = lost_location_utc
+                    if last_enrolled_date_utc and device_last_seen:
+                        device_last_seen = max(device_last_seen, last_enrolled_date_utc)
+                    elif last_enrolled_date_utc:
+                        device_last_seen = last_enrolled_date_utc
+                    if device_last_seen:
+                        device.last_seen = device_last_seen
                     try:
                         total_size = general_info.get('capacity_mb')
                         if total_size:
