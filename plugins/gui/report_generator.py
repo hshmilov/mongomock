@@ -143,6 +143,7 @@ class ReportGenerator(object):
                     continue
                 title = custom_chart.get('name', f'Custom Chart {i}')
                 try:
+                    content = None
                     if custom_chart['view'] == ChartViews.histogram.name:
                         content = self._create_query_histogram(custom_chart['data'])
                     elif custom_chart['view'] == ChartViews.pie.name:
