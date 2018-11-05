@@ -1,6 +1,5 @@
 from enum import Enum, auto
 
-
 NO_CHANGE_DESCRIPTION = 'requested to alert every discovery cycle'
 NEW_ENTITIES_DESCRIPTION = 'new entites were added'
 PREVIOUS_ENTITIES = 'previous entities were removed'
@@ -39,22 +38,6 @@ SERVICE_NOW_SEVERITY = {
 }
 
 REPORT_TITLE = 'Axonius Alert - "{name}" for Query: {query}'
-
-REPORT_CONTENT_HTML = '''\
-<html>
-  <head></head>
-  <body>
-    <p>Alert - "{name}" for the following query has been triggered: {query}<br><br>
-       <b>Alert Details</b><br>
-       Number of times this alert has been triggered: {num_of_triggers}<br>
-       The alert was triggered because: {trigger_message}<br>
-       The number of devices returned by the query: {num_of_current_devices}<br>
-       The previous number of devices was: {old_results_num_of_devices}<br><br>
-       You can watch the query and its results here:<br><a href="{query_link}">Link</a>
-    </p>
-  </body>
-</html>
-'''
 
 REPORT_CONTENT = \
     '''Alert - "{name}" for the following query has been triggered: {query}

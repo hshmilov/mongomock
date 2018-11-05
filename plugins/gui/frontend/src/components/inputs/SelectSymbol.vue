@@ -3,7 +3,7 @@
               :placeholder="placeholder" :id="id" size="sm" :searchable="true">
         <template slot-scope="{ option }">
             <div class="x-type-img">
-                <img v-if="type === 'img'" :src="`/src/assets/images/logos/${option.name}.png`" />
+                <img v-if="type === 'img'" :src="require(`Logos/${option.name}.png`)" />
                 <svg-icon v-else-if="type === 'icon'" :name="`navigation/${option.name}`" :original="true" width="30"/>
             </div>
             <div class="logo-text">{{option.title}}</div>

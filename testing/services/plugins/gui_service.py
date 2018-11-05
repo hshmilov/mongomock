@@ -4,7 +4,7 @@ import json
 import os
 
 from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME
-from gui.consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
+from axonius.consts.gui_consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
 
@@ -226,6 +226,7 @@ RUN cd ./gui/frontend && npm set progress=false && npm install
 # Copy the current directory contents into the container at /app
 COPY ./ ./gui/
 COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
+RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axonius-libs/src/ && ln -s ../../libs/ .
 
 # Compile npm. we assume we have it from axonius-libs
 RUN cd ./gui/frontend/ && npm run {dev}build

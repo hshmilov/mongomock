@@ -2,13 +2,17 @@
 import concurrent.futures
 import datetime
 import logging
+import mimetypes
 import threading
 from collections import Iterable
+from email.utils import make_msgid
 
 from bson.objectid import ObjectId
 from flask import jsonify
+from jinja2 import Environment, FileSystemLoader
 
 from axonius.consts import report_consts
+from axonius.consts.gui_consts import LOGOS_PATH
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           PLUGIN_UNIQUE_NAME)
@@ -25,6 +29,7 @@ from axonius.utils.json import to_json
 from axonius.utils.parsing import parse_filter
 
 logger = logging.getLogger(f'axonius.{__name__}')
+# pylint: disable = too-many-locals, too-many-statements
 
 
 def get_ids(query_object: dict) -> list:
@@ -79,7 +84,19 @@ class ReportsService(PluginBase, Triggerable):
                         report query result changes. """
 
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
-
+        self.env = Environment(loader=FileSystemLoader('.'))
+        self.templates = {
+            'report': self._get_template('alert_report'),
+            'calc_area': self._get_template('report_calc_area'),
+            'header': self._get_template('report_header'),
+            'second_header': self._get_template('report_second_header'),
+            'table_section': self._get_template('report_tables_section'),
+            'adapter_image': self._get_template('adapter_image'),
+            'table': self._get_template('report_table'),
+            'table_head': self._get_template('report_table_head'),
+            'table_row': self._get_template('report_table_row'),
+            'table_data': self._get_template('report_table_data')
+        }
         self._actions = {
             'create_service_now_computer': self._handle_action_create_service_now_computer,
             'fresh_service_incident': self._handle_action_create_fresh_service_incident,
@@ -525,12 +542,17 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
+
         mail_sender = self.mail_sender
         if mail_sender:
-            email = mail_sender.new_email(
-                report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']),
-                action_data.get('emailList', []))
+            subject = action_data.get('mailSubject') if action_data.get(
+                'mailSubject') else report_consts.REPORT_TITLE.format(name=report_data['name'],
+                                                                      query=report_data['view'])
 
+            email = mail_sender.new_email(subject,
+                                          action_data.get('emailList', []),
+                                          cc_recipients=action_data.get('emailListCC', []))
+            # all the trigger result
             if action_data.get('sendDeviceCSV', False):
                 query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
                     'name': report_data['view']})
@@ -545,14 +567,195 @@ class ReportsService(PluginBase, Triggerable):
 
                 email.add_attachment('Axonius Entity Data.csv', csv_string.getvalue().encode('utf-8'), 'text/csv')
 
-            email.send(report_consts.REPORT_CONTENT_HTML.format(
-                name=report_data['name'], query=report_data['view'], num_of_triggers=report_data['triggered'],
-                trigger_message=self._get_trigger_description(report_data['triggers'], triggered),
-                num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
-                old_results_num_of_devices=len(report_data['result']),
-                query_link=self._generate_query_link(report_data['view_entity'], report_data['view'])))
+            added_result_count = 0
+            removed_result_count = 0
+            if 'added' in trigger_data:
+                added_result_count = len(trigger_data['added'])
+            if 'removed' in trigger_data:
+                removed_result_count = len(trigger_data['removed'])
+
+            if action_data.get('sendDevicesChangesCSV', False):
+                if added_result_count:
+                    self.add_changes_csv(email, report_data, trigger_data['added'], 'added')
+                if removed_result_count:
+                    self.add_changes_csv(email, report_data, trigger_data['removed'], 'removed')
+
+            image_cid = make_msgid()
+
+            with open(f'{LOGOS_PATH}/logo/axonius.png', 'rb') as img:
+
+                # know the Content-Type of the image
+                maintype, subtype = mimetypes.guess_type(img.name)[0].split('/')
+
+                # attach it
+                email.add_logos_attachments(img.read(), maintype=maintype, subtype=subtype, cid=image_cid)
+
+            reason = self._get_trigger_description(report_data['triggers'], triggered)
+
+            html_sections = []
+            prev_result_count = 0
+            if 'result' in report_data:
+                prev_result_count = current_num_of_devices - added_result_count + removed_result_count
+
+            query_link = self._generate_query_link(report_data['view_entity'], report_data['view'])
+
+            html_sections.append(self.templates['header'].render({'subject': report_data['name']}))
+            html_sections.append(self.templates['second_header'].render(
+                {'query_link': query_link, 'reason': reason, 'query': report_data['view']}))
+            html_sections.append(self.templates['calc_area'].render({'prev': prev_result_count,
+                                                                     'added': added_result_count,
+                                                                     'removed': removed_result_count,
+                                                                     'sum': current_num_of_devices}))
+            images_cid = {}
+            query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
+                'name': report_data['view']})
+            parsed_query_filter = parse_filter(query['view']['query']['filter'])
+
+            self.create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
+                                       EntityType(report_data['view_entity']),
+                                       10, 'Top 10 results')
+
+            if added_result_count > 0:
+                parsed_added_query_filter = self.create_query(trigger_data['added'])
+
+                self.create_table_in_email(email, parsed_added_query_filter, html_sections, images_cid,
+                                           EntityType(report_data['view_entity']),
+                                           5, f'Top 5 new {report_data["view_entity"]} in query')
+                logger.info(parsed_added_query_filter)
+            if removed_result_count > 0:
+                parsed_removed_query_filter = self.create_query(trigger_data['removed'])
+
+                self.create_table_in_email(email, parsed_removed_query_filter, html_sections, images_cid,
+                                           EntityType(report_data['view_entity']),
+                                           5, f'Top 5 {report_data["view_entity"]} removed from query')
+                logger.info(parsed_removed_query_filter)
+            logger.info(parsed_query_filter)
+
+            html_data = self.templates['report'].render(
+                {'query_link': query_link, 'image_cid': image_cid[1:-1], 'content': '\n'.join(html_sections)})
+
+            email.send(html_data)
         else:
             logger.info('Email cannot be sent because no email server is configured')
+
+    @staticmethod
+    def create_query(trigger_data: list):
+        """
+        create the query for the result diff
+        :param trigger_data:  The results difference added or removed result
+        :return:
+        """
+        id_list = []
+        for entity in trigger_data:
+            for data in entity['specific_data']:
+                id_list.append(data['data']['id'])
+        parsed_query_filter = {'specific_data.data.id': {'$in': id_list}}
+        return parsed_query_filter
+
+    def add_changes_csv(self, email, report_data: dict, trigger_data: list, data_action):
+        """
+        add csv attachment to the mail contains the changed values added or removed from the prev query
+        :param email: the email instance
+        :param dict report_data: The report settings.
+        :param trigger_data: The results difference added or removed list.
+        :param data_action: added or removed from query
+        """
+
+        parsed_query_filter = self.create_query(trigger_data)
+        query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one(
+            {
+                'name': report_data['view']
+            })
+        field_list = query['view'].get('fields', [])
+        with self._get_db_connection() as db_connection:
+            csv_string = gui_helpers.get_csv(parsed_query_filter,
+                                             gui_helpers.get_sort(query['view']),
+                                             {field: 1 for field in field_list},
+                                             db_connection,
+                                             EntityType(report_data['view_entity']))
+
+        email.add_attachment(f'Axonius {data_action} entity data.csv', csv_string.getvalue().encode('utf-8'),
+                             'text/csv')
+
+    def create_table_in_email(self, email, query_filter, sections: list, images_cids: dict, entity_type: EntityType,
+                              limit: int, header: str):
+        """
+
+        :param email: the email instance
+        :param query_filter: the query to run for the diff
+        :param sections: list of html sections
+        :param images_cids: images cids for the email html attachments
+        :param entity_type: User or Device
+        :param limit: for the query result
+        :param header: of the section contains the table
+        :return:
+        """
+        if entity_type == EntityType.Devices:
+            data = gui_helpers.get_entities(limit, 0, query_filter, {},
+                                            {'adapters': 1, 'specific_data.data.hostname': 1},
+                                            entity_type)
+            heads = [self.templates['table_head'].render({'content': 'Adapters'}),
+                     self.templates['table_head'].render({'content': 'Host Name'})]
+        elif entity_type == EntityType.Users:
+            data = gui_helpers.get_entities(limit, 0, query_filter, {},
+                                            {'adapters': 1, 'specific_data.data.username': 1},
+                                            entity_type)
+            heads = [self.templates['table_head'].render({'content': 'Adapters'}),
+                     self.templates['table_head'].render({'content': 'User Name'})]
+        rows = []
+        for entity in data:
+            item_values = []
+
+            canonized_value = [str(x) for x in entity['adapters']]
+            row_images = []
+            for adapter in canonized_value:
+                if adapter not in images_cids:
+
+                    cid = make_msgid()
+                    with open(f'{LOGOS_PATH}/logos/{adapter}.png',
+                              'rb') as img:
+
+                        # know the Content-Type of the image
+                        maintype, subtype = mimetypes.guess_type(img.name)[0].split('/')
+
+                        # attach it
+                        email.add_logos_attachments(img.read(), maintype=maintype, subtype=subtype, cid=cid)
+                    images_cids[adapter] = cid
+                    row_images.append(cid)
+                else:
+                    row_images.append(images_cids[adapter])
+
+            cid_template = []
+            for img in row_images:
+                cid_template.append(self.templates['adapter_image'].render({'image_cid': img[1:-1]}))
+
+            item_values.append(self.templates['table_data'].render(
+                {'content': '\n'.join(cid_template)}))
+
+            if entity_type == EntityType.Devices:
+                entity_value = entity['specific_data.data.hostname']
+            elif entity_type == EntityType.Users:
+                entity_value = entity['specific_data.data.username']
+            if isinstance(entity_value, list):
+                canonized_value = [str(x) for x in entity_value]
+                entity_value = ','.join(canonized_value)
+            item_values.append(self.templates['table_data'].render({'content': entity_value}))
+            rows.append(self.templates['table_row'].render({'content': '\n'.join(item_values)}))
+        sections.append(self.templates['table_section'].render({
+            'header': header,
+            'content': self.templates['table'].render({
+                'head_content': self.templates['table_row'].render({'content': '\n'.join(heads)}),
+                'body_content': '\n'.join(rows)
+            }),
+        }))
+
+    def _get_template(self, template_name):
+        """
+        Get the template with requested name, expected to be found in self.template_path and have the extension 'html'
+        :param template_name: Name of template file
+        :return: The template object
+        """
+        return self.env.get_template(f'reports/templates/report/{template_name}.html')
 
     def _handle_action_create_notification(self, report_data, triggered, trigger_data, current_num_of_devices,
                                            action_data=None):

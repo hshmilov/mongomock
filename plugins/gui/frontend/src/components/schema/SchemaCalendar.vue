@@ -1,7 +1,7 @@
 <template>
     <div class="x-schema-calendar">
         <div class="calendar-details" v-if="details">
-            <img :src="`/src/assets/images/logos/${details.image}.png`" height="48" />
+            <img :src="require(`Logos/${details.image}.png`)" height="48" />
             <div v-for="field in details.fields">{{ field }}</div>
         </div>
         <div class="calendar-view">
