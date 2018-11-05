@@ -92,6 +92,7 @@ class ReportsService(PluginBase, Triggerable):
             'second_header': self._get_template('report_second_header'),
             'table_section': self._get_template('report_tables_section'),
             'adapter_image': self._get_template('adapter_image'),
+            'entity_name_url': self._get_template('entity_name_url'),
             'table': self._get_template('report_table'),
             'table_head': self._get_template('report_table_head'),
             'table_row': self._get_template('report_table_row'),
@@ -352,6 +353,12 @@ class ReportsService(PluginBase, Triggerable):
         system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME).find_one({'type': 'server'}) or {}
         return 'https://{}/{}?view={}'.format(
             system_config.get('server_name', 'localhost'), entity_type, view_name)
+
+    def _generate_entity_link(self, entity_type, entity_id):
+        # Getting system config from the gui.
+        system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME).find_one({'type': 'server'}) or {}
+        return 'https://{}/{}/{}'.format(
+            system_config.get('server_name', 'localhost'), entity_type, entity_id)
 
     def _handle_action_create_service_now_computer(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):
@@ -690,6 +697,8 @@ class ReportsService(PluginBase, Triggerable):
         :param header: of the section contains the table
         :return:
         """
+        heads = []
+        data = {}
         if entity_type == EntityType.Devices:
             data = gui_helpers.get_entities(limit, 0, query_filter, {},
                                             {'adapters': 1, 'specific_data.data.hostname': 1},
@@ -731,7 +740,7 @@ class ReportsService(PluginBase, Triggerable):
 
             item_values.append(self.templates['table_data'].render(
                 {'content': '\n'.join(cid_template)}))
-
+            entity_value = ''
             if entity_type == EntityType.Devices:
                 entity_value = entity['specific_data.data.hostname']
             elif entity_type == EntityType.Users:
@@ -739,7 +748,12 @@ class ReportsService(PluginBase, Triggerable):
             if isinstance(entity_value, list):
                 canonized_value = [str(x) for x in entity_value]
                 entity_value = ','.join(canonized_value)
-            item_values.append(self.templates['table_data'].render({'content': entity_value}))
+            item_values.append(self.templates['table_data'].render({'content':
+                                                                    self.templates['entity_name_url'].render(
+                                                                        {'entity_link': self._generate_entity_link(
+                                                                            entity_type.value,
+                                                                            entity['internal_axon_id']),
+                                                                         'content': entity_value})}))
             rows.append(self.templates['table_row'].render({'content': '\n'.join(item_values)}))
         sections.append(self.templates['table_section'].render({
             'header': header,
