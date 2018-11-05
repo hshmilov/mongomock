@@ -1,6 +1,5 @@
 DOCKER_PORTS = {
     'smtp':                             25,
-    'syslog':                           514,
     'gui':                              443,
     'selenium-hub':                     4444,
     'execution':                        4999,

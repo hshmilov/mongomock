@@ -19,8 +19,8 @@ ALERT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_alert_change == 5'
 
 @retry(stop_max_attempt_number=100, wait_fixed=100)
 def _verify_in_syslog_data(syslog_service: SyslogService, text):
-    last_log = list(syslog_service.get_syslog_data())[-1]
-    assert text in last_log
+    last_log = list(syslog_service.get_syslog_data())[-10:]
+    assert any(bytes(text, 'ascii') in l for l in last_log)
 
 
 def create_alert_name(number, alert_name=ALERT_NAME):
@@ -248,7 +248,8 @@ class TestAlert(TestBase):
             toggle = self.settings_page.find_syslog_toggle()
             self.settings_page.click_toggle_button(toggle, make_yes=True)
             self.settings_page.fill_syslog_host(syslog_server.name)
-            self.settings_page.fill_syslog_port(syslog_server.port)
+            self.settings_page.fill_syslog_port(syslog_server.tcp_port)
+            self.settings_page.select_syslog_ssl('Unencrypted')
             self.settings_page.click_save_button()
 
             # switch to alerts page
@@ -275,6 +276,38 @@ class TestAlert(TestBase):
 
             # Verifying the multiple actions in alert worked
             self.notification_page.verify_amount_of_notifications(1)
+
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            toggle = self.settings_page.find_syslog_toggle()
+            self.settings_page.click_toggle_button(toggle, make_yes=True)
+            self.settings_page.fill_syslog_host(syslog_server.name)
+            self.settings_page.fill_syslog_port(syslog_server.tls_port)
+            self.settings_page.select_syslog_ssl('Unverified')
+            self.settings_page.click_save_button()
+
+            # make another alert
+            new_alert_name = f'{ALERT_NAME}_SSL'
+            self.alert_page.create_basic_alert(new_alert_name, COMMON_ALERT_QUERY)
+
+            # check all trigger causes so it will always jump
+            self.alert_page.check_every_discovery()
+            self.alert_page.check_new()
+            self.alert_page.check_previous()
+
+            self.alert_page.check_push_system_notification()
+
+            # This is here because our syslog doesn't like logs sent using "INFO"
+            # this is an issue with our syslog's configuration, and it's not worth the time fixing
+            self.alert_page.choose_severity_warning()
+
+            self.alert_page.check_notify_syslog()
+            self.alert_page.click_save_button()
+
+            self.base_page.run_discovery()
+            syslog_expected = f'Axonius:Alert - "{new_alert_name}"' + \
+                              f' for the following query has been triggered: {COMMON_ALERT_QUERY}'
+            _verify_in_syslog_data(syslog_server, syslog_expected)
 
     def test_notification_sanity(self):
         self.create_notifications(2)

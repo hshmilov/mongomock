@@ -49,7 +49,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.types.ssl_state import SSLState
+from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
 from axonius.utils import gui_helpers
 from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.utils.files import create_temp_file, get_local_config_file
@@ -3802,31 +3802,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             "title": "Default domain to present to the user",
                             "type": "string"
                         },
-                        {
-                            "name": "use_ssl",
-                            "title": "Use SSL for connection",
-                            "type": "string",
-                            "enum": [SSLState.Unencrypted.name, SSLState.Verified.name, SSLState.Unverified.name],
-                            "default": SSLState.Unverified.name,
-                        },
-                        {
-                            "name": "ca_file",
-                            "title": "CA File",
-                            "description": "The binary contents of the ca_file",
-                            "type": "file"
-                        },
-                        {
-                            "name": "cert_file",
-                            "title": "Certificate File",
-                            "description": "The binary contents of the cert_file",
-                            "type": "file"
-                        },
-                        {
-                            "name": "private_key",
-                            "title": "Private Key File",
-                            "description": "The binary contents of the private_key",
-                            "type": "file"
-                        },
+                        *COMMON_SSL_CONFIG_SCHEMA
                     ],
                     "required": ["enabled", "dc_address"],
                     "name": "ldap_login_settings",
@@ -3890,10 +3866,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 "dc_address": "",
                 "default_domain": "",
                 "group_cn": "",
-                "use_ssl": SSLState.Unencrypted.name,
-                "ca_file": None,
-                "cert_file": None,
-                "private_key": None
+                **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             "google_login_settings": {
                 "enabled": False,

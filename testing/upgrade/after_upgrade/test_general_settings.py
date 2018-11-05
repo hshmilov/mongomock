@@ -27,7 +27,7 @@ class TestGeneralSettings(TestBase):
         syslog_server = SyslogService()
         assert self.settings_page.is_toggle_selected(self.settings_page.find_syslog_toggle())
         assert self.settings_page.get_syslog_host() == syslog_server.name
-        assert int(self.settings_page.get_syslog_port()) == syslog_server.port
+        assert int(self.settings_page.get_syslog_port()) == syslog_server.tcp_port
 
     def test_fresh_service_settings(self):
         self.settings_page.switch_to_page()

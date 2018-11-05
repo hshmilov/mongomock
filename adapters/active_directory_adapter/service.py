@@ -36,7 +36,7 @@ from axonius.mixins.devicedisabelable import Devicedisabelable
 from axonius.mixins.userdisabelable import Userdisabelable
 from axonius.plugin_base import add_rule
 from axonius.smart_json_class import SmartJsonClass
-from axonius.types.ssl_state import SSLState
+from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.dns import query_dns
 from axonius.utils.files import get_local_config_file
@@ -314,31 +314,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "title": "DNS Server Address",
                     "type": "string"
                 },
-                {
-                    "name": "use_ssl",
-                    "title": "Use SSL for connection",
-                    "type": "string",
-                    "enum": [SSLState.Unencrypted.name, SSLState.Verified.name, SSLState.Unverified.name],
-                    "default": SSLState.Unverified.name,
-                },
-                {
-                    "name": "ca_file",
-                    "title": "CA File",
-                    "description": "The binary contents of the ca_file",
-                    "type": "file",
-                },
-                {
-                    "name": "cert_file",
-                    "title": "Certificate File",
-                    "description": "The binary contents of the cert_file",
-                    "type": "file",
-                },
-                {
-                    "name": "private_key",
-                    "title": "Private Key File",
-                    "description": "The binary contents of the private_key",
-                    "type": "file",
-                },
+                *COMMON_SSL_CONFIG_SCHEMA,
                 {
                     "name": "fetch_disabled_devices",
                     "title": "Fetch Disabled Devices",

@@ -23,6 +23,8 @@ class SettingsPage(Page):
     EMAIL_HOST_ID = 'smtpHost'
     SYSLOG_HOST = 'syslogHost'
     SYSLOG_PORT = 'syslogPort'
+    SYSLOG_SSL_CSS_DROPBOX = '[for=use_ssl]+div'
+    SYSLOG_SSL_CSS_DROPBOX_OPTIONS = '[for=use_ssl]+div>.expand>div>.x-select-options>div'
     USE_FRESH_SERVICE = 'Use FreshService'
     FRESH_SERVICE_DOMAIN = 'domain'
     FRESH_SERVICE_API_KEY = 'api_key'
@@ -130,6 +132,11 @@ class SettingsPage(Page):
 
     def find_syslog_toggle(self):
         return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
+
+    def select_syslog_ssl(self, text):
+        self.select_option_without_search(self.SYSLOG_SSL_CSS_DROPBOX,
+                                          self.SYSLOG_SSL_CSS_DROPBOX_OPTIONS,
+                                          text)
 
     def find_fresh_service_toggle(self):
         return self.find_checkbox_by_label(self.USE_FRESH_SERVICE)
@@ -280,16 +287,16 @@ class SettingsPage(Page):
         self.driver.find_element_by_css_selector('li.nav-item.disabled #settings')
 
     def select_permissions(self, label_text, permission):
-        self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
-            find_element_by_css_selector('div.trigger-text').\
+        self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)). \
+            find_element_by_css_selector('div.trigger-text'). \
             click()
         self.fill_text_field_by_css_selector('input.input-value', permission)
         self.driver.find_element_by_css_selector(self.SELECT_OPTION_CSS).click()
 
     def get_permissions_text(self, label_text):
         return self.driver.find_element_by_xpath(
-            self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).\
-            find_element_by_css_selector('div > div').\
+            self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)). \
+            find_element_by_css_selector('div > div'). \
             text
 
     @staticmethod

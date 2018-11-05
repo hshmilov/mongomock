@@ -27,6 +27,8 @@ import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 # bson is requirement of mongo and its not recommended to install it manually
+from tlssyslog import TLSSysLogHandler
+
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from bson import ObjectId, json_util
@@ -62,6 +64,7 @@ from axonius.mixins.feature import Feature
 from axonius.thread_stopper import (StopThreadException, ThreadStopper,
                                     stoppable)
 from axonius.types.correlation import CorrelationResult, CorrelateException
+from axonius.types.ssl_state import COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS, SSLState
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.json_encoders import IteratorJSONEncoder
@@ -320,10 +323,6 @@ class PluginBase(Configurable, Feature):
 
         # Creating logger
         create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, LOG_PATH)
-
-        # Initializing syslog help variables
-        self.current_syslog_host = None
-        self.current_syslog_port = None
 
         # Adding rules to flask
         for routed in ROUTED_FUNCTIONS:
@@ -1906,26 +1905,8 @@ class PluginBase(Configurable, Feature):
         syslog_settings = self._syslog_settings
         if syslog_settings['enabled'] is True:
             syslog_logger = logging.getLogger("axonius.syslog")
-            if self.current_syslog_host is None or \
-                    self.current_syslog_port is None or \
-                    self.current_syslog_host != syslog_settings['syslogHost'] or \
-                    self.current_syslog_port != syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT):
-                # No syslog handler defined yet or settings changed.
-                # We should replace the current handler with a new one.
-                logger.info("Initializing new handler to syslog logger (deleting old if exist)")
-                syslog_logger.handlers = []  # Removing all previous handlers
-                # Making a new handler with most up to date settings
-                syslog_handler = logging.handlers.SysLogHandler(address=(
-                    syslog_settings['syslogHost'], syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)),
-                    facility=logging.handlers.SysLogHandler.LOG_DAEMON)
-                syslog_handler.setLevel(logging.INFO)
-                syslog_logger.addHandler(syslog_handler)
-                # Saving the values used
-                self.current_syslog_host = syslog_settings['syslogHost']
-                self.current_syslog_port = syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)
-
             # Starting the messages with the tag Axonius
-            formatted_message = f"Axonius:{message}"
+            formatted_message = f'Axonius:{message}'
             getattr(syslog_logger, log_level)(formatted_message)
 
     @property
@@ -1956,7 +1937,15 @@ class PluginBase(Configurable, Feature):
         self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
         self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
         self._reg_check_exists = config['execution_settings'].get('reg_check_exists')
-        self._syslog_settings = config['syslog_settings']
+
+        current_syslog = getattr(self, '_syslog_settings', None)
+        if current_syslog != config['syslog_settings']:
+            logger.info('new syslog settings arrived')
+            self.__create_syslog_handler(config['syslog_settings'])
+            self._syslog_settings = config['syslog_settings']
+        else:
+            self._syslog_settings = current_syslog
+
         self._service_now_settings = config['service_now_settings']
         self._fresh_service_settings = config['fresh_service_settings']
 
@@ -1969,6 +1958,40 @@ class PluginBase(Configurable, Feature):
             filter={'config_name': 'CoreService'}, update={"$set": {"config": config}})
 
         logger.info(self._maintenance_settings)
+
+    def __create_syslog_handler(self, syslog_settings: dict):
+        """
+        Replaces the syslog handler used with the provided
+        """
+        try:
+            # No syslog handler defined yet or settings changed.
+            # We should replace the current handler with a new one.
+            logger.info("Initializing new handler to syslog logger (deleting old if exist)")
+            syslog_logger = logging.getLogger("axonius.syslog")
+            syslog_logger.handlers = []  # Removing all previous handlers
+            # Making a new handler with most up to date settings
+            use_ssl = SSLState[syslog_settings['use_ssl']]
+            if use_ssl != SSLState.Unencrypted:
+                cert_file = self._grab_file_contents(syslog_settings.get('cert_file'))
+                ssl_kwargs = dict(
+                    cert_reqs=ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE,
+                    ssl_version=ssl.PROTOCOL_TLS,
+                    ca_certs=cert_file.name if cert_file else None
+                )
+                syslog_handler = TLSSysLogHandler(address=(syslog_settings['syslogHost'],
+                                                           syslog_settings.get('syslogPort',
+                                                                               6514)),
+                                                  facility=logging.handlers.SysLogHandler.LOG_DAEMON,
+                                                  ssl_kwargs=ssl_kwargs)
+            else:
+                syslog_handler = logging.handlers.SysLogHandler(address=(syslog_settings['syslogHost'],
+                                                                         syslog_settings.get('syslogPort',
+                                                                                             logging.handlers.SYSLOG_UDP_PORT)),
+                                                                facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+            syslog_handler.setLevel(logging.INFO)
+            syslog_logger.addHandler(syslog_handler)
+        except Exception:
+            logger.exception('Failed setting up syslog handler, no syslog handler has been set up')
 
     @staticmethod
     def global_settings_schema():
@@ -1991,7 +2014,8 @@ class PluginBase(Configurable, Feature):
                             "title": "Port",
                             "type": "integer",
                             "format": "port"
-                        }
+                        },
+                        *COMMON_SSL_CONFIG_SCHEMA
                     ],
                     "name": "syslog_settings",
                     "title": "Syslog Settings",
@@ -2239,7 +2263,8 @@ class PluginBase(Configurable, Feature):
             "syslog_settings": {
                 "enabled": False,
                 "syslogHost": None,
-                "syslogPort": logging.handlers.SYSLOG_UDP_PORT
+                "syslogPort": logging.handlers.SYSLOG_UDP_PORT,
+                **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             MAINTENANCE_SETTINGS: {
                 ANALYTICS_SETTING: True,
