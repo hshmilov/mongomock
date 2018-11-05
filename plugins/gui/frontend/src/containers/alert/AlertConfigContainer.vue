@@ -54,7 +54,7 @@
                         <x-checkbox label="The number of query results is below" v-model="alert.triggers.decrease"
                                     title="Trigger alert if the number of entities that was discovered from the given saved query is below the given threshold" />
                         <div class="form-inline" >
-                            <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0" v-on:keypress="isNumber($event)" :disabled="!alert.triggers.decrease">
+                            <input id="alert_below" type="number" v-model="alert.triggers.below" min="0" v-on:keypress="isNumber($event)" :disabled="!alert.triggers.decrease">
                         </div>
                     </div>
                 </div>

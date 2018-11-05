@@ -15,6 +15,7 @@ COMMON_ALERT_QUERY = 'Enabled AD Devices'
 
 ALERT_CHANGE_NAME = 'test_alert_change'
 ALERT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_alert_change == 5'
+ALERT_NUMBER_OF_DEVICES = 21
 
 
 @retry(stop_max_attempt_number=100, wait_fixed=100)
@@ -28,16 +29,6 @@ def create_alert_name(number, alert_name=ALERT_NAME):
 
 
 class TestAlert(TestBase):
-
-    def create_outputting_notification_alert(self, alert_name=ALERT_NAME, alert_query=COMMON_ALERT_QUERY):
-        self.alert_page.create_basic_alert(alert_name, alert_query)
-        self.alert_page.check_new()
-        self.alert_page.check_previous()
-        self.alert_page.check_every_discovery()
-        self.alert_page.check_push_system_notification()
-        self.alert_page.click_save_button()
-        self.alert_page.wait_for_spinner_to_end()
-        self.alert_page.wait_for_table_to_load()
 
     def create_basic_saved_query(self, query_name, query_filter):
         self.devices_page.switch_to_page()
@@ -55,7 +46,7 @@ class TestAlert(TestBase):
         result = []
         for i in range(count):
             alert_name = create_alert_name(i)
-            self.create_outputting_notification_alert(alert_name)
+            self.alert_page.create_outputting_notification_alert(alert_name, COMMON_ALERT_QUERY)
             result.append(alert_name)
         self.base_page.run_discovery()
         return result
@@ -72,7 +63,7 @@ class TestAlert(TestBase):
         self.alert_page.find_missing_email_server_notification()
 
     def test_remove_alert(self):
-        self.create_outputting_notification_alert()
+        self.alert_page.create_outputting_notification_alert(ALERT_NAME, COMMON_ALERT_QUERY)
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
@@ -93,7 +84,7 @@ class TestAlert(TestBase):
     def test_invalid_input(self):
         self.alert_page.create_basic_alert(ALERT_NAME, COMMON_ALERT_QUERY)
         self.alert_page.check_above()
-        self.alert_page.fill_above(-5)
+        self.alert_page.fill_above_value(-5)
         value = self.alert_page.get_above_value()
         assert value == '5'
 
@@ -354,3 +345,33 @@ class TestAlert(TestBase):
         now = datetime.datetime.now()
         seconds_diff = [(now - single_time).total_seconds() for single_time in times]
         assert any(seconds < 60 * 5 for seconds in seconds_diff)
+
+    def test_above_threshold(self):
+        self.alert_page.create_outputting_notification_above('above 1',
+                                                             COMMON_ALERT_QUERY,
+                                                             above=ALERT_NUMBER_OF_DEVICES + 10)
+
+        self.base_page.run_discovery()
+        self.notification_page.verify_amount_of_notifications(0)
+
+        self.alert_page.create_outputting_notification_above('above 2',
+                                                             COMMON_ALERT_QUERY,
+                                                             above=ALERT_NUMBER_OF_DEVICES - 10)
+
+        self.base_page.run_discovery()
+        self.notification_page.verify_amount_of_notifications(1)
+
+    def test_below_threshold(self):
+        self.alert_page.create_outputting_notification_below('below 1',
+                                                             COMMON_ALERT_QUERY,
+                                                             below=ALERT_NUMBER_OF_DEVICES - 10)
+
+        self.base_page.run_discovery()
+        self.notification_page.verify_amount_of_notifications(0)
+
+        self.alert_page.create_outputting_notification_below('below 2',
+                                                             COMMON_ALERT_QUERY,
+                                                             below=ALERT_NUMBER_OF_DEVICES + 10)
+
+        self.base_page.run_discovery()
+        self.notification_page.verify_amount_of_notifications(1)

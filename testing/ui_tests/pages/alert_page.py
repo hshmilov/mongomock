@@ -35,7 +35,8 @@ class AlertPage(EntitiesPage):
     SAVED_QUERY_INPUT_CSS = 'input.input-value'
     SAVED_QUERY_OPTION_CSS = 'div.x-select-option'
     ALERTS_CHECKBOX = 'div.x-checkbox-container'
-    INCREASE_ID = 'alert_above'
+    ABOVE_ID = 'alert_above'
+    BELOW_ID = 'alert_below'
     EDIT_ALERT_XPATH = '//div[@title=\'{alert_name}\']'
     SELECT_SAVED_QUERY_TEXT_CSS = 'div.trigger-text'
     SEND_AN_EMAIL = 'Send an Email'
@@ -89,9 +90,6 @@ class AlertPage(EntitiesPage):
     def check_every_discovery(self):
         self.check_alert_checkbox(Trigger.EveryDiscoveryCycle)
 
-    def fill_below_value(self, value):
-        self.fill_text_field_by_element_id('TriggerBelow', value)
-
     def check_push_system_notification(self):
         self.check_alert_checkbox(Action.PushNotification)
 
@@ -121,11 +119,14 @@ class AlertPage(EntitiesPage):
     def choose_period(self, period):
         self.driver.find_element_by_css_selector(period).click()
 
-    def fill_above(self, value):
-        self.fill_text_field_by_element_id(self.INCREASE_ID, value)
+    def fill_above_value(self, value):
+        self.fill_text_field_by_element_id(self.ABOVE_ID, value)
 
     def get_above_value(self):
-        return self.driver.find_element_by_id(self.INCREASE_ID).get_attribute('value')
+        return self.driver.find_element_by_id(self.ABOVE_ID).get_attribute('value')
+
+    def fill_below_value(self, value):
+        self.fill_text_field_by_element_id(self.BELOW_ID, value)
 
     def edit_alert(self, alert_name):
         self.driver.find_element_by_xpath(self.EDIT_ALERT_XPATH.format(alert_name=alert_name)).click()
@@ -144,6 +145,52 @@ class AlertPage(EntitiesPage):
         self.wait_for_spinner_to_end()
         self.fill_alert_name(alert_name)
         self.select_saved_query(alert_query)
+
+    def create_outputting_notification_alert(self,
+                                             alert_name,
+                                             alert_query,
+                                             new=True,
+                                             previous=True,
+                                             every_discovery=True,
+                                             above=0,
+                                             below=0):
+
+        self.create_basic_alert(alert_name, alert_query)
+        if new:
+            self.check_new()
+        if previous:
+            self.check_previous()
+        if every_discovery:
+            self.check_every_discovery()
+        if above:
+            self.check_above()
+            self.fill_above_value(above)
+        if below:
+            self.check_below()
+            self.fill_below_value(below)
+
+        self.check_push_system_notification()
+        self.click_save_button()
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+
+    def create_outputting_notification_above(self, alert_name, alert_query, above):
+        self.create_outputting_notification_alert(alert_name,
+                                                  alert_query,
+                                                  new=False,
+                                                  previous=False,
+                                                  every_discovery=False,
+                                                  above=above,
+                                                  below=0)
+
+    def create_outputting_notification_below(self, alert_name, alert_query, below):
+        self.create_outputting_notification_alert(alert_name,
+                                                  alert_query,
+                                                  new=False,
+                                                  previous=False,
+                                                  every_discovery=False,
+                                                  above=0,
+                                                  below=below)
 
     def is_severity_selected(self, severity):
         return self.driver.find_element_by_css_selector(severity).is_selected()
