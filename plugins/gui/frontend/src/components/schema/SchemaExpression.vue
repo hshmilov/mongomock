@@ -6,7 +6,7 @@
         <!-- Option to add '(', to negate expression and choice of field to filter -->
         <label class="x-btn light checkbox-label expression-bracket-left" :class="{'active': expression.leftBracket}">
             <input type="checkbox" v-model="expression.leftBracket">(</label>
-        <label class="x-btn light checkbox-label" :class="{active: expression.not, disabled: disableNot}">
+        <label class="x-btn light checkbox-label expression-not" :class="{active: expression.not, disabled: disableNot}">
             <input type="checkbox" v-model="expression.not">NOT</label>
         <x-select-typed-field :fields="fields" v-model="expression.field" :id="first? 'query_field': undefined" />
         <!-- Choice of function to compare by and value to compare, according to chosen field -->

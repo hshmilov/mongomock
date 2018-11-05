@@ -11,7 +11,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
-        self.devices_page.select_query_comp_op('subnet')
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET)
         self.devices_page.fill_query_value('1.1.1.1')
         self.devices_page.find_element_by_text('Specify <address>/<CIDR> to filter IP by subnet')
         self.devices_page.click_search()
@@ -57,9 +57,9 @@ class TestDevicesQuery(TestBase):
         Testing that change of the comparison function resets the value, since its type may be different to previous
         """
         self.devices_page.select_query_field(self.devices_page.FIELD_ADAPTERS)
-        self.devices_page.select_query_comp_op('size')
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE)
         self.devices_page.fill_query_value('2')
-        self.devices_page.select_query_comp_op('equals')
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS)
         assert not self.devices_page.get_query_value()
 
     def _test_and_expression(self):
@@ -69,7 +69,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         results_count = len(self.devices_page.get_all_data())
-        self.devices_page.select_query_logic_op('and')
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) <= results_count
@@ -84,7 +84,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.fill_query_value(365, parent=expressions[0])
         self.devices_page.wait_for_spinner_to_end()
         results_count = len(self.devices_page.get_all_data())
-        self.devices_page.select_query_logic_op('and')
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
         self.devices_page.select_query_comp_op('days', parent=expressions[1])
         self.devices_page.fill_query_value(1, parent=expressions[1])
@@ -98,7 +98,7 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 3
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
-        self.devices_page.select_query_logic_op('or')
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
         self.devices_page.toggle_left_bracket(expressions[0])
         assert self.devices_page.is_text_error(self.ERROR_TEXT_QUERY_BRACKET.format(direction='right'))
@@ -107,7 +107,7 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
         self.devices_page.select_query_comp_op('days', parent=expressions[2])
         self.devices_page.fill_query_value(30, parent=expressions[2])
-        self.devices_page.select_query_logic_op('and', parent=expressions[2])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
         self.devices_page.remove_query_expression(expressions[0])
         assert self.devices_page.is_text_error(self.ERROR_TEXT_QUERY_BRACKET.format(direction='left'))
         self.devices_page.toggle_right_bracket(expressions[1])
@@ -120,14 +120,14 @@ class TestDevicesQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 3
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, parent=expressions[0])
-        self.devices_page.select_query_comp_op('subnet', parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET, parent=expressions[0])
         self.devices_page.fill_query_value('192.168.0.0', parent=expressions[0])
-        self.devices_page.select_query_logic_op('and')
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
         self.devices_page.select_query_comp_op('days', parent=expressions[2])
         self.devices_page.fill_query_value(30, parent=expressions[2])
-        self.devices_page.select_query_logic_op('and', parent=expressions[2])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_text_error()
         assert len(self.devices_page.get_all_data())
@@ -137,6 +137,44 @@ class TestDevicesQuery(TestBase):
         self.devices_page.remove_query_expression(expressions[0])
         assert self.devices_page.is_text_error()
         assert len(self.devices_page.get_all_data())
+        self.devices_page.clear_query_wizard()
+
+    def _test_not_expression(self):
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOST_NAME, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.devices_page.fill_query_value('test', parent=expressions[0])
+        self.devices_page.toggle_not(expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_text_error()
+        assert len(self.devices_page.get_all_data()) == 1
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 2
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
+        self.devices_page.select_query_field(self.devices_page.FIELD_SAVED_QUERY, parent=expressions[1])
+        self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_WINDOWS, parent=expressions[1])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_text_error()
+        assert not len(self.devices_page.get_all_data())
+        self.devices_page.toggle_not(expressions[1])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_text_error()
+        assert len(self.devices_page.get_all_data()) == 1
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 3
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
+        self.devices_page.select_query_field(self.devices_page.FIELD_ASSET_NAME, parent=expressions[2])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[2])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_text_error()
+        assert len(self.devices_page.get_all_data()) == 1
+        self.devices_page.toggle_not(expressions[2])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_text_error()
+        assert not len(self.devices_page.get_all_data())
         self.devices_page.clear_query_wizard()
 
     def test_query_wizard_combos(self):
@@ -150,3 +188,4 @@ class TestDevicesQuery(TestBase):
         self._test_last_seen_query()
         self._test_query_brackets()
         self._test_remove_query_expressions()
+        self._test_not_expression()

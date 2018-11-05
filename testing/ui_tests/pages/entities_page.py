@@ -20,9 +20,17 @@ class EntitiesPage(Page):
     QUERY_ADD_EXPRESSION_CSS = '.filter .footer .x-btn'
     QUERY_BRACKET_LEFT_CSS = '.expression-bracket-left'
     QUERY_BRACKET_RIGHT_CSS = '.expression-bracket-right'
+    QUERY_NOT_CSS = '.expression-not'
     QUERY_REMOVE_EXPRESSION_CSS = '.x-btn.expression-remove'
     QUERY_LOGIC_DROPDOWN_CSS = 'div.x-select.x-select-logic'
     QUERY_ERROR_CSS = '.filter .error-text'
+    QUERY_COMP_EXISTS = 'exists'
+    QUERY_COMP_CONTAINS = 'contains'
+    QUERY_COMP_EQUALS = 'equals'
+    QUERY_COMP_SUBNET = 'subnet'
+    QUERY_COMP_SIZE = 'size'
+    QUERY_LOGIC_AND = 'and'
+    QUERY_LOGIC_OR = 'or'
     TABLE_COUNT_CSS = '.x-table-header .x-title .count'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
     TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
@@ -76,6 +84,12 @@ class EntitiesPage(Page):
 
     def fill_query_value(self, text, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS, text, context=parent)
+
+    def select_query_value(self, text, parent=None):
+        self.select_option(self.QUERY_VALUE_COMPONENT_CSS,
+                           self.QUERY_TEXT_BOX_CSS,
+                           self.QUERY_SELECTED_OPTION_CSS,
+                           text, parent=parent)
 
     def get_query_value(self):
         el = self.wait_for_element_present_by_css(self.QUERY_VALUE_COMPONENT_CSS)
@@ -133,6 +147,9 @@ class EntitiesPage(Page):
 
     def toggle_right_bracket(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_BRACKET_RIGHT_CSS).click()
+
+    def toggle_not(self, expression_element):
+        expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click()
 
     def remove_query_expression(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_REMOVE_EXPRESSION_CSS).click()
