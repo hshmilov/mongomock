@@ -1194,7 +1194,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 },
                 {
                     "name": "realtime_adapter",
-                    "title": "Should this adapter be fetched real time",
+                    "title": "Run as a Real Time adapter",
                     "type": "bool",
                 }
             ],

@@ -125,7 +125,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                         },
                         {
                             'name': 'constant_alerts',
-                            'title': 'Should alerts be triggered all the time',
+                            'title': 'Always run Alerts',
                             'type': 'bool',
                             'required': True
                         }
