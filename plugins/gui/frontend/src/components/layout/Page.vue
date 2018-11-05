@@ -85,6 +85,7 @@
             padding: 0;
             height: calc(100% - 80px);
             overflow: auto;
+            position: relative;
         }
     }
 </style>

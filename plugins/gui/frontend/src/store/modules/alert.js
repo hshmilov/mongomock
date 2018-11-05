@@ -1,4 +1,4 @@
-import { fetchDataContent, REQUEST_API } from '../actions'
+import { REQUEST_API } from '../actions'
 import { FETCH_DATA_CONTENT } from '../actions'
 
 export const FETCH_ALERTS = 'FETCH_ALERTS'
@@ -179,7 +179,7 @@ export const alert = {
 				rule: rule,
 				method: method,
 				data: payload
-			}).then(() => dispatch(FETCH_DATA_CONTENT, { module: 'alert', skip: 0 }))
+			}).then(() => dispatch(FETCH_DATA_CONTENT, { module: 'alert', skip: 0, limit: 20 }))
 		}
 	}
 }

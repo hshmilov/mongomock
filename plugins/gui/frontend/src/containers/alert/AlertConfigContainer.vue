@@ -3,9 +3,9 @@
     	{ title: 'alerts', path: {name: 'Alerts'}},
     	{ title: (alertData.name? alertData.name : 'New alert')}
     ]">
+        <div class="v-spinner-bg" v-if="loading"></div>
+        <pulse-loader :loading="loading" color="#FF7D46" />
         <x-box class="alert-config">
-            <div class="v-spinner-bg" v-if="loading"></div>
-            <pulse-loader :loading="loading" color="#FF7D46" />
             <form @keyup.enter="saveAlert">
                 <!-- Section for alert name and query to run by -->
                 <div class="x-grid">
