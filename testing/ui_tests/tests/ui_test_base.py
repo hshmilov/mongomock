@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime
@@ -76,6 +77,30 @@ class TestBase:
         except Exception:
             logger.exception('Error while saving screenshot')
 
+    def _save_js_logs(self, method):
+        if not self.driver:
+            return
+        try:
+            # this is copied as-is from _save_screenshot so it will appear in the same directory
+            folder = os.path.join('screenshots', method.__name__)
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            current_time = datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')
+            for log_type in self.driver.log_types:
+                file_path = os.path.join(
+                    folder,
+                    f'_{self.driver.name}_{current_time}_{log_type}.log')
+                logs = self.driver.get_log(log_type)
+                for log in logs:
+                    timestamp = log.get('timestamp')
+                    if timestamp:
+                        log['date'] = str(datetime.fromtimestamp(timestamp / 1000))
+                with open(file_path, 'w') as file:
+                    file.writelines(json.dumps(x) for x in logs)
+
+        except Exception:
+            logger.exception('Error while saving JS logs')
+
     def _clean_db(self):
         if not self.axonius_system:
             return
@@ -105,6 +130,7 @@ class TestBase:
 
     def teardown_method(self, method):
         self._save_screenshot(method, text='before_teardown')
+        self._save_js_logs(method)
         if not pytest.config.option.teardown_keep_db:
             self._clean_db()
         if self.driver:

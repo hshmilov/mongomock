@@ -69,6 +69,6 @@ class ThreadStopper(object):
                 caller thread, to raise an excpetion in the context of the
                 thread represented by this instance.
                 """
-        logger.debug(f'stopping {cls.stoppable_threads}')
+        logger.info(f'stopping {cls.stoppable_threads}')
         tids = list(reversed(cls.stoppable_threads))  # stopping each thread only once
         cls.async_raise(tids)
