@@ -33,7 +33,7 @@ class JamfProfile(SmartJsonClass):
 class JamfAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
-        public_ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
+        public_ip = Field(str, 'Public IP', converter=format_ip, json_format=JsonStringFormat.ip)
         policies = ListField(JamfPolicy, "Jamf Policies")
         is_managed = Field(bool, 'Is Managed')
         profiles = ListField(JamfProfile, "Jamf Profiles")
