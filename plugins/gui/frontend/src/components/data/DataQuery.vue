@@ -312,9 +312,9 @@
         created() {
             this.searchQuery().then(() => {
                 if (this.$route.query.view) {
-                    let requestedQuery = this.savedViews.find(view => view.name === this.$route.query.view)
-                    if (requestedQuery) {
-                        this.queryFilter = requestedQuery.view.query.filter
+                    let requestedView = this.savedViews.find(view => view.name === this.$route.query.view)
+                    if (requestedView) {
+                        this.updateView({module: this.module, view: requestedView.view})
                     }
                 }
             })

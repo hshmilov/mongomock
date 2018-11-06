@@ -204,9 +204,9 @@
             }
         },
 		created() {
-			if (!this.pageData || !this.pageData.length) {
+			if ((!this.pageData || !this.pageData.length) && !this.$route.query.view) {
 			    this.fetchContentPages()
-            } else {
+            } else if (!this.$route.query.view) {
 				this.loading = false
             }
             if (this.refresh) {
