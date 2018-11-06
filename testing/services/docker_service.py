@@ -250,7 +250,7 @@ else:
 
         # killing the container is faster than down. but killing it will make some apps not flush their data
         # to the disk, so we give it a second.
-        process = subprocess.Popen(['docker', 'stop', '--time', '3', self.container_name], cwd=self.service_dir,
+        process = subprocess.Popen(['docker', 'stop', '--time', '10', self.container_name], cwd=self.service_dir,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         yield process
         process.wait()

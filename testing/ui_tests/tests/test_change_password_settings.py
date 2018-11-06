@@ -1,3 +1,5 @@
+import time
+
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests import ui_consts
 
@@ -73,6 +75,7 @@ class TestChangePasswordSettings(TestBase):
         gui_service.take_process_ownership()
         gui_service.stop(should_delete=False)
         gui_service.start_and_wait()
+        time.sleep(5)
 
         # Check that we can log in with the new password
         self.my_account_page.refresh()

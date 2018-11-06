@@ -15,9 +15,6 @@ class GuiService(PluginService):
         self._session = requests.Session()
         self.override_exposed_port = True
 
-    def wait_for_service(self, *args, **kwargs):
-        super().wait_for_service(*args, **kwargs)
-
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 1:
