@@ -19,6 +19,14 @@ class TestMetrics(TestBase):
             assert len(stress.clients()) == 1
             assert len(stress_scanner.clients()) == 1
 
+            metric_query = 'specific_data.data.os.major == 1'
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(metric_query)
+            self.devices_page.enter_search()
+            self.devices_page.click_save_query()
+            self.devices_page.fill_query_name('test_metric_query_1')
+            self.devices_page.click_save_query_save_button()
+
             self.base_page.run_discovery()
 
             devices_unique = self.axonius_system.get_devices_db().count_documents({})
@@ -37,7 +45,7 @@ class TestMetrics(TestBase):
             wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter', 2))
             wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter', r'\d+'))
 
-            report = re.escape('adapters_data.active_directory_adapter.last_seen >= date("NOW - 7d")')
+            report = re.escape(metric_query)
             wait_until(lambda: tester.is_metric_in_log('query.report', report))
 
             self.devices_page.switch_to_page()

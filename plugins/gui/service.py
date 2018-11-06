@@ -3150,7 +3150,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 view_filter = self._find_filter_by_name(entity, query['name'])
                 if view_filter:
                     query_filter = view_filter['query']['filter']
-                    log_metric(logger, 'query.report', query_filter)
                     view_parsed = parse_filter(query_filter)
                     views.append({
                         **query,
@@ -3212,14 +3211,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 try:
                     view = view_doc.get('view')
                     if view:
+                        filter_query = view.get('query', {}).get('filter', '')
+                        log_metric(logger, 'query.report', filter_query)
                         field_list = view.get('fields', [])
                         views_data.append({
                             'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in field_list],
                             'data': list(gui_helpers.get_entities(limit=view.get('pageSize', 20),
                                                                   skip=0,
-                                                                  view_filter=parse_filter(
-                                                                      view.get('query', {}).get('filter', '')),
+                                                                  view_filter=parse_filter(filter_query),
                                                                   sort=gui_helpers.get_sort(view),
                                                                   projection={field: 1 for field in field_list},
                                                                   entity_type=entity,
