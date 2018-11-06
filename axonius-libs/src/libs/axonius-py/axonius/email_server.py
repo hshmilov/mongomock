@@ -36,7 +36,7 @@ class EmailServer:
         self.source = source
         self.smtp = None
 
-    def new_email(self, subject, to_recipients, cc_recipients):
+    def new_email(self, subject, to_recipients, cc_recipients=None):
         return Email(self, subject, to_recipients, cc_recipients)
 
     def __enter__(self):
