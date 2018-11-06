@@ -248,9 +248,12 @@ class vCenterApi(object):
         """
         self.__devices_count = 1
         try:
-            children = [self._parse_vm(x)
-                        for x in
-                        self._session.content.rootFolder.childEntity]
+            children = []
+            for vm_to_parse in self._session.content.rootFolder.childEntity:
+                try:
+                    children.append(self._parse_vm(vm_to_parse))
+                except Exception:
+                    logger.exception(f'Problem parsing vm to parse: {str(vm_to_parse)}')
             return vCenterNode(Name="Root", Type="Root", Children=children)
         except vim.fault.NoPermission:
             # we're catching and raising so it'll be sent up to _should_retry_fetchin

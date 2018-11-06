@@ -35,6 +35,7 @@ class JamfAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         public_ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
         policies = ListField(JamfPolicy, "Jamf Policies")
+        is_managed = Field(bool, 'Is Managed')
         profiles = ListField(JamfProfile, "Jamf Profiles")
         jamf_version = Field(str, 'Jamf Version')
         site = Field(JamfSite, "Jamf Sites")
@@ -171,6 +172,12 @@ class JamfAdapter(AdapterBase, Configurable):
                     # The field 'platform' means that we are handling a computer, and not a mobile.
                     # Thus we believe the following fields will be present.
                     last_contact_time_utc = general_info.get('last_contact_time_utc')
+                    try:
+                        is_managed = (general_info.get('remote_management') or {}).get('managed')
+                        if is_managed is not None:
+                            device.is_managed = is_managed
+                    except Exception:
+                        logger.exception(f'Problem getting is managed for {general_info}')
                     try:
                         if last_contact_time_utc:
                             device.last_seen = parse_date(last_contact_time_utc)
@@ -321,7 +328,12 @@ class JamfAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f"Problem handling last inventory update utc")
                         last_inventory_update_utc = None
-
+                    try:
+                        is_managed = general_info.get('managed')
+                        if is_managed is not None:
+                            device.is_managed = is_managed
+                    except Exception:
+                        logger.exception(f'Problem getting is managed for {general_info}')
                     try:
                         last_enrolled_date_utc = parse_date(general_info.get('last_enrolled_date_utc'))
                     except Exception:
