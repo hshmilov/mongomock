@@ -261,7 +261,6 @@ axonius-libs/src/libs/axonius-py/axonius/consts/email_consts.py
 axonius-libs/src/libs/axonius-py/axonius/devices/ad_entity.py
 axonius-libs/src/libs/axonius-py/axonius/devices/device_adapter.py
 axonius-libs/src/libs/axonius-py/axonius/logging/customised_json_formatter.py
-axonius-libs/src/libs/axonius-py/axonius/logging/logger.py
 axonius-libs/src/libs/axonius-py/axonius/logging/logger_wrapper.py
 axonius-libs/src/libs/axonius-py/axonius/logging/logstash_http_log_handler.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/activatable.py
