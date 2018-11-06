@@ -196,7 +196,7 @@ class EsxAdapter(AdapterBase):
                                ghz=node_hardware['totalCpu'] / node_hardware['numCpuCores'] / 1024)
                 device.total_physical_memory = node_hardware['totalMemory'] / (1024.0 * 1024 * 1024)
             yield device
-        elif node_type in ("Datacenter", "Folder", "Root"):
+        elif node_type in ("Datacenter", "Folder", "Root", 'Cluster'):
             for child in node.get('Children', [{}]):
                 yield from self._parse_raw_data(child, _curr_path + "/" + node['Name'])
         else:

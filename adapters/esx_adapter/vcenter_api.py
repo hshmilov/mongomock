@@ -67,7 +67,7 @@ class vCenterApi(object):
         self._user = user
         self._password = password
         self._connect()
-        self.devices_count = None
+        self.__devices_count = None
 
     def _connect(self):
         if self._verify_ssl:
@@ -120,12 +120,36 @@ class vCenterApi(object):
         values_to_take = ['totalCpu', 'totalMemory', 'numCpuCores', 'numCpuThreads', 'effectiveCpu', 'effectiveMemory',
                           'numHosts', 'numEffectiveHosts', 'overallStatus']
         details = {k: getattr(host.summary, k, None) for k in values_to_take}
-        parsed_host = {}
-        if len(host.host) == 1:
-            parsed_host = self._parse_vm_host(host.host[0])
-        else:
-            logger.warn(f"Amount of hosts is {len(host.host)}, which is unexpected")
-        return vCenterNode(Name=host.name, Type='ESXHost', Details=parsed_host, Hardware=details)
+
+        parsed_hosts = [self._parse_vm_host(x) for x in host.host]
+
+        if len(parsed_hosts) > 1:
+            if host._wsdlName != 'ClusterComputeResource':
+                logger.warning(f'Host isn\'t a cluster, it\'s a {host._wsdlName} but has {len(parsed_hosts)}')
+
+            return vCenterNode(Name=host.name, Type='Cluster', Children=[
+                self._cluster_host_to_vcenter_node(parsed_host, f'{host.name}_{index}')
+                for index, parsed_host
+                in enumerate(parsed_hosts)
+            ], Hardware=details)
+
+        if not parsed_hosts:
+            return vCenterNode(Name=host.name, Type='ESXHost', Details={}, Hardware=details)
+
+        if len(parsed_hosts) == 1:
+            return vCenterNode(Name=host.name, Type='ESXHost', Details=parsed_hosts[0], Hardware=details)
+
+    @staticmethod
+    def _cluster_host_to_vcenter_node(host, alternative_name: str) -> vCenterNode:
+        """
+        Takes a host (vim.HostSystem) that has been parsed already using _parse_vm_host
+        and processes it into a vCenterNode
+        :param host: the host from _parse_vm_host
+        :param alternative_name: the name to use for the ID if nothing else is available
+        """
+        return vCenterNode(Name=host.get('config', {}).get('instanceUuid') or alternative_name,
+                           Type='ESXHost',
+                           Details=host)
 
     def _parse_vm_host(self, vm_root):
         """
@@ -174,9 +198,9 @@ class vCenterApi(object):
         Print information for a particular virtual machine or recurse into a folder
         or vApp with depth protection
         """
-        self.devices_count += 1
-        if self.devices_count % 1000 == 0:
-            logger.info(f"Got {self.devices_count} vms so far")
+        self.__devices_count += 1
+        if self.__devices_count % 1000 == 0:
+            logger.info(f"Got {self.__devices_count} vms so far")
         maxdepth = 100
         if depth > maxdepth:
             return
@@ -222,7 +246,7 @@ class vCenterApi(object):
 
         :return vCenterNode:
         """
-        self.devices_count = 1
+        self.__devices_count = 1
         try:
             children = [self._parse_vm(x)
                         for x in
