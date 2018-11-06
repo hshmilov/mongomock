@@ -513,6 +513,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if entity is None:
             return return_error("Entity ID wasn't found", 404)
         for specific in entity['specific_data']:
+            if not specific.get('data') or not specific['data'].get('raw'):
+                continue
             new_raw = {}
             for k, v in specific['data']['raw'].items():
                 if type(v) != bytes:
