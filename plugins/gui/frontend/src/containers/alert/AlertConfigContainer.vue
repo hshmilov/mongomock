@@ -130,7 +130,7 @@
                         <x-checkbox class="grid-span2" label="Tag all entities" v-model="actions.tagAll"/>
                         <input class="form-control" id="tagAllName" v-model="tagAllName" v-if="actions.tagAll">
                         <div v-if="!actions.tagAll"></div>
-                        <template v-if="alert.triggers.increase">
+                        <template v-if="alert.triggers.increase|| alert.triggers.new_entities">
                             <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag New Entities"
                                         v-model="actions.tag"/>
                             <input class="form-control" id="tagName" v-model="tagName" v-if="actions.tag">
