@@ -72,7 +72,7 @@ class EmailServer:
                 try:
                     server.starttls()
                 except Exception:
-                    logger.exception('Exception was raised while trying to connect to e-mail server and send e-mail.')
+                    logger.info('Could not start TLS')
 
             # Try to login if optional.
             if self.user:
@@ -143,5 +143,5 @@ class Email:
             with self.server:
                 self.server.smtp.send_message(msg)
         except Exception:
-            logger.exception('Exception was raised while trying to connect to e-mail server and send e-mail.')
+            logger.exception('Exception was raised while trying to send an e-mail.')
             raise
