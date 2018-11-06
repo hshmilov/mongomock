@@ -238,8 +238,7 @@
             savePermissions(user) {
                 if (this.readOnly) return
                 this.changePermissions({
-                    user_name: user.user_name, source: user.source,
-                    role_name: user.role_name, permissions: user.permissions
+                    uuid: user.uuid, role_name: user.role_name, permissions: user.permissions
                 }).then(response => {
                     this.$emit('toast', (response && response.status === 200? 'User permissions saved.' : response.data.message))
                 }).catch(error => this.$emit('toast', error.response.data.message))
@@ -250,8 +249,7 @@
             },
             performRemoveUser() {
                 this.removeUser({
-                    user_name: this.userToRemove.user_name,
-                    source: this.userToRemove.source
+                    uuid: this.userToRemove.uuid
                 }).then(response => {
                     this.$emit('toast', (response.status === 200? 'User removed.' : response.data.message))
                     this.getAllUsers()

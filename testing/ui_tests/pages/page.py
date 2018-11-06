@@ -1,6 +1,7 @@
 import logging
 import time
 import urllib.parse
+from json import dumps
 
 from selenium.common.exceptions import (ElementNotVisibleException,
                                         NoSuchElementException,
@@ -426,3 +427,11 @@ class Page:
 
     def click_ok_button(self):
         self.click_button('OK')
+
+    # Following method should upload a file to input[id=input_id][type=file]
+    # However, it has not yet worked practically
+    def upload_file_by_id(self, input_id, file_content):
+        file_path = '/dev/shm/temp_file_upload'
+        with open(file_path, 'w') as file_ref:
+            file_ref.write(dumps(file_content))
+        self.driver.find_element_by_id(input_id).send_keys(file_path)

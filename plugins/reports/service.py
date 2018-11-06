@@ -12,13 +12,11 @@ from flask import jsonify
 from jinja2 import Environment, FileSystemLoader
 
 from axonius.consts import report_consts
-from axonius.consts.gui_consts import LOGOS_PATH
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           PLUGIN_UNIQUE_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.report_consts import (TRIGGERS_DIFF_ADDED,
-                                          TRIGGERS_DIFF_REMOVED)
+from axonius.consts.report_consts import (TRIGGERS_DIFF_ADDED, TRIGGERS_DIFF_REMOVED, LOGOS_PATH)
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error

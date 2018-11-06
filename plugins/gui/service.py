@@ -71,10 +71,10 @@ from urllib3.util.url import parse_url
 
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
-from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME,
-                                       EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE,
-                                       SUPPORT_ACCESS_THREAD_ID, ChartFuncs, ChartMetrics, ChartViews,
-                                       ChartRangeTypes, ChartRangeUnits, RANGE_UNIT_DAYS, ResearchStatus, ROLES_COLLECTION,
+from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME, EXEC_REPORT_THREAD_ID,
+                                       EXEC_REPORT_TITLE, SUPPORT_ACCESS_THREAD_ID, RANGE_UNIT_DAYS, ResearchStatus,
+                                       ChartFuncs, ChartMetrics, ChartViews, ChartRangeTypes, ChartRangeUnits,
+                                       GOOGLE_KEYPAIR_FILE, ROLES_COLLECTION, USERS_COLLECTION,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_READONLY, PREDEFINED_ROLE_RESTRICTED)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
@@ -258,7 +258,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
-        self.__users_collection = self._get_collection('users')
+        self.__users_collection = self._get_collection(USERS_COLLECTION)
         self.__roles_collection = self._get_collection(ROLES_COLLECTION)
         self._add_default_roles()
         if self._get_collection('users_config').find_one({}) is None:
@@ -902,11 +902,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def user_notes(self, user_id):
         return self._entity_notes(EntityType.Users, user_id)
 
-    @gui_add_rule_logged_in("devices/<user_id>/notes/<note_id>", methods=['POST'],
+    @gui_add_rule_logged_in("users/<user_id>/notes/<note_id>", methods=['POST'],
                             required_permissions={Permission(PermissionType.Users,
                                                              PermissionLevel.ReadWrite)})
     def user_notes_update(self, user_id, note_id):
-        return self._entity_notes_update(EntityType.Devices, user_id, note_id)
+        return self._entity_notes_update(EntityType.Users, user_id, note_id)
 
     ###########
     # ADAPTER #
@@ -1610,7 +1610,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             },
             "google": {
                 'enabled': self.__google['enabled'],
-                'client_id': self.__google['client_id']
+                'client': self.__google['client']
             },
             "ldap": {
                 'enabled': self.__ldap_login['enabled'],
@@ -1765,7 +1765,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return redirect("/", code=302)
 
-    @gui_helpers.add_rule_unauth("ldap-login", methods=['POST'])
+    @gui_helpers.add_rule_unauth("login/ldap", methods=['POST'])
     def ldap_login(self):
         try:
             log_in_data = self.get_request_data_as_object()
@@ -1967,7 +1967,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         else:
             return redirect(auth.login())
 
-    @gui_helpers.add_rule_unauth("google-login", methods=['POST'])
+    @gui_helpers.add_rule_unauth("login/google", methods=['POST'])
     def google_login(self):
         """
         Login with google
@@ -1992,7 +1992,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         try:
             # Specify the CLIENT_ID of the app that accesses the backend:
-            idinfo = id_token.verify_oauth2_token(token, requests.Request(), google_creds['client_id'])
+            idinfo = id_token.verify_oauth2_token(token, requests.Request(), google_creds['client'])
 
             if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
                 raise ValueError('Wrong issuer.')
@@ -2005,7 +2005,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 user_id = idinfo.get('sub')
                 if not user_id:
                     return return_error("No user id present")
-                auth_file = json.loads(self._grab_file_contents(google_creds['keypair_file']))
+                auth_file = json.loads(self._grab_file_contents(google_creds[GOOGLE_KEYPAIR_FILE]))
                 from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
                 connection = GSuiteAdminConnection(auth_file, google_creds['account_to_impersonate'],
                                                    ['https://www.googleapis.com/auth/admin.directory.group.readonly'])
@@ -2042,10 +2042,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return ""
 
     @gui_helpers.paginated()
-    @gui_add_rule_logged_in("authusers", methods=['GET', 'POST'])
-    def authusers(self, limit, skip):
+    @gui_add_rule_logged_in('system/users', methods=['GET', 'PUT'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             PermissionLevel.ReadWrite)})
+    def system_users(self, limit, skip):
         """
-        View users or change user password
+        GET Returns all users of the system
+        PUT Create a new user
+
         :param limit: limit for pagination
         :param skip: start index for pagination
         :return:
@@ -2063,61 +2067,79 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                ])
                            .skip(skip)
                            .limit(limit))
-        elif request.method == 'POST':
-            post_data = self.get_request_data_as_object()
-            user = session.get('user')
-            if user['user_name'] != post_data['user_name']:
-                return return_error("Login to your user first")
-            if not bcrypt.verify(post_data['old_password'], user['password']):
-                return return_error("Given password is wrong")
-            self.__users_collection.update({'user_name': user['user_name'], 'source': user['source']},
-                                           {
-                                               "$set": {
-                                                   'password': bcrypt.hash(post_data['new_password'])
-                                               }
-            })
-            self.__invalidate_sessions(user['user_name'], user['source'])
-            self.__users_collection.find_one({'user_name': user['user_name'], 'source': user['source']})
-            return "", 200
+        # Handle PUT - only option left
+        post_data = self.get_request_data_as_object()
+        post_data['password'] = bcrypt.hash(post_data['password'])
+        # Make sure user is unique by combo of name and source (no two users can have same name and same source)
+        if self.__users_collection.find_one(filter_archived({
+            'user_name': post_data['user_name'],
+            'source': 'internal'
+        })):
+            return return_error("User already exists", 400)
+        self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
+                                           picname=None, source='internal', password=post_data['password'],
+                                           role_name=post_data.get('role_name'))
+        return ""
 
-    @gui_add_rule_logged_in("edit_foreign_user", methods=['POST', 'PUT', 'DELETE'],
+    @gui_add_rule_logged_in('system/users/<user_id>/password', methods=['POST'])
+    def system_users_password(self, user_id):
+        """
+        Change a password for a specific user. It must be the same user as currently logged in to the system.
+        Post data is expected to have the old password, matching the one in the DB
+
+        :param user_id:
+        :return:
+        """
+        post_data = self.get_request_data_as_object()
+        user = session.get('user')
+        if str(user['_id']) != user_id:
+            return return_error("Login to your user first")
+        if not bcrypt.verify(post_data['old'], user['password']):
+            return return_error("Given password is wrong")
+
+        self.__users_collection.update({'_id': ObjectId(user_id)},
+                                       {
+                                           "$set": {
+                                               'password': bcrypt.hash(post_data['new'])
+                                           }
+        })
+        self.__invalidate_sessions(user_id)
+        return "", 200
+
+    @gui_add_rule_logged_in('system/users/<user_id>/access', methods=['POST'],
                             required_permissions={Permission(PermissionType.Settings,
                                                              PermissionLevel.ReadWrite)})
-    def edit_foreign_user(self):
+    def system_users_access(self, user_id):
+        """
+        Change permissions for a specific user, given the correct permissions.
+        Post data is expected to contain the permissions object and the role, if there is one.
+
+        :param user_id:
+        :return:
+        """
+        post_data = self.get_request_data_as_object()
+        self.__users_collection.update({'_id': ObjectId(user_id)},
+                                       {
+                                           "$set": post_data
+        })
+        self.__invalidate_sessions(user_id)
+        return ""
+
+    @gui_add_rule_logged_in('system/users/<user_id>', methods=['DELETE'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             PermissionLevel.ReadWrite)})
+    def system_users_delete(self, user_id):
         """
         Allows changing a users' permission set
         """
-        post_data = self.get_request_data_as_object()
-        if request.method == 'POST':
-            self.__users_collection.update({'user_name': post_data['user_name'], 'source': post_data['source']},
-                                           {
-                                               "$set": {
-                                                   'permissions': post_data['permissions'],
-                                                   'role_name': post_data.get('role_name', '')
-                                               }
-            })
-            self.__invalidate_sessions(post_data['user_name'], post_data['source'])
-            return ""
-        elif request.method == 'PUT':
-            post_data['password'] = bcrypt.hash(post_data['password'])
-            if self.__users_collection.find_one(filter_archived({
-                'user_name': post_data['user_name'],
-                'source': 'internal'
-            })):
-                return return_error("User already exists", 400)
-            self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
-                                               picname=None, source='internal', password=post_data['password'],
-                                               role_name=post_data.get('role_name'))
-            return ""
-        elif request.method == 'DELETE':
-            self.__users_collection.update({'user_name': post_data['user_name'], 'source': post_data['source']},
-                                           {
-                                               "$set": {
-                                                   'archived': True
-                                               }
-            })
-            self.__invalidate_sessions(post_data['user_name'], post_data['source'])
-            return ""
+        self.__users_collection.update({'_id': ObjectId(user_id)},
+                                       {
+                                           "$set": {
+                                               'archived': True
+                                           }
+        })
+        self.__invalidate_sessions(user_id)
+        return ""
 
     @gui_add_rule_logged_in('roles', methods=['GET', 'PUT', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
@@ -2213,7 +2235,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         constants['permission_types'] = dictify_enum(PermissionType)
         return jsonify(constants)
 
-    def __invalidate_sessions(self, user_name: str, source: str):
+    def __invalidate_sessions(self, user_id: str):
         """
         Invalidate all sessions for this user except the current one
         :param user_name: username to invalidate all sessions for
@@ -2225,11 +2247,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             d = v.get('d')
             if not d:
                 continue
-            if d.get('user') and d['user'].get('user_name') == user_name and d['user'].get('source') == source:
+            if d.get('user') and str(d['user'].get('_id')) == user_id:
                 d['user'] = None
 
-    @gui_add_rule_logged_in("get_api_key", methods=['GET', 'POST'])
-    def get_api_key(self):
+    @gui_add_rule_logged_in("api_key", methods=['GET', 'POST'])
+    def api_creds(self):
         """
         Get or change the API key
         """
@@ -2238,8 +2260,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             new_api_key = secrets.token_urlsafe()
             self.__users_collection.update(
                 {
-                    'user_name': session['user']['user_name'],
-                    'source': session['user']['source']
+                    '_id': session['user']['_id'],
                 },
                 {
                     "$set": {
@@ -2248,9 +2269,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     }
                 }
             )
-        api_data = self.__users_collection.find_one(
-            {'user_name': session['user']['user_name'], 'source': session['user']['source']}
-        )
+        api_data = self.__users_collection.find_one({
+            '_id': session['user']['_id']
+        })
         return jsonify({
             'api_key': api_data['api_key'],
             'api_secret': api_data['api_secret']
@@ -3548,10 +3569,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'GET':
             return jsonify(notes_list)
 
-        current_user = f'{session.get("user")["source"]}/{session.get("user")["user_name"]}'
+        current_user = session.get('user')
+        if not current_user:
+            logger.error('Login in order to update notes')
+            return return_error('Login in order to update notes', 400)
         if request.method == 'PUT':
             note_obj = self.get_request_data_as_object()
-            note_obj['user_name'] = current_user
+            note_obj['user_id'] = current_user['_id']
+            note_obj['user_name'] = f'{current_user["source"]}/{current_user["user_name"]}'
             note_obj['accurate_for_datetime'] = datetime.now()
             note_obj['uuid'] = str(uuid4())
             notes_list.append(note_obj)
@@ -3563,7 +3588,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if not session.get('user').get('admin') and session.get('user').get('role_name') != PREDEFINED_ROLE_ADMIN:
                 # Validate all notes requested to be removed belong to user
                 for note in notes_list:
-                    if note['uuid'] in note_ids_list and note['user_name'] != current_user:
+                    if note['uuid'] in note_ids_list and note['user_id'] != current_user['_id']:
                         logger.error('Only Administrator can remove another user\'s Note')
                         return return_error('Only Administrator can remove another user\'s Note', 400)
             remaining_notes_list = []
@@ -3596,13 +3621,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.error(f'Entity with internal_axon_id = {entity_id} has no note at index = {note_id}')
             return return_error('Selected Note cannot be found for the Entity', 400)
 
-        current_user = f'{session.get("user")["source"]}/{session.get("user")["user_name"]}'
-        if current_user != note_doc['user_name'] and not session.get('user').get('admin') and \
+        current_user = session.get('user')
+        if not current_user:
+            logger.error('Login in order to update notes')
+            return return_error('Login in order to update notes', 400)
+        if current_user['_id'] != note_doc['user_id'] and not session.get('user').get('admin') and \
                 session.get('user').get('role_name') != PREDEFINED_ROLE_ADMIN:
             return return_error('Only Administrator can edit another user\'s Note', 400)
 
         note_doc['note'] = self.get_request_data_as_object()['note']
-        note_doc['user_name'] = current_user
+        note_doc['user_id'] = current_user['_id']
+        note_doc['user_name'] = f'{current_user["source"]}/{current_user["user_name"]}'
         note_doc['accurate_for_datetime'] = datetime.now()
         entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
         return jsonify(note_doc)
@@ -3749,7 +3778,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             "type": "bool"
                         },
                         {
-                            "name": "client_id",
+                            "name": "client",
                             "title": "Google client id",
                             "type": "string"
                         },
@@ -3759,7 +3788,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             "type": "string"
                         },
                         {
-                            "name": "keypair_file",
+                            "name": GOOGLE_KEYPAIR_FILE,
                             "title": "JSON Key pair for the service account",
                             "description": "The binary contents of the keypair file",
                             "type": "file",
@@ -3775,7 +3804,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             "type": "string"
                         }
                     ],
-                    "required": ["enabled", "client_id", 'account_to_impersonate', 'keypair_file'],
+                    "required": ["enabled", "client", 'account_to_impersonate', GOOGLE_KEYPAIR_FILE],
                     "name": "google_login_settings",
                     "title": "Google Login Settings",
                     "type": "array"
@@ -3870,11 +3899,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             },
             "google_login_settings": {
                 "enabled": False,
-                "client_id": None,
+                "client": None,
                 "allowed_domain": None,
                 "allowed_group": None,
                 'account_to_impersonate': None,
-                'keypair_file': None
+                GOOGLE_KEYPAIR_FILE: None
             },
             "saml_login_settings": {
                 "enabled": False,

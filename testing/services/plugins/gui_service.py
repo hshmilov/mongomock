@@ -3,7 +3,7 @@ import requests
 import json
 import os
 
-from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME
+from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION
 from axonius.consts.gui_consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
@@ -168,6 +168,7 @@ class GuiService(PluginService):
     def _update_schema_version_4(self):
         print('upgrade to schema 4')
         try:
+            # Fix Restricted User Role - Change permissions to Restricted
             permissions = {
                 p.name: PermissionLevel.Restricted.name for p in PermissionType
             }
@@ -179,6 +180,20 @@ class GuiService(PluginService):
                     'permissions': permissions
                 }
             })
+
+            # Fix the Google Login Settings - Rename 'client_id' field to 'client'
+            config_match = {
+                'config_name': 'GuiService'
+            }
+            current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+            if current_config:
+                current_config_google = current_config['config']['google_login_settings']
+                if current_config_google.get('client_id'):
+                    current_config_google['client'] = current_config_google['client_id']
+                    del current_config_google['client_id']
+                    self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+                        config_match, current_config)
+
             self.db_schema_version = 4
         except Exception as e:
             print(f'Exception while upgrading gui db to version 4. Details: {e}')
@@ -279,10 +294,10 @@ RUN cd ./gui/frontend/ && npm run {dev}build
         return self.post(f'plugins/{plugin_id}/stop', *vargs, **kwargs)
 
     def get_api_key(self):
-        return self.get('get_api_key', session=self._session).json()
+        return self.get('api_key', session=self._session).json()
 
     def renew_api_key(self):
-        return self.post('get_api_key', session=self._session).json()
+        return self.post('api_key', session=self._session).json()
 
     def get_queries(self):
         self.get('trigger_watches', api_key=self.api_key, session=self._session)

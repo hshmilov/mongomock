@@ -61,6 +61,9 @@
                 },
                 userSource(state) {
                     return state.auth.currentUser.data.source
+                },
+                userId(state) {
+                    return state.auth.currentUser.data.uuid
                 }
             }),
             passwordFormSchema() {
@@ -105,23 +108,22 @@
                     return
                 }
                 this.changePassword({
-                    'user_name': this.userName,
-                    'source': this.userSource,
-                    'old_password': this.passwordForm.currentPassword,
-                    'new_password': this.passwordForm.newPassword
+                    uuid: this.userId,
+                    oldPassword: this.passwordForm.currentPassword,
+                    newPassword: this.passwordForm.newPassword
                 }).then(() => {
                     this.message = "Password changed"
                     this.passwordForm.currentPassword = null
                     this.passwordForm.newPassword = null
                     this.passwordForm.confirmNewPassword = null
-                    this.passwordForm = {...this.passwordForm}
+                    this.passwordForm = { ...this.passwordForm }
                 }).catch(error => {
                     this.message = JSON.parse(error.request.response).message
                 })
             },
             getApiKey() {
                 this.fetchData({
-                    rule: `get_api_key`
+                    rule: 'api_key'
                 }).then(response => {
                     if (response.status === 200 && response.data) {
                         this.apiKey = response.data
@@ -131,7 +133,7 @@
             resetKey() {
                 this.closeResetKeyModal()
                 this.fetchData({
-                    rule: `get_api_key`,
+                    rule: 'api_key',
                     method: 'POST'
                 }).then(response => {
                     if (response.status === 200 && response.data) {

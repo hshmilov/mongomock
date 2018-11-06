@@ -56,3 +56,6 @@ FRESH_SERVICE_PRIORITY = {
     'high': 3,
     'urgent': 4
 }
+
+
+LOGOS_PATH = '/home/axonius/libs/axonius-py/axonius/assets'

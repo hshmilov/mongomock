@@ -15,7 +15,7 @@ d<template>
                     <a @click="onOktaLogin" v-if="oktaConfig.enabled" id="okta_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with Okta</a>
                     <a @click="onSamlLogin" v-if="samlConfig.enabled" id="saml_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with {{ samlConfig.idp_name }}</a>
                     <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" id="ldap_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with LDAP</a>
-                    <google-login v-if="googleConfig.enabled" :client_id="googleConfig.client_id"
+                    <google-login v-if="googleConfig.enabled" :client_id="googleConfig.client"
                                   v-on:success="onGoogleSignIn" :class="{'grid-span2': singleLoginMethod}"/>
                 </div>
             </div>
@@ -128,17 +128,17 @@ d<template>
                 this.login(this.credentials)
             },
             onOktaLogin() {
-                var guiurl = this.oktaConfig.gui_url.endsWith('/') ?
+                let guiURL = this.oktaConfig.gui_url.endsWith('/') ?
                     this.oktaConfig.gui_url.substr(0, this.oktaConfig.gui_url.length - 1)
                     :
-                    this.oktaConfig.gui_url;
-                var x = new OktaAuth({
+                    this.oktaConfig.gui_url
+                let x = new OktaAuth({
                     url: this.oktaConfig.url,
                     issuer: this.oktaConfig.url,
                     clientId: this.oktaConfig.client_id,
-                    redirectUri: `${guiurl}/api/okta-redirect`,
+                    redirectUri: `${guiURL}/api/okta-redirect`,
                     scope: 'openid'
-                });
+                })
                 x.token.getWithRedirect({responseType: 'code'})
             },
             onSamlLogin() {

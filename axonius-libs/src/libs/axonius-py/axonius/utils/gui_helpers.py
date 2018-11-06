@@ -292,7 +292,7 @@ def beautify_user_entry(user):
     :return:
     """
     user = beautify_db_entry(user)
-    user = {k: v for k, v in user.items() if k in ['_id',
+    user = {k: v for k, v in user.items() if k in ['uuid',
                                                    'user_name',
                                                    'first_name',
                                                    'last_name',

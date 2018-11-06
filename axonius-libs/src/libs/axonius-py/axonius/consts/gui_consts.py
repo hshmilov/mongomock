@@ -84,13 +84,18 @@ enter reporting in Axonius.'''
 
 SUPPORT_ACCESS_THREAD_ID = 'support_access_thread'
 
-######################
+#########################
 # User and Roles consts #
-######################
+#########################
 
+USERS_COLLECTION = 'users'
 ROLES_COLLECTION = 'roles'
 PREDEFINED_ROLE_ADMIN = 'Admin'
 PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted User'
 
-LOGOS_PATH = '/home/axonius/libs/axonius-py/axonius/assets'
+#######################
+# Google Login consts #
+#######################
+
+GOOGLE_KEYPAIR_FILE = 'keypair_file'

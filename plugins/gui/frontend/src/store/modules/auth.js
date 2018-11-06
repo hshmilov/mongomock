@@ -119,7 +119,7 @@ export const auth = {
 				return
 			}
 			dispatch(REQUEST_API, {
-				rule: 'ldap-login',
+				rule: 'login/ldap',
 				method: 'POST',
 				data: payload
 			}).then((response) => {
@@ -143,7 +143,7 @@ export const auth = {
 				return
 			}
 			dispatch(REQUEST_API, {
-				rule: 'google-login',
+				rule: 'login/google',
 				method: 'POST',
 				data: payload
 			}).then((response) => {
@@ -180,7 +180,7 @@ export const auth = {
 				Request from server to get a list of all users of the system
 			 */
 			return dispatch(REQUEST_API, {
-				rule: 'authusers',
+				rule: 'system/users',
 				type: UPDATE_ALL_USERS
 			})
 		},
@@ -188,26 +188,32 @@ export const auth = {
 			/*
 				Request from server to login a user according to its Google token id
 			 */
-			if (!payload || !payload.user_name || !payload.old_password || !payload.new_password || !payload.source) {
+			if (!payload || !payload.uuid || !payload.oldPassword || !payload.newPassword) {
 				return
 			}
 			return dispatch(REQUEST_API, {
-				rule: 'authusers',
+				rule: `system/users/${payload.uuid}/password`,
 				method: 'POST',
-				data: payload
+				data: {
+					new: payload.newPassword,
+					old: payload.oldPassword
+                }
 			})
 		},
 		[ CHANGE_PERMISSIONS ] ({ dispatch }, payload) {
 			/*
 				Request from server to change permissions for an existing user
 			 */
-			if (!payload || !payload.user_name || !payload.permissions || !payload.source) {
+			if (!payload || !payload.uuid || !payload.permissions) {
 				return
 			}
 			return dispatch(REQUEST_API, {
-				rule: 'edit_foreign_user',
+				rule: `system/users/${payload.uuid}/access`,
 				method: 'POST',
-				data: payload
+				data: {
+					permissions: payload.permissions,
+					role_name: payload.role_name
+				}
 			})
 		},
 		[ CREATE_USER ] ({ dispatch }, payload) {
@@ -218,7 +224,7 @@ export const auth = {
 				return
 			}
 			return dispatch(REQUEST_API, {
-				rule: 'edit_foreign_user',
+				rule: 'system/users',
 				method: 'PUT',
 				data: payload
 			})
@@ -227,13 +233,12 @@ export const auth = {
             /*
                 Request from server to remove a user
              */
-            if (!payload || !payload.user_name) {
+            if (!payload || !payload.uuid) {
                 return
             }
             return dispatch(REQUEST_API, {
-                rule: 'edit_foreign_user',
-                method: 'DELETE',
-                data: payload
+                rule: `system/users/${payload.uuid}`,
+                method: 'DELETE'
             })
 		},
         [ GET_ALL_ROLES ] ({ dispatch }) {

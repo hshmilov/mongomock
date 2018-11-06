@@ -1,4 +1,6 @@
+from selenium.common.exceptions import NoSuchElementException
 from ui_tests.pages.page import Page, X_BODY
+from axonius.consts.gui_consts import GOOGLE_KEYPAIR_FILE
 
 
 class SettingsPage(Page):
@@ -35,8 +37,9 @@ class SettingsPage(Page):
     DC_ADDRESS = 'dc_address'
     SINGLE_ADAPTER_VIEW = 'Use Single Adapter View'
     ALLOW_GOOGLE_LOGINS = 'Allow Google logins'
-    GOOGLE_CLIENT_ID = 'Google client id'
-    GOOGLE_EMAIL_OF_ADMIN = 'Email of an admin account to impersonate'
+    GOOGLE_CLIENT_ID_OLD = 'client_id'
+    GOOGLE_CLIENT_ID = 'client'
+    GOOGLE_EMAIL_OF_ADMIN = 'account_to_impersonate'
     READ_ONLY_PERMISSION = 'Read only'
     RESTRICTED_PERMISSION = 'Restricted'
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
@@ -262,7 +265,10 @@ class SettingsPage(Page):
         return self.is_toggle_selected(self.find_checkbox_by_label(self.ALLOW_GOOGLE_LOGINS))
 
     def set_google_client_id(self, text):
-        self.fill_text_field_by_element_id(self.GOOGLE_CLIENT_ID, text)
+        try:
+            self.fill_text_field_by_element_id(self.GOOGLE_CLIENT_ID, text)
+        except NoSuchElementException:
+            self.fill_text_field_by_element_id(self.GOOGLE_CLIENT_ID_OLD, text)
 
     def get_google_client_id(self):
         return self.driver.find_element_by_id(self.GOOGLE_CLIENT_ID).get_attribute('value')
@@ -272,6 +278,21 @@ class SettingsPage(Page):
 
     def get_google_email_account(self):
         return self.driver.find_element_by_id(self.GOOGLE_EMAIL_OF_ADMIN).get_attribute('value')
+
+    def set_google_keypair_file(self, text):
+        self.upload_file_by_id(GOOGLE_KEYPAIR_FILE, text)
+
+    def get_google_keypair_file(self):
+        return self.driver.find_element_by_id(GOOGLE_KEYPAIR_FILE)
+
+    def fill_google_login_details(self, client_id, email_account, keypair_data):
+        self.set_google_clients_login()
+        self.set_google_client_id(client_id)
+        self.set_google_email_account(email_account)
+        self.set_google_keypair_file(keypair_data)
+
+    def get_google_login_details(self):
+        return self.get_google_client_id(), self.get_google_email_account(), self.get_google_keypair_file()
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))

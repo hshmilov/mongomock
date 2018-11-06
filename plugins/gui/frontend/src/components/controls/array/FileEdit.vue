@@ -7,7 +7,7 @@
             </div>
         </template>
         <template v-else>
-            <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file" :disabled="readOnly" />
+            <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file" :disabled="readOnly" :id="schema.name" />
             <div class="file-name" :class="{'error-border': error}">{{value ? value.filename : "No file chosen"}}</div>
             <div class="x-btn link" :class="{ disabled: readOnly }" @click="selectFile">Choose file</div>
         </template>
@@ -38,16 +38,16 @@
                     this.validate(false)
                     return
                 }
-                var file = files[0]
-                var formData = new FormData()
+                let file = files[0]
+                let formData = new FormData()
                 formData.append("field_name", this.schema.name)
                 formData.append("userfile", file)
 
                 this.uploading = true
-                var request = new XMLHttpRequest()
+                let request = new XMLHttpRequest()
                 request.open('POST', `/api/${this.apiUpload}/upload_file`)
                 request.onload = (result) => {
-                    var res = JSON.parse(result.srcElement.responseText)
+                    let res = JSON.parse(result.srcElement.responseText)
                     this.uploading = false
                     this.filename = file.name
                     this.valid = true
@@ -82,9 +82,12 @@
 <style lang="scss">
     .upload-file {
         display: flex;
+        position: relative;
         input[type=file] {
             position: absolute;
-            left: -999em;
+            left: 0;
+            top: 0;
+            z-index: 0;
         }
         .x-btn.link {
             color: $theme-black;
@@ -96,6 +99,8 @@
         }
         .file-name {
             border: 1px solid $grey-2;
+            background: $theme-white;
+            z-index: 2;
             padding: 0 8px;
             line-height: 26px;
             overflow: hidden;
@@ -112,5 +117,8 @@
                 display: inline-block;
             }
         }
+    }
+    .schema-form .object .upload-file input {
+        width: 10px;
     }
 </style>

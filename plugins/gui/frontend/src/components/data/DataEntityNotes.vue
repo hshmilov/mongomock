@@ -42,7 +42,7 @@
             ...mapState({
                 currentUser(state) {
                     return {
-                        name: `${state.auth.currentUser.data.source}/${state.auth.currentUser.data.user_name}`,
+                        uuid: state.auth.currentUser.data.uuid,
                         admin: state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin'
                     }
                 }
@@ -94,7 +94,7 @@
             readOnlyNotes() {
                 if (this.currentUser.admin) return []
                 return this.noteData
-                    .filter(note => note['user_name'] !== this.currentUser.name)
+                    .filter(note => note['user_id'] !== this.currentUser.uuid)
                     .map(note => note.uuid)
             }
         },
