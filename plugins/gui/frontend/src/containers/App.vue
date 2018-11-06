@@ -45,10 +45,8 @@
                 userName(state) {
                 	return state.auth.currentUser.data.user_name
                 },
-                entitiesRestricted(state) {
-                    let user = state.auth.currentUser.data
-                    if (!user || !user.permissions) return true
-                    return user.permissions.Devices === 'Restricted' || user.permissions.Users === 'Restricted'
+                userPermissions(state) {
+                    return state.auth.currentUser.data.permissions
                 }
             }),
             isDev() {
@@ -84,14 +82,16 @@
                 this.fetchConstants()
                 this.firstHistoricalDate()
                 this.allowedDates()
-                if (!this.entitiesRestricted) {
-                    entities.forEach(entity => {
-                        this.fetchDataFields({module: entity.name})
-                    })
-                }
+                entities.forEach(entity => {
+                    if (this.entityRestricted(entity.title)) return
+                    this.fetchDataFields({module: entity.name})
+                })
             },
             notifyAccess(name) {
                 this.blockedComponent = name
+            },
+            entityRestricted(entity) {
+                return this.userPermissions[entity] === 'Restricted'
             }
 		},
         created() {

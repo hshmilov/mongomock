@@ -18,7 +18,7 @@
 				if (Array.isArray(this.value)) {
 					if (!this.value.length) return ''
 					return this.value.reduce((current, accumulator) => {
-						return current && accumulator
+						return current || accumulator
                     }, true)
                 }
                 return this.value
