@@ -47,7 +47,9 @@
         computed: {
             ...mapState({
                 firstHistoricalDate(state) {
-                    return state.constants.firstHistoricalDate
+                    return Object.values(state.constants.firstHistoricalDate).reduce((a, b) => {
+                        return (a < b) ? a : b
+                    }, null)
                 }
             }),
             firstDateLimit() {

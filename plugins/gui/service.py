@@ -2754,26 +2754,18 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 ]
             }
             base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and ' if view else ''
-        base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == exists(true)'
+        field_compare = 'true' if field['type'] == 'bool' else 'exists(true)'
+        base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == {field_compare}'
         if for_date:
             # If history requested, fetch from appropriate historical db
             data_collection = self._historical_entity_views_db_map[entity]
-            if base_query:
-                base_query = {
-                    '$and': [
-                        base_query, {
-                            field['name']: {
-                                '$exists': True
-                            }
-                        }, {
-                            'accurate_for_datetime': for_date
-                        }
-                    ]
-                }
-            else:
-                base_query = {
-                    'accurate_for_datetime': for_date
-                }
+            base_query = {
+                '$and': [
+                    base_query, {
+                        'accurate_for_datetime': for_date
+                    }
+                ]
+            }
         results = data_collection.find(base_query, projection={field['name']: 1})
         count = 0
         sigma = 0

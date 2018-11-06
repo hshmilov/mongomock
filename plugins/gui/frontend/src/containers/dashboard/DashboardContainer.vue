@@ -230,7 +230,11 @@
                 this.chartsCurrentlyShowing[cardUuid] = undefined
             },
             confirmPickDate(cardUuid, cardName) {
-                var pendingDateChosen = this.chartsCurrentlyShowing[cardUuid]
+                let pendingDateChosen = this.chartsCurrentlyShowing[cardUuid]
+                if (!pendingDateChosen) {
+                    this.clearDate(cardUuid)
+                    return
+                }
                 this.fetchHistoricalCard({
                     cardUuid: cardUuid,
                     date: pendingDateChosen
