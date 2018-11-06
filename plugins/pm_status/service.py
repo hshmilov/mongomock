@@ -103,6 +103,7 @@ class PmStatusService(PluginBase, Triggerable):
 
         logger.info("Get PM Status started (before lock).")
         self._get_pm_status_internal()
+        self._save_field_names_to_db(EntityType.Devices)
 
         logger.info("Finished gathering pm status")
 
@@ -330,10 +331,6 @@ class PmStatusService(PluginBase, Triggerable):
                 action_if_exists="update",  # If the tag exists, we update it using deep merge (and not replace it).
                 client_used=executer_info["adapter_client_used"]
             )
-
-            # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
-            # Fixme: running all queries.
-            self._save_field_names_to_db(EntityType.Devices)
 
             if len(all_error_logs) > 0:
                 is_execution_exception = True

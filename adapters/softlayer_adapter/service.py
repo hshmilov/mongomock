@@ -42,7 +42,7 @@ class SoftlayerAdapter(AdapterBase, Configurable):
         provision_date = Field(datetime, "Provision Date")
         # this could have included the password but we decided not to save them
         remote_management_accounts = ListField(str, "Remote Management Users")
-        softlayer_tags = ListField(str, "Tags")
+        softlayer_tags = ListField(str, "SoftLayer Tags")
         notes = Field(str, "Notes")
 
     def __init__(self):

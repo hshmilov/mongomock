@@ -112,6 +112,7 @@ class CarbonblackResponseAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=R0912
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -142,6 +143,23 @@ class CarbonblackResponseAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem parsing isolating {device_raw}')
                 device.is_isolating = False
+
+            free_size = device_raw.get('systemvolume_free_size')
+            total_size = device_raw.get('systemvolume_total_size')
+            try:
+                if free_size:
+                    free_size = int(free_size) / (1024 ** 3)    # bytes -> gb
+                else:
+                    free_size = None
+                if total_size:
+                    total_size = int(total_size) / (1024 ** 3)  # bytes -> gb
+                else:
+                    total_size = None
+
+                if free_size or total_size:
+                    device.add_hd(total_size=total_size, free_size=free_size)
+            except Exception:
+                logger.exception(f'Problem setting hd. freesize is {free_size} totalsize is {total_size}')
             device.set_raw(device_raw)
             return device
         except Exception:

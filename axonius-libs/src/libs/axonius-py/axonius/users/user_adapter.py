@@ -29,6 +29,7 @@ class UserAdapter(SmartJsonClass):
     user_sid = Field(str, "SID")
     mail = Field(str, "Mail")
     username = Field(str, 'User Name')  # Only username, no domain
+    display_name = Field(str, 'Display Name')
     description = Field(str, 'Description')
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     is_admin = Field(bool, "Is Admin")
@@ -85,6 +86,12 @@ class UserAdapter(SmartJsonClass):
         else:
             target_field_list = self._user_fields
         target_field_list.add(name)
+
+    def declare_new_field(self, *args, **kwargs):
+        assert self.__class__ != UserAdapter, \
+            'Can not change UserAdapter, its generic! ' \
+            'see test_smart_json_class.py::test_schema_change_for_special_classes'
+        super().declare_new_field(*args, **kwargs)
 
     def add_associated_device(self, **kwargs):
         self.associated_devices.append(UserAdapterDevice(**kwargs))

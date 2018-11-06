@@ -19,7 +19,6 @@ class MobileironAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
-        device_model = Field(str, 'Device Model')
         user_id = Field(str, 'Device User Id')
         imei = Field(str, 'Device IMEI')
         storage_capacity = Field(str, 'Storage Capacity')

@@ -31,7 +31,7 @@ class CiscoMerakiAdapter(AdapterBase):
         lng = Field(str, "Lng")
         lat = Field(str, "Lat")
         notes = Field(str, 'Notes')
-        tags = Field(str, 'Tags')
+        cisco_tags = Field(str, 'Cisco Tags')
         address = Field(str, "Address")
         dns_name = Field(str, "DNS Name")
         associated_devices = ListField(AssociatedDeviceAdapter, "Associated Devices")
@@ -143,7 +143,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.address = device_raw.get("address")
                 device.network_id = device_raw.get("network_name")
                 device.notes = device_raw.get('notes')
-                device.tags = device_raw.get('tags')
+                device.cisco_tags = device_raw.get('tags')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

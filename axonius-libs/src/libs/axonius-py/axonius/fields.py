@@ -86,6 +86,7 @@ class Field(object):
         elif issubclass(field_type, Enum):
             enum = field_type
         self._enum = enum
+        self._dynamic = False
 
     @property
     def name(self):
@@ -128,6 +129,10 @@ class Field(object):
         return self._enum
 
     @property
+    def dynamic(self):
+        return self._dynamic
+
+    @property
     def json_name(self):
         if issubclass(self.type, bool):
             return 'bool'
@@ -147,6 +152,10 @@ class Field(object):
     def __eq__(self, other):
         assert isinstance(other, str)
         return self._name == other
+
+    def set_dynamic(self, val: bool):
+        assert isinstance(val, bool)
+        self._dynamic = val
 
     def _set_name(self, name: str):
         assert isinstance(name, str)

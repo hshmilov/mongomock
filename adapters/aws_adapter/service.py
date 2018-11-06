@@ -149,7 +149,7 @@ class AwsAdapter(AdapterBase):
 
         # EC2-specific fields
         public_ip = Field(str, 'Public IP')
-        aws_tags = ListField(AWSTagKeyValue, 'Tags')
+        aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
         instance_type = Field(str, 'Instance Type')
         key_name = Field(str, 'Key Name')
         monitoring_state = Field(str, 'Monitoring State')

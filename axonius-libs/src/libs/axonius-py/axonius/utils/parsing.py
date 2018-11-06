@@ -52,6 +52,7 @@ DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MBA', 
 # them each time.
 NORMALIZED_IPS = 'normalized_ips'
 NORMALIZED_MACS = 'normalized_macs'
+ALLOWED_VAR_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'
 
 # This number stands for the default number of days needed for us to say a device is old,
 # first use if for correlation at is_old_device
@@ -98,6 +99,17 @@ def get_manufacturer_from_mac(mac: str) -> str:
         if manufacturer is None:
             return None
         return f"{manufacturer[2]} ({manufacturer[3]})"
+
+
+def normalize_var_name(name):
+    """
+    Takes a string and returns another string which can be a variable name in python.
+    :param name:
+    :return:
+    """
+    name = name.replace('-', '_').replace(' ', '_')
+    name = ''.join([character for character in name if character in ALLOWED_VAR_CHARACTERS])
+    return name
 
 
 def get_exception_string():

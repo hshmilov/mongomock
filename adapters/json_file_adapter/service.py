@@ -30,16 +30,16 @@ class JsonFileAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
 
         @classmethod
-        def get_fields_info(cls):
-            base = super().get_fields_info().copy()
+        def get_fields_info(cls, *args, **kwargs):
+            base = super().get_fields_info(*args, **kwargs).copy()
             base['items'].extend(JsonFileAdapter.additional())
             return base
 
     class MyUserAdapter(UserAdapter):
 
         @classmethod
-        def get_fields_info(cls):
-            base = super().get_fields_info().copy()
+        def get_fields_info(cls, *args, **kwargs):
+            base = super().get_fields_info(*args, **kwargs).copy()
             base['items'].extend(JsonFileAdapter.additional())
             return base
 

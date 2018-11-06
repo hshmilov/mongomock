@@ -258,8 +258,6 @@ class PluginBase(Configurable, Feature):
         self._entity_adapter_fields = {entity_type: {
             "fields_set": set(),
             "raw_fields_set": set(),
-            "last_fields_count": (0, 0),
-            "first_fields_change": True,
             "fields_db_lock": threading.RLock()
         } for entity_type in [EntityType.Devices, EntityType.Users]}
         print(f"{datetime.now()} {self.plugin_name} is starting")
@@ -449,6 +447,16 @@ class PluginBase(Configurable, Feature):
         self._update_schema()
         self._update_config_inner()
 
+        # Save field names to db on the initialiation of the plugin, just to have the generic static fields
+        # appear in the gui immediately.
+        try:
+            if self.MyDeviceAdapter is not None:
+                self._save_field_names_to_db(EntityType.Devices)
+            if self.MyUserAdapter is not None:
+                self._save_field_names_to_db(EntityType.Users)
+        except Exception:
+            logger.exception(f'Problem persisting field names to db')
+
         # Finished, Writing some log
         logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                          self.version,
@@ -463,23 +471,45 @@ class PluginBase(Configurable, Feature):
         if my_entity is None:
             return
 
+        # Do note that we are saving the schema each time this function is called, instead of just once.
+        # we do this because things can change due to dynamic fields etc.
+        # we need to make sure that _save_field_names_to_db is not called too frequently, but mainly after
+        # schema change (we can just call it once after all entities insertion,
+        # or maybe after the insertion of X entities)
+
         with entity_fields['fields_db_lock']:
-            logger.debug(f"Persisting {entity_type.name} fields to DB")
-            fields = list(entity_fields['fields_set'])  # copy
+            logger.info(f"Persisting {entity_type.name} fields to DB")
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
             # Upsert new fields
             fields_collection = self._get_db_connection()[self.plugin_unique_name][collection_name]
-
             fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
-            if entity_fields['first_fields_change']:
-                fields_collection.update({'name': 'parsed'},
-                                         {'name': 'parsed', 'schema': my_entity.get_fields_info()},
-                                         upsert=True)
-                entity_fields['first_fields_change'] = False
 
-            # Save last update count
-            entity_fields['last_fields_count'] = len(fields), len(raw_fields)
+            # Dynamic fields that were somewhen in the schema must always stay there (unless explicitly removed)
+            # because otherwise we would always miss them (image an adapter parsing csv1 and then removing it. csv1's
+            # columns are dynamic fields. we want the schema of csv1 appear in the gui even after its not longer
+            # the current client!).
+            current_dynamic_schema = my_entity.get_fields_info('dynamic')
+            current_dynamic_schema_names = [field['name'] for field in current_dynamic_schema['items']]
+
+            # Search for an old dynamic schema and add whatever we don't already have
+            dynamic_fields_collection_in_db = fields_collection.find_one({'name': 'dynamic'})
+            if dynamic_fields_collection_in_db:
+                for old_dynamic_field in dynamic_fields_collection_in_db.get('schema', {}).get('items', []):
+                    if old_dynamic_field['name'] not in current_dynamic_schema_names:
+                        current_dynamic_schema['items'].append(old_dynamic_field)
+
+            # Save the new dynamic schema
+            fields_collection.update({'name': 'dynamic'},
+                                     {'name': 'dynamic', 'schema': current_dynamic_schema},
+                                     upsert=True)
+
+            # extend the overall schema
+            current_schema = my_entity.get_fields_info('static')
+            current_schema['items'].extend(current_dynamic_schema['items'])
+            fields_collection.update({'name': 'parsed'},
+                                     {'name': 'parsed', 'schema': current_schema},
+                                     upsert=True)
 
     def _new_device_adapter(self) -> DeviceAdapter:
         """ Returns a new empty device associated with this adapter. """

@@ -66,6 +66,7 @@ class DeviceAdapterOS(SmartJsonClass):
     build = Field(str, 'Build')  # aka patch level
     sp = Field(str, 'Service Pack')
     install_date = Field(datetime.datetime, "Install Date")
+    kernel_version = Field(str, 'Kernel Version')
 
     major = Field(int, 'Major')
     minor = Field(int, 'Minor')
@@ -299,6 +300,12 @@ class DeviceAdapter(SmartJsonClass):
         else:
             target_field_list = self._adapter_fields
         target_field_list.add(name)
+
+    def declare_new_field(self, *args, **kwargs):
+        assert self.__class__ != DeviceAdapter, \
+            'Can not change DeviceAdapter, its generic! ' \
+            'see test_smart_json_class.py::test_schema_change_for_special_classes'
+        super().declare_new_field(*args, **kwargs)
 
     def set_raw(self, raw_data: dict):
         """ Sets the raw fields associated with this device and also updates adapter_raw_fields.
