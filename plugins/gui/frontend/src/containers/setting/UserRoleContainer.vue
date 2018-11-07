@@ -9,7 +9,7 @@
             <div class="user-details">
                 <img :src="user.pic_name" class="user-details-profile"/>
                 <div>
-                    <div class="user-details-title">{{ user.user_name }}</div>
+                    <div class="user-details-title">{{ user.user_name }} <span v-if="user.first_name.length > 0 || user.last_name.length > 0"> - {{ user.first_name}} {{ user.last_name }}</span></div>
                     <div>{{ user.source }}</div>
                 </div>
             </div>
