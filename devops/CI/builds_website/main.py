@@ -11,8 +11,8 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for, s
 from flask_dance.contrib.slack import make_slack_blueprint, slack
 from flask_dance.consumer import oauth_authorized
 
-NORMAL_EC2_TYPE = "t2.medium"
-STRONG_EC2_TYPE = "t2.xlarge"
+NORMAL_EC2_TYPE = "t2.large"
+STRONG_EC2_TYPE = "t2.2xlarge"
 
 DEVELOPMENT_MODE = False
 
