@@ -3,7 +3,8 @@ import requests
 import json
 import os
 
-from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION
+from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
+    AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.consts.gui_consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
@@ -25,6 +26,8 @@ class GuiService(PluginService):
             self._update_schema_version_3()
         if self.db_schema_version < 4:
             self._update_schema_version_4()
+        if self.db_schema_version < 5:
+            self._update_schema_version_5()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -194,6 +197,57 @@ class GuiService(PluginService):
             self.db_schema_version = 4
         except Exception as e:
             print(f'Exception while upgrading gui db to version 4. Details: {e}')
+
+    def _update_schema_version_5(self):
+        print('upgrade to schema 5')
+        try:
+            # Change all labels not by GUI to be by GUI
+            def change_for_collection(col):
+                col.update_many(
+                    filter={
+                        'tags': {
+                            '$elemMatch': {
+                                '$and': [
+                                    {
+                                        'type': 'label'
+                                    },
+                                    {
+                                        PLUGIN_NAME: {
+                                            '$ne': GUI_NAME
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    update={
+                        '$set': {
+                            f'tags.$[i].{PLUGIN_NAME}': GUI_NAME,
+                            f'tags.$[i].{PLUGIN_UNIQUE_NAME}': GUI_NAME
+                        }
+                    },
+                    array_filters=[
+                        {
+                            '$and': [
+                                {
+                                    f'i.{PLUGIN_NAME}': {
+                                        '$ne': GUI_NAME
+                                    }
+                                },
+                                {
+                                    'i.type': 'label'
+                                }
+                            ]
+                        }
+                    ]
+                )
+
+            change_for_collection(self.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'devices_db'))
+            change_for_collection(self.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'users_db'))
+
+            self.db_schema_version = 5
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 5. Details: {e}')
 
     @property
     def exposed_ports(self):

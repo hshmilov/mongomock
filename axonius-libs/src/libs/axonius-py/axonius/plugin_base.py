@@ -1311,7 +1311,10 @@ class PluginBase(Configurable, Feature):
         :return: List of affected entities
         """
         _entities_db = self._entity_db_map[entity]
-        additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = self.plugin_unique_name, self.plugin_name
+        if PLUGIN_UNIQUE_NAME not in additional_data or PLUGIN_NAME not in additional_data:
+            additional_data[PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
+            additional_data[PLUGIN_NAME] = self.plugin_name
+
         additional_data['accurate_for_datetime'] = datetime.utcnow()
         with _entities_db.start_session() as session:
             entities_candidates_list = list(session.find({"$or": [
@@ -1778,6 +1781,9 @@ class PluginBase(Configurable, Feature):
         :param rebuild: Whether or not to trigger a rebuild afterwards
         :return: List of affected entities
         """
+        # all labels belong to GUI
+        additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = GUI_NAME, GUI_NAME
+
         result = self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None,
                            additional_data)
         if result and rebuild:
