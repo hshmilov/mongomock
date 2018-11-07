@@ -326,6 +326,13 @@ def is_domain_valid(domain):
     return False
 
 
+def not_aruba_adapters(adapter_device1, adapter_device2):
+    if 'aruba' not in adapter_device1.get('plugin_name').lower() and \
+            'aruba' not in adapter_device2.get('plugin_name').lower():
+        return True
+    return False
+
+
 def get_first_object_from_dn(dn):
     """
     :param dn: e.g. CN=Administrator,CN=Users,DC=TestDomain,DC=test
