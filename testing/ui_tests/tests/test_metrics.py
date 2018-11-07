@@ -53,4 +53,4 @@ class TestMetrics(TestBase):
             self.devices_page.fill_filter(query_text)
             self.devices_page.enter_search()
 
-            wait_until(lambda: tester.is_metric_in_log('query.gui', query_text, lines_lookback=10))
+            wait_until(lambda: tester.is_metric_in_log('query.gui', query_text))
