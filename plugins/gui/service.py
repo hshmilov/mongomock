@@ -520,6 +520,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if type(v) != bytes:
                     new_raw[k] = v
             specific['data']['raw'] = new_raw
+
+        # Fix notes to have the expected format of user id
+        generic_data = entity['generic_data']
+        for item in generic_data:
+            if item.get('name') == 'Notes' and item.get('data'):
+                item['data'] = [{**note, **{'user_id': str(note['user_id'])}} for note in item['data']]
+
         # Specific is returned as is, to show all adapter datas.
         # Generic fields are divided to basic which are all merged through all adapter datas
         # and advanced, of which the main field is merged and data is given in original structure.
@@ -530,7 +537,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'advanced': [{
                     'name': category, 'data': gui_helpers.find_entity_field(entity, f'specific_data.data.{category}')
                 } for category in advanced_fields],
-                'data': entity['generic_data']
+                'data': generic_data
             },
             'labels': entity['labels'],
             'internal_axon_id': entity['internal_axon_id']
@@ -3560,9 +3567,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if notes_list is None:
             notes_list = []
 
-        if request.method == 'GET':
-            return jsonify(notes_list)
-
         current_user = session.get('user')
         if not current_user:
             logger.error('Login in order to update notes')
@@ -3575,6 +3579,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             note_obj['uuid'] = str(uuid4())
             notes_list.append(note_obj)
             entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
+            note_obj['user_id'] = str(note_obj['user_id'])
             return jsonify(note_obj)
 
         if request.method == 'DELETE':
@@ -3628,6 +3633,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         note_doc['user_name'] = f'{current_user["source"]}/{current_user["user_name"]}'
         note_doc['accurate_for_datetime'] = datetime.now()
         entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
+        note_doc['user_id'] = str(note_doc['user_id'])
         return jsonify(note_doc)
 
     @property
