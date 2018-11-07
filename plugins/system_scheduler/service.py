@@ -22,10 +22,9 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.thread_stopper import StopThreadException, stoppable
 from axonius.utils.files import get_local_config_file
+from axonius.utils.threading import StopThreadException
 from flask import jsonify
-from retrying import retry
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -175,6 +174,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             logger.error(f'Got bad trigger request for non-existent job: {job_name}')
             return return_error('Got bad trigger request for non-existent job', 400)
 
+        logger.info(f'Started system scheduler')
         self.__start_research()
 
     @contextmanager
@@ -204,7 +204,6 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 self.current_phase = scheduler_consts.Phases.Stable
                 self.state = SchedulerState()
 
-    @stoppable
     def __start_research(self):
         """
         Manages a research phase and it's sub phases.
@@ -432,61 +431,26 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.Core
 
-    def stop_research_phase(self):
-        with self.__stopping_lock:
-            try:
-                self.__stopping_initiated = True
-
-                @retry(stop_max_attempt_number=50, wait_fixed=300, retry_on_result=lambda result: result is False)
-                def _wait_for_stable():
-                    return self.current_phase == scheduler_consts.Phases.Stable
-
-                logger.info(f'received stop request for plugin: {self.plugin_unique_name}')
-                try:
-                    self._stop_plugins()
-                except Exception:
-                    logger.exception('An exception was raised while stopping all plugins')
-                try:
-                    _wait_for_stable()
-                except Exception:
-                    logger.exception('Couldn\'t stop plugins for more than a while - forcing stop')
-                    with self.__realtime_lock:
-                        self.current_phase = scheduler_consts.Phases.Stable
-                        self.state = SchedulerState()
-                        logger.info(f'{self.current_phase} and {self.state}')
-                    self._restore_to_running_state()
-                else:
-                    logger.info("Finished waiting for stable")
-
-            finally:
-                self.__stopping_initiated = False
-
-    @add_rule('stop_all', should_authenticate=False, methods=['POST'])
-    def stop_all(self):
-        if self.__stopping_initiated:
-            logger.info("Already stopping")
-            return '', 204
-
-        logger.info(f'Received stop_all - starting to stop - {self.__stopping_lock}')
+    def _stopped(self, job_name: str):
+        logger.info(f'Got a stop request: Back to {scheduler_consts.Phases.Stable} Phase.')
         try:
-            self._unschedule()
-            self.stop_research_phase()
-        except Exception:
-            logger.exception('Exception while stopping')
-        finally:
-            logger.info('Finished stopping all')
+            self.__stopping_initiated = True
             # Let's rebuild once at the end for precaution
             self._request_db_rebuild(sync=False)
-        return '', 204
+            self._stop_plugins()
+        finally:
+            self.current_phase = scheduler_consts.Phases.Stable
+            self.state = SchedulerState()
+            self.__stopping_initiated = False
 
     def get_all_plugins(self):
         """
-        :return: all the currently registered plugins - used when we want to stop everything in the system towards a
-                 clean discovery phase
+        :return: all the currently registered plugins except Scheduler
         """
         plugins_available = self.get_available_plugins_from_core()
         for plugin_unique_name in plugins_available:
-            yield plugin_unique_name
+            if plugin_unique_name != self.plugin_unique_name:
+                yield plugin_unique_name
 
     def _stop_plugins(self):
         """
@@ -498,8 +462,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         def _stop_plugin(plugin):
             try:
                 logger.debug(f'stopping {plugin}')
-                response = self.request_remote_plugin('stop_plugin', plugin, timeout=20)
-                if response.status_code != 204:
+                response = self.request_remote_plugin('stop_all', plugin, method='post', timeout=20)
+                if response.status_code != 200:
                     logger.error(f'{plugin} didn\'t stop properly, returned: {response.content}')
             except Exception:
                 logger.exception(f'error stopping {plugin}')
@@ -517,7 +481,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                         _stop_plugin, plugin))
 
                 wait(futures, timeout=None, return_when=ALL_COMPLETED)
-            except Exception as err:
+            except Exception:
                 logger.exception('An exception was raised while stopping all plugins.')
 
         logger.info('Finished stopping all plugins.')

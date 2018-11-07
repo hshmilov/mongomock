@@ -4,7 +4,6 @@ from axonius.consts.plugin_subtype import PluginSubtype
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-from axonius.thread_stopper import stoppable
 
 import time
 import threading
@@ -84,7 +83,6 @@ class PmStatusService(PluginBase, Triggerable):
         with self._execution_manager_lock:
             self._number_of_active_execution_requests_var = value
 
-    @stoppable
     def _get_pm_status(self):
         """
         Runs rpc queries on windows devices to understand the patch management status.

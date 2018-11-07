@@ -20,7 +20,6 @@ from axonius.consts.report_consts import (TRIGGERS_DIFF_ADDED, TRIGGERS_DIFF_REM
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.thread_stopper import stoppable
 from axonius.utils import gui_helpers
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import to_json
@@ -846,7 +845,6 @@ class ReportsService(PluginBase, Triggerable):
                         f'{(len(current_result) if isinstance(current_result, Iterable) else current_result)}')
             self.update_report(report_data)
 
-    @stoppable
     def _handle_report(self, report_data):
         """
         Check if report that was added to the system is triggered,

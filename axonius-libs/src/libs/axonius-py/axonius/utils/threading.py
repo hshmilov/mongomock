@@ -1,16 +1,96 @@
 import concurrent.futures
 import multiprocessing
 import queue
-import threading
 from datetime import datetime
 from threading import RLock
 import logging
 
 import func_timeout
-
+from func_timeout import StoppableThread
 
 logger = logging.getLogger(f'axonius.{__name__}')
-from axonius.thread_stopper import StopThreadException, ThreadStopper, stoppable
+
+
+class StopThreadException(BaseException):
+    pass
+
+
+class ReusableThread:
+    """
+    A thread that you can call "start" many times without having the following exception
+        RuntimeError: threads can only be started once
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__build_executor()
+
+    def __build_executor(self):
+        """
+        Makes a new executor for threads
+        """
+        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='ReusableThread')
+
+    def start(self, target):
+        """
+        Runs the target function on the thread
+        assumes the thread is stable
+        :param target: function target to run
+        """
+        self.__executor.submit(target)
+
+    def terminate_thread(self):
+        """
+        Makes sure the thread does not continue execution
+        """
+        threads = list(self.__executor._threads)
+        if not threads:
+            return
+
+        thread = threads[0]
+
+        class StopThreadExceptionTempType(StopThreadException):
+            def __init__(self):
+                return StopThreadException.__init__(self)
+
+        exception = type('StopThreadException', StopThreadExceptionTempType.__bases__,
+                         dict(StopThreadExceptionTempType.__dict__))
+
+        logger.info(f'Stopping thread {thread}')
+        StoppableThread._stopThread(thread, exception, raiseEvery=1.5)
+        self.__executor.shutdown(wait=False)
+        self.__build_executor()
+
+    def __str__(self):
+        threads = list(self.__executor._threads)
+        thread_str = ', '.join(str(x) for x in list(self.__executor._threads))
+        return f'{super().__str__()} with {len(threads)} threads - {thread_str}'
+
+
+def run_in_thread_helper(thread: ReusableThread, method_to_call, resolve, reject, *_, args=None, kwargs=None, **__):
+    """
+    Helps with running Promises in a ReusableThread
+    :param thread: thread to call on
+    :param method_to_call: method to run
+    :param resolve: will be called if method returns
+    :param reject: will be called with exception from method
+    :param args: args to method_to_call
+    :param kwargs: kwargs to method_to_call
+    """
+    args = args or []
+    kwargs = kwargs or {}
+
+    def resolver():
+        try:
+            resolve(method_to_call(*args, **kwargs))
+        except Exception as e:
+            logger.exception(f'Exception in {method_to_call.__name__} using thread {thread}')
+            reject(e)
+        except (StopThreadException, func_timeout.exceptions.FunctionTimedOut) as e:
+            logger.info(f'StopThread or Timeout in {method_to_call.__name__} using thread {thread}')
+            reject(e)
+
+    thread.start(resolver)
 
 
 def run_in_executor_helper(executor, method_to_call, resolve, reject, *_, args=[], kwargs={}, **__):
@@ -46,7 +126,6 @@ def run_and_forget(call_this):
     GLOBAL_RUN_AND_FORGET.submit(call_this)
 
 
-@stoppable
 def timeout_iterator(iterable, timeout):
     """
     Iterates over an iterator, and counting time between yields of the given iterator.
@@ -64,7 +143,6 @@ def timeout_iterator(iterable, timeout):
     out_exception = [None]
 
     # iterate the iterator into a queue
-    @stoppable
     def iterate_into_queue():
         try:
             for x in iterable:
@@ -74,8 +152,8 @@ def timeout_iterator(iterable, timeout):
         finally:
             q.put(finished_queue)
 
-    t = threading.Thread(target=iterate_into_queue, daemon=True)
-    t.start()
+    t = ReusableThread()
+    t.start(iterate_into_queue)
 
     def checker():
         started = datetime.now()
@@ -88,7 +166,7 @@ def timeout_iterator(iterable, timeout):
                     return
                 yield item
             except queue.Empty:
-                ThreadStopper.async_raise([t.ident])
+                t.terminate_thread()
                 raise func_timeout.exceptions.FunctionTimedOut(timedOutAfter=(datetime.now() - started).total_seconds(),
                                                                timedOutFunction=iterate_into_queue,
                                                                timedOutArgs=[],

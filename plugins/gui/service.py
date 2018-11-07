@@ -3121,7 +3121,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         logger.info("Stopping research phase")
         response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f"Could not stop research phase. returned code: {response.status_code}, reason: {str(response.content)}")
             return return_error(f"Could not stop research phase {str(response.content)}", response.status_code)

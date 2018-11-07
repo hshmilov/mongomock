@@ -15,7 +15,6 @@ from typing import Tuple, List, Iterable
 
 from axonius.mixins.feature import Feature
 
-from axonius.thread_stopper import stoppable
 from axonius.adapter_base import AdapterBase
 from axonius.consts.adapter_consts import IGNORE_DEVICE, ADAPTER_PLUGIN_TYPE
 
@@ -234,7 +233,6 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @stoppable
     def __correlate_devices(self, parsed_data) -> Iterable:
         """
         Uses the DB and the `_get_scanner_correlator` logic to correlate the devices
@@ -276,7 +274,6 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             if device_count % 1000 == 0:
                 logger.info(f"Got {device_count} devices.")
 
-    @stoppable
     def _try_query_data_by_client(self, client_name, entity_type: EntityType, use_cache=True):
         raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type)
         if entity_type == EntityType.Devices:

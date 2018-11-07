@@ -12,7 +12,6 @@ import threading
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.thread_stopper import stoppable
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.files import get_local_config_file
 from datetime import datetime
@@ -259,7 +258,6 @@ class ExecutionService(PluginBase):
 
         return action_id
 
-    @stoppable
     def _create_request_thread(self, action_type, device_id, issuer, data, adapters_tuple, action_id,
                                accumulated_error, adapters_whitelist=None):
         """ A function for creating an action request
@@ -384,7 +382,6 @@ class ExecutionService(PluginBase):
 
         return result
 
-    @stoppable
     @add_rule("action/<action_type>", methods=['POST'])
     def _make_action(self, action_type):
         """ Exported function for initiate new actions

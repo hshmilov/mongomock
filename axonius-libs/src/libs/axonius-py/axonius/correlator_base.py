@@ -11,7 +11,6 @@ from axonius.entities import EntityType
 from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase
-from axonius.thread_stopper import stoppable
 from funcy import chunks
 from namedlist import namedlist
 
@@ -141,7 +140,6 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
 
         return list(db.find({}))
 
-    @stoppable
     def __correlate(self, entities_ids=None):
         """
         Correlate and process entities

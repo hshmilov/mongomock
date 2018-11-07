@@ -2,7 +2,6 @@ import functools
 import logging
 from concurrent.futures import wait, ThreadPoolExecutor, ALL_COMPLETED
 
-from axonius.thread_stopper import stoppable
 
 logger = logging.getLogger(f'axonius.{__name__}')
 from urllib3.util.url import parse_url
@@ -54,7 +53,6 @@ class SoftlayerConnection(object):
         :return: the response
         :rtype: dict
         """
-        @stoppable
         def get_virtual_device(get_details_func, device_id, device_number):
             try:
                 device_details = get_details_func(device_id['id'])

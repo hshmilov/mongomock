@@ -12,7 +12,7 @@ class SystemSchedulerService(PluginService):
     def stop_research(self):
         response = requests.post(
             self.req_url + "/stop_all", headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 204, f"Error in response: {str(response.status_code)}, " \
+        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
                                             f"{str(response.content)}"
         return response
 

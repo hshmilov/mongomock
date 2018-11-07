@@ -109,7 +109,7 @@ def test_trigger_activated():
     x._trigger(job_name)
     assert x._get_state(job_name) == {
         "state": "Scheduled",
-        "last_error": ""
+        "last_error": "Ran OK"
     }
     retry_assert_equal(x.counter, 1)
 
@@ -121,14 +121,14 @@ def test_double_trigger():
     x._trigger(job_name)
     assert x._get_state(job_name) == {
         "state": "Scheduled",
-        "last_error": ""
+        "last_error": "Ran OK"
     }
     retry_assert_equal(x.counter, 1)
     x._trigger(job_name)
 
     assert verify_state(x, {
         "state": "Scheduled",
-        "last_error": ""
+        "last_error": "Ran OK"
     }, job_name)
     retry_assert_equal(x.counter, 2)
 
@@ -162,7 +162,7 @@ def test_double_trigger_with_failure():
 
     assert x._get_state(job_name) == {
         "state": "Scheduled",
-        "last_error": ""
+        "last_error": "Ran OK"
     }
     retry_assert_equal(x.counter, 1)
     try:

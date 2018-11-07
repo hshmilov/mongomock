@@ -61,8 +61,6 @@ from axonius.entities import EntityType
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
-from axonius.thread_stopper import (StopThreadException, ThreadStopper,
-                                    stoppable)
 from axonius.types.correlation import CorrelationResult, CorrelateException
 from axonius.types.ssl_state import COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS, SSLState
 from axonius.users.user_adapter import UserAdapter
@@ -169,16 +167,6 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
                 except Exception as second_err:
                     return json.dumps({"status": "error", "type": type(second_err).__name__,
                                        "message": str(second_err)}), 400
-                except StopThreadException:
-                    if logger:
-                        # Adding exception details for the json logger
-                        logger.info(f"Gracefully stopped {threading.get_ident()}")
-                        return return_error(f"Gracefully stopped.", 400)
-            except StopThreadException:
-                if logger:
-                    # Adding exception details for the json logger
-                    logger.info(f"Gracefully stopped {threading.get_ident()}")
-                    return return_error(f"Gracefully stopped.", 400)
 
         return actual_wrapper
 
@@ -786,16 +774,6 @@ class PluginBase(Configurable, Feature):
                     "There is no plugin {0} currently registered".format(plugin_name))
             return found_plugins
 
-    @add_rule('stop_plugin', should_authenticate=False)
-    def stop_plugin(self):
-        ThreadStopper.stopped.set()
-        try:
-            logger.info(f"received stop request for plugin: {self.plugin_unique_name}")
-            ThreadStopper.stop_all()
-        finally:
-            ThreadStopper.stopped.clear()
-        return '', 204
-
     @add_rule('supported_features', should_authenticate=False)
     def get_supported_features(self):
         return jsonify(self.supported_features)
@@ -1062,7 +1040,6 @@ class PluginBase(Configurable, Feature):
         db_to_use = self._entity_db_map.get(entity_type)
         assert db_to_use, f"got unexpected {entity_type}"
 
-        @stoppable
         def insert_data_to_db(data_to_update, parsed_to_insert):
             """
             Insert data (devices/users/...) into the DB
@@ -1132,7 +1109,6 @@ class PluginBase(Configurable, Feature):
             inserted_data_count = 0
             promises = []
 
-            @stoppable
             def insert_quickpath_to_db(devices):
                 all_parsed = (self._create_axonius_entity(client_name, data, entity_type) for data in devices)
                 db_to_use.insert_many(({

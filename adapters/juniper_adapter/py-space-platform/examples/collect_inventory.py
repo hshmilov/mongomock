@@ -24,7 +24,6 @@ import concurrent.futures
 import threading
 import time
 from jnpr.space import rest, factory
-from axonius.thread_stopper import stoppable
 
 remaining = 0
 lock = threading.Lock()
@@ -90,7 +89,6 @@ def collect_inv(spc, num_threads):
     print("\nAll Over!!!")
 
 
-@stoppable
 def process_device(spc, device):
     """
     Process inventory collection for a given device.

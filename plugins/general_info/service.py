@@ -14,7 +14,6 @@ from axonius.fields import Field, ListField
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
 from axonius.profiling.memory import asizeof
-from axonius.thread_stopper import stoppable
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.db import find_and_sort_by_first_element_of_list
 from axonius.utils.files import get_local_config_file
@@ -100,7 +99,6 @@ class GeneralInfoService(PluginBase, Triggerable):
         with self._execution_manager_lock:
             self._number_of_active_execution_requests_var = value
 
-    @stoppable
     def _gather_general_info(self):
         """
         Runs wmi queries on windows devices to understand important stuff.

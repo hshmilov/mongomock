@@ -24,12 +24,10 @@ from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.thread_stopper import (StopThreadException, call_with_stoppable,
-                                    stoppable)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
 from axonius.utils.parsing import get_exception_string
-from axonius.utils.threading import timeout_iterator
+from axonius.utils.threading import timeout_iterator, StopThreadException
 from bson import ObjectId
 from flask import jsonify, request
 
@@ -632,8 +630,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                                    data=json.dumps({"status": status, "output": output}))
         # TODO: Think of a better way to implement status
 
-    # This should never be stoppable!! Or else we might stop execution while it happens, which makes
-    # it possible for us to have files left on the diks
     def _run_action_thread(self, func, device_data, action_id, **kwargs):
         """ Function for running new action.
 
@@ -760,7 +756,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         timeout = self.__connect_client_timeout
         timeout = timeout.total_seconds() if timeout else None
 
-        @stoppable
         def call_connect_as_stoppable(*args, **kwargs):
             try:
                 return self._connect_client(*args, **kwargs)
@@ -770,10 +765,10 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 return e
 
         try:
-            res = call_with_stoppable(func_timeout.func_timeout,
-                                      kwargs=dict(timeout=timeout,
-                                                  func=call_connect_as_stoppable,
-                                                  args=[client_config]))
+            res = func_timeout.func_timeout(
+                timeout=timeout,
+                func=call_connect_as_stoppable,
+                args=[client_config])
             if isinstance(res, BaseException):
                 raise res
             return res
@@ -902,7 +897,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         self._save_field_names_to_db(EntityType.Devices)
 
-    @stoppable
     def _try_query_data_by_client(self, client_id, entity_type: EntityType, use_cache=True):
         """
         Try querying data for given client. If fails, try reconnecting to client.
@@ -934,7 +928,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                     raise adapter_exceptions.CredentialErrorException(
                         f"Could not update client {client_id} with status {status}")
 
-        @stoppable
         def _get_raw_and_parsed_data():
             mapping = {
                 EntityType.Devices: (self._query_devices_by_client, self._parse_devices_raw_data_hook),
@@ -942,7 +935,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
             }
             raw, parse = mapping[entity_type]
 
-            @stoppable
             def call_raw_as_stoppable(*args, **kwargs):
                 try:
                     return raw(*args, **kwargs)
@@ -952,18 +944,16 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                     self.create_notification(f"Timeout after {timeout} seconds for '{client_name}'"
                                              f" client on {self.plugin_unique_name}"
                                              f" while fetching {entity_type.value}", repr(e))
-                except StopThreadException:
-                    logger.info("Stopped fetching")
                 except BaseException:
                     logger.exception("Unexpected exception")
 
             timeout = self.__fetching_timeout
             timeout = timeout.total_seconds() if timeout else None
 
-            _raw_data = call_with_stoppable(func_timeout.func_timeout,
-                                            kwargs=dict(timeout=timeout,
-                                                        func=call_raw_as_stoppable,
-                                                        args=(client_id, self._clients[client_id])))
+            _raw_data = func_timeout.func_timeout(
+                timeout=timeout,
+                func=call_raw_as_stoppable,
+                args=(client_id, self._clients[client_id]))
             logger.info("Got raw")
             _parsed_data = timeout_iterator(parse(_raw_data), timeout=timeout)
             logger.info("Got parsed")
@@ -1006,7 +996,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         _update_client_status("success", '')
         return [], parsed_data  # AD-HOC: Not returning any raw values
 
-    @stoppable
     def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[Any, Dict[str, Any]]]:
         """
         Synchronously returns all available data types (devices/users) from all clients.

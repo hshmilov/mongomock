@@ -12,7 +12,6 @@ from jamf_adapter.exceptions import JamfConnectionError, JamfRequestException
 from jamf_adapter import consts
 from axonius.utils.xml2json_parser import Xml2Json
 from axonius.smart_json_class import SmartJsonClass
-from axonius.thread_stopper import stoppable
 from axonius.utils import gui_helpers
 from axonius.plugin_base import EntityType
 import re
@@ -232,7 +231,6 @@ class JamfConnection(object):
                 logger.exception(f"Error getting users department data for user {user_raw}")
 
     def threaded_get_devices(self, url, device_list_name, device_type, should_fetch_department=False):
-        @stoppable
         def get_device(device, device_number):
             try:
                 if self.__threads_time_sleep:
@@ -263,7 +261,6 @@ class JamfConnection(object):
         return device_list
 
     def threaded_get_policy_history(self, devices):
-        @stoppable
         def get_history_worker(device, device_number):
             device_details = {}
             try:
