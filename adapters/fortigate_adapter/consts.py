@@ -11,3 +11,7 @@ IS_FORTIMANAGER = 'is_fortimanager'
 URL_PATH = 'jsonrpc'
 EXEC_ID = 11
 LOGIN_URL = 'sys/login/user'
+DEVICES_URL = 'dvmdb'
+GET_DEVICES_ID = 8625
+GET_ADOMS_URL = 'dvmdb/adom'
+GET_ADOMS_ID = 4321

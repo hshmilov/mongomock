@@ -30,5 +30,24 @@ class FortimanagerConnection(RESTConnection):
         self._token = response['session']
 
     def get_device_list(self):
-        for device_raw in []:
+        body_devices = {'method': 'get',
+                        'params': [{'url': consts.DEVICES_URL,
+                                    'data': None,
+                                    'option': None}],
+                        'id': consts.GET_DEVICES_ID,
+                        'verbose': False,
+                        'jsonrpc': '2.0',
+                        'session': self._token}
+        response_devices = self._post(consts.URL_PATH,
+                                      body_params=json.dumps(body_devices),
+                                      use_json_in_body=False)['result']
+        if not isinstance(response_devices, list):
+            response_devices = [response_devices]
+        devices_raw = []
+        for result_obj in response_devices:
+            try:
+                devices_raw.extend(result_obj.get('data'))
+            except Exception:
+                logger.exception(f'Problem with result obj {result_obj}')
+        for device_raw in devices_raw:
             yield device_raw, 'fortimanager_device'

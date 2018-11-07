@@ -110,7 +110,24 @@ class FortigateAdapter(AdapterBase, Configurable):
     def _create_fortimanager_device(self, device_raw):
         try:
             device = self._new_device_adapter()
-
+            logger.info(f'DEVICE {device_raw.keys()} RAW {device_raw}')
+            hostname = device_raw.get('hostname')
+            if not hostname:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = hostname
+            device.hostname = hostname
+            try:
+                if device_raw.get('last_checked'):
+                    device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('last_checked'))
+            except Exception:
+                logger.exception(f'Problem setting last seen to {device_raw}')
+            try:
+                ip = device_raw.get('ip')
+                if ip:
+                    device.add_nic(None, [ip])
+            except Exception:
+                logger.exception(f'Problem adding NIC to {device_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:
