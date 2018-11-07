@@ -332,6 +332,7 @@ def get_first_object_from_dn(dn):
     :return: e.g. Administrator
     """
     if type(dn) == str:
+        dn = dn.replace('\\,', '')
         dn = dn.split(",")
         if len(dn) > 0:
             # This usually looks like CN=User Name, CN=Users, DC=.... so lets take the first one

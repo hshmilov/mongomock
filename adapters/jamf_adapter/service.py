@@ -175,7 +175,7 @@ class JamfAdapter(AdapterBase, Configurable):
                     try:
                         is_managed = (general_info.get('remote_management') or {}).get('managed')
                         if is_managed is not None:
-                            device.is_managed = is_managed
+                            device.is_managed = is_managed == 'true'
                     except Exception:
                         logger.exception(f'Problem getting is managed for {general_info}')
                     try:
@@ -331,7 +331,7 @@ class JamfAdapter(AdapterBase, Configurable):
                     try:
                         is_managed = general_info.get('managed')
                         if is_managed is not None:
-                            device.is_managed = is_managed
+                            device.is_managed = is_managed == 'true'
                     except Exception:
                         logger.exception(f'Problem getting is managed for {general_info}')
                     try:

@@ -189,6 +189,12 @@ class EsxAdapter(AdapterBase):
             device = self._parse_vm_machine(node, _curr_path)
             if device is None:
                 return
+            try:
+                details = node.get('Details', {})
+                if details and details.get('config'):
+                    device.hostname = details.get('config').get('name')
+            except Exception:
+                logger.exception(f'Problem getting ESX Host name ')
             device.device_type = ESXDeviceType.ESXHost
             node_hardware = node.get('Hardware')
             if node_hardware:
