@@ -42,7 +42,7 @@
             </tab>
             <tab title="Notes" id="notes" key="notes">
                 <x-data-entity-notes :module="module" :entity-id="entityId" :data="entityNotes"
-                                     :read-only="readOnly || history !== undefined" />
+                                     :read-only="readOnly || history !== null" />
             </tab>
             <tab title="Tags" id="tags" key="tags">
                 <div @click="activateTag" class="x-btn link tag-edit" :class="{ disabled: readOnly }">Edit Tags</div>
@@ -111,6 +111,7 @@
 				return this.$route.params.id
             },
             history() {
+                if (this.$route.query.history === undefined) return null
 				return this.$route.query.history
             },
 			entityGenericAdvanced() {

@@ -540,7 +540,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'data': generic_data
             },
             'labels': entity['labels'],
-            'internal_axon_id': entity['internal_axon_id']
+            'internal_axon_id': entity['internal_axon_id'],
+            'accurate_for_datetime': entity.get('accurate_for_datetime', None)
         })
 
     def _disable_entity(self, entity_type: EntityType):
