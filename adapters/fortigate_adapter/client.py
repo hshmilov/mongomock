@@ -19,7 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class FortigateClient():
 
     def __init__(self, host, username, password, verify_ssl=False, port=DEFAULT_FORTIGATE_PORT,
-                 vdom=None, dhcp_lease_time=DEFAULT_DHCP_LEASE_TIME):
+                 vdom=None, dhcp_lease_time=DEFAULT_DHCP_LEASE_TIME, is_fortimanager=None):
         if port is None:
             port = DEFAULT_FORTIGATE_PORT
         if dhcp_lease_time is None:
