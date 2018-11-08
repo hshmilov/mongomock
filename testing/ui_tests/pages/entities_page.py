@@ -50,6 +50,7 @@ class EntitiesPage(Page):
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
     ALL_COLUMN_NAMES_CSS = 'thead>tr>th'
     ALL_ENTITIES_CSS = 'tbody>tr'
+    JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
 
     @property
     def url(self):
@@ -157,6 +158,12 @@ class EntitiesPage(Page):
     def clear_query_wizard(self):
         self.click_button('Clear', partial_class=True)
 
+    def clear_filter(self):
+        # Explicit clear needed for Mac - 'fill_filter' will not replace the text
+        self.click_query_wizard()
+        self.clear_query_wizard()
+        self.click_query_wizard()
+
     def find_expressions(self):
         return self.driver.find_elements_by_css_selector(self.QUERY_EXPRESSIONS_CSS)
 
@@ -249,3 +256,25 @@ class EntitiesPage(Page):
 
     def click_save_query_save_button(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
+
+    def run_filter_and_save(self, query_name, query_filter):
+        self.fill_filter(query_filter)
+        self.enter_search()
+        self.wait_for_table_to_load()
+        self.click_save_query()
+        self.fill_query_name(query_name)
+        self.click_save_query_save_button()
+
+    def customize_view_and_save(self, query_name, page_size, sort_field, toggle_columns, query_filter):
+        self.select_page_size(page_size)
+        self.wait_for_table_to_load()
+        self.click_sort_column(sort_field)
+        self.wait_for_table_to_load()
+        self.select_columns(toggle_columns)
+        self.run_filter_and_save(query_name, query_filter)
+
+    def execute_saved_query(self, query_name):
+        self.fill_filter(query_name)
+        self.open_search_list()
+        self.select_query_by_name(query_name)
+        self.wait_for_table_to_load()

@@ -3,7 +3,6 @@ from test_credentials.json_file_credentials import USER_NAME_UNICODE
 
 
 class TestUsersTable(TestBase):
-    JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
     USER_NAME_COLUMN = 'User Name'
     DOMAIN_COLUMN = 'Domain'
     MAIL_COLUMN = 'Mail'
@@ -62,3 +61,23 @@ class TestUsersTable(TestBase):
         self.users_page.select_columns([self.MAIL_COLUMN, self.DOMAIN_COLUMN])
         assert len(self.users_page.get_column_data(self.MAIL_COLUMN))
         assert not len(self.users_page.get_column_data(self.DOMAIN_COLUMN))
+
+    def test_user_save_query(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+
+        self.users_page.customize_view_and_save('test_save_query', 50, self.USER_NAME_COLUMN,
+                                                [self.MAIL_COLUMN, self.DOMAIN_COLUMN],
+                                                self.users_page.JSON_ADAPTER_FILTER)
+        view_data = self.users_page.get_all_data()
+
+        # Load some default view, to see that the saved one changes it
+        self.users_page.execute_saved_query('Users Created in Last 30 Days')
+        assert self.users_page.get_all_data() != view_data
+
+        self.users_page.clear_filter()
+        self.users_page.execute_saved_query('test_save_query')
+
+        # Check loaded data is equal to original one whose view was saved
+        assert self.users_page.get_all_data() == view_data

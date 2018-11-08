@@ -30,17 +30,10 @@ def create_alert_name(number, alert_name=ALERT_NAME):
 
 class TestAlert(TestBase):
 
-    def create_basic_saved_query(self, query_name, query_filter):
+    def create_alert_change_query(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
-        self.devices_page.fill_filter(query_filter)
-        self.devices_page.enter_search()
-        self.devices_page.click_save_query()
-        self.devices_page.fill_query_name(query_name)
-        self.devices_page.click_save_query_save_button()
-
-    def create_alert_change_query(self):
-        self.create_basic_saved_query(ALERT_CHANGE_NAME, ALERT_CHANGE_FILTER)
+        self.devices_page.run_filter_and_save(ALERT_CHANGE_NAME, ALERT_CHANGE_FILTER)
 
     def create_notifications(self, count=1, name=ALERT_NAME) -> List[str]:
         result = []
