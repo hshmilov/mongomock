@@ -28,7 +28,8 @@ class TestDevicesQuery(TestBase):
         assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.find_search_value() == windows_filter
-        assert all(x == 'Windows' for x in self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
+        assert all(x == self.devices_page.VALUE_OS_WINDOWS for x in
+                   self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
         self.devices_page.fill_filter('linux')
         self.devices_page.open_search_list()
         self.devices_page.select_query_by_name('Linux Operating System')
@@ -189,3 +190,23 @@ class TestDevicesQuery(TestBase):
         self._test_query_brackets()
         self._test_remove_query_expressions()
         self._test_not_expression()
+
+    def test_saved_query_field(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.select_query_field(self.devices_page.FIELD_SAVED_QUERY, parent=expressions[0])
+        self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_WINDOWS, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_text_error()
+        for os_type in self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE):
+            assert os_type == self.devices_page.VALUE_OS_WINDOWS
+
+        self.devices_page.select_query_value(self.devices_page.VALUE_SAVED_QUERY_LINUX, parent=expressions[0])
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_text_error()
+        assert not len(self.devices_page.get_all_data())

@@ -10,6 +10,8 @@ class DevicesPage(EntitiesPage):
     FIELD_ASSET_NAME = 'Asset Name'
     FIELD_SAVED_QUERY = 'Saved Query'
     VALUE_SAVED_QUERY_WINDOWS = 'Windows Operating System'
+    VALUE_SAVED_QUERY_LINUX = 'Linux Operating System'
+    VALUE_OS_WINDOWS = 'Windows'
     TAG_CHECKBOX_CSS = 'div.modal-container.w-xl > div.modal-body > div > div.x-checkbox-list > div > div'
     TAG_SAVE_BUTTON_CSS = 'div.modal-container.w-xl > div.modal-footer > div > button:nth-child(2)'
     LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.search-input > input'
