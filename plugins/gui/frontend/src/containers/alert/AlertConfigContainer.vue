@@ -130,12 +130,9 @@
                         <x-checkbox class="grid-span2" label="Tag all entities" v-model="actions.tagAll"/>
                         <input class="form-control" id="tagAllName" v-model="tagAllName" v-if="actions.tagAll">
                         <div v-if="!actions.tagAll"></div>
-                        <template v-if="alert.triggers.increase|| alert.triggers.new_entities">
-                            <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag New Entities"
-                                        v-model="actions.tag"/>
-                            <input class="form-control" id="tagName" v-model="tagName" v-if="actions.tag">
-                            <div v-if="!actions.tag"></div>
-                        </template>
+                        <x-checkbox class="grid-span2" label="Tag new entities" v-model="actions.tag"/>
+                        <input class="form-control" id="tagNew" v-model="tagNew" v-if="actions.tag">
+                        <div v-if="!actions.tag"></div>
                         <!-- TAGS -->
                     </div>
                 </div>
@@ -284,7 +281,7 @@
                 mailList: [],
                 mailListCC: [],
                 subject: '',
-                tagName: '',
+                tagNew: '',
                 tagAllName: '',
                 ticketEmail: '',
                 sendAllDevicesToSyslog: false,
@@ -357,7 +354,7 @@
                             break
                         case 'tag_entities':
                             this.actions.tag = true
-                            this.tagName = action.data
+                            this.tagNew = action.data
                             break
                         case 'tag_all_entities':
                             this.actions.tagAll = true
@@ -427,7 +424,7 @@
                 }
                 if (this.actions.tag) {
                     this.alert.actions.push({
-                        type: 'tag_entities', data: this.tagName
+                        type: 'tag_entities', data: this.tagNew
                     })
                 }
                 if (this.actions.tagAll) {

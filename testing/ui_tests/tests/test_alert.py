@@ -15,7 +15,12 @@ COMMON_ALERT_QUERY = 'Enabled AD Devices'
 
 ALERT_CHANGE_NAME = 'test_alert_change'
 ALERT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_alert_change == 5'
+
+AD_LAST_OR_ADDED_QUERY = '({added_filter}) or adapters_data.active_directory_adapter.ad_last_logon> date("NOW-8d")'
 ALERT_NUMBER_OF_DEVICES = 21
+
+TAG_ALL_COMMENT = 'tag all'
+TAG_NEW_COMMENT = 'tag new'
 
 
 @retry(stop_max_attempt_number=100, wait_fixed=100)
@@ -151,6 +156,52 @@ class TestAlert(TestBase):
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_CHANGE_NAME)
+
+    def test_tag_entities(self):
+        json_service = JsonFileService()
+        json_service.take_process_ownership()
+        try:
+            json_service.stop(should_delete=False)
+            self.devices_page.switch_to_page()
+            self.devices_page.run_filter_and_save(ALERT_CHANGE_NAME,
+                                                  AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
+                                                                                JSON_ADAPTER_FILTER))
+            self.alert_page.switch_to_page()
+            self.alert_page.wait_for_table_to_load()
+            self.alert_page.click_new_alert()
+            self.alert_page.wait_for_spinner_to_end()
+            self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
+            self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
+            self.alert_page.check_every_discovery()
+            self.alert_page.check_push_system_notification()
+            self.alert_page.click_tag_all_entities()
+            self.alert_page.fill_tag_all_text(TAG_ALL_COMMENT)
+            self.alert_page.click_save_button()
+            self.base_page.run_discovery()
+
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
+                                                                        JSON_ADAPTER_FILTER))
+            self.devices_page.enter_search()
+            assert self.devices_page.get_first_tag_text() == TAG_ALL_COMMENT
+
+            self.alert_page.switch_to_page()
+            self.alert_page.edit_alert(ALERT_CHANGE_NAME)
+            self.alert_page.wait_for_spinner_to_end()
+            self.alert_page.check_every_discovery()
+            self.alert_page.check_new()
+            self.alert_page.click_tag_all_entities()
+            self.alert_page.click_tag_new_entities()
+            self.alert_page.fill_tag_new_text(TAG_NEW_COMMENT)
+            self.alert_page.click_save_button()
+        finally:
+            json_service.start_and_wait()
+
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.fill_filter(self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.enter_search()
+        assert self.devices_page.get_first_tag_text() == TAG_NEW_COMMENT
 
     def test_save_query_deletion(self):
         self.create_alert_change_query()

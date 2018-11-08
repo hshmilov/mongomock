@@ -26,6 +26,8 @@ class Action:
     SendEmail = 'Send an Email'
     PushNotification = 'Push a system notification'
     Syslog = 'Notify syslog'
+    TagAllEntities = 'Tag all entities'
+    TagNewEntities = 'Tag new entities'
 
 
 class AlertPage(EntitiesPage):
@@ -68,6 +70,22 @@ class AlertPage(EntitiesPage):
         element = self.find_element_by_text(Action.SendEmail)
         self.scroll_into_view(element, X_BODY)
         element.click()
+
+    def click_tag_all_entities(self):
+        element = self.find_element_by_text(Action.TagAllEntities)
+        self.scroll_into_view(element, X_BODY)
+        element.click()
+
+    def click_tag_new_entities(self):
+        element = self.find_element_by_text(Action.TagNewEntities)
+        self.scroll_into_view(element, X_BODY)
+        element.click()
+
+    def fill_tag_all_text(self, tag_text):
+        self.fill_text_field_by_element_id('tagAllName', tag_text)
+
+    def fill_tag_new_text(self, tag_text):
+        self.fill_text_field_by_element_id('tagNew', tag_text)
 
     def find_missing_email_server_notification(self):
         return self.find_element_by_text('In order to send alerts through mail, define the server under settings')
