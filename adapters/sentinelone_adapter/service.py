@@ -176,6 +176,20 @@ class SentineloneAdapter(AdapterBase):
                         logging.exception(f'Problem getting user for {user_raw}')
             except Exception:
                 logging.exception(f'Problem getting users for {device_raw}')
+            try:
+                apps = device_raw.get('apps')
+                if not isinstance(apps, list):
+                    apps = []
+                for app in apps:
+                    try:
+                        app_name = app.get('name')
+                        app_version = app.get('version')
+                        app_vendor = app.get('publisher')
+                        device.add_installed_software(name=app_name, version=app_version, vendor=app_vendor)
+                    except Exception:
+                        logger.exception(f'Problem adding app to device raw {app} device: {device_raw}')
+            except Exception:
+                logger.exception(f'Problem adding apps to {device_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:

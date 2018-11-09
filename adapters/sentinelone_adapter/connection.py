@@ -99,6 +99,11 @@ class SentinelOneConnection(RESTConnection):
             try:
                 for device_raw in self._get('web/api/v1.6/agents', url_params={'limit': consts.DEVICE_PER_PAGE,
                                                                                'skip': start_offset}):
+                    try:
+                        device_id = device_raw.get('id')
+                        device_raw['apps'] = self._get(f'web/api/v1.6/agents/{device_id}/applications')
+                    except Exception:
+                        logger.exception(f'Problem adding software to {device_raw}')
                     yield device_raw, consts.V1
             except Exception:
                 logger.exception(f'Problem with offset {start_offset}')
