@@ -1,3 +1,4 @@
+import urllib3
 import logging
 
 from axonius.mixins.configurable import Configurable
@@ -17,7 +18,8 @@ from multiprocessing.pool import ThreadPool
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE, PROXY_SETTINGS, PROXY_USER, \
+    PROXY_PASSW, PROXY_ADDR, PROXY_PORT
 from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
 
@@ -471,6 +473,13 @@ class CoreService(PluginBase, Configurable):
 
     def _on_config_update(self, config):
         logger.info(f"Loading core config: {config}")
+        self._proxy_settings = config[PROXY_SETTINGS]
+
+        try:
+            with open('/tmp/proxy_data.txt', 'w') as f:
+                f.write(self.to_proxy_string(self._proxy_settings))
+        except Exception:
+            logger.error(f'Failed to set proxy settings from gui {self._proxy_settings}')
 
         def update_plugin(plugin_name):
             try:
@@ -481,6 +490,22 @@ class CoreService(PluginBase, Configurable):
         online_plugins = self.online_plugins.keys()
         if online_plugins:
             self.__config_updater_pool.map_async(update_plugin, online_plugins)
+
+    @staticmethod
+    def to_proxy_string(proxy_data):
+        """
+        Format proxy paramteres into proxy string format without the protocol prefix
+        :param proxy_data: dict with proxy params such as user name, port ip etc
+        """
+        if not proxy_data['enabled'] or not proxy_data[PROXY_ADDR] or proxy_data[PROXY_ADDR] == '':
+            return ''
+        ip_port = f'{proxy_data[PROXY_ADDR]}:{proxy_data[PROXY_PORT]}'
+        proxy_string = ip_port
+        if proxy_data[PROXY_USER]:
+            proxy_string = f'{proxy_data[PROXY_USER]}:{proxy_data[PROXY_PASSW]}@{ip_port}'
+
+        urllib3.ProxyManager(f'http://{proxy_string}')
+        return proxy_string
 
     @classmethod
     def _db_config_schema(cls) -> dict:

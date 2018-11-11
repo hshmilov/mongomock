@@ -54,7 +54,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORE_UNIQUE_NAME, GUI_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           TROUBLESHOOTING_SETTING,
-                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, X_UI_USER, X_UI_USER_SOURCE)
+                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, X_UI_USER, X_UI_USER_SOURCE,
+                                          PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
@@ -2219,10 +2220,44 @@ class PluginBase(Configurable, Feature):
                     "title": "Maintenance Settings",
                     "type": "array",
                     "required": [ANALYTICS_SETTING, TROUBLESHOOTING_SETTING]
+                },
+                {
+                    'name': PROXY_SETTINGS,
+                    'title': 'Proxy settings',
+                    'type': 'array',
+                    'required': ['proxy_addr', 'proxy_port'],
+                    'items': [
+                        {
+                            "name": "enabled",
+                            "title": "Proxy Enabled",
+                            "type": "bool",
+                            "required": True
+                        },
+                        {
+                            'name': PROXY_ADDR,
+                            'title': 'Proxy address',
+                            'type': 'string'
+                        },
+                        {
+                            'name': PROXY_PORT,
+                            'title': 'Proxy port',
+                            'type': 'number'
+                        },
+                        {
+                            'name': PROXY_USER,
+                            'title': 'Proxy username',
+                            'type': 'string'
+                        },
+                        {
+                            'name': PROXY_PASSW,
+                            'title': 'Proxy password',
+                            'type': 'string'
+                        }
+                    ]
                 }
             ],
-            "pretty_name": "Global Configuration",
-            "type": "array"
+            'pretty_name': 'Global Configuration',
+            'type': 'array'
         }
 
     @staticmethod
@@ -2269,5 +2304,12 @@ class PluginBase(Configurable, Feature):
             MAINTENANCE_SETTINGS: {
                 ANALYTICS_SETTING: True,
                 TROUBLESHOOTING_SETTING: True
+            },
+            PROXY_SETTINGS: {
+                'enabled': False,
+                PROXY_ADDR: '',
+                PROXY_PORT: 8080,
+                PROXY_USER: '',
+                PROXY_PASSW: ''
             }
         }

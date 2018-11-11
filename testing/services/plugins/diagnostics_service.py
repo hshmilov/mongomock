@@ -53,15 +53,16 @@ class DiagnosticsService(DockerService):
     def environment(self):
         env = json.loads(self.diag_env_file.read_bytes())
 
-        for k, v in env.items():
-            yield f'{k}={v}'
-
-        proxy = os.environ.get('https_proxy')
-        if proxy is not None and proxy != '':
+        proxy = env.get('HTTPS_PROXY')
+        if proxy:
             connect, username, password = parse_proxy(proxy)
             yield f'PROXY_CONNECT={connect}'
             yield f'PROXY_PASSWORD={password}'
             yield f'PROXY_USERNAME={username}'
+            env.pop('HTTPS_PROXY', None)
+
+        for k, v in env.items():
+            yield f'{k}={v}'
 
     @property
     def volumes(self):

@@ -21,6 +21,11 @@ SYSTEM_SETTINGS = 'system_settings'
 MAINTENANCE_SETTINGS = 'maintenance_settings'
 ANALYTICS_SETTING = 'analytics'
 TROUBLESHOOTING_SETTING = 'troubleshooting'
+PROXY_SETTINGS = 'proxy_settings'
+PROXY_ADDR = 'proxy_addr'
+PROXY_PORT = 'proxy_port'
+PROXY_USER = 'proxy_user'
+PROXY_PASSW = 'proxy_password'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
