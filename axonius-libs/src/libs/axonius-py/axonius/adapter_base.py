@@ -960,6 +960,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
             return _raw_data, _parsed_data
 
         try:
+            self._save_field_names_to_db(entity_type)
             raw_data, parsed_data = _get_raw_and_parsed_data()
         except Exception as e:
             with self._clients_lock:

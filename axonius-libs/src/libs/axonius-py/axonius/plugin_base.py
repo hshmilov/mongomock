@@ -435,16 +435,6 @@ class PluginBase(Configurable, Feature):
         self._update_schema()
         self._update_config_inner()
 
-        # Save field names to db on the initialiation of the plugin, just to have the generic static fields
-        # appear in the gui immediately.
-        try:
-            if self.MyDeviceAdapter is not None:
-                self._save_field_names_to_db(EntityType.Devices)
-            if self.MyUserAdapter is not None:
-                self._save_field_names_to_db(EntityType.Users)
-        except Exception:
-            logger.exception(f'Problem persisting field names to db')
-
         # Finished, Writing some log
         logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                          self.version,
