@@ -71,3 +71,17 @@ class TestGlobalSettings(TestBase):
         wait_until(
             lambda: LogTester(GUI_LOG_PATH).is_pattern_in_log(
                 '(Creating a stop job for the time|Job already existing - updating its run time to)', 10))
+
+    def test_proxy_settings(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        self.settings_page.wait_for_spinner_to_end()
+
+        proxy_ip = '1.2.3.4'
+        self.settings_page.set_proxy_settings_enabled()
+        self.settings_page.fill_proxy_address('1.2.3.4')
+        self.settings_page.save_and_wait_for_toaster()
+
+        (content, _, _) = self.axonius_system.core.get_file_contents_from_container('/tmp/proxy_data.txt')
+        content = content.decode().strip()
+        assert content == f'{proxy_ip}:8080'

@@ -47,6 +47,7 @@ class SettingsPage(Page):
     SELECT_OPTION_CSS = 'div.x-select-option'
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
+    USE_PROXY = 'Proxy Enabled'
 
     @property
     def url(self):
@@ -382,3 +383,10 @@ class SettingsPage(Page):
     def is_saml_login_enabled(self):
         toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)
         return self.is_toggle_selected(toggle)
+
+    def set_proxy_settings_enabled(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.USE_PROXY)
+        self.click_toggle_button(toggle, make_yes=make_yes)
+
+    def fill_proxy_address(self, proxy_addr):
+        self.fill_text_field_by_element_id('proxy_addr', proxy_addr)
