@@ -39,10 +39,10 @@ class TestMetrics(TestBase):
             wait_until(lambda: tester.is_metric_in_log('system.users.seen', r'\d+'))  # TBD
             wait_until(lambda: tester.is_metric_in_log('system.users.unique', users_unique))
 
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter', 10))
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter', 10))
+            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter', r'\[10, 10\]'))
+            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter', r'\[10, 10\]'))
 
-            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter', 2))
+            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter', r'\[2, 2\]'))
             wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter', r'\d+'))
 
             report = re.escape(metric_query)

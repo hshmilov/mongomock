@@ -39,13 +39,33 @@
             },
             dataCounters() {
 				if (!this.data || !this.data.counters) return []
-				return [ ...this.data.counters ].sort((first, second) => second.value - first.value)
+
+                function pretty_number(a, b) {
+				    if (a != b){
+				        return `${a} (${b})`
+                    }
+                    return a
+                }
+
+				return [ ...this.data.counters ]
+                    .sort((first, second) => second.value[1] - first.value[1])
+                    .map(x => {
+                        return {
+                            name: x.name,
+                            value:`${pretty_number(x.value[0], x.value[1])}`
+                        }
+                    })
             },
             dataSeen() {
-				return this.data.seen || 0
+			    let seen = this.data.seen || 0
+                let nonunique_seen = this.data.nonunique_seen || 0
+                if (seen != nonunique_seen) {
+                    return `${seen} (${nonunique_seen})`
+                }
+                return seen
             },
             dataUnique() {
-				return Math.min(this.data.unique || 0, this.dataSeen)
+				return Math.min(this.data.unique || 0, this.data.seen || 0)
             }
         },
         methods: {

@@ -21,7 +21,7 @@ class LogTester:
         """
         Check is a certain metric is present in log
         :param metric_name: Value of metric_name field
-        :param value: regex pattern for value, or exact value otherwise
+        :param value: str pattern for regex value, or exact numeric value otherwise
         :param lines_lookback: number of lines to go back in log
         :return: True iff the metric was present in the log
         """
