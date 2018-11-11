@@ -37,6 +37,13 @@ class DockerService(AxonService):
         self._process_owner = True
 
     @property
+    def fqdn(self):
+        """
+        :return: list of pairs (exposed_port, inner_port)
+        """
+        return f'{self.container_name}.axonius.local'
+
+    @property
     def exposed_ports(self):
         """
         :return: list of pairs (exposed_port, inner_port)
@@ -129,7 +136,8 @@ else:
 
         logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
 
-        docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
+        docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
+                     '--network-alias', self.fqdn, '--detach']
 
         max_allowed_memory = self.max_allowed_memory
         if max_allowed_memory:

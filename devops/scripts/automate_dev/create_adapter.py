@@ -153,7 +153,7 @@ version = %%version%%
 [DEBUG]
 host = 0.0.0.0
 port = 443
-core_address = https://core"""
+core_address = https://core.axonius.local"""
 
     with open(filename, 'w') as file_:
         file_.write(template)
