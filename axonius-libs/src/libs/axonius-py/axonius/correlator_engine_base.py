@@ -121,6 +121,49 @@ def _prefilter_devices(devices, correlation_preconditions):
             pass
 
 
+class PairsTracker:
+    def __init__(self):
+        """
+        Allows tracking pairs that are "linked".
+        Lets take an instance where we are correlating numbers 1 to 6.
+        Lets say that the correlator has returned all possible combinations:
+        1->2,1->3,1->4,...2->3,2->4,...,4->5,4->6,5->6...
+        pick 2 out of 6 - gives you 15 options.
+
+        However we only want to perform 5 correlations: 1->2->...->6 - the rest could be optimized away
+        By using "add pair" we can track which values had been
+        """
+        self.__tracker = {}
+
+    def add_pair(self, x, y) -> bool:
+        """
+        Returns whether the pair is new or not
+        """
+        if x not in self.__tracker and y not in self.__tracker:
+            arr = [object()]
+            self.__tracker[x] = arr
+            self.__tracker[y] = arr
+            return True
+
+        if x in self.__tracker:
+            # not new
+            if y not in self.__tracker:
+                self.__tracker[y] = self.__tracker[x]
+                return True
+            else:
+                if self.__tracker[y][0] == self.__tracker[x][0]:
+                    # they're the same already
+                    return False
+
+                # Y is already known, mark everything associated with Y as X
+                self.__tracker[y][0] = self.__tracker[x][0]
+            return True
+
+        if y in self.__tracker:
+            # x is assumed not in self.__tracker because it was checked above
+            self.__tracker[x] = self.__tracker[y]
+
+
 class CorrelatorEngineBase(ABC):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -185,7 +228,7 @@ class CorrelatorEngineBase(ABC):
         """
         for bucket in self._bucket_creator(adapters_to_correlate, sort_order, bucket_insertion_comparators):
             # This is to prevents massive false correlation
-            if len(bucket) > 100:
+            if len(bucket) > 10000:
                 logger.critical(f'Got a huge bucket this is really bad {len(bucket)}')
                 continue
             if pair_correlation_preconditions:
@@ -289,7 +332,7 @@ class CorrelatorEngineBase(ABC):
             for axonius_device in devices
             for adapter_device in axonius_device['adapters']
         }
-        correlations_done_already = set()
+        correlations_done_already = PairsTracker()
 
         correlations_with_unavailable_devices = list()
 
@@ -353,12 +396,6 @@ class CorrelatorEngineBase(ABC):
                    in first_axonius_device['tags']):
                 continue
 
-            sorted_associated_adapters = tuple(sorted(result.associated_adapters))
-            if sorted_associated_adapters in correlations_done_already:
-                logger.debug(f"result is the same as old one : {result}")
-                # skip correlations done twice
-                continue
-
             if not self._bigger_picture_decision(first_axonius_device, second_axonius_device,
                                                  first_adapter_device, second_adapter_device):
                 logger.debug(f'{first_adapter_device} and {second_adapter_device} won\'t get correlated'
@@ -366,7 +403,12 @@ class CorrelatorEngineBase(ABC):
                 continue
 
             else:
-                correlations_done_already.add(sorted_associated_adapters)
+                if not correlations_done_already.add_pair(first_axonius_device['internal_axon_id'],
+                                                          second_axonius_device['internal_axon_id']):
+                    logger.debug(f"result is the same as old one : {result}")
+                    # skip correlations optimized away
+                    continue
+
                 yield result
 
         # sort all correlations src->dst ("src" - device used for correlation and "dst" - device found by

@@ -51,6 +51,7 @@ def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=
     generate_name = str(uuid.uuid1()) if plugin_name is None else plugin_name
     generated_id = device_id if device_id else str(uuid.uuid1())
     val = {
+        'internal_axon_id': uuid.uuid1(),
         'tags': [],
         'adapters': [
             {

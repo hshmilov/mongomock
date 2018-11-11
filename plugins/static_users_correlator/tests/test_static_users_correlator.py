@@ -44,6 +44,7 @@ def get_raw_device(mail=None, tag_data=None, principle_name=None):
     generate_name = str(uuid.uuid1())
     generated_id = str(uuid.uuid1())
     val = {
+        'internal_axon_id': uuid.uuid1(),
         'tags': [],
         'adapters': [
             {

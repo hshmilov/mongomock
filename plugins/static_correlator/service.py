@@ -46,6 +46,7 @@ class StaticCorrelatorService(CorrelatorBase):
         return list(self.devices_db.aggregate([
             {"$match": match},
             {'$project': {
+                'internal_axon_id': 1,
                 'adapters': {
                     '$map': {
                         'input': '$adapters',
