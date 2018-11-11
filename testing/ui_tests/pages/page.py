@@ -285,6 +285,20 @@ class Page:
                 return True
         raise TimeoutException(f'Timeout while waiting for {value} to disappear')
 
+    def wait_for_toaster_to_end(self,
+                                text,
+                                retries=RETRY_WAIT_FOR_ELEMENT,
+                                interval=SLEEP_INTERVAL):
+        for _ in range(retries):
+            try:
+                toaster = self.find_toaster(text)
+                if not toaster:
+                    return True
+                time.sleep(interval)
+            except NoSuchElementException:
+                return True
+        raise TimeoutException(f'Timeout while waiting for toaster {text} to disappear')
+
     def find_element(self, how, what, element=None):
         if element is None:
             return self.driver.find_element(by=how, value=what)

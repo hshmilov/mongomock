@@ -146,15 +146,17 @@ class Triggerable(Feature, ABC):
         Stops job_state
         """
         logger.info(f'Stopping job {job_name}')
-        job_state.thread.terminate_thread()
-        promise = job_state.promise
-        if promise:
-            promise.do_reject(Exception('Stopped manually exception'))
-            job_state.promise = None
-        job_state.scheduled = False
-        job_state.triggered = False
-        job_state.last_error = 'Stopped manually'
-        self._stopped(job_name)
+        if job_state.triggered:
+            logger.info(f'Job state: {job_state}')
+            job_state.thread.terminate_thread()
+            promise = job_state.promise
+            if promise:
+                job_state.promise = None
+                promise.do_reject(Exception('Stopped manually exception'))
+            job_state.scheduled = False
+            job_state.triggered = False
+            job_state.last_error = 'Stopped manually'
+            self._stopped(job_name)
 
     @add_rule('stop/<job_name>', methods=['POST'])
     def stop_job(self, job_name):
@@ -227,6 +229,8 @@ class Triggerable(Feature, ABC):
 
         def to_run(*args, **kwargs):
             with job_state.lock:
+                if not job_state.promise:
+                    return
                 job_state.last_started_time = datetime.now()
             return self._triggered(job_name, post_json, *args, **kwargs)
 

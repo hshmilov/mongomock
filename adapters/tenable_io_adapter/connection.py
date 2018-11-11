@@ -3,6 +3,7 @@ import time
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.thread_stopper import StopThreadException
 from axonius.utils.parsing import make_dict_from_csv
 from tenable_io_adapter import consts
 
@@ -182,6 +183,8 @@ class TenableIoConnection(RESTConnection):
                             agents_raw.extend(self._get(f'scanners/{scanner_id}/agents',
                                                         url_params={'offset': offset,
                                                                     'limit': consts.AGENTS_PER_PAGE})['agents'])
+                        except StopThreadException:
+                            raise
                         except BaseException:
                             logger.exception(f'Problem with offset {offset}')
                         offset += consts.MAX_AGENTS

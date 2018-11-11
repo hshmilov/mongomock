@@ -1,18 +1,18 @@
 import concurrent.futures
 import multiprocessing
 import queue
+import sys
 from datetime import datetime
 from threading import RLock
 import logging
 
+from axonius.logging.logger import clean_locks_from_logger
+from axonius.thread_stopper import ThreadStopper, StopThreadException
+
 import func_timeout
-from func_timeout import StoppableThread
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-
-class StopThreadException(BaseException):
-    pass
 
 
 class ReusableThread:
@@ -49,15 +49,8 @@ class ReusableThread:
 
         thread = threads[0]
 
-        class StopThreadExceptionTempType(StopThreadException):
-            def __init__(self):
-                return StopThreadException.__init__(self)
-
-        exception = type('StopThreadException', StopThreadExceptionTempType.__bases__,
-                         dict(StopThreadExceptionTempType.__dict__))
-
         logger.info(f'Stopping thread {thread}')
-        StoppableThread._stopThread(thread, exception, raiseEvery=1.5)
+        ThreadStopper.async_raise([thread.ident])
         self.__executor.shutdown(wait=False)
         self.__build_executor()
 
@@ -86,9 +79,9 @@ def run_in_thread_helper(thread: ReusableThread, method_to_call, resolve, reject
         except Exception as e:
             logger.exception(f'Exception in {method_to_call.__name__} using thread {thread}')
             reject(e)
-        except (StopThreadException, func_timeout.exceptions.FunctionTimedOut) as e:
-            logger.info(f'StopThread or Timeout in {method_to_call.__name__} using thread {thread}')
-            reject(e)
+        except (StopThreadException, func_timeout.exceptions.FunctionTimedOut):
+            logger.exception(f'StopThread or Timeout in {method_to_call.__name__} using thread {thread}')
+            clean_locks_from_logger()
 
     thread.start(resolver)
 

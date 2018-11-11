@@ -1,7 +1,6 @@
 import pytest
 from selenium.common.exceptions import (InvalidElementStateException,
-                                        NoSuchElementException,
-                                        WebDriverException)
+                                        NoSuchElementException)
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -51,8 +50,7 @@ class TestUserPermissions(TestBase):
         self.adapters_page.switch_to_page()
         self.adapters_page.click_adapter('Active Directory')
         self.adapters_page.wait_for_table_to_load()
-        with pytest.raises(WebDriverException):
-            self.adapters_page.click_new_server()
+        self.adapters_page.assert_new_server_button_is_disabled()
 
         self.alert_page.switch_to_page()
         with pytest.raises(NoSuchElementException):

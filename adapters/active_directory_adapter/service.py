@@ -1214,7 +1214,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 raise ValueError(err_log)
             else:
                 err_log = f"Execution Error! command returned returncode " \
-                          f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
+                    f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
                 logger.error(err_log)
                 raise ValueError(err_log)
 
@@ -1250,7 +1250,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # Many validity check
         if len(product) != len(commands):
             err_log = f"Error, needed to run {commands} and expected the same length in return " \
-                      f"but got {product}"
+                f"but got {product}"
             logger.error(err_log)
             raise ValueError(err_log)
 
@@ -1263,7 +1263,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         if len(product['data']) != len(axr_commands):
             err_log = f"Error, needed to run {axr_commands} and expected the same length in return " \
-                      f"but got {product}"
+                f"but got {product}"
             logger.error(err_log)
             raise ValueError(err_log)
 
@@ -1336,7 +1336,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # Some more validity check
         if len(product) != len(wmi_smb_commands):
             err_log = f"Error, needed to run {wmi_smb_commands} and expected the same length in return " \
-                      f"but got {product}"
+                f"but got {product}"
             logger.error(err_log)
             raise ValueError(err_log)
 

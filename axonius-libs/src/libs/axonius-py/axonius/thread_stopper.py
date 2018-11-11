@@ -1,9 +1,11 @@
 import logging
 
-from axonius.utils.threading import StopThreadException
-
 logger = logging.getLogger(f'axonius.{__name__}')
 import ctypes
+
+
+class StopThreadException(BaseException):
+    pass
 
 
 class ThreadStopper(object):

@@ -3236,7 +3236,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
         self.dump_metrics()
-        self.generate_new_report_offline()
+        return self.generate_new_report_offline()
 
     def generate_new_report_offline(self):
         """
@@ -3246,26 +3246,22 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return: "Success" if successful, error if there is an error
         """
 
-        try:
-            logger.info("Rendering Report.")
-            # generate_report() renders the report html
-            report_html = self.generate_report()
-            # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
-            with io.BytesIO() as report_data:
-                report_html.write_pdf(report_data)
-                report_data.seek(0)
-                # Uploads the report to the db and returns a uuid to retrieve it
-                uuid = self._upload_report(report_data)
-                logger.info(f"Report was saved to the db {uuid}")
-                # Stores the uuid in the db in the "reports" collection
-                self._get_collection("reports").replace_one(
-                    {'filename': 'most_recent_report'},
-                    {'uuid': uuid, 'filename': 'most_recent_report', 'time': datetime.now()}, True
-                )
-            return "Success"
-        except Exception as e:
-            logger.exception('Failed to generate report.')
-            return return_error(f'Problem generating report:\n{str(e.args[0]) if e.args else e}', 400)
+        logger.info("Rendering Report.")
+        # generate_report() renders the report html
+        report_html = self.generate_report()
+        # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
+        with io.BytesIO() as report_data:
+            report_html.write_pdf(report_data)
+            report_data.seek(0)
+            # Uploads the report to the db and returns a uuid to retrieve it
+            uuid = self._upload_report(report_data)
+            logger.info(f"Report was saved to the db {uuid}")
+            # Stores the uuid in the db in the "reports" collection
+            self._get_collection("reports").replace_one(
+                {'filename': 'most_recent_report'},
+                {'uuid': uuid, 'filename': 'most_recent_report', 'time': datetime.now()}, True
+            )
+        return "Success"
 
     def _upload_report(self, report):
         """

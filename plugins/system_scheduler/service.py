@@ -22,8 +22,8 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.thread_stopper import StopThreadException
 from axonius.utils.files import get_local_config_file
-from axonius.utils.threading import StopThreadException
 from flask import jsonify
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -197,8 +197,10 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 yield
             except StopThreadException:
                 logger.info('Stopped execution')
+                raise
             except BaseException:
                 logger.exception(f'Failed {scheduler_consts.Phases.Research.name} Phase.')
+                raise
             finally:
                 logger.info(f'Back to {scheduler_consts.Phases.Stable} Phase.')
                 self.current_phase = scheduler_consts.Phases.Stable

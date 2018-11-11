@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import threading
 from abc import ABC, abstractmethod
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -11,7 +10,6 @@ from axonius.entities import EntityType
 from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase
-from funcy import chunks
 from namedlist import namedlist
 
 from axonius.types.correlation import CorrelationResult
@@ -149,24 +147,21 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         entities_to_correlate = self.get_entities_from_ids(entities_ids)
         logger.info(
             f"Correlator {self.plugin_unique_name} started to correlate {len(entities_to_correlate)} entities")
-        pool = ThreadPool(processes=2 * multiprocessing.cpu_count())
+        with ThreadPool(processes=2 * multiprocessing.cpu_count()) as pool:
+            def process_correlation_result(result):
+                if isinstance(result, CorrelationResult):
+                    try:
+                        self.link_adapters(self._entity_to_correlate, result)
+                    except Exception:
+                        logger.warning(f'Failed linking for some reason, {result}')
+                if isinstance(result, WarningResult):
+                    logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
+                    self.create_notification(result.title, result.content, result.notification_type)
+                    return
 
-        def process_correlation_result(result):
-            if isinstance(result, CorrelationResult):
-                try:
-                    self.link_adapters(self._entity_to_correlate, result)
-                except Exception:
-                    logger.warning(f'Failed linking for some reason, {result}')
-            if isinstance(result, WarningResult):
-                logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
-                self.create_notification(result.title, result.content, result.notification_type)
-                return
-
-        pool.map_async(process_correlation_result, self._correlate(entities_to_correlate))
-        logger.info("Waiting for correlation")
-        pool.close()
-        pool.join()
-        logger.info("Done!")
+            logger.info("Waiting for correlation")
+            pool.map(process_correlation_result, self._correlate(entities_to_correlate))
+            logger.info("Done!")
         self._request_db_rebuild(sync=False)
 
     @property

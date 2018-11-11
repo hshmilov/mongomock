@@ -24,10 +24,11 @@ from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.thread_stopper import StopThreadException
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
 from axonius.utils.parsing import get_exception_string
-from axonius.utils.threading import timeout_iterator, StopThreadException
+from axonius.utils.threading import timeout_iterator
 from bson import ObjectId
 from flask import jsonify, request
 
@@ -944,6 +945,8 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                     self.create_notification(f"Timeout after {timeout} seconds for '{client_name}'"
                                              f" client on {self.plugin_unique_name}"
                                              f" while fetching {entity_type.value}", repr(e))
+                except StopThreadException:
+                    raise
                 except BaseException:
                     logger.exception("Unexpected exception")
 

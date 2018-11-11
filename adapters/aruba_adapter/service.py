@@ -16,7 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class ArubaAdapter(AdapterBase):
 
-    #pylint: disable =R0902
+    # pylint: disable =R0902
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Aruba Device Type', enum=['Arp Device', 'Client Airwave'])
         protocol = Field(str, 'Protocol')

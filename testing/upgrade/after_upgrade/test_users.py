@@ -1,5 +1,5 @@
 import pytest
-from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from ui_tests.pages.adapters_page import AdaptersPage
@@ -38,5 +38,4 @@ class TestPrepareUsers(TestBase):
         self.adapters_page.switch_to_page()
         self.adapters_page.click_adapter('Active Directory')
         self.adapters_page.wait_for_table_to_load()
-        with pytest.raises(WebDriverException):
-            self.adapters_page.click_new_server()
+        self.adapters_page.assert_new_server_button_is_disabled()

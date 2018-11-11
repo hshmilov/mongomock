@@ -7,7 +7,10 @@ from axonius.logging.customised_json_formatter import CustomisedJSONFormatter
 BYTES_LIMIT = 5 * 1024 * 1024  # 5MB
 
 
-def create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
+LOGGER = None
+
+
+def _create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
     """ Creating Json logger.
 
     Creating a logging object to be used by the plugin. This object is the pythonic logger object
@@ -33,3 +36,25 @@ def create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
     logger.addHandler(file_handler)
     logger.setLevel(log_level)
     return logger
+
+
+def create_logger(*args, **kwargs):
+    # pylint: disable=W0603
+    global LOGGER
+    if not LOGGER:
+        LOGGER = _create_logger(*args, **kwargs)
+    return LOGGER
+
+
+def clean_locks_from_logger():
+    # pylint: disable=W0212
+    # cleaning logger locks we might still be holding
+    if not LOGGER:
+        return
+    LOGGER.info(f'Clearing locks from {LOGGER.handlers}')
+    for handler in LOGGER.handlers:
+        try:
+            lock = handler.lock
+            lock._release_save()
+        except Exception:
+            LOGGER.exception(f'Exception while restoring locks - {handler} - {lock}')
