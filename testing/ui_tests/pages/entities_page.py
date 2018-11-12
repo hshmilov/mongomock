@@ -51,6 +51,9 @@ class EntitiesPage(Page):
     ALL_COLUMN_NAMES_CSS = 'thead>tr>th'
     ALL_ENTITIES_CSS = 'tbody>tr'
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
+    DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
+    DATEPICKER_CLEAR_CSS = '.md-datepicker .md-button'
+    DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
 
     @property
     def url(self):
@@ -162,7 +165,7 @@ class EntitiesPage(Page):
         # Explicit clear needed for Mac - 'fill_filter' will not replace the text
         self.click_query_wizard()
         self.clear_query_wizard()
-        self.click_query_wizard()
+        self.close_dropdown()
 
     def find_expressions(self):
         return self.driver.find_elements_by_css_selector(self.QUERY_EXPRESSIONS_CSS)
@@ -256,6 +259,16 @@ class EntitiesPage(Page):
 
     def click_save_query_save_button(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
+
+    def fill_showing_results(self, date_to_fill):
+        self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS, date_to_fill.date().isoformat())
+
+    def close_showing_results(self):
+        self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS).click()
+        self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
+
+    def clear_showing_results(self):
+        self.driver.find_element_by_css_selector(self.DATEPICKER_CLEAR_CSS).click()
 
     def run_filter_and_save(self, query_name, query_filter):
         self.fill_filter(query_filter)

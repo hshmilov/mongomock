@@ -7,6 +7,7 @@ class DevicesPage(EntitiesPage):
     FIELD_ADAPTERS = 'Adapters'
     FIELD_LAST_SEEN = 'Last Seen'
     FIELD_HOST_NAME = 'Host Name'
+    FIELD_HOSTNAME_NAME = 'hostname'
     FIELD_ASSET_NAME = 'Asset Name'
     FIELD_SAVED_QUERY = 'Saved Query'
     VALUE_SAVED_QUERY_WINDOWS = 'Windows Operating System'

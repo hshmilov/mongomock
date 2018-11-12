@@ -49,9 +49,15 @@
                     return this.historicalState.substring(0, 10)
                 },
                 set(newDate) {
+                    let historical = newDate
+                    if (historical !== null) {
+                        // Distracting Timezone difference, so that ISO date will be midnight of same day
+                        historical.setMinutes(historical.getMinutes() - historical.getTimezoneOffset())
+                        historical = this.allowedDates[historical.toISOString().substring(0, 10)]
+                    }
                     this.updateView({
                         module: this.module, view: {
-                            historical: this.allowedDates[newDate]
+                            historical
                         }
                     })
                 }
@@ -89,6 +95,6 @@
 
 <style lang="scss">
     .x-data-entities {
-        height: calc(100% - 24px);
+        height: calc(100% - 36px);
     }
 </style>

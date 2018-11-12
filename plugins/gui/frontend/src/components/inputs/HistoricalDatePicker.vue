@@ -1,28 +1,18 @@
 <template>
     <div class="x-historical-date-picker">
         <div class="title">Showing Results for</div>
-        <x-date-edit @input="confirmPickDate" placeholder="latest" v-model="date" :show-time="false"
-                     :limit="[{ type: 'fromto', from: firstHistoricalDate, to: new Date()}]"/>
-        <a v-if="showingHistorical" class="x-btn link" @click="clearDate">x</a>
+        <md-datepicker v-model="selectedDate" :md-disabled-dates="checkDateAvailability" :md-immediately="true"
+                       @md-clear="onClear" :md-debounce="500" :class="{'no-icon': minimal}" />
     </div>
 </template>
 
 
 <script>
-    import xDateEdit from '../../components/controls/string/DateEdit.vue'
-    import {mapState} from 'vuex'
+    import { mapState } from 'vuex'
 
     export default {
         name: 'x-historical-date-picker',
-        components: {
-            xDateEdit
-        },
-        data() {
-            return {
-                date: this.value
-            }
-        },
-        props: ['value', 'module'],
+        props: ['module', 'minimal'],
         computed: {
             ...mapState({
                 firstHistoricalDate(state) {
@@ -44,22 +34,34 @@
             }),
             showingHistorical() {
                 return this.date != null
+            },
+            currentDate() {
+                return new Date()
+            }
+        },
+        data() {
+            return {
+                selectedDate: null
+            }
+        },
+        watch: {
+            selectedDate(newDate) {
+                this.$emit('input', newDate)
             }
         },
         methods: {
-            confirmPickDate() {
-                if (this.allowedDates && !this.allowedDates[this.date]) {
-                    this.$emit('error', `No history for ${this.date}`)
-                    this.date = ''
-                }
-                this.$emit('input', this.date)
+            checkDateAvailability(date) {
+                if (date < this.firstHistoricalDate || date > this.currentDate) return true
+
+                if (this.allowedDates && !this.allowedDates[date.toISOString().substring(0,10)]) return true
+
+                return false
             },
-            clearDate() {
-                this.date = null
-                this.$emit('input', this.date)
-                this.$emit('cleared', null)
+            onClear() {
+                this.$emit('input', null)
+                this.$emit('clear')
             }
-        },
+        }
     }
 </script>
 
@@ -73,14 +75,13 @@
             color: $theme-orange;
             font-weight: 300;
             margin-right: 12px;
-            line-height: 24px;
+            line-height: 36px;
         }
-        .cov-vue-date {
-            width: 200px;
-            margin-right: 12px;
-            input {
-                width: calc(100% - 4px);
-            }
+        .md-field {
+            width: auto;
+            padding-top: 0;
+            min-height: auto;
+            margin-bottom: 0;
         }
         .x-btn.link {
             padding: 2px 0;

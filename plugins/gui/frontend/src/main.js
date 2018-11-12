@@ -1,8 +1,13 @@
 /* eslint-disable no-undef */
 import Vue from 'vue'
 
-import { MdSwitch } from 'vue-material/dist/components'
+import { MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog } from 'vue-material/dist/components'
 Vue.use(MdSwitch)
+Vue.use(MdDatepicker)
+Vue.use(MdField)
+Vue.use(MdIcon)
+Vue.use(MdButton)
+Vue.use(MdDialog)
 
 import router from './router/index'
 import store from './store/index'
@@ -13,7 +18,6 @@ import * as svgicon from 'vue-svgicon'
 Vue.use(svgicon, {tagName: 'svg-icon'})
 
 import { MediaQueries } from 'vue-media-queries'
-
 const mediaQueries = new MediaQueries()
 Vue.use(mediaQueries)
 

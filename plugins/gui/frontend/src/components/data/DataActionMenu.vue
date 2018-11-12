@@ -1,12 +1,12 @@
 <template>
     <div>
-        <triggerable-dropdown size="sm" align="right" :arrow="false">
+        <x-dropdown size="sm" align="right" :arrow="false" ref="dropdown">
             <button slot="trigger" class="x-btn link">Actions</button>
             <nested-menu slot="content">
                 <nested-menu-item v-for="item in $children" v-if="item.title" :key="item.title"
                                   :title="item.title" @click="activate(item)"/>
             </nested-menu>
-        </triggerable-dropdown>
+        </x-dropdown>
         <x-tag-modal title="Tag..." :module="module" :entities="selected" :tags="currentTags" />
         <x-data-action-item title="Disable..." :handle-save="disableEntities" :message="`Disabled ${module}`"
                             action-text="Disable">
@@ -25,7 +25,7 @@
 </template>
 
 <script>
-	import TriggerableDropdown from '../popover/Dropdown.vue'
+	import xDropdown from '../popover/Dropdown.vue'
 	import NestedMenu from '../../components/menus/NestedMenu.vue'
 	import NestedMenuItem from '../../components/menus/NestedMenuItem.vue'
     import xDataActionItem from '../../components/data/DataActionItem.vue'
@@ -42,7 +42,7 @@
 	export default {
 		name: 'x-data-action-menu',
         components: {
-			TriggerableDropdown, 'nested-menu': NestedMenu, 'nested-menu-item': NestedMenuItem,
+			xDropdown, 'nested-menu': NestedMenu, 'nested-menu-item': NestedMenuItem,
             xDataActionItem, xTagModal
         },
         props: { module: {required: true}, selected: {required: true} },
@@ -98,6 +98,7 @@
             	if (!item || !item.activate) return
                 item.activate()
                 this.$el.click()
+                this.$refs.dropdown.close()
             },
 			disableEntities() {
 				return this.disableData({ module: this.module, data: this.disableable })

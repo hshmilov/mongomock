@@ -18,7 +18,7 @@
                     <div class="card-history" v-if="chart.metric !== 'timeline'">
                         <x-historical-date-picker v-model="chartsCurrentlyShowing[chart.uuid]"
                                                   @input="confirmPickDate(chart.uuid, chart.name)"
-                                                  @cleared="clearDate(chart.uuid)">
+                                                  @clear="clearDate(chart.uuid)" :minimal="true">
                         </x-historical-date-picker>
                     </div>
                     <components :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" />

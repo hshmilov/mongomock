@@ -73,7 +73,6 @@
     import xCustomData from '../../components/schema/CustomData.vue'
     import Tabs from '../../components/tabs/Tabs.vue'
     import Tab from '../../components/tabs/Tab.vue'
-    import xDateEdit from '../../components/controls/string/DateEdit.vue'
     import xToast from '../../components/popover/Toast.vue'
     import xUserRoleContainer from './UserRoleContainer.vue'
 
@@ -85,8 +84,7 @@
     export default {
         name: 'settings-container',
         components: {
-            xPage, Tabs, Tab, xUserRoleContainer,
-            xDateEdit, xSchemaForm, xCustomData, xToast
+            xPage, Tabs, Tab, xUserRoleContainer, xSchemaForm, xCustomData, xToast
         },
         computed: {
             ...mapState({
@@ -293,7 +291,7 @@
                 }
             })
             this.getSupportAccess()
-            this.changeState({name: 'research-settings-tab'})
+            this.changeState({name: 'lifecycleRate'})
         },
         mounted() {
             if (this.$route.hash) {
@@ -320,9 +318,6 @@
         }
         .research-settings-tab .tab-settings .schema-form > .array {
             display: grid;
-        }
-        input.cov-datepicker {
-            width: 100%;
         }
         label {
             margin-bottom: 0;

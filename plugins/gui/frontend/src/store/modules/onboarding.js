@@ -492,13 +492,6 @@ export const onboarding = {
 					id: 'settings', title: 'SETTINGS', align: 'bottom', queue: 'alerts',
 					content: 'Choose configuration options for system functionality.'
 				},
-				'research-settings-tab': {
-					id: 'research_time', title: 'DISCOVERY SCHEDULE', align: 'top',
-					content: 'Select a date and time for the next discovery run.',
-					actions: [
-						{ title: 'Next', state: 'lifecycleRate' }
-					]
-				},
 				'lifecycleRate': {
 					id: 'discovery_settings', title: 'DISCOVERY RUN FREQUENCY', align: 'top',
 					content: 'Set the number of hours between discovery runs.',

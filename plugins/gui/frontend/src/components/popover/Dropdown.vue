@@ -1,5 +1,5 @@
 <template>
-    <div class="x-dropdown" v-bind:class="{ active: isActive, disabled: readOnly }" v-on-clickaway="close">
+    <div class="x-dropdown" v-bind:class="{ active: isActive, disabled: readOnly }">
         <div :class="{trigger: true, arrow: arrow}" data-toggle="dropdown" aria-haspopup="true" :aria-expanded="isActive"
              @click="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
             <slot name="trigger"></slot>
@@ -7,15 +7,14 @@
         <div :class="`content ${sizeClass}`" :style="{[align]: alignSpace + 'px', [alignAuto]: 'auto'}" v-if="isActive">
             <slot name="content"></slot>
         </div>
+        <div @click="close" v-if="isActive" class="x-dropdown-bg" />
     </div>
 </template>
 
 <script>
-    import { mixin as clickaway } from 'vue-clickaway'
 
     export default {
         name: 'x-dropdown',
-        mixins: [ clickaway ],
         props: {
             size: {default: ''},
             align: {default: 'left'},
@@ -95,6 +94,16 @@
             &.expand {
                 width: 100%;
             }
+        }
+        .x-dropdown-bg {
+            position: fixed;
+            z-index: 299;
+            background: transparent;
+            height: 100vh;
+            width: 100vw;
+            top: 0;
+            left: 0;
+            cursor: default;
         }
     }
 </style>

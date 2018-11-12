@@ -2,6 +2,7 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 
 class UsersPage(EntitiesPage):
+    FIELD_USERNAME_NAME = 'username'
 
     @property
     def url(self):

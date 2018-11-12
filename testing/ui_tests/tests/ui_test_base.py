@@ -1,7 +1,8 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+from random import randint
 
 import pytest
 from passlib.hash import bcrypt
@@ -111,6 +112,8 @@ class TestBase:
         self.axonius_system.get_notifications_db().remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
+        self.axonius_system.db.get_historical_entity_db_view(EntityType.Users).remove()
+        self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices).remove()
         self.axonius_system.get_system_users_db().remove(
             {'user_name': {'$nin': [AXONIUS_USER_NAME, DEFAULT_USER['user_name']]}})
         self.axonius_system.get_system_users_db().update_one(
@@ -166,3 +169,25 @@ class TestBase:
         self.driver.get(self.base_url)
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=self.username, password=self.password, remember_me=True)
+
+    def _create_history(self, entity_type: EntityType, update_field):
+        history_db = self.axonius_system.db.get_historical_entity_db_view(entity_type)
+        entity_count = self.axonius_system.db.get_entity_db_view(entity_type).count_documents({})
+        if not entity_count:
+            return []
+        day_to_entity_count = []
+        for day in range(1, 30):
+            # Randomly select a chunk of entities to be added as history for `day` back
+            entity_limit = randint(entity_count - int(entity_count / 2), entity_count)
+            entity_skip = randint(0, entity_count - entity_limit)
+            entities = list(history_db.find().skip(entity_skip).limit(entity_limit))
+            current_date = datetime.now() - timedelta(day)
+            for entity in entities:
+                del entity['_id']
+                # Update the historical date being generated
+                entity['accurate_for_datetime'] = current_date
+                entity['specific_data'][0]['data'][update_field] += f' {day}'
+            insert_many_result = history_db.insert_many(entities)
+            # Save the count for testing the expected amount for the day is presented
+            day_to_entity_count.append(len(insert_many_result.inserted_ids))
+        return day_to_entity_count

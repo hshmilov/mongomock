@@ -12,10 +12,14 @@
         <button @click="addView" class="x-btn light grid-span3" :class="{ disabled: hasMaxViews }" :title="addBtnTitle">+</button>
         <div class="line-range grid-span3">
             <input type="radio" v-model="config.timeframe.type" value="absolute" id="range_absolute" />
-            <label for="range_absolute">Show results from range of dates</label>
+            <label for="range_absolute">Show results in date range</label>
             <template v-if="isRangeAbsolute">
-                <x-date-edit v-model="config.timeframe.from" :show-time="false" :limit="fromDateLimit" placeholder="From" />
-                <x-date-edit v-model="config.timeframe.to" :show-time="false" :limit="toDateLimit" placeholder="To" />
+                <md-datepicker v-model="config.timeframe.from" :md-disabled-dates="checkDateAvailabilityFrom" :md-immediately="true" class="no-clear" >
+                    <label>From</label>
+                </md-datepicker>
+                <md-datepicker v-model="config.timeframe.to" :md-disabled-dates="checkDateAvailabilityTo" :md-immediately="true" class="no-clear" >
+                    <label>To</label>
+                </md-datepicker>
             </template>
             <div class="grid-span2" v-else ></div>
             <input type="radio" v-model="config.timeframe.type" value="relative" id="range_relative" />
@@ -32,7 +36,6 @@
 <script>
     import xSelect from '../../../components/inputs/Select.vue'
     import xSelectSymbol from '../../../components/inputs/SelectSymbol.vue'
-    import xDateEdit from '../../../components/controls/string/DateEdit.vue'
     import ChartMixin from './chart'
 
     import { mapState } from 'vuex'
@@ -41,32 +44,18 @@
     export default {
         name: "x-chart-timeline",
         mixins: [ ChartMixin ],
-        components: {
-            xSelect, xSelectSymbol, xDateEdit },
+        components: { xSelect, xSelectSymbol },
         props: { value: {}, views: { required: true }, entities: { required: true } },
         computed: {
             ...mapState({
                 firstHistoricalDate(state) {
-                    return Object.values(state.constants.firstHistoricalDate).reduce((a, b) => {
-                        return (a < b) ? a : b
-                    }, null)
+                    return Object.values(state.constants.firstHistoricalDate)
+                        .map(dateStr => new Date(dateStr))
+                        .reduce((a, b) => {
+                            return (a < b) ? a : b
+                        }, new Date())
                 }
             }),
-            firstDateLimit() {
-                return [{ type: 'fromto', from: this.firstHistoricalDate, to: new Date()}]
-            },
-            fromDateLimit() {
-                if (!this.config.timeframe.to) {
-                    return this.firstDateLimit
-                }
-                return [{ type: 'fromto', from: this.firstHistoricalDate, to: this.config.timeframe.to}]
-            },
-            toDateLimit() {
-                if (!this.config.timeframe.from) {
-                    return this.firstDateLimit
-                }
-                return [{ type: 'fromto', from: this.config.timeframe.from, to: new Date()}]
-            },
             relativeRangeUnits() {
                 return [
                     { name: 'day', title: 'Days' },
@@ -146,6 +135,20 @@
             validate() {
                 this.$emit('validate', !this.config.views.filter(view => view.name === '').length
                     && (this.absoluteRangeValid || this.relativeRangeValid))
+            },
+            checkDateAvailabilityFrom(date) {
+                let isPast = date < new Date(this.firstHistoricalDate)
+                if (!this.config.timeframe.to) {
+                    return isPast || date >= new Date()
+                }
+                return isPast || date >= this.config.timeframe.to
+            },
+            checkDateAvailabilityTo(date) {
+                let isFuture = date > new Date()
+                if (!this.config.timeframe.from) {
+                    return date < this.firstHistoricalDate || isFuture
+                }
+                return date <= this.config.timeframe.from || isFuture
             }
         }
     }
@@ -155,16 +158,10 @@
     .x-chart-metric {
         .line-range {
             display: grid;
-            grid-template-columns: 20px 240px auto auto;
+            grid-template-columns: 20px 200px auto auto;
             grid-gap: 8px;
             align-items: center;
             grid-template-rows: 32px;
-            .cov-vue-date {
-                width: 200px;
-                .cov-datepicker {
-                    width: calc(100% - 4px);
-                }
-            }
             .x-select-trigger {
                 line-height: 24px;
                 height: 24px;

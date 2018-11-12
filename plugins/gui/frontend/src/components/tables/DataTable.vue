@@ -121,7 +121,8 @@
             	if (newView.query.filter !== oldView.query.filter || newView.fields.length > oldView.fields.length ||
                     newView.sort.field !== oldView.sort.field || newView.sort.desc !== oldView.sort.desc ||
                     Math.abs(newView.page - oldView.page) > 3 ||
-                    this.content.data.length <= (newView.page % this.pageLinkNumbers.length) * newView.pageSize) {
+                    this.content.data.length <= (newView.page % this.pageLinkNumbers.length) * newView.pageSize ||
+                    newView.historical !== oldView.historical) {
 
             	    this.loading = true
                 }

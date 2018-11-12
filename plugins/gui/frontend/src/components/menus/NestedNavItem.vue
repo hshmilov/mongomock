@@ -60,6 +60,7 @@
             font-size: 14px;
             background-color: $theme-black;
             border: 0;
+            cursor: pointer;
             .svg-icon {
                 transition: all ease-in 0.2s;
                 margin-right: 10px;

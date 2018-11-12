@@ -64,16 +64,17 @@ X_BODY = '.x-body'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
-LOADING_SPINNER_CSS = '.v-spinner'
 TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
 RETRY_WAIT_FOR_ELEMENT = 150
 SLEEP_INTERVAL = 0.2
 
 
 class Page:
+    LOADING_SPINNER_CSS = '.v-spinner-bg'
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
     CHECKBOX_CSS = 'div.x-checkbox-container'
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
+    DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
 
     def __init__(self, driver, base_url):
         self.driver = driver
@@ -281,7 +282,7 @@ class Page:
                 if not element:
                     return True
                 time.sleep(interval)
-            except NoSuchElementException:
+            except (NoSuchElementException, StaleElementReferenceException):
                 return True
         raise TimeoutException(f'Timeout while waiting for {value} to disappear')
 
@@ -424,7 +425,7 @@ class Page:
         element.send_keys(Keys.ARROW_DOWN)
 
     def wait_for_spinner_to_end(self):
-        return self.wait_for_element_absent_by_css(LOADING_SPINNER_CSS)
+        return self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
 
     def wait_for_table_to_load(self):
         self.wait_for_element_present_by_xpath(TABLE_SPINNER_NOT_DISPLAYED_XPATH)
@@ -449,3 +450,6 @@ class Page:
         with open(file_path, 'w') as file_ref:
             file_ref.write(dumps(file_content))
         self.driver.find_element_by_id(input_id).send_keys(file_path)
+
+    def close_dropdown(self):
+        self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()

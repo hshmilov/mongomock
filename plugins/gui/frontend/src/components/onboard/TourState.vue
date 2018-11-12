@@ -93,11 +93,7 @@
             	if (element == null) {
             		return 0
                 }
-                let offset = element.offsetTop + this.calcOffsetTop(element.offsetParent)
-                if (this.currentState.fixed) {
-                    offset -= parseInt(window.getComputedStyle(element, null).getPropertyValue('padding-top'))
-                }
-                return offset
+                return element.offsetTop + this.calcOffsetTop(element.offsetParent)
             },
             calcScrollTop(element) {
             	if (this.currentState.fixed) return 0

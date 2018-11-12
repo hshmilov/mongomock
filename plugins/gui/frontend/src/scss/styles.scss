@@ -139,6 +139,7 @@ input, select, textarea {
   font-size: inherit;
   font-family: inherit;
   font-weight: 200;
+  color: $grey-5;
 }
 
 ul {
@@ -490,36 +491,6 @@ table {
   }
 }
 
-/* Common Animations */
-
-.rotating {
-  animation: rotating 2s linear infinite;
-}
-
-.filling {
-  animation: filling 1s ease-in-out;
-}
-
-.scaling {
-  animation: scaling 1s ease-in-out forwards;
-}
-
-.growing-x {
-  animation: growX 1s ease-out;
-}
-
-.growing-y {
-  animation: growY 1s ease-in-out;
-}
-
-.shrinking-y {
-  animation: shrinkY 1s ease-in-out;
-}
-
-.pulsing {
-  animation: pulse 1.4s linear infinite;
-}
-
 .tag {
   display: inline;
   border: 1px solid $grey-4;
@@ -575,6 +546,87 @@ table {
       left: 52%;
     }
   }
+}
+
+.md-datepicker {
+  .md-date-icon {
+    fill: $grey-4;
+  }
+  &.md-focused .md-date-icon {
+    fill: $theme-orange;
+  }
+  .md-input {
+    border-bottom: 1px solid $grey-4;
+  }
+  &.md-field .md-input-action {
+    top: 0;
+  }
+  &.md-clearable.no-clear {
+    .md-input {
+      padding-right: 0;
+    }
+    .md-input-action {
+      display: none;
+    }
+  }
+  &.no-icon {
+    .md-date-icon {
+      display: none;
+    }
+    .md-input {
+      margin-left: 0;
+    }
+  }
+}
+.md-datepicker-dialog {
+  background-color: $theme-white;
+  .md-datepicker-header, .md-datepicker-selected {
+    background: $theme-orange;
+  }
+  .md-datepicker-today:not(.md-datepicker-selected) {
+    color: $theme-orange;
+  }
+  .md-input {
+    border-bottom: 1px solid $grey-4;
+  }
+}
+.md-field {
+  &.md-focused:before {
+    background-color: $theme-blue;
+    opacity: 1;
+    transform: scale(1);
+    transition: .3s cubic-bezier(.4, 0, .2, 1);
+  }
+}
+
+/* Common Animations */
+
+.rotating {
+  animation: rotating 2s linear infinite;
+}
+
+.filling {
+  animation: filling 1s ease-in-out;
+}
+
+.scaling {
+  animation: scaling 1s ease-in-out forwards;
+}
+
+.growing-x {
+  animation: growX 1s ease-out;
+}
+
+.growing-y {
+  animation: growY 1s ease-in-out;
+}
+
+.shrinking-y {
+  animation: shrinkY 1s ease-in-out;
+}
+
+.pulsing {
+  animation: pulse 1.4s linear infinite;
 }
 
 
