@@ -1,9 +1,12 @@
+from flaky import flaky
+
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDevicesTable(TestBase):
     LABELS_TEXTBOX_TEXT = 'foobar'
 
+    @flaky(max_runs=2)
     def test_devices_action_add_and_remove_tag(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
