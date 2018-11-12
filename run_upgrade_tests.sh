@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+function finish {
+  echo "#### In finish function"
+  ./clean_dockers.sh
+  echo "#### After finish function"
+}
+trap finish EXIT
+
 set -e
 version="head"
 installer_name=axonius_${version}.py
