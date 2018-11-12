@@ -41,6 +41,7 @@ class SettingsPage(Page):
     GOOGLE_CLIENT_ID = 'client'
     GOOGLE_EMAIL_OF_ADMIN = 'account_to_impersonate'
     READ_ONLY_PERMISSION = 'Read only'
+    READ_WRITE_PERMISSION = 'Read and edit'
     RESTRICTED_PERMISSION = 'Restricted'
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
     SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'

@@ -9,7 +9,7 @@
         </div>
         <x-table :data="noteData" :fields="noteSchema" :sort="sort" id-field="uuid" v-model="readOnly? undefined : selectedNotes"
                  :click-row-handler="readOnly? undefined : editNote" :click-col-handler="sortNotes" :read-only="readOnlyNotes" />
-        <x-modal v-if="removeNoteModal.active" @confirm="removeNotes" @close="closeRemoveNotesModal">
+        <x-modal v-if="removeNoteModal.active" approve-text="Delete" @confirm="removeNotes" @close="closeRemoveNotesModal">
             <div slot="body">You are about to remove {{selectedNotes.length}} notes. Are you sure?</div>
         </x-modal>
         <x-modal v-if="configNoteModal.active" approve-text="Save" @confirm="saveNote" @close="closeConfigNoteModal"

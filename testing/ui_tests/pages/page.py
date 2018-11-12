@@ -75,6 +75,11 @@ class Page:
     CHECKBOX_CSS = 'div.x-checkbox-container'
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
+    MODAL_OVERLAY_CSS = '.modal-overlay'
+    CANCEL_BUTTON = 'Cancel'
+    SAVE_BUTTON = 'Save'
+    REMOVE_BUTTON = 'Remove'
+    DELETE_BUTTON = 'Delete'
 
     def __init__(self, driver, base_url):
         self.driver = driver

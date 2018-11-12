@@ -15,11 +15,7 @@ class AdaptersPage(EntitiesPage):
     SEARCH_TEXTBOX_CSS = 'div.search-input > input.input-value'
     TABLE_ROW_CLASS = 'table-row'
     TEST_CONNECTIVITY = 'Test Connectivity'
-    CANCEL = 'Cancel'
-    SAVE = 'Save'
-    REMOVE = 'Remove'
     DEVICE_CHECKBOX = 'div.x-checkbox-container'
-    DELETE = 'Delete'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
     ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.configuration>a'
 
@@ -67,10 +63,10 @@ class AdaptersPage(EntitiesPage):
         self.click_button(adapter_name, button_class='title', button_type='div', call_space=False)
 
     def click_save(self):
-        self.click_button(self.SAVE)
+        self.click_button(self.SAVE_BUTTON)
 
     def click_cancel(self):
-        self.click_button(self.CANCEL, button_class='x-btn link')
+        self.click_button(self.CANCEL_BUTTON, button_class='x-btn link')
 
     def click_test_connectivity(self):
         self.click_button(self.TEST_CONNECTIVITY)
@@ -101,12 +97,6 @@ class AdaptersPage(EntitiesPage):
 
     def select_all_servers(self):
         self.driver.find_element_by_css_selector(self.DEVICE_CHECKBOX).click()
-
-    def remove_selected_servers(self):
-        self.find_element_by_text(self.REMOVE).click()
-
-    def approve_remove_servers(self):
-        self.find_element_by_text(self.DELETE).click()
 
     def wait_for_server_green(self):
         self.wait_for_element_present_by_id(self.SERVER_GREEN_COLOR_ID)
@@ -140,11 +130,11 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_table_to_load()
         self.select_all_servers()
         try:
-            self.remove_selected_servers()
+            self.remove_selected()
         except NoSuchElementException:
             # we dont have element to remove, just return...
             return
-        self.approve_remove_servers()
+        self.approve_remove_selected()
 
     def fill_creds(self, **kwargs):
         for key, value in kwargs.items():

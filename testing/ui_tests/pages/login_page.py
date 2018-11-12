@@ -84,3 +84,8 @@ class LoginPage(Page):
 
     def find_failed_ad_login_msg(self):
         return self.wait_for_element_present_by_text('Failed logging into AD')
+
+    def switch_user(self, user_name, user_password):
+        self.logout()
+        self.wait_for_login_page_to_load()
+        self.login(username=user_name, password=user_password)

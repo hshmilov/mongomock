@@ -14,6 +14,7 @@ LAST_NAME = 'LastName'
 TAG_NAME = 'lalala'
 
 RESTRICTED_ENTITY_USERNAME = 'RestrictedEntityUser'
+NOTES_USERNAME = 'NotesUser'
 
 HIDDEN_USER_NEW_PASSWORD = 'test_pass_2'
 

@@ -54,6 +54,10 @@ class EntitiesPage(Page):
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
     DATEPICKER_CLEAR_CSS = '.md-datepicker .md-button'
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
+    NOTES_TAB_CSS = 'li#notes'
+    NOTES_CREATED_TOASTER = 'New note was created'
+    NOTES_EDITED_TOASTER = 'Existing note was edited'
+    NOTES_REMOVED_TOASTER = 'Notes were removed'
 
     @property
     def url(self):
@@ -110,7 +114,7 @@ class EntitiesPage(Page):
         return self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).get_attribute('id')
 
     def click_row(self):
-        self.driver.find_element_by_css_selector(self.TABLE_FIRST_CELL_CSS).click()
+        self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).click()
 
     def click_first_row_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CHECKBOX_CSS).click()
@@ -291,3 +295,35 @@ class EntitiesPage(Page):
         self.open_search_list()
         self.select_query_by_name(query_name)
         self.wait_for_table_to_load()
+
+    def remove_selected(self):
+        self.find_element_by_text(self.REMOVE_BUTTON).click()
+
+    def approve_remove_selected(self):
+        self.find_element_by_text(self.DELETE_BUTTON).click()
+
+    def click_notes_tab(self):
+        self.driver.find_element_by_css_selector(self.NOTES_TAB_CSS).click()
+
+    def fill_save_note(self, note_text, toast_text):
+        self.fill_text_field_by_css_selector('.text-input', note_text)
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_toaster(toast_text)
+
+    def create_note(self, note_text):
+        self.click_button('+ Note')
+        self.fill_save_note(note_text, self.NOTES_CREATED_TOASTER)
+
+    def edit_note(self, note_text):
+        self.click_row()
+        self.fill_save_note(note_text, self.NOTES_EDITED_TOASTER)
+
+    def remove_note(self):
+        self.click_first_row_checkbox()
+        self.remove_selected()
+        self.approve_remove_selected()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
+    def find_row_readonly(self):
+        return self.driver.find_elements_by_css_selector('.x-row:not(.clickable)')
