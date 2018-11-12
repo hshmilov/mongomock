@@ -337,10 +337,10 @@ class ReportsService(PluginBase, Triggerable):
         if triggers.get('previous_entities') and diff_dict[TRIGGERS_DIFF_REMOVED]:
             triggered.append('previous_entities')
 
-        if triggers.get('above') and len(current_result) > triggers.get('above'):
+        if triggers.get('above') and len(current_result) > int(triggers.get('above')):
             triggered.append('above')
 
-        if triggers.get('below') and len(current_result) < triggers.get('below'):
+        if triggers.get('below') and len(current_result) < int(triggers.get('below')):
             triggered.append('below')
 
         return triggered

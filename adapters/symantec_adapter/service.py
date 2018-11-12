@@ -162,6 +162,11 @@ class SymantecAdapter(AdapterBase):
                 except Exception:
                     logger.exception("Problem adding last seen to Symantec")
                 device.id = device_raw['agentId'] + '_' + computer_name
+                try:
+                    if device_raw.get('logonUserName'):
+                        device.last_used_users = device_raw.get('logonUserName').split(',')
+                except Exception:
+                    logger.exception(f'Problem adding user to {device_raw}')
                 device.set_raw(device_raw)
                 yield device
         except Exception:

@@ -2491,7 +2491,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     }
                     config = {**dashboard['config']}
                     if config.get('entity'):
+                        # _fetch_chart_compare crashed in the wild because it got entity as a param.
+                        # We don't understand how such a dasbhoard chart was created. But at lease we won't crash now
                         config['entity'] = EntityType(dashboard['config']['entity'])
+                        if self._fetch_chart_compare == handler_by_metric[dashboard_metric]:
+                            del config['entity']
                     dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
                     yield gui_helpers.beautify_db_entry(dashboard)
                 except Exception as e:

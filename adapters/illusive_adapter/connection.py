@@ -1,3 +1,4 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -31,11 +32,14 @@ class IllusiveConnection(RESTConnection):
         yield from response['content']
         total_count = response['totalQueryResults']
         offset = consts.DEVICE_PER_PAGE
-        while offset <= min(total_count, consts.MAX_DEVICES_COUNT):
+        sleep_count = 0
+        while offset <= min(total_count, consts.MAX_DEVICES_COUNT) and sleep_count < 4:
             try:
                 yield from self._get('monitoring/hosts',
                                      url_params={'limit': consts.DEVICE_PER_PAGE,
                                                  'offset': offset})['content']
+                offset += consts.DEVICE_PER_PAGE
             except Exception:
                 logger.exception(f'Problem at offset {offset}')
-            offset += consts.DEVICE_PER_PAGE
+                sleep_count += 1
+                time.sleep(15 * 60)

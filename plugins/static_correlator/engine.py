@@ -145,7 +145,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [],
-                                      [compare_last_used_users],
+                                      [compare_last_used_users,
+                                       not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and LastUsedUser'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -156,7 +157,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [],
-                                      [compare_domain],
+                                      [compare_domain,
+                                       not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -167,7 +169,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [is_deep_security_adapter_not_localhost],
-                                      [],
+                                      [not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and one is DeepSecurity'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -216,7 +218,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname],
                                       [compare_hostname],
                                       [is_from_ad],
-                                      [],
+                                      [not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -232,7 +234,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname],
                                       [compare_hostname],
                                       [is_from_no_mac_adapters_with_empty_mac],
-                                      [],
+                                      [not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and one is No MACs Adapters with no MAC'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -291,7 +293,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_asset_or_host],
                                       [compare_asset_hosts],
                                       [get_asset_name],
-                                      [ips_do_not_contradict_or_mac_intersection],
+                                      [ips_do_not_contradict_or_mac_intersection,
+                                       not_aruba_adapters],
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 

@@ -68,6 +68,10 @@ class CiscoMerakiAdapter(AdapterBase):
         :return: A json with all the attributes returned from the CiscoMeraki Server
         """
         connection, vlan_exclude_list = client_data
+        if not vlan_exclude_list:
+            vlan_exclude_list = []
+        else:
+            vlan_exclude_list = vlan_exclude_list.split(',')
         with connection:
             return connection.get_device_list(), vlan_exclude_list
 

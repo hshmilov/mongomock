@@ -271,8 +271,12 @@ class JamfConnection(object):
                 device_policies = {}
                 for policy in reversed(policies):
                     try:
-                        policy_key = policy['policy_id']
-                        policy_date = parse_date(policy['date_completed_utc']) or parse_date(policy['date_completed'])
+                        policy_key = policy.get('policy_id')
+                        policy_date = parse_date(policy.get('date_completed_utc')
+                                                 ) or parse_date(policy.get('date_completed'))
+                        if not policy_date:
+                            logging.warning(f'Bad Policy with no date or key {policy}')
+                            continue
                         device_policy = device_policies.get(policy_key)
                         if device_policy is None or device_policy.last_runtime_date < policy_date:
                             device_policy = JamfPolicy()
