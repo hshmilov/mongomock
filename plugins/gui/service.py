@@ -2558,7 +2558,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         data.sort(key=val, reverse=True)
         if chart_view == ChartViews.pie:
-            return [{'name': 'ALL', 'value': 0}, *map(lambda x: {**x, 'value': x['value'] / total}, data)]
+            return_data = [{'name': 'ALL', 'value': 0}]
+            if total:
+                return_data.extend(map(lambda x: {**x, 'value': x['value'] / total}, data))
+            return return_data
         return data
 
     def _fetch_chart_intersect(self, _: ChartViews, entity: EntityType, base, intersecting, for_date=None):
