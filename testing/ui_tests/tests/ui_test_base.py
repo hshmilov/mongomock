@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 
 import pytest
+from passlib.hash import bcrypt
 from selenium import webdriver
 
 import conftest
@@ -110,7 +111,10 @@ class TestBase:
         self.axonius_system.get_notifications_db().remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
-        self.axonius_system.get_system_users_db().remove({'user_name': {'$nin': [AXONIUS_USER_NAME, 'admin']}})
+        self.axonius_system.get_system_users_db().remove(
+            {'user_name': {'$nin': [AXONIUS_USER_NAME, DEFAULT_USER['user_name']]}})
+        self.axonius_system.get_system_users_db().update_one(
+            {'user_name': DEFAULT_USER['user_name']}, {'$set': {'password': bcrypt.hash(DEFAULT_USER['password'])}})
 
     def change_base_url(self, new_url):
         old_base_url = self.base_url

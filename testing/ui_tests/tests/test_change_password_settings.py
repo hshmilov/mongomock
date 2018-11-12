@@ -1,5 +1,7 @@
 import time
 
+from flaky import flaky
+
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests import ui_consts
 
@@ -58,6 +60,7 @@ class TestChangePasswordSettings(TestBase):
                                              self.password,
                                              self.my_account_page.wait_for_password_changed_toaster)
 
+    @flaky(max_runs=2)
     def test_gui_restart_keeps_password(self):
         self.my_account_page.switch_to_page()
         self.my_account_page.click_change_admin_password()
