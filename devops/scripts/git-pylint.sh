@@ -104,6 +104,15 @@ for file in $GIT_FILES; do
     skip=false
     if  [ ${#file} -gt 3 ] && [ ${file: -3} == ".py" ]; then
 
+        # handle pep
+        if [ $PEP -eq 1 ]; then
+            autopep8 --max-line-length 120 --in-place $file
+            autopep8 --select=E722 --aggressive --in-place $file
+            if [ $ADDED_ONLY -eq 1 ]; then
+                git add $file
+            fi
+        fi
+
         for path in ${EXCLUDE_PATHS[*]}; do
             if [[ $file == $path* ]]; then
                 skip=true;
@@ -115,14 +124,6 @@ for file in $GIT_FILES; do
             continue
         fi
 
-        # handle pep
-        if [ $PEP -eq 1 ]; then
-            autopep8 --max-line-length 120 --in-place $file
-            autopep8 --select=E722 --aggressive --in-place $file
-            if [ $ADDED_ONLY -eq 1 ]; then
-                git add $file
-            fi
-        fi
 
         # handle delete 
         if [ $DELETE -eq 1 ]; then
