@@ -1475,11 +1475,12 @@ class PluginBase(Configurable, Feature):
         return self.__perform_tag(entity, identity_by_adapter, name, data, tag_type, action_if_exists, additional_data)
 
     @mongo_retry()
-    def link_adapters(self, entity: EntityType, correlation: CorrelationResult):
+    def link_adapters(self, entity: EntityType, correlation: CorrelationResult, rebuild: bool = True):
         """
         Performs a correlation between the entities given by 'correlation'
         :param entity: The entity type to use
         :param correlation: The information of the correlation - see definition of CorrelationResult
+        :param rebuild: Whether or not to rebuild the entities
         """
         _entities_db = self._entity_db_map[entity]
         with _entities_db.start_session() as session:
@@ -1555,8 +1556,10 @@ class PluginBase(Configurable, Feature):
             except CorrelateException as e:
                 logger.exception("Unlink logic exception")
                 raise
-        self._request_db_rebuild(sync=False,
-                                 internal_axon_ids=[x['internal_axon_id'] for x in entities_candidates])
+
+        if rebuild:
+            self._request_db_rebuild(sync=False,
+                                     internal_axon_ids=[x['internal_axon_id'] for x in entities_candidates])
 
     @mongo_retry()
     def unlink_adapter(self, entity: EntityType, plugin_unique_name: str, adapter_id: str):

@@ -151,7 +151,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
             def process_correlation_result(result):
                 if isinstance(result, CorrelationResult):
                     try:
-                        self.link_adapters(self._entity_to_correlate, result)
+                        self.link_adapters(self._entity_to_correlate, result, rebuild=False)
                     except Exception:
                         logger.warning(f'Failed linking for some reason, {result}')
                 if isinstance(result, WarningResult):
