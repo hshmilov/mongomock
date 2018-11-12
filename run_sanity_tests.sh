@@ -4,9 +4,8 @@ echo "Running unitests"
 pytest -vv -s --ignore=testing \
               --ignore=deployment \
               --ignore=plugins/gui/src/frontend \
-              --ignore=plugins/gui/frontend/node_modules\
-              --ignore=adapters/juniper_adapter/py-space-platform \
-              --junitxml=testing/reporting/ut_report.xml
+              --ignore=plugins/gui/frontend/node_modules \
+              --ignore=adapters/juniper_adapter/py-space-platform
 if [ $? -ne 0 ]
 then
   echo "Unitests failed"

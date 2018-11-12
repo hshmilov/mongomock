@@ -47,7 +47,7 @@ def main():
 
         print('Running UI tests')
         return pytest.main(
-            ['-s', '-vv', '--showlocals', '--durations=0', '--junitxml=reporting/ui_report.xml'] + sys.argv)
+            ['-s', '-vv', '--showlocals', '--durations=0'] + sys.argv)
     finally:
         axonius_system.stop(should_delete=True)
         # selenium_service.stop(should_delete=True)

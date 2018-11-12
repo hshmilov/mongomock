@@ -3,7 +3,7 @@ import sys
 
 
 def main():
-    return pytest.main(['-s', '-vv', '--showlocals', '--durations=0', '--junitxml=reporting/integ_report.xml'] + sys.argv)
+    return pytest.main(['-s', '-vv', '--showlocals', '--durations=0'] + sys.argv)
 
 
 if __name__ == '__main__':

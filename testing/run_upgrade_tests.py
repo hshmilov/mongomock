@@ -17,8 +17,7 @@ def main():
 
         print('Running after upgrade tests')
         return pytest.main(
-            ['-s', '-vv', '--showlocals', '--durations=0',
-             f'--junitxml=reporting/upgrade_report_{sanitized}.xml'] + sys.argv)
+            ['-s', '-vv', '--showlocals', '--durations=0'] + sys.argv)
     finally:
         selenium_service.stop()
 
