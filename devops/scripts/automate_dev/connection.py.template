@@ -1,0 +1,25 @@
+import logging
+
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.exception import RESTException
+
+logger = logging.getLogger(f'axonius.{{__name__}}')
+
+
+class {capital_adapter_name}Connection(RESTConnection):
+    """ rest client for {capital_adapter_name} adapter """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, url_base_prefix='', headers={{'Content-Type': 'application/json',
+                                                              'Accept': 'application/json'}}, **kwargs)
+
+    def _connect(self):
+        if self._username is not None and self._password is not None:
+            # AUTOADAPTER - implement connection
+            pass
+        else:
+            raise RESTException('No username or password')
+
+    def get_device_list(self):
+        # AUTOADAPTER - implement get_device_list
+        pass

@@ -8,7 +8,7 @@ Basically we do the following things:
 -> add description to plugins/gui/frontend/src/constants/plugin_meta.js
     -> AUTOADAPTER - add description
 
--> create plugins/gui/frontend/src/assets/images/logos/<adapter_name>_adapter.png
+-> create axonius-libs/src/libs/axonius-py/axonius/assets/logos/<adapter_name>_adapter.png
     -> AUTOADAPTER - replace this line with logo
 
 -> mkdir adapters/<adapter_name>_adapter
@@ -52,7 +52,7 @@ def get_cortex_dir() -> str:
 
 
 def capitalize_adapter_name(adapter_name: str) -> str:
-    ''' Returns captialize adapter_name '''
+    ''' Returns capitalize adapter_name '''
     return ''.join(map(str.capitalize, adapter_name.split('_')))
 
 
@@ -67,6 +67,8 @@ def get_action_table(adapter_name: str) -> OrderedDict:
         f'adapters/{adapter_name}_adapter/config.ini': (not_exists_validator, config_ini_action),
         f'adapters/{adapter_name}_adapter/service.py': (not_exists_validator, service_action),
         f'adapters/{adapter_name}_adapter/client_id.py': (not_exists_validator, client_id_action),
+        f'adapters/{adapter_name}_adapter/consts.py': (not_exists_validator, consts_action),
+        f'adapters/{adapter_name}_adapter/connection.py': (not_exists_validator, connection_action),
         f'testing/test_credentials/test_{adapter_name}_credentials.py': (not_exists_validator, creds_action),
         f'testing/services/adapters/{adapter_name}_service.py': (not_exists_validator, test_service_action),
         f'testing/parallel_tests/test_{adapter_name}.py': (not_exists_validator, parallel_tests_action),
@@ -161,73 +163,16 @@ core_address = https://core.axonius.local"""
 
 def service_action(filename: str, adapter_name: str):
     ''' Create service.py file for the adapter '''
-    template = \
-        """
-import logging
-
-from %s_adapter.client_id import get_client_id
-from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.files import get_local_config_file
-
-logger = logging.getLogger(f'axonius.{__name__}')
+    template = open(os.path.join(get_cortex_dir(), 'devops/scripts/automate_dev/service.py.template'), 'r').read()
+    template = template.format(adapter_name=adapter_name, capital_adapter_name=capitalize_adapter_name(adapter_name))
+    with open(filename, 'w') as file_:
+        file_.write(template)
 
 
-class %sAdapter(AdapterBase):
-    class MyDeviceAdapter(DeviceAdapter):
-        pass
-
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
-
-    @staticmethod
-    def _get_client_id(client_config):
-        return get_client_id(client_config)
-
-    def _test_reachability(self, client_config):
-        'AUTOADAPTER - add code that tests client reachability'
-        raise NotImplementedError()
-
-    def _connect_client(self, client_config):
-        client_id = self._get_client_id(client_config)        
-        try:
-            'AUTOADAPTER - add code that returns client'
-        except Exception as e:
-            logger.error(f'Failed to connect to client {client_id}')
-            raise ClientConnectionException(str(e))
-
-    def _query_devices_by_client(self, client_name, client_data):
-        'AUTOADAPTER - add code that returns (or yields) raw_data list'
-
-    def _clients_schema(self):
-        return {
-            'items': [
-                'AUTOADAPTER - add items'
-            ],
-            'required': [
-            ],
-            'type': 'array'
-        }
-
-    def create_device(self, raw_device_data):
-        device = self._new_device_adapter()
-        'AUTOADAPTER - create device'
-        return device
-
-    def _parse_raw_data(self, devices_raw_data):
-        for raw_device_data in iter(devices_raw_data):
-            try:
-                device = self.create_device(raw_device_data)
-                yield device
-            except Exception:
-                logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
-
-    @classmethod
-    def adapter_properties(cls):
-        'AUTOADAPTER - check if you need to add other properties'
-        return [AdapterProperty.Assets]
-""" % (adapter_name, capitalize_adapter_name(adapter_name))
+def connection_action(filename: str, adapter_name: str):
+    ''' Create service.py file for the adapter '''
+    template = open(os.path.join(get_cortex_dir(), 'devops/scripts/automate_dev/connection.py.template'), 'r').read()
+    template = template.format(capital_adapter_name=capitalize_adapter_name(adapter_name))
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -241,10 +186,20 @@ def client_id_action(filename: str, _):
         file_.write(template)
 
 
+def consts_action(filename: str, _):
+    template = \
+        """DEVICE_PER_PAGE = 200
+MAX_NUMBER_OF_DEVICES = 1000000
+"""
+
+    with open(filename, 'w') as file_:
+        file_.write(template)
+
+
 def creds_action(filename: str, _):
     ''' Create creds file'''
     template = \
-        """client_details = {
+        """CLIENT_DETAILS = {
 } # AUTOADAPTER - insert client information to test
 
 SOME_DEVICE_ID = 'AUTOADAPTER - give one device_id that should return from the above client'
@@ -280,11 +235,10 @@ def {adapter_name}_fixture(request):
 def parallel_tests_action(filename: str, adapter_name: str):
     ''' Create parallel tests file'''
     template = \
-        f"""# pylint: disable=unused-import
-# pylint: disable=abstract-method
+        f"""#pylint: disable=unused-import
 from services.adapters.{adapter_name}_service import {capitalize_adapter_name(adapter_name)}Service, {adapter_name}_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_{adapter_name}_credentials import client_details, SOME_DEVICE_ID
+from test_credentials.test_{adapter_name}_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
 from {adapter_name}_adapter.client_id import get_client_id
 
 
@@ -294,16 +248,28 @@ class Test{capitalize_adapter_name(adapter_name)}Adapter(AdapterTestBase):
         return {capitalize_adapter_name(adapter_name)}Service()
 
     @property
+    def adapter_name(self):
+        return '{adapter_name}_adapter'
+
+    @property
     def some_client_id(self):
-        return get_client_id(client_details)
+        return get_client_id(CLIENT_DETAILS)
+
+    @property
+    def some_client_detials(self):
+        return CLIENT_DETAILS
 
     @property
     def some_client_details(self):
-        return client_details
+        return CLIENT_DETAILS
 
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @property
+    def some_user_id(self):
+        raise NotImplementedError()
 """
     with open(filename, 'w') as file_:
         file_.write(template)
