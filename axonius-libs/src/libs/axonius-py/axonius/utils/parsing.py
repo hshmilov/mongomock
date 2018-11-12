@@ -1,7 +1,7 @@
 """
 ParsingUtils.py: Collection of utils that might be used by parsers, specifically adapters
 """
-
+import logging
 import re
 import sys
 from types import FunctionType
@@ -18,6 +18,8 @@ import csv
 import axonius
 import os
 import string
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 osx_version_fallback = re.compile(r'[^\w](\d+\.\d+.\d+)')
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
@@ -466,6 +468,19 @@ def is_date_real(datetime_to_parse):
     return type(datetime_to_parse) == datetime.datetime and \
         datetime_to_parse.replace(tzinfo=None) != datetime.datetime(1601, 1, 1) and \
         datetime_to_parse.replace(tzinfo=None) != datetime.datetime(1970, 1, 1)
+
+
+def parse_unix_timestamp(unix_timestamp):
+    try:
+        return datetime.datetime.utcfromtimestamp(unix_timestamp)
+    except Exception:
+        # This must be unix timestamp with milliseconds, we continue to the next line.
+        pass
+    try:
+        return datetime.datetime.utcfromtimestamp(unix_timestamp / 1000)
+    except Exception:
+        logger.exception(f'problem parsing unix timestamp {unix_timestamp}')
+        return None
 
 
 def parse_date(datetime_to_parse):

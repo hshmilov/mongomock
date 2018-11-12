@@ -199,7 +199,7 @@ class CsvAdapter(AdapterBase):
                     cpu_speed = vals.get('cpu_speed')
                     architecture = vals.get('architecture')
                     if cpu_speed or architecture:
-                        device.add_cpu(ghz=cpu_speed, architecture=architecture)
+                        device.add_cpu(ghz=cpu_speed / (1024 ** 3), architecture=architecture)
                 except Exception:
                     logger.exception(f'Problem setting cpu')
 

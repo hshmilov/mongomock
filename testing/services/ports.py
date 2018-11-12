@@ -99,6 +99,7 @@ DOCKER_PORTS = {
     'datadog-adapter':                  6041,
     'dropbox-adapter':                  6042,
     'nimbul-adapter':                   6043,
+    'ibm-tivoli-taddm-adapter':         27019,
     'mongo':                            27017,
     'mongo-slave':                      27018,
 }

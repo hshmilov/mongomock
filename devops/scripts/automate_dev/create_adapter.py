@@ -61,7 +61,7 @@ def get_action_table(adapter_name: str) -> OrderedDict:
 
     return OrderedDict({
         f'plugins/gui/frontend/src/constants/plugin_meta.js': (description_validator, description_action),
-        f'plugins/gui/frontend/src/assets/images/logos/{adapter_name}_adapter.png': (not_exists_validator, image_action),
+        f'axonius-libs/src/libs/axonius-py/axonius/assets/logos/{adapter_name}_adapter.png': (not_exists_validator, image_action),
         f'adapters/{adapter_name}_adapter': (not_exists_validator, adapter_dir_action),
         f'adapters/{adapter_name}_adapter/__init__.py': (not_exists_validator, adapter_init_action),
         f'adapters/{adapter_name}_adapter/config.ini': (not_exists_validator, config_ini_action),
@@ -181,7 +181,8 @@ class %sAdapter(AdapterBase):
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return get_client_id(client_config)
 
     def _test_reachability(self, client_config):
@@ -189,14 +190,14 @@ class %sAdapter(AdapterBase):
         raise NotImplementedError()
 
     def _connect_client(self, client_config):
+        client_id = self._get_client_id(client_config)        
         try:
             'AUTOADAPTER - add code that returns client'
         except Exception as e:
-            logger.error('Failed to connect to client {0}'.format(
-                self._get_client_id(client_config)))
+            logger.error(f'Failed to connect to client {client_id}')
             raise ClientConnectionException(str(e))
 
-    def _query_devices_by_client(self, client_name, session):
+    def _query_devices_by_client(self, client_name, client_data):
         'AUTOADAPTER - add code that returns (or yields) raw_data list'
 
     def _clients_schema(self):
@@ -214,8 +215,8 @@ class %sAdapter(AdapterBase):
         'AUTOADAPTER - create device'
         return device
 
-    def _parse_raw_data(self, raw_data):
-        for raw_device_data in iter(raw_data):
+    def _parse_raw_data(self, devices_raw_data):
+        for raw_device_data in iter(devices_raw_data):
             try:
                 device = self.create_device(raw_device_data)
                 yield device
@@ -266,7 +267,7 @@ class {capitalize_adapter_name(adapter_name)}Service(AdapterService):
         super().__init__('{adapter_name.replace('_', '-')}')
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope='module', autouse=True)
 def {adapter_name}_fixture(request):
     service = {capitalize_adapter_name(adapter_name)}Service()
     initialize_fixture(request, service)
@@ -279,11 +280,12 @@ def {adapter_name}_fixture(request):
 def parallel_tests_action(filename: str, adapter_name: str):
     ''' Create parallel tests file'''
     template = \
-        f"""from services.adapters.{adapter_name}_service import {capitalize_adapter_name(adapter_name)}Service, {adapter_name}_fixture
+        f"""# pylint: disable=unused-import
+# pylint: disable=abstract-method
+from services.adapters.{adapter_name}_service import {capitalize_adapter_name(adapter_name)}Service, {adapter_name}_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_{adapter_name}_credentials import *
+from test_credentials.test_{adapter_name}_credentials import client_details, SOME_DEVICE_ID
 from {adapter_name}_adapter.client_id import get_client_id
-import pytest
 
 
 class Test{capitalize_adapter_name(adapter_name)}Adapter(AdapterTestBase):

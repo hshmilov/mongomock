@@ -120,6 +120,7 @@ class DeviceAdapterHD(SmartJsonClass):
     On linux and mac, we need to think what it is (not sure its mounts...) """
 
     path = Field(str, "Path")
+    description = Field(str, 'Description')
     total_size = Field(float, "Size (GB)")
     free_size = Field(float, "Free Size (GB)")
     is_encrypted = Field(bool, "Encrypted")
@@ -223,6 +224,12 @@ class DeviceTagKeyValue(SmartJsonClass):
     tag_value = Field(str, "Tag Value")
 
 
+class DeviceSwapFile(SmartJsonClass):
+    """ A Definition for a key-value tag """
+    name = Field(str, 'Name')
+    size_in_gb = Field(int, 'Size (GB)')
+
+
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
@@ -269,6 +276,7 @@ class DeviceAdapter(SmartJsonClass):
     total_physical_memory = Field(float, "Total RAM (GB)")
     free_physical_memory = Field(float, "Free RAM (GB)")
     physical_memory_percentage = Field(float, "RAM Usage (%)")
+    swap_files = ListField(DeviceSwapFile, 'Swap Files')
     total_number_of_physical_processors = Field(int, "Total Physical Processors")
     total_number_of_cores = Field(int, "Total Cores")
     batteries = ListField(DeviceAdapterBattery, "Battery")
@@ -476,6 +484,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_key_value_tag(self, key, value):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
+
+    def add_swap_file(self, name, size_in_gb):
+        self.swap_files.append(DeviceSwapFile(name=name, size_in_gb=size_in_gb))
 
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name

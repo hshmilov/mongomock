@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    ibm_tivoli_taddm_adapter: {
+        title: 'IBM Tivoli TADDM',
+        description: 'IBM® Tivoli Application Dependency Discovery Manager (TADDM) is a configuration management tool that helps IT operations personnel ensure and improve application availability in application environments.'
+    },
     nimbul_adapter: {
         title: 'Nimbul',
         description: 'Nimbul is a custom cloud infrastructure management solution developed by the New York Times.'
