@@ -6,7 +6,7 @@ OKTA_LOGIN_DETAILS = {
     'client_id': '0oafnwsabgsiZGSQx0h7',
     'client_secret': 'wf9ldosnEPUle9zXRnmF873SOf23ndibNa55CRk8',
     'url': 'https://dev-734958.oktapreview.com',
-    'gui_url': 'https://marxonius.com',
+    'gui_url': 'https://okta.axonius.local',
 }
 OKTA_CLIENT_LOGIN_DETAILS = {
     'username': 'ofri@axonius.com',

@@ -1,4 +1,3 @@
-import pytest
 from test_credentials.test_okta_credentials import (OKTA_CLIENT_LOGIN_DETAILS,
                                                     OKTA_LOGIN_DETAILS)
 from ui_tests.tests import hosts_file_modifier
@@ -6,7 +5,6 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestOktaLogin(TestBase):
-    @pytest.mark.skip('Skipped to replace marxonius.com')
     def test_okta_login(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()

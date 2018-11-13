@@ -13,7 +13,7 @@ class LoginPage(Page):
     LOGIN_WITH_OKTA_BUTTON_CLASS = 'x-btn link'
     OKTA_LOGIN_PASSWORD_ID = 'okta-signin-password'
     OKTA_LOGIN_USERNAME_ID = 'okta-signin-username'
-    OKTA_URL = 'marxonius.com'
+    OKTA_URL = 'okta.axonius.local'
     OKTA_SUBMIT_BUTTON_ID = 'okta-signin-submit'
 
     @property
