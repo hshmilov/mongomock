@@ -235,6 +235,7 @@
                     this.clearDate(cardUuid)
                     return
                 }
+                pendingDateChosen = pendingDateChosen.toISOString().substr(0, 10)
                 this.fetchHistoricalCard({
                     cardUuid: cardUuid,
                     date: pendingDateChosen

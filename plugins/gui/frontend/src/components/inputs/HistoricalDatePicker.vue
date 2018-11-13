@@ -2,7 +2,8 @@
     <div class="x-historical-date-picker">
         <div class="title">Showing Results for</div>
         <md-datepicker v-model="selectedDate" :md-disabled-dates="checkDateAvailability" :md-immediately="true"
-                       @md-clear="onClear" :md-debounce="500" :class="{'no-icon': minimal}" />
+                       @md-clear="onClear" :md-debounce="500" :class="{'no-icon': minimal}" ref="date"/>
+        <button @click="onClear" class="x-btn link" v-if="selectedDate">X</button>
     </div>
 </template>
 
@@ -58,7 +59,8 @@
                 return false
             },
             onClear() {
-                this.$emit('input', null)
+                this.$refs.date.modelDate = ''
+                this.selectedDate = null
                 this.$emit('clear')
             }
         }
@@ -83,9 +85,15 @@
             min-height: auto;
             margin-bottom: 0;
         }
+        .md-datepicker.md-clearable {
+            .md-input-action {
+                visibility: hidden;
+            }
+        }
         .x-btn.link {
-            padding: 2px 0;
-            margin-left: -8px;
+            margin-left: -32px;
+            margin-bottom: -4px;
+            z-index: 100;
         }
     }
 </style>
