@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timedelta
 
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
-                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS)
+                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, AXONIUS_NETWORK)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from services import adapters, plugins
@@ -29,8 +29,8 @@ def get_service():
     return AxoniusService()
 
 
-class AxoniusService():
-    _NETWORK_NAME = 'axonius'
+class AxoniusService:
+    _NETWORK_NAME = AXONIUS_NETWORK
 
     def __init__(self):
         self.db = MongoService()

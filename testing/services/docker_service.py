@@ -5,6 +5,7 @@ from typing import Iterable
 from contextlib import contextmanager
 from pathlib import Path
 
+from axonius.consts.plugin_consts import AXONIUS_NETWORK
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
@@ -111,7 +112,7 @@ else:
 
     @property
     def docker_network(self):
-        return 'axonius'
+        return AXONIUS_NETWORK
 
     @property
     def _additional_parameters(self) -> Iterable[str]:
@@ -136,8 +137,10 @@ else:
 
         logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
 
-        docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
-                     '--network-alias', self.fqdn, '--detach']
+        docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
+
+        if self.docker_network == AXONIUS_NETWORK:
+            docker_up += ['--network-alias', self.fqdn]
 
         max_allowed_memory = self.max_allowed_memory
         if max_allowed_memory:
