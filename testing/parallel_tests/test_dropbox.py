@@ -27,14 +27,14 @@ class TestDropboxAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip('No test environment.')
+    @pytest.mark.skip('Always reachable so this test is bypassed..')
     def test_check_reachability(self):
         pass
 
-    @pytest.mark.skip('No test environment.')
+    @pytest.mark.skip('AX-2461')
     def test_removing_adapter_creds_with_devices(self):
         pass
 
-    @pytest.mark.skip('No test environment.')
+    @pytest.mark.skip('AX-2461')
     def test_removing_adapter_creds_with_users(self):
         pass
