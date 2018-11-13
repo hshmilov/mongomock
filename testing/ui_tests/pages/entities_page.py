@@ -52,7 +52,6 @@ class EntitiesPage(Page):
     ALL_ENTITIES_CSS = 'tbody>tr'
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
-    DATEPICKER_CLEAR_CSS = '.md-datepicker .md-button'
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
     NOTES_TAB_CSS = 'li#notes'
     NOTES_CREATED_TOASTER = 'New note was created'
@@ -272,7 +271,7 @@ class EntitiesPage(Page):
         self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
 
     def clear_showing_results(self):
-        self.driver.find_element_by_css_selector(self.DATEPICKER_CLEAR_CSS).click()
+        self.click_button('X', partial_class=True)
 
     def run_filter_and_save(self, query_name, query_filter):
         self.fill_filter(query_filter)
