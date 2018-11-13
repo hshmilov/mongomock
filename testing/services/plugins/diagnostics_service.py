@@ -36,9 +36,9 @@ class DiagnosticsService(DockerService):
     def __init__(self):
         name = 'diagnostics'
         super().__init__(name, f'../devops/{name}')
+        self.diag_env_file = Path(self.cortex_root_dir) / 'diag_env.json'
 
     def start(self, *args, **kwargs):
-        self.diag_env_file = Path(self.cortex_root_dir) / 'diag_env.json'
         if not self.diag_env_file.is_file():
             raise RuntimeError("env file is missing")
         super().start(*args, **kwargs)
