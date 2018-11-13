@@ -14,12 +14,10 @@
             <input type="radio" v-model="config.timeframe.type" value="absolute" id="range_absolute" />
             <label for="range_absolute">Show results in date range</label>
             <template v-if="isRangeAbsolute">
-                <md-datepicker v-model="config.timeframe.from" :md-disabled-dates="checkDateAvailabilityFrom" :md-immediately="true" class="no-clear" >
-                    <label>From</label>
-                </md-datepicker>
-                <md-datepicker v-model="config.timeframe.to" :md-disabled-dates="checkDateAvailabilityTo" :md-immediately="true" class="no-clear" >
-                    <label>To</label>
-                </md-datepicker>
+                <x-date-edit v-model="config.timeframe.from" :is-disabled-handler="checkDateAvailabilityFrom"
+                             :format="false" :clearable="false" label="From" />
+                <x-date-edit v-model="config.timeframe.to" :is-disabled-handler="checkDateAvailabilityTo"
+                             :format="false" :clearable="false" label="To" />
             </template>
             <div class="grid-span2" v-else ></div>
             <input type="radio" v-model="config.timeframe.type" value="relative" id="range_relative" />
@@ -36,6 +34,7 @@
 <script>
     import xSelect from '../../../components/inputs/Select.vue'
     import xSelectSymbol from '../../../components/inputs/SelectSymbol.vue'
+    import xDateEdit from '../../../components/controls/string/DateEdit.vue'
     import ChartMixin from './chart'
 
     import { mapState } from 'vuex'
@@ -44,7 +43,7 @@
     export default {
         name: "x-chart-timeline",
         mixins: [ ChartMixin ],
-        components: { xSelect, xSelectSymbol },
+        components: { xDateEdit, xSelect, xSelectSymbol },
         props: { value: {}, views: { required: true }, entities: { required: true } },
         computed: {
             ...mapState({

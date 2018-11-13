@@ -82,9 +82,9 @@
                     	return {
                             ...chart, showingHistorical: this.dateChosen[chart.uuid],
                             data: chart.data.map(item => {
-                                var historical_card = this.cardHistoricalData[chart.uuid]
+                                let historical_card = this.cardHistoricalData[chart.uuid]
 								if (historical_card) {
-                                    var historical_card_view = historical_card[item.name]
+                                    let historical_card_view = historical_card[item.name]
 									if (!historical_card_view) return null
 									return { ...item,
                                         value: historical_card[item.name].value,
@@ -235,7 +235,6 @@
                     this.clearDate(cardUuid)
                     return
                 }
-                pendingDateChosen = pendingDateChosen.toISOString().substr(0, 10)
                 this.fetchHistoricalCard({
                     cardUuid: cardUuid,
                     date: pendingDateChosen

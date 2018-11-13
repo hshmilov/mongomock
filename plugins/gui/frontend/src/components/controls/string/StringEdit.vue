@@ -2,10 +2,7 @@
     <input v-if="inputType" :id="schema.name" :type="inputType" v-model="processedData" :class="{'error-border': error}"
        @input="input" @focusout.stop="focusout" :disabled="readOnly" />
     <!-- Date Picker -->
-    <md-field v-else-if="isDate && readOnly">
-        <md-input type="text" disabled />
-    </md-field>
-    <md-datepicker v-else-if="isDate" v-model="data" @input="input" :md-immediately="true" :md-clearable="false" class="no-clear" />
+    <x-date-edit v-else-if="isDate" v-model="data" @input="input" :read-only="readOnly" :clearable="false" :minimal="true" />
     <!-- Select from enum values -->
     <x-select v-else-if="enumOptions" :options="enumOptions" v-model="data" placeholder="value..." :searchable="true"
               @input="input" @focusout.stop="validate" :class="{'error-border': error}" :read-only="readOnly" />
@@ -14,11 +11,19 @@
 <script>
 	import PrimitiveMixin from '../primitive.js'
     import xSelect from '../../inputs/Select.vue'
+    import xDateEdit from './DateEdit.vue'
 
 	export default {
 		name: 'x-string-edit',
         mixins: [PrimitiveMixin],
-        components: { xSelect },
+        components: { xSelect, xDateEdit },
+        data() {
+            return {
+                data: '',
+                valid: true,
+                error: ''
+            }
+        },
         computed: {
 		    processedData: {
 				get() {
@@ -45,9 +50,6 @@
         },
         methods: {
 		    formatData() {
-                if (this.isDate) {
-                    return this.data.toISOString().substring(0, 10)
-                }
                 return this.data
             }
         }

@@ -1,19 +1,19 @@
 <template>
     <div class="x-historical-date-picker">
         <div class="title">Showing Results for</div>
-        <md-datepicker v-model="selectedDate" :md-disabled-dates="checkDateAvailability" :md-immediately="true"
-                       @md-clear="onClear" :md-debounce="500" :class="{'no-icon': minimal}" ref="date"/>
-        <button @click="onClear" class="x-btn link" v-if="selectedDate">X</button>
+        <x-date-edit :value="value" @input="onInput" :is-disabled-handler="isDateUnavailable" :minimal="true" />
     </div>
 </template>
 
 
 <script>
     import { mapState } from 'vuex'
+    import XDateEdit from '../controls/string/DateEdit.vue'
 
     export default {
         name: 'x-historical-date-picker',
-        props: ['module', 'minimal'],
+        components: { XDateEdit },
+        props: ['value', 'module', 'minimal'],
         computed: {
             ...mapState({
                 firstHistoricalDate(state) {
@@ -33,35 +33,20 @@
                     return state.constants.allowedDates[this.module]
                 }
             }),
-            showingHistorical() {
-                return this.date != null
-            },
             currentDate() {
                 return new Date()
             }
         },
-        data() {
-            return {
-                selectedDate: null
-            }
-        },
-        watch: {
-            selectedDate(newDate) {
-                this.$emit('input', newDate)
-            }
-        },
         methods: {
-            checkDateAvailability(date) {
+            isDateUnavailable(date) {
                 if (date < this.firstHistoricalDate || date > this.currentDate) return true
 
                 if (this.allowedDates && !this.allowedDates[date.toISOString().substring(0,10)]) return true
 
                 return false
             },
-            onClear() {
-                this.$refs.date.modelDate = ''
-                this.selectedDate = null
-                this.$emit('clear')
+            onInput(historical) {
+                this.$emit('input', historical)
             }
         }
     }
@@ -78,22 +63,6 @@
             font-weight: 300;
             margin-right: 12px;
             line-height: 36px;
-        }
-        .md-field {
-            width: auto;
-            padding-top: 0;
-            min-height: auto;
-            margin-bottom: 0;
-        }
-        .md-datepicker.md-clearable {
-            .md-input-action {
-                visibility: hidden;
-            }
-        }
-        .x-btn.link {
-            margin-left: -32px;
-            margin-bottom: -4px;
-            z-index: 100;
         }
     }
 </style>
