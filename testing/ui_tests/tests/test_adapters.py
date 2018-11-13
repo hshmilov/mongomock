@@ -1,6 +1,7 @@
 import time
 from copy import copy
 
+from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
 from services.adapters.cisco_service import CiscoService
@@ -118,6 +119,7 @@ class TestAdapters(TestBase):
             self.wait_for_adapter_down(GOTOASSIST_NAME)
             self.wait_for_adapter_down(CISCO_NAME)
 
+    @flaky(max_runs=2)
     def test_connections(self):
         try:
             with CiscoService().contextmanager(take_ownership=True):
