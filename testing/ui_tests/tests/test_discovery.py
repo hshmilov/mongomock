@@ -1,8 +1,6 @@
 #pylint: disable=R0915
 import time
 
-from flaky import flaky
-
 from ui_tests.tests.test_adapters import JSON_ADAPTER_SEARCH, JSON_ADAPTER_NAME, JSON_ADAPTER_PLUGIN_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -19,7 +17,6 @@ class TestDiscovery(TestBase):
         self.base_page.run_discovery(wait=False)
         self.base_page.stop_discovery()
 
-    @flaky(max_runs=3)
     def test_realtime(self):
         """
         Test that the adapter is not an RT adapter by waiting for device to appear without cycle, and
@@ -47,8 +44,7 @@ class TestDiscovery(TestBase):
         self.axonius_system.aggregator.rebuild_views()
         time.sleep(10)
         self.devices_page.switch_to_page()
-        self.devices_page.safe_refresh()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.refresh_table()
 
         # make sure they're gone
         all_devices = self.devices_page.get_all_data_proper()
@@ -58,8 +54,7 @@ class TestDiscovery(TestBase):
         time.sleep(40)
 
         # refresh to make sure
-        self.devices_page.safe_refresh()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.refresh_table()
 
         # make sure the adapter haven't brough them again
         all_devices = self.devices_page.get_all_data_proper()
@@ -79,8 +74,7 @@ class TestDiscovery(TestBase):
 
         # verify the adapter has brought the device by the RT cycle
         self.devices_page.switch_to_page()
-        self.devices_page.safe_refresh()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.refresh_table()
 
         all_devices = self.devices_page.get_all_data_proper()
         assert any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
@@ -100,8 +94,7 @@ class TestDiscovery(TestBase):
         self.axonius_system.aggregator.rebuild_views()
         time.sleep(10)
         self.devices_page.switch_to_page()
-        self.devices_page.safe_refresh()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.refresh_table()
 
         # make sure they're gone
         all_devices = self.devices_page.get_all_data_proper()
@@ -111,8 +104,7 @@ class TestDiscovery(TestBase):
         time.sleep(40)
 
         # refresh to make sure
-        self.devices_page.safe_refresh()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.refresh_table()
 
         # make sure the adapter haven't brough them again
         all_devices = self.devices_page.get_all_data_proper()

@@ -336,7 +336,7 @@ RUN cd ./gui/frontend/ && npm run {dev}build
                            **kwargs)
 
     def add_labels_to_device(self, payload, *vargs, **kwargs):
-        return self.post('devices/labels'.format(id), data=json.dumps(payload), session=self._session, *vargs, **kwargs)
+        return self.post('devices/labels', data=json.dumps(payload), session=self._session, *vargs, **kwargs)
 
     def activate_plugin_job(self, plugin_id, *vargs, **kwargs):
         return self.post(f'plugins/{plugin_id}/start', *vargs, **kwargs)

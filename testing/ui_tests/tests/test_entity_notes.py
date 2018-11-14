@@ -52,6 +52,7 @@ class TestEntityNotes(TestBase):
         assert self.NOTE_1_TEXT in admins_note[0].text
 
     def test_notes_sanity(self):
+        self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self._create_notes_user()
         self._test_notes_basic_operations(self.users_page)

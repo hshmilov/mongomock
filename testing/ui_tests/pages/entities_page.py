@@ -326,3 +326,7 @@ class EntitiesPage(Page):
 
     def find_row_readonly(self):
         return self.driver.find_elements_by_css_selector('.x-row:not(.clickable)')
+
+    def refresh_table(self):
+        self.enter_search()
+        self.wait_for_table_to_load()

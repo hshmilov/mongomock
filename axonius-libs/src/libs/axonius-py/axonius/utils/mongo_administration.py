@@ -31,6 +31,7 @@ def get_collection_capped_size(col: Collection) -> int:
     options = col.options()
     if options.get('capped'):
         return options['size']
+    return None
 
 
 def create_capped_collection(col: Collection, size):

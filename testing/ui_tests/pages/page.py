@@ -442,11 +442,11 @@ class Page:
     def get_all_checkboxes(self):
         return self.driver.find_elements_by_css_selector(self.CHECKBOX_CSS)
 
-    def safe_refresh(self):
-        self.driver.get(self.driver.current_url)
-
     def click_ok_button(self):
         self.click_button('OK')
+
+    def safe_refresh(self):
+        self.driver.get(self.driver.current_url)
 
     # Following method should upload a file to input[id=input_id][type=file]
     # However, it has not yet worked practically
