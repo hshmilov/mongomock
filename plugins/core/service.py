@@ -2,6 +2,7 @@ import urllib3
 import logging
 
 from axonius.mixins.configurable import Configurable
+from axonius.utils.mongo_administration import set_mongo_parameter
 
 logger = logging.getLogger(f'axonius.{__name__}')
 from apscheduler.triggers.interval import IntervalTrigger
@@ -25,13 +26,6 @@ from core.exceptions import PluginNotFoundError
 
 CHUNK_SIZE = 1024
 MAX_INSTANCES_OF_SAME_PLUGIN = 100
-
-
-def set_mongo_parameter(connection, name, value):
-    connection['admin'].command({
-        'setParameter': 1,
-        name: value
-    })
 
 
 class CoreService(PluginBase, Configurable):

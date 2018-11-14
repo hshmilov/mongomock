@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import tarfile
 import threading
 import time
@@ -58,6 +59,8 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        beautify_user_entry, check_permissions,
                                        deserialize_db_permissions,
                                        get_historized_filter, get_entity_labels, add_labels_to_entities)
+from axonius.utils.mongo_administration import get_collection_storage_size, get_collection_capped_size, \
+    get_collection_stats
 from axonius.utils.parsing import bytes_image_to_base64, parse_filter
 from axonius.utils.threading import run_and_forget
 from bson import ObjectId
@@ -3559,6 +3562,44 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         return jsonify(self.metadata)
+
+    @gui_add_rule_logged_in('historical_sizes', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Settings,
+                                                             PermissionLevel.ReadOnly)})
+    def get_historical_size_stats(self):
+        sizes = {}
+        for entity_type in EntityType:
+            try:
+                col = self._historical_entity_views_db_map[entity_type]
+
+                # find the date of the last historical point
+                last_date = col.find_one(projection={
+                    'accurate_for_datetime': 1
+                },
+                    sort=[('accurate_for_datetime', -1)])['accurate_for_datetime']
+
+                axonius_entities_in_last_historical_point = col.count_documents({
+                    'accurate_for_datetime': last_date
+                })
+
+                stats = get_collection_stats(col)
+
+                d = {
+                    'size': stats['storageSize'],
+                    'capped': get_collection_capped_size(col),
+                    'avg_document_size': stats['avgObjSize'],
+                    'entities_last_point': axonius_entities_in_last_historical_point
+                }
+                sizes[entity_type.name] = d
+            except Exception:
+                logger.exception(f'failed calculating stats for {entity_type}')
+
+        disk_usage = shutil.disk_usage("/")
+        return jsonify({
+            'disk_free': disk_usage.free,
+            'disk_used': disk_usage.used,
+            'entity_sizes': sizes
+        })
 
     ####################
     # User Notes #

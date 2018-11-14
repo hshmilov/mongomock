@@ -11,6 +11,7 @@ from selenium import webdriver
 import conftest
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from axonius.plugin_base import EntityType
+from axonius.utils.mongo_administration import truncate_capped_collection
 from services.axonius_service import get_service
 from services.ports import DOCKER_PORTS
 from test_credentials.test_gui_credentials import DEFAULT_USER
@@ -112,8 +113,10 @@ class TestBase:
         self.axonius_system.get_notifications_db().remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
-        self.axonius_system.db.get_historical_entity_db_view(EntityType.Users).remove()
-        self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices).remove()
+
+        truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Users))
+        truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices))
+
         self.axonius_system.get_system_users_db().remove(
             {'user_name': {'$nin': [AXONIUS_USER_NAME, DEFAULT_USER['user_name']]}})
         self.axonius_system.get_system_users_db().update_one(

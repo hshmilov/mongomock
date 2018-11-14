@@ -1,5 +1,6 @@
 import concurrent.futures
 import logging
+import shutil
 import threading
 import time
 from datetime import datetime
@@ -18,6 +19,7 @@ from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
+from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
 from axonius.utils.threading import LazyMultiLocker
 from funcy import chunks
 from pymongo.errors import CollectionInvalid
@@ -165,8 +167,12 @@ class AggregatorService(PluginBase, Triggerable):
             for entity in EntityType
         }
 
+        # Setting up capped collections.
+        # This must come before __insert_indexes because indexes are dropped on a capped collection resize
+        self.__create_capped_collections()
+
         # Setting up db
-        self.insert_indexes()
+        self.__insert_indexes()
 
         # the last time the DB has been rebuilt
         self.__last_full_db_rebuild = {
@@ -188,7 +194,32 @@ class AggregatorService(PluginBase, Triggerable):
             # if the collection already exists - that's OK
             pass
 
-    def insert_indexes(self):
+    def __create_capped_collections(self):
+        """
+        Set up historical dbs as capped collections, if they aren't already
+        :return:
+        """
+        total_capped_data_on_disk = 0
+        for entity_type in EntityType:
+            col = self._historical_entity_views_db_map[entity_type]
+            size = get_collection_storage_size(col)
+            logger.info(f'{col.name} size on disk is {size}')
+            total_capped_data_on_disk += size
+
+        disk_usage = shutil.disk_usage("/")
+        # Size for all capped collections:
+        # (disk_free + total_current_capped_collection) * 0.8 - 5GB
+        # then, each collection will get a fair share
+        actual_disk_free = disk_usage.free + total_capped_data_on_disk
+        proper_capped_size = (actual_disk_free * 0.8 - 5 * 1024 * 1024 * 1024) / len(EntityType)
+
+        logger.info(f'Disk usage: {disk_usage}; virtually free is: {actual_disk_free}. '
+                    f'Calculated capped size: {proper_capped_size}')
+
+        for entity_type in EntityType:
+            create_capped_collection(self._historical_entity_views_db_map[entity_type], proper_capped_size)
+
+    def __insert_indexes(self):
         """
         Insert useful indexes.
         :return: None
