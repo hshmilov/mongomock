@@ -1616,7 +1616,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'enabled': self.__okta['enabled'],
                 "client_id": self.__okta['client_id'],
                 "url": self.__okta['url'],
-                "gui_url": self.__okta['gui_url']
+                "gui2_url": self.__okta['gui2_url']
             },
             "google": {
                 'enabled': self.__google['enabled'],
@@ -3776,12 +3776,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             "type": "string"
                         },
                         {
-                            "name": "gui_url",
+                            "name": "gui2_url",
                             "title": "The URL of Axonius GUI",
                             "type": "string"
                         }
                     ],
-                    "required": ["enabled", "client_id", "client_secret", "url", "gui_url"],
+                    "required": ["enabled", "client_id", "client_secret", "url", "gui2_url"],
                     "name": "okta_login_settings",
                     "title": "Okta Login Settings",
                     "type": "array"
@@ -3904,7 +3904,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 "client_id": "",
                 "client_secret": "",
                 "url": "https://yourname.okta.com",
-                "gui_url": "https://127.0.0.1"
+                "gui2_url": "https://127.0.0.1"
             },
             "ldap_login_settings": {
                 "enabled": False,

@@ -128,15 +128,15 @@ d<template>
                 this.login(this.credentials)
             },
             onOktaLogin() {
-                let guiURL = this.oktaConfig.gui_url.endsWith('/') ?
-                    this.oktaConfig.gui_url.substr(0, this.oktaConfig.gui_url.length - 1)
+                let gui2URL = this.oktaConfig.gui2_url.endsWith('/') ?
+                    this.oktaConfig.gui2_url.substr(0, this.oktaConfig.gui2_url.length - 1)
                     :
-                    this.oktaConfig.gui_url
+                    this.oktaConfig.gui2_url
                 let x = new OktaAuth({
                     url: this.oktaConfig.url,
                     issuer: this.oktaConfig.url,
                     clientId: this.oktaConfig.client_id,
-                    redirectUri: `${guiURL}/api/okta-redirect`,
+                    redirectUri: `${gui2URL}/api/okta-redirect`,
                     scope: 'openid'
                 })
                 x.token.getWithRedirect({responseType: 'code'})

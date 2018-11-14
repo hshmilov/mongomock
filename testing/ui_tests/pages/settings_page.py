@@ -235,11 +235,11 @@ class SettingsPage(Page):
     def fill_dc_address(self, dc_address):
         self.fill_text_field_by_element_id(self.DC_ADDRESS, dc_address)
 
-    def fill_okta_login_details(self, client_id, client_secret, url, gui_url):
+    def fill_okta_login_details(self, client_id, client_secret, url, gui2_url):
         self.fill_text_field_by_element_id('client_id', client_id)
         self.fill_text_field_by_element_id('client_secret', client_secret)
         self.fill_text_field_by_element_id('url', url)
-        self.fill_text_field_by_element_id('gui_url', gui_url)
+        self.fill_text_field_by_element_id('gui2_url', gui2_url)
 
     def get_dc_address(self):
         return self.driver.find_element_by_id(self.DC_ADDRESS).get_attribute('value')
@@ -249,7 +249,7 @@ class SettingsPage(Page):
             'client_id': self.driver.find_element_by_id('client_id').get_attribute('value'),
             'client_secret': self.driver.find_element_by_id('client_secret').get_attribute('value'),
             'url': self.driver.find_element_by_id('url').get_attribute('value'),
-            'gui_url': self.driver.find_element_by_id('gui_url').get_attribute('value')
+            'gui2_url': self.driver.find_element_by_id('gui2_url').get_attribute('value')
         }
 
     def set_single_adapter_checkbox(self, make_yes=True):

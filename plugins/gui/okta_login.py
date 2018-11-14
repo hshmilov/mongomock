@@ -63,13 +63,13 @@ def try_connecting_using_okta(okta_config) -> bool:
         logger.info("No state")
         return False
 
-    gui_url = okta_config['gui_url']
-    if gui_url.endswith('/'):
-        gui_url = gui_url[:-1]
+    gui2_url = okta_config['gui2_url']
+    if gui2_url.endswith('/'):
+        gui2_url = gui2_url[:-1]
     querystring = {
         'grant_type': 'authorization_code',
         'code': request.args.get('code'),
-        'redirect_uri': f'{gui_url}/api/okta-redirect',
+        'redirect_uri': f'{gui2_url}/api/okta-redirect',
         'client_secret': okta_config['client_secret'],
         'client_id': okta_config['client_id'],
     }
