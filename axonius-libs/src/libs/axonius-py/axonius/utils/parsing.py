@@ -45,7 +45,8 @@ DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP', '.LOCALHOST']
 # In MacOs hostname of the same computer can return in different shapes,
 # that's why we would like to compare them without these strings
 DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MBA', '-MACBOOK-AIR', 'MACBOOK-AIR'] + \
-                         [f"-MBP-{index}" for index in range(20)] + [f"-MBP-0{index}" for index in range(10)] + ['-AIR', 'AIR'] + \
+                         [f"-MBP-{index}" for index in range(20)] + [f"-MBP-0{index}" for index in range(10)] + ['-AIR',
+                                                                                                                 'AIR'] + \
                          [f"-MACBOOK-PRO-{index}" for index in range(20)] + \
                          [f"-MACBOOK-PRO-0{index}" for index in range(10)] + \
                          [f"MACBOOKPRO{index}" for index in range(20)] + [f"MACBOOKPRO0{index}" for index in range(10)]
@@ -652,7 +653,9 @@ def is_junos_space_device(adapter_device):
 
 
 def is_from_juniper_and_asset_name(adapter_device):
-    return adapter_device.get('plugin_name') in ['juniper_adapter', 'junos_adapter'] and adapter_device.get('data', {}).get('name')
+    return adapter_device.get('plugin_name') in ['juniper_adapter', 'junos_adapter'] and adapter_device.get('data',
+                                                                                                            {}).get(
+        'name')
 
 
 def compare_id(adapter_device1, adapter_device2):
@@ -872,7 +875,8 @@ def have_mac_intersection(adapter_device1, adapter_device2) -> bool:
 
 
 def ips_do_not_contradict_or_mac_intersection(adapter_device1, adapter_device2):
-    return ips_do_not_contradict(adapter_device1, adapter_device2) or have_mac_intersection(adapter_device1, adapter_device2)
+    return ips_do_not_contradict(adapter_device1, adapter_device2) or have_mac_intersection(adapter_device1,
+                                                                                            adapter_device2)
 
 
 def ips_do_not_contradict(adapter_device1, adapter_device2):
@@ -891,12 +895,12 @@ def macs_do_not_contradict(adapter_device1, adapter_device2):
 # This doesn't mean we want to correlate according to these rules,
 # just not to contradict, we hope to correlate with MAC
 def contain_macbook_names(device1_hostnames, device2_hostnames):
-    return ("MBP" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or\
-           ("MBP" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or\
-           ("AIR" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or\
-           ("AIR" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or\
-           (len(str(device1_hostnames)) > 5 and (str(device1_hostnames)[:5] == str(device2_hostnames)[:5])) or\
-           (str(device1_hostnames).lower() == 'mac' or str(device2_hostnames).lower() == 'mac') or\
+    return ("MBP" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or \
+           ("MBP" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or \
+           ("AIR" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or \
+           ("AIR" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or \
+           (len(str(device1_hostnames)) > 5 and (str(device1_hostnames)[:5] == str(device2_hostnames)[:5])) or \
+           (str(device1_hostnames).lower() == 'mac' or str(device2_hostnames).lower() == 'mac') or \
            ((''.join(char for char in str(device2_hostnames) if char.isalnum())) ==
             (''.join(char for char in str(device1_hostnames) if char.isalnum())))
 
@@ -923,7 +927,7 @@ def hostnames_do_not_contradict(adapter_device1, adapter_device2):
         (contain_macbook_names(adapter_device1.get('data', {}).get("hostname", ""),
                                adapter_device2.get('data', {}).get("hostname", "")) and
          (adapter_device1.get('data', {}).get("os", {}).get("type") == "OS X") and
-         (adapter_device2.get('data', {}).get("os", {}).get("type") == "OS X")) \
+            (adapter_device2.get('data', {}).get("os", {}).get("type") == "OS X")) \
         or compare_normalized_hostnames(device1_hostnames, device2_hostnames)
 
 
@@ -942,6 +946,7 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
     :param adapter_device2: second device
     :return:
     """
+
     def is_os_x(adapter_device):
         return ((adapter_device.get("data") or {}).get("os") or {}).get("type", '') == "OS X"
 
@@ -950,6 +955,7 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
                 and len(get_hostname(adapter_device).split('.')[0]) >= 15 and is_os_x(adapter_device):
             return True
         return False
+
     first_element_only = False
     test_on_first_param_and_first_element = False
     test_on_second_param_and_first_element = False
@@ -1049,6 +1055,96 @@ def and_function(*functions) -> FunctionType:
     return tmp
 
 
+def convert_many_queries_to_elemmatch_with_addition_conditional(datas, prefix, field_name):
+    """
+    Helper for fix_adapter_data and fix_specific_data
+    """
+    return {
+        '$elemMatch': {
+            '$and': [
+                {
+                    field_name: {
+                        '$ne': True
+                    }
+                },
+                {
+                    '$or': [
+                        {
+                            k[len(prefix):]: v
+                        }
+                        for k, v
+                        in datas]
+                }
+            ]
+        }
+    }
+
+
+def fix_adapter_data(find):
+    """
+    Helper for post_process_add_old_filtering
+    """
+    prefix = 'adapters_data.'
+    datas = [(k, v) for k, v in find.items() if k.startswith(prefix)]
+    if datas:
+        for k, v in datas:
+            # k will look like "adapters_data.maradapter.something"
+            adapter_name = k.split('.')[1]
+            elem_match = {
+                # remove the dot at the end
+                prefix[:-1]: convert_many_queries_to_elemmatch_with_addition_conditional([(k, v)],
+                                                                                         prefix,
+                                                                                         f'{adapter_name}._old')
+            }
+
+            find.update(elem_match)
+
+        for k, _ in datas:
+            del find[k]
+
+    for k, v in find.items():
+        if not k.startswith(prefix):
+            add_duplicates_filtering(v)
+
+
+def fix_specific_data(find):
+    """
+    Helper for post_process_add_old_filtering
+    """
+    prefix = 'specific_data.'
+    datas = [(k, v) for k, v in find.items() if k.startswith(prefix)]
+    if datas:
+        elem_match = {
+            # remove the dot at the end
+            prefix[:-1]: convert_many_queries_to_elemmatch_with_addition_conditional(datas, prefix, 'data._old')
+        }
+
+        find.update(elem_match)
+
+    for k, _ in datas:
+        del find[k]
+
+    for k, v in find.items():
+        if not k.startswith(prefix):
+            add_duplicates_filtering(v)
+
+
+def add_duplicates_filtering(find):
+    """
+    Fixes in place the mongo filter to not include 'old' entities
+    """
+    if isinstance(find, dict):
+        fix_specific_data(find)
+        fix_adapter_data(find)
+
+    elif isinstance(find, list):
+        for x in find:
+            add_duplicates_filtering(x)
+
+
+NO_DUPLICATES = 'UNIQUE ADAPTER:'
+
+
 def parse_filter(filter_str):
     """
     Translates a string representing of a filter to a valid MongoDB query
@@ -1066,6 +1162,12 @@ def parse_filter(filter_str):
     """
     if filter_str is None or filter_str == '':
         return {}
+
+    no_duplicates = False
+    filter_str = filter_str.strip()
+    if filter_str.startswith(NO_DUPLICATES):
+        no_duplicates = True
+        filter_str = filter_str[len(NO_DUPLICATES):]
 
     # Handle predefined sequence representing a range of some time units from now back
     matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
@@ -1088,11 +1190,13 @@ def parse_filter(filter_str):
         filter_str = filter_str.replace(matches.group(0), f'not ({matches.group(1)})')
         matches = re.search('NOT\s*\[(.*)\]', filter_str)
 
-    return translate_filter_not(pql.find(filter_str))
+    res = translate_filter_not(pql.find(filter_str))
+    if no_duplicates:
+        add_duplicates_filtering(res)
+    return res
 
 
 def translate_filter_not(filter_obj):
-
     if isinstance(filter_obj, dict):
         translated_filter_obj = {}
         for key, value in filter_obj.items():

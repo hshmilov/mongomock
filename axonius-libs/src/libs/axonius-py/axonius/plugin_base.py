@@ -15,6 +15,7 @@ import sys
 import threading
 import traceback
 import uuid
+from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 from pathlib import Path
@@ -56,7 +57,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           TROUBLESHOOTING_SETTING,
                                           VOLATILE_CONFIG_PATH, PLUGIN_NAME, X_UI_USER, X_UI_USER_SOURCE,
                                           PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW)
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
 from axonius.logging.logger import create_logger
@@ -192,6 +193,31 @@ def return_error(error_message, http_status=500, additional_data=None):
 entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
 """
 GUI_DBs = namedtuple("GUI_DBs", ['entity_query_views_db_map'])
+
+
+def recalculate_adapter_oldness(adapter_list: list):
+    """
+    Updates (in place) all adapters given.
+    This assuems that they all comprise a single axonius entity.
+    All groups of adapters by plugin_name (i.e. "duplicate" adapter entities from the same adapter)
+    will have they're "old" value recalculated
+    https://axonius.atlassian.net/wiki/spaces/AX/pages/794230909/Handle+Duplicates+of+adapter+entity+of+the+same+adapter+entity
+    Only the newest adapter entity will have an "old" value of False, all others will have "new".
+    (Adapters that don't have duplicates are unaffected)
+    :param adapter_list: list of adapter entities
+    :return: None
+    """
+    all_unique_adapter_entities_data_indexed = defaultdict(list)
+    for adapter in adapter_list:
+        all_unique_adapter_entities_data_indexed[adapter[PLUGIN_NAME]].append(adapter)
+
+    for adapters in all_unique_adapter_entities_data_indexed.values():
+        if len(adapters) > 1:
+            if not all(LAST_SEEN_FIELD in adapter['data'] for adapter in adapters):
+                continue
+            for adapter in adapters:
+                adapter['data']['_old'] = True
+            max(adapters, key=lambda x: x['data'][LAST_SEEN_FIELD])['data']['_old'] = False
 
 
 class PluginBase(Configurable, Feature):
@@ -1513,6 +1539,7 @@ class PluginBase(Configurable, Feature):
 
                     collected_adapter_entities = [axonius_entity['adapters'] for axonius_entity in entities_candidates]
                     all_unique_adapter_entities_data = [v for d in collected_adapter_entities for v in d]
+                    recalculate_adapter_oldness(all_unique_adapter_entities_data)
 
                     # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
                     # a tag is the same tag, if it has the same plugin_unique_name and name.
@@ -1609,6 +1636,7 @@ class PluginBase(Configurable, Feature):
             "adapters": adapter_to_extract,
             "tags": []
         }
+
         # figure out which adapters should stay on the current entity (axonius_entity_to_split - remaining adapters)
         # and those that should move to the new axonius entity
         remaining_adapters = set(x[PLUGIN_UNIQUE_NAME] for x in entity_to_split['adapters']) - \
@@ -1630,18 +1658,20 @@ class PluginBase(Configurable, Feature):
                     new_axonius_entity['tags'].append(newtag)
         # remove the adapters one by one from the DB, and also keep track in memory
         adapter_entities_left = list(entity_to_split['adapters'])
+
         for adapter_to_remove_from_old in new_axonius_entity['adapters']:
-            session.update_many({'internal_axon_id': entity_to_split['internal_axon_id']},
-                                {
-                                    "$pull": {
-                                        'adapters': {
-                                            PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
-                                                PLUGIN_UNIQUE_NAME],
-                                            'data.id': adapter_to_remove_from_old['data']['id']
-                                        }
-                                    }
-            })
             adapter_entities_left.remove(adapter_to_remove_from_old)
+
+        recalculate_adapter_oldness(adapter_entities_left)
+        session.update_one({
+            'internal_axon_id': entity_to_split['internal_axon_id']
+        },
+            {
+                '$set': {
+                    'adapters': adapter_entities_left
+                }
+        })
+
         # generate a list of (unique_plugin_name, id) from the adapter entities left
         adapter_entities_left_by_id = [
             [adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']]
@@ -1691,6 +1721,8 @@ class PluginBase(Configurable, Feature):
                             full_query)
         new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(
             set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
+
+        recalculate_adapter_oldness(new_axonius_entity['adapters'])
         session.insert_one(new_axonius_entity)
 
     def __archive_axonius_device(self, plugin_unique_name, device_id, db_to_use, session=None):

@@ -1,6 +1,7 @@
 import uuid
 import time
 import random
+from datetime import datetime
 
 from axonius.adapter_base import AdapterBase
 from axonius.devices.device_adapter import DeviceAdapter
@@ -185,6 +186,7 @@ class StresstestAdapter(AdapterBase):
                     device.add_nic(iface.get('macAddress'), ips)
             device.hostname = device_raw['guest'].get('hostName')
             device.vm_tools_status = device_raw['guest'].get('toolsStatus')
+            device.last_seen = datetime.now()
             device.set_raw(device_raw)
             yield device
 
