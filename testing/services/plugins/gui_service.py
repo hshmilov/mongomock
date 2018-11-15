@@ -1,11 +1,15 @@
-import secrets
-import requests
 import json
 import os
+import secrets
 
-from axonius.consts.plugin_consts import DASHBOARD_COLLECTION, GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
-    AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME
-from axonius.consts.gui_consts import ROLES_COLLECTION, PREDEFINED_ROLE_RESTRICTED
+import requests
+
+from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED,
+                                       ROLES_COLLECTION)
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
+                                          CONFIGURABLE_CONFIGS_COLLECTION,
+                                          DASHBOARD_COLLECTION, GUI_NAME,
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME)
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
 
@@ -28,6 +32,8 @@ class GuiService(PluginService):
             self._update_schema_version_4()
         if self.db_schema_version < 5:
             self._update_schema_version_5()
+        if self.db_schema_version < 6:
+            self._update_schema_version_6()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -249,6 +255,25 @@ class GuiService(PluginService):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 5. Details: {e}')
 
+    def _update_schema_version_6(self):
+        print('upgrade to schema 6')
+        try:
+            # Fix the Okta Login Settings - Rename 'gui_url' field to 'gui2_url'
+            config_match = {
+                'config_name': 'GuiService'
+            }
+            current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+            if current_config:
+                current_config_okta = current_config['config']['okta_login_settings']
+                if current_config_okta.get('gui_url'):
+                    current_config_okta['gui2_url'] = current_config_okta['gui_url']
+                    del current_config_okta['gui_url']
+                    self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+                        config_match, current_config)
+            self.db_schema_version = 6
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 6. Details: {e}')
+
     @property
     def exposed_ports(self):
         """
@@ -268,13 +293,13 @@ class GuiService(PluginService):
         volumes = [f'{libs}:/home/axonius/libs:ro']
 
         # extend volumes by mapping specifically each python file, to be able to debug much better.
-        volumes.extend([f"{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro"
-                        for fn in os.listdir(self.service_dir) if fn.endswith(".py")])
+        volumes.extend([f'{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro'
+                        for fn in os.listdir(self.service_dir) if fn.endswith('.py')])
         return volumes
 
     def get_dockerfile(self, mode=''):
         dev = '' if mode == 'prod' else 'dev-'
-        return f"""
+        return f'''
 FROM axonius/axonius-libs
 
 # Set the working directory to /app
@@ -296,7 +321,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
 # Compile npm. we assume we have it from axonius-libs
 RUN cd ./gui/frontend/ && npm run {dev}build
-"""[1:]
+'''[1:]
 
     def __del__(self):
         self._session.close()
@@ -321,8 +346,8 @@ RUN cd ./gui/frontend/ && npm run {dev}build
         return self.delete('users', session=self._session, data={'internal_axon_ids': internal_axon_ids},
                            *vargs, **kwargs)
 
-    def get_device_by_id(self, id, *vargs, **kwargs):
-        return self.get('devices/{0}'.format(id), session=self._session, *vargs, **kwargs)
+    def get_device_by_id(self, id_, *vargs, **kwargs):
+        return self.get('devices/{0}'.format(id_), session=self._session, *vargs, **kwargs)
 
     def delete_client(self, adapter_unique_name, client_id, *vargs, **kwargs):
         return self.delete(f'adapters/{adapter_unique_name}/clients/{client_id}', session=self._session,

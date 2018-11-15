@@ -460,7 +460,6 @@ testing/services/plugins/device_control_service.py
 testing/services/plugins/diagnostics_service.py
 testing/services/plugins/execution_service.py
 testing/services/plugins/general_info_service.py
-testing/services/plugins/gui_service.py
 testing/services/plugins/mongo_service.py
 testing/services/plugins/pm_status_service.py
 testing/services/plugins/system_scheduler_service.py

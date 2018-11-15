@@ -1,3 +1,4 @@
+from copy import deepcopy
 from services.standalone_services.syslog_server import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
@@ -86,7 +87,15 @@ class TestPrepareGlobalSettings(TestBase):
 
         toggle = self.settings_page.find_allow_okta_logins_toggle()
         self.settings_page.click_toggle_button(toggle)
-        self.settings_page.fill_okta_login_details(**OKTA_LOGIN_DETAILS)
+
+        old_okta_login = deepcopy(OKTA_LOGIN_DETAILS)
+        old_okta_login['gui_url'] = old_okta_login['gui2_url']
+        del old_okta_login['gui2_url']
+        try:
+            self.settings_page.fill_okta_login_details(**old_okta_login)
+        except Exception:
+            self.settings_page.fill_okta_login_details(**OKTA_LOGIN_DETAILS)
+
         # Input for uploading file, with id 'keypair_file' is not found
         # self.settings_page.fill_google_login_details(CLIENT_ID, account_to_impersonate, service_json_data)
 
