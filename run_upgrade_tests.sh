@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 function finish {
+  set +e
   echo "#### In finish function"
   # In case where it won't work, it does not matter since regular clean_dockers.sh was called.
   pwd
