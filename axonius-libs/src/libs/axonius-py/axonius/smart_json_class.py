@@ -3,9 +3,9 @@ import logging
 from collections import OrderedDict
 from enum import Enum
 from axonius.fields import Field, ListField
+from axonius.utils.parsing import normalize_var_name
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 """
 SmartJsonClass is a auto-json-serializable class, that allows finer declaration of possible fields and their types.
@@ -153,6 +153,13 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
         self.fields_info.append(field_value)
 
         logger.info(f'Successfully declared dynamic field {field_name}')
+
+    def set_dynamic_field(self, field_name, field_value):
+        field_name = normalize_var_name(field_name)
+        capitalized = ' '.join([word.capitalize() for word in field_name.split(' ')])
+        if not self.does_field_exist(field_name):
+            self.declare_new_field(field_name, Field(str, f'{capitalized}'))
+        self[field_name] = field_value
 
     def to_dict(self):
         """ returns a serialized dict of this instance, can be passes as a json object """

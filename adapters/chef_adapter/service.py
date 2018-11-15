@@ -115,7 +115,8 @@ class ChefAdapter(AdapterBase):
                 device.name = device_raw['name']  # exception is thrown and logged if we don't have an id
                 device.id = device.name
                 device.environment = device_raw.get('chef_environment')
-                device_raw_automatic = device_raw.get('automatic')
+                device_raw_automatic = device_raw.get('automatic', {})
+                device_raw_normal = device_raw.get('normal', {})
                 device.figure_os(' '.join([(device_raw_automatic.get('platform_family') or ''),
                                            (device_raw_automatic.get('platform') or ''),
                                            (device_raw_automatic.get('platform_version') or ''),
@@ -203,15 +204,27 @@ class ChefAdapter(AdapterBase):
 
                 # MongoDB can only store up to 8-byte ints :(
                 try:
-                    ((device_raw.get('automatic') or {}).get('sysconf') or {}).pop('ULONG_MAX')
+                    device_raw_automatic.get('sysconf', {}).pop('ULONG_MAX')
                 except Exception as e:
                     logger.warning(f"Problem with pop of sys conf : {e}")
 
                 try:
-                    device.chef_tags = device_raw['normal']['tags']
-                    device.public_ip = device_raw['automatic']['public_ip']['data']['ip']
+                    device.chef_tags = device_raw_normal['tags']
+                    device.public_ip = device_raw_automatic['public_ip']['data']['ip']
                 except Exception:
                     logger.info(f"No axonius specific info found")
+
+                customer = device_raw_normal.get('customer', '')
+                if customer:
+                    device.set_dynamic_field('customer', customer)
+
+                ssh_port = device_raw_normal.get('rev-ssh-port', '')
+                if ssh_port:
+                    device.set_dynamic_field('ssh_port', str(ssh_port))
+
+                version = device_raw_automatic.get('axonius_metadata', {}).get('content', {}).get('Version')
+                if version:
+                    device.set_dynamic_field('axonius_version', version)
 
                 device.set_raw(device_raw)
 
