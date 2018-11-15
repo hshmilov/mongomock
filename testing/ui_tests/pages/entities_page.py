@@ -45,6 +45,7 @@ class EntitiesPage(Page):
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
+    TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(3) > div.item-content'
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
@@ -326,6 +327,21 @@ class EntitiesPage(Page):
 
     def find_row_readonly(self):
         return self.driver.find_elements_by_css_selector('.x-row:not(.clickable)')
+
+    def query_json_adapter(self):
+        self.fill_filter(self.JSON_ADAPTER_FILTER)
+        self.enter_search()
+        self.wait_for_table_to_load()
+
+    def open_delete_dialog(self):
+        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_DELETE_CSS).click()
+
+    def read_delete_dialog(self):
+        return self.wait_for_element_present_by_css('.x-actions .modal-body .warn-delete').text
+
+    def confirm_delete(self):
+        self.click_button(self.DELETE_BUTTON)
 
     def refresh_table(self):
         self.enter_search()

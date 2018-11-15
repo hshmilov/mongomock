@@ -16,7 +16,7 @@
         </x-data-action-item>
         <x-data-action-item title="Delete..." :handle-save="deleteEntities" :message="`Deleted ${module}`"
                             action-text="Delete">
-            <div>You are about to delete {{selected.length}} {{module}}, {{selectedAdaptersCount}} total adapter {{module}}.</div>
+            <div class="warn-delete">You are about to delete {{selected.length}} {{module}}, {{selectedAdaptersCount}} total adapter {{module}}.</div>
             <div>These {{module}} could reappear in further scans if they're not removed or detached.</div>
             <div>Are you sure you want to delete these {{module}}?</div>
         </x-data-action-item>

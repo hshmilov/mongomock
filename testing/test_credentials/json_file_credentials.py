@@ -2,16 +2,21 @@ from adapters.json_file_adapter.service import DEVICES_DATA, USERS_DATA
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 USER_NAME_UNICODE = 'אבידור'
+DEVICE_FIRST_IP = '10.0.2.1'
+DEVICE_SECOND_IP = '10.0.2.2'
 
 client_details = {
-    DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, b'''
+    DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, '''
     {
         "devices" : [
             {
             "id": "cb_id1",
             "name": "CB 1",
             "hostname": "CB First",
-            "network_interfaces": [{"mac": "06:3A:9B:D7:D7:A8", "ips": ["10.0.2.1"]}],
+            "network_interfaces": [{
+                "mac": "06:3A:9B:D7:D7:A8",
+                "ips": ["''' + DEVICE_FIRST_IP + '''", "''' + DEVICE_SECOND_IP + '''", "10.0.2.3"]
+            }],
             "av_status": "active",
             "last_contact": "-",
             "sensor_version": "0.4.1",

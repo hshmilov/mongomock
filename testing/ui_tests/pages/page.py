@@ -80,6 +80,7 @@ class Page:
     SAVE_BUTTON = 'Save'
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'
+    ACTIONS_BUTTON = 'Actions'
 
     def __init__(self, driver, base_url):
         self.driver = driver

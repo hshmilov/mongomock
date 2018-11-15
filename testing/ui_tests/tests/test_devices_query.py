@@ -143,7 +143,7 @@ class TestDevicesQuery(TestBase):
     def _test_not_expression(self):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
-        self.devices_page.select_query_field(self.devices_page.FIELD_HOST_NAME, parent=expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
         self.devices_page.fill_query_value('test', parent=expressions[0])
         self.devices_page.toggle_not(expressions[0])
