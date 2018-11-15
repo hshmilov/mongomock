@@ -17,10 +17,14 @@ class TestSplunkAdapter(AdapterTestBase):
     def some_client_details(self):
         return splunk_details
 
+    @property
+    def some_device_id(self):
+        return FETCHED_DEVICE_EXAMPLE['id']
+
     def test_fetch_devices(self):
         self.adapter_service.set_configurable_config('SplunkAdapter', 'fetch_nexpose', True)
-        self.adapter_service.add_client(self.some_client_details)
-        self.axonius_system.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
+        self.adapter_service.set_configurable_config('SplunkAdapter', 'max_log_history', 365 * 2)
+        super().test_fetch_devices()
         devices_as_dict = self.adapter_service.devices()
         assert len(devices_as_dict) > 0
 
