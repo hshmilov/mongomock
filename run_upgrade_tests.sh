@@ -2,6 +2,9 @@
 
 function finish {
   echo "#### In finish function"
+  # In case where it won't work, it does not matter since regular clean_dockers.sh was called.
+  pwd
+  cd ..
   ./clean_dockers.sh
   echo "#### After finish function"
 }
