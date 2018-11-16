@@ -49,7 +49,7 @@
             border-color: $theme-blue;
         }
         .input-value {
-            width: calc(100% - 42px);
+            width: 100%;
             border: none;
             background: transparent;
             padding: 4px 4px 4px 42px;

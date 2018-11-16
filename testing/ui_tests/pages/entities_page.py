@@ -58,6 +58,7 @@ class EntitiesPage(Page):
     NOTES_CREATED_TOASTER = 'New note was created'
     NOTES_EDITED_TOASTER = 'Existing note was edited'
     NOTES_REMOVED_TOASTER = 'Notes were removed'
+    NOTES_SEARCH_INUPUT_CSS = '#search-notes .input-value'
 
     @property
     def url(self):
@@ -116,7 +117,7 @@ class EntitiesPage(Page):
     def click_row(self):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).click()
 
-    def click_first_row_checkbox(self):
+    def click_row_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CHECKBOX_CSS).click()
 
     def find_query_search_input(self):
@@ -320,13 +321,16 @@ class EntitiesPage(Page):
         self.fill_save_note(note_text, self.NOTES_EDITED_TOASTER)
 
     def remove_note(self):
-        self.click_first_row_checkbox()
+        self.click_row_checkbox()
         self.remove_selected()
         self.approve_remove_selected()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def find_row_readonly(self):
         return self.driver.find_elements_by_css_selector('.x-row:not(.clickable)')
+
+    def search_note(self, search_text):
+        self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)
 
     def query_json_adapter(self):
         self.fill_filter(self.JSON_ADAPTER_FILTER)

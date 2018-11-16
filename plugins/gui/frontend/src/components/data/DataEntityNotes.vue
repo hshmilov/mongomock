@@ -1,7 +1,7 @@
 <template>
     <div class="x-entity-notes">
         <div class="header">
-            <x-search-input v-model="searchValue" placeholder="Search Notes..." />
+            <x-search-input v-model="searchValue" placeholder="Search Notes..." id="search-notes" />
             <div class="actions">
                 <button class="x-btn link" v-if="selectedNotes && selectedNotes.length" @click="confirmRemoveNotes">Remove</button>
                 <button class="x-btn" @click="readOnly? undefined : createNote()" :class="{disabled: readOnly}">+ Note</button>

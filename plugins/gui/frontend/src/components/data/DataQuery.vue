@@ -337,6 +337,7 @@
                 }
                 .input-value {
                     padding-left: 36px;
+                    width: calc(100% - 12px);
                 }
             }
             .query-quick {
