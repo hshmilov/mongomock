@@ -1,7 +1,8 @@
 import logging
+import os
 import time
 import urllib.parse
-from json import dumps
+from tempfile import NamedTemporaryFile
 
 from selenium.common.exceptions import (ElementNotVisibleException,
                                         NoSuchElementException,
@@ -82,9 +83,11 @@ class Page:
     DELETE_BUTTON = 'Delete'
     ACTIONS_BUTTON = 'Actions'
 
-    def __init__(self, driver, base_url):
+    def __init__(self, driver, base_url, local_browser: bool):
         self.driver = driver
         self.base_url = base_url
+        self.local_browser = local_browser
+        self.ui_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../', '../'))
 
     def cleanup(self):
         pass
@@ -449,13 +452,20 @@ class Page:
     def safe_refresh(self):
         self.driver.get(self.driver.current_url)
 
-    # Following method should upload a file to input[id=input_id][type=file]
-    # However, it has not yet worked practically
-    def upload_file_by_id(self, input_id, file_content):
-        file_path = '/dev/shm/temp_file_upload'
-        with open(file_path, 'w') as file_ref:
-            file_ref.write(dumps(file_content))
+    def __upload_file_by_id(self, input_id, file_path):
         self.driver.find_element_by_id(input_id).send_keys(file_path)
+
+    def upload_file_by_id(self, input_id, file_content):
+        if self.local_browser:
+            with NamedTemporaryFile(delete=False) as temp_file:
+                temp_file.write(bytes(file_content, 'ascii'))
+                temp_file.file.flush()
+                return self.__upload_file_by_id(input_id, temp_file.name)
+
+        file_path = os.path.join(self.ui_tests_dir, 'selenium_tests', 'temp_file_upload')
+        with open(file_path, 'w') as file_ref:
+            file_ref.write(file_content)
+        return self.__upload_file_by_id(input_id, '/home/seluser/selenium_tests/temp_file_upload')
 
     def close_dropdown(self):
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()

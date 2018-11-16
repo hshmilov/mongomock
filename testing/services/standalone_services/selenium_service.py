@@ -1,3 +1,4 @@
+import os
 import subprocess
 import shlex
 import time
@@ -11,8 +12,15 @@ class SeleniumService(DockerService):
         return True
 
     def __init__(self):
-        name = 'grid'
-        super().__init__(name, '')
+        super().__init__('grid', '')
+
+        self.selenium_files_path = os.path.abspath(os.path.join(self.cortex_root_dir, 'testing', 'selenium_tests'))
+        if not os.path.exists(self.selenium_files_path):
+            os.makedirs(self.selenium_files_path)
+
+        if os.name == 'nt':
+            # docker doesn't play nice without this
+            self.selenium_files_path = self.selenium_files_path.replace('\\', '/')
 
     def start(self,
               mode='',
@@ -22,7 +30,7 @@ class SeleniumService(DockerService):
               show_print=True,
               expose_port=False,
               extra_flags=None):
-        extra_flags = ['-e', 'TZ="Asia/Jerusalem"', '--privileged']
+        extra_flags = ['-e', 'TZ="Asia/Jerusalem"', '--link=gui:okta.axonius.local', '--privileged']
         super().start(mode=mode,
                       allow_restart=allow_restart,
                       rebuild=rebuild,
@@ -50,7 +58,8 @@ class SeleniumService(DockerService):
 
     @property
     def volumes(self):
-        return ['/dev/shm:/dev/shm']
+        return ['/dev/shm:/dev/shm',
+                f'{self.selenium_files_path}:/home/seluser/selenium_tests']
 
     @property
     def exposed_ports(self):

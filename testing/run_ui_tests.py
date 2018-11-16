@@ -6,10 +6,9 @@ import sys
 import pytest
 
 from services.axonius_service import get_service
-from services.ports import DOCKER_PORTS
-# from services.standalone_services.selenium_service import SeleniumService
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
+from services.standalone_services.selenium_service import SeleniumService
 from devops.scripts.automate_dev import credentials_inputer
 
 
@@ -17,21 +16,14 @@ def main():
     axonius_system = get_service()
     ad_service = AdService()
     json_service = JsonFileService()
-
-    # selenium_service = SeleniumService()
-    cmd = 'docker run -d --name=grid ' \
-          f'-p {DOCKER_PORTS["selenium-hub"]}:24444 -p {DOCKER_PORTS["selenium-vnc"]}:25900 -e TZ="Asia/Jerusalem" ' \
-          '-v /dev/shm:/dev/shm --privileged --link=gui:okta.axonius.local --network=axonius elgalu/selenium'
-    subprocess.Popen(shlex.split(cmd)).communicate()
-    cmd = 'docker exec grid wait_all_done 30s'
-    subprocess.Popen(shlex.split(cmd)).communicate()
+    selenium_service = SeleniumService()
 
     try:
         axonius_system.take_process_ownership()
         axonius_system.start_and_wait()
 
-        # selenium_service.take_process_ownership()
-        # selenium_service.start_and_wait()
+        selenium_service.take_process_ownership()
+        selenium_service.start_and_wait()
 
         # Set up testing configurations
         axonius_system.core.set_execution_config(True)

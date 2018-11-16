@@ -1,3 +1,5 @@
+from json import dumps
+
 from selenium.common.exceptions import NoSuchElementException
 from ui_tests.pages.page import Page, X_BODY
 from axonius.consts.gui_consts import GOOGLE_KEYPAIR_FILE
@@ -295,7 +297,7 @@ class SettingsPage(Page):
         self.set_google_clients_login()
         self.set_google_client_id(client_id)
         self.set_google_email_account(email_account)
-        self.set_google_keypair_file(keypair_data)
+        self.set_google_keypair_file(dumps(keypair_data))
 
     def get_google_login_details(self):
         return self.get_google_client_id(), self.get_google_email_account(), self.get_google_keypair_file()

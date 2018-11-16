@@ -1090,12 +1090,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param adapter_unique_name: the adapter to refer to
         :return:
         """
-        with self._get_db_connection() as db_connection:
-            if request.method == 'PUT':
-                self.__is_system_first_use = False
-                return self._query_client_for_devices(adapter_unique_name)
-            else:
-                return self._test_client_connectivity(adapter_unique_name)
+        if request.method == 'PUT':
+            self.__is_system_first_use = False
+            return self._query_client_for_devices(adapter_unique_name)
+        else:
+            return self._test_client_connectivity(adapter_unique_name)
 
     @gui_add_rule_logged_in("adapters/<adapter_unique_name>/clients/<client_id>",
                             methods=['PUT', 'DELETE'], required_permissions={Permission(PermissionType.Adapters,

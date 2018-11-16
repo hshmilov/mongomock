@@ -35,9 +35,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class TestBase:
     def _initialize_driver(self):
         if pytest.config.option.local_browser:
+            self.local_browser = True
             self.driver = self._get_local_browser()
             self.base_url = 'https://127.0.0.1'
         else:
+            self.local_browser = False
             self.driver = webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
                                            desired_capabilities=self._get_desired_capabilities())
             self.base_url = 'https://gui'
@@ -147,7 +149,7 @@ class TestBase:
             self.driver.quit()
 
     def register_pages(self):
-        params = dict(driver=self.driver, base_url=self.base_url)
+        params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser)
         self.base_page = BasePage(**params)
         self.login_page = LoginPage(**params)
         self.settings_page = SettingsPage(**params)
