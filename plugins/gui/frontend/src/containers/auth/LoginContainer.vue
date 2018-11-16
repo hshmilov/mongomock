@@ -48,6 +48,13 @@ d<template>
     export default {
         name: 'login-container',
         components: {xSchemaForm, Modal, GoogleLogin},
+        watch: {
+            oktaConfig() {
+                if (this.oktaConfig.enabled === true && this.$route.query.login_type  === 'okta_login') {
+                    this.onOktaLogin()
+                }
+            },
+        },
         computed: {
 			...mapState(['auth']),
             schema() {
