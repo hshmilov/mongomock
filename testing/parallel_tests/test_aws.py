@@ -3,8 +3,6 @@ from services.adapters.aws_service import AwsService, aws_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_aws_credentials import *
 
-pytestmark = pytest.mark.sanity
-
 
 def _get_id_from_client(client):
     return client['aws_access_key_id'] + client['region_name']

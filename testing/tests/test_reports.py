@@ -6,7 +6,6 @@ import time
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from tests.conftest import axonius_fixture
 
-pytestmark = pytest.mark.sanity
 
 NO_RESULT_WATCH_DB_DOC = {
     "alert_types": [

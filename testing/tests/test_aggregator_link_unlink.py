@@ -4,8 +4,6 @@ import pytest
 from services.adapters.ad_service import ad_fixture
 from services.adapters.esx_service import esx_fixture
 
-pytestmark = pytest.mark.sanity
-
 
 def test_aggregator_is_up(axonius_fixture):
     assert axonius_fixture.aggregator.is_up()

@@ -5,7 +5,6 @@ from test_credentials.test_hyper_v_credentials import *
 
 # Hyper-V is part of our sanity tests since it uses the wmi runner to fetch devices from hyperv. Since this
 # is a big part of the execution it could affect hyper-v (it indeed affects hyper-v a lot)
-pytestmark = pytest.mark.sanity
 
 
 class TestHyperVAdapter(AdapterTestBase):
