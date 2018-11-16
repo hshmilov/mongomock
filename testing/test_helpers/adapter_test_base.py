@@ -15,7 +15,6 @@ from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from test_helpers.utils import check_conf
-from test_helpers.log_tester import LogTester
 
 
 class AdapterTestBase:
@@ -68,7 +67,7 @@ class AdapterTestBase:
 
     @property
     def log_tester(self):
-        return LogTester(self.adapter_service.log_path)
+        return self.adapter_service.log_tester
 
     def set_minimum_time_until_next_fetch(self, value):
         return self.adapter_service.set_configurable_config('AdapterBase', 'minimum_time_until_next_fetch', value)

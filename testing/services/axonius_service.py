@@ -24,6 +24,8 @@ from services.plugins.system_scheduler_service import SystemSchedulerService
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
+BLACKLIST_LABEL = 'do_not_execute'
+
 
 def get_service():
     return AxoniusService()
@@ -123,11 +125,26 @@ class AxoniusService:
         for service in services_to_start:
             service.wait_for_service()
 
+    def blacklist_device(self, plugin_unique_name, device_id):
+        device_to_blacklist = self.get_device_by_id(plugin_unique_name, device_id)
+        assert len(device_to_blacklist) == 1
+        device_to_blacklist = device_to_blacklist[0]
+        result = self.gui.add_labels_to_device(
+            {'entities': [device_to_blacklist['internal_axon_id']], 'labels': [BLACKLIST_LABEL]})
+        assert result.status_code == 200, f'Failed adding label. reason: ' \
+                                          f'{str(result.status_code)}, {str(result.content)}'
+
     def get_devices_db(self):
         return self.db.get_entity_db(EntityType.Devices)
 
+    def get_devices_db_view(self):
+        return self.db.get_entity_db_view(EntityType.Devices)
+
     def get_users_db(self):
         return self.db.get_entity_db(EntityType.Users)
+
+    def get_users_db_view(self):
+        return self.db.get_entity_db_view(EntityType.Users)
 
     def get_reports_db(self):
         return self.db.get_collection(self.reports.unique_name, 'reports')
@@ -160,8 +177,16 @@ class AxoniusService:
         cursor = self.get_devices_db().find(cond)
         return list(cursor)
 
+    def get_devices_view_with_condition(self, cond):
+        cursor = self.get_devices_db_view().find(cond)
+        return list(cursor)
+
     def get_users_with_condition(self, cond):
         cursor = self.get_users_db().find(cond)
+        return list(cursor)
+
+    def get_users_view_with_condition(self, cond):
+        cursor = self.get_users_db_view().find(cond)
         return list(cursor)
 
     def get_device_by_id(self, adapter_name, device_id):
@@ -175,6 +200,17 @@ class AxoniusService:
         }
         return self.get_devices_with_condition(cond)
 
+    def get_device_view_by_id(self, adapter_name, device_id):
+        cond = {
+            'specific_data': {
+                "$elemMatch": {
+                    'data.id': device_id,
+                    PLUGIN_UNIQUE_NAME: adapter_name
+                }
+            }
+        }
+        return self.get_devices_view_with_condition(cond)
+
     def get_user_by_id(self, adapter_name, user_id):
         cond = {
             'adapters': {
@@ -186,6 +222,17 @@ class AxoniusService:
         }
         return self.get_users_with_condition(cond)
 
+    def get_user_view_by_id(self, adapter_name, user_id):
+        cond = {
+            'specific_data': {
+                "$elemMatch": {
+                    'data.id': user_id,
+                    PLUGIN_UNIQUE_NAME: adapter_name
+                }
+            }
+        }
+        return self.get_users_view_with_condition(cond)
+
     def get_device_network_interfaces(self, adapter_name, device_id):
         device = self.get_device_by_id(adapter_name, device_id)
         adapter_device = next(adapter_device for adapter_device in device[0]['adapters'] if
@@ -193,18 +240,28 @@ class AxoniusService:
         return adapter_device['data'][NETWORK_INTERFACES_FIELD]
 
     def assert_device_aggregated(self, adapter, client_details):
+        # triggers a query and checks for the existence of a certain device
         self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
-        self.aggregator.rebuild_views()
-        for client_id, some_device_id in client_details:
-            devices = self.get_device_by_id(adapter.unique_name, some_device_id)
-            assert len(devices) == 1
+        for _, some_device_id in client_details:
+            self.assert_device_in_db(adapter.unique_name, some_device_id)
+
+    def assert_device_in_db(self, plugin_unique_name, some_device_id):
+        devices = self.get_device_by_id(plugin_unique_name, some_device_id)
+        assert len(devices) == 1
+        devices = self.get_device_view_by_id(plugin_unique_name, some_device_id)
+        assert len(devices) == 1
 
     def assert_user_aggregated(self, adapter, client_details):
+        # triggers a query and checks for the existence of a certain user
         self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
-        self.aggregator.rebuild_views()
-        for client_id, some_device_id in client_details:
-            devices = self.get_user_by_id(adapter.unique_name, some_device_id)
-            assert len(devices) == 1
+        for _, some_device_id in client_details:
+            self.assert_user_in_db(adapter.unique_name, some_device_id)
+
+    def assert_user_in_db(self, plugin_unique_name, some_device_id):
+        users = self.get_user_by_id(plugin_unique_name, some_device_id)
+        assert len(users) == 1
+        users = self.get_user_view_by_id(plugin_unique_name, some_device_id)
+        assert len(users) == 1
 
     def restart_plugin(self, plugin):
         """

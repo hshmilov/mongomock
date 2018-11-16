@@ -33,9 +33,6 @@ class MongoService(DockerService):
               allow_restart=False,
               rebuild=False,
               *args, **kwargs):
-        # TODO: Figure out how NOT to rebuild mongo everytime :)
-        rebuild = True
-
         super().start(mode, allow_restart, rebuild, *args, **kwargs)
 
         self.wait_for_service()

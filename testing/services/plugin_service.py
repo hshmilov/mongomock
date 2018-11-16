@@ -12,6 +12,7 @@ from services.docker_service import DockerService
 from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
 from test_helpers.file_mock_credentials import FileForCredentialsMock
+from test_helpers.log_tester import LogTester
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
@@ -126,6 +127,10 @@ class PluginService(DockerService):
     @property
     def log_path(self):
         return os.path.join(self.log_dir, f'{self.unique_name}.axonius.log')
+
+    @property
+    def log_tester(self):
+        return LogTester(self.log_path)
 
     def generate_debug_template(self):
         name = self.adapter_name.replace("-", "_") if isinstance(self, AdapterService) else self.package_name

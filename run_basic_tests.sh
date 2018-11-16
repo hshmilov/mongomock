@@ -11,7 +11,7 @@ echo "Finished unitests"
 
 echo "Start integration tests"
 cd ./testing
-timeout 900 python3 run_tests.py tests $@
+timeout 3000 python3 run_tests.py tests $@
 if [ $? -ne 0 ]
 then
   echo "Integration tests failed"

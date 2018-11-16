@@ -17,6 +17,15 @@ class LogTester:
             recent = data[-min(lines_lookback, len(data)):]
             return any(re.search(pattern, line) is not None for line in recent)
 
+    def is_str_in_log(self, str_in_log, lines_lookback=0):
+        """
+        This is just a nicer version of is_pattern_in_log that doesn't require escaping special characters.
+        """
+        with open(self.filepath) as f:
+            data = f.readlines()
+            recent = data[-min(lines_lookback, len(data)):]
+            return str_in_log in ','.join(recent)
+
     def is_metric_in_log(self, metric_name, value, lines_lookback=0):
         """
         Check is a certain metric is present in log
