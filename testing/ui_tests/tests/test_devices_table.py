@@ -3,6 +3,7 @@ from flaky import flaky
 
 from ui_tests.tests.ui_test_base import TestBase
 from axonius.entities import EntityType
+from axonius.utils.wait import wait_until
 from test_credentials.json_file_credentials import DEVICE_FIRST_IP, DEVICE_SECOND_IP
 
 
@@ -83,7 +84,7 @@ class TestDevicesTable(TestBase):
         self.devices_page.query_json_adapter()
         self.devices_page.click_row_checkbox()
         self.devices_page.open_delete_dialog()
-        assert self.DELETE_DIALOG_TEXT in self.devices_page.read_delete_dialog()
+        wait_until(lambda: self.DELETE_DIALOG_TEXT in self.devices_page.read_delete_dialog())
         self.devices_page.confirm_delete()
         self.devices_page.wait_for_element_absent_by_css(self.devices_page.MODAL_OVERLAY_CSS)
         assert not self.devices_page.count_entities()

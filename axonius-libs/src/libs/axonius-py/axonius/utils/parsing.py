@@ -1142,7 +1142,7 @@ def add_duplicates_filtering(find):
             add_duplicates_filtering(x)
 
 
-NO_DUPLICATES = 'UNIQUE ADAPTER:'
+NO_DUPLICATES = 'UNIQUE ADAPTER: '
 
 
 def parse_filter(filter_str):
@@ -1189,7 +1189,7 @@ def parse_filter(filter_str):
     while matches:
         filter_str = filter_str.replace(matches.group(0), f'not ({matches.group(1)})')
         matches = re.search('NOT\s*\[(.*)\]', filter_str)
-
+    logger.info(filter_str)
     res = translate_filter_not(pql.find(filter_str))
     if no_duplicates:
         add_duplicates_filtering(res)

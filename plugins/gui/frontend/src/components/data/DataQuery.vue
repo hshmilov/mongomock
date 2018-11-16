@@ -44,6 +44,7 @@
             <div slot="content">
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" ref="filter"
                                  @change="updateFilter" @error="filterValid = false"/>
+                <md-switch v-model="isUniqueAdapters">Query {{ isUniqueAdapters? 'most recent' : 'all the' }} Adapter instances</md-switch>
                 <div class="place-right">
                     <button class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</button>
                     <button class="x-btn" @click="compileFilter" @keyup.enter="compileFilter">Search</button>
@@ -75,6 +76,8 @@
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
     import {expression} from '../../constants/filter'
 
+    const UNIQUE_ADAPTERS_MAGIC = 'UNIQUE ADAPTER: '
+
     export default {
         name: 'x-data-query',
         components: {
@@ -103,7 +106,6 @@
                 return this.getDataFieldsByPlugin(this.module)
             },
             schemaByField() {
-                let map = {}
                 return this.schema.reduce((map, item) => {
                     item.fields.forEach(field => {
                         map[field.name] = field
@@ -133,6 +135,15 @@
                             query: {filter, expressions: this.queryExpressions}, page: 0
                         }
                     })
+                }
+            },
+            isUniqueAdapters: {
+                get() {
+                    return this.queryFilter.includes(UNIQUE_ADAPTERS_MAGIC)
+                },
+                set(isUniqueAdapters) {
+                    this.queryFilter = isUniqueAdapters ? `${UNIQUE_ADAPTERS_MAGIC}${this.queryFilter}`
+                                                        : this.queryFilter.replace(UNIQUE_ADAPTERS_MAGIC, '')
                 }
             },
             disableSaveQuery() {
@@ -192,7 +203,7 @@
                     isActive: false,
                     name: ''
                 },
-                queryMenuIndex: -1,
+                queryMenuIndex: -1
             }
         },
         watch: {
@@ -238,7 +249,7 @@
             },
             searchText() {
                 /* Plug the search value in the template for filtering by any of currently selected fields */
-                this.queryFilter = this.textSearchPattern.replace(/{val}/g, this.searchValue)
+                this.queryFilter = this.wrapFilterOptions(this.textSearchPattern.replace(/{val}/g, this.searchValue))
                 this.inTextSearch = true
                 this.closeInput()
             },
@@ -249,7 +260,7 @@
                     this.searchText()
                 } else {
                     // Use the search value as a filter
-                    this.queryFilter = this.searchValue
+                    this.queryFilter = this.wrapFilterOptions(this.searchValue)
                 }
                 this.closeInput()
             },
@@ -265,6 +276,7 @@
                 this.$refs.wizard.close()
             },
             updateFilter(filter) {
+                filter = this.wrapFilterOptions(filter)
                 if (this.queryFilter === filter) return
                 this.queryFilter = filter
                 this.filterValid = true
@@ -307,6 +319,13 @@
             },
             tour(stateName) {
                 this.changeState({name: stateName})
+            },
+            wrapFilterOptions(filter) {
+                filter = filter.replace(UNIQUE_ADAPTERS_MAGIC, '')
+                if (this.isUniqueAdapters) {
+                    filter = `${UNIQUE_ADAPTERS_MAGIC}${filter}`
+                }
+                return filter
             }
         },
         created() {
