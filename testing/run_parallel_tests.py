@@ -14,7 +14,7 @@ class ParallelTestsRunner(ParallelRunner):
             args = f"pytest -s -vv --showlocals --durations=0"
             if extra_flags:
                 args = f"{args} {extra_flags}"
-            args = f"{args} --junitxml=reporting/{test_case}.xml {file}".split(' ')
+            args = f"{args} {file}".split(' ')
             print(f'adding {file} to run!')
             self.append_single(test_case, args, **kwargs)
 

@@ -32,12 +32,10 @@ class ParallelRunner(object):
         command = ' '.join(args)
         print(f"[{len(self.running_list) + 1} / {MAX_PARALLEL_TASKS}] "
               f"Running {COLOR.get('light_blue', '<')}{command}{COLOR.get('reset', '>')}")
-        stdout = kwargs.pop('stdout', None)
-        stdout = stdout if stdout is not None else open(self.std_file(task_name), "wb")
         stderr = kwargs.pop('stderr', None)
         stderr = stderr if stderr is not None else open(self.err_file(task_name), "wb")
 
-        process = subprocess.Popen(args, stdout=stdout, stderr=stderr, **kwargs)
+        process = subprocess.Popen(args, stderr=stderr, **kwargs)
         self.running_list[task_name] = process
         self.start_times[task_name] = time.time()
         return process
