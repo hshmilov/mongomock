@@ -19,4 +19,6 @@ class AxoniusDict(Mapping):
         return len(self._storage)
 
     def get_or_default(self, key, default=None):
+        if isinstance(default, dict):
+            default = AxoniusDict(default)
         return self._storage.get(key, default) or default
