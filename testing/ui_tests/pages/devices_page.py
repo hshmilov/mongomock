@@ -4,6 +4,7 @@ from ui_tests.pages.entities_page import EntitiesPage
 class DevicesPage(EntitiesPage):
     FIELD_NETWORK_INTERFACES_IPS = 'Network Interfaces: IPs'
     FIELD_OS_TYPE = 'OS: Type'
+    FIELD_TAGS = 'Tags'
     FIELD_ADAPTERS = 'Adapters'
     FIELD_LAST_SEEN = 'Last Seen'
     FIELD_HOSTNAME_TITLE = 'Host Name'
@@ -35,7 +36,7 @@ class DevicesPage(EntitiesPage):
         self.wait_for_element_absent_by_xpath(self.TAGGING_1_DEVICE_XPATH)
 
     def open_tag_dialog(self):
-        self.click_button('Actions', partial_class=True)
+        self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
         self.click_actions_tag_button()
 
     def add_new_tag(self, tag_text):
@@ -52,7 +53,16 @@ class DevicesPage(EntitiesPage):
         self.click_tag_save_button()
         self.wait_for_success_tagging_message()
 
+    def remove_tag(self, text):
+        self.open_tag_dialog()
+        self.find_element_by_text(text).click()
+        self.click_tag_save_button()
+        self.wait_for_success_tagging_message()
+
     def get_first_tag_text(self):
+        return self.get_first_row_tags().splitlines()[0]
+
+    def get_first_row_tags(self):
         return self.driver.find_elements_by_css_selector(self.TABLE_FIRST_ROW_TAG_CSS)[0].text
 
     def assert_screen_is_restricted(self):

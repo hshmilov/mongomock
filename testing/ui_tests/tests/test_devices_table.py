@@ -1,28 +1,49 @@
 import time
-from flaky import flaky
 
-from ui_tests.tests.ui_test_base import TestBase
 from axonius.entities import EntityType
 from axonius.utils.wait import wait_until
-from test_credentials.json_file_credentials import DEVICE_FIRST_IP, DEVICE_SECOND_IP
+from services.plugins.general_info_service import GeneralInfoService
+from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
+                                                    DEVICE_SECOND_IP)
+from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDevicesTable(TestBase):
     LABELS_TEXTBOX_TEXT = 'foobar'
     DELETE_DIALOG_TEXT = 'You are about to delete 1 devices, 1 total adapter devices.'
 
-    @flaky(max_runs=2)
     def test_devices_action_add_and_remove_tag(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
-        self.driver.get(self.driver.current_url)
         self.devices_page.wait_for_table_to_load()
+        # 'saved queries' button is hiding the first row of the table
+        # using a click on the table removes the 'saved queries' from the screen
+        self.devices_page.click_sort_column(self.devices_page.FIELD_TAGS)
         self.devices_page.click_row_checkbox()
         self.devices_page.add_new_tag(self.LABELS_TEXTBOX_TEXT)
-        assert self.devices_page.get_first_tag_text() == self.LABELS_TEXTBOX_TEXT
+        assert self.LABELS_TEXTBOX_TEXT in self.devices_page.get_first_row_tags()
         self.devices_page.remove_first_tag()
-        assert self.devices_page.get_first_tag_text() == ''
+        assert not self.devices_page.get_first_row_tags()
+
+    def test_devices_action_remove_plugin_tag(self):
+        with GeneralInfoService().contextmanager(take_ownership=True):
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            toggle = self.settings_page.find_execution_toggle()
+            self.settings_page.click_toggle_button(toggle, make_yes=True)
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.wait_for_table_to_load()
+            wait_until(lambda: any(self.devices_page.get_column_data(
+                self.devices_page.FIELD_TAGS)), total_timeout=60 * 5)
+            self.settings_page.switch_to_page()
+            self.devices_page.switch_to_page()
+            self.devices_page.click_sort_column(self.devices_page.FIELD_TAGS)
+            self.devices_page.click_row_checkbox()
+            tag_to_remove = self.devices_page.get_first_tag_text()
+            self.devices_page.remove_tag(tag_to_remove)
+            assert tag_to_remove not in self.devices_page.get_first_row_tags()
 
     def test_devices_save_query(self):
         self.settings_page.switch_to_page()

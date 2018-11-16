@@ -183,7 +183,7 @@ class TestAlert(TestBase):
             self.devices_page.fill_filter(AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
                                                                         JSON_ADAPTER_FILTER))
             self.devices_page.enter_search()
-            assert self.devices_page.get_first_tag_text() == TAG_ALL_COMMENT
+            assert self.devices_page.get_first_row_tags() == TAG_ALL_COMMENT
 
             self.alert_page.switch_to_page()
             self.alert_page.edit_alert(ALERT_CHANGE_NAME)
@@ -201,7 +201,7 @@ class TestAlert(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.fill_filter(self.devices_page.JSON_ADAPTER_FILTER)
         self.devices_page.enter_search()
-        assert self.devices_page.get_first_tag_text() == TAG_NEW_COMMENT
+        assert self.devices_page.get_first_row_tags() == TAG_NEW_COMMENT
 
     def test_save_query_deletion(self):
         self.create_alert_change_query()
