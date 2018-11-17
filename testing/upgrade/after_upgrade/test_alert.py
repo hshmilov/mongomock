@@ -9,6 +9,7 @@ class TestPrepareAlert(TestBase):
         self.alert_page.switch_to_page()
         self.alert_page.wait_for_spinner_to_end()
         self.alert_page.edit_alert(Alerts.alert_name_1)
+        self.alert_page.wait_for_spinner_to_end()
         assert self.alert_page.is_period_selected(Period.Daily)  # Period
         assert self.alert_page.is_trigger_selected(Trigger.EveryDiscoveryCycle)  # Trigger
         assert self.alert_page.is_severity_selected(Severity.Warning)  # Severity
