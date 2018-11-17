@@ -4,6 +4,7 @@ import concurrent
 import concurrent.futures
 import configparser
 import functools
+import gc
 import json
 import logging
 import logging.handlers
@@ -848,6 +849,15 @@ class PluginBase(Configurable, Feature):
                 return return_error(error_string.format(wanted_level=wanted_level, levels=logging_types.keys()), 400)
         else:
             return logging.getLevelName(self.log_level)
+
+    @add_rule('debug/run_gc/<generation>', methods=['POST'])
+    def run_gc(self, generation: int):
+        """
+        Runs GC for the given generation
+        :param generation: generation to collect
+        :return: see gc.collect
+        """
+        return jsonify(gc.collect(int(generation)))
 
     @add_rule('action_update/<action_id>', methods=['POST'])
     def action_callback(self, action_id):
