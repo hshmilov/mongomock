@@ -44,7 +44,7 @@
             <div slot="content">
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" ref="filter"
                                  @change="updateFilter" @error="filterValid = false"/>
-                <md-switch v-model="isUniqueAdapters">Query {{ isUniqueAdapters? 'most recent' : 'all the' }} Adapter instances</md-switch>
+                <md-switch v-model="isUniqueAdapters" :disabled="!queryFilter">Include outdated Adapter {{prettyModule}} in query</md-switch>
                 <div class="place-right">
                     <button class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</button>
                     <button class="x-btn" @click="compileFilter" @keyup.enter="compileFilter">Search</button>
@@ -76,7 +76,7 @@
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
     import {expression} from '../../constants/filter'
 
-    const UNIQUE_ADAPTERS_MAGIC = 'UNIQUE ADAPTER: '
+    const INCLUDE_OUDATED_MAGIC = 'INCLUDE OUTDATED: '
 
     export default {
         name: 'x-data-query',
@@ -102,6 +102,9 @@
                 }
             }),
             ...mapGetters({getDataFieldsByPlugin: GET_DATA_FIELD_BY_PLUGIN}),
+            prettyModule() {
+                return this.module[0].toUpperCase() + this.module.slice(1)
+            },
             schema() {
                 return this.getDataFieldsByPlugin(this.module)
             },
@@ -139,11 +142,11 @@
             },
             isUniqueAdapters: {
                 get() {
-                    return this.queryFilter.includes(UNIQUE_ADAPTERS_MAGIC)
+                    return this.queryFilter.includes(INCLUDE_OUDATED_MAGIC)
                 },
                 set(isUniqueAdapters) {
-                    this.queryFilter = isUniqueAdapters ? `${UNIQUE_ADAPTERS_MAGIC}${this.queryFilter}`
-                                                        : this.queryFilter.replace(UNIQUE_ADAPTERS_MAGIC, '')
+                    this.queryFilter = isUniqueAdapters ? `${INCLUDE_OUDATED_MAGIC}${this.queryFilter}`
+                                                        : this.queryFilter.replace(INCLUDE_OUDATED_MAGIC, '')
                 }
             },
             disableSaveQuery() {
@@ -321,9 +324,9 @@
                 this.changeState({name: stateName})
             },
             wrapFilterOptions(filter) {
-                filter = filter.replace(UNIQUE_ADAPTERS_MAGIC, '')
-                if (this.isUniqueAdapters) {
-                    filter = `${UNIQUE_ADAPTERS_MAGIC}${filter}`
+                filter = filter.replace(INCLUDE_OUDATED_MAGIC, '')
+                if (this.isUniqueAdapters && filter) {
+                    filter = `${INCLUDE_OUDATED_MAGIC}${filter}`
                 }
                 return filter
             }

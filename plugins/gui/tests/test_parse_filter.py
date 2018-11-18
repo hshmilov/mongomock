@@ -1,4 +1,4 @@
-from axonius.utils.parsing import parse_filter, NO_DUPLICATES
+from axonius.utils.parsing import parse_filter
 
 
 def assert_equal(axonius_query: str, mongo_dict: dict):
@@ -11,7 +11,7 @@ def assert_equal(axonius_query: str, mongo_dict: dict):
 # we actually want to test our own code
 
 def test_basic_no_dups_query():
-    assert_equal(f'{NO_DUPLICATES}specific_data.data.id == "c-0"',
+    assert_equal('specific_data.data.id == "c-0"',
                  {
                      'specific_data': {
                          '$elemMatch': {
@@ -36,7 +36,7 @@ def test_basic_no_dups_query():
 
 
 def test_regex_no_dups():
-    assert_equal(f'{NO_DUPLICATES}specific_data.data.description == regex("s", "i")',
+    assert_equal('specific_data.data.description == regex("s", "i")',
                  {
                      'specific_data': {
                          '$elemMatch': {
@@ -64,7 +64,7 @@ def test_regex_no_dups():
 
 
 def test_and_no_dups():
-    assert_equal(f'{NO_DUPLICATES}specific_data.data.id == "c-0" and specific_data.data.id == "b"',
+    assert_equal('specific_data.data.id == "c-0" and specific_data.data.id == "b"',
                  {
                      '$and': [
                          {
@@ -114,7 +114,7 @@ def test_and_no_dups():
 
 def test_and_no_dups_adpater_data():
     assert_equal(
-        f'{NO_DUPLICATES}adapters_data.stresstest_adapter.id == "a" and adapters_data.stresstest_adapter.id == "b"',
+        'adapters_data.stresstest_adapter.id == "a" and adapters_data.stresstest_adapter.id == "b"',
         {
             '$and': [
                 {

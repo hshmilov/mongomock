@@ -1142,7 +1142,7 @@ def add_duplicates_filtering(find):
             add_duplicates_filtering(x)
 
 
-NO_DUPLICATES = 'UNIQUE ADAPTER: '
+INCLUDE_OUTDATED = 'INCLUDE OUTDATED: '
 
 
 def parse_filter(filter_str):
@@ -1163,11 +1163,11 @@ def parse_filter(filter_str):
     if filter_str is None or filter_str == '':
         return {}
 
-    no_duplicates = False
+    include_outdated = False
     filter_str = filter_str.strip()
-    if filter_str.startswith(NO_DUPLICATES):
-        no_duplicates = True
-        filter_str = filter_str[len(NO_DUPLICATES):]
+    if filter_str.startswith(INCLUDE_OUTDATED):
+        include_outdated = True
+        filter_str = filter_str[len(INCLUDE_OUTDATED):]
 
     # Handle predefined sequence representing a range of some time units from now back
     matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
@@ -1191,7 +1191,7 @@ def parse_filter(filter_str):
         matches = re.search('NOT\s*\[(.*)\]', filter_str)
     logger.info(filter_str)
     res = translate_filter_not(pql.find(filter_str))
-    if no_duplicates:
+    if not include_outdated:
         add_duplicates_filtering(res)
     return res
 
