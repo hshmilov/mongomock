@@ -308,7 +308,7 @@ class AggregatorService(PluginBase, Triggerable):
         See docs for _rebuild_entity_view
         """
         internal_axon_ids = list(internal_axon_ids)
-        logger.info(f"Performance: Starting partial rebuild for {len(internal_axon_ids)} devices")
+        logger.debug(f"Performance: Starting partial rebuild for {len(internal_axon_ids)} devices")
 
         processed_devices = list(from_db.aggregate([
             {
@@ -337,7 +337,7 @@ class AggregatorService(PluginBase, Triggerable):
                 }
             })
 
-        logger.info("Performance: Done partial rebuild")
+        logger.debug("Performance: Done partial rebuild")
 
     def _rebuild_entity_view(self, entity_type: EntityType, internal_axon_ids: List[str] = None):
         """
