@@ -1,3 +1,6 @@
+import pytest
+from selenium.common.exceptions import NoSuchElementException
+
 from ui_tests.pages.entities_page import EntitiesPage
 
 
@@ -19,6 +22,7 @@ class DevicesPage(EntitiesPage):
     LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.search-input > input'
     TAGGING_1_DEVICE_MESSAGE = 'Tagged 1 devices!'
     TAGGING_1_DEVICE_XPATH = f'.//div[contains(@class, \'text-center\') and .//text()=\'{TAGGING_1_DEVICE_MESSAGE}\']'
+    MULTI_LINE_CSS = 'div.x-data-table.multiline'
 
     @property
     def url(self):
@@ -30,6 +34,13 @@ class DevicesPage(EntitiesPage):
 
     def click_tag_save_button(self):
         self.driver.find_element_by_css_selector(self.TAG_SAVE_BUTTON_CSS).click()
+
+    def check_if_table_is_multi_line(self):
+        self.wait_for_element_present_by_css(self.MULTI_LINE_CSS)
+
+    def check_if_adapter_tab_not_exist(self):
+        with pytest.raises(NoSuchElementException):
+            self.driver.find_element_by_css_selector('#specific')
 
     def wait_for_success_tagging_message(self):
         self.wait_for_element_present_by_xpath(self.TAGGING_1_DEVICE_XPATH)

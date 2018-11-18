@@ -109,3 +109,25 @@ class TestDevicesTable(TestBase):
         self.devices_page.confirm_delete()
         self.devices_page.wait_for_element_absent_by_css(self.devices_page.MODAL_OVERLAY_CSS)
         assert not self.devices_page.count_entities()
+
+    def test_multi_table_and_single_adapter_view(self):
+        try:
+            self.settings_page.switch_to_page()
+            self.base_page.run_discovery()
+            self.settings_page.click_gui_settings()
+            self.settings_page.wait_for_spinner_to_end()
+            self.settings_page.set_single_adapter_checkbox()
+            self.settings_page.set_table_multi_line_checkbox()
+            self.settings_page.click_save_button()
+            self.devices_page.switch_to_page()
+            self.devices_page.check_if_table_is_multi_line()
+            self.devices_page.click_row()
+            # if its not exist than single adapter is working
+            self.devices_page.check_if_adapter_tab_not_exist()
+        finally:
+            self.settings_page.switch_to_page()
+            self.settings_page.click_gui_settings()
+            self.settings_page.wait_for_spinner_to_end()
+            self.settings_page.set_single_adapter_checkbox(make_yes=False)
+            self.settings_page.set_table_multi_line_checkbox(make_yes=False)
+            self.settings_page.click_save_button()

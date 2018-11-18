@@ -1,8 +1,9 @@
 from json import dumps
 
 from selenium.common.exceptions import NoSuchElementException
-from ui_tests.pages.page import Page, X_BODY
+
 from axonius.consts.gui_consts import GOOGLE_KEYPAIR_FILE
+from ui_tests.pages.page import X_BODY, Page
 
 
 class SettingsPage(Page):
@@ -38,6 +39,7 @@ class SettingsPage(Page):
     HISTORY_GATHERED = 'Should history be gathered'
     DC_ADDRESS = 'dc_address'
     SINGLE_ADAPTER_VIEW = 'Use Single Adapter View'
+    TABLE_MULTI_LINE_VIEW = 'Use Table Multi Line View'
     ALLOW_GOOGLE_LOGINS = 'Allow Google logins'
     GOOGLE_CLIENT_ID_OLD = 'client_id'
     GOOGLE_CLIENT_ID = 'client'
@@ -260,6 +262,10 @@ class SettingsPage(Page):
 
     def set_single_adapter_checkbox(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.SINGLE_ADAPTER_VIEW)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
+    def set_table_multi_line_checkbox(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.TABLE_MULTI_LINE_VIEW)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
 
     def get_single_adapter_checkbox(self):
