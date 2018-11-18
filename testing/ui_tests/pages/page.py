@@ -13,6 +13,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
 from services.axon_service import TimeoutException
+from ui_tests.tests.ui_consts import TEMP_FILE_NAME
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -465,7 +466,11 @@ class Page:
         file_path = os.path.join(self.ui_tests_dir, 'selenium_tests', 'temp_file_upload')
         with open(file_path, 'w') as file_ref:
             file_ref.write(file_content)
-        return self.__upload_file_by_id(input_id, '/home/seluser/selenium_tests/temp_file_upload')
+        return self.__upload_file_by_id(input_id, f'/home/seluser/selenium_tests/{TEMP_FILE_NAME}')
 
     def close_dropdown(self):
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()
+
+    def get_filename_by_input_id(self, input_id):
+        return self.driver.find_element_by_xpath(
+            f'//div[child::input[@id=\'{input_id}\']]/div[contains(@class, \'file-name\')]').text

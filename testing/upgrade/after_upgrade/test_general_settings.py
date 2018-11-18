@@ -1,9 +1,9 @@
+from axonius.consts.gui_consts import GOOGLE_KEYPAIR_FILE
 from services.standalone_services.syslog_server import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
-#from test_credentials.test_google_mdm_credentials import service_json_data, account_to_impersonate, CLIENT_ID
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import EmailSettings, FreshServiceSettings, Saml
+from ui_tests.tests.ui_consts import EmailSettings, FreshServiceSettings, Saml, TEMP_FILE_NAME
 
 
 class TestGeneralSettings(TestBase):
@@ -67,6 +67,9 @@ class TestGeneralSettings(TestBase):
         assert self.settings_page.get_okta_login_details() == OKTA_LOGIN_DETAILS
         # See before_upgrade - not setting the Google login
         # assert self.settings_page.get_google_keypair_file() == (CLIENT_ID, account_to_impersonate, service_json_data)
+
+        assert self.settings_page.get_filename_by_input_id(GOOGLE_KEYPAIR_FILE) == TEMP_FILE_NAME
+
         assert self.settings_page.get_dc_address() == ad_client1_details['dc_name']
 
     def test_saml_settings(self):
@@ -76,3 +79,7 @@ class TestGeneralSettings(TestBase):
 
         assert self.settings_page.is_saml_login_enabled()
         assert self.settings_page.get_saml_idp() == Saml.idp
+        assert self.settings_page.get_filename_by_input_id(Saml.cert) == TEMP_FILE_NAME
+        # note: move saml_login_settings->const
+        uuid = self.axonius_system.gui.get_saml_settings()['saml_login_settings'][Saml.cert]['uuid']
+        assert self.axonius_system.gui.get_file_content_from_db(uuid).decode() == Saml.cert_content

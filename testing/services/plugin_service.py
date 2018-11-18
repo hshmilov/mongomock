@@ -1,13 +1,19 @@
 import json
-import requests
 import os
 
-from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, VERSION_COLLECTION
+import gridfs
+import requests
+from bson import ObjectId
+
+from axonius.config_reader import (AdapterConfig, PluginConfig,
+                                   PluginVolatileConfig)
+from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
+                                          VERSION_COLLECTION)
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
-from services.debug_template import py_charm_debug_template, py_charm_debug_port_template
+from services.debug_template import (py_charm_debug_port_template,
+                                     py_charm_debug_template)
 from services.docker_service import DockerService
 from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
@@ -150,7 +156,7 @@ class PluginService(DockerService):
         :return: the config or None
         """
         config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-                                                                                                 'config_name': conf_name})
+            'config_name': conf_name})
         if config_bulk:
             return config_bulk.get('config')
         return None
@@ -166,7 +172,7 @@ class PluginService(DockerService):
         :return: the config or None
         """
         config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-                                                                                                 'config_name': conf_name})
+            'config_name': conf_name})
         config_bulk = config_bulk['config']
         config_bulk[specific_key] = value
         self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].update_one({'config_name': conf_name},
@@ -192,6 +198,10 @@ class PluginService(DockerService):
         self.__version_collection.replace_one({'name': 'schema'},
                                               {'name': 'schema', 'version': val},
                                               upsert=True)
+
+    def get_file_content_from_db(self, uuid):
+        oid = ObjectId(uuid)
+        return gridfs.GridFS(self.db.client[self.unique_name]).get(oid).read()
 
 
 class AdapterService(PluginService):

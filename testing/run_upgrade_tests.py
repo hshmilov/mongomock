@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 
 import pytest
@@ -8,12 +9,9 @@ from services.standalone_services.selenium_service import SeleniumService
 def main():
     selenium_service = SeleniumService()
 
-    path = sys.argv[-1]
-    sanitized = path.replace('/', '_')
-
     try:
         selenium_service.take_process_ownership()
-        selenium_service.start()
+        selenium_service.start(allow_restart=True)
 
         print('Running after upgrade tests')
         return pytest.main(

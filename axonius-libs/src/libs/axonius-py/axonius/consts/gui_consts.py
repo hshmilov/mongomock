@@ -66,6 +66,8 @@ class ResearchStatus(Enum):
     done = auto()
 
 
+CONFIG_COLLECTION = 'GuiService'
+
 ######################
 # Exec report consts #
 ######################

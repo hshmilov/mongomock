@@ -5,7 +5,7 @@ import secrets
 import requests
 
 from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED,
-                                       ROLES_COLLECTION)
+                                       ROLES_COLLECTION, CONFIG_COLLECTION)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           DASHBOARD_COLLECTION, GUI_NAME,
@@ -189,7 +189,7 @@ class GuiService(PluginService):
 
             # Fix the Google Login Settings - Rename 'client_id' field to 'client'
             config_match = {
-                'config_name': 'GuiService'
+                'config_name': CONFIG_COLLECTION
             }
             current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
             if current_config:
@@ -260,7 +260,7 @@ class GuiService(PluginService):
         try:
             # Fix the Okta Login Settings - Rename 'gui_url' field to 'gui2_url'
             config_match = {
-                'config_name': 'GuiService'
+                'config_name': CONFIG_COLLECTION
             }
             current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
             if current_config:
@@ -416,3 +416,6 @@ RUN cd ./gui/frontend/ && npm run {dev}build
 
     def put_api_report(self, report_data, *vargs, **kwargs):
         return self.put(f'V{self.get_api_version()}/reports', report_data, *vargs, **kwargs)
+
+    def get_saml_settings(self):
+        return self.get_configurable_config(CONFIG_COLLECTION)

@@ -113,4 +113,6 @@ class TestPrepareGlobalSettings(TestBase):
         self.settings_page.set_allow_saml_based_login()
         self.settings_page.fill_saml_idp(Saml.idp)
 
+        self.settings_page.upload_file_by_id(Saml.cert, Saml.cert_content)
+
         self.settings_page.save_and_wait_for_toaster()

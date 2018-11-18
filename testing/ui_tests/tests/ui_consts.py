@@ -21,6 +21,8 @@ HIDDEN_USER_NEW_PASSWORD = 'test_pass_2'
 LOCAL_DEFAULT_USER_PATTERN = 'admin[internal]'
 NONE_USER_PATTERN = 'None[None]'
 
+TEMP_FILE_NAME = 'temp_file_upload'
+
 
 class EmailSettings:
     port = '25'
@@ -45,3 +47,5 @@ class Alerts:
 
 class Saml:
     idp = 'test_idp_1'
+    cert = 'certificate'
+    cert_content = 'certfilecontent'
