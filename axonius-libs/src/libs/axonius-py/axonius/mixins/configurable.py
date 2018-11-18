@@ -113,6 +113,12 @@ class Configurable(object):
         :return: the data, which conforms to the new_schema, while preserving the most from the old_schema
         """
         schema_type = new_schema['type']
+
+        if schema_type == 'file':  # file is a special case, it's sometimes a dict and sometimes not
+            if old_data is not None:
+                return old_data
+            return default_data
+
         if schema_type != 'array':  # assuming scalar
 
             if isinstance(old_data, dict):

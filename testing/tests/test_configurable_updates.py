@@ -237,3 +237,29 @@ def test_false_value():
                                               default_data={'x': True, 'y': 2})
     check_dict_subset(processed_data,
                       {'x': False, 'y': 2})
+
+
+def test_files():
+    """
+    Test that files are surviving
+    """
+    schema = {
+        'items': [
+            {
+                'name': 'x',
+                'type': 'file'
+            }
+        ],
+        'type': 'array'
+    }
+
+    some_file = {
+        'filename': 'some file',
+        'uuid': 'blabla'
+    }
+
+    processed_data = run_configurable_upgrade(schema,
+                                              old_data={'x': some_file},
+                                              default_data={'x': None})
+    check_dict_subset(processed_data,
+                      {'x': some_file})
