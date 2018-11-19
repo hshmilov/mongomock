@@ -110,13 +110,14 @@ class FortigateAdapter(AdapterBase, Configurable):
     def _create_fortimanager_device(self, device_raw):
         try:
             device = self._new_device_adapter()
-            logger.info(f'DEVICE {device_raw.keys()} RAW {device_raw}')
+            logger.debug(f'DEVICE {device_raw.keys()} RAW {device_raw}')
             hostname = device_raw.get('hostname')
             name = device_raw.get('name')
             if not hostname and not name:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = hostname or name
+            device.name = name
             device.hostname = hostname
             try:
                 if device_raw.get('last_checked'):
@@ -163,8 +164,9 @@ class FortigateAdapter(AdapterBase, Configurable):
                                                 client_config.get(consts.FORTIGATE_PORT, consts.DEFAULT_FORTIGATE_PORT))
 
     def _connect_client(self, client_config):
-        if client_config.get(consts.IS_FORTIMANAGER) is True:
-            try:
+        try:
+            if client_config.get(consts.IS_FORTIMANAGER) is True \
+                    or 'fortianalyzer' in client_config[consts.FORTIGATE_HOST]:
                 connection = FortimanagerConnection(domain=client_config[consts.FORTIGATE_HOST],
                                                     verify_ssl=client_config[consts.VERIFY_SSL],
                                                     username=client_config[consts.USER],
@@ -173,20 +175,12 @@ class FortigateAdapter(AdapterBase, Configurable):
                 with connection:
                     pass  # check that the connection credentials are valid
                 return connection, 'fortimanager'
-            except Exception as e:
-                message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                    client_config[consts.FORTIGATE_HOST], str(e))
-                logger.exception(message)
-                raise ClientConnectionException(message)
-
-        else:
-            try:
-                return FortigateClient(**client_config), 'fortios'
-            except Exception as err:
-                logger.exception(
-                    f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
-                raise ClientConnectionException(
-                    f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
+            return FortigateClient(**client_config), 'fortios'
+        except Exception as e:
+            message = 'Error connecting to client with domain {0}, reason: {1}'.format(
+                client_config[consts.FORTIGATE_HOST], str(e))
+            logger.exception(message)
+            raise ClientConnectionException(message)
 
     @classmethod
     def adapter_properties(cls):

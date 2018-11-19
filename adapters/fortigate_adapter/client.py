@@ -4,8 +4,9 @@ from json.decoder import JSONDecodeError
 
 import requests
 import uritools
+from bs4 import BeautifulSoup
 
-import axonius.adapter_exceptions
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from fortigate_adapter.consts import (DEFAULT_DHCP_LEASE_TIME,
@@ -39,9 +40,12 @@ class FortigateClient():
             with self._get_session():
                 pass
 
+        except ClientConnectionException:
+            logger.exception('Failed connecting to fortigate')
+            raise
         except Exception:
             logger.exception('Failed connecting to fortigate')
-            raise axonius.adapter_exceptions.ClientConnectionException('Failed to connect to fortigate.')
+            raise ClientConnectionException('Failed to connect to fortigate.')
 
     def _make_request(self, session, method, resource, payload=None):
         url = uritools.urijoin(RESTConnection.build_url(domain=self.host, port=self.port), resource)
@@ -61,14 +65,25 @@ class FortigateClient():
         with requests.session() as session:
 
             # Login and save the auth header.
-            self._make_request(session, 'post', 'logincheck', {'username': self.username, 'secretkey': self.password})
+            response = self._make_request(session,
+                                          'post',
+                                          'logincheck',
+                                          {'username': self.username, 'secretkey': self.password})
+
+            soup = BeautifulSoup(response)
+            if soup.title and soup.title.text == 'Login Failed':
+                raise ClientConnectionException(soup.body.text)
 
             for cookie in session.cookies:
                 if cookie.name == 'ccsrftoken':
                     csrftoken = cookie.value[1:-1]
                     session.headers.update({'X-CSRFTOKEN': csrftoken})
                     break
+            else:
+                raise ClientConnectionException('Unable to find ccsrftoken')
 
+            if csrftoken == '0%260':
+                raise ClientConnectionException('Got Invalid ccsrftoken, (invalid password?)')
             # Return the authenticated session.
             yield session
 
