@@ -99,7 +99,7 @@
                 if (isArray && ops.exists) {
                     ops.exists = {
                         pattern: `(${ops.exists.pattern} and {field} != [])`,
-                        notPattern: `(${ops.exists.notPattern} or {field} == [])`
+                        notPattern: `not (${ops.exists.pattern} and {field} != [])`
                     }
                 }
 				return ops
