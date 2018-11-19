@@ -26,6 +26,8 @@ from ui_tests.pages.notification_page import NotificationPage
 from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
+from ui_tests.pages.dashboard_page import DashboardPage
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -161,6 +163,7 @@ class TestBase:
         self.alert_page = AlertPage(**params)
         self.adapters_page = AdaptersPage(**params)
         self.notification_page = NotificationPage(**params)
+        self.dashboard_page = DashboardPage(**params)
 
     def get_all_screens(self):
         screens = (self.devices_page,
