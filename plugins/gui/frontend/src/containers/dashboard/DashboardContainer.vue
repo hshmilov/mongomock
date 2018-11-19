@@ -7,10 +7,8 @@
         <template v-else>
             <x-insights-search @click="onClickInsights" />
             <div class="dashboard-charts">
-                <x-data-discovery-card :data="deviceDiscovery" module="devices"
-                                       :filter="isDevicesRestricted? undefined: runFilter" />
-                <x-data-discovery-card :data="dashboard.dataDiscovery.users.data" module="users"
-                                       :filter="isUsersRestricted? undefined: runFilter" />
+                <x-data-discovery-card :data="deviceDiscovery" module="devices" :filter="isDevicesRestricted? undefined: runFilter" />
+                <x-data-discovery-card :data="dashboard.dataDiscovery.users.data" module="users" :filter="isUsersRestricted? undefined: runFilter" />
                 <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title" :data="item"
                                  @click-one="runCoverageFilter(item.properties, $event)" :read-only="isDevicesRestricted"/>
                 <x-card v-for="(chart, chartInd) in charts" v-if="chart.data" :key="chart.name" :title="chart.name"

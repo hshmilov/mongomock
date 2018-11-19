@@ -3019,18 +3019,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         logger.info(f'Getting adapter data for entity {entity_type.name}')
 
-        # nonunique in this sense refers to AX-2430
-        # this means that if an axonius entity has 2 adapter entities from the same plugin it will be counter
-        # for each time it is there
-
-        adapter_entities = {'seen': 0, 'counters': [], 'nonunique_seen': 0}
         entity_collection = self._entity_views_db_map[entity_type]
+        adapter_entities = {
+            'seen': 0, 'seen_gross': 0, 'unique': entity_collection.count_documents({}), 'counters': []
+        }
 
-        adapter_entities['unique'] = entity_collection.count_documents({})
-
-        # first value is unique adapters count, second is nonunique adapters count
-        entities_per_adapters = defaultdict(lambda: [0, 0])
-
+        # First value is net adapters count, second is gross adapters count (refers to AX-2430)
+        # If an Axonius entity has 2 adapter entities from the same plugin it will be counted for each time it is there
+        entities_per_adapters = defaultdict(lambda: {'value': 0, 'meta': 0})
         for res in entity_collection.aggregate([
             {
                 "$group": {
@@ -3042,14 +3038,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }
         ]):
             for plugin_name in set(res['_id']):
-                entities_per_adapters[plugin_name][0] += res['count']
+                entities_per_adapters[plugin_name]['value'] += res['count']
                 adapter_entities['seen'] += res['count']
 
             for plugin_name in res['_id']:
-                entities_per_adapters[plugin_name][1] += res['count']
-                adapter_entities['nonunique_seen'] += res['count']
+                entities_per_adapters[plugin_name]['meta'] += res['count']
+                adapter_entities['seen_gross'] += res['count']
         for name, value in entities_per_adapters.items():
-            adapter_entities['counters'].append({'name': name, 'value': value})
+            adapter_entities['counters'].append({'name': name, **value})
 
         return adapter_entities
 
@@ -3546,7 +3542,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             def dump_per_adapter(mapping, subtype):
                 counters = mapping['counters']
                 for counter in counters:
-                    log_metric(logger, f'adapter.{subtype}.{counter["name"]}', counter['value'])
+                    log_metric(logger, f'adapter.{subtype}.{counter["name"]}', [counter['value'], counter['meta']])
 
             dump_per_adapter(adapter_devices, 'devices')
             dump_per_adapter(adapter_users, 'users')

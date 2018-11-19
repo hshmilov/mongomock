@@ -179,6 +179,9 @@ a {
 .w-16 {
     width: 16px;
 }
+.w-30 {
+    width: 30px;
+}
 
 .no-break {
     page-break-inside: avoid;
@@ -220,24 +223,22 @@ a {
 }
 .histogram .item {
     position: relative;
-    line-height: 7px;
-    margin-bottom: 2px;
-    top: 1px;
-    height: 7px;
+    margin-bottom: 8px;
+    line-height: 24px;
+}
+.histogram .item-bar {
+    line-height: 24px;
+    vertical-align: middle;
 }
 .histogram .item .quantity {
-    width: 60px;
-    text-align: center;
-    margin-right: 0;
-    margin-left: auto;
     font-weight: 500;
     font-size: 14px;
 }
 .histogram .item .bar {
-    height: 10px;
-    background-color: rgba(222, 222, 222, 0.4);
+    height: 8px;
+    background-color: rgba(222, 222, 222, 1);
 }
-.histogram .title{
+.histogram .title {
     margin-top: 1px;
 }
 .title {

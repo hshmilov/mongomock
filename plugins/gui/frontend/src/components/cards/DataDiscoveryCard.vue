@@ -1,7 +1,7 @@
 <template>
-    <x-card :title="title" class="x-data-discovery-card" :class="{double: dataCounters && dataCounters.length > 5}" >
+    <x-card :title="title" class="x-data-discovery-card" :class="{double: dataCounters && dataCounters.length > 4}" >
         <div class="data-discovery">
-            <x-histogram :data="dataCounters" type="logo" :limit="15" @click-one="runAdaptersFilter" :read-only="!filter" />
+            <x-histogram :data="dataCounters" @click-one="runAdaptersFilter" :read-only="!filter" />
             <div class="discovery-summary">
                 <div class="summary-row">
                     <div class="title">Total {{ module }} seen</div>
@@ -24,7 +24,7 @@
 
 <script>
 	import xCard from '../../components/cards/Card.vue'
-    import xHistogram from '../charts/Histogram.vue'
+    import xHistogram from '../charts/HistogramCondensed.vue'
 
 	export default {
 		name: 'x-entity-discovery-card',
@@ -39,28 +39,20 @@
             },
             dataCounters() {
 				if (!this.data || !this.data.counters) return []
-
-                function pretty_number(a, b) {
-				    if (a != b){
-				        return `${a} (${b})`
-                    }
-                    return a
-                }
-
-				return [ ...this.data.counters ]
-                    .sort((first, second) => second.value[1] - first.value[1])
-                    .map(x => {
+				return this.data.counters
+                    .sort((first, second) => second.value - first.value)
+                    .map(item => {
                         return {
-                            name: x.name,
-                            value:`${pretty_number(x.value[0], x.value[1])}`
+                            name: item.name, value: item.value,
+                            title: (item.value !== item.meta) ? `${item.value} (${item.meta})`: item.value
                         }
                     })
             },
             dataSeen() {
 			    let seen = this.data.seen || 0
-                let nonunique_seen = this.data.nonunique_seen || 0
-                if (seen != nonunique_seen) {
-                    return `${seen} (${nonunique_seen})`
+                let seenGross = this.data.seen_gross || 0
+                if (seen !== seenGross) {
+                    return `${seen} (${seenGross})`
                 }
                 return seen
             },
@@ -91,10 +83,9 @@
             .discovery-summary {
                 border-top: 2px dashed $grey-2;
                 padding-top: 12px;
-                margin-top: 12px;
                 .summary-row {
                     display: flex;
-                    font-size: 18px;
+                    font-size: 16px;
                     .title {
                         flex: auto 1 0;
                         &.mid {
@@ -106,7 +97,7 @@
                     }
                     .quantity {
                         font-weight: 500;
-                        width: 60px;
+                        width: 120px;
                         text-align: center;
                     }
                     .svg-icon {
