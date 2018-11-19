@@ -83,6 +83,8 @@ class Page:
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'
     ACTIONS_BUTTON = 'Actions'
+    VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
+    NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
 
     def __init__(self, driver, base_url, local_browser: bool):
         self.driver = driver
@@ -470,6 +472,16 @@ class Page:
 
     def close_dropdown(self):
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()
+
+    def click_tab(self, tab_title):
+        self.find_element_by_text(tab_title).click()
+
+    def find_vertical_tabs(self):
+        vertical_tabs = []
+        for tab in self.driver.find_elements_by_css_selector(self.VERTICAL_TABS_CSS):
+            if tab.text:
+                vertical_tabs.append(tab.text)
+        return vertical_tabs
 
     def get_filename_by_input_id(self, input_id):
         return self.driver.find_element_by_xpath(

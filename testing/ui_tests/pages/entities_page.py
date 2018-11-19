@@ -52,6 +52,7 @@ class EntitiesPage(Page):
     ALL_COLUMN_NAMES_CSS = 'thead>tr>th'
     ALL_ENTITIES_CSS = 'tbody>tr'
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
+    AD_WMI_ADAPTER_FILTER = 'adapters == "active_directory_adapter" and adapters_data.general_info.id == exists(true)'
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
     NOTES_TAB_CSS = 'li#notes'

@@ -110,6 +110,51 @@ class TestDevicesTable(TestBase):
         self.devices_page.wait_for_element_absent_by_css(self.devices_page.MODAL_OVERLAY_CSS)
         assert not self.devices_page.count_entities()
 
+    def test_devices_config(self):
+        with GeneralInfoService().contextmanager(take_ownership=True):
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True)
+            self.settings_page.save_and_wait_for_toaster()
+
+            self.base_page.run_discovery()
+
+            # Testing regular Adapter
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(self.devices_page.JSON_ADAPTER_FILTER)
+            self.devices_page.enter_search()
+            self.devices_page.wait_for_table_to_load()
+            first_id = self.devices_page.find_first_id()
+            self.devices_page.click_row()
+            assert f'devices/{first_id}' in self.driver.current_url
+            self.devices_page.click_tab('Adapters Data')
+            assert len(self.devices_page.find_vertical_tabs()) == 1
+            assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
+            assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS)
+            self.devices_page.click_tab('General Data')
+            assert self.devices_page.find_vertical_tabs() == ['Basic Info']
+            assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+            assert not self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS).is_displayed()
+            self.devices_page.click_tab('Tags')
+            assert self.devices_page.find_element_by_text('Edit Tags')
+
+            # Testing AD Adapter
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(self.devices_page.AD_WMI_ADAPTER_FILTER)
+            self.devices_page.enter_search()
+            self.devices_page.wait_for_table_to_load()
+            wait_until(self.devices_page.get_all_data, total_timeout=60 * 25)
+            first_id = self.devices_page.find_first_id()
+            self.devices_page.click_row()
+            assert f'devices/{first_id}' in self.driver.current_url
+            self.devices_page.click_tab('Adapters Data')
+            assert self.devices_page.find_vertical_tabs() == ['WMI Info', 'Active Directory']
+            assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
+            self.devices_page.click_tab('Active Directory')
+            assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AD_NAME)
+            self.devices_page.click_tab('General Data')
+            assert 'Installed Software' in self.devices_page.find_vertical_tabs()
+
     def test_multi_table_and_single_adapter_view(self):
         try:
             self.settings_page.switch_to_page()

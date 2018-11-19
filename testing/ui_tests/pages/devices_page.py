@@ -6,6 +6,7 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 class DevicesPage(EntitiesPage):
     FIELD_NETWORK_INTERFACES_IPS = 'Network Interfaces: IPs'
+    FIELD_NETWORK_INTERFACES = 'Network Interfaces'
     FIELD_OS_TYPE = 'OS: Type'
     FIELD_TAGS = 'Tags'
     FIELD_ADAPTERS = 'Adapters'
@@ -14,6 +15,8 @@ class DevicesPage(EntitiesPage):
     FIELD_HOSTNAME_NAME = 'hostname'
     FIELD_ASSET_NAME = 'Asset Name'
     FIELD_SAVED_QUERY = 'Saved Query'
+    FIELD_AVSTATUS = 'AvStatus'
+    FIELD_AD_NAME = 'AD name'
     VALUE_SAVED_QUERY_WINDOWS = 'Windows Operating System'
     VALUE_SAVED_QUERY_LINUX = 'Linux Operating System'
     VALUE_OS_WINDOWS = 'Windows'
