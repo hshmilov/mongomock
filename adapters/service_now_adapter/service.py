@@ -200,11 +200,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.class_name = device_raw.get('sys_class_name')
                     try:
                         ip_addresses = device_raw.get('ip_address')
-                        if ip_addresses and not any(elem in ip_addresses for elem in ['DHCP',
-                                                                                      '*',
-                                                                                      'Stack',
-                                                                                      'x',
-                                                                                      'X']):
+                        if self.__fetch_ips and ip_addresses and not any(elem in ip_addresses for elem in ['DHCP',
+                                                                                                           '*',
+                                                                                                           'Stack',
+                                                                                                           'x',
+                                                                                                           'X']):
                             ip_addresses = ip_addresses.split('/')
                             ip_addresses = [ip.strip() for ip in ip_addresses]
                         else:
@@ -322,10 +322,16 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'fetch_users',
                     'type': 'bool',
                     'title': 'Should Fetch Users'
+                },
+                {
+                    'name': 'fetch_ips',
+                    'type': 'bool',
+                    'title': 'Should Fetch IPs'
                 }
             ],
             "required": [
-                'fetch_users'
+                'fetch_users',
+                'fetch_ips'
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -334,8 +340,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_users': True
+            'fetch_users': True,
+            'fetch_ips': True
         }
 
     def _on_config_update(self, config):
         self.__fetch_users = config['fetch_users']
+        self.__fetch_ips = config['fetch_ips']

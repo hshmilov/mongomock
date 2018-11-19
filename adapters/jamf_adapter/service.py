@@ -172,17 +172,20 @@ class JamfAdapter(AdapterBase, Configurable):
                     # The field 'platform' means that we are handling a computer, and not a mobile.
                     # Thus we believe the following fields will be present.
                     last_contact_time_utc = general_info.get('last_contact_time_utc')
+                    report_date = general_info.get('report_date')
+                    try:
+                        if last_contact_time_utc:
+                            device.last_seen = parse_date(last_contact_time_utc)
+                        elif report_date:
+                            device.last_seen = parse_date(report_date)
+                    except Exception:
+                        logger.exception(f"Problem parsing last seen date {last_contact_time_utc} and {report_date}")
                     try:
                         is_managed = (general_info.get('remote_management') or {}).get('managed')
                         if is_managed is not None:
                             device.is_managed = is_managed == 'true'
                     except Exception:
                         logger.exception(f'Problem getting is managed for {general_info}')
-                    try:
-                        if last_contact_time_utc:
-                            device.last_seen = parse_date(last_contact_time_utc)
-                    except Exception:
-                        logger.exception(f"Problem parsing last seen date {last_contact_time_utc}")
 
                     device.jamf_version = general_info.get('jamf_version')
                     try:

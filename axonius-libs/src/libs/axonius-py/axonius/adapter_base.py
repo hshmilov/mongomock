@@ -261,9 +261,14 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         device_age_cutoff = self.__device_time_cutoff()
         user_age_cutoff = self.__user_time_cutoff()
+        if self._notify_on_adapters is True:
+            self.create_notification(f"Cleaning devices and users that are before "
+                                     f"{device_age_cutoff}, {user_age_cutoff}")
         logger.info(f"Cleaning devices and users that are before {device_age_cutoff}, {user_age_cutoff}")
         devices_cleaned = self.__clean_entity(device_age_cutoff, EntityType.Devices)
         users_cleaned = self.__clean_entity(user_age_cutoff, EntityType.Users)
+        if self._notify_on_adapters is True:
+            self.create_notification(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
         logger.info(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
         self._request_db_rebuild(sync=False)
         return {EntityType.Devices.value: devices_cleaned, EntityType.Users.value: users_cleaned}
@@ -980,13 +985,14 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 self.create_notification(f"Adapter {self.plugin_name} had connection error to "
                                          f"server with the ID {client_id}.",
                                          str(e2))
-                logger.exception(
-                    "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
                 try:
                     self.send_syslog_message(f'Adapter {self.plugin_name} had connection error'
                                              f' to server with the ID {client_id}.', 'info')
                 except Exception:
                     logger.exception(f'Problem sending syslog message')
+                logger.exception(
+                    "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
+
                 _update_client_status("error", str(e2))
                 raise
             else:

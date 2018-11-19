@@ -12,7 +12,7 @@ export const pluginMeta = {
         description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud and client software.'
     },
     azure_ad_adapter: {
-        title: 'Microsoft Azure AD - BETA',
+        title: 'Microsoft Azure AD',
         description: 'Microsoft Azure Active Directory (Azure AD) is Microsoft\'s multi-tenant, cloud-based directory, and identity management service.'
     },
     divvycloud_adapter: {

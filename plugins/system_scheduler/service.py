@@ -192,6 +192,12 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         else:
             # Change current phase
             self.current_phase = scheduler_consts.Phases.Research
+            if self._notify_on_adapters is True:
+                self.create_notification(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
+            try:
+                self.send_syslog_message(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
+            except Exception:
+                logger.exception(f'Problem sending syslog message')
             logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
             try:
                 yield
@@ -215,7 +221,14 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         def _change_subphase(subphase: scheduler_consts.ResearchPhases):
             with self.__realtime_lock:
                 self.state.SubPhase = subphase
+
             logger.info(f'Started Subphase {subphase}')
+            if self._notify_on_adapters is True:
+                self.create_notification(f'Started Subphase {subphase}')
+            try:
+                self.send_syslog_message(f'Started Subphase {subphase}')
+            except Exception:
+                logger.exception(f'Problem sending syslog message')
 
         with self._start_research():
             self.state.Phase = scheduler_consts.Phases.Research
@@ -267,6 +280,12 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
             self._request_db_rebuild(sync=True)
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
+            if self._notify_on_adapters is True:
+                self.create_notification(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
+            try:
+                self.send_syslog_message(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
+            except Exception:
+                logger.exception(f'Problem sending syslog message')
 
     def __get__all_adapters(self):
         with self._get_db_connection() as db_connection:

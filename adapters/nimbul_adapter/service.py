@@ -1,3 +1,4 @@
+from collections import defaultdict
 import datetime
 import logging
 
@@ -9,6 +10,7 @@ from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
+from nimbul_adapter.client_id import get_client_id
 from nimbul_adapter.connection import NimbulConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -40,14 +42,20 @@ class NimbulAdapter(AdapterBase):
         created_at = Field(datetime.datetime, 'Created At')
         patch_level = Field(str, 'Patch Level')
 
+        project_name = Field(str, 'Project Name')
+        project_application_name = Field(str, 'Project Application Name')
+        project_application_email = Field(str, 'Project Appliaction Email')
+
     class MyUserAdapter(UserAdapter):
         nimbul_source = Field(str, 'Nimbul Source')
+        user_instances = ListField(str, 'User Instances')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
-    def _get_client_id(self, client_config):
-        return client_config['token']
+    @staticmethod
+    def _get_client_id(client_config):
+        return get_client_id(client_config)
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability('https://nimbul-api.nyt.net')
@@ -67,8 +75,10 @@ class NimbulAdapter(AdapterBase):
             raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client_data):
+        self._users_to_devices_dict = defaultdict(list)
         with client_data:
             self._app_dict = client_data.get_apps()
+            self._project_dict = client_data.get_project()
             yield from client_data.get_device_list()
 
     def _query_users_by_client(self, key, data):
@@ -91,7 +101,27 @@ class NimbulAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def __add_app_data(self, device, device_raw):
+    def __add_project_data(self, device, project_name, cloud_id):
+        try:
+            if not project_name:
+                return
+            project_data = self._project_dict.get(project_name)
+            if not project_data:
+                return
+            device.project_application_name = project_data.get('application_name')
+            project_application_email = project_data.get('application_email')
+            if project_application_email:
+                device.project_application_email = project_application_email
+            if project_application_email and cloud_id:
+                if not self._users_to_devices_dict[project_application_email]:
+                    self._users_to_devices_dict[project_application_email] = []
+                if cloud_id not in self._users_to_devices_dict[project_application_email]:
+                    self._users_to_devices_dict[project_application_email].append(cloud_id)
+
+        except Exception:
+            logger.exception(f'Problem adding project specfic data')
+
+    def __add_app_data(self, device, device_raw, cloud_id=None):
         try:
             app_id = device_raw.get('app_id')
             if not app_id:
@@ -100,7 +130,13 @@ class NimbulAdapter(AdapterBase):
             if not app_data:
                 return
             device.app_code = app_data.get('code')
-            device.app_email = app_data.get('email')
+            app_email = app_data.get('email')
+            if app_email and cloud_id:
+                device.app_email = app_email
+                if not self._users_to_devices_dict[app_email]:
+                    self._users_to_devices_dict[app_email] = []
+                if cloud_id not in self._users_to_devices_dict[app_email]:
+                    self._users_to_devices_dict[app_email].append(cloud_id)
             device.app_description = app_data.get('description')
             device.app_permission = app_data.get('permission')
             device.app_slack = app_data.get('slack_channel')
@@ -117,7 +153,8 @@ class NimbulAdapter(AdapterBase):
             logger.warning(f'Bad device with no ID {device_raw}')
             return None
         device.id = str(device_raw.get('instance_id'))
-        device.cloud_id = device_raw.get('cloud_id')
+        cloud_id = device_raw.get('cloud_id')
+        device.cloud_id = cloud_id
         image_cloud_id = device_raw.get('image_cloud_id')
         device.volume_snapshot_frequencies = device_raw.get('volume_snapshot_frequencies')
         if image_cloud_id and image_cloud_id.startswith('ami-'):
@@ -154,7 +191,7 @@ class NimbulAdapter(AdapterBase):
                 device.public_ip = public_ip
         except Exception:
             logger.exception(f'Problem getting ip for {device_raw}')
-        self.__add_app_data(device, device_raw)
+        self.__add_app_data(device, device_raw, cloud_id)
         device.set_raw(device_raw)
         return device
 
@@ -165,7 +202,8 @@ class NimbulAdapter(AdapterBase):
             return None
         device.id = str(device_raw.get('id')) + str(device_raw.get('cloud_uid'))
         device.name = device_raw.get('cloud_uid')
-        device.cloud_id = device_raw.get('cloud_uid')
+        cloud_id = device_raw.get('cloud_uid')
+        device.cloud_id = cloud_id
         device.cloud_state = device_raw.get('cloud_state')
         image_cloud_id = device_raw.get('image_cloud_id')
         if image_cloud_id and image_cloud_id.startswith('ami-'):
@@ -192,7 +230,16 @@ class NimbulAdapter(AdapterBase):
             device.patch_level = device_raw.get('patch_level')
         except Exception:
             logger.exception(f'Problem at parse date {device_raw}')
-        self.__add_app_data(device, device_raw)
+        self.__add_app_data(device, device_raw, cloud_id)
+        try:
+            full_name = device_raw.get('name')
+            if full_name and 'googleapis' in full_name and '/projects/' in full_name:
+                project_name = full_name.split('/')[full_name.split('/').index('projects') + 1]
+                device.project_name = project_name
+                self.__add_project_data(device, project_name, cloud_id)
+        except Exception:
+            logger.exception(f'Problem adding project name')
+
         device.set_raw(device_raw)
         return device
 
@@ -204,6 +251,11 @@ class NimbulAdapter(AdapterBase):
         user.id = mail
         user.mail = mail
         user.nimbul_source = user_raw.get('source')
+        try:
+            if self._users_to_devices_dict.get(mail):
+                user.user_instances = self._users_to_devices_dict.get(mail)
+        except Exception:
+            logger.exception(f'Problem adding instances to {user_raw}')
         user.set_raw(user_raw)
         return user
 

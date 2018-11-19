@@ -26,6 +26,8 @@ PROXY_ADDR = 'proxy_addr'
 PROXY_PORT = 'proxy_port'
 PROXY_USER = 'proxy_user'
 PROXY_PASSW = 'proxy_password'
+NOTIFICATIONS_SETTINGS = 'notifications_settings'
+NOTIFY_ADAPTERS_FETCH = 'notify_adapters_fetch'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'

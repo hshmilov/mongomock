@@ -112,10 +112,11 @@ class FortigateAdapter(AdapterBase, Configurable):
             device = self._new_device_adapter()
             logger.info(f'DEVICE {device_raw.keys()} RAW {device_raw}')
             hostname = device_raw.get('hostname')
-            if not hostname:
+            name = device_raw.get('name')
+            if not hostname and not name:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = hostname
+            device.id = hostname or name
             device.hostname = hostname
             try:
                 if device_raw.get('last_checked'):

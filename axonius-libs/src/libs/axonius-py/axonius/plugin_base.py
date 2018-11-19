@@ -57,7 +57,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PLUGIN_UNIQUE_NAME,
                                           TROUBLESHOOTING_SETTING,
                                           VOLATILE_CONFIG_PATH, PLUGIN_NAME, X_UI_USER, X_UI_USER_SOURCE,
-                                          PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW)
+                                          PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW,
+                                          NOTIFICATIONS_SETTINGS, NOTIFY_ADAPTERS_FETCH)
 from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
@@ -1209,6 +1210,10 @@ class PluginBase(Configurable, Feature):
                 logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
 
             time_for_client = datetime.now() - time_before_client
+            if self._notify_on_adapters is True:
+                self.create_notification(
+                    f"Finished aggregating {entity_type} for client {client_name}, "
+                    f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
             if should_log_info is True:
                 logger.info(
                     f"Finished aggregating {entity_type} for client {client_name}, "
@@ -1978,6 +1983,7 @@ class PluginBase(Configurable, Feature):
             {'config_name': 'CoreService'})['config']
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
+        self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._execution_enabled = config['execution_settings']['enabled']
         self._should_use_axr = config['execution_settings']['should_use_axr']
         self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
@@ -2299,7 +2305,20 @@ class PluginBase(Configurable, Feature):
                             'type': 'string'
                         }
                     ]
-                }
+                },
+                {
+                    "items": [
+                        {
+                            "name": NOTIFY_ADAPTERS_FETCH,
+                            "title": "Notify On Adapters Fetch",
+                            "type": "bool"
+                        }
+                    ],
+                    "name": NOTIFICATIONS_SETTINGS,
+                    "title": "Notifications Settings",
+                    "type": "array",
+                    "required": [NOTIFY_ADAPTERS_FETCH]
+                },
             ],
             'pretty_name': 'Global Configuration',
             'type': 'array'
@@ -2356,5 +2375,8 @@ class PluginBase(Configurable, Feature):
                 PROXY_PORT: 8080,
                 PROXY_USER: '',
                 PROXY_PASSW: ''
+            },
+            NOTIFICATIONS_SETTINGS: {
+                NOTIFY_ADAPTERS_FETCH: False
             }
         }

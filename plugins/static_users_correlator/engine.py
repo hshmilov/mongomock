@@ -11,6 +11,21 @@ logger = logging.getLogger(f'axonius.{__name__}')
 NORMALIZED_MAIL = 'normalized_mail'
 
 
+def get_ad_upn(adapter_data):
+    ad_upn = adapter_data['data'].get('ad_user_principal_name')
+    if ad_upn:
+        return ad_upn.lower().strip()
+    return None
+
+
+def compare_ad_upn(adapter_data1, adapter_data2):
+    ad_upn_1 = get_ad_upn(adapter_data1)
+    ad_upn_2 = get_ad_upn(adapter_data2)
+    if ad_upn_1 and ad_upn_2 and ad_upn_1 == ad_upn_2:
+        return True
+    return False
+
+
 def compare_mail(adapter_user1, adapter_user2):
     return adapter_user1.get(NORMALIZED_MAIL) and\
         adapter_user1.get(NORMALIZED_MAIL) == adapter_user2.get(NORMALIZED_MAIL)
@@ -67,6 +82,17 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
     def _correlation_preconditions(self):
         return [has_email, has_principle_name]
 
+    def _correlate_ad_upn(self, entities):
+        logger.info('Starting to correlate on ad upn')
+        filtered_adapters_list = filter(get_ad_upn, entities)
+        yield from self._bucket_correlate(list(filtered_adapters_list),
+                                          [get_ad_upn],
+                                          [compare_ad_upn],
+                                          [],
+                                          [],
+                                          {'Reason': 'They have the same ad upn'},
+                                          CorrelationReason.StaticAnalysis)
+
     def _correlate_mail(self, entities):
         logger.info('Starting to correlate on mail')
         mails_indexed = {}
@@ -85,4 +111,5 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                                   CorrelationReason.StaticAnalysis)
 
     def _raw_correlate(self, entities):
-        return self._correlate_mail(normalize_adapter_users(entities))
+        yield from self._correlate_mail(normalize_adapter_users(entities))
+        yield from self._correlate_ad_upn(normalize_adapter_users(entities))

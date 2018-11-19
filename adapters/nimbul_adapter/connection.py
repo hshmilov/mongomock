@@ -36,6 +36,21 @@ class NimbulConnection(RESTConnection):
             logger.exception(f'Problem getting nimubl apps')
             return apps_dict
 
+    def get_project(self):
+        projects_dict = dict()
+        try:
+            projects = self._get('projects')
+            for project in projects:
+                try:
+                    if project.get('cloud_id'):
+                        projects_dict[project.get('cloud_id')] = project
+                except Exception:
+                    logger.exception(f'Problem with project {project}')
+            return projects_dict
+        except Exception:
+            logger.exception(f'Problem getting nimubl projects')
+            return projects_dict
+
     def get_user_list(self):
         for user in self._get('users'):
             yield 'user', user

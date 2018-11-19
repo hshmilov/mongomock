@@ -9,6 +9,7 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from testing.services.plugins.aggregator_service import AggregatorService
 from testing.services.plugins.core_service import CoreService
 from testing.services.plugins.static_correlator_service import StaticCorrelatorService
+from testing.services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 
 
 def main(args):
@@ -29,6 +30,7 @@ def main(args):
     ag = AggregatorService()
     core = CoreService()
     sc = StaticCorrelatorService()
+    scu = StaticUsersCorrelatorService()
 
     if args.component == 'adapter':
         if args.action == 'list':
@@ -49,6 +51,8 @@ def main(args):
         if args.action == 'run':
             print('Running static correlator..')
             sc.correlate(True)
+            print('Running static users correlator..')
+            scu.correlate(True)
         else:
             print(parser.usage)
             return 1

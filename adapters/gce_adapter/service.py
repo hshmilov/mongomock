@@ -47,6 +47,7 @@ class GceAdapter(AdapterBase):
         cluster_uid = Field(str, 'GCE Cluster Unique ID')
         cluster_location = Field(str, 'GCE Cluster Location')
         gce_tags = ListField(GceTag, 'GCE Tags')
+        service_accounts = ListField(str, 'Service Accounts')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -165,7 +166,18 @@ class GceAdapter(AdapterBase):
                         logger.exception(f'Problemg getting extra tags for {raw_device_data}')
         except Exception:
             logger.exception(f'Problem getting cluster info for {str(raw_device_data)}')
-
+        try:
+            device.service_accounts = []
+            service_accounts_raw = raw_device_data.extra.get('serviceAccounts')
+            if isinstance(service_accounts_raw, list) and service_accounts_raw:
+                for service_account_raw in service_accounts_raw:
+                    try:
+                        if service_account_raw.get('email'):
+                            device.service_accounts.append(service_account_raw.get('email'))
+                    except Exception:
+                        logger.exception(f'Problem with service account {service_account_raw}')
+        except Exception:
+            logger.exception(f'Problem adding Service Accounts')
         try:
             # some fields might not be basic types
             # by using IgnoreErrorJSONEncoder with JSON encode we verify that this
