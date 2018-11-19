@@ -18,10 +18,12 @@ from axonius.adapter_exceptions import (AdapterException,
                                         CredentialErrorException)
 from axonius.devices.device_adapter import DeviceRunningState
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
-from axonius.fields import Field, ListField
+from axonius.fields import Field, ListField, JsonStringFormat
+from axonius.utils.parsing import format_ip
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
+from axonius.mixins.configurable import Configurable
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -72,6 +74,27 @@ def get_paginated_next_token_api(func):
 
         next_token = result.get('nextToken')
         if not next_token:
+            break
+
+
+def get_paginated_marker_api(func):
+    marker = None
+    page_number = 0
+
+    while page_number < PAGE_NUMBER_FLOOD_PROTECTION:
+        page_number += 1
+        if marker:
+            result = func(Marker=marker)
+        else:
+            result = func()
+
+        yield result
+
+        if result.get('IsTruncated') is True:
+            marker = result.get('Marker')
+            if not marker:
+                break
+        else:
             break
 
 
@@ -138,7 +161,28 @@ class AWSSecurityGroup(SmartJsonClass):
     outbound = ListField(AWSIPRule, 'Outbound Rules')
 
 
-class AwsAdapter(AdapterBase):
+class AWSRole(SmartJsonClass):
+    role_name = Field(str, 'Name')
+    role_arn = Field(str, 'ARN')
+    role_id = Field(str, 'ID')
+    role_description = Field(str, 'Description')
+    role_permissions_boundary_policy_name = Field(str, 'Permissions Boundary Policy')
+    role_attached_policies_named = ListField(str, 'Attached Policies')
+
+
+class AWSLoadBalancer(SmartJsonClass):
+    name = Field(str, 'Name')
+    dns = Field(str, 'DNS')
+    scheme = Field(str, 'Scheme', enum=['internet-facing', 'internal'])
+    type = Field(str, 'Type', enum=['classic', 'network', 'application'])
+    lb_protocol = Field(str, 'LB Protocol')
+    instance_protocol = Field(str, 'Instance Protocol')
+    lb_port = Field(int, 'LB Port')
+    instance_port = Field(int, 'Instance Port')
+    ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+
+
+class AwsAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceOrContainerAdapter):
         account_tag = Field(str, 'Account Tag')
         aws_region = Field(str, 'Region')
@@ -155,6 +199,8 @@ class AwsAdapter(AdapterBase):
         monitoring_state = Field(str, 'Monitoring State')
         launch_time = Field(datetime.datetime, 'Launch Time')
         image_id = Field(str, 'AMI (Image) ID')
+        aws_attached_role = Field(AWSRole, 'Attached Role')
+        aws_load_balancers = ListField(AWSLoadBalancer, 'Load Balancer (ELB)')
 
         # VPC Generic Fields
         subnet_id = Field(str, 'Subnet Id')
@@ -173,6 +219,9 @@ class AwsAdapter(AdapterBase):
         def add_aws_security_group(self, **kwargs):
             self.security_groups.append(AWSSecurityGroup(**kwargs))
 
+        def add_aws_load_balancer(self, **kwargs):
+            self.aws_load_balancers.append(AWSLoadBalancer(**kwargs))
+
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
@@ -184,6 +233,7 @@ class AwsAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         # We are going to change client_config throughout the function so copy it first
+        clients_dict = dict()
         client_config = client_config.copy()
 
         # Lets start with getting all parameters and validating them.
@@ -235,13 +285,12 @@ class AwsAdapter(AdapterBase):
                 )
 
                 roles_temp_credentials[role_arn] = assumed_role_object['Credentials']
+                clients_dict[role_arn] = dict()
             except Exception as e:
                 logger.exception(f'Error while assuming role {role_arn}')
                 # We prefer showing this message one by one because we want to show the exception.
                 # If we would have shown all failed roles at once this would be a huge string...
                 raise ClientConnectionException(f'Can not assume role {role_arn}: {str(e)}')
-
-        clients_dict = {}
 
         if (client_config.get(GET_ALL_REGIONS) or False) is False:
             if not client_config.get(REGION_NAME):
@@ -254,8 +303,10 @@ class AwsAdapter(AdapterBase):
         else:
             regions_to_pull_from = REGIONS_NAMES
 
-        # We want to fail only if we failed connecting to everything we can
+        # We want to fail only if we failed connecting to everything we can. So what we do is we try to connect
+        # and query the ec2 service which is mendatory for us.
         aws_access_key_id = client_config[AWS_ACCESS_KEY_ID]
+        clients_dict[aws_access_key_id] = dict()
         successful_connections = []
         failed_connections = []
         for region in regions_to_pull_from:
@@ -264,9 +315,9 @@ class AwsAdapter(AdapterBase):
             current_client_config[REGION_NAME] = region
 
             current_try = f'IAM User {aws_access_key_id} with region {region}'
+            clients_dict[aws_access_key_id][region] = current_client_config
             try:
-                clients_dict[f'IAM_User_{aws_access_key_id}_{region}'] = \
-                    self._connect_client_by_source(current_client_config)
+                self._test_ec2_connection(current_client_config)
                 successful_connections.append(current_try)
             except Exception as e:
                 logger.exception(f'Problem with iam user for region {region}')
@@ -284,9 +335,9 @@ class AwsAdapter(AdapterBase):
                 current_client_config[AWS_SECRET_ACCESS_KEY] = role_credentials['SecretAccessKey']
                 current_client_config[AWS_SESSION_TOKEN] = role_credentials['SessionToken']
 
+                clients_dict[role_arn][region] = current_client_config
                 try:
-                    clients_dict[f'IAM_Role_{role_arn}_{region}'] = \
-                        self._connect_client_by_source(current_client_config)
+                    self._test_ec2_connection(current_client_config)
                     successful_connections.append(current_try)
                 except Exception as e:
                     logger.exception(f'problem with role {role_arn} for region {region}')
@@ -298,125 +349,232 @@ class AwsAdapter(AdapterBase):
             # we show the first one which usually indicates the problem.
             raise ClientConnectionException(f'Failed connecting to aws: {failed_connections[0]}')
 
-        if len(failed_connections) > 0:
-            connections_failures = ', '.join(failed_connections)
-            total_connections = len(successful_connections) + len(failed_connections)
-            self.create_notification(
-                f'AWS Adapter connected to {len(successful_connections)} / {total_connections} successfully.',
-                content=f'Failed connections: {connections_failures}' if len(connections_failures) > 0 else '')
-
         return clients_dict
 
-    def _connect_client_by_source(self, client_config):
+    @staticmethod
+    def _get_boto3_config_from_client_config(client_config):
+        params = dict()
+        params[REGION_NAME] = client_config[REGION_NAME]
+        params[AWS_ACCESS_KEY_ID] = client_config[AWS_ACCESS_KEY_ID]
+        params[AWS_SECRET_ACCESS_KEY] = client_config[AWS_SECRET_ACCESS_KEY]
+        params[AWS_CONFIG] = client_config.get(AWS_CONFIG)
+        params[AWS_SESSION_TOKEN] = client_config.get(AWS_SESSION_TOKEN)
+        return params
+
+    def _test_ec2_connection(self, client_config):
+        params = self._get_boto3_config_from_client_config(client_config)
         try:
-            params = dict()
-            params[REGION_NAME] = client_config[REGION_NAME]
-            params[AWS_ACCESS_KEY_ID] = client_config[AWS_ACCESS_KEY_ID]
-            params[AWS_SECRET_ACCESS_KEY] = client_config[AWS_SECRET_ACCESS_KEY]
-            params[AWS_CONFIG] = client_config.get(AWS_CONFIG)
-            params[AWS_SESSION_TOKEN] = client_config.get(AWS_SESSION_TOKEN)
+            boto3_client_ec2 = boto3.client('ec2', **params)
+            boto3_client_ec2.describe_instances(DryRun=True)
+        except Exception as e:
+            if 'Request would have succeeded, but DryRun flag is set.' not in str(e):
+                raise
 
-            boto3_client_ec2 = None
-            boto3_client_ecs = None
-            boto3_client_eks = None
-            try:
-                boto3_client_ec2 = boto3.client('ec2', **params)
-            except botocore.exceptions.BotoCoreError as e:
-                message = 'Could not create EC2 client for account {0}, reason: {1}'.format(
-                    client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
-            except botocore.exceptions.ClientError as e:
-                message = 'Error connecting to EC2 client with account {0}, reason: {1}'.format(
-                    client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
-            try:
-                boto3_client_ecs = boto3.client('ecs', **params)
-            except botocore.exceptions.BotoCoreError as e:
-                message = 'Could not create ECS client for account {0}, reason: {1}'.format(
-                    client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
-            except botocore.exceptions.ClientError as e:
-                message = 'Error connecting to ECS client with account {0}, reason: {1}'.format(
-                    client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
-            try:
-                boto3_client_eks = boto3.client('eks', **params)
-            except botocore.exceptions.BotoCoreError as e:
-                message = 'Could not create EKS client for account {0}, reason: {1}'.format(
-                    client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
-            except botocore.exceptions.ClientError as e:
-                message = 'Error connecting to EKS client with account {0}, reason: {1}'.format(
-                    client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
+    def _connect_client_by_source(self, client_config):
+        params = self._get_boto3_config_from_client_config(client_config)
+        clients = dict()
+        errors = dict()
 
-            # Try to get all the instances. if we have the wrong privileges, it will throw an exception.
-            # The only way of knowing if the connection works is to try something. we use DryRun=True (for Ec2),
-            # and if it all works then we should get:
-            # botocore.exceptions.ClientError: An error occurred (DryRunOperation)
-            # when calling the DescribeInstances operation: Request would have succeeded, but DryRun flag is set.
-            errors = {}
-            try:
-                boto3_client_ec2.describe_instances(DryRun=True)
-            except Exception as e:
-                if e.response['Error'].get('Code') != 'DryRunOperation':
-                    message = 'Error creating EC2 client for account {0}, reason: {1}'.format(
-                        client_config[AWS_ACCESS_KEY_ID], str(e))
-                    logger.warning(message)
-                    errors['ec2'] = e
-            try:
-                boto3_client_ecs.list_clusters()
-            except Exception as e:
-                message = 'Error creating ECS client for account {0}, reason: {1}'.format(
-                    client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
-                errors['ecs'] = e
-            try:
-                boto3_client_eks.list_clusters()
-            except Exception as e:
-                message = 'Error creating EKS client for account {0}, ' \
-                          'reason: {1}'.format(client_config[AWS_ACCESS_KEY_ID], str(e))
-                logger.warning(message)
-                errors['eks'] = e
-            boto3_clients = {}
+        try:
+            c = boto3.client('ec2', **params)
+            c.describe_instances()
+            clients['ec2'] = c
+        except Exception as e:
+            errors['ec2'] = str(e)
 
-            # Tests whether both clients fail the connection test
-            # and therefore whether the credentials must be incorrect
-            if len(errors) == 3:
-                # we have got plenty of errors, lets show at least the ec2 part. this usually means credentials issue.
-                raise ClientConnectionException(f'Could not connect to AWS EC2 or ECS or EKS services: {errors["ec2"]}')
-            else:
-                # Stores both EC2 and EKS clients in a dict
-                if client_config.get(ACCOUNT_TAG):
-                    boto3_clients['account_tag'] = client_config.get(ACCOUNT_TAG)
-                if errors.get('ec2') is None:
-                    boto3_clients['ec2'] = boto3_client_ec2
-                if errors.get('ecs') is None:
-                    boto3_clients['ecs'] = boto3_client_ecs
-                if errors.get('eks') is None:
-                    boto3_clients['eks'] = boto3_client_eks
-                # Store the credentials in the client_config as well as we need them in the future for token generation
-                boto3_clients['credentials'] = client_config
-                boto3_clients['region'] = params[REGION_NAME]
-            return boto3_clients
-        except botocore.exceptions.BotoCoreError as e:
-            message = 'Error creating AWS client for account {0}, reason: {1}'.format(
-                client_config[AWS_ACCESS_KEY_ID], str(e))
-            logger.exception(message)
-        except botocore.exceptions.ClientError as e:
-            message = 'Error connecting to client with account {0}, reason: {1}'.format(
-                client_config[AWS_ACCESS_KEY_ID], str(e))
-            logger.exception(message)
-        raise ClientConnectionException(message)
+        try:
+            c = boto3.client('ecs', **params)
+            c.list_clusters()
+            clients['ecs'] = c
+        except Exception as e:
+            errors['ecs'] = str(e)
+
+        try:
+            c = boto3.client('eks', **params)
+            c.list_clusters()
+            clients['eks'] = c
+        except Exception as e:
+            if not 'Could not connect to the endpoint URL' in str(e):
+                # This means EKS is not supported in this region, this is not an error.
+                errors['eks'] = str(e)
+
+        try:
+            c = boto3.client('iam', **params)
+            c.list_roles()
+            clients['iam'] = c
+        except Exception as e:
+            errors['iam'] = str(e)
+
+        try:
+            c = boto3.client('elb', **params)
+            c.describe_load_balancers()
+            clients['elbv1'] = c
+        except Exception as e:
+            errors['elbv1'] = str(e)
+
+        try:
+            c = boto3.client('elbv2', **params)
+            c.describe_load_balancers()
+            clients['elbv2'] = c
+        except Exception as e:
+            errors['elbv2'] = str(e)
+
+        # the only service we truely need is ec2. all the rest are optional.
+        # If this has failed we raise an exception
+        if not clients.get('ec2'):
+            raise ClientConnectionException(f'Could not connect: {errors.get("ec2")}')
+
+        clients['account_tag'] = client_config.get(ACCOUNT_TAG)
+        clients['credentials'] = client_config
+        clients['region'] = params[REGION_NAME]
+
+        return clients, errors
 
     def _query_devices_by_client(self, client_name, client_data):
-        parsed_data = {}
-        for source, client_data_by_source in client_data.items():
+        # First, we must get clients for everything we need
+        client_data_aws_clients = dict()
+        successful_connections = []
+        failed_connections = []
+        warnings_messages = []
+        for account, account_regions_clients in client_data.items():
+            if account not in client_data_aws_clients:
+                client_data_aws_clients[account] = dict()
+            for region_name, client_data_by_region in account_regions_clients.items():
+                current_try = f'{account}_{region_name}'
+                try:
+                    client_data_aws_clients[account][region_name], warnings = \
+                        self._connect_client_by_source(client_data_by_region)
+                    successful_connections.append(current_try)
+                    if warnings:
+                        for service_name, service_error in warnings.items():
+                            error_string = f'{current_try}: {service_name} - {service_error}'
+                            logger.warning(error_string)
+                            warnings_messages.append(error_string)
+                except Exception as e:
+                    logger.exception(f'problem with {current_try}')
+                    failed_connections.append(f'{current_try}: {str(e)}')
+
+        total_connections = len(successful_connections) + len(failed_connections)
+        content = ''
+        if len(failed_connections) > 0:
+            connections_failures = '\n'.join(failed_connections)
+            content = f'Failed connections: \n{connections_failures}\n\n'
+        if len(warnings_messages) > 0:
+            warnings_str = '\n'.join(warnings_messages)
+            content = f'Warnings: \n{warnings_str}'
+
+        if self.__verbose_auth_notifications is True or len(successful_connections) == 0:
+            self.create_notification(
+                f'AWS Adapter: {len(successful_connections)} / {total_connections} successful connections, '
+                f'{len(warnings_messages)} warnings.',
+                content=content)
+
+        for account, account_regions_clients in client_data_aws_clients.items():
+            logger.info(f'query_devices_by_client account: {account}')
+            parsed_data_for_all_regions = None
+            for region_name, client_data_by_region in account_regions_clients.items():
+                try:
+                    source_name = f'{account}_{region_name}'
+                    if parsed_data_for_all_regions is None:
+                        parsed_data_for_all_regions = self._query_devices_by_client_for_all_sources(
+                            client_data_by_region)
+                    parse_data_for_source = self._query_devices_by_client_by_source(client_data_by_region)
+                    parse_data_for_source.update(parsed_data_for_all_regions)
+                    yield source_name, parse_data_for_source
+                except Exception:
+                    logger.exception(f'Problem querying source {source_name}')
+
+    def _query_devices_by_client_for_all_sources(self, client_data):
+        """
+        Sometimes we have to query resources which are relevant for all regions, i.e. IAM which is region-less.
+        So instead of doing it for each client we prefer to do it here.
+        :param client_data:
+        :return:
+        """
+        raw_data = {}
+        logger.info(f'Starting to query devices for region-less aws services')
+        # Checks whether client_data contains IAM data
+        if client_data.get('iam') is not None and self.__fetch_instance_roles is True:
             try:
-                parsed_data[source] = self._query_devices_by_client_by_source(client_data_by_source)
+                raw_data['instance_profiles'] = {}
+                iam_client_data = client_data.get('iam')
+
+                # For each instance that has a role attached to it, we want list all attached policies.
+                # So the following code will:
+                # 1. list all roles
+                # 2. for each roles, list all attached policies (managed & inline)
+                # 3. for each role, find all attached instance profiles for it.
+                role_i = 0
+                for role_answer in get_paginated_marker_api(iam_client_data.list_roles):
+                    for role_raw in (role_answer.get('Roles') or []):
+                        # Get some basic info about this role
+                        role_data = dict()
+                        role_name = role_raw.get('RoleName')
+                        if not role_name:
+                            logger.error(f'Found a role with no role name, continuing: {role_raw}')
+                            continue
+                        role_i += 1
+                        if role_i % 200 == 0:
+                            logger.info(f'Parsing role num {role_i}: {role_name}')
+                        role_data['role_name'] = role_name
+                        if role_raw.get('RoleId'):
+                            role_data['role_id'] = role_raw.get('RoleId')
+                        if role_raw.get('Arn'):
+                            role_data['arn'] = role_raw.get('Arn')
+                        if role_raw.get('Description'):
+                            role_data['description'] = role_raw.get('Description')
+
+                        get_role_data = iam_client_data.get_role(RoleName=role_name)
+                        permissions_boundary_dict = (get_role_data.get('Role') or {}).get('PermissionsBoundary')
+                        if permissions_boundary_dict:
+                            pb_type = permissions_boundary_dict.get('PermissionsBoundaryType')
+                            pb_arn = permissions_boundary_dict.get('PermissionsBoundaryArn')
+                            if str(pb_type).lower() == 'policy' and pb_arn:
+                                # we have to get the name of this policy
+                                try:
+                                    policy_name = iam_client_data.get_policy(PolicyArn=pb_arn)['Policy']['PolicyName']
+                                    role_data['permissions_boundary_policy_name'] = policy_name
+                                except Exception:
+                                    logger.exception(f'Could not get policy for permissions boundary arn {pb_arn}, '
+                                                     f'continuing')
+
+                        # Now that we have some basic info about the role, lets get all of its attached policies.
+                        attached_policies_names = []
+                        for attached_policy_answer_raw in get_paginated_marker_api(
+                                functools.partial(iam_client_data.list_attached_role_policies, RoleName=role_name)):
+                            for attached_policy_raw in (attached_policy_answer_raw.get('AttachedPolicies') or []):
+                                if attached_policy_raw.get('PolicyName'):
+                                    attached_policies_names.append(attached_policy_raw.get('PolicyName'))
+
+                        for inline_policy_answer_raw in get_paginated_marker_api(
+                                functools.partial(iam_client_data.list_role_policies, RoleName=role_name)):
+                            attached_policies_names.extend(inline_policy_answer_raw.get('PolicyNames') or [])
+
+                        role_data['attached_policies_names'] = attached_policies_names
+
+                        # Now find all profile instances attached to it
+                        for instance_profiles_answer_raw in get_paginated_marker_api(
+                                functools.partial(iam_client_data.list_instance_profiles_for_role, RoleName=role_name)
+                        ):
+                            for instance_profile_raw in (instance_profiles_answer_raw.get('InstanceProfiles') or []):
+                                instance_profile_id = instance_profile_raw.get('InstanceProfileId')
+                                if instance_profile_id:
+                                    if instance_profile_id in raw_data['instance_profiles']:
+                                        logger.error(f'Error! instance profile {instance_profile_id} for '
+                                                     f'role {role_arn} is already in raw data! continuing')
+                                        continue
+                                    raw_data['instance_profiles'][instance_profile_id] = role_data
+            except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
+                    botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
+                raise CredentialErrorException(repr(e))
+            except botocore.exceptions.BotoCoreError as e:
+                raise AdapterException(repr(e))
             except Exception:
-                logger.exception(f'Problem querying source {source}')
-        return parsed_data
+                # We do not raise an exception here since this could be a networking exception or a programming
+                # exception and we do not want the whole adapter to crash.
+                logger.exception('Error while parsing iam')
+
+        return raw_data
 
     def _query_devices_by_client_by_source(self, client_data):
         """
@@ -430,7 +588,9 @@ class AwsAdapter(AdapterBase):
         """
         raw_data = {}
         raw_data['account_tag'] = client_data.get('account_tag')
-        raw_data['region'] = client_data.get('region')
+        region = client_data.get('region')
+        raw_data['region'] = region
+        logger.info(f'Starting to query devices for region {region}')
         # Checks whether client_data contains EC2 data
         if client_data.get('ec2') is not None:
             try:
@@ -668,6 +828,180 @@ class AwsAdapter(AdapterBase):
                 raise CredentialErrorException(repr(e))
             except botocore.exceptions.BotoCoreError as e:
                 raise AdapterException(repr(e))
+        # Checks whether client_data contains ELB data
+        # we declare two dicts. one that maps between instance id's and a list of load balancers that point to them
+        # and one that maps between ip's and a list of load balancers that point to them.
+        raw_data['elb_by_iid'] = {}
+        raw_data['elb_by_ip'] = {}
+        if client_data.get('elbv1') is not None and self.__fetch_load_balancers is True:
+            try:
+                elbv1_client_data = client_data.get('elbv1')
+                elb_num = 0
+                for elb_raw_data_answer in get_paginated_marker_api(elbv1_client_data.describe_load_balancers):
+                    for elb_raw in (elb_raw_data_answer.get('LoadBalancerDescriptions') or []):
+                        elb_dict = {}
+                        elb_name = elb_raw.get('LoadBalancerName')
+                        if not elb_name:
+                            logger.error(f'Error, got load balancer with no name: {elb_raw}, continuing')
+                            continue
+                        elb_num += 1
+                        if elb_num % 200 == 0:
+                            logger.info(f'Parsing elb {elb_num}: {elb_name}')
+
+                        elb_dict['name'] = elb_name
+                        elb_dict['type'] = 'classic'    # this is elbv1
+                        if elb_raw.get('DNSName'):
+                            elb_dict['dns'] = elb_raw.get('DNSName')
+                        if elb_raw.get('Scheme'):
+                            elb_dict['scheme'] = elb_raw.get('Scheme').lower()
+
+                        # Get the listeners, i.e. source and dest port
+                        for listener_raw in (elb_raw.get('ListenerDescriptions') or []):
+                            if not listener_raw.get('Listener'):
+                                logger.error(f'Error parsing listener {listener_raw}, continuing')
+                                continue
+                            lr_data = {}
+                            listener_raw_data = listener_raw['Listener']
+                            if listener_raw_data.get('Protocol'):
+                                lr_data['lb_protocol'] = listener_raw_data.get('Protocol')
+                            if listener_raw_data.get('LoadBalancerPort'):
+                                lr_data['lb_port'] = listener_raw_data.get('LoadBalancerPort')
+                            if listener_raw_data.get('InstanceProtocol'):
+                                lr_data['instance_protocol'] = listener_raw_data.get('InstanceProtocol')
+                            if listener_raw_data.get('InstancePort'):
+                                lr_data['instance_port'] = listener_raw_data.get('InstancePort')
+                            # Map this lb to the instances that it points to. Note that for every listener we create
+                            # this. This is the format for elbv2 so we do this like this.
+                            for elb_instance_raw in elb_raw.get('Instances'):
+                                iid = elb_instance_raw.get('InstanceId')
+                                if not iid:
+                                    logger.error(f'Error pasring elb, no instance id! {elb_raw}, continuing')
+                                    continue
+                                if iid not in raw_data['elb_by_iid']:
+                                    raw_data['elb_by_iid'][iid] = []
+                                elb_final_dict = elb_dict.copy()
+                                elb_final_dict.update(lr_data)
+                                raw_data['elb_by_iid'][iid].append(elb_final_dict)
+                logger.debug(f'ELBV1: Parsed {elb_num} elbs.')
+            except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
+                    botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
+                raise CredentialErrorException(repr(e))
+            except botocore.exceptions.BotoCoreError as e:
+                raise AdapterException(repr(e))
+            except Exception:
+                # We do not raise an exception here since this could be a networking exception or a programming
+                # exception and we do not want the whole adapter to crash.
+                logger.exception('Error while parsing ELB v1')
+        if client_data.get('elbv2') is not None and self.__fetch_load_balancers is True:
+            try:
+                elbv2_client_data = client_data.get('elbv2')
+                # This one is much more complex than the elbv1 one.
+                # we need to query all lb's, then all target groups
+                all_elbv2_lbs_by_arn = dict()
+                for elbv2_lbs_raw_answer in get_paginated_marker_api(elbv2_client_data.describe_load_balancers):
+                    for elbv2_raw_data in (elbv2_lbs_raw_answer.get('LoadBalancers') or []):
+                        elbv2_arn = elbv2_raw_data.get('LoadBalancerArn')
+                        if not elbv2_arn:
+                            logger.error(f'Could not parse elb data for {elbv2_raw_data}, continuing')
+                            continue
+                        elbv2_data = dict()
+                        if elbv2_raw_data.get('LoadBalancerName'):
+                            elbv2_data['name'] = elbv2_raw_data.get('LoadBalancerName')
+                        if elbv2_raw_data.get('DNSName'):
+                            elbv2_data['dns'] = elbv2_raw_data.get('DNSName')
+                        if elbv2_raw_data.get('Scheme'):
+                            elbv2_data['scheme'] = elbv2_raw_data.get('Scheme').lower()
+                        if elbv2_raw_data.get('Type'):
+                            elbv2_data['type'] = elbv2_raw_data.get('Type').lower()
+                        ip_addresses = []
+                        for az_raw in elbv2_raw_data.get('AvailabilityZones') or []:
+                            for lba_raw in az_raw.get('LoadBalancerAddresses') or []:
+                                if lba_raw.get('IpAddress'):
+                                    ip_addresses.append(lba_raw.get('IpAddress'))
+                        if ip_addresses:
+                            elbv2_data['ips'] = ip_addresses
+                        all_elbv2_lbs_by_arn[elbv2_arn] = elbv2_data
+
+                logger.debug(f'ELBV2: Found {len(all_elbv2_lbs_by_arn)} elbs. Moving to target groups')
+                tg_count = 0
+                for elbv2_target_groups_answer in get_paginated_marker_api(elbv2_client_data.describe_target_groups):
+                    for elbv2_target_group_raw_data in (elbv2_target_groups_answer.get('TargetGroups') or []):
+                        tg_arn = elbv2_target_group_raw_data.get('TargetGroupArn')
+                        elbv2_tg_lb_arns = elbv2_target_group_raw_data.get('LoadBalancerArns')
+                        if not elbv2_tg_lb_arns:
+                            # This is a target group which is not assicaoted with any LB
+                            continue
+
+                        if not tg_arn:
+                            logger.error(f'Error parsing target group, no ARN: {elbv2_target_group_raw_data}, '
+                                         f'contuining.')
+                            continue
+                        tg_count += 1
+                        if tg_count % 200 == 0:
+                            logger.info(f'Parsing target group {tg_count}: {tg_arn}')
+                        tg_type = elbv2_target_group_raw_data.get('TargetType')
+                        if not isinstance(tg_type, str) or tg_type.lower() not in ['instance', 'ip']:
+                            logger.error(f'Wrong target group type: {tg_type}, continuing')
+                            continue
+                        tg_type = tg_type.lower()
+                        tg_dict = dict()
+                        if elbv2_target_group_raw_data.get('Protocol'):
+                            # These are the same in new-type lb's.
+                            tg_dict['lb_protocol'] = elbv2_target_group_raw_data.get('Protocol')
+                            tg_dict['instance_protocol'] = elbv2_target_group_raw_data.get('Protocol')
+                        if elbv2_target_group_raw_data.get('Port'):
+                            tg_dict['lb_port'] = elbv2_target_group_raw_data.get('Port')
+
+                        elbv2_targets = dict()
+                        # For each one of the target groups we must describe all targets.
+                        for target_raw in (elbv2_client_data.describe_target_health(TargetGroupArn=tg_arn).get(
+                                'TargetHealthDescriptions') or []):
+                            target_raw_target = target_raw.get('Target')
+                            if not target_raw_target:
+                                logger.error(f'Error, no "target" in target health description: {target_raw}, '
+                                             f'continuing')
+                                continue
+                            target_raw_id = target_raw_target.get('Id')
+                            target_raw_port = target_raw_target.get('Port')
+                            if not target_raw_id or target_raw_port is None:
+                                logger.error(f'Error, target_raw is invalid: {target_raw}, continuing')
+                                continue
+                            final_target_dict = tg_dict.copy()
+                            final_target_dict['instance_port'] = target_raw_port
+                            if target_raw_id not in elbv2_targets:
+                                elbv2_targets[target_raw_id] = []
+                                elbv2_targets[target_raw_id].append(final_target_dict)
+
+                        # At this point we have a dict that maps between ip/instance type targets to a partially
+                        # built dict that represents an entity. we must add the lb information and then map this
+                        # to the final dict of lb's by ip or target.
+                        for lb_arn in elbv2_tg_lb_arns:
+                            if lb_arn not in all_elbv2_lbs_by_arn:
+                                logger.error(f'Error, target group refers to lb {lb_arn} that does not exist, '
+                                             f'continuing')
+                                continue
+                            for final_target_id, final_target_obj_list in elbv2_targets.items():
+                                for final_target_obj in final_target_obj_list:
+                                    final_lb = all_elbv2_lbs_by_arn[lb_arn].copy()
+                                    final_lb.update(final_target_obj)
+                                    if tg_type == 'ip':
+                                        if final_target_id not in raw_data['elb_by_ip']:
+                                            raw_data['elb_by_ip'][final_target_id] = []
+                                        raw_data['elb_by_ip'][final_target_id].append(final_lb)
+                                    elif tg_type == 'instance':
+                                        if final_target_id not in raw_data['elb_by_iid']:
+                                            raw_data['elb_by_iid'][final_target_id] = []
+                                        raw_data['elb_by_iid'][final_target_id].append(final_lb)
+
+            except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
+                    botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
+                raise CredentialErrorException(repr(e))
+            except botocore.exceptions.BotoCoreError as e:
+                raise AdapterException(repr(e))
+            except Exception:
+                # We do not raise an exception here since this could be a networking exception or a programming
+                # exception and we do not want the whole adapter to crash.
+                logger.exception('Error while parsing ELB v2')
         return raw_data
 
     def _clients_schema(self):
@@ -726,7 +1060,7 @@ class AwsAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for aws_source, devices_raw_data_by_source in devices_raw_data.items():
+        for aws_source, devices_raw_data_by_source in devices_raw_data:
             try:
                 yield from self._parse_raw_data_inner(devices_raw_data_by_source, aws_source)
             except Exception:
@@ -735,11 +1069,15 @@ class AwsAdapter(AdapterBase):
     def _parse_raw_data_inner(self, devices_raw_data, aws_source):
         aws_region = devices_raw_data.get('region')
         account_tag = devices_raw_data.get('account_tag')
-        subnets_by_id = devices_raw_data.get('subnets')
-        vpcs_by_id = devices_raw_data.get('vpcs')
-        security_group_dict = devices_raw_data.get('security_groups')
+        subnets_by_id = devices_raw_data.get('subnets') or {}
+        vpcs_by_id = devices_raw_data.get('vpcs') or {}
+        security_group_dict = devices_raw_data.get('security_groups') or {}
+        instance_profiles_dict = devices_raw_data.get('instance_profiles') or {}
+        elb_by_ip = devices_raw_data.get('elb_by_ip') or {}
+        elb_by_iid = devices_raw_data.get('elb_by_iid') or {}
 
         ec2_id_to_ips = dict()
+        private_ips_to_ec2 = dict()
 
         # Checks whether devices_raw_data contains EC2 data
         if devices_raw_data.get('ec2') is not None:
@@ -838,6 +1176,10 @@ class AwsAdapter(AdapterBase):
 
                     if ec2_ips:
                         ec2_id_to_ips[device_id] = ec2_ips
+
+                    specific_private_ip_address = device_raw.get('PrivateIpAddress')
+                    if specific_private_ip_address:
+                        private_ips_to_ec2[specific_private_ip_address] = device_id
                     device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                              DeviceRunningState.Unknown)
                     try:
@@ -845,6 +1187,57 @@ class AwsAdapter(AdapterBase):
                     except Exception:
                         logger.exception(f'Problem getting launch time for {device_raw}')
                     device.image_id = device_raw.get('ImageId')
+
+                    try:
+                        iam_instance_profile_raw = device_raw.get('IamInstanceProfile')
+                        if iam_instance_profile_raw:
+                            iam_instance_profile_id = iam_instance_profile_raw.get('Id')
+                            if iam_instance_profile_id and iam_instance_profile_id in instance_profiles_dict:
+                                ec2_instance_attached_role = instance_profiles_dict[iam_instance_profile_id]
+                                device.aws_attached_role = AWSRole(
+                                    role_name=ec2_instance_attached_role.get('role_name'),
+                                    role_arn=ec2_instance_attached_role.get('arn'),
+                                    role_id=ec2_instance_attached_role.get('role_id'),
+                                    role_description=ec2_instance_attached_role.get('description'),
+                                    role_permissions_boundary_policy_name=ec2_instance_attached_role.get(
+                                        'permissions_boundary_policy_name'),
+                                    role_attached_policies_named=ec2_instance_attached_role.get(
+                                        'attached_policies_names')
+                                )
+                    except Exception:
+                        logger.exception(f'Could not parse iam instance profile {iam_instance_profile_raw}')
+
+                    try:
+                        # Parse load balancers info
+                        associated_lbs = []
+                        for ip in ec2_ips:
+                            if ip in elb_by_ip:
+                                associated_lbs.extend(elb_by_ip[ip])
+
+                        if device_id in elb_by_iid:
+                            associated_lbs.extend(elb_by_iid[device_id])
+
+                        for lb_raw in associated_lbs:
+                            try:
+                                ips = lb_raw.get('ips')
+                                device.add_aws_load_balancer(
+                                    name=lb_raw.get('name'),
+                                    dns=lb_raw.get('dns'),
+                                    scheme=lb_raw.get('scheme'),
+                                    type=lb_raw.get('type'),
+                                    lb_protocol=lb_raw.get('lb_protocol'),
+                                    lb_port=lb_raw.get('lb_port'),
+                                    instance_protocol=lb_raw.get('instance_protocol'),
+                                    instance_port=lb_raw.get('instance_port'),
+                                    ips=ips
+                                )
+                                if ips:
+                                    device.add_nic(ips=ips)
+                            except Exception:
+                                logger.exception(f'Error parsing lb: {lb_raw}')
+                    except Exception:
+                        logger.exception(f'Error parsing load balancers information')
+
                     device.set_raw(device_raw)
                     yield device
 
@@ -876,8 +1269,18 @@ class AwsAdapter(AdapterBase):
                                     device.aws_region = aws_region
                                     device.account_tag = account_tag
                                     device.aws_device_type = 'EKS'
-                                    device.set_instance_or_node(container_instance_name=(
-                                        pod_raw.get('spec') or {}).get('node_name'))
+
+                                    eks_host_ip = pod_status.get('host_ip')
+                                    eks_ec2_instance_id = private_ips_to_ec2.get(eks_host_ip)
+                                    device.set_instance_or_node(
+                                        container_instance_name=(pod_raw.get('spec') or {}).get('node_name'),
+                                        container_instance_id=eks_ec2_instance_id
+                                    )
+
+                                    if self.__correlate_eks_ec2 is True:
+                                        device.cloud_provider = 'AWS'
+                                        device.cloud_id = eks_ec2_instance_id
+
                                     device.vpc_id = vpc_id
                                     device.vpc_name = vpcs_by_id.get(vpc_id)
                                     device.cluster_name = cluster_name
@@ -1053,6 +1456,9 @@ class AwsAdapter(AdapterBase):
                                     device.set_instance_or_node(
                                         container_instance_id=container_instance_arn,
                                     )
+                                    if self.__correlate_ecs_ec2 is True:
+                                        device.cloud_provider = 'AWS'
+                                        device.cloud_id = ecs_ec2_instance_id
 
                                     for attribute in container_instance_raw_data.get('attributes'):
                                         attribute_name = attribute.get('name')
@@ -1110,6 +1516,27 @@ class AwsAdapter(AdapterBase):
                                         private_ip = [private_ip]
 
                                     device.add_nic(mac=mac_address, ips=private_ip, name=network_interface_id)
+
+                                    # There might be a connected load balancer here
+                                    try:
+                                        if private_ip and private_ip[0] in elb_by_ip:
+                                            for lb_raw in elb_by_ip[private_ip[0]]:
+                                                ips = lb_raw.get('ips')
+                                                device.add_aws_load_balancer(
+                                                    name=lb_raw.get('name'),
+                                                    dns=lb_raw.get('dns'),
+                                                    scheme=lb_raw.get('scheme'),
+                                                    type=lb_raw.get('type'),
+                                                    lb_protocol=lb_raw.get('lb_protocol'),
+                                                    lb_port=lb_raw.get('lb_port'),
+                                                    instance_protocol=lb_raw.get('instance_protocol'),
+                                                    instance_port=lb_raw.get('instance_port'),
+                                                    ips=ips
+                                                )
+                                                if ips:
+                                                    device.add_nic(ips=ips)
+                                    except Exception:
+                                        logger.exception(f'Error parsing lb for Fargate: {lb_raw}')
                             except Exception:
                                 logger.exception(f'Error while parsing Fargate attachments!')
                         else:
@@ -1168,6 +1595,65 @@ class AwsAdapter(AdapterBase):
         :return:
         """
         return next(iter(AWS_EC2_ID_MATCHER.findall(correlation_cmd_result.strip())), None)
+
+    def _on_config_update(self, config):
+        logger.info(f"Loading AWS config: {config}")
+        self.__correlate_ecs_ec2 = config.get('correlate_ecs_ec2') or False
+        self.__correlate_eks_ec2 = config.get('correlate_eks_ec2') or False
+        self.__fetch_instance_roles = config.get('fetch_instance_roles') or False
+        self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
+        self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'correlate_ecs_ec2',
+                    'title': 'Correlate ECS Containers with their EC2 Instance',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'correlate_eks_ec2',
+                    'title': 'Correlate EKS Containers with their EC2 Instance',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_instance_roles',
+                    'title': 'Fetch information about EC2 attached roles',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_load_balancers',
+                    'title': 'Fetch information about ELB (Elastic load balancers)',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'verbose_auth_notifications',
+                    'title': 'Show verbose notifications about connection failures',
+                    'type': 'bool'
+                }
+            ],
+            "required": [
+                'correlate_ecs_ec2',
+                'correlate_eks_ec2',
+                'fetch_instance_roles',
+                'fetch_load_balancers',
+                'verbose_auth_notifications'
+            ],
+            "pretty_name": "AWS Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'correlate_ecs_ec2': False,
+            'correlate_eks_ec2': False,
+            'fetch_instance_roles': False,
+            'fetch_load_balancers': False,
+            'verbose_auth_notifications': False
+        }
 
     @classmethod
     def adapter_properties(cls):
