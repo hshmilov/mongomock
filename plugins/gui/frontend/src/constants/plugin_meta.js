@@ -1,4 +1,12 @@
 export const pluginMeta = {
+    cisco_umbrella_adapter: {
+        title: 'Cisco Umbrella - BETA',
+        description: 'Cisco Umbrella is a secure internet gateway in the cloud, and includes capabilities from the Cloud Web Security proxy, and Advanced Malware Protection (AMP) for file inspection.'
+    },
+    clearpass_adapter: {
+        title: 'Aruba ClearPass - BETA',
+        description: 'Aruba ClearPass is a network access control (NAC) solution that allows enterprises to identify devices, enforce policies, and remediate threats.'
+    },
     ibm_tivoli_taddm_adapter: {
         title: 'IBM Tivoli TADDM',
         description: 'IBM® Tivoli Application Dependency Discovery Manager (TADDM) is a configuration management tool that helps IT operations personnel ensure and improve application availability in application environments.'
