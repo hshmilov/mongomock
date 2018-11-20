@@ -67,6 +67,9 @@ def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixtur
     assert len(StresstestScanner_fixture.clients()) == 1
     assert len(Stresstest_fixture.clients()) == 1
 
+    time.sleep(1)
+    scheduler.wait_for_scheduler(True)
+
     scheduler.start_research()
     time.sleep(1)
     scheduler.wait_for_scheduler(True)

@@ -49,7 +49,7 @@ class TestAdapters(TestBase):
         adapter_list = self.adapters_page.get_adapter_list()
         assert not len(adapter_list), 'Search should work only on adapter name'
 
-    def wait_for_adapter(self, adapter_name, retires=30, interval=2):
+    def wait_for_adapter(self, adapter_name, retires=60, interval=2):
         for _ in range(retires):
             self.alert_page.switch_to_page()
             self.adapters_page.switch_to_page()
@@ -61,7 +61,7 @@ class TestAdapters(TestBase):
                 pass
             time.sleep(interval)
 
-    def wait_for_adapter_down(self, adapter_name, retires=30, interval=2):
+    def wait_for_adapter_down(self, adapter_name, retires=60, interval=2):
         for _ in range(retires):
             self.alert_page.switch_to_page()
             self.adapters_page.switch_to_page()
