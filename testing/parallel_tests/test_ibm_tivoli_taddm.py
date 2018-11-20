@@ -1,3 +1,4 @@
+import pytest
 # pylint: disable=unused-import
 # pylint: disable=abstract-method
 from services.adapters.ibm_tivoli_taddm_service import IbmTivoliTaddmService, ibm_tivoli_taddm_fixture
@@ -22,3 +23,11 @@ class TestIbmTivoliTaddmAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('AX-2644')
+    def fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('AX-2644')
+    def test_check_reachability(self):
+        pass
