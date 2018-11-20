@@ -60,6 +60,7 @@ class EntitiesPage(Page):
     NOTES_EDITED_TOASTER = 'Existing note was edited'
     NOTES_REMOVED_TOASTER = 'Notes were removed'
     NOTES_SEARCH_INUPUT_CSS = '#search-notes .input-value'
+    NOTES_SEARCH_BY_TEXT = 'div[title={note_text}]'
 
     @property
     def url(self):
@@ -117,6 +118,7 @@ class EntitiesPage(Page):
 
     def click_row(self):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).click()
+        self.wait_for_spinner_to_end()
 
     def click_row_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CHECKBOX_CSS).click()
@@ -193,6 +195,9 @@ class EntitiesPage(Page):
         except ValueError:
             # Unfortunately col_name is not in the composed list
             return 0
+
+    def get_note_by_text(self, note_text):
+        return self.driver.find_element_by_css_selector(self.NOTES_SEARCH_BY_TEXT.format(note_text=note_text))
 
     def get_column_data(self, col_name):
         col_position = self.count_sort_column(col_name)
@@ -351,3 +356,9 @@ class EntitiesPage(Page):
     def refresh_table(self):
         self.enter_search()
         self.wait_for_table_to_load()
+
+    def load_notes(self):
+        self.switch_to_page()
+        self.wait_for_table_to_load()
+        self.click_row()
+        self.click_notes_tab()

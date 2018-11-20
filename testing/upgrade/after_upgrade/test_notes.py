@@ -1,0 +1,19 @@
+from axonius.utils.wait import wait_until
+from ui_tests.tests.ui_consts import Notes
+from ui_tests.tests.ui_test_base import TestBase
+
+
+class TestNotes(TestBase):
+    def test_admin_note(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.fill_filter(Notes.note1_device_filter)
+        self.devices_page.enter_search()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.click_notes_tab()
+        self.devices_page.search_note(Notes.note1_text)
+        self.devices_page.wait_for_table_to_load()
+
+        wait_until(lambda: Notes.note1_text == self.devices_page.get_note_by_text(Notes.note1_text).text,
+                   exc_list=[Exception])

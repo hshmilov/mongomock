@@ -23,6 +23,8 @@ NONE_USER_PATTERN = 'None[None]'
 
 TEMP_FILE_NAME = 'temp_file_upload'
 
+NOTE_COLUMN = 'Note'
+
 
 class EmailSettings:
     port = '25'
@@ -49,3 +51,8 @@ class Saml:
     idp = 'test_idp_1'
     cert = 'certificate'
     cert_content = 'certfilecontent'
+
+
+class Notes:
+    note1_text = 'note1_text'
+    note1_device_filter = 'DESKTOP-MPP10U1'
