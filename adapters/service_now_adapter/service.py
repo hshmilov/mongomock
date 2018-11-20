@@ -280,7 +280,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         device.device_manufacturer = device_raw.get('cpu_manufacturer')
                         ghz = device_raw.get('cpu_speed')
                         if ghz:
-                            ghz = int(ghz) / 1024.0
+                            ghz = float(ghz) / 1024.0
                         else:
                             ghz = None
                         device.add_cpu(name=device_raw.get('cpu_name'),
