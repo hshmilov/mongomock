@@ -31,6 +31,8 @@ class FortigateClient():
         self.password = password
         self.port = port
         self.verify_ssl = verify_ssl
+        if not vdom:
+            vdom = None
         self.vdom = vdom
         self.dhcp_lease_time = dhcp_lease_time  # In Seconds
         self.test_connection()
