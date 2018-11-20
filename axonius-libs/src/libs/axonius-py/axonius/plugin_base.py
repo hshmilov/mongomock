@@ -1347,6 +1347,15 @@ class PluginBase(Configurable, Feature):
             additional_data[PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
             additional_data[PLUGIN_NAME] = self.plugin_name
 
+        # it's complicated why we need this
+        # https://axonius.atlassian.net/browse/AX-2643
+        # generally, in some cases (Labels created by someone which is not the GUI, e.g. general_info)
+        # we want to completely fake it as if it's a GUI label
+
+        # this will become either the actual plugin name, or the fake one given in additional_data
+        virtual_plugin_unique_name = additional_data[PLUGIN_UNIQUE_NAME]
+        virtual_plugin_name = additional_data[PLUGIN_NAME]
+
         additional_data['accurate_for_datetime'] = datetime.utcnow()
         with _entities_db.start_session() as session:
             entities_candidates_list = list(session.find({"$or": [
@@ -1375,7 +1384,7 @@ class PluginBase(Configurable, Feature):
                 additional_data['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
 
             if any(x['name'] == name and
-                   x[PLUGIN_UNIQUE_NAME] == self.plugin_unique_name and
+                   x[PLUGIN_UNIQUE_NAME] == virtual_plugin_unique_name and
                    x['type'] == tag_type
                    for x
                    in entities_candidate['tags']):
@@ -1386,7 +1395,7 @@ class PluginBase(Configurable, Feature):
                     # Take the old value of this tag.
                     final_data = [
                         x["data"] for x in entities_candidate["tags"] if
-                        x["plugin_unique_name"] == self.plugin_unique_name
+                        x["plugin_unique_name"] == virtual_plugin_unique_name
                         and x["type"] == "adapterdata"
                         and x["name"] == name
                     ]
@@ -1422,7 +1431,7 @@ class PluginBase(Configurable, Feature):
                         "$elemMatch":
                             {
                                 "name": name,
-                                "plugin_unique_name": self.plugin_unique_name,
+                                "plugin_unique_name": virtual_plugin_unique_name,
                                 "type": tag_type
                             }
                     }
@@ -1437,7 +1446,7 @@ class PluginBase(Configurable, Feature):
                           f"expected matched_count == 1 but got {result.matched_count}"
                     logger.error(msg)
                     raise TagDeviceError(msg)
-            elif self.plugin_name == "gui" and tag_type == 'label' and tag_type is False:
+            elif virtual_plugin_name == "gui" and tag_type == 'label' and tag_type is False:
                 # Gui is a special plugin. It can delete any label it wants (even if it has come from
                 # another service)
 

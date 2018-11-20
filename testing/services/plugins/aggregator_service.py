@@ -22,6 +22,8 @@ class AggregatorService(PluginService):
             self._update_schema_version_1()
         if self.db_schema_version < 2:
             self._update_schema_version_2()
+        if self.db_schema_version < 3:
+            self._update_schema_version_3()
 
     def _update_schema_version_1(self):
         try:
@@ -64,6 +66,39 @@ class AggregatorService(PluginService):
             self.db_schema_version = 2
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 2. Details: {e}')
+
+    def _update_schema_version_3(self):
+        # https://axonius.atlassian.net/browse/AX-2643
+        try:
+            devices_db = self.db.client[self.plugin_name]['devices_db']
+
+            for device in devices_db.find({
+                'tags.plugin_unique_name': 'gui'
+            }):
+                relevant_tags = [
+                    x
+                    for x
+                    in device['tags']
+                    if x['type'] == 'label' and x.get('action_if_exists') == 'replace' and
+                    x['plugin_unique_name'] == 'gui'
+                ]
+                tags_dict = {
+                    x['name']: x
+                    for x
+                    in relevant_tags
+                }
+
+                for x in relevant_tags:
+                    device['tags'].remove(x)
+
+                device['tags'].extend(tags_dict.values())
+
+                devices_db.replace_one({'_id': device['_id']},
+                                       device)
+
+            self.db_schema_version = 3
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 3. Details: {e}')
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):

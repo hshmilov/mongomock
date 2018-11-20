@@ -194,6 +194,10 @@ class AggregatorService(PluginBase, Triggerable):
             # if the collection already exists - that's OK
             pass
 
+        # perform an initial rebuild for consistency
+        for entity_type in EntityType:
+            self._rebuild_entity_view(entity_type)
+
     def __create_capped_collections(self):
         """
         Set up historical dbs as capped collections, if they aren't already
