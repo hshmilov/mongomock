@@ -1957,10 +1957,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     logger.info(f'SAML Login failure, attributes are {attributes}')
                     raise ValueError(f'Error! SAML identity provider did not respond with attribute "name"')
 
+                # Some of these attributes can come back as a list. If that is the case we just make things look nicer
                 if isinstance(name_id, list) and len(name_id) == 1:
-                    # the "name" attribute can come back as a list with one string. If that is the case
-                    # lets just make things look nicer.
                     name_id = name_id[0]
+                if isinstance(given_name, list) and len(given_name) == 1:
+                    given_name = given_name[0]
+                if isinstance(surname, list) and len(surname) == 1:
+                    surname = surname[0]
 
                 # Notice! If you change the first parameter, then our CURRENT customers will have their
                 # users re-created next time they log in. This is bad! If you change this, please change
@@ -3717,8 +3720,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         metadata_url = self.__saml_login.get('metadata_url')
         if metadata_url:
-            logger.info(f'Requesting metadata url for SAML Auth')
-            self.__saml_login['idp_data_from_metadata'] = OneLogin_Saml2_IdPMetadataParser.parse_remote(metadata_url)
+            try:
+                logger.info(f'Requesting metadata url for SAML Auth')
+                self.__saml_login['idp_data_from_metadata'] = \
+                    OneLogin_Saml2_IdPMetadataParser.parse_remote(metadata_url)
+            except Exception:
+                logger.exception(f'SAML Configuration change: Metadata parsing error')
+                self.create_notification(
+                    'SAML config change failed',
+                    content='The metadata URL provided is invalid.',
+                    severity_type='error'
+                )
 
     @gui_helpers.add_rule_unauth('analytics')
     def get_analytics(self):
