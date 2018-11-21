@@ -15,6 +15,10 @@ export const pluginMeta = {
         title: 'Nimbul',
         description: 'Nimbul is a custom cloud infrastructure management solution developed by the New York Times.'
     },
+    tripwire_enterprise_adapter: {
+        title: 'Tripwire Enterprise - BETA',
+        description: 'Tripwire® Enterprise is a security configuration management (SCM) suite that provides fully integrated solutions for policy, file integrity and remediation management.'
+    },
     dropbox_adapter: {
         title: 'Dropbox - BETA',
         description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud and client software.'
