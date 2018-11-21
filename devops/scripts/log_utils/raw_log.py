@@ -23,9 +23,12 @@ def main(filename='/dev/stdin'):
                 log_funcname, log_linenumber = log.get('funcName', ''), log.get('lineNumber', '')
                 log_filename = log.get('filename', '')
                 log_exc_info = log.get('exc_info', '')
+                log_exception_message = log.get('exception_message', '')
+                if log_exception_message:
+                    log_exception_message = '\n' + log_exception_message
                 if log_exc_info:
                     log_exc_info = '\n' + log_exc_info
-                print(f'{log_timestamp}  {log_level: <8} {log_message} {log_exc_info}')
+                print(f'{log_timestamp}  {log_level: <8} {log_message} {log_exc_info} {log_exception_message}')
             except Exception:
                 print(line)
     return 0
