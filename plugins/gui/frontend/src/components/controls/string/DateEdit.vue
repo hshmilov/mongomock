@@ -44,7 +44,7 @@
         },
         methods: {
             onInput(selectedDate) {
-                if (selectedDate && typeof this.value === 'string') {
+                if (selectedDate && typeof this.value === 'string' && typeof selectedDate !== 'string') {
                     selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset())
                     selectedDate = selectedDate.toISOString().substring(0, 10)
                 }
