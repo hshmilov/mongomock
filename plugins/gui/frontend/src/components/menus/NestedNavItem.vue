@@ -95,6 +95,7 @@
                 .x-nested-nav-item {
                     .item-link {
                         color: $theme-white;
+                        background-color: $grey-5;
                         &:hover {
                             color: $theme-orange;
                         }

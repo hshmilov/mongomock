@@ -4,10 +4,10 @@
              @click="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
             <slot name="trigger"></slot>
         </div>
-        <div :class="`content ${sizeClass}`" :style="{[align]: alignSpace + 'px', [alignAuto]: 'auto'}" v-if="isActive">
+        <div :class="`content ${sizeClass}`" :style="menuStyle" v-if="isActive" ref="content">
             <slot name="content"></slot>
         </div>
-        <div @click="close" v-if="isActive" class="x-dropdown-bg" />
+        <div @click="close" v-if="isActive" class="x-dropdown-bg" ></div>
     </div>
 </template>
 
@@ -23,9 +23,21 @@
             readOnly: { default: false }
         },
         computed: {
-        	alignAuto() {
-        		if (this.align === 'right') return 'left'
-                return 'right'
+            menuStyle() {
+                if (!this.isActive) return {}
+                let styles = { [ this.align ]: this.alignSpace + 'px' }
+                if (this.align === 'right') {
+                    styles['left'] = 'auto'
+                } else {
+                    styles['right'] = 'auto'
+                }
+                if (this.activated || !this.$refs.content) return styles
+
+                if (window.innerHeight - this.calcOffsetTop(this.$el) < this.$refs.content.offsetHeight + 48) {
+                    styles['bottom'] = '100%'
+                    styles['top'] ='auto'
+                }
+                return styles
             },
             sizeClass() {
         		if (this.size) {
@@ -42,7 +54,7 @@
         },
         watch: {
         	isActive(newIsActive) {
-        		this.activated = newIsActive
+                this.activated = newIsActive
             }
         },
         methods: {
@@ -59,6 +71,12 @@
             },
         	close() {
         		this.isActive = false
+            },
+            calcOffsetTop(element) {
+                if (element == null) {
+                    return 0
+                }
+                return element.offsetTop + this.calcOffsetTop(element.offsetParent)
             }
         },
         updated() {

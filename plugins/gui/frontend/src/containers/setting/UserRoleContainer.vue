@@ -17,7 +17,7 @@
                 <div class="user-role">
                     <label>User Role:</label>
                     <x-select :options="roleOptions" :searchable="true" placeholder="Custom"
-                              v-model="user.role_name" @input="syncPermissions($event, user)"/>
+                              v-model="user.role_name" @input="syncPermissions($event, user)" size="sm" />
                 </div>
                 <h5 v-if="user.role_name !== 'Admin'">Permissions</h5>
                 <x-schema-form v-if="user.role_name !== 'Admin'" :schema="permissionSchema" v-model="user.permissions"
