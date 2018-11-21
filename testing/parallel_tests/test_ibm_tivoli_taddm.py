@@ -25,7 +25,7 @@ class TestIbmTivoliTaddmAdapter(AdapterTestBase):
         return SOME_DEVICE_ID
 
     @pytest.mark.skip('AX-2644')
-    def fetch_devices(self):
+    def test_fetch_devices(self):
         pass
 
     @pytest.mark.skip('AX-2644')
