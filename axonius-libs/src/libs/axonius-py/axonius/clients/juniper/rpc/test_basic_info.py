@@ -58,5 +58,9 @@ def test_basic_info():
 
 def test_create_device():
     result = parse_device('Juniper Device', mock_query_basic_info())
-    result = list(create_device(lambda: JuniperDeviceAdapter(set(), set()), 'Juniper Device', result))
+    result2 = list(create_device(lambda: JuniperDeviceAdapter(set(), set()), 'Juniper Device', result))
+    em0 = list(filter(lambda iface: iface['name'] == 'em0.0', result2[0].network_interfaces))[0].to_dict()
+    assert result2
     assert result
+    assert len(em0['vlan_list']) == 1
+    assert em0['port_type'] == 'Access'
