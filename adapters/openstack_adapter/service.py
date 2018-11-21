@@ -52,7 +52,7 @@ class OpenstackAdapter(AdapterBase):
             "items": [
                 {
                     "name": "auth_url",
-                    "title": "auth_url",
+                    "title": "Authentication URL",
                     "type": "string",
                     "description": "Authentication URL - from dashboard/project/api_access/ -> View Credentials"
                 },
@@ -74,7 +74,7 @@ class OpenstackAdapter(AdapterBase):
                     "description": "Project Name"
                 },
                 {
-                    "name": "url",
+                    "name": "domain",
                     "title": "Domain",
                     "type": "string",
                     "description": 'Default domain name (default: "Default")'
