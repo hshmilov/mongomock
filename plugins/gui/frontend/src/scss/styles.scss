@@ -558,8 +558,13 @@ table {
   .md-input {
     border-bottom: 1px solid $grey-4;
   }
-  &.md-field .md-input-action {
-    top: 0;
+  &.md-field {
+    label {
+      font-size: 14px;
+    }
+    .md-input-action {
+      top: 0;
+    }
   }
   &.md-clearable.no-clear {
     .md-input {

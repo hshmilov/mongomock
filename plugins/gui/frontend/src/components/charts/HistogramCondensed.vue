@@ -61,9 +61,9 @@
             }
             .bar {
                 height: 8px;
-                background-color: rgba($grey-4, 0.4);
+                background-color: rgba($grey-2, 0.8);
                 &:hover {
-                    background-color: $grey-4;
+                    background-color: $grey-2;
                 }
             }
             .quantity {
@@ -83,7 +83,7 @@
             .histogram-item {
                 cursor: default;
                 .bar:hover {
-                    background-color: rgba($grey-2, 0.4);
+                    background-color: rgba($grey-2, 0.8);
                 }
             }
         }

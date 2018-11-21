@@ -1,7 +1,6 @@
 <template>
     <div class="x-historical-date-picker">
-        <div class="title">Showing Results for</div>
-        <x-date-edit :value="value" @input="onInput" :is-disabled-handler="isDateUnavailable" :minimal="true" />
+        <x-date-edit :value="value" @input="onInput" :is-disabled-handler="isDateUnavailable" label="Display by Date" />
     </div>
 </template>
 
@@ -13,7 +12,7 @@
     export default {
         name: 'x-historical-date-picker',
         components: { XDateEdit },
-        props: ['value', 'module', 'minimal'],
+        props: ['value', 'module'],
         computed: {
             ...mapState({
                 firstHistoricalDate(state) {
@@ -58,11 +57,13 @@
         display: flex;
         justify-content: flex-end;
         margin-bottom: 8px;
-        .title {
-            color: $theme-orange;
-            font-weight: 300;
-            margin-right: 12px;
-            line-height: 36px;
+        .md-datepicker {
+            margin-bottom: 0;
+            margin-top: -20px;
+            margin-right: 8px;
+            .md-input {
+                width: 160px;
+            }
         }
     }
 </style>
