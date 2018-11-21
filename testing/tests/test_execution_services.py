@@ -1,8 +1,11 @@
-
-# pylint: disable=unused-import, redefined-outer-name, too-many-statements, pointless-string-statement, too-many-locals
+# redefined-outer-name is needed since we are defining imported fixtures as var names (ad_fixture, for instance).
+# This is a common procedure with pylint and is disabled by default.
+# pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name
 import time
+import logging
 
 import dateutil.parser
+
 from services.axonius_service import get_service, BLACKLIST_LABEL
 from services.adapters.ad_service import ad_fixture
 from services.plugins.general_info_service import general_info_fixture
@@ -14,7 +17,12 @@ from test_credentials.test_ad_credentials import ad_client1_details, \
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from axonius.utils.wait import wait_until
 
+# Set up basic logging. This would change to something Teamcity understands once we do a logger for builds.
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(f'axonius.{__name__}')
+
 EXECUTION_TIMEOUT = 60 * 50
+TESTDOMAIN_ADMIN_SID = 'S-1-5-21-3246437399-2412088855-2625664447-500'
 
 
 def test_execution_modules(
@@ -84,7 +92,7 @@ def test_execution_modules(
         total_timeout=EXECUTION_TIMEOUT - int(time.time() - execution_start)
     )
 
-    print(f'Finished execution after {time.time() - execution_start} seconds')
+    logger.info(f'Finished execution after {time.time() - execution_start} seconds')
     blacklisted_device = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DEVICE_ID_BLACKLIST)[0]
     # Assert we did not run on the blacklisted device. It should have a blacklist label and not have any
     # adapterdata tags.
@@ -145,15 +153,15 @@ def test_execution_modules(
     assert {'admin_name': 'Organization Management@TESTDOMAIN', 'admin_type': 'Group Membership'} in \
         dc1_general_info['local_admins']
     dc1_users = {u['user_sid']: u for u in dc1_general_info['users']}
-    assert dc1_users['S-1-5-21-3246437399-2412088855-2625664447-500']['username'] == 'Administrator@TestDomain.test'
-    assert dc1_users['S-1-5-21-3246437399-2412088855-2625664447-500']['is_local'] is False
-    assert dc1_users['S-1-5-21-3246437399-2412088855-2625664447-500']['origin_unique_adapter_name'] == \
+    assert dc1_users[TESTDOMAIN_ADMIN_SID]['username'] == 'Administrator@TestDomain.test'
+    assert dc1_users[TESTDOMAIN_ADMIN_SID]['is_local'] is False
+    assert dc1_users[TESTDOMAIN_ADMIN_SID]['origin_unique_adapter_name'] == \
         'active_directory_adapter_0'
-    assert dc1_users['S-1-5-21-3246437399-2412088855-2625664447-500']['origin_unique_adapter_data_id'] == \
+    assert dc1_users[TESTDOMAIN_ADMIN_SID]['origin_unique_adapter_data_id'] == \
         'CN=DC1,OU=Domain Controllers,DC=TestDomain,DC=test'
-    assert dc1_users['S-1-5-21-3246437399-2412088855-2625664447-500']['origin_unique_adapter_client'] == \
+    assert dc1_users[TESTDOMAIN_ADMIN_SID]['origin_unique_adapter_client'] == \
         'TestDomain.test'
-    assert 'last_use_date' in dc1_users['S-1-5-21-3246437399-2412088855-2625664447-500']
+    assert 'last_use_date' in dc1_users[TESTDOMAIN_ADMIN_SID]
     assert dc1_users['S-1-5-21-3246437399-2412088855-2625664447-1140'] == \
         {
             'user_sid': 'S-1-5-21-3246437399-2412088855-2625664447-1140',
@@ -281,12 +289,3 @@ def test_execution_modules(
         {'specific_data.data.last_seen_in_devices': {'$exists': True}}).count() > 5
     assert axonius_system.get_users_db_view().find(
         {'specific_data.data.image': {'$exists': True}}).count() > 2
-
-    # Lets get all devices with associated users and see if the users were created and if they have associated devices.
-    '''
-    associated_devices_and_users = 0
-    for device in execution_eligible_devices:
-        for tag in device['tags']:
-            if tag['type'] == 'adapterdata' and tag['plugin_name'] == 'general_info':
-                pass
-    '''

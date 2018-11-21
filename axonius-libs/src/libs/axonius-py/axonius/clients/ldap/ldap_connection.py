@@ -1093,7 +1093,7 @@ class LdapConnection(object):
                     "cost": site_link_cost,
                     "type": site_link_type,
                     "sitelist": ", ".join(site_link_sitelist),
-                    "change_notification_enabled": "True" if site_link_change_notification_enabled is True else False
+                    "change_notification_enabled": True if site_link_change_notification_enabled is True else False
                 })
 
                 # Now provide double-mapping to make things easier in the sites

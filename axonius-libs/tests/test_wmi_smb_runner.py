@@ -1,7 +1,11 @@
 import json
 import subprocess
-import pytest
 import os
+import dateutil.parser
+import datetime
+
+import pefile
+import pytest
 
 from testing.test_credentials.test_ad_credentials import *
 
@@ -18,6 +22,13 @@ WMI_SMB_RUNNER_LOCATION = os.path.abspath(
 TEST_BINARY_LOCATION = os.path.abspath(
     os.path.join(ROOT_DIR, "uploaded_files", "test_binary.exe"))
 
+SHARED_READONLY_FILES_LOCATION = os.path.abspath(os.path.join(ROOT_DIR, 'shared_readonly_files'))
+AXPM_LOCATION = os.path.join(SHARED_READONLY_FILES_LOCATION, 'AXPM', 'AXPM.exe')
+AXR_LOCATION = os.path.join(SHARED_READONLY_FILES_LOCATION, 'AXR', 'axr.exe')
+
+OPENSSL_ATTRS_TO_GET = ['Signature Algorithm', 'Issuer', 'Not Before', 'Not After ', 'Subject']
+CERTIFICATE_VALID_DAYS_TRESHOLD = 30    # we fail if in this amount of days the certificate will be invalid
+
 
 # Timeout in seconds for subprocesses
 MAX_TIME_FOR_PM_ONLINE_OPERATIONS = 60 * 7
@@ -26,6 +37,7 @@ MAX_TRIES_SHARING_VIOLATION = 5
 KNOWN_ERRORS = ["The process cannot access the file because it is being used by another process",
                 "STATUS_SHARING_VIOLATION",
                 "STATUS_OBJECT_NAME_NOT_FOUND"]
+IMAGE_FILE_MACHINE_I386 = 0x14c
 
 
 def pretty(d, indent=0):
@@ -221,6 +233,7 @@ def test_wmi():
         {"type": "execbinary", "args": [TEST_BINARY_LOCATION, "\"hello, world\""]},
         {"type": "query", "args": ["select * from Win32_DeviceGuard",
                                    "//./root/Microsoft/Windows/DeviceGuard"]},
+        {'type': 'shell', 'args': ['forfiles /p axonius /m axonius_* /D -1 /C "cmd /c echo @path"']}
         # {"type": "putfile", "args": ["c:\\a.txt", "abcdefgh"]},
         # {"type": "getfile", "args": ["c:\\a.txt"]},
         # {"type": "deletefile", "args": ["c:\\a.txt"]},
@@ -245,3 +258,83 @@ def test_wmi():
     assert "Console" in response[2]["data"][0]['sNames']
     assert "hello, world" in response[3]["data"]
     assert response[4]["data"][0]["AvailableSecurityProperties"] == [3]
+    assert 'ERROR: No files found with the specified search criteria.' in response[5]['data']
+
+
+def test_executable_exes_signature():
+    def extract_pkcs7_signature(pe_file_name):
+        total_size = os.path.getsize(pe_file_name)
+        pe_file = pefile.PE(pe_file_name, fast_load=True)
+        pe_file.parse_data_directories(directories=[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_SECURITY']])
+        sigoff = 0
+        siglen = 0
+        for s in pe_file.__structures__:
+            if s.name == 'IMAGE_DIRECTORY_ENTRY_SECURITY':
+                # set the offset to the signature table
+                sigoff = s.VirtualAddress
+                # set the length of the table
+                siglen = s.Size
+        pe_file.close()
+
+        assert sigoff > 0 and siglen > 0, 'Could not find IMAGE_DIRECTORY_ENTRY_SECURITY'
+        assert sigoff < total_size, 'Signature offset can not possibly be after the file ends'
+
+        with open(pe_file_name, 'rb') as f:
+            f.seek(sigoff)
+            signature_with_headers = f.read(siglen)
+            # return without headers
+            return signature_with_headers[8:]
+
+    def parse_openssl_pkcs7_signature(binary_signature_format):
+        openssl_proc = subprocess.Popen(
+            ['openssl', 'pkcs7', '-inform', 'DER', '-print_certs', '-noout', '-text'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        try:
+            stdout, _ = openssl_proc.communicate(binary_signature_format + b'\n', 10)
+        finally:
+            openssl_proc.kill()
+
+        certificates_raw = stdout.decode('utf-8').split('Certificate:\n')[1:]
+        certificates = []
+        for certificate_raw in certificates_raw:
+            certificate = dict()
+            for attr_name in OPENSSL_ATTRS_TO_GET:
+                attr_name_full = f'{attr_name}: '
+                if attr_name_full in certificate_raw:
+                    certificate[attr_name.strip()] = \
+                        certificate_raw[certificate_raw.find(attr_name_full) + len(attr_name_full):].splitlines()[0]
+
+            certificates.append(certificate)
+        return certificates
+
+    def validate_signature(signature):
+        assert signature['Signature Algorithm'] == 'sha256WithRSAEncryption'
+        assert signature['Issuer'] == \
+            'C=US, O=DigiCert Inc, OU=www.digicert.com, CN=DigiCert SHA2 Assured ID Code Signing CA'
+        assert signature['Subject'] == 'C=US, ST=New York, L=New York, O=Axonius Inc, CN=Axonius Inc'
+        assert dateutil.parser.parse(signature['Not Before']) < \
+            datetime.datetime.now().astimezone(datetime.timezone.utc), 'Certificate not yet valid'
+        assert datetime.datetime.now().astimezone(datetime.timezone.utc) + \
+            datetime.timedelta(days=CERTIFICATE_VALID_DAYS_TRESHOLD) < \
+            dateutil.parser.parse(signature['Not After']), \
+            f'Certificate will be invalid in less than {CERTIFICATE_VALID_DAYS_TRESHOLD} days'
+
+    axpm_signature = (parse_openssl_pkcs7_signature(extract_pkcs7_signature(AXPM_LOCATION)))
+    axr_signature = (parse_openssl_pkcs7_signature(extract_pkcs7_signature(AXR_LOCATION)))
+    validate_signature(axpm_signature[0])
+    validate_signature(axr_signature[0])
+
+
+def test_executable_exes_file_format():
+    def get_pefile_bitness(file_path):
+        pe = pefile.PE(file_path)
+        pe_header_machine = pe.FILE_HEADER.Machine
+        pe.close()
+        return pe_header_machine
+
+    assert get_pefile_bitness(AXPM_LOCATION) == IMAGE_FILE_MACHINE_I386
+    assert get_pefile_bitness(AXR_LOCATION) == IMAGE_FILE_MACHINE_I386

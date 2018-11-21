@@ -33,6 +33,7 @@ from handlers.remotewua import RemoteWUAHandler
 
 
 MAX_NUM_OF_CONSECUTIVE_QUERY_FAILURES = 2    # Maximum number of times we can fail with not even one success
+MAX_NUM_OF_GET_DEFAULT_WORKING_DIRECTORY = 3    # Maximum times we try to get the default working directory.
 MAX_NUM_OF_TRIES_PER_CONNECT = 2    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 SMB_CONNECTION_TIMEOUT = 60 * 30  # 30 min timeout. Change that for even larger files
@@ -636,6 +637,11 @@ class WmiSmbRunner(object):
         self.dcom = DCOMConnection(self.address, self.username, self.password, self.domain, self.lmhash, self.nthash,
                                    self.aes_key, oxidResolver=True, doKerberos=self.use_kerberos, kdcHost=self.dc_ip)
 
+    @retry(stop_max_attempt_number=MAX_NUM_OF_GET_DEFAULT_WORKING_DIRECTORY)
+    def __get_default_working_directory(self):
+        result = self.execquery("select Name, Path from win32_share where Name='{0}'".format(DEFAULT_SHARE))
+        return result[0]['Path']
+
     def __initialize_smb_connection(self):
         """
         Initialize the usage after we connect. for example, we create the working directory and get its actual location
@@ -654,13 +660,15 @@ class WmiSmbRunner(object):
 
         # We must get the directory in which the default share resides, since this is a parameter we pass
         # to win32_process.create, to create processes with the right current working directory.
+        # Note! setting this to c:\\ could not only fail the shell processes, but also result in a failure
+        # of deleting filse from the customer!
         if WmiSmbRunner.default_working_directory is None:
             try:
-                result = self.execquery("select Name, Path from win32_share where Name='{0}'".format(DEFAULT_SHARE))
-                WmiSmbRunner.default_working_directory = result[0]["Path"]
-            except Exception:
+                WmiSmbRunner.default_working_directory = self.__get_default_working_directory()
+            except Exception as e:
                 raise ValueError(
-                    "Unexpected error occured: coludn't find the physical path of {0}".format(DEFAULT_SHARE))
+                    "Unexpected error occured: coludn't find the physical path of {0}: {1}".format(
+                        DEFAULT_SHARE, str(e)))
 
     def before_close(self):
         """

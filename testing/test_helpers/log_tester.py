@@ -24,7 +24,7 @@ class LogTester:
         with open(self.filepath) as f:
             data = f.readlines()
             recent = data[-min(lines_lookback, len(data)):]
-            return str_in_log in ','.join(recent)
+            return any(str_in_log in x for x in recent)
 
     def is_metric_in_log(self, metric_name, value, lines_lookback=0):
         """

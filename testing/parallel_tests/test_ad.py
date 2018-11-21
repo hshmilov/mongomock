@@ -66,19 +66,27 @@ class TestAdAdapter(AdapterTestBase):
         # Check DC
         dc_list = self.axonius_system.get_devices_with_condition(
             {
-                "adapters.data.id": CLIENT1_DC1_ID,
-                "adapters.data.ad_is_dc": True,
-                "adapters.data.ad_dc_gc": True,
-                "adapters.data.ad_dc_infra_master": True,
-                "adapters.data.ad_dc_rid_master": True,
-                "adapters.data.ad_dc_pdc_emulator": True,
-                "adapters.data.ad_dc_naming_master": True,
-                "adapters.data.ad_dc_schema_master": True,
-                "adapters.data.ad_dc_is_dhcp_server": False,
-                "adapters.data.ad_dfsr_shares.name": "Tools",
-                "adapters.data.ad_site_name": "TestDomain-TelAviv",
-                "adapters.data.ad_site_location": "Tel Aviv",
-                "adapters.data.ad_subnet": "192.168.20.0/24"
+                'adapters':
+                    {
+                        '$elemMatch':
+                            {
+                                'data.id': CLIENT1_DC1_ID,
+                                'data.ad_is_dc': True,
+                                'data.ad_dc_gc': True,
+                                'data.ad_dc_infra_master': True,
+                                'data.ad_dc_rid_master': True,
+                                'data.ad_dc_pdc_emulator': True,
+                                'data.ad_dc_naming_master': True,
+                                'data.ad_dc_schema_master': True,
+                                'data.ad_dc_is_dhcp_server': False,
+                                'data.ad_dfsr_shares.name': 'Tools',
+                                'data.ad_site_name': 'TestDomain-TelAviv',
+                                'data.ad_site_location': 'Tel Aviv',
+                                'data.ad_subnet': '192.168.20.0/24',
+                                'data.network_interfaces.ips': '192.168.20.25'
+                            }
+                    }
+
             }
         )
 
