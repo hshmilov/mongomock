@@ -5,10 +5,10 @@ from axonius.utils.wait import wait_until
 from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_IP)
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.test_entities_table import TestEntitiesTable
 
 
-class TestDevicesTable(TestBase):
+class TestDevicesTable(TestEntitiesTable):
     LABELS_TEXTBOX_TEXT = 'foobar'
     DELETE_DIALOG_TEXT = 'You are about to delete 1 devices, 1 total adapter devices.'
     QUERY_FILTER_DEVICES = 'specific_data.data.hostname%20%3D%3D%20regex(%22w%22%2C%20%22i%22)'
@@ -181,6 +181,15 @@ class TestDevicesTable(TestBase):
             self.settings_page.set_single_adapter_checkbox(make_yes=False)
             self.settings_page.set_table_multi_line_checkbox(make_yes=False)
             self.settings_page.click_save_button()
+
+    def test_devices_advanced_basic(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+
+        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.JSON_ADAPTER_FILTER, '"raw":',
+                                         self.devices_page.FIELD_ASSET_NAME)
+        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.AD_ADAPTER_FILTER, '"cn":',
+                                         self.devices_page.FIELD_HOSTNAME_TITLE)
 
     def test_devices_export_csv(self):
         self.settings_page.switch_to_page()

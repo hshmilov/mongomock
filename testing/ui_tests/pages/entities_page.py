@@ -54,16 +54,23 @@ class EntitiesPage(Page):
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
     ALL_COLUMN_NAMES_CSS = 'thead>tr>th'
     ALL_ENTITIES_CSS = 'tbody>tr'
+
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
-    AD_WMI_ADAPTER_FILTER = 'adapters == "active_directory_adapter" and adapters_data.general_info.id == exists(true)'
+    AD_ADAPTER_FILTER = 'adapters == "active_directory_adapter"'
+    AD_WMI_ADAPTER_FILTER = f'{AD_ADAPTER_FILTER} and adapters_data.general_info.id == exists(true)'
+
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
+
     NOTES_TAB_CSS = 'li#notes'
     NOTES_CREATED_TOASTER = 'New note was created'
     NOTES_EDITED_TOASTER = 'Existing note was edited'
     NOTES_REMOVED_TOASTER = 'Notes were removed'
     NOTES_SEARCH_INUPUT_CSS = '#search-notes .input-value'
     NOTES_SEARCH_BY_TEXT = 'div[title={note_text}]'
+
+    CONFIG_ADVANCED_TEXT = 'View advanced'
+    CONFIG_BASIC_TEXT = 'View basic'
 
     @property
     def url(self):

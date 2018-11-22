@@ -3,6 +3,7 @@ from ui_tests.pages.entities_page import EntitiesPage
 
 class UsersPage(EntitiesPage):
     FIELD_USERNAME_NAME = 'username'
+    FIELD_USERNAME_TITLE = 'User Name'
     FILTER_USERNAME = 'specific_data.data.username == regex("{filter_value}")'
 
     @property

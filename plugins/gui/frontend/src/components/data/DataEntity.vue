@@ -9,7 +9,7 @@
                          :title="item.plugin_name" :logo="true" :outdated="item.outdated">
                         <div class="d-flex content-header">
                             <div class="flex-expand server-info">Data From: {{ item.client_used }}</div>
-                            <div @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced': 'basic'}}</div>
+                            <button @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced': 'basic'}}</button>
                         </div>
                         <x-schema-list v-if="viewBasic" :data="item" :schema="adapterSchema(item.plugin_name)" />
                         <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}" v-else />

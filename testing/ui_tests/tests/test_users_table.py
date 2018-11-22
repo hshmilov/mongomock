@@ -1,8 +1,8 @@
+from ui_tests.tests.test_entities_table import TestEntitiesTable
 from test_credentials.json_file_credentials import USER_NAME_UNICODE
-from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestUsersTable(TestBase):
+class TestUsersTable(TestEntitiesTable):
     USER_NAME_COLUMN = 'User Name'
     DOMAIN_COLUMN = 'Domain'
     MAIL_COLUMN = 'Mail'
@@ -84,6 +84,15 @@ class TestUsersTable(TestBase):
 
         # Check loaded data is equal to original one whose view was saved
         assert self.users_page.get_all_data() == view_data
+
+    def test_users_advanced_basic(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+
+        self.check_toggle_advanced_basic(self.users_page, self.users_page.JSON_ADAPTER_FILTER, '"raw":',
+                                         self.users_page.FIELD_USERNAME_TITLE)
+        self.check_toggle_advanced_basic(self.users_page, self.users_page.AD_ADAPTER_FILTER, '"name":',
+                                         self.users_page.FIELD_USERNAME_TITLE)
 
     def test_user_export_csv(self):
         self.settings_page.switch_to_page()
