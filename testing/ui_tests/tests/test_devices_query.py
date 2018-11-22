@@ -16,6 +16,14 @@ class TestDevicesQuery(TestBase):
         self.devices_page.find_element_by_text('Specify <address>/<CIDR> to filter IP by subnet')
         self.devices_page.click_search()
 
+    def test_devices_query_wizard_default_operators(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_AD)
+        assert self.devices_page.get_query_field() == 'ID'
+        assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_EXISTS
+
     def test_saved_queries_execute(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

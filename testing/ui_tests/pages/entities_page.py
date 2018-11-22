@@ -80,6 +80,9 @@ class EntitiesPage(Page):
                            text,
                            parent=parent)
 
+    def get_query_field(self):
+        return self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).text
+
     def select_query_adapter(self, text, parent=None):
         self.select_option(self.QUERY_ADAPTER_DROPDOWN_CSS,
                            self.QUERY_TEXT_BOX_CSS,
@@ -92,6 +95,9 @@ class EntitiesPage(Page):
                                           self.QUERY_SELECTED_OPTION_CSS,
                                           text,
                                           parent=parent)
+
+    def get_query_comp_op(self):
+        return self.driver.find_element_by_css_selector(self.QUERY_COMP_OP_DROPDOWN_CSS).text
 
     def fill_query_value(self, text, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS, text, context=parent)
