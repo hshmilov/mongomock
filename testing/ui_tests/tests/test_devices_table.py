@@ -11,6 +11,9 @@ from ui_tests.tests.ui_test_base import TestBase
 class TestDevicesTable(TestBase):
     LABELS_TEXTBOX_TEXT = 'foobar'
     DELETE_DIALOG_TEXT = 'You are about to delete 1 devices, 1 total adapter devices.'
+    QUERY_FILTER_DEVICES = 'specific_data.data.hostname%20%3D%3D%20regex(%22w%22%2C%20%22i%22)'
+    QUERY_FIELDS = 'adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.os.type,' \
+                   'specific_data.data.network_interfaces.ips,specific_data.data.network_interfaces.mac,labels'
 
     def test_devices_action_add_and_remove_tag(self):
         self.settings_page.switch_to_page()
@@ -178,3 +181,15 @@ class TestDevicesTable(TestBase):
             self.settings_page.set_single_adapter_checkbox(make_yes=False)
             self.settings_page.set_table_multi_line_checkbox(make_yes=False)
             self.settings_page.click_save_button()
+
+    def test_devices_export_csv(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        # filter the ui to fit the QUERY_FILTER_DEVICES of the csv
+        self.devices_page.query_hostname_contains('w')
+
+        result = self.devices_page.generate_csv('devices',
+                                                self.QUERY_FIELDS,
+                                                self.QUERY_FILTER_DEVICES)
+        self.devices_page.assert_csv_match_ui_data(result)

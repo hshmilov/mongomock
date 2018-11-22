@@ -26,6 +26,7 @@ class DevicesPage(EntitiesPage):
     TAGGING_1_DEVICE_MESSAGE = 'Tagged 1 devices!'
     TAGGING_1_DEVICE_XPATH = f'.//div[contains(@class, \'text-center\') and .//text()=\'{TAGGING_1_DEVICE_MESSAGE}\']'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
+    FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
 
     @property
     def url(self):
@@ -83,3 +84,6 @@ class DevicesPage(EntitiesPage):
         self.switch_to_page()
         self.find_element_by_text('You do not have permission to access the Devices screen')
         self.click_ok_button()
+
+    def query_hostname_contains(self, string):
+        self.run_filter_query(self.FILTER_HOSTNAME.format(filter_value=string))

@@ -1,7 +1,9 @@
 import re
 
+import requests
 from retrying import retry
 
+from axonius.utils.parsing import parse_date, parse_date_with_timezone
 from ui_tests.pages.page import Page
 
 
@@ -38,6 +40,7 @@ class EntitiesPage(Page):
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
+    TABLE_HEADER_XPATH = '//*[@id="app"]/div/div[2]/div/div[3]/div[1]/div[3]/table/thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Active Directory'
     TABLE_HEADER_CELLS_CSS = 'th'
@@ -193,6 +196,11 @@ class EntitiesPage(Page):
     def click_sort_column(self, col_name):
         self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name)).click()
 
+    def get_columns_header_text(self):
+        headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
+        header_columns = headers.find_elements_by_tag_name('th')
+        return [head.text for head in header_columns if head.text]
+
     def count_sort_column(self, col_name):
         # Return the position of given col_name in list of column headers, 1-based
         try:
@@ -344,8 +352,45 @@ class EntitiesPage(Page):
     def search_note(self, search_text):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)
 
+    def generate_csv(self, entity_type, fields, filters):
+        session = requests.Session()
+        cookies = self.driver.get_cookies()
+        for cookie in cookies:
+            session.cookies.set(cookie['name'], cookie['value'])
+        return session.get(
+            f'https://127.0.0.1/api/{entity_type}/csv?fields={fields}&filter={filters}')
+
+    def assert_csv_match_ui_data(self, result):
+        all_csv_rows = result.text.split('\r\n')
+        csv_headers = all_csv_rows[0].split(',')
+        csv_data_rows = all_csv_rows[1:-1]
+
+        ui_headers = self.get_columns_header_text()
+        ui_data_rows = [row.split('\n') for row in self.get_all_data()]
+        # we don't writ image to csv
+        if 'Image' in ui_headers:
+            ui_headers.remove('Image')
+
+        assert sorted(ui_headers) == sorted(csv_headers)
+        # for every cell in the ui_data_rows we check if its in the csv_data_row
+        # the reason we check it is because the csv have more columns with data
+        # than the columns that we getting from the ui (boolean in the ui are represented by the css)
+        for index, data_row in enumerate(csv_data_rows):
+            for ui_data_row in ui_data_rows[index]:
+                ui_row = ui_data_row
+                parsed_date = parse_date_with_timezone(ui_row, 'Israel')
+                if parsed_date:
+                    parsed_date = parse_date(parsed_date)
+                    ui_row = parsed_date.strftime('%Y-%m-%d %H:%M:%S')
+                assert ui_row in data_row
+
     def query_json_adapter(self):
         self.fill_filter(self.JSON_ADAPTER_FILTER)
+        self.enter_search()
+        self.wait_for_table_to_load()
+
+    def run_filter_query(self, filter_value):
+        self.fill_filter(filter_value)
         self.enter_search()
         self.wait_for_table_to_load()
 

@@ -1,11 +1,14 @@
-from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.json_file_credentials import USER_NAME_UNICODE
+from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestUsersTable(TestBase):
     USER_NAME_COLUMN = 'User Name'
     DOMAIN_COLUMN = 'Domain'
     MAIL_COLUMN = 'Mail'
+    QUERY_FILTER_USERNAME = 'specific_data.data.username%20%3D%3D%20regex(%22m%22)'
+    QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
+                   'data.domain,specific_data.data.last_seen,specific_data.data.is_admin'
 
     def test_users_fetched(self):
         self.settings_page.switch_to_page()
@@ -81,3 +84,15 @@ class TestUsersTable(TestBase):
 
         # Check loaded data is equal to original one whose view was saved
         assert self.users_page.get_all_data() == view_data
+
+    def test_user_export_csv(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        # filter the ui to fit the QUERY_FILTER_USERNAME of the csv
+        self.users_page.query_user_name_contains('m')
+
+        result = self.users_page.generate_csv('users',
+                                              self.QUERY_FIELDS,
+                                              self.QUERY_FILTER_USERNAME)
+        self.users_page.assert_csv_match_ui_data(result)

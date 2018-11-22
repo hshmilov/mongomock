@@ -1,23 +1,25 @@
 """
 ParsingUtils.py: Collection of utils that might be used by parsers, specifically adapters
 """
+import base64
+import binascii
+import csv
+import datetime
+import ipaddress
 import logging
+import os
 import re
+import string
 import sys
 from types import FunctionType
-from typing import NewType, Callable
-from axonius.entities import EntityType
+from typing import Callable, NewType
 
 import dateutil.parser
-import ipaddress
-import binascii
-import base64
-import datetime
 import pql
-import csv
+import pytz
+
 import axonius
-import os
-import string
+from axonius.entities import EntityType
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -494,6 +496,26 @@ def parse_date(datetime_to_parse):
             return datetime_to_parse.astimezone(datetime.timezone.utc)
         datetime_to_parse = str(datetime_to_parse)
         d = dateutil.parser.parse(datetime_to_parse).astimezone(datetime.timezone.utc)
+
+        # Sometimes, this would be a fake date (see is_date_real). in this case return None
+        return d if is_date_real(d) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_date_with_timezone(datetime_to_parse, time_zone):
+    """
+    Parses date and returns it as UTC
+    """
+    try:
+        if type(datetime_to_parse) == datetime.datetime:
+            # sometimes that happens too
+            timezone = pytz.timezone(time_zone)
+            return timezone.localize(datetime_to_parse)
+        datetime_to_parse = str(datetime_to_parse)
+        d = datetime.datetime.strptime(datetime_to_parse, '%Y-%m-%d %H:%M:%S')
+        timezone = pytz.timezone(time_zone)
+        d = timezone.localize(d)
 
         # Sometimes, this would be a fake date (see is_date_real). in this case return None
         return d if is_date_real(d) else None
