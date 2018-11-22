@@ -14,7 +14,6 @@ from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 from typing import Iterable, Tuple
-from urllib.parse import urlparse
 from uuid import uuid4
 
 import gridfs
@@ -84,6 +83,7 @@ from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
+from axonius.clients.rest.connection import RESTConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -1845,24 +1845,30 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception("LDAP Verification error")
             return return_error("An error has occurred while verifying your account")
 
-    @staticmethod
-    def __get_flask_request_for_saml(req):
-        url_data = urlparse(req.url)
+    def __get_flask_request_for_saml(self, req):
+        axonius_external_url = str(self.__saml_login.get('axonius_external_url') or '').strip()
+        if axonius_external_url:
+            # do not parse the original host port and scheme, parse the input we got
+            self_url = RESTConnection.build_url(axonius_external_url).strip('/')
+        else:
+            self_url = RESTConnection.build_url(req.url).strip('/')
+
+        url_data = parse_url(self_url)
         req_object = {
-            'https': 'on' if req.scheme == 'https' else 'off',
-            'http_host': req.host,
+            'https': 'on' if url_data.scheme == 'https' else 'off',
+            'http_host': url_data.host,
             'server_port': url_data.port,
             'script_name': req.path,
             'get_data': req.args.copy(),
             'post_data': req.form.copy()
         }
-        return url_data, req_object
+
+        return self_url, req_object
 
     def __get_saml_auth_object(self, req, settings, parse_idp):
         # If server is behind proxys or balancers use the HTTP_X_FORWARDED fields
-        url_data, req_object = self.__get_flask_request_for_saml(req)
+        self_url, req_object = self.__get_flask_request_for_saml(req)
 
-        self_url = f'{req.scheme}://{req.host}{":" + url_data.port if url_data.port else ""}'
         with open(SAML_SETTINGS_FILE_PATH, 'rt') as f:
             saml_settings = json.loads(f.read())
 
@@ -1928,7 +1934,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @gui_helpers.add_rule_unauth("login/saml/", methods=['GET', 'POST'])
     def saml_login(self):
-        _, req = self.__get_flask_request_for_saml(request)
+        self_url, req = self.__get_flask_request_for_saml(request)
         saml_settings = self.__saml_login
 
         if not saml_settings['enabled']:
@@ -1940,7 +1946,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             auth.process_response()
             errors = auth.get_errors()
             if len(errors) == 0:
-                self_url_beginning = f'{request.scheme}://{request.host}'
+                self_url_beginning = self_url
 
                 if 'RelayState' in request.form and not request.form['RelayState'].startswith(self_url_beginning):
                     return redirect(auth.redirect_to(request.form['RelayState']))
@@ -3920,6 +3926,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             "type": "string"
                         },
                         {
+                            "name": "axonius_external_url",
+                            "title": "Axonius External URL",
+                            "type": "string"
+                        },
+                        {
                             "name": "sso_url",
                             "title": "Single Sign-On Service URL",
                             "type": "string"
@@ -3973,6 +3984,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 "enabled": False,
                 "idp_name": None,
                 "metadata_url": None,
+                "axonius_external_url": None,
                 "sso_url": None,
                 "entity_id": None,
                 "certificate": None
