@@ -464,10 +464,50 @@ class PluginBase(Configurable, Feature):
         self._update_schema()
         self._update_config_inner()
 
+        run_and_forget(self.__call_delayed_initialization)
+
         # Finished, Writing some log
         logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                          self.version,
                                                                                          self.lib_version))
+
+    @retry(stop_max_attempt_number=3,
+           wait_fixed=5000)
+    def __call_delayed_initialization(self):
+        """
+        See _delayed_initialization docs
+        This is retrying for dealing with flaky memory restrictions and DB junk
+        Maybe this will save us?
+        :return:
+        """
+        try:
+            self._delayed_initialization()
+        except BaseException:
+            logger.exception('Exception when calling _delayed_initialization')
+            raise
+        logger.info('Finished delayed initialization')
+
+    def _delayed_initialization(self):
+        """
+        Virtual by design
+        Code in this method will run when the plugins starts.
+        The stuff here should be stuff that are important but not critical for the initialization of the plugin
+        and the system in general.
+        The plugins should be able to work properly even if this method haven't finished running, although some
+        performance or functionality drop is acceptable.
+        This code will run in a different thread at the end of the plugin initialization.
+
+        Stuff stuff won't necessarily be available here.
+        For example, your own constructor might not run before this.
+        If your plugin also inherits from triggerable or other classes, their constructors are not guaranteed
+        to run before this method.
+
+        Follow the inheritance line to figure out what is available or not.
+
+        Strive to make this code as simple as possible
+        :return:
+        """
+        pass
 
     def _save_field_names_to_db(self, entity_type: EntityType):
         """ Saves fields_set and raw_fields_set to the Plugin's DB """

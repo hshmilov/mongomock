@@ -7,16 +7,14 @@ from datetime import datetime
 from typing import List
 
 import pymongo
-import requests
 from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.devices import deep_merge_only_dict
 from axonius.mixins.triggerable import Triggerable
-from axonius.plugin_base import EntityType, PluginBase, return_error
+from axonius.plugin_base import EntityType, PluginBase
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
 from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
@@ -149,9 +147,6 @@ class AggregatorService(PluginBase, Triggerable):
         """
         Check AdapterBase documentation for additional params and exception details.
         """
-        super().__init__(get_local_config_file(__file__),
-                         requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
-
         self.__db_locks = {
             entity: LazyMultiLocker()
             for entity in EntityType
@@ -167,18 +162,14 @@ class AggregatorService(PluginBase, Triggerable):
             for entity in EntityType
         }
 
-        # Setting up capped collections.
-        # This must come before __insert_indexes because indexes are dropped on a capped collection resize
-        self.__create_capped_collections()
-
-        # Setting up db
-        self.__insert_indexes()
-
         # the last time the DB has been rebuilt
         self.__last_full_db_rebuild = {
             entity: datetime.utcnow()
             for entity in EntityType
         }
+
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
 
         try:
             # devices are inserted to this collection only via transactions on the 'clean devices'
@@ -193,6 +184,19 @@ class AggregatorService(PluginBase, Triggerable):
         except CollectionInvalid:
             # if the collection already exists - that's OK
             pass
+
+    def _delayed_initialization(self):
+        """
+        See parent docs
+        """
+        super()._delayed_initialization()
+
+        # Setting up capped collections.
+        # This must come before __insert_indexes because indexes are dropped on a capped collection resize
+        self.__create_capped_collections()
+
+        # Setting up db
+        self.__insert_indexes()
 
         # perform an initial rebuild for consistency
         for entity_type in EntityType:
