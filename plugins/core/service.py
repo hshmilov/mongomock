@@ -83,7 +83,7 @@ class CoreService(PluginBase, Configurable):
         executors = {'default': ThreadPoolExecutor(1)}
         self.cleaner_thread = LoggedBackgroundScheduler(executors=executors)
         self.cleaner_thread.add_job(func=self.clean_offline_plugins,
-                                    trigger=IntervalTrigger(seconds=40),
+                                    trigger=IntervalTrigger(seconds=60 * 2),
                                     next_run_time=datetime.now(),
                                     name='clean_offline_plugins',
                                     id='clean_offline_plugins',
