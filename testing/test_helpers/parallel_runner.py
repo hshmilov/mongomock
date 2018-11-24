@@ -49,7 +49,7 @@ class ParallelRunner(object):
 
         return False
 
-    def wait_for_all(self, timeout=45 * 60):
+    def wait_for_all(self, timeout=90 * 60):
         ret_code = 0
         start = time.time()
         first = True
