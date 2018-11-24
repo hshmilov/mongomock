@@ -1,8 +1,10 @@
+import shutil
 from typing import List
 
 from retrying import retry
 
 from axonius.entities import EntityType
+from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
 from services.plugin_service import API_KEY_HEADER, PluginService
 from axonius.consts.plugin_consts import GUI_NAME
 from axonius.consts.gui_consts import USERS_COLLECTION
@@ -24,6 +26,30 @@ class AggregatorService(PluginService):
             self._update_schema_version_2()
         if self.db_schema_version < 3:
             self._update_schema_version_3()
+
+    def __create_capped_collections(self):
+        """
+        Set up historical dbs as capped collections, if they aren't already
+        """
+        total_capped_data_on_disk = 0
+        for entity_type in EntityType:
+            col = self._historical_entity_views_db_map[entity_type]
+            size = get_collection_storage_size(col)
+            print(f'{col.name} size on disk is {size}')
+            total_capped_data_on_disk += size
+
+        disk_usage = shutil.disk_usage("/")
+        # Size for all capped collections:
+        # (disk_free + total_current_capped_collection) * 0.8 - 5GB
+        # then, each collection will get a fair share
+        actual_disk_free = disk_usage.free + total_capped_data_on_disk
+        proper_capped_size = (actual_disk_free * 0.8 - 5 * 1024 * 1024 * 1024) / len(EntityType)
+
+        print(f'Disk usage: {disk_usage}; virtually free is: {actual_disk_free}. '
+              f'Calculated capped size: {proper_capped_size}')
+
+        for entity_type in EntityType:
+            create_capped_collection(self._historical_entity_views_db_map[entity_type], proper_capped_size)
 
     def _update_schema_version_1(self):
         try:

@@ -1,6 +1,5 @@
 import concurrent.futures
 import logging
-import shutil
 import threading
 import time
 from datetime import datetime
@@ -17,7 +16,6 @@ from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
-from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
 from axonius.utils.threading import LazyMultiLocker
 from funcy import chunks
 from pymongo.errors import CollectionInvalid
@@ -191,10 +189,6 @@ class AggregatorService(PluginBase, Triggerable):
         """
         super()._delayed_initialization()
 
-        # Setting up capped collections.
-        # This must come before __insert_indexes because indexes are dropped on a capped collection resize
-        self.__create_capped_collections()
-
         # Setting up db
         self.__insert_indexes()
 
@@ -202,69 +196,43 @@ class AggregatorService(PluginBase, Triggerable):
         for entity_type in EntityType:
             self._rebuild_entity_view(entity_type)
 
-    def __create_capped_collections(self):
-        """
-        Set up historical dbs as capped collections, if they aren't already
-        :return:
-        """
-        total_capped_data_on_disk = 0
-        for entity_type in EntityType:
-            col = self._historical_entity_views_db_map[entity_type]
-            size = get_collection_storage_size(col)
-            logger.info(f'{col.name} size on disk is {size}')
-            total_capped_data_on_disk += size
-
-        disk_usage = shutil.disk_usage("/")
-        # Size for all capped collections:
-        # (disk_free + total_current_capped_collection) * 0.8 - 5GB
-        # then, each collection will get a fair share
-        actual_disk_free = disk_usage.free + total_capped_data_on_disk
-        proper_capped_size = (actual_disk_free * 0.8 - 5 * 1024 * 1024 * 1024) / len(EntityType)
-
-        logger.info(f'Disk usage: {disk_usage}; virtually free is: {actual_disk_free}. '
-                    f'Calculated capped size: {proper_capped_size}')
-
-        for entity_type in EntityType:
-            create_capped_collection(self._historical_entity_views_db_map[entity_type], proper_capped_size)
-
     def __insert_indexes(self):
         """
         Insert useful indexes.
         :return: None
         """
-
         def common_view_indexes(db):
             # used for querying by it directly
-            db.create_index([('internal_axon_id', pymongo.ASCENDING)])
+            db.create_index([('internal_axon_id', pymongo.ASCENDING)], background=True)
             # used as a trick to split all devices by it relatively equally
             # this will always be a single char, 1-9a-f (hex)
             # then you can split the whole db using it to hack mongo
             # into using multiple cores when aggregating
             # https://axonius.atlassian.net/wiki/spaces/AX/pages/740229240/Implementing+and+integrating+historical+views
-            db.create_index([('short_axon_id', pymongo.ASCENDING)])
+            db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
             # those used for querying by it
-            db.create_index([('specific_data.data.id', pymongo.ASCENDING)])
-            db.create_index([(f'specific_data.{PLUGIN_NAME}', pymongo.ASCENDING)])
-            db.create_index([(f'specific_data.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)])
-            db.create_index([(f'specific_data.adapter_properties', pymongo.ASCENDING)])
+            db.create_index([('specific_data.data.id', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.adapter_properties', pymongo.ASCENDING)], background=True)
             # this is used for when you want to see a single snapshot in time
-            db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)])
+            db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)], background=True)
             # this is commonly filtered by
-            db.create_index([(f'adapters', pymongo.ASCENDING)])
+            db.create_index([(f'adapters', pymongo.ASCENDING)], background=True)
             # this is commonly sorted by
-            db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)])
+            db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
             # this is used all the time by the GUI
-            db.create_index([(f'labels', pymongo.ASCENDING)])
+            db.create_index([(f'labels', pymongo.ASCENDING)], background=True)
 
         def common_db_indexes(db):
             db.create_index(
                 [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
-                 ], unique=True)
-            db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)])
-            db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
-            db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)])
-            db.create_index([('adapters.client_used', pymongo.DESCENDING)])
-            db.create_index([(PLUGIN_UNIQUE_NAME, pymongo.DESCENDING)])
+                 ], unique=True, background=True)
+            db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
+            db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
+            db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
+            db.create_index([('adapters.client_used', pymongo.DESCENDING)], background=True)
+            db.create_index([(PLUGIN_UNIQUE_NAME, pymongo.DESCENDING)], background=True)
 
         for entity_type in EntityType:
             common_db_indexes(self._entity_db_map[entity_type])
