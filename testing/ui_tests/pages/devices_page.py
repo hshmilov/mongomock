@@ -23,8 +23,8 @@ class DevicesPage(EntitiesPage):
     TAG_CHECKBOX_CSS = 'div.modal-container.w-xl > div.modal-body > div > div.x-checkbox-list > div > div'
     TAG_SAVE_BUTTON_CSS = 'div.modal-container.w-xl > div.modal-footer > div > button:nth-child(2)'
     LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.search-input > input'
-    TAGGING_1_DEVICE_MESSAGE = 'Tagged 1 devices!'
-    TAGGING_1_DEVICE_XPATH = f'.//div[contains(@class, \'text-center\') and .//text()=\'{TAGGING_1_DEVICE_MESSAGE}\']'
+    TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
+    TAGGING_X_DEVICE_XPATH = './/div[contains(@class, \'text-center\') and .//text()=\'{message}\']'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
 
@@ -46,20 +46,21 @@ class DevicesPage(EntitiesPage):
         with pytest.raises(NoSuchElementException):
             self.driver.find_element_by_css_selector('#specific')
 
-    def wait_for_success_tagging_message(self):
-        self.wait_for_element_present_by_xpath(self.TAGGING_1_DEVICE_XPATH)
-        self.wait_for_element_absent_by_xpath(self.TAGGING_1_DEVICE_XPATH)
+    def wait_for_success_tagging_message(self, number=1):
+        message = self.TAGGING_X_DEVICE_XPATH.format(message=self.TAGGING_X_DEVICE_MESSAGE.format(number=number))
+        self.wait_for_element_present_by_xpath(message)
+        self.wait_for_element_absent_by_xpath(message)
 
     def open_tag_dialog(self):
         self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
         self.click_actions_tag_button()
 
-    def add_new_tag(self, tag_text):
+    def add_new_tag(self, tag_text, number=1):
         self.open_tag_dialog()
         self.fill_text_field_by_css_selector(self.LABELS_TEXTBOX_CSS, tag_text)
         self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
         self.click_tag_save_button()
-        self.wait_for_success_tagging_message()
+        self.wait_for_success_tagging_message(number)
         self.wait_for_spinner_to_end()
 
     def remove_first_tag(self):

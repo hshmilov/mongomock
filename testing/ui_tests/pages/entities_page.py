@@ -33,6 +33,7 @@ class EntitiesPage(Page):
     QUERY_COMP_SIZE = 'size'
     QUERY_LOGIC_AND = 'and'
     QUERY_LOGIC_OR = 'or'
+    TABLE_SELECT_ALL_CHECKBOX_CSS = 'thead .x-checkbox'
     TABLE_COUNT_CSS = '.x-table-header .x-title .count'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
     TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
@@ -229,6 +230,9 @@ class EntitiesPage(Page):
 
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
+
+    def select_all_page_rows_checkbox(self):
+        self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_CHECKBOX_CSS).click()
 
     # retrying because sometimes the table hasn't fully loaded
     @retry(wait_fixed=20, stop_max_delay=3000)
