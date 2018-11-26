@@ -18,7 +18,7 @@ class NexposeClient(abc.ABC):
         super().__init__()
 
     @abc.abstractmethod
-    def get_all_devices(self):
+    def get_all_devices(self, fetch_tags):
         """ Get all the raw devices from the client.
 
         :return: dict containing the api version and the devices.

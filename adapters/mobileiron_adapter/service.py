@@ -9,13 +9,14 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
+from axonius.mixins.configurable import Configurable
 from mobileiron_adapter.connection import MobileironConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 # pylint: disable=too-many-instance-attributes
-class MobileironAdapter(AdapterBase):
+class MobileironAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
@@ -48,7 +49,6 @@ class MobileironAdapter(AdapterBase):
                                                        'Accept': 'application/json'},
                                               url_base_prefix=client_config.get('url_base_path') + '/rest/api/v2/',
                                               verify_ssl=client_config['verify_ssl'],
-                                              fetch_apps=client_config['fetch_apps'],
                                               username=client_config['username'],
                                               password=client_config['password'])
             with connection:
@@ -60,8 +60,7 @@ class MobileironAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific Mobileiron domain
 
@@ -70,9 +69,8 @@ class MobileironAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the MobileIron Server
         """
-        client_data.connect()
-        yield from client_data.get_device_list()
-        client_data.close()
+        with client_data:
+            yield from client_data.get_device_list(fetch_apps=self.__fetch_apps)
 
     @staticmethod
     def _clients_schema():
@@ -108,11 +106,6 @@ class MobileironAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
-                },
-                {
-                    'name': 'fetch_apps',
-                    'title': 'Fetch Applications',
-                    'type': 'bool'
                 }
             ],
             'required': [
@@ -120,7 +113,6 @@ class MobileironAdapter(AdapterBase):
                 'username',
                 'password',
                 'verify_ssl',
-                'fetch_apps',
                 'url_base_path'
             ],
             'type': 'array'
@@ -171,3 +163,29 @@ class MobileironAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_apps',
+                    'title': 'Fetch Applications',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_apps'
+            ],
+            'pretty_name': 'Mobileiron Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_apps': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_apps = config['fetch_apps']

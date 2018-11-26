@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
+from axonius.utils.parsing import parse_date
 from clearpass_adapter.connection import ClearpassConnection
 from clearpass_adapter.client_id import get_client_id
 
@@ -14,9 +15,13 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ClearpassAdapter(AdapterBase):
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         endpoint_status = Field(str, 'Endpoint Status')
         endpoint_attributes = Field(str, 'Endpoint Attributes')
+        spt = Field(str, 'System Posture Token')
+        is_conflict = Field(bool, 'Is Conflict')
+        is_online = Field(bool, 'Is Online')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -46,8 +51,7 @@ class ClearpassAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -57,7 +61,7 @@ class ClearpassAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(self.__get_extended_info)
 
     @staticmethod
     def _clients_schema():
@@ -132,6 +136,25 @@ class ClearpassAdapter(AdapterBase):
             device.description = device_raw.get('description')
             device.endpoint_status = device_raw.get('status')
             device.endpoint_attributes = device_raw.get('attributes')
+            extended_info = device_raw.get('extended_info')
+            if extended_info:
+                try:
+                    device.domain = extended_info.get('domain')
+                    device.last_used_users = [extended_info.get('user')] if extended_info.get('user') else None
+                    device.spt = extended_info.get('spt')
+                    device.hostname = extended_info.get('device_name')
+                    try:
+                        device.figure_os(extended_info.get('device_category'))
+                    except Exception:
+                        logger.exception(f'Problem with OS of {device_raw}')
+                    device.is_conflict = extended_info.get('is_conflict')
+                except Exception:
+                    logger.exception(f'Problem adding extend info for {device_raw}')
+                try:
+                    device.last_seen = parse_date(extended_info.get('updated_at'))
+                except Exception:
+                    logger.exception(f'Problem with last seen at {device_raw}')
+                device.is_online = extended_info.get('is_online')
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -174,3 +197,29 @@ class ClearpassAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'get_extended_info',
+                    'title': 'Get Extended Agent Information',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'get_extended_info'
+            ],
+            'pretty_name': 'Clearpass Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'get_extended_info': True
+        }
+
+    def _on_config_update(self, config):
+        self.__get_extended_info = config['get_extended_info']

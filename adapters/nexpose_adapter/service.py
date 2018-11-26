@@ -11,6 +11,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
 from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 import nexpose_adapter.clients as nexpose_clients
 from axonius.clients.rest.connection import RESTConnection
 
@@ -49,7 +50,7 @@ class NexposeScannerCorrelator(ScannerCorrelatorBase):
         return super()._find_correlation_with_real_adapter(parsed_device)
 
 
-class NexposeAdapter(ScannerAdapterBase):
+class NexposeAdapter(ScannerAdapterBase, Configurable):
     """ Adapter for Rapid7's nexpose """
 
     class MyDeviceAdapter(DeviceAdapter):
@@ -130,7 +131,7 @@ class NexposeAdapter(ScannerAdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         if isinstance(client_data, nexpose_clients.NexposeClient):
-            yield from client_data.get_all_devices()
+            yield from client_data.get_all_devices(fetch_tags=self.__fetch_tags)
 
     def _get_client_id(self, client_config):
         return client_config[NEXPOSE_HOST]
@@ -151,3 +152,29 @@ class NexposeAdapter(ScannerAdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'fetch_tags',
+                    'title': 'Fetch Tags',
+                    'type': 'bool'
+                }
+            ],
+            "required": [
+                'fetch_tags'
+            ],
+            "pretty_name": "Nexpose Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_tags': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_tags = config['fetch_tags']

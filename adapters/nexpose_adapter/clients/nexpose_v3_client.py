@@ -18,7 +18,7 @@ MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
 
 
 class NexposeV3Client(NexposeClient):
-    def get_all_devices(self):
+    def get_all_devices(self, fetch_tags=False):
         logger.info(f'Stating to fetch devices on V3 for nexpose')
         try:
             num_of_asset_pages = 1
@@ -34,6 +34,9 @@ class NexposeV3Client(NexposeClient):
                     for item in devices:
                         item.update({"API": '3'})
 
+                    if not fetch_tags:
+                        yield from devices
+                        continue
                     # Get all tags for all devices asynchronously
                     # Build the requests
                     aio_requests = []

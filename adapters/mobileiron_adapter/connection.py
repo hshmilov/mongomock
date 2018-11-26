@@ -6,9 +6,9 @@ from mobileiron_adapter import consts
 
 
 class MobileironConnection(RESTConnection):
-    def __init__(self, *args, fetch_apps: bool = True, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__fetch_apps = fetch_apps
+        self.__fetch_apps = False
 
     def _connect(self):
         if self._username is not None and self._password is not None:
@@ -16,7 +16,8 @@ class MobileironConnection(RESTConnection):
         else:
             raise RESTException("No user name or password")
 
-    def get_device_list(self, **kwargs):
+    def get_device_list(self, fetch_apps: bool = True):
+        self.__fetch_apps = fetch_apps
         device_space_id = self._get("device_spaces/mine")["results"][0]["id"]
         count = self._get(
             "devices/count", url_params={'adminDeviceSpaceId': device_space_id, 'query': ""})["totalCount"]

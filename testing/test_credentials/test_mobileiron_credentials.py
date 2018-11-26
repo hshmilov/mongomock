@@ -4,7 +4,6 @@ client_details = {
     "username": "admin",
     "password": "Ct4qRPJPRWMPoozQG7t6",
     "verify_ssl": True,
-    "fetch_apps": True,
     "url_base_path": "axonius9801"
 }
 

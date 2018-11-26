@@ -6,6 +6,8 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.fields import Field
+from axonius.utils.parsing import parse_date
 from cisco_umbrella_adapter.connection import CiscoUmbrellaConnection
 from cisco_umbrella_adapter.client_id import get_client_id
 
@@ -14,8 +16,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CiscoUmbrellaAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        # AUTOADAPTER - add here device fields if needed
-        pass
+        agent_version = Field(str, 'Agent Version')
+        agent_type = Field(str, 'Agent Type')
+        agent_status = Field(str, 'Agent Status')
+        ip_blocking = Field(bool, 'IP Blocking')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -103,7 +107,24 @@ class CiscoUmbrellaAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                # AUTOADAPTER - create device
+                device_id = device_raw.get('deviceId')
+                if not device_id:
+                    logger.warning(f'Bad device with no ID {device_raw}')
+                    continue
+                device.id = device_id + '_' + (device_raw.get('name') or '')
+                device.hostname = device_raw.get('name')
+                device.ip_blocking = device_raw.get('hasIpBlocking')
+                try:
+                    device.figure_os(device_raw.get('osVersionName'))
+                except Exception:
+                    logger.exception(f'Problem getting OS for {device_raw}')
+                try:
+                    device.last_seen = parse_date(device_raw.get('lastSync'))
+                except Exception:
+                    logger.exception(f'Problem getting last seen for {device_raw}')
+                device.agent_status = device_raw.get('status')
+                device.agent_type = device_raw.get('type')
+                device.agent_version = device_raw.get('version')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

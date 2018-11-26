@@ -1250,7 +1250,7 @@ class PluginBase(Configurable, Feature):
                 logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
 
             time_for_client = datetime.now() - time_before_client
-            if self._notify_on_adapters is True:
+            if self._notify_on_adapters is True and (time_for_client.seconds or inserted_data_count):
                 self.create_notification(
                     f"Finished aggregating {entity_type} for client {client_name}, "
                     f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")

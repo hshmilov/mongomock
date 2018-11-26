@@ -263,6 +263,8 @@ class AggregatorService(PluginBase, Triggerable):
             logger.error(
                 f'Request for clients from {adapter} failed. Status: {clients.get("status", "")}, Message \'{clients.get("message", "")}\'')
             raise ClientsUnavailable()
+        if clients and self._notify_on_adapters is True:
+            self.create_notification(f"Starting to fetch device for {adapter}")
         for client_name in clients:
             try:
                 data = self.request_remote_plugin(f'trigger/insert_to_db', adapter, method='POST',
@@ -537,8 +539,6 @@ class AggregatorService(PluginBase, Triggerable):
         """
 
         start_time = time.time()
-        if self._notify_on_adapters is True:
-            self.create_notification(f"Starting to fetch device for {adapter_unique_name}")
         logger.info(f"Starting to fetch device for {adapter_unique_name}")
         try:
             data = self._request_insertion_from_adapters(adapter_unique_name)

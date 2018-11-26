@@ -701,6 +701,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param projection: the "mongo_projection" from @gui_helpers.projected()
         :return: None
         """
+        if (session.get('user') or {}).get('user_name') == AXONIUS_USER_NAME:
+            return
         if view_filter and not skip:
             # getting the original filter text on purpose - we want to pass it
             view_filter = request.args.get('filter')
@@ -1671,7 +1673,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if not bcrypt.verify(password, user_from_db['password']):
             logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
-        if request and request.referrer and 'localhost' not in request.referrer and '127.0.0.1' not in request.referrer:
+        if request and request.referrer and 'localhost' not in request.referrer \
+                and '127.0.0.1' not in request.referrer\
+                and 'diag-l.axonius.com' not in request.referrer\
+                and user_name != AXONIUS_USER_NAME:
             self.system_collection.replace_one({'type': 'server'},
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
