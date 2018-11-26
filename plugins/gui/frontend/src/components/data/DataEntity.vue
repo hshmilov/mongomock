@@ -165,7 +165,15 @@
             },
             loading() {
             	return (!this.fields || !this.fields.generic || !this.fields.schema)
-                    || (!this.entity || this.entity.internal_axon_id !== this.entityId)
+                    || (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate)
+            },
+            entityDate() {
+                if (!this.entity.accurate_for_datetime) return null
+                return new Date(this.entity.accurate_for_datetime).toISOString().substring(0, 10)
+            },
+            historyDate() {
+                if (!this.history) return null
+                return this.history.substring(0, 10)
             }
         },
         watch: {
@@ -224,7 +232,7 @@
             }
         },
 		created () {
-			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entity.accurate_for_datetime !== this.history) {
+			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate) {
 				this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
 			} else {
 				this.delayInitTourState = true

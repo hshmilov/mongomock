@@ -178,7 +178,7 @@ class TestBase:
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=self.username, password=self.password, remember_me=True)
 
-    def _create_history(self, entity_type: EntityType, update_field):
+    def _create_history(self, entity_type: EntityType, update_field=None):
         history_db = self.axonius_system.db.get_historical_entity_db_view(entity_type)
         entity_count = self.axonius_system.db.get_entity_db_view(entity_type).count_documents({})
         if not entity_count:
@@ -194,8 +194,14 @@ class TestBase:
                 del entity['_id']
                 # Update the historical date being generated
                 entity['accurate_for_datetime'] = current_date
-                entity['specific_data'][0]['data'][update_field] += f' {day}'
+                if update_field:
+                    entity['specific_data'][0]['data'][update_field] += f' {day}'
             insert_many_result = history_db.insert_many(entities)
             # Save the count for testing the expected amount for the day is presented
             day_to_entity_count.append(len(insert_many_result.inserted_ids))
         return day_to_entity_count
+
+    def _update_and_create_history(self, entity_type: EntityType):
+        self.axonius_system.db.get_historical_entity_db_view(entity_type).drop()
+        self.base_page.run_discovery()
+        self._create_history(entity_type)

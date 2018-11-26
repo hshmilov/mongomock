@@ -2,6 +2,7 @@ import re
 
 import requests
 from retrying import retry
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.parsing import parse_date, parse_date_with_timezone
 from ui_tests.pages.page import Page
@@ -308,11 +309,15 @@ class EntitiesPage(Page):
         self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS, date_to_fill.date().isoformat())
 
     def close_showing_results(self):
-        self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS).click()
-        self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
+        try:
+            self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS).click()
+            self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
+        except NoSuchElementException:
+            # Already closed
+            pass
 
     def clear_showing_results(self):
-        self.click_button('X', partial_class=True)
+        self.click_button('X', partial_class=True, should_scroll_into_view=False)
 
     def run_filter_and_save(self, query_name, query_filter):
         self.fill_filter(query_filter)
@@ -427,8 +432,12 @@ class EntitiesPage(Page):
         self.enter_search()
         self.wait_for_table_to_load()
 
-    def load_notes(self):
+    def load_notes(self, entities_filter=None):
         self.switch_to_page()
+        if entities_filter:
+            self.fill_filter(entities_filter)
+            self.enter_search()
         self.wait_for_table_to_load()
         self.click_row()
+        self.wait_for_spinner_to_end()
         self.click_notes_tab()
