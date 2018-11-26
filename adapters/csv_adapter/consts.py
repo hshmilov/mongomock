@@ -1,7 +1,7 @@
 # These are ordered by what we prefer if there are multiple columns (e.g. id > identifier)
 
 IDENTIFIERS = {
-    'id': ['id', 'identifier', 'serialnumber'],
+    'id': ['id', 'identifier', 'serialnumber', 'assetid'],
     'name': ['name', 'vmname', 'displayname', 'assetname', 'machinename', 'instancename'],
     'hostname': ['fqdn', 'fullyqualifieddomainname', 'hostname'],
     'mac_address': ['mac', 'macaddress', 'macaddresses', 'macs'],

@@ -34,6 +34,7 @@ class ZabbixAdapter(AdapterBase):
                                           https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass
+            return connection
         except Exception as e:
             # pylint: disable=W1202
             logger.error('Failed to connect to client {0}'.format(
@@ -42,7 +43,7 @@ class ZabbixAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
-            yield from client_data.get_devices()
+            yield from client_data.get_device_list()
 
     def _clients_schema(self):
         return {
@@ -117,6 +118,7 @@ class ZabbixAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Problem adding nic to {device_raw}')
         device.id = device_id + '_' + (device_raw.get('name') or '')
+        device.set_raw(device_raw)
 
         return device
 

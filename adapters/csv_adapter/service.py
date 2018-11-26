@@ -157,7 +157,7 @@ class CsvAdapter(AdapterBase):
 
         if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address']):
             logger.error(f'Bad devices fields names {str(csv_data.fieldnames)}')
-            raise GetDevicesError(f'Strong identifier is missing fro devices')
+            raise GetDevicesError(f'Strong identifier is missing for devices')
 
         for device_raw in csv_data:
             try:
