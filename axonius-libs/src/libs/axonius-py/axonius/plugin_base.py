@@ -2029,7 +2029,7 @@ class PluginBase(Configurable, Feature):
             host = https_log_setting.get('https_log_server')
             port = https_log_setting.get('https_log_port') or 443
             https_proxy = https_log_setting.get('https_proxy')
-            url = RESTConnection.build_url(domain=host, port=port).strip('/')
+            url = RESTConnection.build_url(domain=host, port=port, use_domain_path=True).strip('/')
             proxies = dict()
             proxies['http'] = None
             proxies['https'] = https_proxy
