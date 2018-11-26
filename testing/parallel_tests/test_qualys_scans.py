@@ -1,5 +1,7 @@
 
 # pylint: disable=W0611
+import pytest
+
 from services.adapters.qualys_scans_service import (QualysScansService,
                                                     qualys_scans_fixture)
 from test_credentials.test_qualys_scans_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
@@ -31,6 +33,7 @@ class TestQualysScansAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    @pytest.mark.skip(f'AX-2709 Account expired')
     def test_fetch_devices(self):
         some_client, some_adapters_ids = CLIENT_DETAILS
         some_client_id = _get_id_from_client(some_client)
