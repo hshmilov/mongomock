@@ -57,8 +57,13 @@ aggregation_stages_for_entity_view = [
                     'input': '$tags',
                     'as': 'tag',
                     'cond': {
-                        '$eq': [
-                            '$$tag.type', 'data'
+                        '$and': [
+                            {
+                                '$eq': ['$$tag.type', 'data']
+                            },
+                            {
+                                '$ne': ['$$tag.data', False]
+                            }
                         ]
                     }
                 }

@@ -20,12 +20,16 @@ ad_client2_details = {
 
 # These devices has been configured to never sleep, so that we could try to execute code through them.
 DEVICE_ID_FOR_CLIENT_1 = 'CN=DCNY1,OU=Domain Controllers,DC=TestDomain,DC=test'
-CLIENT1_DEVICE_ID_BLACKLIST = 'CN=WIN-N5521ORHDL9,CN=Computers,DC=TestDomain,DC=test'
+CLIENT1_DEVICE_ID_BLACKLIST = 'CN=DC4,OU=Domain Controllers,DC=TestDomain,DC=test'
 CLIENT1_DC1_ID = 'CN=DC1,OU=Domain Controllers,DC=TestDomain,DC=test'
 CLIENT1_DC4_ID = 'CN=DC4,OU=Domain Controllers,DC=TestDomain,DC=test'
+CLIENT1_DEVICE_WITH_VULNS = 'CN=TESTWINDOWS7,CN=Computers,DC=TestDomain,DC=test'
 DEVICE_ID_FOR_CLIENT_2 = 'CN=DESKTOP-GO8PIUL,CN=Computers,DC=TestSecDomain,DC=test'
-USER_ID_FOR_CLIENT_1 = "Administrator"
-USER_SID_FOR_CLIENT_1 = "S-1-5-21-3246437399-2412088855-2625664447-500"
+USERS_IN_CLIENT_1 = [
+    ('Administrator@TestDomain.test', 'S-1-5-21-3246437399-2412088855-2625664447-500'),
+    ('mishka@TestDomain.test', 'S-1-5-21-3246437399-2412088855-2625664447-1114')
+]
+USER_ID_FOR_CLIENT_1 = USERS_IN_CLIENT_1[0][0]
 
 PRINTER_NAME_FOR_CLIENT1 = "AXONIUS-OFFICE-PRINTER (HP Color LaserJet MFP M277dw)"
 WMI_QUERIES_DEVICE = "dcny1.testdomain.test"

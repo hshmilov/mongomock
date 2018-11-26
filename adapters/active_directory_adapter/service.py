@@ -1277,12 +1277,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 if hostname_on_device is not None and hostname_on_device != "" and hostname_on_ad != "":
                     hostname_on_device = hostname_on_device.lower()
                     hostname_on_ad = hostname_on_ad.lower()
+                    identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
                     if not (hostname_on_device.startswith(hostname_on_ad) or
                             hostname_on_ad.startswith(hostname_on_device)):
                         logger.warning(f"Warning! hostname {hostname_on_ad} in our systems has an actual hostname "
                                        f"of {hostname_on_device}! Adding tags and failing")
 
-                        identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
                         self.devices.add_label([identity_tuple], "Hostname Conflict")
                         self.devices.add_data([identity_tuple], "Hostname Conflict",
                                               f"Hostname from Active Directory: '{hostname_on_ad}'\n'"
@@ -1292,6 +1292,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                             "result": 'Failure',
                             "product": f"Hostname Mismatch. Expected {hostname_on_ad} but got {hostname_on_device}"
                         }
+                    else:
+                        self.devices.add_label([identity_tuple], "Hostname Conflict", False)
+                        self.devices.add_data([identity_tuple], "Hostname Conflict", False)
         except Exception:
             logger.exception("Exception in checking the hostname, continuing without check")
 
@@ -1350,12 +1353,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     if hostname_on_device is not None and hostname_on_device != "" and hostname_on_ad != "":
                         hostname_on_device = hostname_on_device.lower()
                         hostname_on_ad = hostname_on_ad.lower()
+                        identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
                         if not (hostname_on_device.startswith(hostname_on_ad) or
                                 hostname_on_ad.startswith(hostname_on_device)):
                             logger.warning(f"Warning! hostname {hostname_on_ad} in our systems has an actual hostname "
                                            f"of {hostname_on_device}! Adding tags and failing")
 
-                            identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
                             self.devices.add_label([identity_tuple], "Hostname Conflict")
                             self.devices.add_data([identity_tuple], "Hostname Conflict",
                                                   f"Hostname from Active Directory: '{hostname_on_ad}'\n'"
@@ -1365,6 +1368,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                 "result": 'Failure',
                                 "product": f"Hostname Mismatch. Expected {hostname_on_ad} but got {hostname_on_device}"
                             }
+                        else:
+                            self.devices.add_label([identity_tuple], "Hostname Conflict", False)
+                            self.devices.add_data([identity_tuple], "Hostname Conflict", False)
             except Exception:
                 logger.exception("Exception in checking the hostname, continuing without check")
 

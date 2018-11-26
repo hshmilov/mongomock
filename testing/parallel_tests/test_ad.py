@@ -105,13 +105,19 @@ class TestAdAdapter(AdapterTestBase):
     def test_fetch_users(self):
         # I'm going to assume this has already been aggregated. TODO: Change test_fetch_devices to test_fetch_data
         # and check that there.
-        users_list = self.axonius_system.get_users_with_condition(
-            {
-                "adapters.data.username": USER_ID_FOR_CLIENT_1,
-                "adapters.data.ad_sid": USER_SID_FOR_CLIENT_1
-            }
-        )
-        assert len(users_list) == 1, f"Did not find user {USER_ID_FOR_CLIENT_1}"
+        for user_id, user_sid in USERS_IN_CLIENT_1:
+            assert len(self.axonius_system.get_users_with_condition(
+                {
+                    'adapters':
+                        {
+                            '$elemMatch':
+                                {
+                                    'data.id': user_id,
+                                    'data.ad_sid': user_sid
+                                }
+                        }
+                }
+            )) == 1,  f'Did not find user {user_id} with sid {user_sid}'
 
     def test_ip_resolving(self):
         self.adapter_service.resolve_ip()
@@ -140,10 +146,8 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_report_generated)
 
-    @pytest.mark.skip("AX-1902")
     def test_dns_conflicts(self):
-        @retry(wait_fixed=5000,
-               stop_max_delay=125000)  # it can take up to 2 minutes for the tag to appear
+        @retry(wait_fixed=10000, stop_max_attempt_number=6 * 5)  # it can take up to 5 minutes for the tag to appear
         def has_ip_conflict_tag():
             assert len(self.axonius_system.get_devices_with_condition(
                 {
@@ -395,3 +399,16 @@ class TestAdAdapter(AdapterTestBase):
             assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[1]["data"]
 
         try_until_not_thrown(15, 10, check_get_files_after_delete_results)
+
+    def test_different_wmi_credentials(self):
+        """
+        the current wmi credentials are good for execution, hence we are going to change them to some invalid ones
+        and check if execution works.
+        :return:
+        """
+        client = self.some_client_details
+        client['wmi_smb_user'] = 'some_nonexisting_user'
+        client['wmi_smb_password'] = 'some_nonexisting_password'
+        self.adapter_service.add_client(client)
+        with pytest.raises(AssertionError):
+            self.test_ad_execute_shell()

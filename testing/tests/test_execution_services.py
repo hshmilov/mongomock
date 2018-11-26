@@ -1,6 +1,6 @@
 # redefined-outer-name is needed since we are defining imported fixtures as var names (ad_fixture, for instance).
 # This is a common procedure with pylint and is disabled by default.
-# pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name
+# pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name, too-many-branches
 import time
 import logging
 
@@ -8,25 +8,30 @@ import dateutil.parser
 
 from services.axonius_service import get_service, BLACKLIST_LABEL
 from services.adapters.ad_service import ad_fixture
+from services.adapters.esx_service import esx_fixture
 from services.plugins.general_info_service import general_info_fixture
 from services.plugins.pm_status_service import pm_status_fixture
 from services.plugins.device_control_service import device_control_fixture
 from services.plugins.static_analysis_service import static_analysis_fixture
 from test_credentials.test_ad_credentials import ad_client1_details, \
-    CLIENT1_DEVICE_ID_BLACKLIST, CLIENT1_DC1_ID
+    CLIENT1_DEVICE_ID_BLACKLIST, CLIENT1_DC1_ID, CLIENT1_DEVICE_WITH_VULNS
+from test_credentials.test_esx_credentials import client_details as esx_client_details
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from axonius.utils.wait import wait_until
 
 # Set up basic logging. This would change to something Teamcity understands once we do a logger for builds.
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(f'axonius.{__name__}')
 
 EXECUTION_TIMEOUT = 60 * 50
+MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3   # the amount of time we expect a cycle to end, without async plugins in bg
 TESTDOMAIN_ADMIN_SID = 'S-1-5-21-3246437399-2412088855-2625664447-500'
+REG_KEY_TO_CHECK = 'HKEY_CURRENT_USER\\Software\\Google\\Chrome'
+TESTDOMAIN_USER_DUPLICATION_SID = 'S-1-5-21-3246437399-2412088855-2625664447-1108'
 
 
 def test_execution_modules(
-        axonius_fixture, ad_fixture, general_info_fixture, pm_status_fixture, device_control_fixture,
+        axonius_fixture, ad_fixture, esx_fixture, general_info_fixture, pm_status_fixture, device_control_fixture,
         static_analysis_fixture):
     # Step 1, Run a cycle without execution to check how it acts.
     # We set execution to disabled while enabling pm. pm should not work in that case.
@@ -45,14 +50,16 @@ def test_execution_modules(
     axonius_system.get_users_db().drop()
     axonius_system.get_users_db_view().drop()
 
-    # Run a cycle.
+    # Run a cycle, first just with AD.
     ad_fixture.add_client(ad_client1_details)
     axonius_system.scheduler.start_research()
     axonius_system.scheduler.wait_for_scheduler(True)
-    wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10))
+    wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10),
+               total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
 
     axonius_system.assert_device_in_db(ad_fixture.unique_name, CLIENT1_DC1_ID)
     axonius_system.assert_device_in_db(ad_fixture.unique_name, CLIENT1_DEVICE_ID_BLACKLIST)
+    axonius_system.assert_device_in_db(ad_fixture.unique_name, CLIENT1_DEVICE_WITH_VULNS)
 
     # Assert general info & pm status are async
     assert general_info_fixture.log_tester.is_str_in_log('Triggered execute unblocked', 5)
@@ -62,12 +69,17 @@ def test_execution_modules(
     assert general_info_fixture.log_tester.is_str_in_log('Execution is disabled, not continuing', 5)
     assert pm_status_fixture.log_tester.is_str_in_log('Execution is disabled, not continuing', 5)
 
-    # Step 2, Run a cycle with general info & pm status.
+    # Step 2, Run a cycle with general info & pm status, and blacklist an ad device beforehand.
     axonius_system.core.set_config(
         {
             'config.execution_settings.enabled': True,
             'config.execution_settings.pm_rpc_enabled': True,
             'config.execution_settings.pm_smb_enabled': True,
+            'config.execution_settings.reg_check_exists': {
+                '0': {'key_name': REG_KEY_TO_CHECK},
+                '1': {'key_name': f'{REG_KEY_TO_CHECK}\\'},  # this should be stripped from '\\'
+                '2': {'key_name': f'{REG_KEY_TO_CHECK}_not_exists'}
+            }
         }
     )
 
@@ -78,7 +90,20 @@ def test_execution_modules(
     execution_start = time.time()
     axonius_system.scheduler.start_research()
     axonius_system.scheduler.wait_for_scheduler(True)
-    wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10))
+    wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10),
+               total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
+
+    # While in the cycle, lets run some actions with device control.
+    iad_dc1 = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DC1_ID)[0]['internal_axon_id']
+    iad_bl = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DEVICE_ID_BLACKLIST)[0]['internal_axon_id']
+    device_control_fixture.run_action(
+        {
+            'action_name': 'dir',
+            'action_type': 'shell',
+            'command': r'dir c:\windows\system32\drivers\etc',
+            'internal_axon_ids': [iad_dc1, iad_bl]
+        }
+    )
 
     # Execution takes time. Lets wait for it to finish.
     wait_until(
@@ -111,6 +136,7 @@ def test_execution_modules(
     # A second discovery cycle also identifies vulnerabilities using the static analyzer regardless if we
     # have execution or not, but we enable here execution just to check that pm doesn't work if execution is on
     # but pm not.
+    # In this stage we also add esx so that we could have correlations.
     axonius_system.core.set_config(
         {
             'config.execution_settings.enabled': True,
@@ -118,9 +144,12 @@ def test_execution_modules(
             'config.execution_settings.pm_smb_enabled': False,
         }
     )
+    esx_fixture.add_client(esx_client_details[0][0])
     axonius_system.scheduler.start_research()
     axonius_system.scheduler.wait_for_scheduler(True)
-    wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10))
+    wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10),
+               total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
+    wait_until(lambda: static_analysis_fixture.log_tester.is_str_in_log('Successfully triggered', 10))
 
     # PM Status should immediately not work.
     assert pm_status_fixture.log_tester.is_str_in_log(
@@ -130,23 +159,34 @@ def test_execution_modules(
     axonius_system.scheduler.stop_research()
 
     # Check once again the blacklisted device is blacklisted (nothing should have changed)
+    # Notice that the device should be correlated with ESX so this check also validates that it is
+    # blacklisted afterwards.
     blacklisted_device = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DEVICE_ID_BLACKLIST)[0]
     blacklist_label_exists = False
+    assert len(blacklisted_device['adapters']) == 2, 'Device should have AD and ESX but does not have them!'
     for tag in blacklisted_device['tags']:
         assert tag['type'] != 'adapterdata', f'found unexpected adapterdata tag {tag}'
         if tag['type'] == 'label' and tag['data'] is True and tag['name'] == BLACKLIST_LABEL:
             blacklist_label_exists = True
     assert blacklist_label_exists, 'Did not find a blacklist label!'
+    assert any(tag['name'] == 'Action \'dir\' Failure' and tag['data'] is True for tag in blacklisted_device['tags']), \
+        'Device control shell should have failed on blacklisted device!'
+    assert any(tag['name'] == 'Action \'dir\' Last Error' and '[BLACKLIST]' in tag['data']
+               for tag in blacklisted_device['tags']), 'Device control shell should have failed because of blacklist!'
 
     # At this moment we have all devices after general info & pm & static analysis succeeded, we conduct a lot of tests
     # to see that everything was successful. This mainly checks for all data tabs to see that we got a lot of info.
-
     # First, we check a certain device to see if it has many of the data we want it to have.
     dc1 = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DC1_ID)[0]
     dc1_general_info = \
         [tag for tag in dc1['tags'] if tag['plugin_name'] == 'general_info' and tag['type'] == 'adapterdata']
     assert len(dc1_general_info) == 1, 'Expecting exactly 1 general info data tag!'
     dc1_general_info = dc1_general_info[0]['data']
+
+    assert any(tag['name'] == 'Action \'dir\' Success' and tag['data'] is True for tag in dc1['tags']), \
+        'Device control shell should have succeeded!'
+    assert any(tag['name'] == 'Action \'dir\'' and 'lmhosts.sam' in tag['data']
+               for tag in dc1['tags']), 'Device control shell should have succeeded and returned information!'
 
     assert \
         {'admin_name': 'Administrator@TESTDOMAIN', 'admin_type': 'Admin User'} in dc1_general_info['local_admins']
@@ -176,6 +216,15 @@ def test_execution_modules(
     # This is a random number but there is no way we would have less than 10 installed software on any machine
     assert len(dc1_general_info['installed_software']) > 10
     assert {'vendor': 'Microsoft', 'name': 'Office', 'version': '2016'} in dc1_general_info['installed_software']
+    # If office is in installed software, we should not have cve's for it, since this is something we specifically
+    # block in static analysis.
+    dc1_static_analysis_tags = [tag for tag in dc1['tags']
+                                if tag['plugin_name'] == 'static_analysis' and tag['type'] == 'adapterdata']
+    if dc1_static_analysis_tags:
+        assert len(dc1_static_analysis_tags) == 1, 'Static analysis adapterdata should only have 1 tag!'
+        dc1_software_cves = dc1_static_analysis_tags[0]['data']['software_cves']
+        assert not any('microsoft' in cve['software_vendor'].lower() and 'office' in cve['software_name'].lower() for
+                       cve in dc1_software_cves), f'Found a software cve for Office! {dc1_software_cves}'
     assert {'vendor': 'Adobe Systems Incorporated', 'name': 'Adobe Flash Player 30 PPAPI', 'version': '30.0.0.113'} \
         in dc1_general_info['installed_software']
     assert len(dc1_general_info['cpus']) >= 2    # I hope you don't ever downgrade dc1 to have less than 2 cpu's.
@@ -214,6 +263,11 @@ def test_execution_modules(
     assert {'hw_id': 'USB\\VID_0E0F&PID_0003&MI_01\\7&2A63CEAD&0&0001',
             'name': 'USB Input Device',
             'manufacturer': '(Standard system devices)'} in dc1_general_info['connected_hardware']
+    assert len(dc1_general_info['reg_key_exists']) == 2, \
+        'Device should have 2 registry key exists, which should be the same!'
+    assert len(dc1_general_info['reg_key_not_exists']) == 1
+    assert dc1_general_info['reg_key_exists'][0] == REG_KEY_TO_CHECK
+    assert dc1_general_info['reg_key_exists'][1] == REG_KEY_TO_CHECK
     assert 'general_info_last_success_execution' in dc1_general_info
 
     dc1_pm_status = [tag for tag in dc1['tags'] if tag['plugin_name'] == 'pm_status' and tag['type'] == 'adapterdata']
@@ -236,6 +290,41 @@ def test_execution_modules(
             'publish_date': dateutil.parser.parse('2018-05-17 00:00:00')
         } in dc1_pm_status['available_security_patches']
     assert 'pm_last_execution_success' in dc1_pm_status
+
+    # Check for vulnerability info.
+    device_with_vulns_and_users = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DEVICE_WITH_VULNS)[0]
+    dv_general_info = \
+        [tag for tag in device_with_vulns_and_users['tags']
+         if tag['plugin_name'] == 'general_info' and tag['type'] == 'adapterdata']
+    assert len(dv_general_info) == 1, 'Expecting exactly 1 general info data tag!'
+    dv_general_info = dv_general_info[0]['data']
+    dv_static_analysis = \
+        [tag for tag in device_with_vulns_and_users['tags']
+         if tag['plugin_name'] == 'static_analysis' and tag['type'] == 'adapterdata']
+    assert len(dv_static_analysis) == 1, \
+        f'Expecting exactly 1 static analysis data tag! got {device_with_vulns_and_users}'
+    dv_static_analysis = dv_static_analysis[0]['data']['software_cves']
+    assert len(dv_static_analysis) > 10
+    assert \
+        {
+            'software_vendor': 'The Wireshark developer community, https://www.wireshark.org',
+            'software_name': 'Wireshark 2.4.6 32-bit',
+            'software_version': '2.4.6',
+            'cve_id': 'CVE-2018-11356',
+            'cve_description': 'In Wireshark 2.6.0, 2.4.0 to 2.4.6, and 2.2.0 to 2.2.14, '
+                               'the DNS dissector could crash. '
+                               'This was addressed in epan/dissectors/packet-dns.c by avoiding a NULL pointer '
+                               'dereference for an empty name in an SRV record.',
+            'cve_references': [
+                'http://www.securityfocus.com/bid/104308',
+                'http://www.securitytracker.com/id/1041036',
+                'https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=14681',
+                'https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=4425716ddba99374749bd033d9bc0f4'
+                'add2fb973',
+                'https://www.wireshark.org/security/wnpa-sec-2018-29.html'
+            ],
+            'cve_severity': 'HIGH'
+        } in dv_static_analysis
 
     # Next, we wanna see how many devices have general info and pm status. Note that this condition is true now
     # but might not be true in the future, when general info will run on devices which are not necessarily windows
@@ -289,3 +378,40 @@ def test_execution_modules(
         {'specific_data.data.last_seen_in_devices': {'$exists': True}}).count() > 5
     assert axonius_system.get_users_db_view().find(
         {'specific_data.data.image': {'$exists': True}}).count() > 2
+    assert axonius_system.get_users_db_view().find(
+        {'specific_data.data.user_sid': TESTDOMAIN_USER_DUPLICATION_SID}).count() == 1, \
+        f'Duplication check failed, sid {TESTDOMAIN_USER_DUPLICATION_SID} should appear only once because AD gets ' \
+        f'correlation with wmi'
+
+    # Lets take an example of a device in which we have all kinds of users signed in, and check that these
+    # were created with the right info.
+    dv_users_by_sid = {u['user_sid']: u for u in dv_general_info['users']}
+
+    domain_user = axonius_system.get_users_with_condition({'adapters.data.id': 'ofri@TestDomain.test'})
+    assert len(domain_user) == 1
+    domain_user = domain_user[0]
+    assert len(domain_user['adapters']) == 1 \
+        and domain_user['adapters'][0]['plugin_name'] == 'active_directory_adapter', \
+        'user should have been fetched only from one adapter, which is AD'
+    assert len(domain_user['tags']) == 1 and domain_user['tags'][0]['plugin_name'] == 'general_info', \
+        'User should have only one tag that came from general info'
+    domain_user_sid = domain_user['adapters'][0]['data']['user_sid']
+    assert dv_users_by_sid[domain_user_sid]['username'] == domain_user['adapters'][0]['data']['id']
+    assert dv_users_by_sid[domain_user_sid]['is_local'] is False
+    assert {
+        'device_caption': 'TESTWINDOWS7.TestDomain.test',
+        'last_use_date': dv_users_by_sid[domain_user_sid]['last_use_date'],
+        'adapter_unique_name': 'active_directory_adapter_0',
+        'adapter_data_id': 'CN=TESTWINDOWS7,CN=Computers,DC=TestDomain,DC=test',
+        'adapter_client_used': 'TestDomain.test'
+    } in domain_user['tags'][0]['data']['associated_devices']
+    local_users = axonius_system.get_users_with_condition({'adapters.data.is_local': True})
+
+    num_of_associated_devices_and_local_users = 0
+    all_local_users_by_sids = {u['tags'][0]['data']['user_sid']: u['tags'][0]['data'] for u in local_users}
+    for dv_local_user_sid, dv_local_user in dv_users_by_sid.items():
+        if dv_local_user.get('is_local') is not True:
+            continue
+        assert dv_local_user_sid in all_local_users_by_sids
+        num_of_associated_devices_and_local_users += 1
+    assert num_of_associated_devices_and_local_users, 'We expect at least one local user created'

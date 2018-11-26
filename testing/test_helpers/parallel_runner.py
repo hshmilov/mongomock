@@ -20,9 +20,6 @@ class ParallelRunner(object):
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
 
-    def std_file(self, task_name):
-        return os.path.join(f"{self.logs_dir}", f"task_{task_name}_std.log")
-
     def err_file(self, task_name):
         return os.path.join(f"{self.logs_dir}", f"task_{task_name}_err.log")
 
@@ -96,7 +93,6 @@ class ParallelRunner(object):
 
     def pump_std(self, name, proc):
         print(name, f"{COLOR.get('light_magenta', '')}STDOUT{COLOR.get('reset', '')}")
-        print(open(self.std_file(name), "rb").read().decode("utf-8"))
         error = open(self.err_file(name), "rb").read().decode("utf-8")
         if error.strip():
             print(name, f"{COLOR.get('light_red', '')}STDERR{COLOR.get('reset', '')}")
