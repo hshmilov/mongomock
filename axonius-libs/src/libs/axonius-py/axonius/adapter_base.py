@@ -261,6 +261,8 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         device_age_cutoff = self.__device_time_cutoff()
         user_age_cutoff = self.__user_time_cutoff()
+        self.send_external_info_log(f"Cleaning devices and users that are before "
+                                    f"{device_age_cutoff}, {user_age_cutoff}")
         logger.info(f"Cleaning devices and users that are before {device_age_cutoff}, {user_age_cutoff}")
         devices_cleaned = self.__clean_entity(device_age_cutoff, EntityType.Devices)
         users_cleaned = self.__clean_entity(user_age_cutoff, EntityType.Users)
@@ -982,11 +984,8 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 self.create_notification(f"Adapter {self.plugin_name} had connection error to "
                                          f"server with the ID {client_id}.",
                                          str(e2))
-                try:
-                    self.send_syslog_message(f'Adapter {self.plugin_name} had connection error'
-                                             f' to server with the ID {client_id}.', 'info')
-                except Exception:
-                    logger.exception(f'Problem sending syslog message')
+                self.send_external_info_log(f'Adapter {self.plugin_name} had connection error'
+                                            f' to server with the ID {client_id}.', 'info')
                 logger.exception(
                     "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
 

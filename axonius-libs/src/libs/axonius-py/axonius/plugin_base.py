@@ -47,6 +47,7 @@ from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.fresh_service.connection import FreshServiceConnection
+from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -1254,6 +1255,9 @@ class PluginBase(Configurable, Feature):
                 self.create_notification(
                     f"Finished aggregating {entity_type} for client {client_name}, "
                     f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
+            self.send_external_info_log(f"Finished aggregating {entity_type} for client {client_name}, "
+                                        f" aggregation took {time_for_client.seconds} seconds and "
+                                        f"returned {inserted_data_count}.")
             if should_log_info is True:
                 logger.info(
                     f"Finished aggregating {entity_type} for client {client_name}, "
@@ -2001,6 +2005,16 @@ class PluginBase(Configurable, Feature):
                 except Exception:
                     logger.exception(f"Got exception creating ServiceNow computer with {name}")
 
+    def send_external_info_log(self, message):
+        try:
+            self.send_syslog_message(message, 'info')
+        except Exception:
+            logger.exception(f'Problem sending syslog message {message}')
+        try:
+            self.send_https_log_message(message)
+        except Exception:
+            logger.exception(f'Problem sending https log message {message}')
+
     def send_syslog_message(self, message, log_level):
         syslog_settings = self._syslog_settings
         if syslog_settings['enabled'] is True:
@@ -2008,6 +2022,19 @@ class PluginBase(Configurable, Feature):
             # Starting the messages with the tag Axonius
             formatted_message = f'Axonius:{message}'
             getattr(syslog_logger, log_level)(formatted_message)
+
+    def send_https_log_message(self, message):
+        https_log_setting = self._https_logs_settings
+        if https_log_setting['enabled'] is True and https_log_setting.get('https_log_server'):
+            host = https_log_setting.get('https_log_server')
+            port = https_log_setting.get('https_log_port') or 443
+            https_proxy = https_log_setting.get('https_proxy')
+            url = RESTConnection.build_url(domain=host, port=port).strip('/')
+            proxies = dict()
+            proxies['http'] = None
+            proxies['https'] = https_proxy
+            r = requests.post(url=url, data=message, proxies=proxies)
+            r.raise_for_status()
 
     @property
     def mail_sender(self):
@@ -2032,6 +2059,7 @@ class PluginBase(Configurable, Feature):
             {'config_name': 'CoreService'})['config']
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
+        self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._execution_enabled = config['execution_settings']['enabled']
         self._should_use_axr = config['execution_settings']['should_use_axr']
@@ -2122,6 +2150,39 @@ class PluginBase(Configurable, Feature):
                     "title": "Syslog Settings",
                     "type": "array",
                     "required": ["syslogHost"]
+                },
+                {
+                    'https_log_settings': {
+                        "enabled": False,
+                        'https_log_server': None
+                    },
+                    "items": [
+                        {
+                            "name": "enabled",
+                            "title": "Use HTTPS logs",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "https_log_server",
+                            "title": "HTTPS Logs Host",
+                            "type": "string"
+                        },
+                        {
+                            "name": "https_log_port",
+                            "title": "Port",
+                            "type": "integer",
+                            "format": "port"
+                        },
+                        {
+                            'name': 'https_proxy',
+                            'title': 'HTTPS Proxy',
+                            'type': 'string'
+                        }
+                    ],
+                    "name": "https_log_settings",
+                    "title": "HTTPS Logs Settings",
+                    "type": "array",
+                    "required": ["https_log_server"]
                 },
                 {
                     "items": [
@@ -2413,6 +2474,12 @@ class PluginBase(Configurable, Feature):
                 "syslogHost": None,
                 "syslogPort": logging.handlers.SYSLOG_UDP_PORT,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
+            },
+            'https_log_settings': {
+                "enabled": False,
+                'https_log_server': None,
+                'https_log_port': 443,
+                'https_proxy': None
             },
             MAINTENANCE_SETTINGS: {
                 ANALYTICS_SETTING: True,

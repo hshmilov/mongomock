@@ -194,10 +194,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             self.current_phase = scheduler_consts.Phases.Research
             if self._notify_on_adapters is True:
                 self.create_notification(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
-            try:
-                self.send_syslog_message(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
-            except Exception:
-                logger.exception(f'Problem sending syslog message')
+            self.send_external_info_log(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
             logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
             try:
                 yield
@@ -225,10 +222,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             logger.info(f'Started Subphase {subphase}')
             if self._notify_on_adapters is True:
                 self.create_notification(f'Started Subphase {subphase}')
-            try:
-                self.send_syslog_message(f'Started Subphase {subphase}')
-            except Exception:
-                logger.exception(f'Problem sending syslog message')
+            self.send_external_info_log(f'Started Subphase {subphase}')
 
         with self._start_research():
             self.state.Phase = scheduler_consts.Phases.Research
@@ -282,10 +276,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             if self._notify_on_adapters is True:
                 self.create_notification(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
-            try:
-                self.send_syslog_message(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
-            except Exception:
-                logger.exception(f'Problem sending syslog message')
+            self.send_external_info_log(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
 
     def __get__all_adapters(self):
         with self._get_db_connection() as db_connection:

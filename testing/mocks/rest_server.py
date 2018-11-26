@@ -9,6 +9,7 @@ from flask import Flask, request, Response, jsonify
 
 CURRENT_PATH = os.path.abspath(os.path.dirname(__file__))
 APP = Flask('Mock Server')
+LOGS = []
 
 
 def mock_services(func):
@@ -67,6 +68,16 @@ def get_body_params():
     if json_to_return is None:
         json_to_return = {}
     return jsonify(json_to_return)
+
+
+@APP.route('/logs', methods=['GET', 'POST'])
+def logs():
+    if request.method == 'POST':
+        data = request.get_data()
+        if isinstance(data, bytes):
+            data = data.decode('utf-8')
+        LOGS.append(str(data))
+    return jsonify(LOGS)
 
 
 def main():

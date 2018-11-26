@@ -539,6 +539,9 @@ class AggregatorService(PluginBase, Triggerable):
         """
 
         start_time = time.time()
+        if self._notify_on_adapters is True:
+            self.create_notification(f"Starting to fetch device for {adapter_unique_name}")
+        self.send_external_info_log(f"Starting to fetch device for {adapter_unique_name}")
         logger.info(f"Starting to fetch device for {adapter_unique_name}")
         try:
             data = self._request_insertion_from_adapters(adapter_unique_name)
