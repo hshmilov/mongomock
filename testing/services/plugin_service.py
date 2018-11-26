@@ -9,6 +9,7 @@ from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           VERSION_COLLECTION)
+from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
@@ -40,6 +41,16 @@ class PluginService(DockerService):
         self.plugin_name = os.path.basename(self.service_dir)
         self.db = MongoService()
         self.__cached_api_key = None
+
+        self._historical_entity_views_db_map = {
+            EntityType.Users: self.db.client['aggregator']['historical_users_db_view'],
+            EntityType.Devices: self.db.client['aggregator']['historical_devices_db_view'],
+        }
+
+        self._entity_db_map = {
+            EntityType.Users: self.db.client['aggregator']['users_db'],
+            EntityType.Devices: self.db.client['aggregator']['devices_db'],
+        }
 
     @property
     def volumes_override(self):

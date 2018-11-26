@@ -1,12 +1,15 @@
 import shutil
-from typing import List
+import traceback
+from collections import defaultdict
+from typing import List, Tuple
 
 from retrying import retry
 
+from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.entities import EntityType
 from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
 from services.plugin_service import API_KEY_HEADER, PluginService
-from axonius.consts.plugin_consts import GUI_NAME
+from axonius.consts.plugin_consts import GUI_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.consts.gui_consts import USERS_COLLECTION
 import requests
 
@@ -26,6 +29,8 @@ class AggregatorService(PluginService):
             self._update_schema_version_2()
         if self.db_schema_version < 3:
             self._update_schema_version_3()
+        if self.db_schema_version < 4:
+            self._update_schema_version_4()
 
     def __create_capped_collections(self):
         """
@@ -125,6 +130,101 @@ class AggregatorService(PluginService):
             self.db_schema_version = 3
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 3. Details: {e}')
+            traceback.print_exc()
+
+    @staticmethod
+    def fix_entity(entity) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+        """
+        Given an axonius entity, calculates which adapters are new and which are false
+        :return: Tuple [set_new, set_old] where each set it a list of [plugin_unique_name, id]
+        for adapters that should be market new and old, respectfully.
+        """
+        adapters_by_name = defaultdict(list)
+        for adapter in entity['adapters']:
+            if adapter['data'].get(LAST_SEEN_FIELD) and '_old' not in adapter['data']:
+                adapters_by_name[adapter[PLUGIN_NAME]].append(adapter)
+
+        set_new = []
+        set_old = []
+
+        for name, adapters in adapters_by_name.items():
+            newest = max(adapters, key=lambda x: x['data'][LAST_SEEN_FIELD])
+
+            set_new.append((newest[PLUGIN_UNIQUE_NAME], newest['data']['id']))
+            for adapter in adapters:
+                if adapter != newest:
+                    set_old.append((adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']))
+
+        return set_new, set_old
+
+    @staticmethod
+    def update_many_adapters(db, to_set, _id, old_value):
+        """
+        Takes a set from "fix_entity" (see above) and updates the given axonius entity
+        :param db: db to change
+        :param to_set: one set from fix_entity
+        :param _id: _id of entity to change
+        :param old_value: which value to set into "data._old"
+        """
+        db.update_one({
+            '_id': _id
+        },
+            {
+                '$set': {
+                    'adapters.$[i].data._old': old_value
+                }
+        },
+            array_filters=[
+                {
+                    '$or': [
+                        {
+                            '$and': [
+                                {f'i.{PLUGIN_UNIQUE_NAME}': unique_name},
+                                {'i.data.id': adapter_id}
+                            ]
+                        }
+                        for unique_name, adapter_id
+                        in to_set
+                    ]
+                }
+        ])
+
+    def _update_schema_version_4(self):
+        # https://axonius.atlassian.net/browse/AX-2698
+        try:
+            for entity_type in EntityType:
+                db = self._entity_db_map[entity_type]
+
+                # all entities that have last_seen but not _old must be fixed to also have _old
+                # if there are two
+                pending_fix = list(db.find({
+                    'adapters': {
+                        '$elemMatch': {
+                            'data.last_seen': {
+                                '$exists': True
+                            },
+                            'data._old': {
+                                '$exists': False
+                            }
+                        }
+                    }
+                }))
+
+                print(f'Fixing up {len(pending_fix)} entities for duplicates')
+
+                for entity in pending_fix:
+                    _id = entity['_id']
+                    set_new, set_old = self.fix_entity(entity)
+                    if set_new:
+                        self.update_many_adapters(db, set_new, _id, False)
+
+                    if set_old:
+                        self.update_many_adapters(db, set_old, _id, True)
+
+            self.db_schema_version = 4
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 4. Details: {e}')
+            traceback.print_exc()
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):
