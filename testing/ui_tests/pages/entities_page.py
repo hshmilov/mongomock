@@ -13,6 +13,7 @@ class EntitiesPage(Page):
     QUERY_FIELD_DROPDOWN_CSS = '.x-dropdown.x-select.field-select'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
     QUERY_TEXT_BOX_CSS = 'div.search-input.x-select-search > input'
+    QUERY_SELECTED_OPTIONS_CSS = 'div.x-select-options'
     QUERY_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.x-select-comp'
     QUERY_VALUE_COMPONENT_CSS = '.expression-value'
@@ -100,6 +101,13 @@ class EntitiesPage(Page):
                            self.QUERY_SELECTED_OPTION_CSS,
                            text,
                            parent=parent)
+
+    def open_query_adapters_list(self):
+        self.driver.find_element_by_css_selector(self.QUERY_ADAPTER_DROPDOWN_CSS).click()
+
+    def get_query_adapters_list(self):
+        self.open_query_adapters_list()
+        return self.driver.find_element_by_css_selector(self.QUERY_SELECTED_OPTIONS_CSS).text
 
     def select_query_comp_op(self, text, parent=None):
         self.select_option_without_search(self.QUERY_COMP_OP_DROPDOWN_CSS,

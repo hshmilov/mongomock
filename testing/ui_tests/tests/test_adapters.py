@@ -139,6 +139,19 @@ class TestAdapters(TestBase):
         finally:
             self.wait_for_adapter_down(CISCO_NAME)
 
+    def test_query_wizard_adapters_clients(self):
+        with CiscoService().contextmanager(take_ownership=True):
+            self.wait_for_adapter(CISCO_NAME)
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_spinner_to_end()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.adapters_page.wait_for_table_to_load()
+            self.devices_page.click_query_wizard()
+            adapters = self.devices_page.get_query_adapters_list()
+            # Cisco should not be in the adapters list because its dose not have a client
+            assert CISCO_NAME not in adapters
+
     def add_ad_server(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
