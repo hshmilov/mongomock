@@ -17,6 +17,11 @@ device_pair = NewType('DevicePair', Tuple)
 # This whole file is generic across all entities, the language still uses "devices" but rest assured it works
 
 
+class CorrelationMarker():
+    """ dummy class to mark that correlation state """
+    pass
+
+
 def _create_correlation_result(device1, device2, data_dict, reason) -> CorrelationResult:
     """
     Creates a CorrelationResult that will correlate given devices with the given data and reason.
@@ -309,7 +314,7 @@ class CorrelatorEngineBase(ABC):
     def _correlation_preconditions(self):
         pass
 
-    def correlate(self, devices):
+    def correlate(self, devices, use_markers=False):
         """
         This calls `_raw_correlate` and also does some significant post processing.
         Post processing involves checking that correlations made are only between available devices
@@ -338,6 +343,10 @@ class CorrelatorEngineBase(ABC):
 
         logger.info(f"Correlating {len(devices)} devices")
         for result in itertools.chain(logic_correlations, self._raw_correlate(devices)):
+
+            if isinstance(result, CorrelationMarker) and not use_markers:
+                continue
+
             if not isinstance(result, CorrelationResult):
                 yield result  # only post process correlation results
                 continue

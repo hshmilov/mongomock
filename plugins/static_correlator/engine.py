@@ -1,31 +1,41 @@
 import logging
 from itertools import combinations
 
-from axonius.consts.plugin_consts import PLUGIN_NAME
-
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
-from axonius.correlator_base import has_hostname, has_name, has_mac, has_last_used_users, has_serial, has_cloud_id, \
-    has_ad_or_azure_name
-from axonius.correlator_engine_base import CorrelatorEngineBase
+from axonius.consts.plugin_consts import PLUGIN_NAME
+from axonius.correlator_base import (has_ad_or_azure_name, has_cloud_id,
+                                     has_hostname, has_last_used_users,
+                                     has_mac, has_name, has_serial)
+from axonius.correlator_engine_base import (CorrelatorEngineBase, CorrelationMarker)
 from axonius.types.correlation import CorrelationReason
 from axonius.utils.parsing import (NORMALIZED_MACS,
+                                   asset_hostnames_do_not_contradict,
+                                   compare_ad_name_or_azure_display_name,
+                                   compare_asset_hosts, compare_asset_name,
+                                   compare_bios_serial_serial, compare_clouds,
                                    compare_device_normalized_hostname,
-                                   compare_hostname, compare_macs,
-                                   get_hostname, get_normalized_ip, get_normalized_hostname_str,
-                                   get_serial, hostnames_do_not_contradict, asset_hostnames_do_not_contradict,
-                                   ips_do_not_contradict_or_mac_intersection, is_from_ad,
-                                   get_asset_name, compare_asset_name, is_from_juniper_and_asset_name,
-                                   is_junos_space_device,
-                                   normalize_adapter_devices, normalize_mac,
-                                   compare_id, is_old_device, is_sccm_or_ad, get_id,
+                                   compare_domain, compare_hostname,
+                                   compare_id, compare_last_used_users,
+                                   compare_macs,
+                                   get_ad_name_or_azure_display_name,
+                                   get_asset_name, get_asset_or_host,
+                                   get_bios_serial_or_serial, get_cloud_data,
+                                   get_domain, get_hostname, get_id,
+                                   get_last_used_users,
+                                   get_normalized_hostname_str,
+                                   get_normalized_ip, get_serial,
+                                   hostnames_do_not_contradict,
+                                   ips_do_not_contradict,
+                                   ips_do_not_contradict_or_mac_intersection,
+                                   is_azuread_or_ad_and_have_name,
+                                   is_deep_security_adapter_not_localhost,
+                                   is_different_plugin, is_from_ad,
+                                   is_from_juniper_and_asset_name,
                                    is_from_no_mac_adapters_with_empty_mac,
-                                   is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial,
-                                   compare_domain, get_domain, get_cloud_data, compare_clouds,
-                                   is_azuread_or_ad_and_have_name, get_ad_name_or_azure_display_name,
-                                   compare_ad_name_or_azure_display_name, get_last_used_users, compare_last_used_users,
-                                   compare_asset_hosts, get_asset_or_host, is_deep_security_adapter_not_localhost,
-                                   ips_do_not_contradict, is_illusive_adapter, is_linux, is_splunk_vpn,
-                                   not_aruba_adapters)
+                                   is_illusive_adapter, is_junos_space_device,
+                                   is_linux, is_old_device, is_sccm_or_ad,
+                                   is_splunk_vpn, normalize_adapter_devices,
+                                   normalize_mac, not_aruba_adapters)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -55,7 +65,6 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         }
     }
     """
-
     @property
     def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
@@ -86,6 +95,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         6. CorrelationReason.StaticAnalysis - the analysis used to discover the correlation
         """
+
         logger.info('Starting to correlate on MAC')
         mac_indexed = {}
         for adapter in adapters_to_correlate:
@@ -376,6 +386,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
+
+        # Correlating mac must happen after all the other correlations are DONE.
+        # the actual linking is happend in _process_correlation_result in other thread,
+        # so in order to solve the race condition we yield marker here and
+        # wait for all correlation to end until the marker in _map_correlation
+        yield CorrelationMarker()
+
         yield from self._correlate_mac(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:

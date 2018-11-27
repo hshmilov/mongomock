@@ -1,7 +1,9 @@
 import logging
-import multiprocessing
 from abc import ABC, abstractmethod
+from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool as ThreadPool
+
+from namedlist import namedlist
 
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import (MAC_FIELD,
@@ -10,15 +12,13 @@ from axonius.entities import EntityType
 from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase
-from namedlist import namedlist
-
 from axonius.types.correlation import CorrelationResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-"""
+'''
 Represents a warning that should be passed on to the GUI.
-"""
+'''
 WarningResult = namedlist('WarningResult', ['title', 'content', ('notification_type', 'basic')])
 
 
@@ -82,6 +82,7 @@ def figure_actual_os(adapters):
         os = adapter.get(OS_FIELD)
         if os is not None:
             return os.get('type')
+        return None
 
     oses = list(set(get_os_type(adapter['data']) for adapter in adapters))
 
@@ -105,7 +106,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
 
     @classmethod
     def specific_supported_features(cls) -> list:
-        return ["Correlator"]
+        return ['Correlator']
 
     def _triggered(self, job_name, post_json, *args):
         """
@@ -114,7 +115,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         :return:
         """
         if job_name != 'execute':
-            raise ValueError("The only job name supported is execute")
+            raise ValueError('The only job name supported is execute')
 
         entities_to_correlate = None
         if post_json is not None:
@@ -132,11 +133,31 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         if entities_ids:
             return list(db.find({
                 'internal_axon_id': {
-                    "$in": entities_ids
+                    '$in': entities_ids
                 }
             }))
 
         return list(db.find({}))
+
+    def _process_correlation_result(self, result):
+        """ for each correlation link the adapter
+            :param result: should  be _correlate result
+        """
+        if isinstance(result, CorrelationResult):
+            try:
+                self.link_adapters(self._entity_to_correlate, result, rebuild=False)
+            except Exception:
+                logger.warning(f'Failed linking for some reason, {result}')
+        if isinstance(result, WarningResult):
+            logger.warning(f'{result.title}, {result.content}: {result.notification_type}')
+            self.create_notification(result.title, result.content, result.notification_type)
+
+    def _map_correlation(self, entities_to_correlate):
+        """ for each entity process it and link adapters """
+        with ThreadPool(processes=2 * cpu_count()) as pool:
+            logger.info('Waiting for correlation')
+            pool.map(self._process_correlation_result, self._correlate(entities_to_correlate))
+            logger.info('Done!')
 
     def __correlate(self, entities_ids=None):
         """
@@ -146,22 +167,8 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         """
         entities_to_correlate = self.get_entities_from_ids(entities_ids)
         logger.info(
-            f"Correlator {self.plugin_unique_name} started to correlate {len(entities_to_correlate)} entities")
-        with ThreadPool(processes=2 * multiprocessing.cpu_count()) as pool:
-            def process_correlation_result(result):
-                if isinstance(result, CorrelationResult):
-                    try:
-                        self.link_adapters(self._entity_to_correlate, result, rebuild=False)
-                    except Exception:
-                        logger.warning(f'Failed linking for some reason, {result}')
-                if isinstance(result, WarningResult):
-                    logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
-                    self.create_notification(result.title, result.content, result.notification_type)
-                    return
-
-            logger.info("Waiting for correlation")
-            pool.map(process_correlation_result, self._correlate(entities_to_correlate))
-            logger.info("Done!")
+            f'Correlator {self.plugin_unique_name} started to correlate {len(entities_to_correlate)} entities')
+        self._map_correlation(entities_to_correlate)
         self._request_db_rebuild(sync=False)
 
     @property
