@@ -25,3 +25,7 @@ class TestEnsiloAdapter(AdapterTestBase):
     @pytest.mark.skip("Waiting to get ensilo")
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip("AX-2729")
+    def test_check_reachability(self):
+        pass
