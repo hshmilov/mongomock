@@ -6,7 +6,7 @@ from juniper_adapter import consts
 from juniper_adapter.client import JuniperClient
 
 from axonius.clients.juniper import rpc
-from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter
+from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter, update_connected
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.utils.files import get_local_config_file
@@ -52,7 +52,7 @@ class JuniperAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _parse_raw_data(self, devices_raw_data):
+    def __parse_raw_data(self, devices_raw_data):
         others = defaultdict(list)
         for device_type, juno_device in devices_raw_data:
             if device_type == 'Juniper Space Device':
@@ -86,6 +86,9 @@ class JuniperAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Error in handling {value}')
                 continue
+
+    def _parse_raw_data(self, devices_raw_data):
+        yield from update_connected(self.__parse_raw_data(devices_raw_data))
 
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, JuniperClient)

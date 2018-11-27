@@ -4103,9 +4103,9 @@ LLDP_MOCK2 = '''<rpc-reply xmlns:junos="http://xml.juniper.net/junos/13.3R6/juno
 
 
 def mock_query_basic_info():
-    return [
+    return ('Juniper-R1', [
         ('interface list', INTERFACE_MOCK),
         ('hardware', HARDWARE_MOCK),
         ('version', VERSION_MOCK),
         ('vlans', VLAN_MOCK),
-    ]
+    ])

@@ -17,7 +17,6 @@ class JuniperDeviceAdapter(DeviceAdapter):
 def _get_lldp_id(lldp_raw_device):
     """ The id field is a little bit messy becuse we want the device id
         to refer to all the different mac addresses """
-    # XXX: fix name
     macs = []
 
     for _, entry in lldp_raw_device:
@@ -25,10 +24,11 @@ def _get_lldp_id(lldp_raw_device):
             macs.append(entry.get('lldp-remote-chassis-id'))
 
     # filter empty and None macs
-    first_mac = sorted(list(filter(bool, macs)))[0]
+    macs = sorted(list(filter(bool, macs)))
     if not macs:
         raise ValueError('Unable to create id for device')
 
+    first_mac = macs[0]
     return '_'.join(['JUNIPER_LLDP', first_mac])
 
 
@@ -347,6 +347,48 @@ def create_device(create_device_func, type_, raw_device):
         raise ValueError(f'Unknown type {type_}')
 
     yield from CREATE_DEVICE_CALLBACKS[type_](create_device_func, raw_device)
+
+
+def update_connected(devices):
+    devices = list(devices)
+
+    other_devices = [device for device in devices if device.device_type != 'Juniper Device']
+    juniper_devices = {device.hostname: device for device in devices
+                       if device.device_type == 'Juniper Device' and device.to_dict().get('hostname')}
+
+    for other_device in other_devices:
+        try:
+            if not other_device.to_dict().get('connected_devices'):
+                continue
+
+            for connected_device in other_device.connected_devices:
+                if not connected_device.to_dict().get('remote_name'):
+                    continue
+
+                if not connected_device.to_dict().get('remote_ifaces'):
+                    continue
+
+                remote = juniper_devices.get(connected_device.remote_name)
+                if not remote:
+                    continue
+
+                if not remote.to_dict().get('network_interfaces'):
+                    continue
+
+                for iface in connected_device.remote_ifaces:
+                    for remote_iface in remote.network_interfaces:
+                        if not remote_iface.to_dict().get('name') or not iface.to_dict().get('name'):
+                            continue
+
+                        if not remote_iface.to_dict().get('port_type'):
+                            continue
+
+                        if remote_iface.name == iface.name and remote_iface.port_type:
+                            iface.port_type = remote_iface.port_type
+        except Exception:
+            logger.exception('Failed to update connected')
+
+    return devices
 
 
 CREATE_DEVICE_CALLBACKS = {

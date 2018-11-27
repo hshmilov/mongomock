@@ -6,7 +6,7 @@ from jnpr.junos.exception import RpcError
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.files import get_local_config_file
 from axonius.clients.juniper import rpc
-from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter
+from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter, update_connected
 from axonius.adapter_exceptions import ClientConnectionException
 from junos_adapter.client import JunOSClient
 from junos_adapter.client_id import get_client_id
@@ -44,10 +44,7 @@ class JunosAdapter(AdapterBase):
                     ('Juniper Device', client.query_basic_info),
             ]:
                 try:
-                    if type_ == 'Juniper Device':
-                        yield (type_, func())
-                    else:
-                        yield (type_, (client._host, func()))
+                    yield (type_, (client._host, func()))
                 except (RPCError, RpcError) as e:
                     logger.error(f'Failed to execute RPC Command: {str(e)}')
                 except Exception:
@@ -89,7 +86,7 @@ class JunosAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _parse_raw_data(self, raw_datas):
+    def __parse_raw_data(self, raw_datas):
         for type_, raw_data in raw_datas:
             try:
                 if type_ != 'Juniper Device':
@@ -100,6 +97,9 @@ class JunosAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Error in handling {raw_data}')
                 continue
+
+    def _parse_raw_data(self, devices_raw_data):
+        yield from update_connected(self.__parse_raw_data(devices_raw_data))
 
     @classmethod
     def adapter_properties(cls):

@@ -21,13 +21,13 @@ def fix_subnet(text):
     return '/'.join([ip, subnet])
 
 
-def parse_basic_info(xmls: List[Tuple[str, str]]):
+def parse_basic_info(xmls: Tuple[str, List[Tuple[str, str]]]):
     """
         Parse basic info is a little bit diffrenent form all the other parser,
         It takes a list of different xml, parse each one and return basic info device
     """
     raw_data = {}
-
+    device_name, xmls = xmls
     for type_, xml in xmls:
         try:
             if type_ not in BASIC_INFO_TYPES:
@@ -39,6 +39,12 @@ def parse_basic_info(xmls: List[Tuple[str, str]]):
             raw_data[type_] = parse_callback(xml)
         except Exception as e:
             logger.exception(f'Exception while handling type {type_}')
+
+    # Monkey patch device_name if we didn't get it yet
+    if 'version' not in raw_data:
+        raw_data['version'] = {}
+    if not raw_data['version'].get('host-name'):
+        raw_data['version']['host-name'] = device_name
     return raw_data
 
 
@@ -131,7 +137,7 @@ def parse_hardware(xml):
 def parse_version(xml):
     """ parse get-software-information xml """
     if gettag(xml.tag) != 'software-information':
-        raise ValueError(f'interface-information not found got {gettag(xml.tag)}')
+        raise ValueError(f'software-information not found got {gettag(xml.tag)}')
 
     entry = {}
     for field in xml:

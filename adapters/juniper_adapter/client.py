@@ -98,7 +98,7 @@ class JuniperClient:
                 except Exception:
                     logger.exception(f'Something is wrong with pu {str(pu)}')
 
-            yield from map(lambda x: ('Juniper Device', x), juniper_devices.values())
+            yield from map(lambda x: ('Juniper Device', x), juniper_devices.items())
 
         finally:
             tm.delete()
