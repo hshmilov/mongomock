@@ -40,5 +40,23 @@ RUN pip2 install -r requirements2.txt
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
+# this SDK isn't available under public PIP
+# https://vdc-download.vmware.com/vmwb-repository/dcr-public/8c68a127-a4fd-4535-a819-3a64d94ca5cb/2b4c33f5-6011-4b43-99c7-1a14b1855f4b/VMware-vCloud-Suite-SDK-Python-6.0.0-2561074-READMEs/client/vCloud-Suite-Client-SDK-Python-README.html
+# https://github.com/vmware/vsphere-automation-sdk-python
+
+COPY VMware-vCloud-Suite-SDK-Python-6.0.0-2561074.zip /home/axonius/app/cloud_suite.zip
+RUN unzip cloud_suite.zip
+
+# you might be wondering why I'm using --no-deps here
+# It's because I love it when you install an old package that has an old requirement
+# so pip uninstalls the current, not old, requirement
+# but pip also depends on that requirement not being too old
+# so pip breaks itself
+# so far this works so please don't touch
+
+RUN pip3 install VMware-vCloud-Suite-SDK-Python-6.0.0/client/lib/vapi_runtime-1.0.0.zip --no-deps
+RUN pip3 install VMware-vCloud-Suite-SDK-Python-6.0.0/client/lib/vapi_common_client-1.0.0.zip --no-deps
+RUN pip3 install VMware-vCloud-Suite-SDK-Python-6.0.0/client/lib/vapi_client_bindings-1.0.0.zip --no-deps
+
 # Set a label for this image.
 LABEL "com.axonius.image-type"="axonius"
