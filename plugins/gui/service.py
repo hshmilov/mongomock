@@ -319,8 +319,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     def load_metadata(self):
         try:
+            metadata_bytes = ''
             if os.path.exists(METADATA_PATH):
-                with open(METADATA_PATH, 'r') as metadata_file:
+                with open(METADATA_PATH, 'r', encoding='UTF-8') as metadata_file:
                     metadata_bytes = metadata_file.read()[:-1].replace('\\', '\\\\')
                     return json.loads(metadata_bytes)
         except Exception:

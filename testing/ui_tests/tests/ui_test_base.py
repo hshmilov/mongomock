@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from random import randint
+import sys
 
 import pytest
 from passlib.hash import bcrypt
@@ -32,6 +32,7 @@ from ui_tests.pages.dashboard_page import DashboardPage
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # pylint: disable=too-many-instance-attributes
+# pylint: disable=no-value-for-parameter
 
 
 class TestBase:
@@ -133,7 +134,11 @@ class TestBase:
 
     def setup_method(self, method):
         self._initialize_driver()
-        self.driver.maximize_window()
+
+        # mac issues, maximize is not working on mac anyway now
+        if not self.local_browser and sys.platform != 'darwin':
+            self.driver.maximize_window()
+
         self.driver.implicitly_wait(0.3)
         self.username = DEFAULT_USER['user_name']
         self.password = DEFAULT_USER['password']
@@ -178,16 +183,16 @@ class TestBase:
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=self.username, password=self.password, remember_me=True)
 
-    def _create_history(self, entity_type: EntityType, update_field=None):
+    def _create_history(self, entity_type: EntityType, update_field=None, days_to_fill=30):
         history_db = self.axonius_system.db.get_historical_entity_db_view(entity_type)
         entity_count = self.axonius_system.db.get_entity_db_view(entity_type).count_documents({})
         if not entity_count:
             return []
         day_to_entity_count = []
-        for day in range(1, 30):
+        for day in range(1, days_to_fill):
             # Randomly select a chunk of entities to be added as history for `day` back
-            entity_limit = randint(entity_count - int(entity_count / 2), entity_count)
-            entity_skip = randint(0, entity_count - entity_limit)
+            entity_limit = entity_count
+            entity_skip = 0
             entities = list(history_db.find().skip(entity_skip).limit(entity_limit))
             current_date = datetime.now() - timedelta(day)
             for entity in entities:

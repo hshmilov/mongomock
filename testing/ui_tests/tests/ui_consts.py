@@ -56,3 +56,8 @@ class Saml:
 class Notes:
     note1_text = 'note1_text'
     note1_device_filter = 'DESKTOP-MPP10U1'
+
+
+class History:
+    history_depth = 40
+    file_path = 'history_upgrade_test.tmp'
