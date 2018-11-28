@@ -349,22 +349,22 @@ class AggregatorService(PluginBase, Triggerable):
 
             with self.__rebuild_db_view_lock[entity_type]:
                 tmp_collection = self._get_db_connection()[to_db.database.name][f"temp_{to_db.name}"]
-                logger.info("Performance: starting aggregating to tmp collection")
+                logger.debug("Performance: starting aggregating to tmp collection")
                 from_db.aggregate([
                     {
                         "$out": tmp_collection.name
                     }
                 ])
-                logger.info("Performance: starting aggregating to actual collection")
+                logger.debug("Performance: starting aggregating to actual collection")
                 tmp_collection.aggregate([
                     *aggregation_stages_for_entity_view,
                     {
                         "$out": to_db.name
                     }
                 ])
-                logger.info("Performance: starting drop temp collection")
+                logger.debug("Performance: starting drop temp collection")
                 tmp_collection.drop()
-                logger.info("Performance: finished")
+                logger.debug("Performance: finished")
 
             self.__last_full_db_rebuild[entity_type] = datetime.utcnow()
 
