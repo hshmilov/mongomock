@@ -48,7 +48,15 @@ def _get_pylint_path():
     return subprocess.Popen([which_command, 'pylint'], stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
 
 
-def _is_pylint_ok(file_name):
+def _is_pylint_ok_expected_true(file_name):
+    return _is_pylint_ok(file_name, True)
+
+
+def _is_pylint_ok_expected_false(file_name):
+    return _is_pylint_ok(file_name, False)
+
+
+def _is_pylint_ok(file_name, is_success_expected):
     pylint_path = _get_pylint_path()
     child = subprocess.Popen(
         [pylint_path, '--rcfile', PYLINTRC_FILE, file_name],
@@ -57,7 +65,7 @@ def _is_pylint_ok(file_name):
     decoded = stdout.decode('utf-8')
     good_file = child.returncode == GOOD_EXIT_CODE and \
         any(report in decoded for report in (PERFECT_PYLINT_MESSAGE, PYLINT_EMPTY_FILE))
-    if not good_file:
+    if not good_file and is_success_expected:
         print(f'ERROR: Found bad pylinted file {file_name}')
         print(decoded)
     return file_name, good_file
@@ -113,7 +121,9 @@ def _get_unexpected_pylint_state(is_success_expected):
     process_pool = multiprocessing.Pool(NUMBER_OF_PROCESSES)
     signal.signal(signal.SIGINT, original_sigint_handler)
     try:
-        res = process_pool.map_async(_is_pylint_ok, files_to_map)  # return tuple
+        # we do this hassle because we can't pickle lambdas
+        func = _is_pylint_ok_expected_true if is_success_expected else _is_pylint_ok_expected_false
+        res = process_pool.map_async(func, files_to_map)  # return tuple
         mapped_values = res.get(60 * 20)
     except KeyboardInterrupt:
         process_pool.terminate()
