@@ -50,3 +50,33 @@ class TestDashboard(TestBase):
         quantities = self.dashboard_page.find_quantity_in_card(ud_card)
         assert quantities[0] + quantities[1] == quantities[2]
         assert quantities[2] >= quantities[3]
+
+    def test_dashboard_search(self):
+        string_to_search = 'be'
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.fill_query_value(string_to_search)
+        self.dashboard_page.enter_search()
+        self.dashboard_page.wait_for_table_to_load()
+        results = self.dashboard_page.get_all_table_rows()
+        host_name = results[0][0]
+        user_name = results[1][0]
+        tables_count = self.dashboard_page.get_all_tables_counters()
+        dashboard_devices_table_count = tables_count[0]
+        dashboard_users_table_count = tables_count[1]
+        assert len(results) == dashboard_devices_table_count + dashboard_users_table_count
+        for result in results:
+            assert any(string_to_search in s.lower() for s in result)
+        self.dashboard_page.open_view_devices()
+        self.devices_page.wait_for_table_to_load()
+        devices_page_tables_count = self.devices_page.get_all_tables_counters()[0]
+        assert devices_page_tables_count == dashboard_devices_table_count
+        assert self.devices_page.find_search_value().count(f'regex("{string_to_search}", "i")') == 7
+        assert any(host_name in s for s in self.devices_page.get_all_table_rows()[0])
+        self.devices_page.page_back()
+        self.dashboard_page.open_view_users()
+        self.users_page.wait_for_table_to_load()
+        users_tables_count = self.users_page.get_all_tables_counters()[0]
+        assert users_tables_count == dashboard_users_table_count
+        assert self.users_page.find_search_value().count(f'regex("{string_to_search}", "i")') == 6
+        assert any(user_name in s for s in self.users_page.get_all_table_rows()[0])

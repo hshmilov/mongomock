@@ -85,6 +85,8 @@ class Page:
     ACTIONS_BUTTON = 'Actions'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
+    TABLE_ROWS_CSS = 'tbody .x-row.clickable'
+    TABLE_COUNTER = 'div.count'
 
     def __init__(self, driver, base_url, local_browser: bool):
         self.driver = driver
@@ -126,6 +128,10 @@ class Page:
         element.send_keys(Keys.BACKSPACE)
         element.send_keys(Keys.LEFT_ALT, Keys.BACKSPACE)
         element.clear()
+
+    @staticmethod
+    def extract_first_int(text):
+        return [int(s) for s in text if s.isdigit()][0]
 
     def fill_text_field_by_element_id(self, element_id, value, context=None, last_field=False):
         return self.fill_text_field_by(By.ID, element_id, value, context, last_field=last_field)
@@ -448,6 +454,20 @@ class Page:
 
     def get_all_checkboxes(self):
         return self.driver.find_elements_by_css_selector(self.CHECKBOX_CSS)
+
+    def get_all_table_rows(self):
+        return [elem.text.split('\n') for elem in
+                self.driver.find_elements_by_css_selector(self.TABLE_ROWS_CSS) if elem.text]
+
+    def get_all_tables_counters(self):
+        counters = self.driver.find_elements_by_css_selector(self.TABLE_COUNTER)
+        extracted_counters = []
+        for counter in counters:
+            extracted_counters.append(self.extract_first_int(counter.text))
+        return extracted_counters
+
+    def page_back(self):
+        self.driver.back()
 
     def click_ok_button(self):
         self.click_button('OK')

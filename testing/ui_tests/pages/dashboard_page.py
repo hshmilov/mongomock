@@ -9,6 +9,7 @@ class DashboardPage(Page):
     NEW_CHART = 'New Chart'
     DEVICE_DISCOVERY = 'Device Discovery'
     USER_DISCOVERY = 'User Discovery'
+    QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
 
     @property
     def root_page_css(self):
@@ -42,6 +43,21 @@ class DashboardPage(Page):
 
     def find_user_discovery_card(self):
         return self.driver.find_elements_by_css_selector('div.x-card.x-data-discovery-card')[1]
+
+    def fill_query_value(self, text, parent=None):
+        self.fill_text_field_by_css_selector(self.QUERY_SEARCH_INPUT_CSS, text, context=parent)
+
+    def enter_search(self):
+        self.key_down_enter(self.find_query_search_input())
+
+    def open_view_devices(self):
+        self.click_button('View in Devices', partial_class=True, should_scroll_into_view=False)
+
+    def open_view_users(self):
+        self.click_button('View in Users', partial_class=True, should_scroll_into_view=False)
+
+    def find_query_search_input(self):
+        return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
 
     @staticmethod
     def get_title_from_card(card):
