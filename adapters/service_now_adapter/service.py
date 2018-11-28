@@ -16,6 +16,16 @@ from axonius.utils.parsing import parse_date
 from axonius.mixins.configurable import Configurable
 logger = logging.getLogger(f'axonius.{__name__}')
 
+install_status_dict = {'0': 'Retired',
+                       '1': 'Deployed',
+                       '10': 'Consumed',
+                       '2': 'On Order',
+                       '3': 'At Depot',
+                       '6': 'In Stock',
+                       '7': 'Disposed',
+                       '8': 'Missing',
+                       '9': 'In Transit'}
+
 
 class ServiceNowAdapter(AdapterBase, Configurable):
     class MyUserAdapter(UserAdapter):
@@ -32,7 +42,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         snow_location = Field(str, 'Location')
         snow_department = Field(str, 'Department')
         assigned_to = Field(str, 'Assigned To')
-        hardware_status = Field(str, 'Hardware Status')
+        install_status = Field(str, 'Install Status')
+        assigned_to_location = Field(str, 'Assigned To Location')
+        purchase_date = Field(datetime.datetime, 'Purchase date')
+        substatus = Field(str, 'Substatus')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -240,11 +253,23 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem getting serial at {device_raw}')
                     try:
+                        device.install_status = install_status_dict.get(device_raw.get('install_status'))
+                    except Exception:
+                        logger.exception(f'Problem getting install status for {device_raw}')
+                    try:
                         ram_mb = device_raw.get('ram', '')
                         if ram_mb != '' and ram_mb != '-1' and ram_mb != -1:
                             device.total_physical_memory = int(ram_mb) / 1024.0
                     except Exception:
                         logger.exception(f'Problem getting ram at {device_raw}')
+                    try:
+                        device.substatus = device_raw.get('hardware_substatus')
+                    except Exception:
+                        logger.exception(f'Problem adding hardware status to {device_raw}')
+                    try:
+                        device.purchase_date = parse_date(device_raw.get('purchase_date'))
+                    except Exception:
+                        logger.exception(f'Problem adding purchase date to {device_raw}')
                     try:
                         host_name = device_raw.get('host_name') or device_raw.get('fqdn')
                         if host_name and name and name.lower() in host_name.lower():
@@ -271,6 +296,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         assigned_to = users_table_dict.get((device_raw.get('assigned_to') or {}).get('value'))
                         if assigned_to:
                             device.assigned_to = assigned_to.get('name')
+                            try:
+                                assigned_to_location_value = (assigned_to.get('location') or {}).get('value')
+                                device.assigned_to_location = (snow_location_table_dict.get(
+                                    assigned_to_location_value) or {}).get('name')
+                            except Exception:
+                                logger.exception(f'Problem getting assing to location in {device_raw}')
                     except Exception:
                         logger.exception(f'Problem adding assigned_to to {device_raw}')
                     owned_by = users_table_dict.get((device_raw.get('owned_by') or {}).get('value'))
@@ -303,7 +334,6 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem adding disk stuff to {device_raw}')
                     device.domain = device_raw.get('dns_domain')
-                    device.hardware_status = device_raw.get('hardware_status')
 
                     device.set_raw(device_raw)
                     yield device

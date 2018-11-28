@@ -28,7 +28,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    ips_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection,
                                    is_azuread_or_ad_and_have_name,
-                                   is_deep_security_adapter_not_localhost,
+                                   is_only_host_adapter_not_localhost,
                                    is_different_plugin, is_from_ad,
                                    is_from_juniper_and_asset_name,
                                    is_from_no_mac_adapters_with_empty_mac,
@@ -172,13 +172,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_hostname_deep_security(self, adapters_to_correlate):
+    def _correlate_hostname_only_host_adapter(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname-DeepSecurity')
         filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [is_deep_security_adapter_not_localhost],
+                                      [is_only_host_adapter_not_localhost],
                                       [not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and one is DeepSecurity'},
                                       CorrelationReason.StaticAnalysis)
@@ -375,7 +375,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         yield from self._correlate_asset_host(adapters_to_correlate)
 
-        yield from self._correlate_hostname_deep_security(adapters_to_correlate)
+        yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate)
 
         yield from self._correlate_ip_linux_illusive(adapters_to_correlate)
 

@@ -117,10 +117,12 @@ class Triggerable(Feature, ABC):
         # use with caution!
         # priority assumes blocking
         priority = request.args.get('priority', 'False') == 'True'
-        logger.info(f'Triggered {job_name} ' +
-                    ('blocking' if blocking else 'unblocked') + ' with ' +
-                    ('prioritized' if priority else 'unprioritized') +
-                    f' from {self.get_caller_plugin_name()}')
+        message = f'Triggered {job_name} ' + ('blocking' if blocking else 'unblocked') + ' with ' + \
+                  ('prioritized' if priority else 'unprioritized') + f' from {self.get_caller_plugin_name()}'
+        if blocking:
+            logger.debug(message)
+        else:
+            logger.info(message)
         return self._trigger(job_name, blocking, priority, request.get_json(silent=True))
 
     @add_rule('wait/<job_name>', methods=['GET'])

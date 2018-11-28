@@ -635,8 +635,8 @@ def is_snow_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'service_now_adapter'
 
 
-def is_deep_security_adapter_not_localhost(adapter_device):
-    return (adapter_device.get('plugin_name') == 'deep_security_adapter') and \
+def is_only_host_adapter_not_localhost(adapter_device):
+    return (adapter_device.get('plugin_name') in ['deep_security_adapter', 'cisco_umbrella_adapter']) and \
            (not adapter_device.get('data').get('hostname') or
             'localhost' not in adapter_device.get('data').get('hostname').strip().lower())
 
@@ -943,6 +943,9 @@ def asset_hostnames_do_not_contradict(adapter_device1, adapter_device2):
 
 
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
+    cb_protection = False
+    if adapter_device1.get('plugin_name') == 'carbonblack_protection_adapter' or adapter_device2.get('plugin_name') == 'carbonblack_protection_adapter':
+        cb_protection = True
     device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
     device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)
     return not device1_hostnames or not device2_hostnames or \
@@ -950,7 +953,7 @@ def hostnames_do_not_contradict(adapter_device1, adapter_device2):
                                adapter_device2.get('data', {}).get("hostname", "")) and
          (adapter_device1.get('data', {}).get("os", {}).get("type") == "OS X") and
             (adapter_device2.get('data', {}).get("os", {}).get("type") == "OS X")) \
-        or compare_normalized_hostnames(device1_hostnames, device2_hostnames)
+        or compare_normalized_hostnames(device1_hostnames, device2_hostnames, first_element_only=cb_protection)
 
 
 def compare_ips(adapter_device1, adapter_device2):
@@ -974,7 +977,8 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
 
     def is_in_short_names_adapters_and_long_name(adapter_device):
         if adapter_device.get('plugin_name') in ['carbonblack_protection_adapter', 'active_directory_adapter'] \
-                and len(get_hostname(adapter_device).split('.')[0]) >= 15 and is_os_x(adapter_device):
+                and len(get_hostname(adapter_device).split('.')[0]) >= 15 and \
+                (is_os_x(adapter_device) or adapter_device.get('plugin_name') == 'carbonblack_protection_adapter'):
             return True
         return False
 
