@@ -33,17 +33,22 @@ class TestMetrics(TestBase):
             users_unique = self.axonius_system.get_users_db().count_documents({})
 
             tester = LogTester(GUI_LOG_PATH)
+            # do not modify anything relate to metrics!
             wait_until(lambda: tester.is_metric_in_log('system.gui.users', 2))
             wait_until(lambda: tester.is_metric_in_log('system.devices.seen', r'\d+'))  # TBD
             wait_until(lambda: tester.is_metric_in_log('system.devices.unique', devices_unique))
             wait_until(lambda: tester.is_metric_in_log('system.users.seen', r'\d+'))  # TBD
             wait_until(lambda: tester.is_metric_in_log('system.users.unique', users_unique))
 
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter', r'\[10, 10\]'))
-            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter', r'\[10, 10\]'))
+            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities', 10))
+            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities.meta', 10))
+            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter.entities', 10))
+            wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_scanner_adapter.entities.meta', 10))
 
-            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter', r'\[2, 2\]'))
-            wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter', r'\d+'))
+            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter.entities', 2))
+            wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter.entities.meta', 2))
+            wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities', r'\d+'))
+            wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities.meta', r'\d+'))
 
             report = re.escape(metric_query)
             wait_until(lambda: tester.is_metric_in_log('query.report', report))

@@ -3557,7 +3557,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             def dump_per_adapter(mapping, subtype):
                 counters = mapping['counters']
                 for counter in counters:
-                    log_metric(logger, f'adapter.{subtype}.{counter["name"]}', [counter['value'], counter['meta']])
+                    log_metric(logger, f'adapter.{subtype}.{counter["name"]}.entities', counter['value'])
+                    log_metric(logger, f'adapter.{subtype}.{counter["name"]}.entities.meta', counter['meta'])
 
             dump_per_adapter(adapter_devices, 'devices')
             dump_per_adapter(adapter_users, 'users')
