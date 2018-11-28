@@ -1,12 +1,10 @@
+#!/usr/bin/env python36
 # XXX: do not import from axonius libs here
+import argparse
+import logging
+
 import requests
-
-AXONIUS_URL = "https://localhost"
-
-AXONIUS_API = f"{AXONIUS_URL}/api/V1"
-
-USERNAME = "admin"
-PASSWORD = "Password"
+from requests.models import Response
 
 TRIGGERS_DEFAULT_VALUES = {'every_discovery': False,
                            'new_entities': False,
@@ -15,917 +13,476 @@ TRIGGERS_DEFAULT_VALUES = {'every_discovery': False,
                            'below': 0,
                            }
 
+ACTION_PUT_FILE = 'Put File'
+ACTION_RUN_SCRIPT = 'Run Script File'
 
-def get_devices():
-    params = {}
+PUT_FILE_EXAMPLE = 'echo \'Touched by axonius\' > /home/ubuntu/axonius_file'
+RUN_SCRIPT_EXAMPLE = '#!/bin/bash\necho hello world!'
 
-    # These paramters are REQUIRED. This will get first 50 devices.
-    params["skip"] = 70
-    params["limit"] = 50
 
-    requests.get(f"{AXONIUS_API}/devices", params=params, auth=(USERNAME, PASSWORD))
-    # The request would look like this
-    # https://localhost/api/V1/devices?limit=50&skip=170
+DEFAULT_AXONIUS_URL = 'https://localhost'
+AXONIUS_API = '/api/V1'
 
-    # This would query a max of 50 devices with no filters on either the devices themselves or their fields
-    # and will skip the first 170 devices.
+DEFAULT_USERNAME = 'admin'
 
-    # An example response would look like this:
-    """
-    {
-    "page": {
-        "number": 1,
-        "size": 2,
-        "totalPages": 1,
-        "totalResources": 2
-    },
-    "assets": [
-        {
-            "adapter_list_length": 1,
-            "adapters": [
-                "eset_adapter"
-            ],
-            "adapters_data": [
-                {
-                    "eset_adapter": {
-                        "accurate_for_datetime": "Sun, 29 Jul 2018 15:44:39 GMT",
-                        "hostname": "windows8.testdomain.test",
-                        "id": "00:0C:29:80:0E:60windows8.testdomain.test",
-                        "last_seen": "Sun, 29 Jul 2018 15:43:53 GMT",
-                        "network_interfaces": [
-                            {
-                                "ips": [
-                                    "192.168.20.9"
-                                ],
-                                "ips_raw": [
-                                    3232240649
-                                ],
-                                "mac": "00:0C:29:80:0E:60",
-                                "manufacturer": "VMware, Inc. (3401 Hillview Avenue Palo Alto CA US 94304 )"
-                            }
-                        ],
-                        "os": {
-                            "bitness": 64,
-                            "distribution": "8",
-                            "type": "Windows"
-                        },
-                        "pretty_id": "AX-61",
-                        "raw": {
-                            "Adapter IPv4 address": "192.168.20.9",
-                            "Adapter IPv6 address": "",
-                            "Computer name": "windows8.testdomain.test",
-                            "Last connected": "2018-07-29 15:43:53",
-                            "MAC address": "00-0C-29-80-0E-60",
-                            "OS name": "Microsoft Windows 8.1 Enterprise",
-                            "OS platform": "64-bit",
-                            "OS type": "Microsoft Windows",
-                            "OS version": "6.3.9600"
-                        }
-                    }
-                }
-            ],
-            "date_fetched": "2018-07-29 14:39:59+00:00",
-            "generic_data": [
-                {
-                    "accurate_for_datetime": "Sun, 29 Jul 2018 14:40:56 GMT",
-                    "action_if_exists": "replace",
-                    "associated_adapters": [
-                        [
-                            "active_directory_adapter_24640",
-                            "CN=WINDOWS8,CN=Computers,DC=TestDomain,DC=test"
-                        ]
-                    ],
-                    "association_type": "Tag",
-                    "data": false,
-                    "entity": "devices",
-                    "name": "IP Conflicts",
-                    "plugin_name": "active_directory_adapter",
-                    "plugin_unique_name": "active_directory_adapter_24640",
-                    "type": "data"
-                }
-            ],
-            "internal_axon_id": "f4962e92eaa44b28b14863efdeaac5f3",
-            "labels": [],
-            "specific_data": [
-                {
-                    "accurate_for_datetime": "Sun, 29 Jul 2018 15:44:39 GMT",
-                    "adapter_properties": [
-                        "Endpoint_Protection_Platform",
-                        "Agent",
-                        "Manager"
-                    ],
-                    "client_used": "192.168.20.18:2223",
-                    "data": {
-                        "accurate_for_datetime": "Sun, 29 Jul 2018 15:44:39 GMT",
-                        "hostname": "windows8.testdomain.test",
-                        "id": "00:0C:29:80:0E:60windows8.testdomain.test",
-                        "last_seen": "Sun, 29 Jul 2018 15:43:53 GMT",
-                        "network_interfaces": [
-                            {
-                                "ips": [
-                                    "192.168.20.9"
-                                ],
-                                "ips_raw": [
-                                    3232240649
-                                ],
-                                "mac": "00:0C:29:80:0E:60",
-                                "manufacturer": "VMware, Inc. (3401 Hillview Avenue Palo Alto CA US 94304 )"
-                            }
-                        ],
-                        "os": {
-                            "bitness": 64,
-                            "distribution": "8",
-                            "type": "Windows"
-                        },
-                        "pretty_id": "AX-61",
-                        "raw": {
-                            "Adapter IPv4 address": "192.168.20.9",
-                            "Adapter IPv6 address": "",
-                            "Computer name": "windows8.testdomain.test",
-                            "Last connected": "2018-07-29 15:43:53",
-                            "MAC address": "00-0C-29-80-0E-60",
-                            "OS name": "Microsoft Windows 8.1 Enterprise",
-                            "OS platform": "64-bit",
-                            "OS type": "Microsoft Windows",
-                            "OS version": "6.3.9600"
-                        }
-                    },
-                    "plugin_name": "eset_adapter",
-                    "plugin_type": "Adapter",
-                    "plugin_unique_name": "eset_adapter_39094",
-                    "type": "entitydata"
-                }
-            ],
-            "unique_adapter_names": [
-                "eset_adapter_39094"
-            ],
-            "uuid": "5b5dd1bff1e64e0014f18b39"
-        },
-        {
-            "adapter_list_length": 1,
-            "adapters": [
-                "eset_adapter"
-            ],
-            "adapters_data": [
-                {
-                    "eset_adapter": {
-                        "accurate_for_datetime": "Sun, 29 Jul 2018 15:44:39 GMT",
-                        "hostname": "eset.axonius.lan",
-                        "id": "00:50:56:91:A6:6Beset.axonius.lan",
-                        "last_seen": "Sun, 29 Jul 2018 15:43:52 GMT",
-                        "network_interfaces": [
-                            {
-                                "ips": [
-                                    "192.168.20.18"
-                                ],
-                                "ips_raw": [
-                                    3232240658
-                                ],
-                                "mac": "00:50:56:91:A6:6B",
-                                "manufacturer": "VMware, Inc. (3401 Hillview Avenue PALO ALTO CA US 94304 )"
-                            }
-                        ],
-                        "os": {
-                            "bitness": 64,
-                            "type": "Linux"
-                        },
-                        "pretty_id": "AX-62",
-                        "raw": {
-                            "Adapter IPv4 address": "192.168.20.18",
-                            "Adapter IPv6 address": "",
-                            "Computer name": "eset.axonius.lan",
-                            "Last connected": "2018-07-29 15:43:52",
-                            "MAC address": "00-50-56-91-A6-6B",
-                            "OS name": "CentOS",
-                            "OS platform": "64-bit",
-                            "OS type": "Linux",
-                            "OS version": "7.3.1611"
-                        }
-                    }
-                }
-            ],
-            "date_fetched": "2018-07-29 14:39:59+00:00",
-            "generic_data": [],
-            "internal_axon_id": "e0a1cfff60da4b9ba4313d42ed29b1fc",
-            "labels": [],
-            "specific_data": [
-                {
-                    "accurate_for_datetime": "Sun, 29 Jul 2018 15:44:39 GMT",
-                    "adapter_properties": [
-                        "Endpoint_Protection_Platform",
-                        "Agent",
-                        "Manager"
-                    ],
-                    "client_used": "192.168.20.18:2223",
-                    "data": {
-                        "accurate_for_datetime": "Sun, 29 Jul 2018 15:44:39 GMT",
-                        "hostname": "eset.axonius.lan",
-                        "id": "00:50:56:91:A6:6Beset.axonius.lan",
-                        "last_seen": "Sun, 29 Jul 2018 15:43:52 GMT",
-                        "network_interfaces": [
-                            {
-                                "ips": [
-                                    "192.168.20.18"
-                                ],
-                                "ips_raw": [
-                                    3232240658
-                                ],
-                                "mac": "00:50:56:91:A6:6B",
-                                "manufacturer": "VMware, Inc. (3401 Hillview Avenue PALO ALTO CA US 94304 )"
-                            }
-                        ],
-                        "os": {
-                            "bitness": 64,
-                            "type": "Linux"
-                        },
-                        "pretty_id": "AX-62",
-                        "raw": {
-                            "Adapter IPv4 address": "192.168.20.18",
-                            "Adapter IPv6 address": "",
-                            "Computer name": "eset.axonius.lan",
-                            "Last connected": "2018-07-29 15:43:52",
-                            "MAC address": "00-50-56-91-A6-6B",
-                            "OS name": "CentOS",
-                            "OS platform": "64-bit",
-                            "OS type": "Linux",
-                            "OS version": "7.3.1611"
-                        }
-                    },
-                    "plugin_name": "eset_adapter",
-                    "plugin_type": "Adapter",
-                    "plugin_unique_name": "eset_adapter_39094",
-                    "type": "entitydata"
-                }
-            ],
-            "unique_adapter_names": [
-                "eset_adapter_39094"
-            ],
-            "uuid": "5b5dd1bff1e64e0014f18b35"
-        }
-    ]
-}
-    """
 
-    params = {}
+class ArgumentParser(argparse.ArgumentParser):
+    """ Argumentparser for the script """
 
-    # These paramters are REQUIRED. This will get first 50 devices.
-    params["skip"] = 0
-    params["limit"] = 50
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.formatter_class = argparse.RawDescriptionHelpFormatter
+        self.description = \
+            '''Example:
+  %(prog)s -x https://axnoius.local --username admin -p password1 --function get_devices_example1
+  %(prog)s -x https://axnoius.local --username admin -p password1 --all-functions'''
 
-    # This will tell the api to bring these specific fields.
-    params["fields"] = ",".join(
-        ["adapters", "specific_data.data.hostname", "specific_data.data.name", "specific_data.data.os.type",
-         "specific_data.data.network_interfaces.ips", "specific_data.data.network_interfaces.mac", "labels"])
+        action_group = self.add_mutually_exclusive_group(required=True)
+        action_group.add_argument('--function', choices=RESTExample.get_examples())
+        action_group.add_argument('--all-functions', action='store_true', default=False, help='Run all functions')
 
-    # This a url encoded filter that brings all the devices that were correlated from Rapid 7 Nexpose and Active Directory adapters.
-    # adapters%20==%20%22active_directory_adapter%22%20and%20adapters%20==%20%22nexpose_adapter%22
-    params["filter"] = 'adapters == "active_directory_adapter" and adapters == "nexpose_adapter"'
+        self.add_argument('--axonius-url', '-x', default=DEFAULT_AXONIUS_URL)
+        self.add_argument('--username', '-u', default=DEFAULT_USERNAME)
+        self.add_argument('--password', '-p', required=True)
+        self.add_argument('--no-verify-ssl', '-s', action='store_true', default=False,
+                          help='Don\'t verify ssl')
 
-    requests.get(f"{AXONIUS_API}/devices", params=params, auth=(USERNAME, PASSWORD))
-    # The request would look like this
-    # https://localhost/api/V1/devices?skip=0&limit=50&fields=adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.os.type,specific_data.data.network_interfaces.ips,specific_data.data.network_interfaces.mac,labels&filter=adapters%20==%20%22active_directory_adapter%22%20and%20adapters%20==%20%22nexpose_adapter%22
 
-    # An example response would look like this:
-    """
-    {
-    "page": {
-        "number": 1,
-        "size": 2,
-        "totalPages": 1,
-        "totalResources": 2
-    },
-    "assets": [
-  {
-    "adapter_list_length": 2, 
-    "adapters": [
-      "nexpose_adapter", 
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "8b45e72e83a1451785630501bdcda95b", 
-    "labels": [
-      "IP Conflicts"
-    ], 
-    "specific_data.data.hostname": [
-      "DESKTOP-MPP10U1"
-    ], 
-    "specific_data.data.name": [], 
-    "specific_data.data.network_interfaces.ips": [
-      "192.168.20.19"
-    ], 
-    "specific_data.data.network_interfaces.mac": [
-      "00:0C:29:45:B8:19"
-    ], 
-    "specific_data.data.os.type": [
-      "Windows"
-    ], 
-    "unique_adapter_names": [
-      "nexpose_adapter_12580", 
-      "active_directory_adapter_12103"
-    ]
-  }, 
-  {
-    "adapter_list_length": 2, 
-    "adapters": [
-      "nexpose_adapter", 
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "643438a7e26e4942ab74b406a43a58c5", 
-    "labels": [], 
-    "specific_data.data.hostname": [
-      "DC4"
-    ], 
-    "specific_data.data.name": [], 
-    "specific_data.data.network_interfaces.ips": [
-      "192.168.20.17"
-    ], 
-    "specific_data.data.network_interfaces.mac": [
-      "00:0C:29:B6:DA:46"
-    ], 
-    "specific_data.data.os.type": [
-      "Windows"
-    ], 
-    "unique_adapter_names": [
-      "nexpose_adapter_12580", 
-      "active_directory_adapter_12103"
-    ]
-  }
-]
-    """
+class RESTClient:
+    """ simple rest client for Axonius REST API """
 
+    def __init__(self, axonius_url, username,
+                 password, **kwargs):
+        self._url = axonius_url
+        self._username = username
+        self._password = password
+        self._request_args = kwargs
 
-def get_device_by_id():
-    device_id = "8b45e72e83a1451785630501bdcda95b"
-    requests.get(f"{AXONIUS_API}/devices/{device_id}", auth=(USERNAME, PASSWORD))
+        self._logger = logging.getLogger('RESTClient')
 
-    # Will return a specific device:
-    """
-    {
-    "adapter_list_length": 2, 
-    "adapters": [
-      "nexpose_adapter", 
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "8b45e72e83a1451785630501bdcda95b", 
-    "labels": [
-      "IP Conflicts"
-    ], 
-    "specific_data.data.hostname": [
-      "DESKTOP-MPP10U1"
-    ], 
-    "specific_data.data.name": [], 
-    "specific_data.data.network_interfaces.ips": [
-      "192.168.20.19"
-    ], 
-    "specific_data.data.network_interfaces.mac": [
-      "00:0C:29:45:B8:19"
-    ], 
-    "specific_data.data.os.type": [
-      "Windows"
-    ], 
-    "unique_adapter_names": [
-      "nexpose_adapter_12580", 
-      "active_directory_adapter_12103"
-    ]
-  }
-    """
+    def do_request(self, action: str, url: str, **kwargs) -> Response:
+        """ Sends axnoius rest api to the server """
+        kwargs.update(self._request_args)
+        kwargs.update({'auth': (self._username, self._password)})
 
+        full_url = f'{self._url}{AXONIUS_API}{url}'
 
-def get_device_views():
-    params = {}
+        resp = requests.request(action,
+                                full_url,
+                                **kwargs)
 
-    # Bring the first 1000 device views
-    params["limit"] = 1000
-    params["skip"] = 0
+        self._logger.info(resp.status_code)
+        # Only if we have content print the json
+        if resp.status_code == 200 and resp.content:
+            self._logger.info(resp.json())
+        else:
+            self._logger.info(resp.text)
 
-    params['filter'] = "query_type=='saved'"
+        return resp
 
-    # https://localhost/api/devices/views?limit=1000&skip=0&filter=query_type==%27saved%27
-    requests.get(f"{AXONIUS_API}/devices/views", params=params, auth=(USERNAME, PASSWORD))
+    def get_devices(self, skip: int, limit: int, fields=None, filter_=None):
+        params = {}
+        params['skip'] = skip
+        params['limit'] = limit
 
-    """
-    [
-  {
-    "date_fetched": "2018-07-06 17:41:22+00:00", 
-    "name": "DEMO - nexpose adapter", 
-    "query_type": "saved", 
-    "timestamp": "Fri, 06 Jul 2018 17:41:22 GMT", 
-    "uuid": "5b3fa9c2606ffc7a20e17767", 
-    "view": {
-      "coloumnSizes": [], 
-      "fields": [
-        "adapters", 
-        "specific_data.data.hostname", 
-        "specific_data.data.name", 
-        "specific_data.data.os.type", 
-        "specific_data.data.network_interfaces.ips", 
-        "specific_data.data.network_interfaces.mac", 
-        "labels"
-      ], 
-      "page": 0, 
-      "pageSize": 20, 
-      "query": {
-        "filter": "adapters == 'nexpose_adapter'"
-      }, 
-      "sort": {
-        "desc": true, 
-        "field": ""
-      }
-    }
-  }, 
-  {
-    "date_fetched": "2018-07-06 17:30:48+00:00", 
-    "name": "Connected Hardware Information", 
-    "query_type": "saved", 
-    "timestamp": "Fri, 06 Jul 2018 17:30:48 GMT", 
-    "uuid": "5b3fa748cb4e67002fc5959a", 
-    "view": {
-      "coloumnSizes": [], 
-      "fields": [
-        "adapters", 
-        "specific_data.data.name", 
-        "specific_data.data.connected_hardware.name", 
-        "specific_data.data.connected_hardware.hw_id", 
-        "specific_data.data.connected_hardware.manufacturer", 
-        "specific_data.data.network_interfaces.ips", 
-        "specific_data.data.network_interfaces.mac", 
-        "specific_data.data.os.type", 
-        "specific_data.data.hostname", 
-        "labels"
-      ], 
-      "page": 0, 
-      "pageSize": 20, 
-      "query": {
-        "expressions": [
-          {
-            "compOp": "exists", 
-            "field": "specific_data.data.connected_hardware.name", 
-            "i": 0, 
-            "leftBracket": false, 
-            "logicOp": "", 
-            "not": false, 
-            "rightBracket": false, 
-            "value": null
-          }
-        ], 
-        "filter": "(specific_data.data.connected_hardware.name == exists(true) and specific_data.data.connected_hardware.name != \"\")"
-      }, 
-      "sort": {
-        "desc": true, 
-        "field": ""
-      }
-    }
-  }, 
-  {
-    "date_fetched": "2018-07-06 17:30:48+00:00", 
-    "name": "Vulnerable Software Information", 
-    "query_type": "saved", 
-    "timestamp": "Fri, 06 Jul 2018 17:30:48 GMT", 
-    "uuid": "5b3fa748cb4e67002fc59599", 
-    "view": {
-      "coloumnSizes": [], 
-      "fields": [
-        "adapters", 
-        "specific_data.data.name", 
-        "specific_data.data.software_cves.software_name", 
-        "specific_data.data.software_cves.software_vendor", 
-        "specific_data.data.software_cves.software_version", 
-        "specific_data.data.software_cves.cve_id", 
-        "specific_data.data.software_cves.cve_severity", 
-        "specific_data.data.software_cves.cve_references", 
-        "specific_data.data.software_cves.cve_description", 
-        "specific_data.data.os.type", 
-        "labels"
-      ], 
-      "page": 0, 
-      "pageSize": 20, 
-      "query": {
-        "expressions": [
-          {
-            "compOp": "exists", 
-            "field": "specific_data.data.software_cves.software_vendor", 
-            "i": 0, 
-            "leftBracket": false, 
-            "logicOp": "", 
-            "not": false, 
-            "rightBracket": false, 
-            "value": null
-          }
-        ], 
-        "filter": "(specific_data.data.software_cves.software_vendor == exists(true) and specific_data.data.software_cves.software_vendor != \"\")"
-      }, 
-      "sort": {
-        "desc": true, 
-        "field": ""
-      }
-    }
-  }]
-    """
+        if fields:
+            params['fields'] = fields
+        if filter_:
+            params['filter'] = filter_
 
+        return self.do_request('get', '/devices', params=params)
 
-def create_new_device_view():
-    data = {"name": "All Nexpose Scanned AD Devices", "view": {"page": 0, "pageSize": 20,
-                                                               "fields": ["adapters", "specific_data.data.hostname",
-                                                                          "specific_data.data.name",
-                                                                          "specific_data.data.os.type",
-                                                                          "specific_data.data.network_interfaces.ips",
-                                                                          "specific_data.data.network_interfaces.mac",
-                                                                          "labels"], "coloumnSizes": [], "query": {
-                                                                   "filter": "adapters == \"active_directory_adapter\" and adapters == \"nexpose_adapter\"", "expressions": [
-                                                                       {"logicOp": "", "not": False, "leftBracket": False, "field": "adapters", "compOp": "equals",
-                                                                        "value": "active_directory_adapter", "rightBracket": False, "i": 0},
-                                                                       {"logicOp": "and", "not": False, "leftBracket": False, "field": "adapters", "compOp": "equals",
-                                                                        "value": "nexpose_adapter", "rightBracket": False, "i": 1}]}, "sort": {"field": "", "desc": True}},
-            "query_type": "saved"}
+    def get_device_by_id(self, device_id: str):
+        return self.do_request('get', f'/devices/{device_id}')
 
-    # Creates a new saved query named: "All Nexpose Scanned AD Devices" That gets all the devices that have been
-    # queried from both Rapid 7 Nexpose and Active Directory
-    requests.post(f"{AXONIUS_API}/devices/views", data=data, auth=(USERNAME, PASSWORD))
+    def get_devices_views(self, skip: int, limit: int, filter_: str):
+        params = {}
+        params['limit'] = 1000
+        params['skip'] = 0
+        params['filter'] = filter_
+        return self.do_request('get', '/devices/views', params=params)
 
-
-def delete_device_view():
-    # Deletes all listed device views (by ID).
-    data = ["5b3fbc3b606ffc7a20e1d837"]
-    requests.delete(f"{AXONIUS_API}/devices/views", data=data, auth=(USERNAME, PASSWORD))
-
-
-def get_users():
-    params = {}
-
-    # These parameters are REQUIRED. This will get first 50 users.
-    params["skip"] = 0
-    params["limit"] = 20
-
-    # This will tell the api to bring these specific fields.
-    params["fields"] = ",".join(
-        ["specific_data.data.image", "specific_data.data.username", "specific_data.data.domain",
-         "specific_data.data.last_seen", "specific_data.data.is_admin"])
-
-    # This a url encoded filter that brings all the not local users.
-    # specific_data.data.is_local%20==%20false
-    params["filter"] = 'specific_data.data.is_local == false'
-    requests.get(f"{AXONIUS_API}/users", params=params, auth=(USERNAME, PASSWORD))
-    # https://localhost/api/V1/users?skip=0&limit=20&fields=specific_data.data.image,specific_data.data.username,specific_data.data.domain,specific_data.data.last_seen,specific_data.data.is_admin&filter=specific_data.data.is_local%20==%20false
-
-    # An example response would look like this:
-    """
-    [
-  {
-    "adapter_list_length": 1, 
-    "adapters": [
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "364d32967f7e448293e8cb886fb02e86", 
-    "labels": [], 
-    "specific_data.data.domain": "TestDomain.test", 
-    "specific_data.data.image": null, 
-    "specific_data.data.is_admin": null, 
-    "specific_data.data.last_seen": "Thu, 05 Jul 2018 14:12:31 GMT", 
-    "specific_data.data.username": "test_ldap_login_user", 
-    "unique_adapter_names": [
-      "active_directory_adapter_15855"
-    ]
-  }, 
-  {
-    "adapter_list_length": 1, 
-    "adapters": [
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "daa251b408f7408a993765d92779db41", 
-    "labels": [], 
-    "specific_data.data.domain": "TestDomain.test", 
-    "specific_data.data.image": null, 
-    "specific_data.data.is_admin": null, 
-    "specific_data.data.last_seen": null, 
-    "specific_data.data.username": "RAINDOMAIN$", 
-    "unique_adapter_names": [
-      "active_directory_adapter_15855"
-    ]
-  }, 
-  {
-    "adapter_list_length": 1, 
-    "adapters": [
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "55dd84002bf442a5b72d7b4667ead88b", 
-    "labels": [], 
-    "specific_data.data.domain": "TestDomain.test", 
-    "specific_data.data.image": null, 
-    "specific_data.data.is_admin": true, 
-    "specific_data.data.last_seen": "Fri, 06 Jul 2018 13:56:29 GMT", 
-    "specific_data.data.username": "Administrator", 
-    "unique_adapter_names": [
-      "active_directory_adapter_15855"
-    ]
-  }, 
-  {
-    "adapter_list_length": 1, 
-    "adapters": [
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "45a5a75b934d4ae193c76edfff523eda", 
-    "labels": [], 
-    "specific_data.data.domain": "TestDomain.test", 
-    "specific_data.data.image": null, 
-    "specific_data.data.is_admin": null, 
-    "specific_data.data.last_seen": null, 
-    "specific_data.data.username": "WEST$", 
-    "unique_adapter_names": [
-      "active_directory_adapter_15855"
-    ]
-  }
-]
-
-    """
-
-
-def get_user_by_id():
-    user_id = "45a5a75b934d4ae193c76edfff523eda"
-    requests.get(f"{AXONIUS_API}/devices/{user_id}", auth=(USERNAME, PASSWORD))
-
-    # Will return a specific device:
-    """
-    {
-    "adapter_list_length": 1, 
-    "adapters": [
-      "active_directory_adapter"
-    ], 
-    "internal_axon_id": "45a5a75b934d4ae193c76edfff523eda", 
-    "labels": [], 
-    "specific_data.data.domain": "TestDomain.test", 
-    "specific_data.data.image": null, 
-    "specific_data.data.is_admin": null, 
-    "specific_data.data.last_seen": null, 
-    "specific_data.data.username": "WEST$", 
-    "unique_adapter_names": [
-      "active_directory_adapter_15855"
-    ]
-  }"""
-
-
-def get_users_view():
-    params = {}
-
-    # Brings the first 10000 saved user queries
-    params["limit"] = 1000
-    params["skip"] = 0
-
-    params["filter"] = "query_type=='saved'"
-
-    requests.get(f"{AXONIUS_API}/users/views", params=params, auth=(USERNAME, PASSWORD))
-    # https://localhost/api/users/views?limit=1000&skip=0&filter=query_type==%27saved%27
-
-    # Response would look like:
-    """
-    [
-  {
-    "date_fetched": "2018-07-06 17:30:49+00:00", 
-    "name": "Not Local Users", 
-    "query_type": "saved", 
-    "timestamp": "Fri, 06 Jul 2018 17:42:18 GMT", 
-    "uuid": "5b3fa749cb4e67002fc595b4", 
-    "view": {
-      "coloumnSizes": [], 
-      "fields": [
-        "specific_data.data.image", 
-        "specific_data.data.username", 
-        "specific_data.data.domain", 
-        "specific_data.data.last_seen", 
-        "specific_data.data.is_admin", 
-        "specific_data.data.last_seen_in_devices"
-      ], 
-      "page": 0, 
-      "pageSize": 20, 
-      "query": {
-        "expressions": [
-          {
-            "compOp": "true", 
-            "field": "specific_data.data.is_local", 
-            "i": 0, 
-            "leftBracket": false, 
-            "logicOp": "", 
-            "not": false, 
-            "rightBracket": false, 
-            "value": ""
-          }
-        ], 
-        "filter": "specific_data.data.is_local == true"
-      }, 
-      "sort": {
-        "desc": true, 
-        "field": ""
-      }
-    }
-  }, 
-  {
-    "date_fetched": "2018-07-06 17:30:49+00:00", 
-    "name": "Users Created in Last 30 Days", 
-    "query_type": "saved", 
-    "timestamp": "Fri, 06 Jul 2018 17:30:49 GMT", 
-    "uuid": "5b3fa749cb4e67002fc595bc", 
-    "view": {
-      "coloumnSizes": [], 
-      "fields": [
-        "specific_data.data.username", 
-        "specific_data.data.user_created", 
-        "adapters", 
-        "specific_data.data.domain"
-      ], 
-      "page": 0, 
-      "pageSize": 20, 
-      "query": {
-        "expressions": [
-          {
-            "compOp": "days", 
-            "field": "specific_data.data.user_created", 
-            "i": 0, 
-            "leftBracket": false, 
-            "logicOp": "", 
-            "not": false, 
-            "rightBracket": false, 
-            "value": 30
-          }
-        ], 
-        "filter": "specific_data.data.user_created >= date(\"NOW - 30d\")"
-      }, 
-      "sort": {
-        "desc": true, 
-        "field": ""
-      }
-    }
-  }, 
-  {
-    "date_fetched": "2018-07-06 17:30:49+00:00", 
-    "name": "Users Created in Last 7 Days", 
-    "query_type": "saved", 
-    "timestamp": "Fri, 06 Jul 2018 17:30:49 GMT", 
-    "uuid": "5b3fa749cb4e67002fc595bb", 
-    "view": {
-      "coloumnSizes": [], 
-      "fields": [
-        "specific_data.data.username", 
-        "specific_data.data.user_created", 
-        "adapters", 
-        "specific_data.data.domain"
-      ], 
-      "page": 0, 
-      "pageSize": 20, 
-      "query": {
-        "expressions": [
-          {
-            "compOp": "days", 
-            "field": "specific_data.data.user_created", 
-            "i": 0, 
-            "leftBracket": false, 
-            "logicOp": "", 
-            "not": false, 
-            "rightBracket": false, 
-            "value": 7
-          }
-        ], 
-        "filter": "specific_data.data.user_created >= date(\"NOW - 7d\")"
-      }, 
-      "sort": {
-        "desc": true, 
-        "field": ""
-      }
-    }
-  }]
-    """
-
-
-def save_users_view():
-    data = {"name": "Not Local Users", "view": {"page": 0, "pageSize": 20,
-                                                "fields": ["specific_data.data.image", "specific_data.data.username",
-                                                           "specific_data.data.domain", "specific_data.data.last_seen",
-                                                           "specific_data.data.is_admin",
-                                                           "specific_data.data.last_seen_in_devices"],
-                                                "coloumnSizes": [],
-                                                "query": {"filter": "specific_data.data.is_local == True",
-                                                          "expressions": [
-                                                              {"compOp": "True", "field": "specific_data.data.is_local",
-                                                               "i": 0, "leftBracket": False, "logicOp": "",
-                                                               "not": False, "rightBracket": False, "value": ""}]},
-                                                "sort": {"desc": True, "field": ""}}, "query_type": "saved"}
-
-    requests.post(f"{AXONIUS_API}/users/views", data=data, auth=(USERNAME, PASSWORD))
-
-
-def delete_user_view():
-    # Deletes all listed device views (by ID).
-    data = ["5b3fa749cb4e67002fc595bb"]
-    requests.delete(f"{AXONIUS_API}/users/views", data=data, auth=(USERNAME, PASSWORD))
-
-
-def get_alerts():
-    params = {}
-
-    params["skip"] = None
-    params["limit"] = None
-
-    params["fields"] = ','.join(["name", "report_creation_time", "triggered", "view", "severity"])
-
-    # This will get all the configured alerts
-    requests.get(f"{AXONIUS_API}/alert", params=params, auth=(USERNAME, PASSWORD))
-    # https://localhost/api/alert?skip=NaN&limit=0&fields=name,report_creation_time,triggered,view,severity
-
-    # Response would look like:
-    """
-    [
-  {
-    "date_fetched": "2018-07-06 17:39:45+00:00", 
-    "name": "Test Alert", 
-    "report_creation_time": "Fri, 06 Jul 2018 17:39:45 GMT", 
-    "severity": "warning", 
-    "triggered": 0, 
-    "uuid": "5b3fa9612af45000146561a9", 
-    "view": "Not Local Users"
-  }
-]
-    """
-
-
-def delete_alert():
-    alert_id = "5b3fa9612af45000146561a9"
-    requests.delete(f"{AXONIUS_API}/alerts/{alert_id}", auth=(USERNAME, PASSWORD))
-
-    # Response would be status code 200 (OK)
-
-
-def put_alert():
-    # Notice that id = "new" tells the api this is a new alert.
-    # Triggers should contain all the triggers with true (or int above 0) on activated triggers.
-    # Actions type should be one of thses:
-    # tag_entities
-    # create_service_now_computer
-    # create_service_now_incident
-    # notify_syslog
-    # send_emails
-    # create_notification
-    # tag_entities
-    trigger_dict = TRIGGERS_DEFAULT_VALUES
-    trigger_dict['above'] = 1
-
-    data = {"id": "new", "name": "Test Alert",
-            "triggers": trigger_dict,
-            "actions": [{"type": "create_notification"}], "view": "Not Local Users", "viewEntity": "users",
-            "retrigger": True, "triggered": False, "severity": "warning"}
-
-    requests.put(f"{AXONIUS_API}/alerts", data=data, auth=(USERNAME, PASSWORD))
-
-    # Response is status code: 201 (Created).
-
-
-def get_actions_to_run():
-    requests.get(f"{AXONIUS_API}/actions", auth=(USERNAME, PASSWORD))
-
-    # Response is status code: 200 and a list of actions that can be executed.
-    # [
-    #     "deploy",
-    #     "shell"
-    # ]
-
-
-def run_actions():
-    # data = { ...this.deploy.data, internal_axon_ids: this.devices}
-    data = {
-        "internal_axon_ids": ['8b45e72e83a1451785630501bdcda95b'],  # The device
-        "action_name": 'Put File',
-        "command": "echo 'Touched by axonius' > /home/ubuntu/axonius_file"
-    }
-
-    requests.post(f"{AXONIUS_API}/actions/shell", data=data, auth=(USERNAME, PASSWORD))
-
-    # Response is status code: 200. The command will run on the requested device.
-
-    with open('./script_file_to_run', 'r') as file_to_run:
+    def create_new_device_view(self, name: str, view: dict, query_type: str):
         data = {
-            "internal_axon_ids": ['8b45e72e83a1451785630501bdcda95b'],  # The device
-            "action_name": 'Run Script File',
-            "binary": file_to_run.read()
+            'name': name,
+            'view': view,
+            'query_type': query_type,
+        }
+        return self.do_request('post', '/devices/views', json=data)
+
+    def delete_device_view(self, device_id: str):
+        # Deletes all listed device views (by ID).
+        data = [device_id]
+        return self.do_request('delete', '/devices/views', json=data)
+
+    def get_users(self, skip: str, limit: str, fields=None, filter_=None):
+        params = {}
+        params['skip'] = skip
+        params['limit'] = limit
+
+        if fields:
+            params['fields'] = fields
+        if filter_:
+            params['filter'] = filter_
+        return self.do_request('get', '/users', params=params)
+
+    def get_user_by_id(self, user_id: str):
+        return self.do_request('get', f'/devices/{user_id}')
+
+    def get_users_view(self, skip: str, limit: str, filter_: list=None):
+
+        params = {}
+
+        params['limit'] = limit
+        params['skip'] = skip
+        if filter_:
+            params['filter'] = filter_
+
+        return self.do_request('get', '/users/views', params=params)
+
+    def save_users_view(self, name: str, view: dict, query_type: str):
+        data = {
+            'name': name,
+            'view': view,
+            'query_type': query_type,
+        }
+        return self.do_request('post', '/users/views', json=data)
+
+    def delete_user_view(self, user_ids: list):
+        # Deletes all listed device views (by ID).
+        data = user_ids
+        return self.do_request('delete', '/users/views', json=data)
+
+    def get_alerts(self, skip: int=None, limit: int=None, fields: list=None):
+        params = {
+            'skip': skip,
+            'limit': limit,
+            'fields': fields
         }
 
-        requests.post(f"{AXONIUS_API}/actions/deploy", data=data, auth=(USERNAME, PASSWORD))
+        # This will get all the configured alerts
+        return self.do_request('get', '/alerts', params=params)
 
-    # Response is status code: 200. The script file was deployed and ran on the devices.
+    def delete_alerts(self, alert_ids: list):
+        return self.do_request('delete', '/alerts', json=alert_ids)
+
+        # Response would be status code 200 (OK)
+
+    def put_alert(self,
+                  name: int,
+                  triggers: dict,
+                  period: str,
+                  actions: list,
+                  view: str,
+                  viewEntity: str,
+                  severity: str,
+                  retrigger: bool=True,
+                  triggered: bool=False):
+        # Notice that id = "new" tells the api this is a new alert.
+        # Triggers should contain all the triggers with true (or int above 0) on activated triggers.
+        # Actions type should be one of thses:
+        # tag_entities
+        # create_service_now_computer
+        # create_service_now_incident
+        # notify_syslog
+        # send_emails
+        # create_notification
+        # tag_entities
+
+        data = {'id': 'new',
+                'name': name,
+                'triggers': triggers,
+                'period': period,
+                'actions': actions,
+                'view': view,
+                'viewEntity': viewEntity,
+                'retrigger': retrigger,
+                'triggered': triggered,
+                'severity': 'warning'}
+
+        return self.do_request('put', '/alerts', json=data)
+
+    def get_actions(self):
+        return self.do_request('get', '/actions')
+
+    def shell_action(self, device_ids: list, action_name: str, command: str):
+        data = {
+            'internal_axon_ids': device_ids,  # The devices
+            'action_name': action_name,
+            'command': command,
+        }
+
+        return self.do_request('post', '/actions/shell', json=data)
+
+    def deploy_action(self, device_ids: list, action_name: str, binary: str):
+        data = {
+            'internal_axon_ids': device_ids,  # The device
+            'action_name': action_name,
+            'binary': binary,
+        }
+
+        return self.do_request('post', '/actions/deploy', json=data)
+
+    def get_devices_labels(self):
+        """ returns a list of strings that are the devices labels in the system """
+        return self.do_request('get', '/devices/labels')
+
+    def get_users_labels(self):
+        """ returns a list of strings that are the users labels in the system """
+        return self.do_request('get', '/users/labels')
+
+    def add_labels(self, entities: list, labels: list):
+        data = {
+            'entities': entities,  # list of internal axon ids
+            'labels': labels      # list of labels to add
+        }
+        return self.do_request('post', '/devices/labels', json=data)
+
+    def delete_labels(self,  entities: list, labels: list):
+        data = {
+            'entities': entities,  # list of internal axon ids
+            'labels': labels       # list of labels to add
+        }
+        return self.do_request('delete', '/devices/labels', json=data)
 
 
-def get_all_labels():
-    # This will return a list of strings that are all the labels in the system
-    requests.get(f"{AXONIUS_API}/devices/labels", auth=(USERNAME, PASSWORD))
-    requests.get(f"{AXONIUS_API}/users/labels", auth=(USERNAME, PASSWORD))
+class RESTExample:
+    def __init__(self, axonius_url, username,
+                 password, verify_ssl):
+        self._client = RESTClient(axonius_url,
+                                  username,
+                                  password,
+                                  verify=verify_ssl)
+
+    @classmethod
+    def get_examples(cls):
+        examples_functions = (cls.get_devices1,
+                              cls.get_devices2,
+                              cls.get_device_by_id,
+                              cls.get_devices_views,
+                              cls.create_new_device_view,
+                              cls.delete_device_view,
+                              cls.get_users,
+                              cls.get_user_by_id,
+                              cls.get_users_view,
+                              cls.save_users_view,
+                              cls.delete_user_view,
+                              cls.get_alerts,
+                              cls.delete_alert,
+                              cls.put_alert,
+                              cls.get_actions,
+                              cls.deploy_action,
+                              cls.shell_action,
+                              cls.get_users_labels,
+                              cls.get_devices_labels,
+                              cls.add_labels,
+                              cls.delete_labels)
+        return [function.__name__ for function in examples_functions]
+
+    def get_devices1(self):
+        params = {}
+
+        # These paramters are REQUIRED. This will get first 50 devices.
+        return self._client.get_devices(skip=70, limit=50)
+        # The request would look like this
+        # https://localhost/api/V1/devices?limit=50&skip=170
+
+        # This would query a max of 50 devices with no filters on either the devices themselves or their fields
+        # and will skip the first 170 devices.
+
+    def get_devices2(self):
+        params = {}
+
+        # These paramters are REQUIRED. This will get first 50 devices.
+        params['skip'] = 0
+        params['limit'] = 50
+
+        # This will tell the api to bring these specific fields.
+        fields = ','.join(
+            ['adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.os.type',
+             'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'])
+
+        # This a url encoded filter that brings all the devices that were correlated from
+        # Rapid 7 Nexpose and Active Directory adapters.
+        # adapters%20==%20%22active_directory_adapter%22%20and%20adapters%20==%20%22nexpose_adapter%22
+        filter_ = 'adapters == "active_directory_adapter" and adapters == "nexpose_adapter"'
+
+        # The request would look like this
+        # https://localhost/api/V1/devices?skip=0&limit=50&fields=adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.os.type,specific_data.data.network_interfaces.ips,specific_data.data.network_interfaces.mac,labels&filter=adapters%20==%20%22active_directory_adapter%22%20and%20adapters%20==%20%22nexpose_adapter%22
+        return self._client.get_devices(skip=0, limit=50, fields=fields, filter_=filter_)
+
+    def get_device_by_id(self):
+        return self._client.get_device_by_id(device_id='8b45e72e83a1451785630501bdcda95b')
+
+    def get_devices_views(self):
+        # https://localhost/api/devices/views?limit=1000&skip=0&filter=query_type==%27saved%27
+        return self._client.get_devices_views(skip=0, limit=1000, filter_='query_type==\'saved\'')
+
+    def create_new_device_view(self):
+        name = 'All Nexpose Scanned AD Devices'
+        view = {'page': 0,
+                'pageSize': 20,
+                'fields': ['adapters', 'specific_data.data.hostname',
+                           'specific_data.data.name',
+                           'specific_data.data.os.type',
+                           'specific_data.data.network_interfaces.ips',
+                           'specific_data.data.network_interfaces.mac',
+                           'labels'],
+                'coloumnSizes': [],
+                'query': {
+                    'filter': 'adapters == \"active_directory_adapter\" and adapters == \"nexpose_adapter\"',
+                    'expressions': [
+                        {'logicOp': '', 'not': False,
+                         'leftBracket': False,
+                         'field': 'adapters',
+                         'compOp': 'equals',
+                         'value': 'active_directory_adapter',
+                         'rightBracket': False,
+                         'i': 0},
+                        {'logicOp': 'and',
+                         'not': False,
+                         'leftBracket': False,
+                         'field': 'adapters',
+                         'compOp': 'equals',
+                         'value': 'nexpose_adapter',
+                         'rightBracket': False,
+                         'i': 1}]},
+                'sort': {'field': '', 'desc': True}}
+        query_type = 'saved'
+
+        # Creates a new saved query named: "All Nexpose Scanned AD Devices" That gets all the devices that have been
+        # queried from both Rapid 7 Nexpose and Active Directory
+        return self._client.create_new_device_view(name, view, query_type)
+
+    def delete_device_view(self):
+        raise NotImplementedError()
+
+    def get_users(self):
+        skip = 0
+        limit = 20
+
+        # This will tell the api to bring these specific fields.
+        fields = ','.join(
+            ['specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
+             'specific_data.data.last_seen', 'specific_data.data.is_admin'])
+
+        filter_ = 'specific_data.data.is_local == false'
+
+        # This a url encoded filter that brings all the not local users.
+        # specific_data.data.is_local%20==%20false
+        # https://localhost/api/V1/users?skip=0&limit=20&fields=specific_data.data.image,specific_data.data.username,specific_data.data.domain,specific_data.data.last_seen,specific_data.data.is_admin&filter=specific_data.data.is_local%20==%20false
+
+        return self._client.get_users(skip, limit, fields, filter_)
+
+    def get_user_by_id(self):
+        raise NotImplementedError()
+
+    def get_users_view(self):
+        # https://localhost/api/users/views?limit=1000&skip=0&filter=query_type==%27saved%27
+        return self._client.get_users_view(0, 1000, 'query_type==\'saved\'')
+
+    def save_users_view(self):
+        name = 'Not Local Users'
+        view = {'page': 0, 'pageSize': 20,
+                'fields': ['specific_data.data.image',
+                           'specific_data.data.username',
+                           'specific_data.data.domain',
+                           'specific_data.data.last_seen',
+                           'specific_data.data.is_admin',
+                           'specific_data.data.last_seen_in_devices'],
+                'coloumnSizes': [],
+                'query': {'filter': 'specific_data.data.is_local == True',
+                          'expressions': [
+                              {'compOp': 'True',
+                               'field': 'specific_data.data.is_local',
+                               'i': 0,
+                               'leftBracket': False,
+                               'logicOp': '',
+                               'not': False,
+                               'rightBracket': False,
+                               'value': ''}]},
+                'sort': {'desc': True, 'field': ''}}
+        query_type = 'saved'
+
+        return self._client.save_users_view(name, view, query_type)
+
+    def delete_user_view(self):
+        raise NotImplementedError()
+
+    def get_alerts(self):
+        # https://localhost/api/alert?skip=NaN&limit=0&fields=name,report_creation_time,triggered,view,severity
+        fields = ['name', 'report_creation_time', 'triggered', 'view', 'severity']
+        return self._client.get_alerts(fields=','.join(fields))
+
+    def delete_alert(self):
+        raise NotImplementedError()
+
+    def put_alert(self):
+        trigger_dict = TRIGGERS_DEFAULT_VALUES
+        trigger_dict['above'] = 1
+        self._client.put_alert(name='Test Alert',
+                               triggers=trigger_dict,
+                               period='weekly',
+                               actions=[{'type': 'create_notification'}],
+                               view='Users Created in Last 30 Days',
+                               viewEntity='users',
+                               severity='warning')
+
+    def get_actions(self):
+        return self._client.get_actions()
+
+    def shell_action(self):
+        return self._client.shell_action(device_ids=['device_id'],  # The device
+                                         action_name=ACTION_PUT_FILE,
+                                         command=PUT_FILE_EXAMPLE)
+
+    def deploy_action(self):
+        return self._client.deploy_action(device_ids=['device_id'],  # The device
+                                          action_name=ACTION_RUN_SCRIPT,
+                                          binary=RUN_SCRIPT_EXAMPLE)
+
+    def get_devices_labels(self):
+        return self._client.get_devices_labels()
+
+    def get_users_labels(self):
+        return self._client.get_devices_labels()
+
+    def add_labels(self):
+        entities = ['internal_axon_id1', 'internal_axon_id2']
+        labels = ['labels to add', 'another label']
+        return self._client.add_labels(entities, labels)
+
+    def delete_labels(self):
+        entities = ['internal_axon_id1', 'internal_axon_id2']
+        labels = ['labels to add', 'another label']
+        return self._client.delete_labels(entities, labels)
 
 
-def add_labels():
-    data = {
-        'entities': ['internal_axon_id1', 'internal_axon_id2'],  # list of internal axon ids
-        'labels': ['labels to add', 'another label']  # list of labels to add
-    }
-    requests.post(f"{AXONIUS_API}/devices/labels", auth=(USERNAME, PASSWORD), data=data)
+def main():
+    requests.packages.urllib3.disable_warnings()
+    logging.basicConfig(format='%(message)s', level=logging.INFO)
+
+    args = ArgumentParser().parse_args()
+
+    client = RESTExample(args.axonius_url,
+                         args.username,
+                         args.password,
+                         not args.no_verify_ssl)
+    if args.function:
+        print(f'Calling api function "{args.function}"')
+        callback = getattr(client, args.function)
+        callback()
+
+    if args.all_functions:
+        for name in client.get_examples():
+            try:
+                print(f'Calling api function "{name}"')
+                callback = getattr(client, name)
+                callback()
+                print('\n\n')
+            except NotImplementedError:
+                continue
 
 
-def delete_labels():
-    data = {
-        'entities': ['internal_axon_id1', 'internal_axon_id2'],  # list of internal axon ids
-        'labels': ['labels to add', 'another label']  # list of labels to remove
-    }
-    requests.delete(f"{AXONIUS_API}/devices/labels", auth=(USERNAME, PASSWORD), data=data)
+if __name__ == '__main__':
+    main()

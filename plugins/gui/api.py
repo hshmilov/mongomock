@@ -208,8 +208,9 @@ class API:
             report_to_add = request.get_json(silent=True)
             return self.put_alert(report_to_add)
 
-        report_ids = self.get_request_data_as_object()
-        return self.delete_alert(report_ids)
+        if request.method == "DELETE":
+            report_ids = self.get_request_data_as_object()
+            return self.delete_alert(report_ids)
 
     ###########
     # QUERIES #
@@ -221,7 +222,7 @@ class API:
         if request.method == "GET":
 
             return_doc = {
-                "page": self.calc_page(skip, limit, views),
+                "page": get_page_metadata(skip, limit, len(views)),
                 "assets": views
             }
         else:
@@ -268,7 +269,7 @@ class API:
         """
         action_data = self.get_request_data_as_object()
         action_data["action_type"] = action_type
-        return self.run_actions(action_type)
+        return self.run_actions(action_data)
 
     @api_add_rule(f"actions")
     def api_get_actions(self):
