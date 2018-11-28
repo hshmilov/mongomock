@@ -89,6 +89,7 @@
                                     v-model="actions.notification" @change="tour('alertSave')" /><div></div>
                         <x-checkbox class="grid-span2" label="Create ServiceNow incident" v-model="actions.servicenowIncident"/>
                         <x-checkbox class="grid-span2" label="Create ServiceNow computer" v-model="actions.servicenowComputer"/>
+                        <x-checkbox class="grid-span2" label="Create Jira ticket" v-model="actions.jiraTicket"/>
                         <x-checkbox class="grid-span2" label="Create FreshService incident" v-model="actions.freshserviceIncident"/>
                         <div v-if="actions.freshserviceIncident" class="x-grid">
                             <label for="ticket_email">Email for Fresh Service Ticket:</label>
@@ -276,7 +277,7 @@
                 },
                 currentQuery: null,
                 actions: {
-                	notification: false, mail: false, tag: false, tagAll: false, syslog: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false, freshserviceIncident: false
+                	notification: false, mail: false, tag: false, tagAll: false, syslog: false, jiraTicket: false, servicenowIncident: false, servicenowComputer: false, cbIsolate: false, cbUnisolate: false, freshserviceIncident: false
                 },
                 mailList: [],
                 mailListCC: [],
@@ -367,6 +368,9 @@
                         case 'create_service_now_incident':
                             this.actions.servicenowIncident = true
                             break
+                        case 'create_jira_ticket':
+                            this.actions.jiraTicket= true
+                            break
                         case 'create_service_now_computer':
                             this.actions.servicenowComputer = true
                             break
@@ -440,6 +444,11 @@
                 if (this.actions.servicenowIncident) {
                     this.alert.actions.push({
                         type: 'create_service_now_incident'
+                    })
+                }
+                if (this.actions.jiraTicket) {
+                    this.alert.actions.push({
+                        type: 'create_jira_ticket'
                     })
                 }
                 if (this.actions.servicenowComputer) {

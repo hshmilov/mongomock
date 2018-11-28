@@ -104,6 +104,7 @@ class ReportsService(PluginBase, Triggerable):
             'notify_syslog': self._handle_action_notify_syslog,
             'send_emails': self._handle_action_send_emails,
             'create_notification': self._handle_action_create_notification,
+            'create_jira_tickets': self._handle_action_create_jira_ticket,
             'tag_all_entities': self._handle_action_tag_all_entities,
             'tag_entities': self._handle_action_tag_entities,
         }
@@ -767,6 +768,28 @@ class ReportsService(PluginBase, Triggerable):
         :return: The template object
         """
         return self.env.get_template(f'reports/templates/report/{template_name}.html')
+
+    def _handle_action_create_jira_ticket(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                          action_data=None):
+        """ Sends an email to the list of e-mails
+
+        :param dict report_data: The report settings.
+        :param set triggered: triggered triggers set.
+        :param trigger_data: The results difference.
+        :param action_data: None.
+        """
+        summary = report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view'])
+        query_link = self._generate_query_link(report_data['view_entity'], report_data['view'])
+        trigger_message = self._get_trigger_description(report_data['triggers'], triggered)
+        description = report_consts.REPORT_CONTENT.format(name=report_data['name'],
+                                                          query=report_data['view'],
+                                                          num_of_triggers=report_data['triggered'],
+                                                          trigger_message=trigger_message,
+                                                          num_of_current_devices=current_num_of_devices,
+                                                          old_results_num_of_devices=len(report_data['result']),
+                                                          query_link=query_link)
+        self.create_jira_ticket(summary=summary,
+                                description=description)
 
     def _handle_action_create_notification(self, report_data, triggered, trigger_data, current_num_of_devices,
                                            action_data=None):

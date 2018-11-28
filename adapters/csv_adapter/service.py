@@ -134,7 +134,7 @@ class CsvAdapter(AdapterBase):
                     for column_name, column_value in user_raw.items():
                         try:
                             if not column_name or not column_value:
-                                logger.warning(f'Bad CSV fields. Name: {column_name} Value: {column_value}')
+                                logger.debug(f'Bad CSV fields. Name: {column_name} Value: {column_value}')
                                 continue
                             normalized_column_name = 'csv_' + normalize_var_name(column_name)
                             if not user_obj.does_field_exist(normalized_column_name):

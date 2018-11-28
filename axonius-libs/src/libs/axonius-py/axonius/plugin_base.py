@@ -2005,6 +2005,33 @@ class PluginBase(Configurable, Feature):
                 except Exception:
                     logger.exception(f"Got exception creating ServiceNow computer with {name}")
 
+    def create_jira_ticket(self, summary, description):
+        jira_servicedesk_settings = self._jira_servicedesk_settings
+        if jira_servicedesk_settings['enabled'] is True:
+            post_data = dict()
+            post_data['serviceDeskId'] = jira_servicedesk_settings['servicedesk_id']
+            post_data['requestTypeId'] = jira_servicedesk_settings['request_type_id']
+            post_data['requestFieldValues'] = dict()
+            post_data['requestFieldValues']['summary'] = summary
+            post_data['requestFieldValues']['description'] = description
+            domain = jira_servicedesk_settings['domain']
+            username = jira_servicedesk_settings['username']
+            verify_ssl = jira_servicedesk_settings.get('verify_ssl', False)
+            apikey = jira_servicedesk_settings['apikey']
+            proxies = dict()
+            proxies['http_proxy'] = None
+            proxies['https_proxy'] = jira_servicedesk_settings.get('https_proxy')
+            headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+            url = RESTConnection.build_url(domain=domain,
+                                           url_base_prefix=f'rest/servicedeskapi/request').strip('/')
+            r = requests.post(url,
+                              headers=headers,
+                              verify=verify_ssl,
+                              proxies=proxies,
+                              auth=(username, apikey),
+                              json=post_data)
+            r.raise_for_status()
+
     def send_external_info_log(self, message):
         try:
             self.send_syslog_message(message, 'info')
@@ -2061,6 +2088,7 @@ class PluginBase(Configurable, Feature):
         self._email_settings = config['email_settings']
         self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
+        self._jira_servicedesk_settings = config['jira_servicedesk_settings']
         self._execution_enabled = config['execution_settings']['enabled']
         self._should_use_axr = config['execution_settings']['should_use_axr']
         self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
@@ -2229,6 +2257,56 @@ class PluginBase(Configurable, Feature):
                     "type": "array",
                     "name": "service_now_settings",
                     "title": "ServiceNow Settings",
+                },
+                {
+                    'type': 'array',
+                    'title': 'Jira ServiceDesk Settings',
+                    'name': 'jira_servicedesk_settings',
+                    'required': ['enabled', 'domain', 'servicedesk_id', 'request_type_id',
+                                 'username', 'apikey', 'verify_ssl'],
+                    'items': [
+                        {
+                            "name": "enabled",
+                            "title": "Use Jira ServiceDesk",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "domain",
+                            "title": "Jira ServiceDesk Domain",
+                            "type": "string"
+                        },
+                        {
+                            "name": "servicedesk_id",
+                            "title": "ServiceDesk ID",
+                            "type": "string"
+                        },
+                        {
+                            'name': 'request_type_id',
+                            'type': 'string',
+                            'title': 'Request Type ID'
+                        },
+                        {
+                            "name": "username",
+                            "title": "User Name",
+                            "type": "string"
+                        },
+                        {
+                            "name": "apikey",
+                            "title": "API Token",
+                            "type": "string",
+                            "format": "password"
+                        },
+                        {
+                            "name": "verify_ssl",
+                            "title": "Verify SSL",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "https_proxy",
+                            "title": "HTTPS Proxy",
+                            "type": "string"
+                        }
+                    ],
                 },
                 {
                     "items": [
@@ -2451,6 +2529,15 @@ class PluginBase(Configurable, Feature):
                 'domain': None,
                 'api_key': None,
                 'admin_email': None
+            },
+            'jira_servicedesk_settings': {
+                'enabled': False,
+                'domain': None,
+                'servicedesk_id': None,
+                'username': None,
+                'apikey': None,
+                'https_proxy': None,
+                'verify_ssl': False
             },
             "email_settings": {
                 "enabled": False,
