@@ -461,7 +461,7 @@ def find_entity_field(entity_data, field_path):
     if entity_data is None:
         # Return no value for this path
         return ''
-    if not field_path:
+    if not field_path or isinstance(entity_data, str):
         # Return value corresponding with given path
         return entity_data
 
