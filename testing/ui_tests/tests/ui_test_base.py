@@ -136,7 +136,7 @@ class TestBase:
         self._initialize_driver()
 
         # mac issues, maximize is not working on mac anyway now
-        if not self.local_browser and sys.platform != 'darwin':
+        if sys.platform != 'darwin':
             self.driver.maximize_window()
 
         self.driver.implicitly_wait(0.3)

@@ -59,5 +59,6 @@ class Notes:
 
 
 class History:
-    history_depth = 40
+    history_depth = 30
+    entities_per_day = 4000
     file_path = 'history_upgrade_test.tmp'
