@@ -1,8 +1,9 @@
 import json
 import logging
+import logging.handlers
 import os
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime, timedelta
 
 import pytest
 from passlib.hash import bcrypt
@@ -18,6 +19,7 @@ from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.pages.adapters_page import AdaptersPage
 from ui_tests.pages.alert_page import AlertPage
 from ui_tests.pages.base_page import BasePage
+from ui_tests.pages.dashboard_page import DashboardPage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
 from ui_tests.pages.login_page import LoginPage
@@ -26,10 +28,30 @@ from ui_tests.pages.notification_page import NotificationPage
 from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
-from ui_tests.pages.dashboard_page import DashboardPage
 
 
-logger = logging.getLogger(f'axonius.{__name__}')
+UI_ARTIFACTS_FOLDER = 'screenshots'
+
+
+def create_ui_tests_logger():
+    folder = os.path.join(UI_ARTIFACTS_FOLDER, 'ui_logger')
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    file_path = os.path.join(
+        folder,
+        'ui_tests.log')
+    file_handler = logging.handlers.RotatingFileHandler(file_path,
+                                                        maxBytes=5 * 1024 * 1024,
+                                                        backupCount=3)
+    my_logger = logging.getLogger('axonius')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s')
+    file_handler.setFormatter(formatter)
+    my_logger.addHandler(file_handler)
+    my_logger.setLevel(logging.DEBUG)
+    return my_logger
+
+
+logger = create_ui_tests_logger()
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=no-value-for-parameter
@@ -43,8 +65,10 @@ class TestBase:
             self.base_url = 'https://127.0.0.1'
         else:
             self.local_browser = False
+            logger.info('Before webdriver.Remote')
             self.driver = webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
                                            desired_capabilities=self._get_desired_capabilities())
+            logger.info('After webdriver.Remote')
             self.base_url = 'https://gui'
 
     @staticmethod
@@ -74,7 +98,7 @@ class TestBase:
         if not self.driver:
             return
         try:
-            folder = os.path.join('screenshots', method.__name__)
+            folder = os.path.join(UI_ARTIFACTS_FOLDER, method.__name__)
             if not os.path.exists(folder):
                 os.makedirs(folder)
             current_time = datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')
@@ -133,6 +157,8 @@ class TestBase:
         self.driver.get(self.driver.current_url.replace(old_base_url, new_url))
 
     def setup_method(self, method):
+        logger.info(f'starting setup_method {method.__name__}')
+        self.logger = logger
         self._initialize_driver()
 
         # mac issues, maximize is not working on mac anyway now
@@ -146,14 +172,17 @@ class TestBase:
 
         self.register_pages()
         self.login()
+        logger.info(f'finishing setup_method {method.__name__}')
 
     def teardown_method(self, method):
+        logger.info(f'starting teardown_method {method.__name__}')
         self._save_screenshot(method, text='before_teardown')
         self._save_js_logs(method)
         if not pytest.config.option.teardown_keep_db:
             self._clean_db()
         if self.driver:
             self.driver.quit()
+        logger.info(f'finishing teardown_method {method.__name__}')
 
     def register_pages(self):
         params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser)
