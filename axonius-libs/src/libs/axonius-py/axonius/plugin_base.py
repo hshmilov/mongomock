@@ -51,15 +51,13 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
-                                          MAINTENANCE_SETTINGS,
-                                          ANALYTICS_SETTING,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME, GUI_NAME,
                                           PLUGIN_UNIQUE_NAME,
-                                          TROUBLESHOOTING_SETTING,
                                           VOLATILE_CONFIG_PATH, PLUGIN_NAME, X_UI_USER, X_UI_USER_SOURCE,
                                           PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW,
                                           NOTIFICATIONS_SETTINGS, NOTIFY_ADAPTERS_FETCH)
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
@@ -2083,7 +2081,7 @@ class PluginBase(Configurable, Feature):
 
     def __renew_global_settings_from_db(self):
         config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
-            {'config_name': 'CoreService'})['config']
+            {'config_name': CORE_CONFIG_NAME})['config']
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
         self._https_logs_settings = config['https_log_settings']
@@ -2106,15 +2104,8 @@ class PluginBase(Configurable, Feature):
         self._service_now_settings = config['service_now_settings']
         self._fresh_service_settings = config['fresh_service_settings']
 
-        if not config[MAINTENANCE_SETTINGS][ANALYTICS_SETTING]:
-            config[MAINTENANCE_SETTINGS][TROUBLESHOOTING_SETTING] = False
-
-        self._maintenance_settings = config[MAINTENANCE_SETTINGS]
-
         self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].update_one(
-            filter={'config_name': 'CoreService'}, update={"$set": {"config": config}})
-
-        logger.info(self._maintenance_settings)
+            filter={'config_name': CORE_CONFIG_NAME}, update={"$set": {"config": config}})
 
     def __create_syslog_handler(self, syslog_settings: dict):
         """
@@ -2440,27 +2431,6 @@ class PluginBase(Configurable, Feature):
                     "type": "array"
                 },
                 {
-                    "items": [
-                        {
-                            "name": ANALYTICS_SETTING,
-                            "title": "Anonymized Analytics - Warning: turning off this feature prevents Axonius from \
-                            proactively detecting issues and notifying about errors.",
-                            "type": "bool"
-                        },
-                        {
-                            "name": TROUBLESHOOTING_SETTING,
-                            "title": "Remote Support - Warning: turning off this feature prevents Axonius from \
-                            updating the system and can lead to slower issue resolution time. \
-                            Note: anonymized analytics must be enabled for remote support",
-                            "type": "bool"
-                        }
-                    ],
-                    "name": MAINTENANCE_SETTINGS,
-                    "title": "Maintenance Settings",
-                    "type": "array",
-                    "required": [ANALYTICS_SETTING, TROUBLESHOOTING_SETTING]
-                },
-                {
                     'name': PROXY_SETTINGS,
                     'title': 'Proxy settings',
                     'type': 'array',
@@ -2567,10 +2537,6 @@ class PluginBase(Configurable, Feature):
                 'https_log_server': None,
                 'https_log_port': 443,
                 'https_proxy': None
-            },
-            MAINTENANCE_SETTINGS: {
-                ANALYTICS_SETTING: True,
-                TROUBLESHOOTING_SETTING: True
             },
             PROXY_SETTINGS: {
                 'enabled': False,

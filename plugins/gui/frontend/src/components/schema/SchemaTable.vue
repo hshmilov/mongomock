@@ -3,7 +3,7 @@
         <thead>
             <tr class="x-row clickable">
                 <th v-if="value" class="w-14">
-                    <x-checkbox v-model="allSelected" :semi="allSelected && selected.length !== data.length"
+                    <x-checkbox v-model="allSelected" :indeterminate="allSelected && selected.length !== data.length"
                                 @change="updateAllSelected"/>
                 </th>
                 <th v-for="field in fields" nowrap :class="{sortable: clickColHandler}"

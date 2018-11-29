@@ -41,7 +41,7 @@
                 </div>
                 <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" :api-upload="`adapters/${adapterId}`"
                                @submit="saveServer" @validate="validateServer" />
-            </div>import aiohttp
+            </div>
             <template slot="footer">
                 <button @click="toggleServerModal" class="x-btn link">Cancel</button>
                 <button id="test_reachability" @click="testServer"
@@ -76,7 +76,7 @@
 		FETCH_ADAPTERS, UPDATE_CURRENT_ADAPTER, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER, TEST_ADAPTER_SERVER
 	} from '../../store/modules/adapter'
     import { pluginMeta } from '../../constants/plugin_meta.js'
-    import { SAVE_PLUGIN_CONFIG } from "../../store/modules/configurable"
+    import { SAVE_PLUGIN_CONFIG } from "../../store/modules/settings"
 	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
     export default {

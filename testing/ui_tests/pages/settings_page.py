@@ -1,4 +1,5 @@
 from json import dumps
+import time
 
 from selenium.common.exceptions import NoSuchElementException
 
@@ -16,10 +17,15 @@ class SettingsPage(Page):
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
-    REMOTE_SUPPORT_LABEL = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
-                           '                             updating the system and can lead' \
-                           ' to slower issue resolution time.' \
-                           '                             Note: anonymized analytics must be enabled for remote support'
+    REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
+                               '                             updating the system and can lead' \
+                               ' to slower issue resolution time.                             ' \
+                               'Note: anonymized analytics must be enabled for remote support'
+    REMOTE_SUPPORT_LABEL = 'Remote Access'
+    ANALYTICS_LABEL_OLD = 'Anonymized Analytics - Warning: turning off this feature prevents Axonius from' \
+                          '                             proactively detecting issues and notifying about errors.'
+    ANALYTICS_LABEL = 'Anonymized Analytics'
+    PROVISION_LABEL = 'Remote Support'
     USE_SYSLOG_LABEL = 'Use syslog'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     OKTA_LOGINS_LABEL = 'Allow Okta logins'
@@ -136,8 +142,28 @@ class SettingsPage(Page):
     def find_send_emails_toggle(self):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
 
+    def toggle_advanced_settings(self):
+        self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=X_BODY)
+        time.sleep(0.5)
+
     def find_remote_support_toggle(self):
-        return self.find_checkbox_by_label(self.REMOTE_SUPPORT_LABEL)
+        try:
+            return self.find_checkbox_with_label_by_label(self.REMOTE_SUPPORT_LABEL)
+        except NoSuchElementException:
+            # The above is new behaviour and will not work on versions up to 1.15
+            # Rollback to previous behaviour
+            return self.find_checkbox_with_label_by_label(self.REMOTE_SUPPORT_LABEL_OLD)
+
+    def find_analytics_toggle(self):
+        try:
+            return self.find_checkbox_with_label_by_label(self.ANALYTICS_LABEL)
+        except NoSuchElementException:
+            # The above is new behaviour and will not work on versions up to 1.15
+            # Rollback to previous behaviour
+            return self.find_checkbox_with_label_by_label(self.ANALYTICS_LABEL_OLD)
+
+    def find_provision_toggle(self):
+        return self.find_checkbox_with_label_by_label(self.PROVISION_LABEL)
 
     def find_syslog_toggle(self):
         return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
@@ -163,6 +189,19 @@ class SettingsPage(Page):
     def set_remote_support_toggle(self, make_yes):
         toggle = self.find_remote_support_toggle()
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
+    def set_analytics_toggle(self, make_yes):
+        toggle = self.find_analytics_toggle()
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
+    def set_provision_toggle(self, make_yes):
+        toggle = self.find_provision_toggle()
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+
+    def confirm_maintenance_removal(self):
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.click_button(self.CONFIRM_BUTTON)
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def fill_syslog_host(self, host):
         self.fill_text_field_by_element_id(self.SYSLOG_HOST, host)
@@ -311,8 +350,14 @@ class SettingsPage(Page):
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
 
+    def find_checkbox_with_label_by_label(self, text):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))
+
     def click_start_remote_access(self):
-        self.click_button('Start', button_class='x-btn right', scroll_into_view_container=X_BODY)
+        self.click_button('Start', scroll_into_view_container=X_BODY)
+
+    def click_stop_remote_access(self):
+        self.click_button('Stop', scroll_into_view_container=X_BODY)
 
     def save_and_wait_for_toaster(self):
         self.click_save_button()

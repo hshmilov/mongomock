@@ -28,18 +28,11 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
-                                          ANALYTICS_SETTING,
-                                          CONFIGURABLE_CONFIGS_COLLECTION,
-                                          CORE_UNIQUE_NAME,
-                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
-                                          GUI_SYSTEM_CONFIG_COLLECTION,
-                                          MAINTENANCE_SETTINGS, METADATA_PATH,
-                                          NOTES_DATA_TAG, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME,
-                                          SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          SYSTEM_SETTINGS,
-                                          TROUBLESHOOTING_SETTING, AXONIUS_USER_NAME)
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME,
+                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION,
+                                          METADATA_PATH, NOTES_DATA_TAG, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          SYSTEM_SCHEDULER_PLUGIN_NAME, SYSTEM_SETTINGS, AXONIUS_USER_NAME)
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import Phases, ResearchPhases, SchedulerState
 from axonius.email_server import EmailServer
@@ -74,7 +67,7 @@ from urllib3.util.url import parse_url
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME, EXEC_REPORT_THREAD_ID,
-                                       EXEC_REPORT_TITLE, SUPPORT_ACCESS_THREAD_ID, RANGE_UNIT_DAYS, ResearchStatus,
+                                       EXEC_REPORT_TITLE, TEMP_MAINTENANCE_THREAD_ID, RANGE_UNIT_DAYS, ResearchStatus,
                                        ChartFuncs, ChartMetrics, ChartViews, ChartRangeTypes, ChartRangeUnits,
                                        GOOGLE_KEYPAIR_FILE, ROLES_COLLECTION, USERS_COLLECTION,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_READONLY, PREDEFINED_ROLE_RESTRICTED)
@@ -282,8 +275,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._mark_demo_views()
         self.add_default_reports('default_reports.ini')
         self.add_default_dashboard_charts('default_dashboard_charts.ini')
-        if not self.system_collection.find({'type': 'server'}):
+        if not self.system_collection.count_documents({'type': 'server'}):
             self.system_collection.insert_one({'type': 'server', 'server_name': 'localhost'})
+        if not self.system_collection.count_documents({'type': 'maintenance'}):
+            self.system_collection.insert_one({
+                'type': 'maintenance', 'provision': True, 'analytics': True, 'troubleshooting': True
+            })
 
         # Start exec report scheduler
         self.exec_report_lock = threading.RLock()
@@ -295,6 +292,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if current_exec_report_setting != {}:
             self._schedule_exec_report(self.exec_report_collection, current_exec_report_setting)
         self._job_scheduler.start()
+        if self._maintenance_config.get('timeout'):
+            next_run_time = self._maintenance_config['timeout']
+            logger.info(f'Creating a job for stopping the maintenance access at {next_run_time}')
+            self._job_scheduler.add_job(func=self._stop_temp_maintenance,
+                                        trigger='date',
+                                        next_run_time=next_run_time,
+                                        name=TEMP_MAINTENANCE_THREAD_ID,
+                                        id=TEMP_MAINTENANCE_THREAD_ID,
+                                        max_instances=1)
 
         self.metadata = self.load_metadata()
         self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
@@ -1430,7 +1436,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if config_to_set is None:
                 return return_error("Invalid config", 400)
             email_settings = config_to_set.get('email_settings')
-            if plugin_unique_name == 'core' and config_name == 'CoreService' and email_settings and email_settings.get(
+            if plugin_unique_name == 'core' and config_name == CORE_CONFIG_NAME and email_settings and email_settings.get(
                     'enabled') is True:
 
                 if not email_settings.get('smtpHost') or not email_settings.get('smtpPort'):
@@ -3471,20 +3477,51 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 logger.info("Email cannot be sent because no email server is configured")
                 raise RuntimeWarning("No email server configured")
 
-    @gui_add_rule_logged_in('support_access', methods=['GET', 'POST', 'DELETE'],
+    def _stop_temp_maintenance(self):
+        logger.info('Stopping Support Access')
+        self._update_temp_maintenance(None)
+        temp_maintenance_job = self._job_scheduler.get_job(TEMP_MAINTENANCE_THREAD_ID)
+        if temp_maintenance_job:
+            temp_maintenance_job.remove()
+
+    def _update_temp_maintenance(self, timeout):
+        self.system_collection.update_one({
+            'type': 'maintenance'
+        }, {
+            '$set': {
+                'timeout': timeout
+            }
+        })
+
+    @gui_add_rule_logged_in('config/maintenance', methods=['GET', 'POST', 'PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Settings,
                                                              ReadOnlyJustForGet)})
-    def support_access(self):
+    def maintenance(self):
         """
-        Try retrieving current job for stopping the support access.
-        If GET request, return its scheduled time or empty, if doesn't exist.
-        If POST request, update the time of the job or create one, if doesn't exist.
-        The time to stop is according to the given duration.
+        Manage the maintenance features which can be customly set by user or switched all on for a limited time.
+        GET returns current config for the features
+        POST updates current config for the features
+        PUT start all features for given duration of time
+        DELETE stop all features (should be available only if they are temporarily on)
 
-        :return: Current time of stop jon for GET request, empty string otherwise
         """
-        support_access_job = self._job_scheduler.get_job(SUPPORT_ACCESS_THREAD_ID)
+        match_maintenance = {
+            'type': 'maintenance'
+        }
+        if request.method == 'GET':
+            return jsonify(self.system_collection.find_one(match_maintenance))
+
         if request.method == 'POST':
+            self.system_collection.update_one(match_maintenance, {
+                '$set': self.get_request_data_as_object()
+            })
+            self._stop_temp_maintenance()
+
+        if request.method == 'DELETE':
+            self._stop_temp_maintenance()
+
+        if request.method == 'PUT':
+            temp_maintenance_job = self._job_scheduler.get_job(TEMP_MAINTENANCE_THREAD_ID)
             duration_param = self.get_request_data_as_object().get('duration', 24)
             try:
                 next_run_time = time_from_now(float(duration_param))
@@ -3494,53 +3531,23 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return return_error(message, 400)
 
             logger.info('Starting Support Access')
-            self._update_support_access(True)
-            if support_access_job is not None:
+            self._update_temp_maintenance(next_run_time)
+            if temp_maintenance_job is not None:
                 # Job exists, not creating another
                 logger.info(f'Job already existing - updating its run time to {next_run_time}')
-                support_access_job.modify(next_run_time=next_run_time)
+                temp_maintenance_job.modify(next_run_time=next_run_time)
                 # self._job_scheduler.reschedule_job(SUPPORT_ACCESS_THREAD_ID, trigger='date')
             else:
-                logger.info(f'Creating a stop job for the time {next_run_time}')
-                self._job_scheduler.add_job(func=self._stop_support_access,
+                logger.info(f'Creating a job for stopping the maintenance access at {next_run_time}')
+                self._job_scheduler.add_job(func=self._stop_temp_maintenance,
                                             trigger='date',
                                             next_run_time=next_run_time,
-                                            name=SUPPORT_ACCESS_THREAD_ID,
-                                            id=SUPPORT_ACCESS_THREAD_ID,
+                                            name=TEMP_MAINTENANCE_THREAD_ID,
+                                            id=TEMP_MAINTENANCE_THREAD_ID,
                                             max_instances=1)
+            return jsonify({'timeout': next_run_time})
 
-        elif request.method == 'GET':
-            if not support_access_job:
-                logger.info('No current job for ending the support access - it was already triggered')
-                return ''
-            return str(int(time.mktime(support_access_job.next_run_time.timetuple())))
-
-        elif request.method == 'DELETE':
-            self._stop_support_access()
-            if support_access_job:
-                support_access_job.remove()
         return ''
-
-    def _stop_support_access(self):
-        logger.info('Stopping Support Access')
-        self._update_support_access(False)
-
-    def _update_support_access(self, support_access_on):
-        """
-        Fetch current config belong
-        :param support_access_on:
-        :return:
-        """
-        config_document = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).find_one({
-            'config_name': 'CoreService'
-        })
-        if not config_document:
-            logger.error('Cannot start the support access, since controlling configuration is not found')
-            return
-        config_to_set = config_document['config']
-        config_to_set[MAINTENANCE_SETTINGS][ANALYTICS_SETTING] = support_access_on
-        config_to_set[MAINTENANCE_SETTINGS][TROUBLESHOOTING_SETTING] = support_access_on
-        self._update_plugin_config(CORE_UNIQUE_NAME, 'CoreService', config_to_set)
 
     def dump_metrics(self):
         try:
@@ -3745,13 +3752,26 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     severity_type='error'
                 )
 
+    @property
+    def _maintenance_config(self):
+        return self.system_collection.find_one({
+            'type': 'maintenance'
+        })
+
+    @gui_helpers.add_rule_unauth('provision')
+    def get_provision(self):
+        return jsonify(
+            self._maintenance_config.get('provision', False) or self._maintenance_config.get('timeout') != None)
+
     @gui_helpers.add_rule_unauth('analytics')
     def get_analytics(self):
-        return jsonify(self._maintenance_settings[ANALYTICS_SETTING])
+        return jsonify(
+            self._maintenance_config.get('analytics', False) or self._maintenance_config.get('timeout') != None)
 
     @gui_helpers.add_rule_unauth('troubleshooting')
     def get_troubleshooting(self):
-        return jsonify(self._maintenance_settings[TROUBLESHOOTING_SETTING])
+        return jsonify(
+            self._maintenance_config.get('troubleshooting', False) or self._maintenance_config.get('timeout') != None)
 
     @classmethod
     def _db_config_schema(cls) -> dict:

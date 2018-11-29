@@ -49,12 +49,12 @@
                                     title="Trigger alert if the number of entities that was discovered from the given saved query is above the given threshold"
                                     @change="tour('alertAbove')" />
                         <div class="form-inline" >
-                            <input id="alert_above" type="number" v-model="alert.triggers.above" min="0" v-on:keypress="isNumber($event)" @input="tour('alertAction')" :disabled="!alert.triggers.increase" >
+                            <input id="alert_above" type="number" v-model="alert.triggers.above" min="0" @keypress="validateNumber" @input="tour('alertAction')" :disabled="!alert.triggers.increase" >
                         </div>
                         <x-checkbox label="The number of query results is below" v-model="alert.triggers.decrease"
                                     title="Trigger alert if the number of entities that was discovered from the given saved query is below the given threshold" />
                         <div class="form-inline" >
-                            <input id="alert_below" type="number" v-model="alert.triggers.below" min="0" v-on:keypress="isNumber($event)" :disabled="!alert.triggers.decrease">
+                            <input id="alert_below" type="number" v-model="alert.triggers.below" min="0" @keypress="validateNumber" :disabled="!alert.triggers.decrease">
                         </div>
                     </div>
                 </div>
@@ -163,6 +163,7 @@
     import {SET_ALERT, UPDATE_ALERT, FETCH_ALERTS} from '../../store/modules/alert'
     import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
     import { entities } from '../../constants/entities'
+    import { validateNumber } from '../../utils'
 
     export default {
         name: 'alert-config-container',
@@ -330,15 +331,6 @@
             ...mapActions({
                 fetchViews: FETCH_DATA_VIEWS, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
             }),
-            isNumber: function(evt) {
-                evt = (evt) ? evt : window.event;
-                var charCode = (evt.which) ? evt.which : evt.keyCode;
-                if (charCode > 31 && (charCode < 48 || charCode > 57)) {
-                    evt.preventDefault();;
-              } else {
-                    return true;
-              }
-            },
             fillAlert(alert) {
                 alert.actions.forEach((action) => {
                     switch (action.type) {
@@ -411,6 +403,7 @@
 					}
 				}
             },
+            validateNumber,
             saveAlert() {
                 /* Validation */
                 if (!this.complete) return
@@ -422,8 +415,10 @@
                 }
                 if (this.actions.mail) {
                     this.alert.actions.push({
-                        type: 'send_emails', data: { mailSubject: this.subject, emailList: this.mailList, emailListCC: this.mailListCC,
-                                                    sendDeviceCSV: this.sendDevicesCSVToEmail, sendDevicesChangesCSV: this.sendDevicesChangesCSVToEmail}
+                        type: 'send_emails', data: {
+                            mailSubject: this.subject, emailList: this.mailList, emailListCC: this.mailListCC,
+                            sendDeviceCSV: this.sendDevicesCSVToEmail, sendDevicesChangesCSV: this.sendDevicesChangesCSVToEmail
+                        }
                     })
                 }
                 if (this.actions.tag) {

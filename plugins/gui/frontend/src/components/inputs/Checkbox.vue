@@ -1,7 +1,7 @@
 <template>
-    <div class="x-checkbox" :class="{'x-checked': checked, disabled: readOnly}" :id="id" :title="title"
+    <div class="x-checkbox" :class="{'x-checked': isChecked, disabled: readOnly}" :id="id" :title="title"
          @click.stop="$refs.checkbox.click()" @keyup.enter.stop="$refs.checkbox.click()">
-        <div class="x-checkbox-container" :class="{'x-checkbox-semi': semi}">
+        <div class="x-checkbox-container" :class="{'x-checkbox-indeterminate': indeterminate}">
             <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox" :disabled="readOnly">
         </div>
         <label v-if="label" class="x-checkbox-label">{{label}}</label>
@@ -12,12 +12,23 @@
 	export default {
 		name: 'x-checkbox',
         props: {
-		    data: {}, value: {default: 'on'}, label: {}, semi: {default: false}, id: {},
+		    data: {}, value: {default: 'on'}, label: {}, indeterminate: {default: false}, id: {},
             readOnly: { default: false }, title: {}
         },
         model: {
 			prop: 'data',
             event: 'change'
+        },
+        computed: {
+		    isChecked() {
+                if (Array.isArray(this.data) && !Array.isArray(this.value)) {
+                    return this.data.includes(this.value)
+                } else if (typeof this.data === 'boolean') {
+                    return this.data === true
+                } else {
+                    return this.data === this.value
+                }
+            }
         },
         data() {
 			return {
@@ -116,7 +127,7 @@
                 transition: .4s cubic-bezier(.25,.8,.25,1);
                 border-color: $theme-white;
             }
-            &.x-checkbox-semi {
+            &.x-checkbox-indeterminate {
                 background-color: $grey-5;
                 border-color: $grey-5;
                 &:after {

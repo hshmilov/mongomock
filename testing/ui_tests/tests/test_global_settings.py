@@ -48,6 +48,7 @@ class TestGlobalSettings(TestBase):
     def test_maintenance_endpoints(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
+        self.settings_page.toggle_advanced_settings()
         gui_service = GuiService()
 
         assert gui_service.troubleshooting().strip() == b'true'
@@ -55,22 +56,35 @@ class TestGlobalSettings(TestBase):
         assert self.settings_page.is_toggle_selected(toggle)
 
         self.settings_page.set_remote_support_toggle(make_yes=False)
-        self.settings_page.save_and_wait_for_toaster()
+        self.settings_page.confirm_maintenance_removal()
         wait_until(lambda: gui_service.troubleshooting().strip() == b'false')
 
         self.settings_page.set_remote_support_toggle(make_yes=True)
-        self.settings_page.save_and_wait_for_toaster()
         wait_until(lambda: gui_service.troubleshooting().strip() == b'true')
+
+        assert gui_service.analytics().strip() == b'true'
+        toggle = self.settings_page.find_analytics_toggle()
+        assert self.settings_page.is_toggle_selected(toggle)
+
+        self.settings_page.set_analytics_toggle(make_yes=False)
+        self.settings_page.confirm_maintenance_removal()
+        wait_until(lambda: gui_service.analytics().strip() == b'false')
+
+        self.settings_page.set_analytics_toggle(make_yes=True)
+        wait_until(lambda: gui_service.analytics().strip() == b'true')
 
     def test_remote_access_log(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
-        self.settings_page.wait_for_spinner_to_end()
+        self.settings_page.toggle_advanced_settings()
 
+        self.settings_page.set_provision_toggle(make_yes=False)
+        self.settings_page.confirm_maintenance_removal()
         self.settings_page.click_start_remote_access()
         wait_until(
             lambda: LogTester(GUI_LOG_PATH).is_pattern_in_log(
-                '(Creating a stop job for the time|Job already existing - updating its run time to)', 10))
+                '(Creating a job for stopping the maintenance|Job already existing - updating its run time to)', 10))
+        self.settings_page.click_stop_remote_access()
 
     def test_proxy_settings(self):
         self.settings_page.switch_to_page()

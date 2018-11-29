@@ -74,6 +74,7 @@ SLEEP_INTERVAL = 0.2
 class Page:
     LOADING_SPINNER_CSS = '.v-spinner-bg'
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
+    CHECKBOX_WITH_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and child::label[text()=\'{label_text}\']]'
     CHECKBOX_CSS = 'div.x-checkbox-container'
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
@@ -83,6 +84,7 @@ class Page:
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'
     ACTIONS_BUTTON = 'Actions'
+    CONFIRM_BUTTON = 'Confirm'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_ROWS_CSS = 'tbody .x-row.clickable'

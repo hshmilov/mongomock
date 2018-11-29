@@ -15,28 +15,15 @@
                     </template>
                 </div>
             </tab>
-            <tab title="Global Settings" id="global-settings-tab">
+            <tab title="Global Settings" id="global-settings-tab" ref="global">
                 <div class="tab-settings">
                     <template v-if="coreSettings">
                         <x-schema-form :schema="coreSettings.schema" @validate="updateCoreValidity"
                                        :read-only="isReadOnly" v-model="coreSettings.config" api-upload="adapters/core"/>
-                        <div class="place-right">
-                            <button class="x-btn" id="global-settings-save" :class="{ disabled: !coreComplete || isReadOnly }"
-                                    @click="saveGlobalSettings">Save</button>
-                        </div>
-                        <h4>Remote Support Control</h4>
-                        <div class="global-settings-access">
-                            <label for="support_access">Temporary Remote Support (hours):</label>
-                            <input type="number" v-model="supportAccess.duration" id="support_access"
-                                   :disabled="isReadOnly"/>
-                            <button @click="startSupportAccess" class="x-btn right" :class="{ disabled: isReadOnly }">Start</button>
-                            <template v-if="supportAccessEndTime">
-                                <div>Will stop at:</div>
-                                <div>{{ supportAccessEndTime.toISOString().replace(/(T|Z)/g, ' ') }}
-                                </div>
-                                <!--button @click="stopSupportAccess" class="x-btn link">Stop Now</button-->
-                            </template>
-                            <div v-else class="grid-span3"/>
+                        <div class="footer">
+                            <x-maintenance-container :read-only="isReadOnly" v-if="$refs.global && $refs.global.isActive" />
+                            <button class="x-btn" :class="{ disabled: !coreComplete || isReadOnly }"
+                                    @click="saveGlobalSettings" id="global-settings-save">Save</button>
                         </div>
                     </template>
                 </div>
@@ -75,16 +62,17 @@
     import Tab from '../../components/tabs/Tab.vue'
     import xToast from '../../components/popover/Toast.vue'
     import xUserRoleContainer from './UserRoleContainer.vue'
+    import xMaintenanceContainer from './MaintenanceContainer.vue'
 
     import { mapState, mapActions, mapMutations } from 'vuex'
-    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/configurable";
+    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/settings";
     import {REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE} from '../../store/actions'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
     export default {
         name: 'settings-container',
         components: {
-            xPage, Tabs, Tab, xUserRoleContainer, xSchemaForm, xCustomData, xToast
+            xPage, Tabs, Tab, xUserRoleContainer, xSchemaForm, xCustomData, xToast, xMaintenanceContainer
         },
         computed: {
             ...mapState({
@@ -94,16 +82,16 @@
                     return user.permissions.Settings === 'ReadOnly'
                 },
                 schedulerSettings(state) {
-                    if (!state.configurable.system_scheduler) return null
-                    return state.configurable.system_scheduler.SystemSchedulerService
+                    if (!state.settings.configurable.system_scheduler) return null
+                    return state.settings.configurable.system_scheduler.SystemSchedulerService
                 },
                 coreSettings(state) {
-                    if (!state.configurable.core) return null
-                    return state.configurable.core.CoreService
+                    if (!state.settings.configurable.core) return null
+                    return state.settings.configurable.core.CoreService
                 },
                 guiSettings(state) {
-                    if (!state.configurable.gui) return null
-                    return state.configurable.gui.GuiService
+                    if (!state.settings.configurable.gui) return null
+                    return state.settings.configurable.gui.GuiService
                 },
                 users(state) {
                     return state.auth.allUsers.data
@@ -116,12 +104,6 @@
             validResearchRate() {
                 if (!this.schedulerSettings.config) return 12
                 return this.validNumber(this.schedulerSettings.config.discovery_settings.system_research_rate)
-            },
-            supportAccessEndTime() {
-                if (!this.coreSettings.config || !this.coreSettings.config.maintenance_settings.analytics) {
-                    return null
-                }
-                return this.supportAccess.endTime
             }
         },
         data() {
@@ -131,10 +113,6 @@
                 schedulerComplete: true,
                 message: '',
                 systemInfo: {},
-                supportAccess: {
-                    duration: 24,
-                    endTime: null
-                },
                 createUserActive: false,
                 userForm: {
                     user_name: '',
@@ -168,7 +146,6 @@
                     config: this.coreSettings.config
                 }).then(response => {
                     this.createToast(response)
-                    this.getSupportAccess()
                 }).catch(error => {
                     if (error.response.status === 400) {
                         this.message = error.response.data.message
@@ -220,54 +197,6 @@
             },
             determineState(tabId) {
                 this.changeState({name: tabId})
-            },
-            startSupportAccess() {
-                if (this.isReadOnly) return
-                this.fetchData({
-                    rule: 'support_access',
-                    method: 'POST',
-                    data: {duration: this.supportAccess.duration}
-                }).then(() => {
-                    this.message = `Support Access Started for ${this.supportAccess.duration} hours`
-                    this.getSupportAccess()
-                    this.loadPluginConfig({
-                        pluginId: 'core',
-                        configName: 'CoreService'
-                    })
-                }).catch(error => {
-                    if (error.response.status === 400) {
-                        this.message = error.response.data.message
-                    }
-                })
-            },
-            stopSupportAccess() {
-                this.fetchData({
-                    rule: 'support_access',
-                    method: 'DELETE'
-                }).then(() => {
-                    this.message = `Support Access Ended`
-                    this.getSupportAccess()
-                    this.loadPluginConfig({
-                        pluginId: 'core',
-                        configName: 'CoreService'
-                    })
-                }).catch(error => {
-                    if (error.response.status === 400) {
-                        this.message = error.response.data.message
-                    }
-                })
-            },
-            getSupportAccess() {
-                this.fetchData({
-                    rule: `support_access`
-                }).then((response) => {
-                    if (response.status === 200 && response.data) {
-                        // Date timestamp received in seconds and JS Date expects milliseconds
-                        this.supportAccess.endTime = new Date(parseInt(response.data) * 1000)
-                    } else {
-                        this.supportAccess.endTime = null
-                    }
-                })
             }
         },
         created() {
@@ -290,7 +219,6 @@
                     this.systemInfo = response.data
                 }
             })
-            this.getSupportAccess()
             this.changeState({name: 'lifecycleRate'})
         },
         mounted() {
@@ -309,12 +237,18 @@
         .tab-settings .schema-form .array {
             grid-template-columns: 1fr;
         }
-        .global-settings-access {
-            display: grid;
-            grid-template-columns: 1fr 1fr 120px;
-            grid-gap: 8px 0;
-            margin-bottom: 24px;
-            align-items: center;
+        .global-settings-tab {
+            .footer {
+                display: flex;
+                align-items: start;
+                .md-card {
+                    width: 80%;
+                    flex: 1 0 auto;
+                }
+                >.x-btn {
+                    margin-top: 4px;
+                }
+            }
         }
         .research-settings-tab .tab-settings .schema-form > .array {
             display: grid;

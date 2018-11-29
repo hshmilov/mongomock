@@ -6,10 +6,10 @@ import requests
 
 from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED,
                                        ROLES_COLLECTION, CONFIG_COLLECTION)
-from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION,
-                                          DASHBOARD_COLLECTION, GUI_NAME,
-                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME)
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION,
+                                          DASHBOARD_COLLECTION, GUI_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          CORE_UNIQUE_NAME, GUI_SYSTEM_CONFIG_COLLECTION)
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
 
@@ -34,6 +34,8 @@ class GuiService(PluginService):
             self._update_schema_version_5()
         if self.db_schema_version < 6:
             self._update_schema_version_6()
+        if self.db_schema_version < 7:
+            self._update_schema_version_7()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -274,6 +276,29 @@ class GuiService(PluginService):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 6. Details: {e}')
 
+    def _update_schema_version_7(self):
+        print('upgrade to schema 7')
+        try:
+            config_match = {
+                'config_name': CORE_CONFIG_NAME
+            }
+            config_collection = self.db.get_collection(CORE_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION)
+            current_config = config_collection.find_one(config_match)
+            if current_config and current_config['config'].get('maintenance_settings'):
+                maintenance_config = current_config['config']['maintenance_settings']
+                self.db.get_collection(GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION).insert_one({
+                    'type': 'maintenance',
+                    'provision': maintenance_config.get('analytics', True),
+                    'analytics': maintenance_config.get('analytics', True),
+                    'troubleshooting': maintenance_config.get('troubleshooting', True),
+                    'timeout': None
+                })
+                del current_config['config']['maintenance_settings']
+                config_collection.replace_one(config_match, current_config)
+            self.db_schema_version = 7
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 7. Details: {e}')
+
     @property
     def exposed_ports(self):
         """
@@ -384,7 +409,7 @@ RUN cd ./gui/frontend/ && npm run {dev}build
     def logout_user(self):
         return self.get('logout', session=self._session)
 
-    def anaylitics(self):
+    def analytics(self):
         return self.get('analytics').content
 
     def troubleshooting(self):

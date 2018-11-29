@@ -1,6 +1,7 @@
 import requests
 
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 
 
@@ -29,7 +30,7 @@ class CoreService(PluginService):
 
     def set_config(self, config):
         self.db.get_collection('core', CONFIGURABLE_CONFIGS_COLLECTION).update_one(
-            {'config_name': 'CoreService'},
+            {'config_name': CORE_CONFIG_NAME},
             {'$set': config}
         )
         self.post('update_config')

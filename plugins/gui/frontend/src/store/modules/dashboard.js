@@ -106,20 +106,20 @@ export const dashboard = {
 		},
 		[ FETCH_DASHBOARD ] ({dispatch}, payload) {
 			if (!payload) {
-			    payload = {}
+				payload = {}
             }
             if (!payload.skip) {
-			    payload.skip = 0
+				payload.skip = 0
             }
             if (!payload.limit) {
-			    payload.limit = 2
+				payload.limit = 2
             }
 			return dispatch(REQUEST_API, {
 				rule: `dashboard?skip=${payload.skip}&limit=${payload.limit}`,
 				type: UPDATE_DASHBOARD,
                 payload
 			}).then(response => {
-                if (response.data && response.data.length == payload.limit) {
+                if (response.data && response.data.length === payload.limit) {
                     dispatch(FETCH_DASHBOARD, { ...payload,
                         skip: payload.skip + payload.limit
                     })

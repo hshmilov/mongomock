@@ -18,9 +18,6 @@ NOTES_DATA_TAG = 'Notes'
 
 # SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'
-MAINTENANCE_SETTINGS = 'maintenance_settings'
-ANALYTICS_SETTING = 'analytics'
-TROUBLESHOOTING_SETTING = 'troubleshooting'
 PROXY_SETTINGS = 'proxy_settings'
 PROXY_ADDR = 'proxy_addr'
 PROXY_PORT = 'proxy_port'

@@ -18,10 +18,12 @@ class TestGeneralSettings(TestBase):
     def test_maintenance_settings(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
-        self.settings_page.wait_for_spinner_to_end()
+        self.settings_page.toggle_advanced_settings()
 
         toggle = self.settings_page.find_remote_support_toggle()
         assert not self.settings_page.is_toggle_selected(toggle)
+        toggle = self.settings_page.find_analytics_toggle()
+        assert self.settings_page.is_toggle_selected(toggle)
 
     def test_syslog_settings(self):
         self.settings_page.switch_to_page()

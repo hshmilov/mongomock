@@ -57,7 +57,7 @@ import { auth } from './modules/auth'
 import { constants } from './modules/constants'
 import { dashboard } from './modules/dashboard'
 import { report } from './modules/report'
-import { configurable } from './modules/configurable'
+import { settings } from './modules/settings'
 import { onboarding } from './modules/onboarding'
 
 Vue.use(Vuex)
@@ -132,7 +132,7 @@ export default new Vuex.Store({
         constants,
         dashboard,
 		report,
-		configurable,
+		settings,
 		onboarding
     }
 

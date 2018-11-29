@@ -214,7 +214,7 @@ def test_maintenance_endpoints():
     axonius_system = get_service()
     gui_service = axonius_system.gui
 
-    assert gui_service.anaylitics().strip() == b'true'
+    assert gui_service.analytics().strip() == b'true'
     assert gui_service.troubleshooting().strip() == b'true'
 
 
