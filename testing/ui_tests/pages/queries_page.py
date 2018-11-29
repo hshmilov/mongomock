@@ -18,7 +18,7 @@ class QueriesPage(Page):
     def parent_root_page_css(self):
         raise NotImplementedError
 
-    def switch_to_page(self):
+    def switch_to_page(self, allow_saved_queries=True):
         # This is a sub-page and therefore is found by hovering the button leading to the parent
         try:
             self.wait_for_table_to_load()
@@ -26,7 +26,7 @@ class QueriesPage(Page):
         except TimeoutException:
             pass
         self.hover_element_by_css(self.parent_root_page_css)
-        super().switch_to_page()
+        super().switch_to_page(allow_saved_queries=allow_saved_queries)
 
     def find_query_row_by_name(self, query_name):
         return self.driver.find_element_by_xpath(self.QUERY_ROW_BY_NAME_XPATH.format(query_name=query_name))

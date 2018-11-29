@@ -116,9 +116,14 @@ class Page:
         full_url = urllib.parse.urljoin(self.base_url, url)
         self.driver.get(full_url)
 
-    def switch_to_page(self):
+    def switch_to_page(self, allow_saved_queries=False):
         logger.info(f'Switching to {self.root_page_css}')
         self.wait_for_element_present_by_css(self.root_page_css)
+
+        # If Saved Queries is opened, it sometimes messes up switch_to_page
+        if not allow_saved_queries:
+            self.close_saved_queries_if_opened()
+
         self.driver.find_element_by_css_selector(self.root_page_css).click()
 
     def scroll_to_top(self):
@@ -508,3 +513,15 @@ class Page:
     def get_filename_by_input_id(self, input_id):
         return self.driver.find_element_by_xpath(
             f'//div[child::input[@id=\'{input_id}\']]/div[contains(@class, \'file-name\')]').text
+
+    def is_saved_queries_opened(self):
+        saved_queries = self.driver.find_elements_by_css_selector('button[title="Saved Queries"] > span')
+        return any(elem.is_displayed() for elem in saved_queries)
+
+    def close_saved_queries(self):
+        self.driver.find_element_by_css_selector('circle[pid="0"]').click()
+
+    def close_saved_queries_if_opened(self):
+        if self.is_saved_queries_opened():
+            logger.info('Saved Queries is opened! Closing it!')
+            self.close_saved_queries()

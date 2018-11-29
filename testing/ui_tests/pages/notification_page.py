@@ -31,7 +31,7 @@ class NotificationPage(Page):
     def url(self):
         return f'{self.base_url}/notification'
 
-    def switch_to_page(self):
+    def switch_to_page(self, allow_saved_queries=False):
         logger.info(f'Switching to {self.url}')
         full_url = urljoin(self.base_url, self.url)
         self.driver.get(full_url)
