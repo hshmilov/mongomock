@@ -3,7 +3,6 @@ import pytest
 
 from axonius.consts import adapter_consts
 from axonius.utils.wait import wait_until
-from esx_adapter.service import EsxAdapter
 from services.adapters.esx_service import EsxService, esx_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
@@ -18,7 +17,8 @@ class TestEsxAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return EsxAdapter._get_client_id(None, self.some_client_details)
+        # Not importing the adapter itself because ESX has some weird dependencies
+        return '{}/{}'.format(self.some_client_details['host'], self.some_client_details['user'])
 
     @property
     def some_client_details(self):
@@ -39,6 +39,12 @@ class TestEsxAdapter(AdapterTestBase):
             client_details_to_send.append((client_id, some_device_id))
         self.axonius_system.assert_device_aggregated(self.adapter_service, client_details_to_send)
         assert not self.axonius_system.get_device_by_id(self.adapter_service.unique_name, VERIFY_DEVICE_MISSING)
+        tagged_device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, DEVICE_WITH_TAG)
+        assert tagged_device, 'tagged device not present'
+        tags = tagged_device[0]['adapters'][0]['data']['tags']
+        assert len(tags) == 1
+        assert tags[0]['tag_key'] == TAG_KEY
+        assert tags[0]['tag_value'] == TAG_VALUE
 
     def test_folder_on_dc_level(self):
         self.drop_clients()

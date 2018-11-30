@@ -47,22 +47,24 @@ class EsxAdapter(AdapterBase):
         return '{}/{}'.format(client_config['host'], client_config['user'])
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get("host"))
+        return RESTConnection.test_reachability(client_config.get('host'))
 
     def _connect_client(self, client_config):
         client_id = self._get_client_id(client_config)
         try:
-            return vCenterApi(host=client_config['host'], user=client_config['user'],
+            host = client_config['host']
+            return vCenterApi(host=host, user=client_config['user'],
                               password=client_config['password'],
-                              verify_ssl=client_config['verify_ssl'])
+                              verify_ssl=client_config['verify_ssl'],
+                              restful_api_url=client_config.get('rest_api', f'https://{host}/api'))
         except vim.fault.InvalidLogin as e:
-            message = "Credentials invalid for ESX client for account {0}".format(client_id)
+            message = 'Credentials invalid for ESX client for account {0}'.format(client_id)
             logger.exception(message)
         except vim.fault.HostConnectFault as e:
-            message = "Unable to access vCenter, text={}, host = {}".format(e.msg, client_config['host'])
+            message = 'Unable to access vCenter, text={}, host = {}'.format(e.msg, client_config['host'])
             logger.exception(message)
         except Exception as e:
-            message = "Unknown error on account {}, text={}".format(client_id, str(e))
+            message = 'Unknown error on account {}, text={}'.format(client_id, str(e))
             logger.exception(message)
         raise ClientConnectionException(message)
 
@@ -73,36 +75,42 @@ class EsxAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "items": [
+            'items': [
                 {
-                    "name": "host",
-                    "title": "Host",
-                    "type": "string"
+                    'name': 'host',
+                    'title': 'Host',
+                    'type': 'string'
                 },
                 {
-                    "name": "user",
-                    "title": "User",
-                    "type": "string"
+                    'name': 'user',
+                    'title': 'User',
+                    'type': 'string'
                 },
                 {
-                    "name": "password",
-                    "title": "Password",
-                    "type": "string",
-                    "format": "password"
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
-                    "name": "verify_ssl",
-                    "title": "Verify SSL",
-                    "type": "bool"
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'rest_api',
+                    'title': 'vCenter RESTful API URL',
+                    'default': None,
+                    'type': 'string'
                 }
             ],
-            "required": [
-                "host",
-                "user",
-                "password",
-                "verify_ssl"
+            'required': [
+                'host',
+                'user',
+                'password',
+                'verify_ssl'
             ],
-            "type": "array"
+            'type': 'array'
         }
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -116,6 +124,12 @@ class EsxAdapter(AdapterBase):
         config = details.get('config', {})
 
         device = self._new_device_adapter()
+
+        tags = details.get('tags')
+        if tags:
+            for tag in tags:
+                device.add_key_value_tag(*tag)
+
         device.name = node.get('Name', '')
         device.figure_os(config.get('guestFullName', ''))
         try:
@@ -149,24 +163,24 @@ class EsxAdapter(AdapterBase):
         device.esx_host = details.get('esx_host_name', None)
         device.hostname = guest.get('hostName', '')
         device.vm_tools_status = guest.get('toolsStatus', '')
-        device.vm_physical_path = _curr_path + "/" + node.get('Name', '')
+        device.vm_physical_path = _curr_path + '/' + node.get('Name', '')
         device.power_state = POWER_STATE_MAP.get(details.get('runtime', {}).get('powerState'),
                                                  DeviceRunningState.Unknown)
-        boot_time = details.get("runtime", {}).get("bootTime")
+        boot_time = details.get('runtime', {}).get('bootTime')
         if boot_time is not None:
             device.boot_time = parse_date(boot_time)
 
-        memory_size_mb = config.get("memorySizeMB")
+        memory_size_mb = config.get('memorySizeMB')
         if memory_size_mb is not None:
             device.total_physical_memory = memory_size_mb / 1024.0
-        total_num_of_cpus = config.get("numCpu")
+        total_num_of_cpus = config.get('numCpu')
         if total_num_of_cpus is not None:
             device.total_number_of_physical_processors = int(total_num_of_cpus)
 
         device.set_raw(details)
         return device
 
-    def _parse_raw_data(self, node, _curr_path: str = ""):
+    def _parse_raw_data(self, node, _curr_path: str = ''):
         """
         Parses the vms as returned from _query_devices_by_client to the format Aggregator wants
 
@@ -179,7 +193,7 @@ class EsxAdapter(AdapterBase):
         node_type = node.get('Type')
         if not node_type:
             return
-        if node_type == "Template":
+        if node_type == 'Template':
             return
         elif node_type == 'Machine':
             device = self._parse_vm_machine(node, _curr_path)
@@ -202,11 +216,11 @@ class EsxAdapter(AdapterBase):
                                ghz=node_hardware['totalCpu'] / node_hardware['numCpuCores'] / 1024)
                 device.total_physical_memory = node_hardware['totalMemory'] / (1024.0 * 1024 * 1024)
             yield device
-        elif node_type in ("Datacenter", "Folder", "Root", 'Cluster'):
+        elif node_type in ('Datacenter', 'Folder', 'Root', 'Cluster'):
             for child in node.get('Children', [{}]):
-                yield from self._parse_raw_data(child, _curr_path + "/" + node['Name'])
+                yield from self._parse_raw_data(child, _curr_path + '/' + node['Name'])
         else:
-            raise RuntimeError("Found weird type of node: {}".format(node['Type']))
+            raise RuntimeError('Found weird type of node: {}'.format(node['Type']))
 
     @classmethod
     def adapter_properties(cls):

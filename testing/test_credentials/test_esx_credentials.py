@@ -3,7 +3,8 @@ client_details = [
         "host": "vcenter.axonius.lan",
         "user": "readonly@vsphere.local",
         "password": "a$Xvje99a$Xvje99",
-        "verify_ssl": False
+        "verify_ssl": False,
+        "rest_api": "https://vcenter.axonius.lan/api",
     }, '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b')]
 # This vcenter is currently not active!!! we should return it as soon as it becomes active again
 # ({
@@ -27,3 +28,8 @@ AGGREGATED_DEVICE_ID = "5011b327-7833-4d80-af9f-11c0afdde448"
 
 # This is a template - make sure we don't get it
 VERIFY_DEVICE_MISSING = "501129ea-6b2e-8ce5-c621-479d4aa454f6"
+
+
+DEVICE_WITH_TAG = '5011020f-b710-e8b5-10a2-6c1ef0e0f791'
+TAG_KEY = 'MARKtag'
+TAG_VALUE = 'Marki mark is marks mark'

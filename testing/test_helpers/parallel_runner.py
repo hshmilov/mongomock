@@ -56,7 +56,7 @@ class ParallelRunner(object):
                     status = "Finished"
                     if proc.poll() is not None:
                         if proc.returncode != 0:
-                            print(f'{name} failed')
+                            print(f'{name} failed, code {proc.returncode}')
                             status = "Failed"
                             self.pump_std(name, proc)
                             if proc.returncode != 0:

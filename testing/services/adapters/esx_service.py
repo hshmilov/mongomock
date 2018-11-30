@@ -9,7 +9,7 @@ class EsxService(AdapterService):
         super().__init__('esx')
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope='module', autouse=True)
 def esx_fixture(request):
     service = EsxService()
     initialize_fixture(request, service)

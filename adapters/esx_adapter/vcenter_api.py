@@ -1,12 +1,24 @@
 import logging
 
+import cachetools
+
 logger = logging.getLogger(f'axonius.{__name__}')
-from pyVim import connect
 from pyVmomi.VmomiSupport import Enum as pyVmomiEnum
 from retrying import retry
 from datetime import datetime
 from namedlist import namedlist
+
+import requests
+from com.vmware.cis.tagging_client import Tag, TagAssociation, TagModel
+from com.vmware.cis_client import Session
+from com.vmware.vapi.std_client import DynamicID
+from pyVim import connect
 from pyVmomi import vim
+from vmware.vapi.lib.connect import get_requests_connector
+from vmware.vapi.security.session import create_session_security_context
+from vmware.vapi.security.user_password import create_user_password_security_context
+from vmware.vapi.stdlib.client.factories import StubConfigurationFactory
+
 
 vCenterNode = namedlist(
     'vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None), ('Hardware', None)])
@@ -53,19 +65,21 @@ def _should_retry_fetching(exception):
 class vCenterApi(object):
     """ vCenterApi.py: A wrapper for vCenter SOAP services """
 
-    def __init__(self, host, user, password, verify_ssl=False):
+    def __init__(self, host, user, password, verify_ssl=False, restful_api_url: str = None):
         """
         Ctor
         :param str host: ip or dns of the vcenter server
         :param str user: your username
         :param str password: your password
         :param bool verify_ssl: should we verify SSL or not
+        :param restful_api_url: If present, will try to fetch additional data from this API as well
         :raise See pyVim documentation for connect
         """
         self._verify_ssl = verify_ssl
         self._host = host
         self._user = user
         self._password = password
+        self.__restful_api_url = restful_api_url
         self._connect()
         self.__devices_count = None
 
@@ -77,6 +91,48 @@ class vCenterApi(object):
             session = connect.ConnectNoSSL(
                 self._host, 443, self._user, self._password)
         self._session = session
+
+        # service that translate Tag IDs into their information
+        self.__tag_svc = None
+
+        # service that allows us to figure out associated tags
+        self.__tag_association = None
+
+        if self.__restful_api_url:
+            try:
+                self.__get_tag_svc()
+            except Exception:
+                logger.exception('Failed setting up vshpere automation sdk for taggins')
+                self.__tag_association = None
+                self.__tag_svc = None
+
+    def __get_tag_svc(self):
+        """
+        Code is adapted from
+        https://github.com/vmware/vsphere-automation-sdk-python/tree/master/samples/vsphere/tagging
+        """
+        session = requests.Session()
+        session.verify = self._verify_ssl
+
+        connector = get_requests_connector(session=session, url=self.__restful_api_url)
+        stub_config = StubConfigurationFactory.new_std_configuration(connector)
+
+        # Pass user credentials (user/password) in the security context to authenticate.
+        # login to vAPI endpoint
+        user_password_security_context = create_user_password_security_context(self._user, self._password)
+        stub_config.connector.set_security_context(user_password_security_context)
+
+        # Create the stub for the session service and login by creating a session.
+        session_svc = Session(stub_config)
+        session_id = session_svc.create()
+
+        # Successful authentication.  Store the session identifier in the security
+        # context of the stub and use that for all subsequent remote requests
+        session_security_context = create_session_security_context(session_id)
+        stub_config.connector.set_security_context(session_security_context)
+        self.__tag_svc = Tag(stub_config)
+        self.__tag_association = TagAssociation(stub_config)
+        logger.info('Tagging fetching enabled')
 
     def _parse_networking(self, vm):
         """
@@ -151,6 +207,32 @@ class vCenterApi(object):
                            Type='ESXHost',
                            Details=host)
 
+    @cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=120))
+    def __get_tagdata_from_tagid(self, tag_id: str) -> TagModel:
+        """
+        Uses tag_svc to get a TagModel form the tag_id given
+        :param tag_id: The tag ID,
+        something like this 'urn:vmomi:InventoryServiceTag:23372443-84b1-4c4f-b323-5008a25da0fc:GLOBAL'
+        """
+        res = self.__tag_svc.get(tag_id)
+        return res.name, res.description
+
+    def __get_all_tags(self, vm):
+        """
+        Uses self.__tag_svc to get tags of a given VM
+        :param vm: pyVmomi.VmomiSupport.vim.VirtualMachine
+        """
+        if not self.__tag_association or not self.__tag_svc:
+            return None
+
+        try:
+            dynamic_id = DynamicID(type=vm._wsdlName, id=vm._GetMoId())
+            all_tags = self.__tag_association.list_attached_tags(dynamic_id)
+            return [self.__get_tagdata_from_tagid(tag) for tag in all_tags]
+        except Exception:
+            logger.exception(f'Error on tags fetching {vm} {vm._wsdlName} {vm._GetMoId()}')
+            return None
+
     def _parse_vm_host(self, vm_root):
         """
         Parse a vm host into a dict
@@ -191,6 +273,7 @@ class vCenterApi(object):
 
         details['networking'] = list(self._parse_networking(vm_root))
         details['hardware_networking'] = list(self._parse_networking_from_hardware(vm_root))
+        details['tags'] = self.__get_all_tags(vm_root)
         return details
 
     def _parse_vm(self, vm_root, depth=1):
