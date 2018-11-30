@@ -4,6 +4,10 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDashboard(TestBase):
+    UNCOVERED_QUERY = 'specific_data.adapter_properties != \'Manager\'' \
+                      ' and specific_data.adapter_properties != \'Agent\''
+    COVERED_QUERY = 'specific_data.adapter_properties in [\'Manager\',\'Agent\']'
+
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
         self.dashboard_page.switch_to_page()
@@ -50,6 +54,17 @@ class TestDashboard(TestBase):
         quantities = self.dashboard_page.find_quantity_in_card(ud_card)
         assert quantities[0] + quantities[1] == quantities[2]
         assert quantities[2] >= quantities[3]
+
+    def test_dashboard_coverage_chart(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.click_uncovered_pie_slice()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_search_value() == self.UNCOVERED_QUERY
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.click_covered_pie_slice()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_search_value() == self.COVERED_QUERY
 
     def test_dashboard_search(self):
         string_to_search = 'be'

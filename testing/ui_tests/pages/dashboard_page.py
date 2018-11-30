@@ -10,6 +10,9 @@ class DashboardPage(Page):
     DEVICE_DISCOVERY = 'Device Discovery'
     USER_DISCOVERY = 'User Discovery'
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
+    UNCOVERED_PIE_SLICE_CSS = 'svg > g#managed_coverage_1 > text.scaling'
+    COVERED_PIE_SLICE_CSS = 'svg > g#managed_coverage_2 > text.scaling'
+    COVERAGE_CARD_CSS = 'div.x-card.coverage'
 
     @property
     def root_page_css(self):
@@ -30,7 +33,7 @@ class DashboardPage(Page):
             f'{self.CONGRATULATIONS}\nhaving all your assets visible in one place.'
 
     def find_managed_device_coverage_card(self):
-        return self.driver.find_element_by_css_selector('div.x-card.coverage')
+        return self.driver.find_element_by_css_selector(self.COVERAGE_CARD_CSS)
 
     def find_system_lifecycle_card(self):
         return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')
@@ -59,6 +62,24 @@ class DashboardPage(Page):
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
 
+    def get_uncovered_from_pie(self, pie):
+        return int(pie.find_element_by_css_selector(self.UNCOVERED_PIE_SLICE_CSS).text.rstrip('%'))
+
+    def get_covered_from_pie(self, pie):
+        return int(pie.find_element_by_css_selector(self.COVERED_PIE_SLICE_CSS).text.rstrip('%'))
+
+    def click_uncovered_pie_slice(self):
+        self.click_managed_device_pie_slice(self.UNCOVERED_PIE_SLICE_CSS)
+
+    def click_covered_pie_slice(self):
+        self.click_managed_device_pie_slice(self.COVERED_PIE_SLICE_CSS)
+
+    def click_managed_device_pie_slice(self, slice_css):
+        self.wait_for_element_present_by_css(self.COVERAGE_CARD_CSS)
+        mdc_card = self.find_managed_device_coverage_card()
+        pie = self.get_pie_chart_from_card(mdc_card)
+        pie.find_element_by_css_selector(slice_css).click()
+
     @staticmethod
     def get_title_from_card(card):
         return card.find_element_by_css_selector('div.x-header > div.x-title').text.title()
@@ -66,14 +87,6 @@ class DashboardPage(Page):
     @staticmethod
     def get_pie_chart_from_card(card):
         return card.find_element_by_css_selector('div.pie')
-
-    @staticmethod
-    def get_uncovered_from_pie(pie):
-        return int(pie.find_element_by_css_selector('svg > g#managed_coverage_1 > text.scaling').text.rstrip('%'))
-
-    @staticmethod
-    def get_covered_from_pie(pie):
-        return int(pie.find_element_by_css_selector('svg > g#managed_coverage_2 > text.scaling').text.rstrip('%'))
 
     @staticmethod
     def get_cycle_from_card(card):
