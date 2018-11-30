@@ -235,10 +235,17 @@ class AwsAdapter(AdapterBase, Configurable):
         # Credentials to some of the clients are temporary so we have to re-create them every cycle.
         # So here we must try to connect (if an exception occurs this will change the status of the adapter)
         # but this must occur every cycle.
-        self._connect_client_once(client_config)
+        self._connect_client_once(client_config, True)
         return client_config
 
-    def _connect_client_once(self, client_config):
+    def _connect_client_once(self, client_config, should_validate: bool):
+        """
+        Generates credentials and optionally tries to test them
+        :param client_config: the configuration from the adapter scheme
+        :param should_validate: whether or not validate these credentials. If True, the function will fail if we can
+                                not connect to even a single ec2 service.
+        :return:
+        """
         # We are going to change client_config throughout the function so copy it first
         clients_dict = dict()
         client_config = client_config.copy()
@@ -314,7 +321,6 @@ class AwsAdapter(AdapterBase, Configurable):
         # and query the ec2 service which is mendatory for us.
         aws_access_key_id = client_config[AWS_ACCESS_KEY_ID]
         clients_dict[aws_access_key_id] = dict()
-        successful_connections = []
         failed_connections = []
         for region in regions_to_pull_from:
             # we need to get the data for this IAM account and for the roles applied.
@@ -324,8 +330,9 @@ class AwsAdapter(AdapterBase, Configurable):
             current_try = f'IAM User {aws_access_key_id} with region {region}'
             clients_dict[aws_access_key_id][region] = current_client_config
             try:
-                self._test_ec2_connection(current_client_config)
-                successful_connections.append(current_try)
+                if should_validate:
+                    self._test_ec2_connection(current_client_config)
+                    should_validate = False  # if even one connection succeeds, do not check anything else
             except Exception as e:
                 logger.exception(f'Problem with iam user for region {region}')
                 failed_connections.append(f'{current_try}: {str(e)}')
@@ -344,13 +351,16 @@ class AwsAdapter(AdapterBase, Configurable):
 
                 clients_dict[role_arn][region] = current_client_config
                 try:
-                    self._test_ec2_connection(current_client_config)
-                    successful_connections.append(current_try)
+                    if should_validate:
+                        self._test_ec2_connection(current_client_config)
+                        should_validate = False  # if even one connection succeeds, do not check anything else
                 except Exception as e:
                     logger.exception(f'problem with role {role_arn} for region {region}')
                     failed_connections.append(f'{current_try}: {str(e)}')
 
-        if len(successful_connections) == 0:
+        # If should_validate remained True, it means nothing has passed any validation.
+        # It its False, then something passed validation, or we did not require any.
+        if should_validate is True:
             # If none has succeeded, its usually when the IAM user has an error. In that case we must show
             # an error message, but we can not show all of them since this will result in a huge string.
             # we show the first one which usually indicates the problem.
@@ -440,7 +450,7 @@ class AwsAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data_credentials):
         # we must re-create all credentials (const and temporary)
 
-        client_data = self._connect_client_once(client_data_credentials)
+        client_data = self._connect_client_once(client_data_credentials, False)
         # First, we must get clients for everything we need
         client_data_aws_clients = dict()
         successful_connections = []
