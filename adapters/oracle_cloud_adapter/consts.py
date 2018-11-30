@@ -1,0 +1,6 @@
+ORACLE_CLOUD_USER = 'user'
+ORACLE_KEY_FILE = 'key_file'
+ORACLE_FINGERPRINT = 'fingerprint'
+ORACLE_TENANCY = 'tenancy'
+ORACLE_REGION = 'region'
+ORACLE_PRIVATE_KEY_FILE_PATH = 'oci_api_key.pem'

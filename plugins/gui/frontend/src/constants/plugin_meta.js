@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    oracle_cloud_adapter: {
+        title: 'Oracle Cloud Infrastructure',
+        description: 'Oracle Cloud is a computing service providing servers, storage, network, applications and services.'
+    },
     cisco_umbrella_adapter: {
         title: 'Cisco Umbrella - BETA',
         description: 'Cisco Umbrella is a secure internet gateway in the cloud, and includes capabilities from the Cloud Web Security proxy, and Advanced Malware Protection (AMP) for file inspection.'
