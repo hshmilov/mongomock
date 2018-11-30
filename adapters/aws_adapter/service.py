@@ -232,6 +232,13 @@ class AwsAdapter(AdapterBase, Configurable):
         raise NotImplementedError
 
     def _connect_client(self, client_config):
+        # Credentials to some of the clients are temporary so we have to re-create them every cycle.
+        # So here we must try to connect (if an exception occurs this will change the status of the adapter)
+        # but this must occur every cycle.
+        self._connect_client_once(client_config)
+        return client_config
+
+    def _connect_client_once(self, client_config):
         # We are going to change client_config throughout the function so copy it first
         clients_dict = dict()
         client_config = client_config.copy()
@@ -430,7 +437,10 @@ class AwsAdapter(AdapterBase, Configurable):
 
         return clients, errors
 
-    def _query_devices_by_client(self, client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data_credentials):
+        # we must re-create all credentials (const and temporary)
+
+        client_data = self._connect_client_once(client_data_credentials)
         # First, we must get clients for everything we need
         client_data_aws_clients = dict()
         successful_connections = []
