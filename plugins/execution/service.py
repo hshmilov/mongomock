@@ -1,53 +1,80 @@
+import json
 import logging
-
-from axonius.consts.plugin_subtype import PluginSubtype
-
-logger = logging.getLogger(f'axonius.{__name__}')
+from datetime import datetime
 
 from bson import json_util
 from bson.objectid import ObjectId
 from flask import jsonify
-import json
-import threading
+import pymongo
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.files import get_local_config_file
-from datetime import datetime
+from axonius.utils.threading import run_and_forget
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 PLUGIN_TYPE = 'execution_controller'
 
 
 class ExecutionService(PluginBase):
-    """ Plugin responsible for all the code execution on different devices """
+    """
+    Plugin responsible for all the code execution on different devices
+    """
 
     # Functions
     def __init__(self, **kwargs):
         # Initialize the base plugin (will initialize http server)
         super().__init__(get_local_config_file(__file__), **kwargs)
 
-        # Will restore old actions from db
-        self._actions_db = dict()
+        self.__actions_collection = self._get_collection('actions')
+        self.__actions_collection.create_index([('status', pymongo.ASCENDING)], background=True)
 
         # Restore old actions list
         self._restore_actions_from_db()
 
-        # Threadpool for creating new actions
+        # Thread pool for creating new actions
         self._actions_thread_pool = LoggedThreadPoolExecutor(max_workers=20)
 
     def _restore_actions_from_db(self):
-        """ Restores actions from db.
-
-        Will only restore actions that are not finished. If an action is on 'started' mode than it will become 
-        A 'limbo' action
         """
-        actions_collection = self._get_collection('actions')
-        # Getting all the actions from db
-        all_actions = actions_collection.find({"$and": [{"status": {"$ne": "finished"}},
-                                                        {"status": {
-                                                            "$ne": "failed"}},
-                                                        {"status": {"$ne": "limbo"}}]})
+        Restores actions from db.
+        Will only restore actions that are not finished. If an action is on 'started' mode than it will become
+        a 'limbo' action
+        """
+        # All actions that were pending before the plugin started haven't actually started
+        # therefore they can be marked as failed actions
+        self.__actions_collection.update_many(
+            filter={
+                'status': 'pending'
+            },
+            update={
+                '$set': {
+                    'status': 'failed'
+                }
+            }
+        )
+
+        self.__actions_collection.update_many(
+            filter={
+                'status': {
+                    '$nin': ['finished', 'failed', 'limbo', 'pending']
+                }
+            },
+            update={
+                '$set': {
+                    'status': 'failed'
+                }
+            }
+        )
+
+        all_actions = self.__actions_collection.find({
+            'status': {
+                '$nin': ['finished', 'failed', 'limbo']
+            }
+        })
         for action in all_actions:
             action_id = str(action['_id'])
             del action['_id']
@@ -68,7 +95,7 @@ class ExecutionService(PluginBase):
 
         :param str device_id: The Axon id of the device we want to run code on
         :param list adapters_whitelist: a list of adapters whitelist, which are the only one we can execute code from.
-        e.g., ["active_directory_adapter", "esx_adapter"]. If None, there is no whitelist.
+        e.g., ['active_directory_adapter', 'esx_adapter']. If None, there is no whitelist.
 
         :return list of tuples: A list of tuple from kind (<adapter_unique_name>, <device_raw_data>). The list is sorted
                              In a descending order of the best adapters to run code on. The device_raw_data is the raw
@@ -76,35 +103,32 @@ class ExecutionService(PluginBase):
 
         .. note:: We should still need to implement this function
         """
-        with self._get_db_connection() as db_connection:
-            devices_db = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
+        result = self.devices_db.find_one({'internal_axon_id': device_id})
+        if result is None:
+            logger.error('could not find device. Are you sure the device exists?')
+            raise ValueError('could not find device. Are you sure the device exists?')
+        if any(tag['name'] == 'do_not_execute' and tag['data'] is True for tag in result['tags']):
+            logger.debug(f'Device {device_id} skipped from execution due to blacklist')
+            return
+        try:
+            for adapter_data in result['adapters']:
+                adapter_name = adapter_data[PLUGIN_NAME]
+                adapter_unique_name = adapter_data[PLUGIN_UNIQUE_NAME]
+                if adapters_whitelist is None or adapter_name in adapters_whitelist:
+                    yield (adapter_unique_name, adapter_data)
+        except KeyError:
+            return
 
-            result = devices_db.find_one({"internal_axon_id": device_id})
-            if result is None:
-                logger.error("could not find device. Are you sure the device exists?")
-                raise ValueError("could not find device. Are you sure the device exists?")
-            if any(tag['name'] == 'do_not_execute' and tag['data'] is True for tag in result['tags']):
-                logger.debug(f"Device {device_id} skipped from execution due to blacklist")
-                return
-            try:
-                for adapter_data in result['adapters']:
-                    adapter_name = adapter_data[PLUGIN_NAME]
-                    adapter_unique_name = adapter_data[PLUGIN_UNIQUE_NAME]
-                    if adapters_whitelist is None or adapter_name in adapters_whitelist:
-                        yield (adapter_unique_name, adapter_data)
-            except KeyError:
-                return
-
-    def request_remote_plugin_thread(self, action_id, plugin_unique_name, method, data):
-        """ Function for request action from other adapter
+    def request_remote_plugin_thread(self, action_id, plugin_unique_name, data):
+        """
+        Function for request action from other adapter
 
         This function will run as a new thread. It will ask a request from other adapter.
         This function exists because we want to make the request without blocking the original request sent to us.
 
         :param str action_id: The id of the current action
         :param str plugin_unique_name: The plugin_unique_name of the adapter we want to execute action on
-        :param str method: The method of the http request
-        :param dict data: A dictionary conaining all the needed parameters for the current action request. For example, 
+        :param dict data: A dictionary containing all the needed parameters for the current action request. For example,
                           get_file request should have src_file parameter.
         """
         self.request_remote_plugin('action_update/{0}'.format(action_id),
@@ -113,20 +137,28 @@ class ExecutionService(PluginBase):
                                    data=data)
 
     def _reset_adapter_actions(self, unique_adapter_name):
-        """ Function for reseting adapter's actions.
-        This function will be called when an executing adapter was reset. In this case the Adapter dont know what 
-        Actions he handled. This function will change the state of his open actions according to what we know. 
+        """
+        Function for resetting adapter's actions.
+        This function will be called when an executing adapter was reset. In this case the Adapter don't know what
+        Actions he handled. This function will change the state of his open actions according to what we know.
         For example, if the last state was 'started', then we cant know what is the current state and this action
         Will have a 'limbo' state.
 
         :param str unique_adapter_name: The unique name of the adapter that had reset.
         """
         # Finding all the actions related to this adapter
-        collection = self._get_collection('actions')
-        adapters_action = collection.find({'$and': [{'adapter_unique_name': unique_adapter_name},
-                                                    {"status": {"$ne": "finished"}},
-                                                    {"status": {"$ne": "failed"}},
-                                                    {"status": {"$ne": "limbo"}}]})
+        adapters_action = self.__actions_collection.find({
+            '$and': [
+                {
+                    'adapter_unique_name': unique_adapter_name
+                },
+                {
+                    'status': {
+                        '$nin': ['finished', 'failed', 'limbo']
+                    }
+                }
+            ]
+        })
 
         # Checking the status of each action, and changing status accordingly
         for one_action in adapters_action:
@@ -136,7 +168,8 @@ class ExecutionService(PluginBase):
                 self._save_action_data({'status': 'limbo'})
 
     def ec_callback(self, action_id):
-        """ A Callback for action updates
+        """
+        A Callback for action updates
 
         This function is the regular Execution Controller callback for action updates sent by the adapters
 
@@ -155,12 +188,15 @@ class ExecutionService(PluginBase):
             action_data['product'] = request_content['output'].get('product', '')
             action_data['result'] = request_content['output'].get('result', '')
 
-        logger.info(f"Got action update on action {action_id}. status is {action_data['status']},"
-                    f"action result is {action_data.get('result')}")
+        action_data_status = action_data['status']
+        action_data_result = action_data.get('resulpt')
+        logger.info(f'Got action update on action {action_id}. status is {action_data_status},'
+                    f'action result is {action_data_result}')
 
         self._save_action_data(action_data, action_id)
 
-        accumulated_error = self._actions_db[action_id].get('accumulated_error', '')
+        current_action = self.__actions_collection.find_one({'_id': ObjectId(action_id)})
+        accumulated_error = current_action.get('accumulated_error', '')
 
         if request_content['status'] == 'failed':
             # Should try another adapter, we will use the list of tuples containing all of the
@@ -168,26 +204,27 @@ class ExecutionService(PluginBase):
 
             # Getting needed data to call the _create_request_thread again. It will handle the code execution
             # All over again.
-            adapters_tuple = self._actions_db[action_id].get('adapters_tuple')
-            action_type = self._actions_db[action_id]['action_type']
-            device_id = self._actions_db[action_id]['device_id']
-            issuer_unique_name = self._actions_db[action_id]['issuer_unique_name']
-            data_for_action = self._actions_db[action_id]['data_for_action']
-            current_adapter = self._actions_db[action_id]['adapter_unique_name']
+            adapters_tuple = current_action.get('adapters_tuple')
+            action_type = current_action['action_type']
+            device_id = current_action['device_id']
+            issuer_unique_name = current_action['issuer_unique_name']
+            data_for_action = current_action['data_for_action']
+            current_adapter = current_action['adapter_unique_name']
 
             # Add error to accumulated error
-            current_adapter_failure = ""
+            current_adapter_failure = ''
             if 'output' in request_content:
-                current_adapter_failure = f"result: {request_content['output'].get('result', '')}, " \
-                                          f"product: {request_content['output'].get('product', '')}"
+                request_output = request_content['output']
+                request_output_result = request_output.get('result')
+                request_output_product = request_output.get('product')
+                current_adapter_failure = f'result: {request_output_result}, ' \
+                                          f'product: {request_output_product}'
 
-            accumulated_error = accumulated_error + f"{current_adapter} failure: {current_adapter_failure}\n"
+            accumulated_error = accumulated_error + f'{current_adapter} failure: {current_adapter_failure}\n'
 
-            logger.warning('Adapter {0} failed to run action {1}'.format(
-                current_adapter, action_id))
+            logger.warning(f'Adapter {current_adapter} failed to run action {action_id}')
             if not adapters_tuple:
-                logger.error(
-                    'Couldnt run code on action {0}, no more adapters to try'.format(action_id))
+                logger.error(f'Couldn\'t run code on action {action_id}, no more adapters to try')
             else:
                 # Trying to run on a different adapter, don't need to inform the issuer
                 self._actions_thread_pool.submit(self._create_request_thread,
@@ -200,67 +237,50 @@ class ExecutionService(PluginBase):
                                                  accumulated_error)
                 return
 
-        request_content['responder'] = self._actions_db[action_id].get('adapter_unique_name')
+        request_content['responder'] = current_action.get('adapter_unique_name')
         request_content['accumulated_error'] = accumulated_error
 
         # Updating the issuer plugin also
-        to_request_params = {'action_id': action_id,
-                             PLUGIN_UNIQUE_NAME: self._actions_db[action_id]['issuer_unique_name'],
-                             'method': 'POST',
-                             'data': json.dumps(request_content, default=json_util.default)}
-        threading.Thread(target=self.request_remote_plugin_thread,
-                         kwargs=to_request_params).start()
+        run_and_forget(lambda: self.request_remote_plugin_thread(action_id,
+                                                                 current_action['issuer_unique_name'],
+                                                                 json.dumps(request_content, default=json_util.default)
+                                                                 ))
 
         return
 
     def _save_action_data(self, data_dict, action_id=None):
-        """ Function for saving new action data.
+        """
+        Function for saving new action data.
 
-        This function handles insertion of action, or update of existing action. It will save the data on the local
-        Variable (_actions_db) and on our db.
+        This function handles insertion of action, or update of existing action.
+        It will save the data on the collection.
 
         :param dict data_dict: A dictionary with the data to update. Only permitted keys will be updated on the local
-                               Variable, but the db will update all of the keys shown on this dict.
+                               variable, but the db will update all of the keys shown on this dict.
         :param str action_id: The action_id of the action we want to update. If not present, the function will create
-                              A new action.
+                              a new action.
 
         :return action_id: The action id of the action updated (or inserted if new)
         """
-        available_data_keys = ['action_type', 'adapter_unique_name', 'issuer_unique_name', 'status', '_id',
-                               'output', 'product', 'result', 'adapters_tuple', 'data_for_action', 'device_id',
-                               'device_axon_id', 'accumulated_error']
-
         # Adding the data to DB
-        collection = self._get_collection('actions')
         if action_id:
             # Updating existing action (or creating new if this action id is not found)
-            collection.update_one({'_id': ObjectId(action_id)}, update={
-                                  '$set': data_dict}, upsert=True)
+            self.__actions_collection.update_one(filter={
+                '_id': ObjectId(action_id)
+            }, update={
+                '$set': data_dict
+            }, upsert=True)
         else:
             # action_id is none, Creating a new doc
-            insert_result = collection.insert_one(data_dict)
+            insert_result = self.__actions_collection.insert_one(data_dict)
             action_id = str(insert_result.inserted_id)
-
-        if action_id in self._actions_db:
-            # This is an action update
-            current_action_data = self._actions_db[action_id]
-        else:
-            # This is a new action
-            current_action_data = dict()
-
-        if data_dict.keys() - available_data_keys:
-            logger.warning('Trying to add invalid key to action_data. '
-                           'Keys: {0}'.format(data_dict.keys() - available_data_keys))
-        current_action_data.update(
-            {k: v for k, v in data_dict.items() if k in available_data_keys})
-
-        self._actions_db[action_id] = current_action_data
 
         return action_id
 
     def _create_request_thread(self, action_type, device_id, issuer, data, adapters_tuple, action_id,
                                accumulated_error, adapters_whitelist=None):
-        """ A function for creating an action request
+        """
+        A function for creating an action request
 
         This function should run as a new thread (since it could block for a while). It will try to request action from
         The first adapter from the adapters_tuple list. If the request fails, it will try the next on the list until
@@ -275,7 +295,7 @@ class ExecutionService(PluginBase):
         :param str accumulated_error: since this function can be called numerous times, we store here the accumulated
                                       error for each time called.
         :param list adapters_whitelist: a whitelist of adapters from which we can execute code.
-               e.g. ["active_directory_adapter"].
+               e.g. ['active_directory_adapter'].
         """
 
         try:
@@ -285,13 +305,13 @@ class ExecutionService(PluginBase):
             adapters_count = 1
             for adapter_unique_name, device_raw_data in adapters_tuple:
                 # Requesting the adapter for the action
-                logger.debug(f"requesting {action_type} from {adapter_unique_name}, action id is {action_id}")
-                result = self.request_action(action_type,
-                                             self.ec_callback,
-                                             data,
-                                             adapter_unique_name,
-                                             action_id,
-                                             device_raw_data)
+                logger.debug(f'requesting {action_type} from {adapter_unique_name}, action id is {action_id}')
+                result = self.__request_action(action_type,
+                                               self.ec_callback,
+                                               data,
+                                               adapter_unique_name,
+                                               action_id,
+                                               device_raw_data)
 
                 if result.status_code == 200:
                     # Action submitted successfully, Adding it to db
@@ -311,48 +331,44 @@ class ExecutionService(PluginBase):
                                                data=json.dumps({'status': 'pending', 'output': ''}))
                     return json.dumps({'action_id': action_id})
 
-                elif result.status_code != 501:
-                    # Some general error happened, which is not "Not Implemented"
-                    logger.warning("Adapter failed running code on {id}. "
-                                   "Reason: {mess}".format(id=device_id,
-                                                           mess=result.content))
+                if result.status_code != 501:
+                    # Some general error happened, which is not 'Not Implemented'
+                    logger.warning(f'Adapter failed running code on {device_id}. '
+                                   f'Reason: {result.content}')
 
-                    accumulated_error = accumulated_error + f"Failure from {adapter_unique_name}. " \
-                                                            f"Got status {result.status_code} with " \
-                                                            f"data {result.content}"
+                    accumulated_error = accumulated_error + f'Failure from {adapter_unique_name}. ' \
+                                                            f'Got status {result.status_code} with ' \
+                                                            f'data {result.content}'
                 adapters_count += 1
 
             if len(adapters_tuple) == 0:
-                accumulated_error = "[BLACKLIST] Couldn't find any adapters to execute code with. This usually means " \
-                                    "the device is blacklisted."
+                accumulated_error = '[BLACKLIST] Couldn\'t find any adapters to execute code with. ' \
+                                    'This usually means the device is blacklisted.'
 
             # Inform issuer.
             self.request_remote_plugin('action_update/{0}'.format(action_id),
                                        plugin_unique_name=issuer,
                                        method='POST',
                                        data=json.dumps({'status': 'failed', 'output': accumulated_error}))
-            # Note! We search for "no executing adapters" in other plugins... if you change it remember
+            # Note! We search for 'no executing adapters' in other plugins... if you change it remember
             # to change it everywhere.
             self._save_action_data({'status': 'failed',
                                     'product': accumulated_error},
                                    action_id)
         except Exception as e:
             # Just update the status and raise it.
-            try:
-                self._save_action_data({'status': 'failed',
-                                        'product': 'General error happened: {0}'.format(str(e))},
-                                       action_id)
-            except Exception:
-                pass
+            self._save_action_data({'status': 'failed',
+                                    'product': 'General error happened: {0}'.format(str(e))},
+                                   action_id)
             raise
+        return None
 
-    def request_action(self, action_type, callback_function, data_for_action,
-                       plugin_unique_name, action_id, device_raw):
-        """ A function for requesting action.
+    def __request_action(self, action_type, callback_function, data_for_action, plugin_unique_name, action_id,
+                         device_raw):
+        """
+        A function for requesting action.
 
-        This function will override the function implemented in PluginBase. The difference is that in this
-        function we are adding the action_id to the request from the remote plugin. and dont use other
-        unrelevant parameters
+        In this function we are adding the action_id to the request from the remote plugin.
 
         :param str action_type: The type of the action. For example 'put_file'
         :param dict data_for_action: Extra data for executing the wanted action.
@@ -382,9 +398,10 @@ class ExecutionService(PluginBase):
 
         return result
 
-    @add_rule("action/<action_type>", methods=['POST'])
+    @add_rule('action/<action_type>', methods=['POST'])
     def _make_action(self, action_type):
-        """ Exported function for initiate new actions
+        """
+        Exported function for initiate new actions
 
         This function will start an action.
         url params:
@@ -393,10 +410,10 @@ class ExecutionService(PluginBase):
 
         The data of the request should hold the extra parameters for the specific action.
 
-        :param str action_type: The type of the action we want to run. For example: "put_file"
+        :param str action_type: The type of the action we want to run. For example: 'put_file'
         """
         if not self._execution_enabled:
-            return return_error("Execution is disabled", 400)
+            return return_error('Execution is disabled', 400)
 
         # Getting the wanted device axon_id
         device_id = self.get_url_param('axon_id')
@@ -410,9 +427,9 @@ class ExecutionService(PluginBase):
         # Checkout if we have a whitelist of adapters. If we do have, remove it from the data_for_action
         # object, as it passes to the execution function.
 
-        adapters_whitelist = data_for_action.pop("adapters_to_whitelist", None)
+        adapters_whitelist = data_for_action.pop('adapters_to_whitelist', None)
         if adapters_whitelist is not None:
-            logger.info(f"Using adapters {adapters_whitelist}")
+            logger.info(f'Using adapters {adapters_whitelist}')
 
         action_id = self._save_action_data({'action_type': action_type,
                                             'issuer_unique_name': issuer_unique_name,
@@ -426,7 +443,7 @@ class ExecutionService(PluginBase):
                                          data_for_action,
                                          None,
                                          action_id,
-                                         "",
+                                         '',
                                          adapters_whitelist=adapters_whitelist
                                          )
 
