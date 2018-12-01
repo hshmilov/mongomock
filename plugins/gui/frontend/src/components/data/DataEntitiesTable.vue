@@ -3,9 +3,9 @@
         <x-historical-date-picker v-model="historical" :module="module" @error="$emit('error', $event)" />
         <x-data-query :module="module" :read-only="isReadOnly" />
         <x-data-table :module="module" id-field="internal_axon_id" ref="table" @click-row="configEntity"
-                      v-model="isReadOnly? undefined: selected" @data="$emit('data', $event)">
+                      v-model="isReadOnly? undefined: selection" @data="$emit('data', $event)">
             <template slot="actions">
-                <x-data-entity-actions v-show="selected && selected.length" :module="module" :entities="selected" @done="updateEntities" />
+                <x-data-entity-actions v-show="hasSelection" :module="module" :entities="selection" @done="updateEntities" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu :module="module" />
                 <div class="x-btn link" @click="exportCSV">Export CSV</div>
@@ -55,11 +55,14 @@
                         }
                     })
                 }
+            },
+            hasSelection() {
+                return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
             }
         },
         data() {
             return {
-                selected: []
+                selection: { ids: [] }
             }
         },
         methods: {
@@ -68,7 +71,7 @@
                 fetchContentCSV: FETCH_DATA_CONTENT_CSV
             }),
             configEntity (entityId) {
-                if (this.selected && this.selected.length) return
+                if (this.hasSelection) return
 
                 let path = `${this.module}/${entityId}`
                 if (this.historicalState) {
@@ -77,8 +80,8 @@
                 this.$router.push({path: path})
             },
             updateEntities() {
-                this.$refs.table.fetchContentPages()
-                this.selected = []
+                this.$refs.table.fetchContentPages(true)
+                this.selection = { ids: [] }
             },
             exportCSV() {
                 this.fetchContentCSV({ module: this.module })

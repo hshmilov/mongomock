@@ -129,8 +129,11 @@ class AxoniusService:
         device_to_blacklist = self.get_device_by_id(plugin_unique_name, device_id)
         assert len(device_to_blacklist) == 1
         device_to_blacklist = device_to_blacklist[0]
-        result = self.gui.add_labels_to_device(
-            {'entities': [device_to_blacklist['internal_axon_id']], 'labels': [BLACKLIST_LABEL]})
+        result = self.gui.add_labels_to_device({
+            'entities': {
+                'ids': [device_to_blacklist['internal_axon_id']], 'include': True
+            }, 'labels': [BLACKLIST_LABEL]
+        })
         assert result.status_code == 200, f'Failed adding label. reason: ' \
                                           f'{str(result.status_code)}, {str(result.content)}'
 

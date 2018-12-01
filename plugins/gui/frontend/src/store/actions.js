@@ -266,43 +266,46 @@ export const fetchDataLabels = ({state, dispatch}, payload) => {
 }
 
 export const ADD_DATA_LABELS = 'ADD_DATA_LABELS'
-export const addDataLabels = ({state, dispatch, commit}, payload) => {
-	if (!getModule(state, payload)) return
-
-	if (!payload.data || !payload.data.entities || !payload.data.entities.length
-		|| !payload.data.labels || !payload.data.labels.length) {
+export const addDataLabels = ({ state, dispatch }, payload) => {
+	let moduleState = getModule(state, payload)
+	if (!moduleState) return
+	if (!payload.data || !payload.data.entities || !payload.data.labels || !payload.data.labels.length) {
 		return
 	}
 
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/labels`,
+		rule: `${payload.module}/labels?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
 		method: 'POST',
-		data: payload.data
-	}).then(() => commit(UPDATE_ADDED_DATA_LABELS, payload))
+		data: payload.data,
+        type: UPDATE_ADDED_DATA_LABELS,
+        payload
+	})
 }
 
 export const REMOVE_DATA_LABELS = 'REMOVE_DATA_LABELS'
-export const removeDataLabels = ({state, dispatch, commit}, payload) => {
-	if (!getModule(state, payload)) return
-
-	if (!payload.data || !payload.data.entities || !payload.data.entities.length
-		|| !payload.data.labels || !payload.data.labels.length) {
+export const removeDataLabels = ({ state, dispatch }, payload) => {
+    let moduleState = getModule(state, payload)
+    if (!moduleState) return
+	if (!payload.data || !payload.data.entities || !payload.data.labels || !payload.data.labels.length) {
 		return
 	}
 
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/labels`,
+		rule: `${payload.module}/labels?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
 		method: 'DELETE',
-		data: payload.data
-	}).then(() => commit(UPDATE_REMOVED_DATA_LABELS, payload))
+		data: payload.data,
+        type: UPDATE_REMOVED_DATA_LABELS,
+        payload
+	})
 }
 
 export const DISABLE_DATA = 'DISABLE_DATA'
 export const disableData = ({state, dispatch}, payload) => {
-	if (!getModule(state, payload)) return
+    let moduleState = getModule(state, payload)
+	if (!moduleState) return
 
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/disable`,
+		rule: `${payload.module}/disable?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
 		method: 'POST',
 		data: payload.data
 	})
@@ -310,10 +313,11 @@ export const disableData = ({state, dispatch}, payload) => {
 
 export const DELETE_DATA = 'DELETE_DATA'
 export const deleteData = ({state, dispatch}, payload) => {
-	if (!getModule(state, payload) || !payload.data.internal_axon_ids) return
+    let moduleState = getModule(state, payload)
+	if (!moduleState || !payload.data) return
 
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}`,
+		rule: `${payload.module}?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
 		method: 'DELETE',
 		data: payload.data
 	})
@@ -367,12 +371,12 @@ export const removeDataNote = ({state, dispatch}, payload) => {
 }
 
 export const RUN_ACTION = 'RUN_ACTION'
-export const runAction = ({dispatch}, payload) => {
+export const runAction = ({state, dispatch}, payload) => {
 	if (!payload || !payload.type || !payload.data) {
 		return
 	}
 	return dispatch(REQUEST_API, {
-		rule: `actions/${payload.type}`,
+		rule: `actions/${payload.type}?filter=${encodeURIComponent(state.devices.view.query.filter)}`,
 		method: 'POST',
 		data: payload.data
 	})

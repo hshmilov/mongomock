@@ -1,5 +1,5 @@
 <template>
-    <x-data-action-menu :module="module" :selected="entities" @done="$emit('done')">
+    <x-data-action-menu :module="module" :entities="entities" @done="$emit('done')">
         <template v-if="module === 'devices'">
             <x-data-action-item :handle-save="saveDeploy" message="Deployment initiated" title="Deploy..." action-text="Deploy">
                 <h3 class="mb-2">Deploy Executable</h3>
@@ -10,7 +10,7 @@
                 <x-schema-form :schema="shellFormSchema" v-model="run.data" class="expand" @validate="run.valid = $event"/>
             </x-data-action-item>
             <x-data-action-item :handle-save="saveBlacklist" message="Blacklist saved" title="Blacklist..." action-text="Blacklist">
-                <div>Add {{entities.length}} devices to Blacklist?</div>
+                <div>Add {{ selectionCount }} devices to Blacklist?</div>
                 <div>These devices will be prevented from executing code on.</div>
             </x-data-action-item>
         </template>
@@ -22,7 +22,7 @@
     import xDataActionItem from './DataActionItem.vue'
     import xSchemaForm from '../schema/SchemaForm.vue'
 
-    import { mapActions } from 'vuex'
+    import { mapState, mapActions } from 'vuex'
     import { ADD_DATA_LABELS, RUN_ACTION } from '../../store/actions'
 
 	export default {
@@ -32,6 +32,11 @@
 		},
 		props: { module: { required: true }, entities: { } },
         computed: {
+            ...mapState({
+                dataCount(state) {
+                    return state[this.module].count.data
+                }
+            }),
             deployFormSchema() {
 				return {
 					type: 'array',
@@ -72,6 +77,12 @@
 					],
 					required: ['action_name', 'command']
 				}
+            },
+            selectionCount() {
+                if (this.entities.include === undefined || this.entities.include) {
+                    return this.entities.ids.length
+                }
+                return this.dataCount - this.entities.ids.length
             }
         },
 		data () {
@@ -93,25 +104,32 @@
 				Blacklist is currently implemented by checking for a designated tag,
 				Therefore, adding this tag to selected devices
 				 */
-                return this.addLabels({module: 'devices', data: {entities: this.entities, labels: ['do_not_execute']}})
+                return this.addLabels({module: 'devices', data: {
+                    entities: this.entities, labels: ['do_not_execute']
+                }})
 			},
 			saveDeploy () {
 				return new Promise((resolve, reject) => {
             	    if (!this.deploy.valid) reject()
-					this.runAction({type: 'deploy', data: { ...this.deploy.data, internal_axon_ids: this.entities}})
-						.then((response) => {
-							this.deploy.data = {}
-							resolve(response)
-						})
-						.catch(error => reject(error.response.data))
+					this.runAction({
+                        type: 'deploy', data: {
+					    ...this.deploy.data, entities: this.entities
+					}}).then((response) => {
+                        this.deploy.data = {}
+                        resolve(response)
+                    }).catch(error => reject(error.response.data))
 				})
 			},
 			saveRun () {
 				return new Promise((resolve, reject) => {
 				    if (!this.run.valid) reject()
-					this.runAction({type: 'shell', data: { ...this.run.data, internal_axon_ids: this.entities}})
-						.then(response => resolve(response))
-                        .catch(error => reject(error.response.data))
+					this.runAction({
+                        type: 'shell', data: {
+					    ...this.run.data, entities: this.entities
+					}}).then(response => {
+					    this.run.data = {}
+					    resolve(response)
+                    }).catch(error => reject(error.response.data))
 				})
 			}
 		}

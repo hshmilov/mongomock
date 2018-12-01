@@ -95,12 +95,16 @@ export const alert = {
 			})
 			if (!found) state.current.data = { ...newAlert }
 		},
-		[ REMOVE_ALERTS ] (state, alertIds) {
+		[ REMOVE_ALERTS ] (state, selection) {
 			/*
 				Filter current list of queries so it no longer has an object by the id of given payload
 			 */
 			state.content.data = [ ...state.content.data ].filter(function(alert) {
-				return !alertIds.includes(alert.uuid)
+				if (selection.include) {
+					return !selection.ids.includes(alert.uuid)
+				} else {
+					return selection.ids.includes(alert.uuid)
+				}
 			})
 			state.count.data = state.content.data.length
 		},
@@ -143,22 +147,22 @@ export const alert = {
 				}
 			})
 		},
-		[ ARCHIVE_ALERTS ] ({dispatch, commit}, alertIds) {
+		[ ARCHIVE_ALERTS ] ({dispatch, commit}, selection) {
 			/*
 				Call to api to add \ update field 'archived' with true, so that this alert will be ignored
 				If completed successfully, matching row is removed from alertsList (instead of re-fetching),
 				using a call to the mutation REMOVE_ALERT
 			 */
-			if (!alertIds || !alertIds.length) { return }
+			if (!selection || (!selection.include && !selection.ids)) return
 			dispatch(REQUEST_API, {
 				rule: 'alert',
 				method: 'DELETE',
-				data: alertIds
+				data: selection
 			}).then((response) => {
 				if (response.data !== '') {
 					return
 				}
-				commit(REMOVE_ALERTS, alertIds)
+				commit(REMOVE_ALERTS, selection)
 			})
 		},
 		[ UPDATE_ALERT ] ({dispatch}, payload) {

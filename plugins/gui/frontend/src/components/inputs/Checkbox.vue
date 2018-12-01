@@ -96,6 +96,20 @@
             transition: .4s cubic-bezier(.25,.8,.25,1);
             display: inline-block;
             vertical-align: middle;
+            &.x-checkbox-indeterminate {
+                background-color: $grey-5;
+                border-color: $grey-5;
+                &:after {
+                    opacity: 1;
+                    width: 8px;
+                    height: 0px;
+                    top: 5px;
+                    left: 2px;
+                    transform: rotate(0) scale3D(1,1,1);
+                    transition: .4s cubic-bezier(.25,.8,.25,1);
+                    border-color: $theme-white;
+                }
+            }
             &:hover {
                 border-color: $grey-5;
             }
@@ -126,20 +140,6 @@
                 transform: rotate(45deg) scale3D(1,1,1);
                 transition: .4s cubic-bezier(.25,.8,.25,1);
                 border-color: $theme-white;
-            }
-            &.x-checkbox-indeterminate {
-                background-color: $grey-5;
-                border-color: $grey-5;
-                &:after {
-                    opacity: 1;
-                    width: 8px;
-                    height: 0px;
-                    top: 5px;
-                    left: 1px;
-                    transform: rotate(0) scale3D(1,1,1);
-                    transition: .4s cubic-bezier(.25,.8,.25,1);
-                    border-color: $theme-white;
-                }
             }
         }
         .x-checkbox-label {

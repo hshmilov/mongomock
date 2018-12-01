@@ -355,8 +355,9 @@ RUN cd ./gui/frontend/ && npm run {dev}build
         return self.get('devices', session=self._session, *vargs, **kwargs)
 
     def delete_devices(self, internal_axon_ids, *vargs, **kwargs):
-        return self.delete('devices', session=self._session, data={'internal_axon_ids': internal_axon_ids},
-                           *vargs, **kwargs)
+        return self.delete('devices', session=self._session, data={
+            'ids': internal_axon_ids, 'include': True
+        }, *vargs, **kwargs)
 
     def get_devices_count(self, *vargs, **kwargs):
         return self.get('devices/count', session=self._session, *vargs, **kwargs)
@@ -368,8 +369,9 @@ RUN cd ./gui/frontend/ && npm run {dev}build
         return self.get('users/count', session=self._session, *vargs, **kwargs)
 
     def delete_users(self, internal_axon_ids, *vargs, **kwargs):
-        return self.delete('users', session=self._session, data={'internal_axon_ids': internal_axon_ids},
-                           *vargs, **kwargs)
+        return self.delete('users', session=self._session, data={
+            'ids': internal_axon_ids, 'include': True
+        }, *vargs, **kwargs)
 
     def get_device_by_id(self, id_, *vargs, **kwargs):
         return self.get('devices/{0}'.format(id_), session=self._session, *vargs, **kwargs)

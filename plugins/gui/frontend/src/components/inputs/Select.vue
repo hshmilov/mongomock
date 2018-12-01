@@ -10,8 +10,9 @@
              @keyup.enter="selectActive" @keyup.esc="closeDropdown">
             <search-input v-if="searchable" v-model="searchValue" class="x-select-search" ref="searchInput" />
             <div class="x-select-options">
-                <div v-for="option, index in currentOptions" @click="selectOption(option.name)" class="x-select-option"
-                     :class="{active: index === activeOptionIndex}" :tabindex="-1" ref="option">
+                <div v-for="option, index in currentOptions"
+                     @click="selectOption(option.name)" @keyup.enter.stop.prevent="selectOption(option.name)"
+                     class="x-select-option" :class="{active: index === activeOptionIndex}" :tabindex="-1" ref="option">
                     <slot :option="option">{{option.title}}</slot>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 <template>
-    <feedback-modal v-model="isActive" :handle-save="saveTags" :message="`Tagged ${entities.length} ${module}!`"
+    <feedback-modal v-model="isActive" :handle-save="saveTags" :message="`Tagged ${taggedCount} ${module}!`"
                     class="x-tag-modal" @enter="$refs.searchInput.focus()">
         <search-input v-model="searchValue" ref="searchInput" tabindex="1"/>
         <x-checkbox-list :items="currentLabels" v-model="selected"/>
@@ -18,7 +18,9 @@
 	export default {
 		name: 'x-tag-modal',
         components: { FeedbackModal, SearchInput, xCheckboxList },
-        props: {module: {required: true}, entities: {required: true}, tags: {}, title: {}},
+        props: {
+		    module: {required: true}, entities: {required: true}, value: {}, title: {}
+        },
 		computed: {
             ...mapState({
 				labels(state) {
@@ -44,11 +46,12 @@
 			return {
                 isActive: false,
                 selected: [],
-                searchValue: ''
+                searchValue: '',
+                taggedCount: null
 			}
 		},
 		watch: {
-			tags (newLabels) {
+			value (newLabels) {
 				this.selected = newLabels
 			}
 		},
@@ -62,24 +65,36 @@
 			saveTags () {
 				/* Separate added and removed tags and create an uber promise returning after both are updated */
 				let added = this.selected.filter((tag) => {
-					return (!this.tags.includes(tag))
+					return (!this.value.includes(tag))
 				})
-				let removed = this.tags.filter((tag) => {
+				let removed = this.value.filter((tag) => {
 					return (!this.selected.includes(tag))
 				})
 				this.searchValue = ''
 				return Promise.all([
-					this.addLabels({module: this.module, data: {entities: this.entities, labels: added}}),
-					this.removeLabels({module: this.module, data: {entities: this.entities, labels: removed}})
-                ])
+					this.addLabels({
+                        module: this.module, data: {
+                            entities: this.entities, labels: added
+                        }
+					}),
+					this.removeLabels({
+                        module: this.module, data: {
+                            entities: this.entities, labels: removed
+                        }
+					})
+                ]).then(response => {
+                    this.taggedCount = response[0]? response[0].data : response[1].data
+                })
 			},
 			removeEntitiesLabels(labels) {
-				this.removeLabels({module: this.module, data: {entities: this.entities, labels}})
+				this.removeLabels({
+                    module: this.module, data: { entities: this.entities, labels }
+				})
             }
 		},
         created() {
-			if (this.tags) {
-				this.selected = [ ...this.tags ]
+			if (this.value) {
+				this.selected = [ ...this.value ]
             }
 			this.fetchLabels({module: this.module})
         }

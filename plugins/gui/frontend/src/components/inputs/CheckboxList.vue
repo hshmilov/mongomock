@@ -21,7 +21,7 @@
         margin-top: 16px;
         font-size: 12px;
         color: $theme-black;
-        height: 360px;
+        max-height: 360px;
         overflow: auto;
     }
 </style>

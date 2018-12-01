@@ -3,8 +3,7 @@
         <thead>
             <tr class="x-row clickable">
                 <th v-if="value" class="w-14">
-                    <x-checkbox v-model="allSelected" :indeterminate="allSelected && selected.length !== data.length"
-                                @change="updateAllSelected"/>
+                    <x-checkbox :data="allSelected" :indeterminate="partSelected" @change="onSelectAll"/>
                 </th>
                 <th v-for="field in fields" nowrap :class="{sortable: clickColHandler}"
                     @click="clickCol(field.name)" @keyup.enter.stop="clickCol(field.name)">
@@ -18,7 +17,7 @@
             <tr v-for="item in data" @click="clickRow(item[idField])" :id="item[idField]"
                 class="x-row" :class="{ clickable: clickRowHandler && !readOnly.includes(item[idField]) }">
                 <td v-if="value" class="w-14">
-                    <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected"
+                    <x-checkbox v-model="selected" :value="item[idField]" @change="onSelect"
                                 :read-only="readOnly.includes(item[idField])" />
                 </td>
                 <td v-for="field in fields" nowrap>
@@ -49,25 +48,28 @@
         components: { xCheckbox, string, integer, number, bool, file, array },
         props: {
 			fields: {}, data: {}, pageSize: {}, sort: {}, idField: { default: 'id' }, value: {},
-            clickRowHandler: {}, clickColHandler: {}, readOnly: { type: Array, default: () => {return []} }
+            clickRowHandler: {}, clickColHandler: {}, clickAllHandler: {},
+            readOnly: { type: Array, default: () => {return []} }
         },
         computed: {
 		    ids() {
 		    	return this.data.map(item => item[this.idField])
-		    }
+		    },
+            allSelected() {
+		        return this.selected.length && this.selected.length === this.data.length
+            },
+            partSelected() {
+		        return this.selected.length && this.selected.length < this.data.length
+            }
 		},
         data() {
 			return {
-                selected: [],
-                allSelected: false
+                selected: []
             }
         },
         watch: {
 			value(newValue) {
 				this.selected = [ ...newValue ]
-                if (!this.selected.length) {
-					this.allSelected = false
-                }
             }
         },
         methods: {
@@ -87,26 +89,17 @@
                 if (this.sort.desc) return 'down'
                 return 'up'
             },
-            updateAllSelected() {
-				let input = {ids: []}
-				if (this.allSelected) {
+            onSelectAll(isSelected) {
+				if (isSelected && !this.selected.length) {
 					this.selected = [ ...this.ids.filter(id => !this.readOnly.includes(id)) ]
-                    input.included = false
                 } else {
 					this.selected = []
-					input.included = true
                 }
                 this.$emit('input', this.selected)
+                this.clickAllHandler(isSelected)
             },
-            updateSelected() {
+            onSelect() {
 				this.$emit('input', this.selected)
-                // if (this.allSelected) {
-					// this.$emit('input', {
-					// 	ids: this.ids.filter(item => !this.selected.includes(item)), included: false
-					// })
-                // } else {
-                //     this.$emit('input', {ids: this.selected, included: true})
-                // }
             },
             processDataValue(item, field) {
 			    if (Array.isArray(item[field.name]) && this.sort && field.name === this.sort.field && !this.sort.desc) {

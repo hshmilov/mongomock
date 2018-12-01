@@ -1,10 +1,16 @@
 <template>
     <div class="x-data-table" :class="{ multiline }">
         <x-actionable-table :title="tableTitle" :count="count.data" :loading="loading" :error="content.error">
+            <div slot="state" v-if="selectionCount" class="selection">
+                <div>[ {{ selectionCount }} selected. </div>
+                <button v-if="enableSelectAll && !allSelected" @click="selectAllData" class="x-btn link">Select all</button>
+                <button v-else-if="allSelected" @click="clearAllData" class="x-btn link">Clear all</button>
+                <div>]</div>
+            </div>
             <slot name="actions" slot="actions"/>
             <x-table slot="table" :data="pageData" :fields="viewFields" :page-size="view.pageSize" :sort="view.sort"
-                     :id-field="idField" :value="value" @input="$emit('input', $event)"
-                     :click-row-handler="onClickRow" :click-col-handler="onClickSort"/>
+                     :id-field="idField" :value="pageSelection" @input="onUpdateSelection"
+                     :click-row-handler="onClickRow" :click-col-handler="onClickSort" :click-all-handler="onClickAll" />
         </x-actionable-table>
         <div class="x-pagination">
             <div class="x-sizes">
@@ -43,7 +49,9 @@
         props: { module: {required: true}, section: {}, idField: {default: 'id'}, value: {}, title: {} },
         data() {
 			return {
-				loading: true
+				loading: true,
+                enableSelectAll: false,
+                allSelected: false
             }
         },
         computed: {
@@ -97,6 +105,9 @@
                 })
 				return this.content.data.slice(pageId * this.view.pageSize, (pageId + 1) * this.view.pageSize)
             },
+            pageIds() {
+			    return this.pageData.map(item => item[this.idField])
+            },
             pageCount() {
 				return Math.ceil(this.count.data / this.view.pageSize) - 1
             },
@@ -114,6 +125,27 @@
                     firstPage = Math.max(lastPage - 6, 0)
 				}
                 return Array.from({length: lastPage - firstPage + 1}, (x, i) => i + firstPage)
+            },
+            pageSelection() {
+			    if (!this.value) return []
+			    if (this.value.include === undefined) {
+			        this.allSelected = false
+                }
+                if (this.allSelected) {
+                    return this.pageIds.filter(id => !this.value.ids.includes(id))
+                }
+                return this.value.ids
+            },
+            selectionCount() {
+			    if (!this.value) return 0
+			    if (this.allSelected) {
+			        return this.count.data - this.value.ids.length
+                }
+                return this.value.ids.length
+            },
+            selectionExcludePage() {
+			    if (!this.value) return []
+			    return this.value.ids.filter(id => !this.pageIds.includes(id))
             }
         },
         watch: {
@@ -177,7 +209,6 @@
             	if (page === this.view.page) return
                 if (page < 0 || page > this.pageCount) return
 				this.updateModuleView({ page: page })
-                this.$emit('input', [])
             },
             onClickSort(fieldName) {
             	let sort = { ...this.view.sort }
@@ -202,6 +233,27 @@
 					})
 				}
 				this.timer = setTimeout(fetchAuto, this.refresh * 1000)
+            },
+            onUpdateSelection(selectedList) {
+                if (!this.allSelected && selectedList.length === this.count.data) {
+                    this.allSelected = true
+                }
+                let newIds = this.selectionExcludePage.concat(
+                    this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
+                this.$emit('input', {
+                    ids: newIds, include: !this.allSelected
+                })
+            },
+            selectAllData() {
+                this.allSelected = true
+                this.$emit('input', {ids: [], include: false})
+            },
+            clearAllData() {
+                this.allSelected = false
+                this.$emit('input', {ids: [], include: true})
+            },
+            onClickAll(selected) {
+                this.enableSelectAll = selected
             }
         },
 		created() {
@@ -223,6 +275,11 @@
 <style lang="scss">
     .x-data-table {
         height: calc(100% - 40px);
+        .selection {
+            display: flex;
+            align-items: center;
+            margin-left: 12px;
+        }
         &.multiline .x-row .array {
             display: block;
             height: auto;
@@ -236,6 +293,7 @@
         .x-pagination {
             justify-content: space-between;
             display: flex;
+            line-height: 28px;
             .x-title {
                 text-transform: uppercase;
             }
@@ -243,7 +301,6 @@
                 display: flex;
                 width: 320px;
                 justify-content: space-between;
-                padding-top: 4px;
                 .active, .x-link:hover {
                     cursor: pointer;
                     color: $theme-orange;

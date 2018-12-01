@@ -138,11 +138,12 @@ class API:
                                                                   "available_security_patches", "users",
                                                                   "connected_hardware", "local_admins"])
 
+    @gui_helpers.filtered()
     @api_add_rule("devices/labels", methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    ReadOnlyJustForGet)})
-    def api_device_labels(self):
-        return self._entity_labels(self.devices_db_view, self.devices)
+    def api_device_labels(self, mongo_filter):
+        return self._entity_labels(self.devices_db_view, self.devices, mongo_filter)
 
     #########
     # USERS #
@@ -179,11 +180,12 @@ class API:
     def api_user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ["associated_devices"])
 
+    @gui_helpers.filtered()
     @api_add_rule("users/labels", methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Users,
                                                    ReadOnlyJustForGet)})
-    def api_user_labels(self):
-        return self._entity_labels(self.users_db_view, self.users)
+    def api_user_labels(self, mongo_filter):
+        return self._entity_labels(self.users_db_view, self.users, mongo_filter)
 
     ##########
     # ALERTS #
@@ -210,7 +212,7 @@ class API:
 
         if request.method == "DELETE":
             report_ids = self.get_request_data_as_object()
-            return self.delete_alert(report_ids)
+            return self.delete_alert(alert_selection)
 
     ###########
     # QUERIES #
@@ -258,10 +260,11 @@ class API:
     # ACTIONS #
     ###########
 
+    @gui_helpers.filtered()
     @api_add_rule(f"actions/<action_type>", methods=["POST"],
                   required_permissions={Permission(PermissionType.Devices,
                                                    PermissionLevel.ReadWrite)})
-    def api_run_actions(self, action_type):
+    def api_run_actions(self, action_type, mongo_filter):
         """
         Executes a run shell command on devices.
         Expected values: a list of internal axon ids, the action name, and the action command.
@@ -269,7 +272,7 @@ class API:
         """
         action_data = self.get_request_data_as_object()
         action_data["action_type"] = action_type
-        return self.run_actions(action_data)
+        return self.run_actions(action_data, mongo_filter)
 
     @api_add_rule(f"actions")
     def api_get_actions(self):

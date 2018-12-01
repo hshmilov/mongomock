@@ -4,14 +4,15 @@
         <pulse-loader :loading="loading" color="#FF7D46" />
         <div class="x-table-header">
             <div class="x-title" v-if="title">
-                <div>{{ title }}</div>
-                <div v-if="count !== undefined" class="count">({{ count }})</div>
+                <div class="title">{{ title }}</div>
+                <div v-if="count !== undefined" class="title count">({{ count }})</div>
+                <slot name="state" />
             </div>
             <div v-else>
                 <x-search-input v-model="searchValue" @input="$emit('search', $event)" placeholder="Search Notes..." />
             </div>
             <div class="error">{{error}}</div>
-            <div class="x-actions"><slot name="actions"/></div>
+            <div class="x-actions"><slot name="actions" /></div>
         </div>
         <div class="x-table-container" :tabindex="-1" ref="greatTable">
             <slot name="table" />
@@ -52,6 +53,10 @@
             background: $grey-0;
             .x-title {
                 display: flex;
+                line-height: 30px;
+                .title {
+                    font-weight: 400;
+                }
                 .count {
                     margin-left: 8px;
                 }
@@ -71,7 +76,7 @@
         }
         .x-table-container {
             overflow: auto;
-            max-height: calc(100% - 40px);
+            max-height: calc(100% - 48px);
         }
     }
 </style>

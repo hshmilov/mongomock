@@ -105,6 +105,10 @@ export const updateDataLabels = (state, payload) => {
 	}
 }
 
+const isEntitySelected = (id, entities) => {
+	return (entities.include && entities.ids.includes(id)) || (!entities.include && !entities.ids.includes(id))
+}
+
 export const UPDATE_ADDED_DATA_LABELS = 'UPDATE_ADDED_DATA_LABELS'
 export const updateAddedDataLabels = (state, payload) => {
 	if (!getModule(state, payload)) return
@@ -117,7 +121,7 @@ export const updateAddedDataLabels = (state, payload) => {
 
 	let content = [...state[payload.module].content.data]
 	content.forEach(function (entity) {
-		if (!data.entities.includes(entity.internal_axon_id)) return
+		if (!isEntitySelected(entity.internal_axon_id, data.entities)) return
 		if (!entity.labels) entity.labels = []
 
 		entity.labels = Array.from(new Set([ ...entity.labels, ...data.labels ]))
@@ -125,7 +129,7 @@ export const updateAddedDataLabels = (state, payload) => {
 	state[payload.module].content.data = content
 
 	let current = state[payload.module].current.data
-	if (current && current.internal_axon_id && data.entities.includes(current.internal_axon_id)) {
+	if (current && current.internal_axon_id && isEntitySelected(current.internal_axon_id, data.entities)) {
 		state[payload.module].current.data = { ...current,
 			labels: Array.from(new Set([ ...current.labels, ...data.labels]))
 		}
@@ -148,14 +152,14 @@ export const updateRemovedDataLabels = (state, payload) => {
 
 	let content = [...state[payload.module].content.data]
 	content.forEach((entity) => {
-		if (!data.entities.includes(entity.internal_axon_id)) return
+		if (!isEntitySelected(entity.internal_axon_id, data.entities)) return
 		if (!entity.labels) { return }
 		entity.labels = entity.labels.filter((label) => !data.labels.includes(label))
 	})
 	state[payload.module].content.data = content
 
 	let current = state[payload.module].current.data
-	if (current && current.internal_axon_id && data.entities.includes(current.internal_axon_id) && current.labels) {
+	if (current && current.internal_axon_id && isEntitySelected(current.internal_axon_id, data.entities) && current.labels) {
 		state[payload.module].current.data = { ...current,
 			labels: current.labels.filter((label) => !data.labels.includes(label))
 		}

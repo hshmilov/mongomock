@@ -1,9 +1,9 @@
 <template>
     <x-page title="alerts" class="x-alerts" :class="{disabled: isReadOnly}">
         <x-data-table module="alert" title="Alerts" @click-row="configAlert" id-field="uuid"
-                      v-model="isReadOnly? undefined: selected" ref="table">
+                      v-model="isReadOnly? undefined: selection" ref="table">
             <template slot="actions" v-if="!isReadOnly">
-                <div v-if="selected && selected.length" @click="removeAlerts" class="x-btn link">Remove</div>
+                <div v-if="hasSelection" @click="removeAlerts" class="x-btn link">Remove</div>
                 <div @click="createAlert" class="x-btn" id="alert_new">+ New Alert</div>
             </template>
         </x-data-table>
@@ -32,11 +32,14 @@
                     if (!user || !user.permissions) return true
                     return user.permissions.Alerts === 'ReadOnly'
                 }
-			})
+			}),
+            hasSelection() {
+                return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
+            }
 		},
         data() {
         	return {
-                selected: []
+                selection: { ids: [] }
             }
         },
         methods: {
@@ -63,7 +66,7 @@
                 if (this.isReadOnly) {
                     return
                 }
-            	this.archiveAlerts(this.selected)
+            	this.archiveAlerts(this.selection)
             }
         },
         created() {

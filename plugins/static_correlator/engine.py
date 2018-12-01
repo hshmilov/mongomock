@@ -395,7 +395,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         yield from self._correlate_mac(adapters_to_correlate)
 
-    def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
+    @staticmethod
+    def _post_process(first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:
             if second_name == first_name:
                 # this means that some logic in the correlator logic is wrong, because
@@ -405,7 +406,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 return False
         return True
 
-    def _bigger_picture_decision(self, first_axonius_device, second_axonius_device,
+    @staticmethod
+    def _bigger_picture_decision(first_axonius_device, second_axonius_device,
                                  first_adapter_device, second_adapter_device) -> bool:
         # Don't correlate devices that have AD in them but are not correlated according to AD
         # AX-2107

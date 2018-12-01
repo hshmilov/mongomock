@@ -554,7 +554,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'accurate_for_datetime': entity.get('accurate_for_datetime', None)
         })
 
-    def _disable_entity(self, entity_type: EntityType):
+    def _disable_entity(self, entity_type: EntityType, mongo_filter):
         entity_map = {
             EntityType.Devices: ("Devicedisabelable", "devices/disable"),
             EntityType.Users: ("Userdisabelable", "users/disable")
@@ -564,11 +564,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         featurename, urlpath = entity_map[entity_type]
 
-        entitys_uuids = self.get_request_data_as_object()
-        if not entitys_uuids:
-            return return_error("No entity uuids provided")
-        entity_disabelables_adapters, entity_ids_by_adapters = \
-            self._find_entities_by_uuid_for_adapter_with_feature(entitys_uuids, featurename, entity_type)
+        entities_selection = self.get_request_data_as_object()
+        if not entities_selection:
+            return return_error("No entity selection provided")
+        entity_disabelables_adapters, entity_ids_by_adapters = self._find_entities_by_uuid_for_adapter_with_feature(
+            entities_selection, featurename, entity_type, mongo_filter)
 
         err = ""
         for adapter_unique_name in entity_disabelables_adapters:
@@ -582,17 +582,19 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return return_error(err, 500) if err else ("", 200)
 
-    def _find_entities_by_uuid_for_adapter_with_feature(self, entity_uuids, feature, entity_type: EntityType):
+    def _find_entities_by_uuid_for_adapter_with_feature(self, entities_selection, feature, entity_type: EntityType, mongo_filter):
         """
         Find all entity from adapters that have a given feature, from a given set of entities
         :return: plugin_unique_names of entity with given features, dict of plugin_unique_name -> id of adapter entity
         """
         with self._get_db_connection() as db_connection:
-            entities = list(self._entity_db_map.get(entity_type).find(
-                {'internal_axon_id': {
-                    "$in": entity_uuids
-                }}))
-
+            query_op = "$in" if entities_selection['include'] else "$nin"
+            entities = list(self._entity_db_map.get(entity_type).find({
+                '$and': [
+                    {'internal_axon_id': {
+                        query_op: entities_selection['ids']
+                    }}, mongo_filter
+                ]}))
             entities_ids_by_adapters = {}
             for axonius_device in entities:
                 for adapter_entity in axonius_device['adapters']:
@@ -660,7 +662,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                 {'$set': {'archived': True}})
             return ""
 
-    def _entity_labels(self, db, namespace):
+    def _entity_labels(self, db, namespace, mongo_filter):
         """
         GET Find all tags that currently belong to devices, to form a set of current tag values
         POST Add new tags to the list of given devices
@@ -677,22 +679,42 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if not entities_and_labels.get('labels'):
             return return_error("Cannot label entities without list of labels.", 400)
         try:
-            add_labels_to_entities(db, namespace,
-                                   entities_and_labels['entities'],
-                                   entities_and_labels['labels'],
-                                   request.method == 'DELETE')
+            select_include = entities_and_labels['entities'].get('include', True)
+            select_ids = entities_and_labels['entities'].get('ids', [])
+            internal_axon_ids = select_ids if select_include else [entry['internal_axon_id'] for entry in db.find({
+                '$and': [
+                    mongo_filter, {
+                        'internal_axon_id': {
+                            '$nin': select_ids
+                        }
+                    }
+                ]
+            }, projection={'internal_axon_id': 1})]
+            add_labels_to_entities(
+                db, namespace, internal_axon_ids, entities_and_labels['labels'], request.method == 'DELETE')
         except Exception as e:
             logger.exception(f"Tagging did not complete")
             return return_error(f'Tagging did not complete. First error: {e}', 400)
 
-        return '', 200
+        return str(len(internal_axon_ids)), 200
 
-    def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, internal_axon_ids: Iterable[str]):
-        internal_axon_ids = list(internal_axon_ids)
+    def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, entities_selection, mongo_filter):
+        if entities_selection['include']:
+            internal_axon_ids = entities_selection['ids']
+        else:
+            internal_axon_ids = [entry['internal_axon_id'] for entry in self._entity_views_db_map[entity_type].find({
+                '$and': [
+                    {'internal_axon_id': {
+                        '$nin': entities_selection['ids']
+                    }}, mongo_filter
+                ]
+            }, projection={'internal_axon_id': 1})]
+        logger.info(f'DELETE {internal_axon_ids}')
         self._entity_db_map[entity_type].delete_many({'internal_axon_id': {
-            "$in": internal_axon_ids
+            '$in': internal_axon_ids
         }})
-        self._request_db_rebuild(sync=True, internal_axon_ids=internal_axon_ids)
+        self._request_db_rebuild(
+            sync=True, internal_axon_ids=entities_selection['ids'] if entities_selection['include'] else None)
 
         return '', 200
 
@@ -750,8 +772,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                              ReadOnlyJustForGet)})
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         if request.method == 'DELETE':
-            to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
-            return self.__delete_entities_by_internal_axon_id(EntityType.Devices, to_delete)
+            return self.__delete_entities_by_internal_axon_id(
+                EntityType.Devices, self.get_request_data_as_object(), mongo_filter)
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
@@ -813,17 +835,19 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter))
 
+    @gui_helpers.filtered()
     @gui_add_rule_logged_in("devices/labels", methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              ReadOnlyJustForGet)})
-    def device_labels(self):
-        return self._entity_labels(self.devices_db_view, self.devices)
+    def device_labels(self, mongo_filter):
+        return self._entity_labels(self.devices_db_view, self.devices, mongo_filter)
 
+    @gui_helpers.filtered()
     @gui_add_rule_logged_in("devices/disable", methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
-    def disable_device(self):
-        return self._disable_entity(EntityType.Devices)
+    def disable_device(self, mongo_filter):
+        return self._disable_entity(EntityType.Devices, mongo_filter)
 
     @gui_add_rule_logged_in('devices/<device_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
@@ -849,8 +873,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                                                                  ReadOnlyJustForGet)})
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         if request.method == 'DELETE':
-            to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
-            return self.__delete_entities_by_internal_axon_id(EntityType.Users, to_delete)
+            return self.__delete_entities_by_internal_axon_id(
+                EntityType.Users, self.get_request_data_as_object(), mongo_filter)
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
@@ -900,10 +924,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         with self._get_db_connection() as db_connection:
             return jsonify(gui_helpers.entity_fields(EntityType.Users, self.core_address, db_connection))
 
+    @gui_helpers.filtered()
     @gui_add_rule_logged_in("users/disable", methods=['POST'], required_permissions={Permission(PermissionType.Users,
                                                                                                 PermissionLevel.ReadWrite)})
-    def disable_user(self):
-        return self._disable_entity(EntityType.Users)
+    def disable_user(self, mongo_filter):
+        return self._disable_entity(EntityType.Users, mongo_filter)
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
@@ -913,11 +938,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def user_views(self, limit, skip, mongo_filter):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
 
+    @gui_helpers.filtered()
     @gui_add_rule_logged_in("users/labels", methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users,
                                                              ReadOnlyJustForGet)})
-    def user_labels(self):
-        return self._entity_labels(self.users_db_view, self.users)
+    def user_labels(self, mongo_filter):
+        return self._entity_labels(self.users_db_view, self.users, mongo_filter)
 
     @gui_add_rule_logged_in('users/<user_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
@@ -1245,9 +1271,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return '', 200
 
-    def run_actions(self, action_data):
+    def run_actions(self, action_data, mongo_filter):
         # The format of data is defined in device_control\service.py::run_shell
         action_type = action_data['action_type']
+        entities_selection = action_data['entities']
+        action_data['internal_axon_ids'] = entities_selection['ids'] if entities_selection['include'] else [
+            str(entry['internal_axon_id']) for entry in self.devices_db_view.find({
+                '$and': [
+                    mongo_filter, {
+                        '$nin': entities_selection['ids']
+                    }
+                ]
+            }, projection={'internal_axon_id': 1})]
+        del action_data['entities']
+
         try:
             response = self.request_remote_plugin('run_action', self.device_control_plugin, 'post', json=action_data)
             if response.status_code != 200:
@@ -1258,13 +1295,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
 
+    @gui_helpers.filtered()
     @gui_add_rule_logged_in("actions/<action_type>", methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
-    def actions_run(self, action_type):
+    def actions_run(self, action_type, mongo_filter):
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type
-        return self.run_actions(action_data)
+        return self.run_actions(action_data, mongo_filter)
 
     @gui_add_rule_logged_in("actions/upload_file", methods=['POST'],
                             required_permissions={Permission(PermissionType.Adapters,
@@ -1273,15 +1311,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return self._upload_file(self.device_control_plugin)
 
     def get_alerts(self, limit, mongo_filter, mongo_projection, mongo_sort, skip):
-        report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
         sort = []
         for field, direction in mongo_sort.items():
             sort.append((field, direction))
         if not sort:
             sort.append(('report_creation_time', pymongo.DESCENDING))
-        return [gui_helpers.beautify_db_entry(report) for report in
-                self._get_collection('reports', db_name=report_service).find(
-                    mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)]
+        return [gui_helpers.beautify_db_entry(report) for report in self.reports_collection.find(
+            mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)]
 
     def put_alert(self, report_to_add):
         view_name = report_to_add['view']
@@ -1292,12 +1328,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
         return response.text, response.status_code
 
-    def delete_alert(self, report_ids):
+    def delete_alert(self, alert_selection):
         # Since other method types cause the function to return - here we have DELETE request
-        if report_ids is None or len(report_ids) == 0:
+        if alert_selection is None or (not alert_selection['ids'] and alert_selection['include']):
             logger.error('No alert provided to be deleted')
             return ''
-        response = self.request_remote_plugin("reports", "reports", method='DELETE', json=report_ids)
+
+        response = self.request_remote_plugin("reports", "reports", method='DELETE',
+                                              json=alert_selection['ids'] if alert_selection['include'] else [
+                                                  str(report['_id']) for report in self.reports_collection.find(
+                                                      {}, projection={'_id': 1}) if str(report['_id'])
+                                                  not in alert_selection['ids']])
         if response is None:
             return return_error("No response whether alert was removed")
         return response.text, response.status_code
@@ -1323,8 +1364,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             report_to_add = request.get_json(silent=True)
             return self.put_alert(report_to_add)
 
-        report_ids = self.get_request_data_as_object()
-        return self.delete_alert(report_ids)
+        alert_selection = self.get_request_data_as_object()
+        return self.delete_alert(alert_selection)
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in("alert/count", required_permissions={Permission(PermissionType.Alerts,
@@ -3718,6 +3759,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @property
     def system_collection(self):
         return self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION)
+
+    @property
+    def reports_collection(self):
+        return self._get_collection('reports', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
 
     @property
     def exec_report_collection(self):

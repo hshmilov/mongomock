@@ -6,7 +6,7 @@
         <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
         <x-box class="alert-config">
-            <form @keyup.enter="saveAlert">
+            <form>
                 <!-- Section for alert name and query to run by -->
                 <div class="x-grid">
                     <label for="alert_name">Alert name:</label>

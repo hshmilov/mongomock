@@ -10,7 +10,7 @@ from ui_tests.tests.test_entities_table import TestEntitiesTable
 
 class TestDevicesTable(TestEntitiesTable):
     LABELS_TEXTBOX_TEXT = 'Connection Error'
-    DELETE_DIALOG_TEXT = 'You are about to delete 1 devices, 1 total adapter devices.'
+    DELETE_DIALOG_TEXT = 'You are about to delete 1 devices.'
     QUERY_FILTER_DEVICES = 'specific_data.data.hostname%20%3D%3D%20regex(%22w%22%2C%20%22i%22)'
     QUERY_FIELDS = 'adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.os.type,' \
                    'specific_data.data.network_interfaces.ips,specific_data.data.network_interfaces.mac,labels'
@@ -143,8 +143,7 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.open_delete_dialog()
         wait_until(lambda: self.DELETE_DIALOG_TEXT in self.devices_page.read_delete_dialog())
         self.devices_page.confirm_delete()
-        self.devices_page.wait_for_element_absent_by_css(self.devices_page.MODAL_OVERLAY_CSS)
-        assert not self.devices_page.count_entities()
+        wait_until(lambda: not self.devices_page.count_entities())
 
     def test_devices_config(self):
         with GeneralInfoService().contextmanager(take_ownership=True):
