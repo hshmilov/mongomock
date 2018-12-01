@@ -1,10 +1,14 @@
 from enum import Enum, auto
 
-NO_CHANGE_DESCRIPTION = 'requested to alert every discovery cycle'
-NEW_ENTITIES_DESCRIPTION = 'new entites were added'
+NO_CHANGE_DESCRIPTION = 'any results'
+NEW_ENTITIES_DESCRIPTION = 'new entities were added'
 PREVIOUS_ENTITIES = 'previous entities were removed'
 ABOVE_DESCRIPTION = 'the number of entities is above {}'
 BELOW_DESCRIPTION = 'the number of entities is below {}'
+PERIOD_ALL_DESCRIPTION = 'every discovery cycle'
+PERIOD_WEEKLY_DESCRIPTION = 'weekly'
+PERIOD_DAILY_DESCRIPTION = 'daily'
+PERIOD_MONTHLY_DESCRIPTION = 'monthly'
 
 
 TRIGGERS_DIFF_ADDED = 'added'
@@ -16,6 +20,12 @@ TRIGGERS_TO_DESCRIPTION = {'every_discovery': NO_CHANGE_DESCRIPTION,
                            'above': ABOVE_DESCRIPTION,
                            'below': BELOW_DESCRIPTION
                            }
+
+PERIOD_TO_DESCRIPTION = {'all': PERIOD_ALL_DESCRIPTION,
+                         'weekly': PERIOD_WEEKLY_DESCRIPTION,
+                         'daily': PERIOD_DAILY_DESCRIPTION,
+                         'monthly': PERIOD_MONTHLY_DESCRIPTION,
+                         }
 
 TRIGGERS_DEFAULT_VALUES = {'every_discovery': False,
                            'new_entities': False,

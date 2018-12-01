@@ -15,7 +15,7 @@ class Period:
 
 
 class Trigger:
-    EveryDiscoveryCycle = 'Every discovery cycle'
+    EveryDiscoveryCycle = 'Any results'
     NewEntries = 'New entities were added to query results'
     PreviousEntries = 'Previous entities were subtracted from query results'
     Above = 'The number of query results is above'

@@ -31,28 +31,28 @@
                         </div>
                         <div class="grid-span2">
                             <input id="EveryPhasePeriod" type="radio" value="all" v-model="alert.period">
-                            <label for="EveryPhasePeriod" class="ml-2">Every discovery phase</label>
+                            <label for="EveryPhasePeriod" class="ml-2">Every discovery cycle</label>
                         </div>
                     </div>
                 </div>
                 <div class="configuration">
                     <div class="header">Alert trigger</div>
-                    <div>Monitor selected query and raise alert whether...</div>
+                    <div>Monitor selected query and raise alert upon...</div>
                     <div class="content">
-                        <x-checkbox class="grid-span2" label="Every discovery cycle" v-model="alert.triggers.every_discovery"
-                                    title="Trigger alert for each discovery cycle, regardless of results" />
+                        <x-checkbox class="grid-span2" label="Any results" v-model="alert.triggers.every_discovery"
+                                    title="Trigger alert every alert period, regardless of query results" />
                         <x-checkbox class="grid-span2" label="New entities were added to query results" v-model="alert.triggers.new_entities"
-                                    title="For each discovery cycle, trigger alert if the given saved query discovered an entity that wasn't discovered for the same saved query in the previous cycle" />
+                                    title="Trigger alert if the given saved query results contains new entities" />
                         <x-checkbox class="grid-span2" label="Previous entities were subtracted from query results" v-model="alert.triggers.previous_entities"
-                                    title="For each discovery cycle, trigger alert if the given saved query didn't discover an entity that was discovered for the same saved query in the previous cycle" />
+                                    title="Trigger alert if entities were subtracted from the given saved query results" />
                         <x-checkbox label="The number of query results is above" v-model="alert.triggers.increase" id="alert_increased"
-                                    title="Trigger alert if the number of entities that was discovered from the given saved query is above the given threshold"
+                                    title="Trigger alert if the number of entities in the given saved query is above the threshold"
                                     @change="tour('alertAbove')" />
                         <div class="form-inline" >
                             <input id="alert_above" type="number" v-model="alert.triggers.above" min="0" @keypress="validateNumber" @input="tour('alertAction')" :disabled="!alert.triggers.increase" >
                         </div>
                         <x-checkbox label="The number of query results is below" v-model="alert.triggers.decrease"
-                                    title="Trigger alert if the number of entities that was discovered from the given saved query is below the given threshold" />
+                                    title="Trigger alert if the number of entities in the given saved query is below the threshold" />
                         <div class="form-inline" >
                             <input id="alert_below" type="number" v-model="alert.triggers.below" min="0" @keypress="validateNumber" :disabled="!alert.triggers.decrease">
                         </div>

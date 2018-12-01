@@ -190,6 +190,10 @@ class ReportsService(PluginBase, Triggerable):
         return report_consts.TRIGGERS_TO_DESCRIPTION[first_trigger].format(first_trigger_data)
 
     @staticmethod
+    def _get_period_description(period):
+        return report_consts.PERIOD_TO_DESCRIPTION[period]
+
+    @staticmethod
     def validate_triggers(report_data):
         """ check that the given triggers in report_data are valid.
             raise ValueError if not """
@@ -596,6 +600,7 @@ class ReportsService(PluginBase, Triggerable):
                 email.add_logos_attachments(img.read(), maintype=maintype, subtype=subtype, cid=image_cid)
 
             reason = self._get_trigger_description(report_data['triggers'], triggered)
+            period = self._get_period_description(report_data['period'])
 
             html_sections = []
             prev_result_count = 0
@@ -606,7 +611,7 @@ class ReportsService(PluginBase, Triggerable):
 
             html_sections.append(self.templates['header'].render({'subject': report_data['name']}))
             html_sections.append(self.templates['second_header'].render(
-                {'query_link': query_link, 'reason': reason, 'query': report_data['view']}))
+                {'query_link': query_link, 'reason': reason, 'period': period, 'query': report_data['view']}))
             html_sections.append(self.templates['calc_area'].render({'prev': prev_result_count,
                                                                      'added': added_result_count,
                                                                      'removed': removed_result_count,
