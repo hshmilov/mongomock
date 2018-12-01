@@ -14,10 +14,11 @@ from testing.services.plugins.static_users_correlator_service import StaticUsers
 
 def main(args):
     parser = argparse.ArgumentParser(description='Axonius SE Panel', usage='''
-    {name} list / fetch --adapter [plugin_unique_name] - control adapter
-    {name} sc [run] - control static correlator   
+    {name} adapter list / fetch --adapter [plugin_unique_name] - control adapter
+    {name} sc [run] - run static correlator & static users correlator
+    {name} cd [run] - run clean devices (clean db)
     '''.format(name=os.path.basename(__file__)))
-    parser.add_argument('component', choices=['adapter', 'sc'])
+    parser.add_argument('component', choices=['adapter', 'sc', 'cd'])
     parser.add_argument('action')
     parser.add_argument('--adapter', default=None)
 
@@ -53,6 +54,13 @@ def main(args):
             sc.correlate(True)
             print('Running static users correlator..')
             scu.correlate(True)
+        else:
+            print(parser.usage)
+            return 1
+    elif args.component == 'cd':
+        if args.action == 'run':
+            print('Running clean devices (Blocking)...')
+            ag.clean_db(True)
         else:
             print(parser.usage)
             return 1

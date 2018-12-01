@@ -23,6 +23,7 @@ class FortigateAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         interface = Field(str, 'Interface')
+        fortigate_name = Field(str, 'Fortigate Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -82,6 +83,11 @@ class FortigateAdapter(AdapterBase, Configurable):
             device = self._new_device_adapter()
             hostname = raw_device.get('hostname')
             device.hostname = hostname
+            fortios_name = raw_device.get('fortios_name')
+            if not fortios_name:
+                logger.error(f'Error no fortios name, this should be client_name')
+                return None
+            device.fortigate_name = fortios_name
             try:
                 mac_address = format_mac(raw_device.get('mac'))
             except Exception:
@@ -89,7 +95,7 @@ class FortigateAdapter(AdapterBase, Configurable):
             if not mac_address:
                 logger.warning(f'Bad MAC address at device {raw_device}')
                 return None
-            device.id = 'fortigate_' + mac_address + '_' + (hostname or '')
+            device.id = 'fortigate_' + fortios_name + '_' + mac_address + '_' + (hostname or '')
             device.add_nic(mac_address, [raw_device.get('ip')] if raw_device.get('ip') else None)
 
             last_seen = raw_device.get('expire_time')
@@ -150,7 +156,7 @@ class FortigateAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data, client_type = client_data
         if client_type == 'fortios':
-            yield from client_data.get_all_devices()
+            yield from client_data.get_all_devices(client_name)
         if client_type == 'fortimanager':
             with client_data:
                 yield from client_data.get_device_list()

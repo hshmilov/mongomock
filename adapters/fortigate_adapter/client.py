@@ -92,7 +92,7 @@ class FortigateClient():
             # Logout.
             self._make_request(session, 'get', 'logout')
 
-    def get_all_devices(self):
+    def get_all_devices(self, fortios_name):
         with self._get_session() as session:
             raw_devices = self._make_request(session, 'get', 'api/v2/monitor/system/dhcp/')
             raw_devices.update({'dhcp_lease_time': self.dhcp_lease_time})
@@ -100,6 +100,7 @@ class FortigateClient():
                 try:
                     for raw_device in current_interface.get('list',
                                                             [current_interface]):  # If current interface does'nt hold
+                        raw_device['fortios_name'] = fortios_name
                         yield raw_device, 'fortios_device'
                 except Exception:
                     # pylint: disable=W1203

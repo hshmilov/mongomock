@@ -243,5 +243,16 @@ class AggregatorService(PluginService):
                                  'internal_axon_ids': internal_axon_ids
         })
 
+    def clean_db(self, blocking: bool):
+        response = requests.post(
+            self.req_url + f'/trigger/clean_db?blocking={blocking}',
+            headers={API_KEY_HEADER: self.api_key}
+        )
+
+        assert response.status_code == 200, \
+            f"Error in response: {str(response.status_code)}, " \
+            f"{str(response.content)}"
+        self.rebuild_views()
+
     def is_up(self):
         return super().is_up() and {"Triggerable"}.issubset(self.get_supported_features())
