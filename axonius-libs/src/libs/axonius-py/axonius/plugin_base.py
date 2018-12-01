@@ -2021,7 +2021,7 @@ class PluginBase(Configurable, Feature):
             proxies['https_proxy'] = jira_servicedesk_settings.get('https_proxy')
             headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
             url = RESTConnection.build_url(domain=domain,
-                                           url_base_prefix=f'rest/servicedeskapi/request').strip('/')
+                                           url_base_prefix=f'/rest/servicedeskapi/request').strip('/')
             r = requests.post(url,
                               headers=headers,
                               verify=verify_ssl,

@@ -104,7 +104,7 @@ class ReportsService(PluginBase, Triggerable):
             'notify_syslog': self._handle_action_notify_syslog,
             'send_emails': self._handle_action_send_emails,
             'create_notification': self._handle_action_create_notification,
-            'create_jira_tickets': self._handle_action_create_jira_ticket,
+            'create_jira_ticket': self._handle_action_create_jira_ticket,
             'tag_all_entities': self._handle_action_tag_all_entities,
             'tag_entities': self._handle_action_tag_entities,
         }
