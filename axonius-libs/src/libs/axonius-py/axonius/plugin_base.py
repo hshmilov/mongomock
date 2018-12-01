@@ -213,12 +213,11 @@ def recalculate_adapter_oldness(adapter_list: list):
         all_unique_adapter_entities_data_indexed[adapter[PLUGIN_NAME]].append(adapter)
 
     for adapters in all_unique_adapter_entities_data_indexed.values():
-        if len(adapters) > 1:
-            if not all(LAST_SEEN_FIELD in adapter['data'] for adapter in adapters):
-                continue
-            for adapter in adapters:
-                adapter['data']['_old'] = True
-            max(adapters, key=lambda x: x['data'][LAST_SEEN_FIELD])['data']['_old'] = False
+        if not all(LAST_SEEN_FIELD in adapter['data'] for adapter in adapters):
+            continue
+        for adapter in adapters:
+            adapter['data']['_old'] = True
+        max(adapters, key=lambda x: x['data'][LAST_SEEN_FIELD])['data']['_old'] = False
 
 
 class PluginBase(Configurable, Feature):
@@ -1783,8 +1782,9 @@ class PluginBase(Configurable, Feature):
             full_query = {
                 "$set": set_query
             }
-        session.update_many({'internal_axon_id': entity_to_split['internal_axon_id']},
-                            full_query)
+        session.update_one({
+            'internal_axon_id': entity_to_split['internal_axon_id']
+        }, full_query)
         new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(
             set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
 
