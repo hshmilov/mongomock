@@ -66,6 +66,8 @@ class EntitiesPage(Page):
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
 
     NOTES_TAB_CSS = 'li#notes'
+    TAGS_CSS = 'li#tags'
+
     NOTES_CREATED_TOASTER = 'New note was created'
     NOTES_EDITED_TOASTER = 'Existing note was edited'
     NOTES_REMOVED_TOASTER = 'Notes were removed'
@@ -349,6 +351,9 @@ class EntitiesPage(Page):
 
     def click_notes_tab(self):
         self.driver.find_element_by_css_selector(self.NOTES_TAB_CSS).click()
+
+    def click_tags_tab(self):
+        self.driver.find_element_by_css_selector(self.TAGS_CSS).click()
 
     def fill_save_note(self, note_text, toast_text):
         self.fill_text_field_by_css_selector('.text-input', note_text)

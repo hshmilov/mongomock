@@ -1,5 +1,5 @@
 from axonius.utils.wait import wait_until
-from ui_tests.tests.ui_consts import Notes
+from ui_tests.tests.ui_consts import Notes, Tags
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -17,3 +17,11 @@ class TestNotes(TestBase):
 
         wait_until(lambda: Notes.note1_text == self.devices_page.get_note_by_text(Notes.note1_text).text,
                    exc_list=[Exception])
+
+    def test_create_tag(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.fill_filter(Notes.note1_device_filter)
+        self.devices_page.enter_search()
+        self.devices_page.wait_for_table_to_load()
+        assert Tags.tag_1 in self.devices_page.get_first_row_tags()
