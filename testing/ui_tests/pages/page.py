@@ -125,6 +125,7 @@ class Page:
             self.close_saved_queries_if_opened()
 
         self.driver.find_element_by_css_selector(self.root_page_css).click()
+        logger.info(f'Finished switching to {self.root_page_css}')
 
     def scroll_to_top(self):
         self.driver.execute_script('window.scrollTo(0, 0)')

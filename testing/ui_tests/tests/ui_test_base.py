@@ -166,6 +166,9 @@ class TestBase:
             self.driver.maximize_window()
 
         self.driver.implicitly_wait(0.3)
+        self.driver.set_page_load_timeout(30)
+        self.driver.set_script_timeout(30)
+
         self.username = DEFAULT_USER['user_name']
         self.password = DEFAULT_USER['password']
         self.axonius_system = get_service()
