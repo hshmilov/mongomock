@@ -36,9 +36,7 @@ class InfobloxAdapter(AdapterBase):
         try:
             connection = InfobloxConnection(
                 domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                username=client_config['username'], password=client_config['password'],
-                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-                url_base_prefix='/wapi/v2.7/')
+                username=client_config['username'], password=client_config['password'])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
