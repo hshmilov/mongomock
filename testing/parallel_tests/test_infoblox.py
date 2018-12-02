@@ -22,6 +22,7 @@ class TestInfobloxAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    @pytest.mark.skip("No server")
     def test_fetch_devices(self):
         # The trail was set on the 28.9.18, it should not work in 2 months, or 3 months.
         super().test_fetch_devices()
