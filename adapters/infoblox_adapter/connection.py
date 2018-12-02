@@ -44,27 +44,22 @@ class InfobloxConnection(RESTConnection):
             logger.exception(f'Problem getting path {path} with params {url_params}')
 
     def _connect(self):
-        if self._username and self._password:
-            try:
-                self._get('zone_auth?_return_as_object=1', do_basic_auth=True)
-            except Exception as e:
-                logger.exception(f'can not log in')
-                if '401 client error' in str(e).lower():
-                    raise RESTException(f'401 Unauthorized - Please check your login credentials')
-                else:
-                    raise
-        else:
+        if not self._username or not self._password:
             raise RESTException('No username or password')
-
-    def __get_networks(self):
-        # These are the reasonable numbers of cidrs in networks
-        for cidr in range(8, 28):
-            yield from self.__get_items_from_url('network', url_params={'network~': f'.0/{cidr}'})
+        try:
+            self._get('zone_auth', url_params={'_return_as_object': 1, '_max_results': 1}, do_basic_auth=True)
+        except Exception as e:
+            logger.exception(f'can not log in')
+            if '401 client error' in str(e).lower():
+                raise RESTException(f'401 Unauthorized - Please check your login credentials')
+            else:
+                raise
 
     def get_device_list(self):
-        for network_raw in self.__get_networks():
-            if not network_raw.get('network'):
-                logger.error(f'Problem with network raw {network_raw}')
-            network = network_raw['network']
-            logger.info(f'Starting network {network}')
-            yield from self.__get_items_from_url('ipv4address', url_params={'network': f'{network}'})
+        yield from self.__get_items_from_url('lease',
+                                             url_params={'_return_fields': 'served_by,'
+                                                                           'starts,ends,'
+                                                                           'address,'
+                                                                           'binding_state,'
+                                                                           'hardware,'
+                                                                           'client_hostname,network_view'})

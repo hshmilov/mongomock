@@ -1,4 +1,5 @@
 import logging
+import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -6,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field, ListField
+from axonius.fields import Field
 from infoblox_adapter.connection import InfobloxConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -14,11 +15,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class InfobloxAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        infoblox_device_status = Field(str, 'Status')
-        infoblox_device_types = ListField(str, 'Types')
-        infoblox_device_usage = ListField(str, 'Usage')
         infoblox_network_view = Field(str, 'Network View')
-        infoblox_is_conflict = Field(bool, 'Is Conflict')
+        served_by = Field(str, 'Served By')
+        start_time = Field(datetime.datetime, 'Start Time')
+        end_time = Field(datetime.datetime, 'End Time')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -101,63 +101,39 @@ class InfobloxAdapter(AdapterBase):
 
     # pylint: disable=R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
+        ids_set = set()
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                names = device_raw.get('names') or []
-                mac_address = device_raw.get('mac_address')
+                hostname = device_raw.get('client_hostname')
+                mac_address = device_raw.get('hardware')
 
-                if len(names) == 0 and not mac_address:
+                if not hostname and not mac_address:
                     # These devices might not exist, so this log is pretty much spamming.
                     logger.debug(f'No names or mac at : {device_raw}')
                     continue
-
-                infoblox_device_status = device_raw.get('status')
-                infoblox_device_types = device_raw.get('types') or []
-                if infoblox_device_status == 'UNUSED' or 'BROADCAST' in infoblox_device_types:
-                    continue
-
-                try:
-                    device.infoblox_device_status = infoblox_device_status
-                except Exception:
-                    logger.error(f'can not set infoblox device status: {device_raw}')
-                try:
-                    device.infoblox_device_types = infoblox_device_types
-                except Exception:
-                    logger.error(f'can not set infoblox device types: {device_raw}')
-
-                try:
-                    device.infoblox_device_usage = device_raw.get('usage')
-                except Exception:
-                    logger.error(f'can not set infoblox device usage: {device_raw}')
 
                 try:
                     device.infoblox_network_view = device_raw.get('network_view')
                 except Exception:
                     logger.exception(f'can not set network view: {device_raw}')
 
-                try:
-                    device.infoblox_is_conflict = device_raw.get('is_conflict')
-                except Exception:
-                    logger.exception(f'can not set is conflict: {device_raw}')
-
-                try:
-                    hostname = names[0]
-                    device.hostname = hostname
-                except Exception:
-                    hostname = None
-
+                device.hostname = hostname
                 if mac_address and hostname:
-                    device.id = f'mac_{mac_address}_host_{hostname}'
+                    device_id = f'mac_{mac_address}_host_{hostname}'
                 elif mac_address:
-                    device.id = f'mac_{mac_address}'
+                    device_id = f'mac_{mac_address}'
                 elif hostname:
-                    device.id = f'host_{hostname}'
+                    device_id = f'host_{hostname}'
                 else:
                     logger.error(f'Error - no mac or hostname, can not determine id: {device_raw}, continuing')
                     continue
+                if device_id in ids_set:
+                    continue
+                ids_set.add(device_id)
+                device.id = device_id
 
-                ip_address = device_raw.get('ip_address')
+                ip_address = device_raw.get('address')
                 network = device_raw.get('network')
 
                 try:
@@ -166,6 +142,23 @@ class InfobloxAdapter(AdapterBase):
                                    subnets=[network] if network else None)
                 except Exception:
                     logger.exception(f'Can not set nic. device_raw: {device_raw}')
+
+                try:
+                    device.served_by = device_raw.get('served_by')
+                except Exception:
+                    logger.exception(f'Problem getting served by')
+                try:
+                    start_time = device_raw.get('starts')
+                    if start_time:
+                        device.start_time = datetime.datetime.fromtimestamp(start_time)
+                except Exception:
+                    logger.exception(f'Problem getting start time {start_time}')
+                try:
+                    end_time = device_raw.get('ends')
+                    if end_time:
+                        device.end_time = datetime.datetime.fromtimestamp(end_time)
+                except Exception:
+                    logger.exception(f'Problem getting end time {end_time}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
