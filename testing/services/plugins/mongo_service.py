@@ -1,5 +1,7 @@
 import pymongo
 
+import psutil
+
 from axonius.plugin_base import EntityType
 from services.docker_service import DockerService
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
@@ -23,7 +25,10 @@ class MongoService(DockerService):
 
     @property
     def max_allowed_memory(self):
-        return 12 * 1024  # 12GB
+        # Returns tha max allowed memory in mb.
+        total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
+        total_memory = int(total_memory * 0.75)  # We want mongodb to always catch 75% of ram.
+        return total_memory
 
     @property
     def image(self):
