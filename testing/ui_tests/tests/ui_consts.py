@@ -61,8 +61,11 @@ class Notes:
 class History:
     history_depth = 30
     entities_per_day = 4000
-    file_path = 'history_upgrade_test.tmp'
 
 
 class Tags:
     tag_1 = 'tag_1'
+
+
+class Account:
+    file_path = 'account_data.tmp'

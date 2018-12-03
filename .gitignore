@@ -313,7 +313,7 @@ shared_readonly_files/__build_metadata
 axonius-libs/__build_metadata
 *.json.zip
 nvd_current_state.json
-history_upgrade_test.tmp
+account_data.tmp
 
 # Vim 
 *.swp

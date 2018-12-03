@@ -16,6 +16,7 @@ from axonius.utils.mongo_administration import truncate_capped_collection
 from services.axonius_service import get_service
 from services.ports import DOCKER_PORTS
 from test_credentials.test_gui_credentials import DEFAULT_USER
+from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
 from ui_tests.pages.alert_page import AlertPage
 from ui_tests.pages.base_page import BasePage
@@ -201,6 +202,7 @@ class TestBase:
         self.adapters_page = AdaptersPage(**params)
         self.notification_page = NotificationPage(**params)
         self.dashboard_page = DashboardPage(**params)
+        self.account_page = AccountPage(**params)
 
     def get_all_screens(self):
         screens = (self.devices_page,
