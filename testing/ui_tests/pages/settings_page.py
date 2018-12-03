@@ -346,6 +346,11 @@ class SettingsPage(Page):
     def set_google_keypair_file(self, text):
         self.upload_file_by_id(GOOGLE_KEYPAIR_FILE, text)
 
+    def set_email_ssl_files(self, ca_data, cert_data, private_data):
+        self.upload_file_by_id('ca_file', ca_data)
+        self.upload_file_by_id('cert_file', cert_data)
+        self.upload_file_by_id('private_key', private_data)
+
     def get_google_keypair_file(self):
         return self.driver.find_element_by_id(GOOGLE_KEYPAIR_FILE)
 

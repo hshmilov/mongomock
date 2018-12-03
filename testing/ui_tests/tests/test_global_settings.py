@@ -45,6 +45,12 @@ class TestGlobalSettings(TestBase):
             self.settings_page.click_save_button()
             self.settings_page.find_saved_successfully_toaster()
 
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        toggle = self.settings_page.find_send_emails_toggle()
+        self.settings_page.click_toggle_button(toggle, make_yes=False)
+        self.settings_page.click_save_button()
+
     def test_maintenance_endpoints(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()

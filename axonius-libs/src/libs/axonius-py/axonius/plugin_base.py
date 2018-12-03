@@ -2067,10 +2067,14 @@ class PluginBase(Configurable, Feature):
         if email_settings['enabled'] is True:
             return EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
                                email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
-                               self._grab_file_contents(email_settings.get('smtpKey'), stored_locally=False),
-                               self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False),
-                               source=email_settings.get('sender_address')
-                               if email_settings.get('sender_address') else None)
+                               ssl_state=SSLState[email_settings.get('use_ssl', SSLState.Unencrypted.name)],
+                               keyfile_data=self._grab_file_contents(email_settings.get('private_key'),
+                                                                     stored_locally=False),
+                               certfile_data=self._grab_file_contents(email_settings.get('cert_file'),
+                                                                      stored_locally=False),
+                               ca_file_data=self._grab_file_contents(email_settings.get('ca_file'),
+                                                                     stored_locally=False),
+                               source=email_settings.get('sender_address'))
         return None
 
     # Global settings
@@ -2362,16 +2366,7 @@ class PluginBase(Configurable, Feature):
                             "type": "string",
                             "format": "password"
                         },
-                        {
-                            "name": "smtpKey",
-                            "title": "TLS 1.2 Key File",
-                            "type": "file"
-                        },
-                        {
-                            "name": "smtpCert",
-                            "title": "TLS 1.2 Cert File",
-                            "type": "file"
-                        },
+                        *COMMON_SSL_CONFIG_SCHEMA,
                         {
                             'name': 'sender_address',
                             'title': 'Sender Address',
@@ -2515,8 +2510,7 @@ class PluginBase(Configurable, Feature):
                 "smtpPort": None,
                 "smtpUser": None,
                 "smtpPassword": None,
-                "smtpCert": None,
-                "smtpKey": None,
+                **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
                 'sender_address': None
             },
             "execution_settings": {

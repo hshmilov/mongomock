@@ -1487,10 +1487,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     return return_error('Host and Port are required to connect to email server', 400)
                 email_server = EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
                                            email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
-                                           self._grab_file_contents(email_settings.get(
-                                               'smtpKey'), stored_locally=False),
-                                           self._grab_file_contents(email_settings.get('smtpCert'),
-                                                                    stored_locally=False))
+                                           ssl_state=SSLState[email_settings.get('use_ssl', SSLState.Unencrypted.name)],
+                                           keyfile_data=self._grab_file_contents(email_settings.get('private_key'),
+                                                                                 stored_locally=False),
+                                           certfile_data=self._grab_file_contents(email_settings.get('cert_file'),
+                                                                                  stored_locally=False),
+                                           ca_file_data=self._grab_file_contents(email_settings.get('ca_file'),
+                                                                                 stored_locally=False), )
                 try:
                     with email_server:
                         # Just to test connection
@@ -1725,8 +1728,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
         if request and request.referrer and 'localhost' not in request.referrer \
-                and '127.0.0.1' not in request.referrer\
-                and 'diag-l.axonius.com' not in request.referrer\
+                and '127.0.0.1' not in request.referrer \
+                and 'diag-l.axonius.com' not in request.referrer \
                 and user_name != AXONIUS_USER_NAME:
             self.system_collection.replace_one({'type': 'server'},
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
@@ -2228,7 +2231,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return: GET list of roles with their set of permissions
         """
         if request.method == 'GET':
-            return jsonify([gui_helpers.beautify_db_entry(entry) for entry in self.__roles_collection.find(filter_archived())])
+            return jsonify(
+                [gui_helpers.beautify_db_entry(entry) for entry in self.__roles_collection.find(filter_archived())])
 
         role_data = self.get_request_data_as_object()
         if 'name' not in role_data:

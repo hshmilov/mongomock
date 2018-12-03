@@ -1,8 +1,12 @@
+# pylint: disable=protected-access
 import logging
-import os
 import smtplib
-import tempfile
+import ssl
 from email.message import EmailMessage
+
+from axonius.types.ssl_state import SSLState
+
+from axonius.utils.files import create_temp_file
 
 from axonius.consts import email_consts
 
@@ -11,15 +15,19 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class EmailServer:
 
-    def __init__(self, host, port, user=None, password=None, key=None, cert=None, source=None):
+    def __init__(self, host, port, user=None, password=None,
+                 ssl_state: SSLState = SSLState.Unencrypted, keyfile_data=None, certfile_data=None, ca_file_data=None,
+                 source=None):
         """
 
         :param str host: Host of the smtp server.
         :param int port: Port of the smtp server.
         :param str user: The user to login to the smtp server with.
         :param str password: The password to login to the smtp server with.
-        :param key: The key file to communicate in TLS with the smtp server with.
-        :param cert: The certificate file to communicate in TLS with the smtp server with.
+        :parma ssl_state: How far to use SSL
+        :param keyfile_data: Keyfile for TLS
+        :param certfile_data: Cert file for TLS
+        :param ca_file_data: CA File to trust in TLS
         :param str source: An email address to send emails from (currently defaults to system@axonius.com).
         """
         if source is None:
@@ -31,8 +39,11 @@ class EmailServer:
         self.port = port
         self.user = user
         self.password = password
-        self.key = key if key is not None and key != '' else None
-        self.cert = cert if cert is not None and cert != '' else None
+        self.__ssl_state = ssl_state
+        self.__key_file = create_temp_file(keyfile_data) if keyfile_data else None
+        self.__cert_file = create_temp_file(certfile_data) if certfile_data else None
+        self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
+
         self.source = source
         self.smtp = None
 
@@ -45,28 +56,14 @@ class EmailServer:
             server = smtplib.SMTP(self.host, self.port)
 
             # First activate TLS if available
-            if self.key or self.cert:
+            if self.__ssl_state != SSLState.Unencrypted:
                 # First with provided TLS data
-                key_file_path = None
-                cert_file_path = None
-                try:
-                    if self.key:
-                        key_file_descriptor, key_file_path = tempfile.mkstemp()
-                        with os.fdopen(key_file_descriptor, 'wb') as key_file:
-                            key_file.write(self.key)
-
-                    if self.cert:
-                        cert_file_descriptor, cert_file_path = tempfile.mkstemp()
-                        with os.fdopen(cert_file_descriptor, 'wb') as cert_file:
-                            cert_file.write(self.cert)
-
-                    server.starttls(key_file_path, cert_file_path)
-                finally:
-                    if key_file_path:
-                        os.remove(key_file_path)
-
-                    if cert_file_path:
-                        os.remove(cert_file_path)
+                context = ssl._create_stdlib_context(
+                    certfile=self.__cert_file.name,
+                    keyfile=self.__key_file.name,
+                    cafile=self.__ca_file.name,
+                    cert_reqs=ssl.CERT_REQUIRED if self.__ssl_state == SSLState.Verified else ssl.CERT_NONE)
+                server.starttls(context=context)
             else:
                 # Try TLS anyway because it's more secure
                 try:
