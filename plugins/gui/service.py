@@ -654,7 +654,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             update_result = entity_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
             if not update_result.upserted_id and not update_result.modified_count:
                 return return_error(f'View named {view_data.name} was not saved', 400)
-            return ''
+
+            entity = entity_views_collection.find_one({'name': view_data['name']})
+            return str(entity.get('_id'))
 
         if method == 'DELETE':
             query_ids = self.get_request_data_as_object()
@@ -1330,7 +1332,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     def delete_alert(self, alert_selection):
         # Since other method types cause the function to return - here we have DELETE request
-        if alert_selection is None or (not alert_selection['ids'] and alert_selection['include']):
+        if alert_selection is None or (not alert_selection.get('ids')
+                                       and alert_selection.get('include')):
             logger.error('No alert provided to be deleted')
             return ''
 

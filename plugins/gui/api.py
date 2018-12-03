@@ -212,6 +212,10 @@ class API:
 
         if request.method == "DELETE":
             report_ids = self.get_request_data_as_object()
+            alert_selection = {
+                'ids': report_ids,
+                'include': True
+            }
             return self.delete_alert(alert_selection)
 
     ###########
@@ -270,8 +274,16 @@ class API:
         Expected values: a list of internal axon ids, the action name, and the action command.
         :return:
         """
+
+        if action_type == "upload_file":
+            return self._upload_file(self.device_control_plugin)
+
         action_data = self.get_request_data_as_object()
         action_data["action_type"] = action_type
+        action_data["entities"] = {
+            "ids": action_data["internal_axon_ids"],
+            "include": True,
+        }
         return self.run_actions(action_data, mongo_filter)
 
     @api_add_rule(f"actions")
@@ -281,5 +293,5 @@ class API:
         Expected values: a list of internal axon ids, the action name, and the action command.
         :return:
         """
-        actions = ["deploy", "shell"]
+        actions = ["deploy", "shell", "upload_file"]
         return jsonify(actions)

@@ -16,6 +16,7 @@ import sys
 import threading
 import traceback
 import uuid
+import gridfs
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
@@ -1042,7 +1043,6 @@ class PluginBase(Configurable, Feature):
         :return: stream like object
         """
         if field_data:
-            import gridfs
             db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
             return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid']))
 
