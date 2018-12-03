@@ -4,6 +4,7 @@ import time
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import GOOGLE_KEYPAIR_FILE
+from services.axon_service import TimeoutException
 from ui_tests.pages.page import X_BODY, Page
 
 
@@ -143,8 +144,12 @@ class SettingsPage(Page):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
 
     def toggle_advanced_settings(self):
-        self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=X_BODY)
-        time.sleep(0.5)
+        try:
+            self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=X_BODY)
+            time.sleep(0.5)
+        except NoSuchElementException:
+            # In version 1.15 this does not yet exist
+            pass
 
     def find_remote_support_toggle(self):
         try:
@@ -152,7 +157,7 @@ class SettingsPage(Page):
         except NoSuchElementException:
             # The above is new behaviour and will not work on versions up to 1.15
             # Rollback to previous behaviour
-            return self.find_checkbox_with_label_by_label(self.REMOTE_SUPPORT_LABEL_OLD)
+            return self.find_checkbox_by_label(self.REMOTE_SUPPORT_LABEL_OLD)
 
     def find_analytics_toggle(self):
         try:
@@ -160,7 +165,7 @@ class SettingsPage(Page):
         except NoSuchElementException:
             # The above is new behaviour and will not work on versions up to 1.15
             # Rollback to previous behaviour
-            return self.find_checkbox_with_label_by_label(self.ANALYTICS_LABEL_OLD)
+            return self.find_checkbox_by_label(self.ANALYTICS_LABEL_OLD)
 
     def find_provision_toggle(self):
         return self.find_checkbox_with_label_by_label(self.PROVISION_LABEL)
@@ -187,16 +192,22 @@ class SettingsPage(Page):
         self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
 
     def set_remote_support_toggle(self, make_yes):
-        toggle = self.find_remote_support_toggle()
-        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+        self.set_maintenance_toggle(make_yes, self.find_remote_support_toggle())
 
     def set_analytics_toggle(self, make_yes):
-        toggle = self.find_analytics_toggle()
-        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+        self.set_maintenance_toggle(make_yes, self.find_analytics_toggle())
 
     def set_provision_toggle(self, make_yes):
-        toggle = self.find_provision_toggle()
+        self.set_maintenance_toggle(make_yes, self.find_provision_toggle())
+
+    def set_maintenance_toggle(self, make_yes, toggle):
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+        try:
+            self.confirm_maintenance_removal()
+        except (NoSuchElementException, TimeoutException):
+            # The above is new behaviour and will not work on versions up to 1.15
+            # Rollback to previous behaviour
+            self.save_and_wait_for_toaster()
 
     def confirm_maintenance_removal(self):
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)

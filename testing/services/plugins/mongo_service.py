@@ -1,4 +1,5 @@
 import pymongo
+import time
 
 import psutil
 
@@ -44,6 +45,11 @@ class MongoService(DockerService):
         print("Mongo master is online")
 
         self.run_command_in_container("mongo /docker-entrypoint-initdb.d/configure_replica_set.js")
+        # The sleep here is only relevant to the core, because it runs first.
+        # The intention of this sleep is to allow the DB to initialize itself properly and then
+        # accessing it without specifying a replicaSet will work.
+        # This might be solved by using a more sophisticated docker setup, but it will do for now.
+        time.sleep(10)
         print("Finished setting up mongo")
 
     @property
@@ -88,6 +94,14 @@ class MongoService(DockerService):
         return True
 
     def connect(self):
+        # Ideally, the replicaSet would be specified here (the same way it does in plugin_base.py)
+        # However this code is ran within the context of the machine and not a specific docker, so
+        # accessing the DB is done by accessing 'localhost', with a forwarded port.
+        #
+        # If the replicaSet is specified here, then the machine will try to access the
+        # endpoints specified in that replicaSet, which are only accessible from within the
+        # docker network, and thus, inaccessible to the context this code is running from.
+
         connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user="ax_user",
                                                                              password="ax_pass",
                                                                              addr=self.endpoint[0],

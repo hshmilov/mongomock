@@ -1,6 +1,7 @@
 import requests
+import traceback
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 
@@ -8,6 +9,36 @@ from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PA
 class CoreService(PluginService):
     def __init__(self):
         super().__init__('core')
+
+    def _migrate_db(self):
+        super()._migrate_db()
+        if self.db_schema_version < 1:
+            self._update_schema_version_1()
+
+    def _update_schema_version_1(self):
+        print('Upgrade to schema 1')
+        try:
+            config_match = {
+                'config_name': CORE_CONFIG_NAME
+            }
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_COLLECTION)
+            current_config = config_collection.find_one(config_match)
+            if current_config:
+                maintenance_config = current_config['config'].get('maintenance_settings')
+                if maintenance_config:
+                    self.db.get_collection(GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION).insert_one({
+                        'type': 'maintenance',
+                        'provision': maintenance_config.get('analytics', True),
+                        'analytics': maintenance_config.get('analytics', True),
+                        'troubleshooting': maintenance_config.get('troubleshooting', True),
+                        'timeout': None
+                    })
+                del current_config['config']['maintenance_settings']
+                config_collection.replace_one(config_match, current_config)
+            self.db_schema_version = 1
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 1. Details: {e}')
+            traceback.print_exc()
 
     def register(self, api_key=None, plugin_name=""):
         headers = {}

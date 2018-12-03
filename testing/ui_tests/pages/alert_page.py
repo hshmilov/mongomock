@@ -1,3 +1,5 @@
+from selenium.common.exceptions import NoSuchElementException
+
 from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import X_BODY
 
@@ -106,7 +108,12 @@ class AlertPage(EntitiesPage):
         self.check_alert_checkbox(Trigger.Below)
 
     def check_every_discovery(self):
-        self.check_alert_checkbox(Trigger.EveryDiscoveryCycle)
+        try:
+            self.check_alert_checkbox(Trigger.EveryDiscoveryCycle)
+        except NoSuchElementException:
+            # The above is new behaviour and will not work on versions up to 1.15
+            # Rollback to previous behaviour
+            self.check_alert_checkbox('Every discovery cycle')
 
     def check_push_system_notification(self):
         self.check_alert_checkbox(Action.PushNotification)

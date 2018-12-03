@@ -56,7 +56,6 @@ class TestGlobalSettings(TestBase):
         assert self.settings_page.is_toggle_selected(toggle)
 
         self.settings_page.set_remote_support_toggle(make_yes=False)
-        self.settings_page.confirm_maintenance_removal()
         wait_until(lambda: gui_service.troubleshooting().strip() == b'false')
 
         self.settings_page.set_remote_support_toggle(make_yes=True)
@@ -67,7 +66,6 @@ class TestGlobalSettings(TestBase):
         assert self.settings_page.is_toggle_selected(toggle)
 
         self.settings_page.set_analytics_toggle(make_yes=False)
-        self.settings_page.confirm_maintenance_removal()
         wait_until(lambda: gui_service.analytics().strip() == b'false')
 
         self.settings_page.set_analytics_toggle(make_yes=True)
@@ -79,7 +77,6 @@ class TestGlobalSettings(TestBase):
         self.settings_page.toggle_advanced_settings()
 
         self.settings_page.set_provision_toggle(make_yes=False)
-        self.settings_page.confirm_maintenance_removal()
         self.settings_page.click_start_remote_access()
         wait_until(
             lambda: LogTester(GUI_LOG_PATH).is_pattern_in_log(
