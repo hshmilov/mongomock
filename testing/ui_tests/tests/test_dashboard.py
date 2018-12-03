@@ -7,6 +7,7 @@ class TestDashboard(TestBase):
     UNCOVERED_QUERY = 'specific_data.adapter_properties != \'Manager\'' \
                       ' and specific_data.adapter_properties != \'Agent\''
     COVERED_QUERY = 'specific_data.adapter_properties in [\'Manager\',\'Agent\']'
+    SUMMARY_CARD_QUERY = 'specific_data.data.hostname == exists(true)'
 
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
@@ -65,6 +66,20 @@ class TestDashboard(TestBase):
         self.dashboard_page.click_covered_pie_slice()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.COVERED_QUERY
+
+    def test_dashboard_summary_chart(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', 'test summary')
+        self.dashboard_page.wait_for_spinner_to_end()
+        summary_chart = self.dashboard_page.get_summary_card()
+        result_count = int(summary_chart.text)
+        summary_chart.click()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == result_count
+        assert self.devices_page.find_search_value() == self.SUMMARY_CARD_QUERY
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.remove_summary_card()
 
     def test_dashboard_search(self):
         string_to_search = 'be'
