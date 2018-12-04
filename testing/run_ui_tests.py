@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import shlex
 import subprocess
+import signal
 import sys
 
 import pytest
@@ -12,7 +13,12 @@ from services.standalone_services.selenium_service import SeleniumService
 from devops.scripts.automate_dev import credentials_inputer
 
 
+def signal_term_handler(signal_, frame):
+    raise TimeoutError
+
+
 def main():
+    signal.signal(signal.SIGTERM, signal_term_handler)
     axonius_system = get_service()
     ad_service = AdService()
     json_service = JsonFileService()
