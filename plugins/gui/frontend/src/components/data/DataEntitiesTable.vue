@@ -93,5 +93,10 @@
 <style lang="scss">
     .x-data-entities {
         height: calc(100% - 36px);
+        .x-historical-date-picker {
+            .md-input {
+                width: 160px;
+            }
+        }
     }
 </style>
