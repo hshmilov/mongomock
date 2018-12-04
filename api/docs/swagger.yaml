@@ -34,14 +34,12 @@ paths:
         in: "query"
         description: "How many devices to skip (0 means none and bring devices from\
           \ the start)."
-        required: false
-        default: 0
+        required: true
         type: "integer"
       - name: "limit"
         in: "query"
         description: "How many devices to return (pagination)."
-        required: false
-        default: 2000
+        required: true
         type: "integer"
       - name: "fields"
         in: "query"
@@ -53,11 +51,6 @@ paths:
       - name: "filter"
         in: "query"
         description: "The filter to get devices by."
-        required: true
-        type: "string"
-      - name: "sort"
-        in: "query"
-        description: "The field to sort the devices by."
         required: false
         type: "string"
       responses:
@@ -79,7 +72,6 @@ paths:
       - name: "filter"
         in: "query"
         description: "The filter to get Devices by."
-        required: true
         type: "string"
       responses:
         200:
@@ -138,7 +130,7 @@ paths:
         description: "List of devices and labels, all labels will be added to all devices"
         required: true
         schema:
-          $ref: "#/definitions/Labels_And_Devices"
+          $ref: "#/definitions/Labels"
       responses:
         400:
           description: "Invalid input supplied"
@@ -158,7 +150,7 @@ paths:
         description: "List of devices and labels, all labels will be removed from all devices"
         required: true
         schema:
-          $ref: "#/definitions/Labels_And_Devices"
+          $ref: "#/definitions/Labels"
       responses:
         400:
           description: "Invalid input supplied"
@@ -180,14 +172,12 @@ paths:
         in: "query"
         description: "How many devices to skip (0 means none and bring devices from\
           \ the start)."
-        required: false
-        default: 0
+        required: true
         type: "integer"
       - name: "limit"
         in: "query"
         description: "How many users to return (pagination)."
-        required: false
-        default: 2000
+        required: true
         type: "integer"
       - name: "fields"
         in: "query"
@@ -196,15 +186,10 @@ paths:
         type: "array"
         items:
           type: "string"
-      - name: "sort"
-        in: "query"
-        description: "The field to sort the users by."
-        required: false
-        type: "string"
       - name: "filter"
         in: "query"
         description: "The filter to get devices by."
-        required: true
+        required: false
         type: "string"
       responses:
         200:
@@ -284,7 +269,7 @@ paths:
         description: "List of users and labels, all labels will be added to all users"
         required: true
         schema:
-          $ref: "#/definitions/Labels_And_Devices"
+          $ref: "#/definitions/Labels"
       responses:
         400:
           description: "Invalid input supplied"
@@ -304,7 +289,7 @@ paths:
         description: "List of users and labels, all labels will be removed from all users"
         required: true
         schema:
-          $ref: "#/definitions/Labels_And_Devices"
+          $ref: "#/definitions/Labels"
       responses:
         400:
           description: "Invalid input supplied"
@@ -418,14 +403,12 @@ paths:
         in: "query"
         description: "How many devices to skip (0 means none and bring devices from\
           \ the start)."
-        required: false
-        default: 0
+        required: true
         type: "integer"
       - name: "limit"
         in: "query"
         description: "How many users to return (pagination)."
-        required: false
-        default: 2000
+        required: true
         type: "integer"
       - name: "filter"
         in: "query"
@@ -456,6 +439,8 @@ paths:
         schema:
           $ref: "#/definitions/View"
       responses:
+        200:
+          description: "Returns the view id"
         400:
           description: "Invalid user supplied"
         404:
@@ -471,10 +456,10 @@ paths:
       parameters:
       - in: "body"
         name: "body"
-        description: "Updated user object"
+        description: "List of ids to delete"
         required: true
         schema:
-          $ref: "#/definitions/View"
+          $ref: "#/definitions/Id_List"
       responses:
         400:
           description: "Invalid user supplied"
@@ -496,19 +481,17 @@ paths:
         in: "query"
         description: "How many devices to skip (0 means none and bring devices from\
           \ the start)."
-        required: false
-        default: 0
+        required: true
         type: "integer"
       - name: "limit"
         in: "query"
         description: "How many users to return (pagination)."
-        required: false
-        default: 2000
+        required: true
         type: "integer"
       - name: "filter"
         in: "query"
         description: "The filter to get views by."
-        required: true
+        required: false
         type: "string"
       responses:
         200:
@@ -551,10 +534,10 @@ paths:
       parameters:
       - in: "body"
         name: "body"
-        description: "Updated user object"
+        description: "List of ids to delete"
         required: true
         schema:
-          $ref: "#/definitions/View"
+          $ref: "#/definitions/Id_List"
       responses:
         400:
           description: "Invalid user supplied"
@@ -716,13 +699,24 @@ definitions:
       query:
         type: "object"
         properties: {}
-  Labels_And_Devices:
+  Labels:
     properties:
       entities:
-        type: "array"
+        properties:
+          ids:
+            type: "array"
+            items:
+              type: "string"
+              example: "internal_axon_id"
         items:
           type: "string"
       labels:
         type: "array"
         items:
           type: "string"
+          example: "Example Label"
+  Id_List:
+    type: "array"
+    items:
+      type: "string"
+      example: "internal_axon_id"

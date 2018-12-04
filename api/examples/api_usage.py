@@ -1,11 +1,25 @@
 #!/usr/bin/env python36
-# XXX: do not import from axonius libs here
-import argparse
 import logging
-import pprint
-import typing
 
-import requests
+from axoniussdk import argument_parser
+from axoniussdk.client import RESTClient
+
+__author__ = 'Axonius, Inc'
+
+
+class ArgumentParser(argument_parser.ArgumentParser):
+    """ Argumentparser for the script """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        action_group = self.add_mutually_exclusive_group(required=True)
+        action_group.add_argument('--function', choices=RESTExample.get_examples())
+        action_group.add_argument('--all-functions', action='store_true', default=False, help='Run all functions')
+        self.description = \
+            '''Example:
+  %(prog)s -x https://axonius.local --username admin -p password1 --no-verify-ssl --function get_devices1
+  %(prog)s -x https://axonius.local --api-key xxxx --api-secret yyyy --all-functions'''
+
 
 TRIGGERS_DEFAULT_VALUES = {'every_discovery': False,
                            'new_entities': False,
@@ -22,10 +36,7 @@ ACTION_RUN_FILENAME = 'example.sh'
 RUN_SCRIPT_EXAMPLE = b'#!/bin/bash\necho hello world!'
 
 
-DEFAULT_AXONIUS_URL = 'https://localhost'
 AXONIUS_API = '/api/V1'
-
-DEFAULT_USERNAME = 'admin'
 
 DEVICE_VIEW_NAME = 'All Nexpose Scanned AD Devices Example'
 DEVICE_VIEW_VIEW = {'page': 0,
@@ -80,243 +91,7 @@ USER_VIEW_VIEW = {'page': 0, 'pageSize': 20,
                   'sort': {'desc': True, 'field': ''}}
 USER_VIEW_QUERY_TYPE = 'saved'
 
-
 ALERT_NAME = 'Test Alert 3'
-
-
-class ArgumentParser(argparse.ArgumentParser):
-    """ Argumentparser for the script """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.formatter_class = argparse.RawDescriptionHelpFormatter
-        self.description = \
-            '''Example:
-  %(prog)s -x https://axnoius.local --username admin -p password1 --function get_devices_example1
-  %(prog)s -x https://axnoius.local --username admin -p password1 --all-functions'''
-
-        action_group = self.add_mutually_exclusive_group(required=True)
-        action_group.add_argument('--function', choices=RESTExample.get_examples())
-        action_group.add_argument('--all-functions', action='store_true', default=False, help='Run all functions')
-
-        self.add_argument('--axonius-url', '-x', default=DEFAULT_AXONIUS_URL)
-        self.add_argument('--username', '-u', default=DEFAULT_USERNAME)
-        self.add_argument('--password', '-p', required=True)
-        self.add_argument('--no-verify-ssl', '-s', action='store_true', default=False,
-                          help='Don\'t verify ssl')
-
-        self.add_argument('--logfile', '-l')
-
-
-class RESTClient:
-    """ simple rest client for Axonius REST API """
-
-    def __init__(self, axonius_url, username,
-                 password, **kwargs):
-        self._url = axonius_url
-        self._username = username
-        self._password = password
-        self._request_args = kwargs
-
-        self._logger = logging.getLogger('RESTClient')
-
-    def do_request(self, action: str, url: str, **kwargs):
-        """ Sends axnoius rest api to the server """
-        kwargs.update(self._request_args)
-        kwargs.update({'auth': (self._username, self._password)})
-
-        full_url = f'{self._url}{AXONIUS_API}{url}'
-        resp = requests.request(action,
-                                full_url,
-                                **kwargs)
-
-        self._logger.info(resp.status_code)
-        # Only if we have content print the json
-        if resp.status_code == 200 and resp.content:
-            data = resp.json()
-            self._logger.info(pprint.pformat(data))
-        else:
-            data = resp.text
-            self._logger.info(data)
-
-        return (resp.status_code, data)
-
-    def get_devices(self, skip: int, limit: int, fields=None, filter_=None):
-        params = {}
-        params['skip'] = skip
-        params['limit'] = limit
-
-        if fields:
-            params['fields'] = fields
-        if filter_:
-            params['filter'] = filter_
-
-        return self.do_request('get', '/devices', params=params)
-
-    def get_device_by_id(self, device_id: str):
-        return self.do_request('get', f'/devices/{device_id}')
-
-    def get_devices_views(self, skip: int, limit: int, filter_: str):
-        params = {}
-        params['limit'] = 1000
-        params['skip'] = 0
-        params['filter'] = filter_
-        return self.do_request('get', '/devices/views', params=params)
-
-    def create_new_device_view(self, name: str, view: dict, query_type: str):
-        data = {
-            'name': name,
-            'view': view,
-            'query_type': query_type,
-        }
-        return self.do_request('post', '/devices/views', json=data)
-
-    def delete_devices_views(self, device_id: list):
-        # Deletes all listed device views (by ID).
-        return self.do_request('delete', '/devices/views', json=device_id)
-
-    def get_users(self, skip: str, limit: str, fields=None, filter_=None):
-        params = {}
-        params['skip'] = skip
-        params['limit'] = limit
-
-        if fields:
-            params['fields'] = fields
-        if filter_:
-            params['filter'] = filter_
-        return self.do_request('get', '/users', params=params)
-
-    def get_user_by_id(self, user_id: str):
-        return self.do_request('get', f'/users/{user_id}')
-
-    def get_users_views(self, skip: str, limit: str, filter_: list=None):
-
-        params = {}
-
-        params['limit'] = limit
-        params['skip'] = skip
-        if filter_:
-            params['filter'] = filter_
-
-        return self.do_request('get', '/users/views', params=params)
-
-    def create_new_user_view(self, name: str, view: dict, query_type: str):
-        data = {
-            'name': name,
-            'view': view,
-            'query_type': query_type,
-        }
-        return self.do_request('post', '/users/views', json=data)
-
-    def delete_users_views(self, user_ids: list):
-        # Deletes all listed device views (by ID).
-        data = user_ids
-        return self.do_request('delete', '/users/views', json=data)
-
-    def get_alerts(self, skip: int=None, limit: int=None, fields: list=None):
-        params = {
-            'skip': skip,
-            'limit': limit,
-            'fields': fields
-        }
-
-        # This will get all the configured alerts
-        return self.do_request('get', '/alerts', params=params)
-
-    def delete_alerts(self, alert_ids: list):
-        return self.do_request('delete', '/alerts', json=alert_ids)
-
-        # Response would be status code 200 (OK)
-
-    def put_alert(self,
-                  name: int,
-                  triggers: dict,
-                  period: str,
-                  actions: list,
-                  view: str,
-                  viewEntity: str,
-                  severity: str,
-                  retrigger: bool=True,
-                  triggered: bool=False):
-        # Notice that id = "new" tells the api this is a new alert.
-        # Triggers should contain all the triggers with true (or int above 0) on activated triggers.
-        # Actions type should be one of thses:
-        # tag_entities
-        # create_service_now_computer
-        # create_service_now_incident
-        # notify_syslog
-        # send_emails
-        # create_notification
-        # tag_entities
-
-        data = {'id': 'new',
-                'name': name,
-                'triggers': triggers,
-                'period': period,
-                'actions': actions,
-                'view': view,
-                'viewEntity': viewEntity,
-                'retrigger': retrigger,
-                'triggered': triggered,
-                'severity': 'warning'}
-
-        return self.do_request('put', '/alerts', json=data)
-
-    def get_actions(self):
-        return self.do_request('get', '/actions')
-
-    def run_action(self, device_ids: list, action_name: str, command: str):
-        data = {
-            'internal_axon_ids': device_ids,  # The devices
-            'action_name': action_name,
-            'command': command,
-        }
-
-        return self.do_request('post', '/actions/shell', json=data)
-
-    def deploy_action(self, device_ids: list, action_name: str, binary_uuid: str, binary_filename: str,
-                      params: str=''):
-        data = {
-            'internal_axon_ids': device_ids,  # The device
-            'action_name': action_name,
-            'binary': {'filename': binary_filename,
-                       'uuid': binary_uuid}
-        }
-        if params:
-            data['params'] = params
-
-        return self.do_request('post', '/actions/deploy', json=data)
-
-    def get_devices_labels(self):
-        """ returns a list of strings that are the devices labels in the system """
-        return self.do_request('get', '/devices/labels')
-
-    def get_users_labels(self):
-        """ returns a list of strings that are the users labels in the system """
-        return self.do_request('get', '/users/labels')
-
-    def add_labels(self, entities: list, labels: list):
-        data = {
-            'entities': {
-                'ids': entities,  # list of internal axon ids
-            },
-            'labels': labels      # list of labels to add
-        }
-        return self.do_request('post', '/devices/labels', json=data)
-
-    def delete_labels(self,  entities: list, labels: list):
-        data = {
-            'entities': {
-                'ids': entities,
-            },                     # list of internal axon ids
-            'labels': labels       # list of labels to add
-        }
-        return self.do_request('delete', '/devices/labels', json=data)
-
-    def upload_file(self, binary: typing.io.BinaryIO):
-        """ Upload a file to the system, that later can be use for deployment """
-        return self.do_request('post', '/actions/upload_file', data={'field_name': 'binary'},
-                               files={'userfile': ('example_filename', binary)})
 
 
 class RESTExample:
@@ -324,23 +99,22 @@ class RESTExample:
         note: the examples assumes that there are at least one user and one device in the system with
               and execution and device_control enabled"""
 
-    def __init__(self, axonius_url, username,
-                 password, verify_ssl):
-        self._client = RESTClient(axonius_url,
-                                  username,
-                                  password,
-                                  verify=verify_ssl)
+    def __init__(self, axonius_url, **kwargs):
+        self._client = RESTClient(axonius_url, **kwargs)
         self._logger = logging.getLogger('RESTExample')
 
     @classmethod
     def get_examples(cls):
         examples_functions = (cls.get_devices1,
                               cls.get_devices2,
+                              cls.get_devices_count,
                               cls.get_device_by_id,
                               cls.get_devices_views,
                               cls.create_and_delete_device_view,
                               cls.get_users,
+                              cls.get_users_count,
                               cls.get_user_by_id,
+                              cls.get_users_views,
                               cls.create_and_delete_user_view,
                               cls.get_alerts,
                               cls.create_and_delete_alert,
@@ -349,8 +123,17 @@ class RESTExample:
                               cls.run_action,
                               cls.get_users_labels,
                               cls.get_devices_labels,
-                              cls.add_and_delete_labels)
-        return [function.__name__ for function in examples_functions]
+                              cls.add_and_delete_devices_labels,
+                              cls.add_and_delete_users_labels)
+
+        examples_functions = {function.__name__ for function in examples_functions}
+        all_examples_functions = set(filter(lambda x: 'get_examples' not in x and not x.startswith('__'),
+                                            dir(cls)))
+
+        # just validate that we didn't forget any example
+        assert all_examples_functions == examples_functions, all_examples_functions - examples_functions
+
+        return examples_functions
 
     def get_devices1(self):
         # This would query a max of 50 devices with no filters on either the devices themselves or their fields
@@ -499,7 +282,7 @@ class RESTExample:
                                                        period='weekly',
                                                        actions=[{'type': 'create_notification'}],
                                                        view='Users Created in Last 30 Days',
-                                                       viewEntity='users',
+                                                       view_entity='users',
                                                        severity='warning')
 
         assert status_code == 201, 'Failed to create new alert'
@@ -575,12 +358,22 @@ class RESTExample:
         assert status_code == 200
         assert isinstance(labels, list)
 
+    def get_devices_count(self):
+        status_code, count = self._client.get_devices_count('adapters == \"active_directory_adapter\"')
+        assert status_code == 200
+        assert isinstance(count, int)
+
+    def get_users_count(self):
+        status_code, count = self._client.get_users_count()
+        assert status_code == 200
+        assert isinstance(count, int)
+
     def get_users_labels(self):
         status_code, labels = self._client.get_users_labels()
         assert status_code == 200
         assert isinstance(labels, list)
 
-    def add_and_delete_labels(self):
+    def add_and_delete_devices_labels(self):
         # Fetch some devices to find any id for the exmaple
         status_code, devices = self._client.get_devices(limit=2, skip=0)
         assert status_code == 200, 'Failed to fetch devices'
@@ -591,7 +384,7 @@ class RESTExample:
         entities = [device_id]
         labels = ['Example Label']
 
-        status_code, resp = self._client.add_labels(entities, labels)
+        status_code, resp = self._client.add_devices_labels(entities, labels)
         assert status_code == 200
 
         self._logger.info(f'Fetching device id: {device_id}')
@@ -600,7 +393,7 @@ class RESTExample:
 
         assert 'Example Label' in device['labels'], 'Failed to add label %s' % device['labels']
 
-        status_code, resp = self._client.delete_labels(entities, labels)
+        status_code, resp = self._client.delete_devices_labels(entities, labels)
         assert status_code == 200
 
         self._logger.info(f'Fetching device id: {device_id}')
@@ -609,16 +402,44 @@ class RESTExample:
 
         assert 'Example Label' not in device['labels'], 'Failed to delete label'
 
+    def add_and_delete_users_labels(self):
+        # Fetch some users to find any id for the exmaple
+        status_code, users = self._client.get_users(limit=2, skip=0)
+        assert status_code == 200, 'Failed to fetch users'
+
+        user_example = users['assets'][0]
+        user_id = user_example['internal_axon_id']
+
+        entities = [user_id]
+        labels = ['Example Label']
+
+        status_code, resp = self._client.add_users_labels(entities, labels)
+        assert status_code == 200
+
+        self._logger.info(f'Fetching user id: {user_id}')
+        status_code, user = self._client.get_user_by_id(user_id)
+        assert status_code == 200, 'Failed to fetch user by id'
+
+        assert 'Example Label' in user['labels'], 'Failed to add label %s' % user['labels']
+
+        status_code, resp = self._client.delete_users_labels(entities, labels)
+        assert status_code == 200
+
+        self._logger.info(f'Fetching user id: {user_id}')
+        status_code, user = self._client.get_user_by_id(user_id)
+        assert status_code == 200, 'Failed to fetch user by id'
+
+        assert 'Example Label' not in user['labels'], 'Failed to delete label'
+
 
 def main():
-    requests.packages.urllib3.disable_warnings()
     args = ArgumentParser().parse_args()
     logging.basicConfig(format='%(message)s', level=logging.INFO, filename=args.logfile)
 
     client = RESTExample(args.axonius_url,
-                         args.username,
-                         args.password,
-                         not args.no_verify_ssl)
+                         auth=args.auth,
+                         headers=args.headers,
+                         verify=not args.no_verify_ssl)
     if args.function:
         logging.info(f'Calling api function "{args.function}"')
         callback = getattr(client, args.function)

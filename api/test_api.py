@@ -3,14 +3,14 @@
 # pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name, too-many-branches
 import logging
 
-import services.axonius_service
+from tests.conftest import axonius_fixture
 from services.adapters.ad_service import ad_fixture
 from services.axonius_service import get_service
 from services.plugins.device_control_service import device_control_fixture
 from services.plugins.general_info_service import general_info_fixture
-from plugins.gui.api_usage import RESTExample
 from test_credentials.test_ad_credentials import ad_client1_details
 from testing.test_credentials.test_gui_credentials import DEFAULT_USER
+from examples.api_usage import RESTExample
 
 
 def test_api(axonius_fixture, general_info_fixture, device_control_fixture, ad_fixture):
@@ -30,9 +30,8 @@ def test_api(axonius_fixture, general_info_fixture, device_control_fixture, ad_f
     )
 
     client = RESTExample('https://127.0.0.1',
-                         DEFAULT_USER['user_name'],
-                         DEFAULT_USER['password'],
-                         False)
+                         auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
+                         verify=False)
     for name in client.get_examples():
         logging.info(f'Calling api function "{name}"')
         callback = getattr(client, name)
