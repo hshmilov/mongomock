@@ -157,6 +157,7 @@ class InfobloxAdapter(AdapterBase):
                     end_time = device_raw.get('ends')
                     if end_time:
                         device.end_time = datetime.datetime.fromtimestamp(end_time)
+                        device.last_seen = datetime.datetime.fromtimestamp(end_time)
                 except Exception:
                     logger.exception(f'Problem getting end time {end_time}')
                 device.set_raw(device_raw)

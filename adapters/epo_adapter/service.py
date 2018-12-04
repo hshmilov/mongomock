@@ -8,7 +8,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import format_mac, is_valid_ip, parse_date
+from axonius.utils.parsing import format_mac, is_valid_ip, parse_date, is_domain_valid
 from epo_adapter.mcafee import client
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -153,7 +153,12 @@ class EpoAdapter(AdapterBase):
             if last_seen:
                 device.last_seen = last_seen
 
-            device.domain = device_raw.get("EPOComputerProperties.DomainName")
+            domain = device_raw.get("EPOComputerProperties.DomainName")
+            if is_domain_valid(domain):
+                device.domain = domain
+                device.part_of_domain = True
+            else:
+                device.part_of_domain = False
             device.epo_agent_version = device_raw.get("EPOLeafNode.AgentVersion")
 
             # TODO: Understand if the next line is always included in hostname. Do we need it?
