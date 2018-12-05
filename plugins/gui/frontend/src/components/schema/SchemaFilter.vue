@@ -40,6 +40,7 @@
                 if (this.isFilterEmpty) {
 					this.error = ''
                     this.filters = []
+                    this.bracketWeights = []
                 }
 			}
 		},
