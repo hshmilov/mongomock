@@ -333,3 +333,4 @@ testing/upgrade/*/screenshots/
 cscope.out
 cscope.files
 tags
+api.tar.xz
