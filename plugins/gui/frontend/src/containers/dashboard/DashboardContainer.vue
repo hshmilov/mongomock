@@ -189,7 +189,7 @@
                     this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`, 'devices')
                 } else {
                     this.runFilter(properties.map((property) => {
-                        return `specific_data.adapter_properties != '${property}'`
+                        return `(not(specific_data.adapter_properties == "${property}"))`
                     }).join(' and '), 'devices')
                 }
             },
