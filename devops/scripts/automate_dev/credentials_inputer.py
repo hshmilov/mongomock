@@ -20,7 +20,11 @@ def main():
             if len(adapter.clients()) > 0:
                 print('A Client Already exists')
 
-            test_adapter_module = import_module(f'parallel_tests.test_{current_service[0]}')
+            try:
+                test_adapter_module = import_module(f'parallel_tests.test_{current_service[0]}')
+            except ModuleNotFoundError as ex:
+                print(f'Could not find test service for {current_service[0]}')
+                return
 
             for atter, value in test_adapter_module.__dict__.items():
                 if hasattr(value, 'some_client_details'):
