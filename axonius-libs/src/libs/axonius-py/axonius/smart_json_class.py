@@ -161,6 +161,51 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
             self.declare_new_field(field_name, Field(str, f'{capitalized}'))
         self[field_name] = field_value
 
+    def set_static_field(self, field_name: str, field_value) -> bool:
+        """
+        Made for this https://axonius.atlassian.net/wiki/spaces/AX/pages/818577415/Add+user+custom+fields+data+to+Axonius+entity+from+the+GUI
+        This is needed so the GUI could specify complex paths to be set, e.g network_interfaces.mac
+        network_interfaces is a list, so GUI didn't "specify" what to do with that list
+        The default behavior currently implemented is that if any list is empty it will create a new item in it, and if
+        it is not empty, it will edit the first one.
+        :param field_name: path to change, dot separated, e.g network_interfaces.mac
+        :param field_value: Value to set
+        :return: True if successful, False if any place in the path doesn't exist
+        """
+        base = self
+        field = base
+
+        path = field_name.split('.')
+
+        for path_current in path[:-1]:
+            previous_base = base
+
+            if isinstance(previous_base, ListField):
+                base = [x for x in base._type.fields_info if x.name == path_current]
+            else:
+                base = [x for x in base.fields_info if x.name == path_current]
+
+            if not base:
+                return False
+
+            base = base[0]
+            if isinstance(base, ListField):
+                new_data = base.type()
+                if isinstance(previous_base, ListField):
+                    field[path_current].append(new_data)
+                else:
+                    previous_base[path_current].append(new_data)
+                field = new_data
+            else:
+                if issubclass(base.type, SmartJsonClass):
+                    previous_base[path_current] = base.type()
+                field = previous_base[path_current]
+        try:
+            field[path[-1]] = field_value
+        except AttributeError:
+            return False
+        return True
+
     def to_dict(self):
         """ returns a serialized dict of this instance, can be passes as a json object """
         new_dict = dict(self._dict)

@@ -567,12 +567,10 @@ class ReportsService(PluginBase, Triggerable):
                     'name': report_data['view']})
                 parsed_query_filter = parse_filter(query['view']['query']['filter'])
                 field_list = query['view'].get('fields', [])
-                with self._get_db_connection() as db_connection:
-                    csv_string = gui_helpers.get_csv(parsed_query_filter,
-                                                     gui_helpers.get_sort(query['view']),
-                                                     {field: 1 for field in field_list},
-                                                     db_connection,
-                                                     EntityType(report_data['view_entity']))
+                csv_string = gui_helpers.get_csv(parsed_query_filter,
+                                                 gui_helpers.get_sort(query['view']),
+                                                 {field: 1 for field in field_list},
+                                                 EntityType(report_data['view_entity']))
 
                 email.add_attachment('Axonius Entity Data.csv', csv_string.getvalue().encode('utf-8'), 'text/csv')
 
@@ -677,12 +675,8 @@ class ReportsService(PluginBase, Triggerable):
                 'name': report_data['view']
             })
         field_list = query['view'].get('fields', [])
-        with self._get_db_connection() as db_connection:
-            csv_string = gui_helpers.get_csv(parsed_query_filter,
-                                             gui_helpers.get_sort(query['view']),
-                                             {field: 1 for field in field_list},
-                                             db_connection,
-                                             EntityType(report_data['view_entity']))
+        csv_string = gui_helpers.get_csv(parsed_query_filter, gui_helpers.get_sort(query['view']),
+                                         {field: 1 for field in field_list}, EntityType(report_data['view_entity']))
 
         email.add_attachment(f'Axonius {data_action} entity data.csv', csv_string.getvalue().encode('utf-8'),
                              'text/csv')

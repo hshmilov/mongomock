@@ -163,7 +163,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_row()
             assert f'devices/{first_id}' in self.driver.current_url
             self.devices_page.click_tab('Adapters Data')
-            assert len(self.devices_page.find_vertical_tabs()) == 1
+            assert len(self.devices_page.find_vertical_tabs()) == 2
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS)
             self.devices_page.click_tab('General Data')
@@ -183,7 +183,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_row()
             assert f'devices/{first_id}' in self.driver.current_url
             self.devices_page.click_tab('Adapters Data')
-            assert self.devices_page.find_vertical_tabs() == ['WMI Info', 'Active Directory']
+            assert self.devices_page.find_vertical_tabs() == ['WMI Info', 'Active Directory', 'Custom Data']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
             self.devices_page.click_tab('Active Directory')
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AD_NAME)

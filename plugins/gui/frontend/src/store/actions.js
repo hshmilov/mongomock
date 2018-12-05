@@ -396,3 +396,15 @@ export const fetchSystemConfig =({dispatch}) => {
         type: UPDATE_SYSTEM_CONFIG
     })
 }
+
+export const SAVE_CUSTOM_DATA = 'SAVE_CUSTOM_DATA'
+export const saveCustomData = ({ state, dispatch }, payload) => {
+	let module = getModule(state, payload)
+    if (!module) return
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/custom?filter=${encodeURIComponent(module.view.query.filter)}`,
+		method: 'POST',
+		data: payload.data
+	})
+}

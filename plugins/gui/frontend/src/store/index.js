@@ -22,7 +22,8 @@ import {
 	REMOVE_DATA_NOTE, removeDataNote,
 	RUN_ACTION, runAction,
     STOP_RESEARCH_PHASE, stopResearch,
-	FETCH_SYSTEM_CONFIG, fetchSystemConfig
+	FETCH_SYSTEM_CONFIG, fetchSystemConfig,
+    SAVE_CUSTOM_DATA, saveCustomData
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
@@ -115,7 +116,8 @@ export default new Vuex.Store({
         [ REMOVE_DATA_NOTE ]: removeDataNote,
         [ RUN_ACTION ]: runAction,
         [ STOP_RESEARCH_PHASE ]: stopResearch,
-		[ FETCH_SYSTEM_CONFIG ]: fetchSystemConfig
+		[ FETCH_SYSTEM_CONFIG ]: fetchSystemConfig,
+        [ SAVE_CUSTOM_DATA ]: saveCustomData
     },
     modules: {
         /*

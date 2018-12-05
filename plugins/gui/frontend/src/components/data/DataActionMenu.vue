@@ -21,6 +21,10 @@
             <div>Are you sure you want to delete these {{module}}?</div>
         </x-data-action-item>
         <slot></slot>
+        <x-data-action-item :title="`Add custom data...`" :handle-save="saveFields" :message="`Custom data saved`"
+                            action-text="Save">
+            <x-data-adapter-editor :module="module" v-model="customAdapterData" :fields="fields" />
+        </x-data-action-item>
     </div>
 </template>
 
@@ -30,22 +34,29 @@
 	import NestedMenuItem from '../../components/menus/NestedMenuItem.vue'
     import xDataActionItem from '../../components/data/DataActionItem.vue'
 	import xTagModal from '../../components/popover/TagModal.vue'
+    import xDataAdapterEditor from './DataCustomFields.vue'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
     import { GET_DATA_BY_ID } from '../../store/getters'
-    import { DELETE_DATA, DISABLE_DATA, REQUEST_API } from '../../store/actions'
+    import { DELETE_DATA, DISABLE_DATA, SAVE_CUSTOM_DATA } from '../../store/actions'
 
 	export default {
 		name: 'x-data-action-menu',
         components: {
 			xDropdown, 'nested-menu': NestedMenu, 'nested-menu-item': NestedMenuItem,
-            xDataActionItem, xTagModal
+            xDataActionItem, xTagModal, xDataAdapterEditor
         },
         props: { module: {required: true}, entities: {required: true} },
         computed: {
             ...mapState({
                 dataCount(state) {
                     return state[this.module].count.data
+                },
+                fields(state) {
+                    let fields = state[this.module].fields.data
+                    if (!fields) return []
+                    if (!fields.specific) return fields.generic
+                    return fields.specific.gui || fields.generic
                 }
             }),
 			...mapGetters({getDataByID: GET_DATA_BY_ID }),
@@ -70,8 +81,13 @@
                 return this.dataCount - this.entities.ids.length
             }
         },
+        data() {
+		    return {
+                customAdapterData: {}
+            }
+        },
         methods: {
-            ...mapActions({ disableData: DISABLE_DATA, deleteData: DELETE_DATA, fetchData: REQUEST_API }),
+            ...mapActions({ disableData: DISABLE_DATA, deleteData: DELETE_DATA, saveCustomData: SAVE_CUSTOM_DATA }),
             activate(item) {
             	if (!item || !item.activate) return
                 item.activate()
@@ -84,6 +100,13 @@
             deleteEntities() {
                 return this.deleteData({
                     module: this.module, data: this.entities
+                }).then(() => this.$emit('done'))
+            },
+            saveFields() {
+                return this.saveCustomData({
+                    module: this.module, data: {
+                        selection: this.entities, data: this.customAdapterData
+                    }
                 }).then(() => this.$emit('done'))
             }
         }

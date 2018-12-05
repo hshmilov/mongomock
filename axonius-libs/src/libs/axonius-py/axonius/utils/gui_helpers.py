@@ -15,7 +15,7 @@ from retry.api import retry_call
 
 from axonius.adapter_base import AdapterProperty
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME)
+                                          PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
@@ -541,7 +541,7 @@ def get_sort(view):
     return sort_obj
 
 
-def entity_fields(entity_type: EntityType, core_address, db_connection):
+def entity_fields(entity_type: EntityType):
     """
     Get generic fields schema as well as adapter-specific parsed fields schema.
     Together these are all fields that any device may have data for and should be presented in UI accordingly.
@@ -574,31 +574,30 @@ def entity_fields(entity_type: EntityType, core_address, db_connection):
     }
     plugins_available = PluginBase.Instance.get_available_plugins_from_core()
     exclude_specific_schema = [item['name'] for item in generic_fields.get('items', [])]
-    plugins_from_db = list(db_connection['core']['configs'].find({}).
-                           sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
-    for plugin in plugins_from_db:
-        if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
-            continue
-        plugin_fields = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
-        if not plugin_fields:
-            continue
-        plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
-        if not plugin_fields_record:
-            continue
-        fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
-            'type': plugin_fields_record['schema']['type'],
-            'required': plugin_fields_record['schema'].get('required', []),
-            'items': filter(lambda x: x['name'] not in exclude_specific_schema,
-                            plugin_fields_record['schema'].get('items', []))
-        }
-        fields['specific'][plugin[PLUGIN_NAME]] = flatten_fields(
-            plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
+    with PluginBase.Instance._get_db_connection() as db_connection:
+        for plugin in db_connection[CORE_UNIQUE_NAME]['configs'].find().sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]):
+            if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
+                continue
+            plugin_fields = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
+            if not plugin_fields:
+                continue
+            plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
+            if not plugin_fields_record:
+                continue
+            fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
+                'type': plugin_fields_record['schema']['type'],
+                'required': plugin_fields_record['schema'].get('required', []),
+                'items': filter(lambda x: x['name'] not in exclude_specific_schema,
+                                plugin_fields_record['schema'].get('items', []))
+            }
+            fields['specific'][plugin[PLUGIN_NAME]] = flatten_fields(
+                plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
 
     return fields
 
 
-def get_csv(mongo_filter, mongo_sort, mongo_projection,
-            basic_db_connection, entity_type: EntityType, default_sort=True, history: datetime = None):
+def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType, default_sort=True,
+            history: datetime = None):
     """
     Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
@@ -616,8 +615,7 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection,
         mongo_projection.pop('unique_adapter_names', None)
         mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
         # Getting pretty titles for all generic fields as well as specific
-        current_entity_fields = entity_fields(entity_type, PluginBase.Instance.core_address,
-                                              basic_db_connection)
+        current_entity_fields = entity_fields(entity_type)
         for field in current_entity_fields['generic']:
             if field['name'] in mongo_projection:
                 mongo_projection[field['name']] = field['title']

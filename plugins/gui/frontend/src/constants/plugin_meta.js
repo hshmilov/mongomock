@@ -95,6 +95,10 @@ export const pluginMeta = {
         title: 'Active Directory',
         description: 'Active Directory (AD) is a directory service for Windows domain networks that authenticates and authorizes all users and computers.'
     },
+    gui: {
+        title: 'Custom Data',
+        description: 'Generic fields with values given by the user, that can be edited in the entity configuration page'
+    },
     gotoassist_adapter: {
         title: 'GoToAssist',
         description: 'GoToAssist is a cloud-based toolset for IT and customer support teams an includes remote support, IT monitoring and service desk management.'

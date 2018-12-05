@@ -20,7 +20,8 @@
             align: {default: 'left'},
             alignSpace: {default: 0},
             arrow: {default: true},
-            readOnly: { default: false }
+            readOnly: { default: false },
+            container: { }
         },
         computed: {
             menuStyle() {
@@ -33,7 +34,9 @@
                 }
                 if (this.activated || !this.$refs.content) return styles
 
-                if (window.innerHeight - this.calcOffsetTop(this.$el) < this.$refs.content.offsetHeight + 48) {
+                let bottomDistance = this.calcOffsetTop(this.$el) + this.$refs.content.offsetHeight
+                if ((this.container && this.container.offsetHeight + this.container.offsetTop < bottomDistance)
+                    || window.innerHeight < bottomDistance + 48) {
                     styles['bottom'] = '100%'
                     styles['top'] ='auto'
                 }

@@ -1,5 +1,5 @@
 <template>
-    <x-dropdown :arrow="true" class="x-select" ref="dropdown" :size="size" :read-only="readOnly">
+    <x-dropdown :arrow="true" class="x-select" ref="dropdown" :size="size" :read-only="readOnly" :container="container">
         <div slot="trigger" class="x-select-trigger" @keyup.down="incActiveOption" :tabindex="-1" :id="id">
             <slot v-if="selectedOption" :option="selectedOption">
                 <div class="trigger-text" :title="selectedOption.title">{{selectedOption.title}}</div>
@@ -29,7 +29,7 @@
         components: { xDropdown, SearchInput },
         props: {
 		    options: {}, value: {}, placeholder: {}, searchable: { default: false }, id: {}, size: {},
-		    readOnly: { default: false }
+		    container: {}, readOnly: { default: false }
         },
         computed: {
 			currentOptions() {
@@ -38,7 +38,7 @@
             },
             selectedOption() {
 				if (!this.value || !this.options || !this.options.length) return undefined
-				return this.options.filter(option => (option.name === this.value))[0]
+				return this.options.find(option => (option.name === this.value))
             }
         },
         data() {

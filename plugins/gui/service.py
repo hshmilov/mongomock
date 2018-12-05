@@ -22,6 +22,11 @@ import pymongo
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
+from axonius.fields import Field
+
+from axonius.users.user_adapter import UserAdapter
+
+from axonius.devices.device_adapter import DeviceAdapter
 
 from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -217,6 +222,12 @@ def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, dat
 
 
 class GuiService(PluginBase, Triggerable, Configurable, API):
+    class MyDeviceAdapter(DeviceAdapter):
+        pass
+
+    class MyUserAdapter(UserAdapter):
+        pass
+
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
     ALT_AVATAR_PIC = '/src/assets/images/users/alt_avatar.png'
     DEFAULT_USER = {'user_name': 'admin',
@@ -509,13 +520,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
 
         def _basic_generic_field_names():
-            with self._get_db_connection() as db_connection:
-                generic_field_names = list(map(lambda field: field.get(
-                    'name'), gui_helpers.entity_fields(entity_type, self.core_address, db_connection)['generic']))
-            return filter(
-                lambda field: field != 'adapters' and field != 'labels' and
-                len([category for category in advanced_fields if category in field]) == 0,
-                generic_field_names)
+            return filter(lambda field: field != 'adapters' and field != 'labels' and
+                          len([category for category in advanced_fields if category in field]) == 0,
+                          list(map(lambda field: field.get('name'), gui_helpers.entity_fields(entity_type)['generic'])))
 
         entity = self._fetch_historical_entity(entity_type, entity_id, history_date, projection={
             'adapters_data': 0
@@ -532,8 +539,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             specific['data']['raw'] = new_raw
 
         # Fix notes to have the expected format of user id
-        generic_data = entity['generic_data']
-        for item in generic_data:
+        for item in entity['generic_data']:
             if item.get('name') == 'Notes' and item.get('data'):
                 item['data'] = [{**note, **{'user_id': str(note['user_id'])}} for note in item['data']]
 
@@ -547,7 +553,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'advanced': [{
                     'name': category, 'data': gui_helpers.find_entity_field(entity, f'specific_data.data.{category}')
                 } for category in advanced_fields],
-                'data': generic_data
+                'data': entity['generic_data']
             },
             'labels': entity['labels'],
             'internal_axon_id': entity['internal_axon_id'],
@@ -701,24 +707,34 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return str(len(internal_axon_ids)), 200
 
     def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, entities_selection, mongo_filter):
+        self._entity_db_map[entity_type].delete_many({'internal_axon_id': {
+            '$in': self.__get_selected_internal_axon_ids(entities_selection, entity_type, mongo_filter)
+        }})
+        self._request_db_rebuild(
+            sync=True, internal_axon_ids=entities_selection['ids'] if entities_selection['include'] else None)
+
+        return '', 200
+
+    def __get_selected_internal_axon_ids(self, entities_selection, entity_type: EntityType, mongo_filter):
+        """
+
+        :param entities_selection: Represents the selection of entities.
+                If include is True, then ids is the list of selected internal axon ids
+                Otherwise, selected internal axon ids are all those fetched by the mongo filter excluding the ids list
+        :param entity_type: Type of entity to fetch
+        :param mongo_filter: Query to fetch entire data by
+        :return: List of internal axon ids that were meant to be selected, according to given selection and filter
+        """
         if entities_selection['include']:
-            internal_axon_ids = entities_selection['ids']
+            return entities_selection['ids']
         else:
-            internal_axon_ids = [entry['internal_axon_id'] for entry in self._entity_views_db_map[entity_type].find({
+            return [entry['internal_axon_id'] for entry in self._entity_views_db_map[entity_type].find({
                 '$and': [
                     {'internal_axon_id': {
                         '$nin': entities_selection['ids']
                     }}, mongo_filter
                 ]
             }, projection={'internal_axon_id': 1})]
-        logger.info(f'DELETE {internal_axon_ids}')
-        self._entity_db_map[entity_type].delete_many({'internal_axon_id': {
-            '$in': internal_axon_ids
-        }})
-        self._request_db_rebuild(
-            sync=True, internal_axon_ids=entities_selection['ids'] if entities_selection['include'] else None)
-
-        return '', 200
 
     def _save_query_to_history(self, entity_type: EntityType, view_filter, skip, limit, sort, projection):
         """
@@ -760,6 +776,59 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 },
                 upsert=True)
 
+    def _entity_custom_data(self, entity_type: EntityType, mongo_filter):
+        """
+        Adds misc adapter data to the data as given in the request
+        POST data:
+        {
+            'selection': {
+                'ids': list of ids, 'include': true / false
+            },
+            'data': {...}
+        }
+        :param entity_type: the entity type to use
+        """
+        post_data = request.get_json()
+        entities = list(self._entity_db_map[entity_type].find(filter={
+            'internal_axon_id': {
+                '$in': self.__get_selected_internal_axon_ids(post_data['selection'], entity_type, mongo_filter)
+            }
+        }, projection={
+            'internal_axon_id': True,
+            f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+            'adapters.data.id': True
+        }))
+
+        entity_to_add = self._new_device_adapter()
+        for k, v in post_data['data'].items():
+            allowed_types = [str, int, bool, float]
+            if type(v) not in allowed_types:
+                return return_error(f'{k} is of type {type(v)} which is not allowed')
+            if not entity_to_add.set_static_field(k, v):
+                # Save the field with a canonized name and title as received
+                new_field_name = '_'.join(k.split(' ')).lower()
+                entity_to_add.declare_new_field(new_field_name, Field(type(v), k))
+                setattr(entity_to_add, new_field_name, v)
+
+        entity_to_add_dict = entity_to_add.to_dict()
+
+        with ThreadPool(5) as pool:
+            def tag_adapter(entity):
+                try:
+                    self.add_adapterdata_to_entity(entity_type,
+                                                   [(x[PLUGIN_UNIQUE_NAME], x['data']['id'])
+                                                    for x
+                                                    in entity['adapters']],
+                                                   entity_to_add_dict,
+                                                   action_if_exists='update')
+                except Exception as e:
+                    logger.exception(e)
+
+            pool.map_async(tag_adapter, entities).get()
+
+        self._save_field_names_to_db(entity_type)
+        self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in entities])
+
     ##########
     # DEVICE #
     ##########
@@ -790,16 +859,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in("devices/csv", required_permissions={Permission(PermissionType.Devices,
                                                                             PermissionLevel.ReadOnly)})
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
-        with self._get_db_connection() as db_connection:
-            csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
-                                             db_connection, EntityType.Devices,
-                                             default_sort=self._system_settings['defaultSort'],
-                                             history=history)
-            output = make_response(csv_string.getvalue().encode('utf-8'))
-            timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
-            output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
-            output.headers['Content-type'] = 'text/csv'
-            return output
+        csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices,
+                                         default_sort=self._system_settings['defaultSort'], history=history)
+        output = make_response(csv_string.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
+        output.headers['Content-type'] = 'text/csv'
+        return output
 
     @gui_helpers.historical()
     @gui_add_rule_logged_in("devices/<device_id>", methods=['GET'],
@@ -822,8 +888,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in("devices/fields", required_permissions={Permission(PermissionType.Devices,
                                                                                PermissionLevel.ReadOnly)})
     def device_fields(self):
-        with self._get_db_connection() as db_connection:
-            return jsonify(gui_helpers.entity_fields(EntityType.Devices, self.core_address, db_connection))
+        return jsonify(gui_helpers.entity_fields(EntityType.Devices))
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
@@ -862,6 +927,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def device_notes_update(self, device_id, note_id):
         return self._entity_notes_update(EntityType.Devices, device_id, note_id)
 
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in("devices/custom", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadWrite)})
+    def devices_custom_Data(self, mongo_filter):
+        """
+        See self._entity_custom_data
+        """
+        self._entity_custom_data(EntityType.Devices, mongo_filter)
+        return '', 200
+
     #########
     # USER #
     #########
@@ -891,19 +967,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in("users/csv", required_permissions={Permission(PermissionType.Users,
                                                                           PermissionLevel.ReadOnly)})
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
-        with self._get_db_connection() as db_connection:
-            # Deleting image from the CSV (we dont need this base64 blob in the csv)
-            if "specific_data.data.image" in mongo_projection:
-                del mongo_projection["specific_data.data.image"]
-            csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
-                                             db_connection, EntityType.Users,
-                                             default_sort=self._system_settings['defaultSort'],
-                                             history=history)
-            output = make_response(csv_string.getvalue().encode('utf-8'))
-            timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
-            output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
-            output.headers['Content-type'] = 'text/csv'
-            return output
+        # Deleting image from the CSV (we dont need this base64 blob in the csv)
+        if "specific_data.data.image" in mongo_projection:
+            del mongo_projection["specific_data.data.image"]
+        csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users,
+                                         default_sort=self._system_settings['defaultSort'], history=history)
+        output = make_response(csv_string.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
+        output.headers['Content-type'] = 'text/csv'
+        return output
 
     @gui_helpers.historical()
     @gui_add_rule_logged_in("users/<user_id>", methods=['GET'], required_permissions={Permission(PermissionType.Users,
@@ -923,8 +996,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in("users/fields", required_permissions={Permission(PermissionType.Users,
                                                                              PermissionLevel.ReadOnly)})
     def user_fields(self):
-        with self._get_db_connection() as db_connection:
-            return jsonify(gui_helpers.entity_fields(EntityType.Users, self.core_address, db_connection))
+        return jsonify(gui_helpers.entity_fields(EntityType.Users))
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in("users/disable", methods=['POST'], required_permissions={Permission(PermissionType.Users,
@@ -957,6 +1029,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                              PermissionLevel.ReadWrite)})
     def user_notes_update(self, user_id, note_id):
         return self._entity_notes_update(EntityType.Users, user_id, note_id)
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in("users/custom", methods=['POST'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             PermissionLevel.ReadWrite)})
+    def users_custom_data(self, mongo_filter):
+        """
+        See self._entity_custom_data
+        """
+        self._entity_custom_data(EntityType.Users, mongo_filter)
+        return '', 200
 
     ###########
     # ADAPTER #
@@ -3267,8 +3350,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
 
         def _get_field_titles(entity):
-            with self._get_db_connection() as db_connection:
-                current_entity_fields = gui_helpers.entity_fields(entity, self.core_address, db_connection)
+            current_entity_fields = gui_helpers.entity_fields(entity)
             name_to_title = {}
             for field in current_entity_fields['generic']:
                 name_to_title[field['name']] = field['title']

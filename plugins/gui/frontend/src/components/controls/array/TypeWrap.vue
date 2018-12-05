@@ -9,7 +9,7 @@
 <script>
 	export default {
 		name: 'x-type-wrap',
-        props: { name: {}, type: {}, description: {}, title: {}, required: { default: true } },
+        props: { name: {}, type: {}, description: {}, title: {}, required: { default: true }, items: {} },
         computed: {
 			label() {
 				if (this.type === 'array') { return '' }

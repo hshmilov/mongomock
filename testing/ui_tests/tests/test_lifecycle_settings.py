@@ -6,7 +6,9 @@ class TestLifecycleSettings(TestBase):
         self.settings_page.switch_to_page()
         assert self.settings_page.get_schedule_rate_value() == self.settings_page.DEFAULT_SCHEDULE_RATE
         self.settings_page.fill_schedule_rate(-5)
-        self.settings_page.find_schedule_rate_error()
+        assert self.settings_page.get_schedule_rate_value() == '5'
         self.settings_page.click_save_button()
         self.settings_page.refresh()
-        assert self.settings_page.get_schedule_rate_value() == self.settings_page.DEFAULT_SCHEDULE_RATE
+        assert self.settings_page.get_schedule_rate_value() == '5'
+        self.settings_page.fill_schedule_rate(12)
+        self.settings_page.click_save_button()

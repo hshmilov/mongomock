@@ -8,10 +8,15 @@
                     <tab v-for="item, i in sortedSpecificData" :id="item.id" :key="item.id" :selected="!i"
                          :title="item.plugin_name" :logo="true" :outdated="item.outdated">
                         <div class="d-flex content-header">
-                            <div class="flex-expand server-info">Data From: {{ item.client_used }}</div>
-                            <button @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced': 'basic'}}</button>
+                            <div class="flex-expand server-info">
+                                <template v-if="item.client_used">
+                                    Data From: {{ item.client_used }}
+                                </template>
+                            </div>
+                            <button v-if="isGuiAdapterData(item)" @click="editFields" class="x-btn">Edit Fields</button>
+                            <button v-else @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced': 'basic'}}</button>
                         </div>
-                        <x-schema-list v-if="viewBasic" :data="item" :schema="adapterSchema(item.plugin_name)" />
+                        <x-schema-list v-if="viewBasic || isGuiAdapterData(item)" :data="item" :schema="adapterSchema(item.plugin_name)" />
                         <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}" v-else />
                     </tab>
                 </tabs>
@@ -55,6 +60,11 @@
             </tab>
         </tabs>
         <x-tag-modal :module="module" :entities="entities" :tags="entity.labels" ref="tagModal" />
+        <x-modal v-if="fieldsEditor.active" @confirm="saveFieldsEditor" @close="closeFieldsEditor" :disabled="!fieldsEditor.valid">
+            <x-data-custom-fields slot="body" :module="module" v-model="fieldsEditor.data" :fields="customFields"
+                                  @validate="validateFieldsEditor" />
+        </x-modal>
+        <x-toast v-if="toastMessage" :message="toastMessage" @done="removeToast" />
     </div>
 </template>
 
@@ -68,11 +78,15 @@
     import xTagModal from '../../components/popover/TagModal.vue'
     import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
     import xDataEntityNotes from './DataEntityNotes.vue'
+    import xModal from '../popover/Modal.vue'
+    import xDataCustomFields from './DataCustomFields.vue'
+    import xToast from '../../components/popover/Toast.vue'
 
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { SINGLE_ADAPTER } from '../../store/getters'
-    import { FETCH_DATA_BY_ID } from '../../store/actions'
+    import { FETCH_DATA_BY_ID, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../store/actions'
     import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
+    import { guiPluginName, initCustomData } from '../../constants/entities'
 
     const lastSeenByModule = {
 		'users': 'last_seen_in_devices',
@@ -81,14 +95,21 @@
 	export default {
 		name: 'x-data-entity',
         components: {
-		    Tabs, Tab, xSchemaList, xSchemaTable, xSchemaCalendar, xCustomData, xTagModal, PulseLoader, xDataEntityNotes
+		    Tabs, Tab, xSchemaList, xSchemaTable, xSchemaCalendar, xCustomData,
+            xTagModal, xModal, PulseLoader, xDataEntityNotes, xDataCustomFields, xToast
         },
         props: { module: { required: true }, readOnly: { default: false } },
 		data () {
 			return {
 				viewBasic: true,
 				entities: [ this.$route.params.id ],
-				delayInitTourState: false
+				delayInitTourState: false,
+                fieldsEditor: {
+				    active: false,
+                    data: null,
+                    valid: true
+                },
+                toastMessage: ''
 			}
 		},
         computed: {
@@ -135,12 +156,16 @@
 			sortedSpecificData () {
 				if (!this.entity.specific) return []
 				let lastSeen = new Set()
-				return this.entity.specific.filter((item) => {
+				let res = this.entity.specific.filter((item) => {
 				    if (item['hidden_for_gui']) return false
 					if (item['plugin_type'] && item['plugin_type'].toLowerCase().includes('plugin')) return false
 
                     return true
 				}).sort((first, second) => {
+				    // GUI plugin (miscellaneous) always comes last
+				    if (first.plugin_name === guiPluginName) return 1
+				    if (second.plugin_name === guiPluginName) return -1
+
 					// Adapters with no last_seen field go first
                     let firstSeen = first.data[lastSeenByModule[this.module]]
                     let secondSeen = second.data[lastSeenByModule[this.module]]
@@ -154,6 +179,11 @@
 					lastSeen.add(item.plugin_name)
 					return item
 				})
+                if (res[res.length - 1].plugin_name !== guiPluginName) {
+                    // Add initial gui adapter data
+				    res.push(initCustomData(this.module))
+                }
+                return res
 			},
             entityExtendedData() {
                 return this.entity.generic.data.filter(item => item.name !== 'Notes')
@@ -174,6 +204,9 @@
             historyDate() {
                 if (!this.history) return null
                 return this.history.substring(0, 10)
+            },
+            customFields() {
+                return (this.fields.specific.gui || this.fields.generic)
             }
         },
         watch: {
@@ -186,10 +219,15 @@
             }
         },
         methods: {
-            ...mapMutations({ changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE }),
-            ...mapActions({
-                fetchDataByID: FETCH_DATA_BY_ID
+            ...mapMutations({
+                changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE
             }),
+            ...mapActions({
+                fetchDataByID: FETCH_DATA_BY_ID, saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS
+            }),
+            fetchCurrentEntity() {
+                this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
+            },
 			getAdvancedFieldSchema(field) {
                 let schema = this.fields.schema.generic.items.find(schema => schema.name === field)
                 if (schema) return schema
@@ -211,6 +249,9 @@
 					{ type: 'array', ...this.fields.schema.generic, name: 'data', title: 'SEPARATOR' },
 					{ type: 'array', ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }
 				]: [ ...this.fields.schema.generic.items, ...this.fields.schema.specific[name].items ]
+                if (name === guiPluginName) {
+                    items[0].items = items[0].items.filter(item => item.name !== 'id')
+                }
             	return { type: 'array', items }
             },
             determineState(tabId) {
@@ -229,11 +270,61 @@
 					})
 				}
 				this.delayInitTourState = false
+            },
+            isGuiAdapterData(data) {
+                return data.plugin_name === guiPluginName
+            },
+            flattenObj(path, obj) {
+                if (Array.isArray(obj)) {
+                    return this.flattenObj(path, obj[0])
+                }
+                if (typeof obj === 'object' && Object.keys(obj).length) {
+                    return Object.keys(obj).reduce((map, key) => {
+                        return { ...map, ...this.flattenObj(path? `${path}.${key}` : key, obj[key]) }
+                    }, {})
+                }
+                return { [ path ]: obj }
+            },
+            editFields() {
+                this.fieldsEditor = {
+                    active: true,
+                    data: this.flattenObj('', this.sortedSpecificData[this.sortedSpecificData.length - 1].data || {})
+                }
+            },
+            saveFieldsEditor() {
+                if (!this.fieldsEditor.valid) return
+                this.saveCustomData({
+                    module: this.module, data: {
+                        selection: {
+                            ids: this.entities, include: true
+                        }, data: this.fieldsEditor.data
+                    }
+                }).then((response) => {
+                    if (response.status === 200) {
+                        this.toastMessage = 'Saved Custom Data'
+                        this.fetchDataFields({ module: this.module })
+                        this.fetchCurrentEntity()
+                        this.closeFieldsEditor()
+                    } else {
+                        this.toastMessage = response.data.message
+                    }
+                })
+            },
+            closeFieldsEditor() {
+                this.fieldsEditor = {
+                    active: false, data: null
+                }
+            },
+            validateFieldsEditor(valid) {
+                this.fieldsEditor.valid = valid
+            },
+            removeToast() {
+                this.toastMessage = ''
             }
         },
 		created () {
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate) {
-				this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
+				this.fetchCurrentEntity()
 			} else {
 				this.delayInitTourState = true
             }

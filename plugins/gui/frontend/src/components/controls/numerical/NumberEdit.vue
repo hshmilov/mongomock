@@ -2,12 +2,14 @@
 	import PrimitiveMixin from '../primitive.js'
     import NumericalMixin from './numerical'
 	import xSelect from '../../inputs/Select.vue'
+    import { validateNumber } from '../../../utils'
 
-	export default {
+    export default {
 		name: 'x-number-edit',
         components: { xSelect },
         mixins: [PrimitiveMixin, NumericalMixin],
         methods: {
+		    validateNumber,
 			formatData() {
                 if (this.data === '-' || this.data === '') {
 			        return this.data

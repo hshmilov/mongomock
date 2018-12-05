@@ -49,12 +49,14 @@
                                     title="Trigger alert if the number of entities in the given saved query is above the threshold"
                                     @change="tour('alertAbove')" />
                         <div class="form-inline" >
-                            <input id="alert_above" type="number" v-model="alert.triggers.above" min="0" @keypress="validateNumber" @input="tour('alertAction')" :disabled="!alert.triggers.increase" >
+                            <input id="alert_above" type="number" v-model="alert.triggers.above" min="0"
+                                   @keypress="validateInteger" @input="tour('alertAction')" :disabled="!alert.triggers.increase" >
                         </div>
                         <x-checkbox label="The number of query results is below" v-model="alert.triggers.decrease"
                                     title="Trigger alert if the number of entities in the given saved query is below the threshold" />
                         <div class="form-inline" >
-                            <input id="alert_below" type="number" v-model="alert.triggers.below" min="0" @keypress="validateNumber" :disabled="!alert.triggers.decrease">
+                            <input id="alert_below" type="number" v-model="alert.triggers.below" min="0"
+                                   @keypress="validateInteger" :disabled="!alert.triggers.decrease">
                         </div>
                     </div>
                 </div>
@@ -163,7 +165,7 @@
     import {SET_ALERT, UPDATE_ALERT, FETCH_ALERTS} from '../../store/modules/alert'
     import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
     import { entities } from '../../constants/entities'
-    import { validateNumber } from '../../utils'
+    import { validateInteger } from '../../utils'
 
     export default {
         name: 'alert-config-container',
@@ -403,7 +405,7 @@
 					}
 				}
             },
-            validateNumber,
+            validateInteger,
             saveAlert() {
                 /* Validation */
                 if (!this.complete) return

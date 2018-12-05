@@ -19,7 +19,7 @@ class TestGlobalSettings(TestBase):
         # self.settings_page.fill_email_host(INVALID_EMAIL_HOST)
 
         self.settings_page.fill_email_port(-5)
-        self.settings_page.find_email_port_error()
+        assert self.settings_page.get_email_port() == '5'
 
         # Ports above the maximum are also not validated
         # self.settings_page.fill_email_port(555)

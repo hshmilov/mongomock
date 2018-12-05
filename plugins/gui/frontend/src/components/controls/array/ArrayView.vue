@@ -1,13 +1,12 @@
 <template>
     <div class="x-array-view">
-        <div v-if="schema.title === 'SEPARATOR'" class="separator">&nbsp;</div>
-        <template v-else-if="schema.title">
+        <div v-if="schema.title === 'SEPARATOR' && dataSchemaItems.length" class="separator">&nbsp;</div>
+        <template v-else-if="schema.title && dataSchemaItems.length">
             <div @click="toggleCollapsed" class="x-btn link expander">{{ collapsed? '+': '-'}}</div>
             <label :title="schema.description || ''" class="label">{{ schema.title }}</label>
         </template>
         <div class="array">
-            <div v-for="item, index in schemaItems"
-                 v-if="!empty(data[item.name]) && (!collapsed || (!isOrderedObject && index < 5))" class="item-container">
+            <div v-for="item, index in dataSchemaItems" v-if="(!collapsed || (!isOrderedObject && index < 5))" class="item-container">
                 <!-- In collapsed mode, only first item is revealed -->
                 <div ref="item" class="item" :class="{ 'growing-y': collapsable}">
                     <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>

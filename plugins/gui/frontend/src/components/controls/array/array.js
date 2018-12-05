@@ -19,7 +19,7 @@ export default {
 		processedData() {
 			return this.data
 		},
-		schemaItems () {
+		schemaItems() {
 			let schemaItems = []
 			// Process schema to create list of items which Array components can present
 			if (this.isOrderedObject) {
@@ -43,6 +43,9 @@ export default {
 				}
 			})
 			return schemaItems
+		},
+		dataSchemaItems() {
+			return this.schemaItems.filter(item => !this.empty(this.data[item.name]))
 		},
 		isHidden() {
 			return this.data['enabled'] === false

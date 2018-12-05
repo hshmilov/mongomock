@@ -6,5 +6,5 @@ export default {
 	'				@focusout.stop="focusout" @input="input" :disabled="readOnly" />\n' +
 	'</div>\n' +
 	'<input v-else :id="schema.name" type="number" v-model="data" :class="{\'error-border\': error}"\n' +
-	'       @focusout.stop="focusout" @input="input" :disabled="readOnly" />'
+	'       @focusout.stop="focusout" @input="input" :disabled="readOnly" @keypress="validateNumber" />'
 }
