@@ -14,7 +14,7 @@
                 <div class="modal-footer">
                     <slot name="footer">
                         <button class="x-btn link" @click="$emit('close')">{{dismissText}}</button>
-                        <button class="x-btn" :class="{disabled}" @click="onApprove" :id="approveId">{{approveText}}</button>
+                        <button class="x-btn" :class="{ disabled }" @click="onApprove" :id="approveId">{{approveText}}</button>
                     </slot>
                 </div>
             </div>

@@ -104,11 +104,7 @@
 				viewBasic: true,
 				entities: [ this.$route.params.id ],
 				delayInitTourState: false,
-                fieldsEditor: {
-				    active: false,
-                    data: null,
-                    valid: true
-                },
+                fieldsEditor: { active: false },
                 toastMessage: ''
 			}
 		},
@@ -288,7 +284,8 @@
             editFields() {
                 this.fieldsEditor = {
                     active: true,
-                    data: this.flattenObj('', this.sortedSpecificData[this.sortedSpecificData.length - 1].data || {})
+                    data: this.flattenObj('', this.sortedSpecificData[this.sortedSpecificData.length - 1].data || {}),
+                    valid: true
                 }
             },
             saveFieldsEditor() {
@@ -311,9 +308,7 @@
                 })
             },
             closeFieldsEditor() {
-                this.fieldsEditor = {
-                    active: false, data: null
-                }
+                this.fieldsEditor = { active: false }
             },
             validateFieldsEditor(valid) {
                 this.fieldsEditor.valid = valid
@@ -368,6 +363,7 @@
                 }
                 .specific .schema-list {
                     height: calc(100% - 36px);
+                    white-space: pre;
                     > .x-array-view > .array {
                         display: block;
                         > .item-container > .item > .object > .x-array-view > .array {

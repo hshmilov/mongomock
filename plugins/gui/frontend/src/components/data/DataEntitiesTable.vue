@@ -23,7 +23,7 @@
 
     import { mapState, mapMutations, mapActions } from 'vuex'
     import { UPDATE_DATA_VIEW } from '../../store/mutations';
-    import { FETCH_DATA_CONTENT_CSV } from '../../store/actions'
+    import { FETCH_DATA_CONTENT_CSV, FETCH_DATA_FIELDS } from '../../store/actions'
 
     export default {
         name: 'data-entities-table',
@@ -68,7 +68,7 @@
         methods: {
             ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
             ...mapActions({
-                fetchContentCSV: FETCH_DATA_CONTENT_CSV
+                fetchContentCSV: FETCH_DATA_CONTENT_CSV, fetchDataFields: FETCH_DATA_FIELDS
             }),
             configEntity (entityId) {
                 if (this.hasSelection) return
@@ -81,6 +81,7 @@
             },
             updateEntities() {
                 this.$refs.table.fetchContentPages(true)
+                this.fetchDataFields({ module: this.module })
                 this.selection = { ids: [] }
             },
             exportCSV() {

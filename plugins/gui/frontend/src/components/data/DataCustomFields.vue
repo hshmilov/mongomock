@@ -22,9 +22,10 @@
                 <div v-if="field.new" @click="removeField(i)" class="x-btn link">X</div><div v-else></div>
             </div>
         </div>
-        <div>
+        <div class="footer">
             <button @click="addPredefinedField" class="x-btn link">+ Predefined field</button>
             <button @click="addCustomField" class="x-btn link">+ New field</button>
+            <div v-if="error" class="error-text">{{ error }}</div>
         </div>
     </div>
 </template>
@@ -46,7 +47,8 @@
         },
         data() {
             return {
-                fieldConfig: []
+                fieldConfig: [],
+                error: ''
             }
         },
         computed: {
@@ -103,18 +105,20 @@
                 this.fieldConfig.push({
                     predefined: true, new: true
                 })
+                this.$emit('validate', false)
             },
             addCustomField() {
                 this.fieldConfig.push({
                     predefined: false, new: true
                 })
+                this.$emit('validate', false)
             },
             onInputValue() {
                 let valid = true
                 this.$emit('input', this.fieldConfig.reduce((map, field) => {
-                    if (this.empty(field.name) || this.empty(field.value) || this.duplicateFieldName(field.name)) {
-                        valid = false
-                    }
+                    if (this.empty(field.name) || this.empty(field.value)
+                        || (!field.predefined && this.duplicateFieldName(field.name))) valid = false
+
                     if (field.value !== undefined && field.value !== null) {
                         map[field.name] = field.value
                     }
@@ -136,8 +140,8 @@
             validateFieldName(event) {
                 event = (event) ? event : window.event;
                 let charCode = (event.which) ? event.which : event.keyCode;
-                if ((charCode <= 90 && charCode >= 48) || (charCode <= 122 && charCode >= 97)
-                    || charCode === 32 || charCode === 95) {
+                if ((charCode >= 48 && charCode <= 57) || (charCode >= 65 && charCode <= 90)
+                    || (charCode >= 97 && charCode <= 122) || charCode === 32 || charCode === 95) {
                     return true
                 }
                 event.preventDefault()
@@ -148,10 +152,12 @@
                         return this.fieldMap[field].title === fieldName
                     }
                     return field === fieldName
-                }).length > 1) {
+                }).length > 1 || Object.keys(this.fieldMap).includes(fieldName)) {
                     this.$emit('validate', false)
+                    this.error = 'Custom Field Name is already in use by another field'
                     return true
                 }
+                this.error = ''
                 return false
             }
         },
@@ -189,6 +195,15 @@
                 .border-error {
                     border: 1px solid $indicator-error;
                 }
+            }
+        }
+        .footer {
+            display: flex;
+            .error-text {
+                margin-left: 24px;
+                flex: 1 0 auto;
+                line-height: 28px;
+                text-align: right;
             }
         }
     }
