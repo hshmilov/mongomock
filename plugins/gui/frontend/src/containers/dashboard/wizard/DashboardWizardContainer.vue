@@ -210,6 +210,7 @@
             display: grid;
             grid-template-columns: 160px auto 20px;
             grid-gap: 16px 8px;
+            min-width: 0;
         }
         .x-select {
             text-transform: capitalize;

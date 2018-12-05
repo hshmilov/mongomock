@@ -61,6 +61,9 @@
             margin-bottom: 0;
             margin-top: -20px;
             margin-right: 8px;
+            .md-input {
+                max-width: 160px;
+            }
         }
     }
 </style>

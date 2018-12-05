@@ -157,10 +157,11 @@
     .x-chart-metric {
         .line-range {
             display: grid;
-            grid-template-columns: 20px 200px auto auto;
+            grid-template-columns: 20px 180px auto auto;
             grid-gap: 8px;
             align-items: center;
             grid-template-rows: 32px;
+            min-width: 0;
             .x-select-trigger {
                 line-height: 24px;
                 height: 24px;
