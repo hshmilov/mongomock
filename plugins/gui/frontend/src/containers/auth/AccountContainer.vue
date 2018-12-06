@@ -17,7 +17,7 @@
                 </div>
             </tab>
         </tabs>
-        <modal v-if="resetKeyActive" @close="closeResetKeyModal" @confirm="resetKey" approve-text="Reset Key">
+        <modal v-if="resetKeyActive" @close="closeResetKeyModal" @confirm="resetKey" approve-text="Reset Key" approve-id="approve-reset-api-key">
             <div slot="body">
                 Are you sure you want to revoke the current key and generate a new one?<br/>
                 This means that all applications using this key will stop working.
