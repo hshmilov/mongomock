@@ -4,8 +4,8 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDashboard(TestBase):
-    UNCOVERED_QUERY = 'specific_data.adapter_properties != \'Manager\'' \
-                      ' and specific_data.adapter_properties != \'Agent\''
+    UNCOVERED_QUERY = '(not(specific_data.adapter_properties == "Manager")) and ' \
+                      '(not(specific_data.adapter_properties == "Agent"))'
     COVERED_QUERY = 'specific_data.adapter_properties in [\'Manager\',\'Agent\']'
     SUMMARY_CARD_QUERY = 'specific_data.data.hostname == exists(true)'
 
