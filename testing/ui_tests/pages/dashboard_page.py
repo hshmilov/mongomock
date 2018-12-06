@@ -1,3 +1,5 @@
+from selenium.common.exceptions import NoSuchElementException
+
 from ui_tests.pages.page import Page
 
 
@@ -22,7 +24,12 @@ class DashboardPage(Page):
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
     SUMMARY_CARD_CSS = '#test_summary > div.x-summary-chart > div.summary'
-    SUMMARY_CARD_CLOSE_BTN_CSS = '#test_summary > div.x-header > div.x-remove'
+    SEGMENTATION_HISTOGRAM_CARD_CSS = '#test_segmentation_histogram'
+    SEGMENTATION_PIE_CARD_CSS = '#test_segmentation_pie'
+    CARD_CLOSE_BTN_CSS = '{id} > div.x-header > div.x-remove'
+    SUMMARY_CARD_CLOSE_BTN_CSS = CARD_CLOSE_BTN_CSS.format(id='#test_summary')
+    SEGMENTATION_HISTOGRAM_CARD_CLOSE_BTN_CSS = CARD_CLOSE_BTN_CSS.format(id=SEGMENTATION_HISTOGRAM_CARD_CSS)
+    SEGMENTATION_PIE_CARD_CLOSE_BTN_CSS = CARD_CLOSE_BTN_CSS.format(id=SEGMENTATION_PIE_CARD_CSS)
 
     @property
     def root_page_css(self):
@@ -75,11 +82,11 @@ class DashboardPage(Page):
     def select_chart_metric(self, option):
         self.select_option_without_search(self.CHART_METRIC_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS, option, parent=None)
 
-    def select_chart_summary_module(self, entity):
+    def select_chart_wizard_module(self, entity):
         self.select_option_without_search(self.CHART_MODULE_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS,
                                           entity, parent=None)
 
-    def select_chart_summary_field(self, prop):
+    def select_chart_wizard_field(self, prop):
         self.select_option(self.CHART_FIELD_DROP_DOWN_CSS,
                            self.CHART_FIELD_TEXT_BOX_CSS,
                            self.WIZARD_OPTIONS_CSS, prop, parent=None)
@@ -90,18 +97,51 @@ class DashboardPage(Page):
     def add_summary_card(self, module, field, func_name, title):
         self.open_new_card_wizard()
         self.select_chart_metric('Field Summary')
-        self.select_chart_summary_module(module)
-        self.select_chart_summary_field(field)
+        self.select_chart_wizard_module(module)
+        self.select_chart_wizard_field(field)
         self.select_chart_summary_function(func_name)
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
         self.click_button('Save')
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
+    def add_segmentation_card(self, module, field, title, chart_type='histogram'):
+        try:
+            self.open_new_card_wizard()
+            self.select_chart_metric('Field Segmentation')
+            self.driver.find_element_by_css_selector(f'#{chart_type}').click()
+            self.select_chart_wizard_module(module)
+            self.select_chart_wizard_field(field)
+            self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+            self.click_button('Save')
+            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        except NoSuchElementException:
+            # in case of wrong field input return false and change it in order to continue the test
+            el = self.driver.find_element_by_css_selector(self.CHART_FIELD_TEXT_BOX_CSS)
+            self.fill_text_by_element(el, 'OS: Type')
+            self.driver.find_element_by_css_selector(self.WIZARD_OPTIONS_CSS).click()
+            self.click_button('Cancel', partial_class=True)
+            return False
+        return True
+
     def get_summary_card(self):
         return self.wait_for_element_present_by_css(self.SUMMARY_CARD_CSS)
 
+    def get_segmentation_histogram_card(self):
+        return self.wait_for_element_present_by_css(self.SEGMENTATION_HISTOGRAM_CARD_CSS)
+
+    def click_segmentation_pie_card(self):
+        card = self.wait_for_element_present_by_css(self.SEGMENTATION_PIE_CARD_CSS)
+        pie = self.get_pie_chart_from_card(card)
+        pie.find_element_by_css_selector('svg').click()
+
     def remove_summary_card(self):
         self.driver.find_element_by_css_selector(self.SUMMARY_CARD_CLOSE_BTN_CSS).click()
+
+    def remove_segmentation_histogram_card(self):
+        self.driver.find_element_by_css_selector(self.SEGMENTATION_HISTOGRAM_CARD_CLOSE_BTN_CSS).click()
+
+    def remove_segmentation_pie_card(self):
+        self.driver.find_element_by_css_selector(self.SEGMENTATION_PIE_CARD_CLOSE_BTN_CSS).click()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -131,6 +171,14 @@ class DashboardPage(Page):
     @staticmethod
     def get_pie_chart_from_card(card):
         return card.find_element_by_css_selector('div.pie')
+
+    @staticmethod
+    def get_histogram_chart_from_card(card):
+        return card.find_element_by_css_selector('div.histogram')
+
+    @staticmethod
+    def get_histogram_line_from_histogram(histogram, number):
+        return histogram.find_element_by_css_selector(f'div:nth-child({number}) > div.item-bar > div.quantity > div')
 
     @staticmethod
     def get_cycle_from_card(card):

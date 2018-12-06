@@ -8,6 +8,9 @@ class TestDashboard(TestBase):
                       '(not(specific_data.adapter_properties == "Agent"))'
     COVERED_QUERY = 'specific_data.adapter_properties in [\'Manager\',\'Agent\']'
     SUMMARY_CARD_QUERY = 'specific_data.data.hostname == exists(true)'
+    SEGMENTATION_HISTOGRAM_FIRST_GRAPH_CARD_QUERY = 'specific_data.data.os.type == "Windows"'
+    SEGMENTATION_HISTOGRAM_SECOND_GRAPH_CARD_QUERY = 'specific_data.data.os.type == exists(false)'
+    SEGMENTATION_PIE_CARD_QUERY = 'specific_data.data.total_number_of_cores == exists(false)'
 
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
@@ -80,6 +83,43 @@ class TestDashboard(TestBase):
         assert self.devices_page.find_search_value() == self.SUMMARY_CARD_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.remove_summary_card()
+
+    def test_dashboard_segmentation_chart(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        # 'network interfaces' is not one of the options, it suppose to return false
+        assert not self.dashboard_page.add_segmentation_card('Devices', 'network interfaces', 'test segmentation')
+        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', 'test segmentation histogram')
+        self.dashboard_page.wait_for_spinner_to_end()
+        shc_card = self.dashboard_page.get_segmentation_histogram_card()
+        shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
+        line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 1)
+        first_result_count = int(line.text)
+        line.click()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == first_result_count
+        assert self.devices_page.find_search_value() == self.SEGMENTATION_HISTOGRAM_FIRST_GRAPH_CARD_QUERY
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.wait_for_spinner_to_end()
+        shc_card = self.dashboard_page.get_segmentation_histogram_card()
+        shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
+        line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 2)
+        second_result_count = int(line.text)
+        line.click()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.count_entities() == second_result_count
+        assert self.devices_page.find_search_value() == self.SEGMENTATION_HISTOGRAM_SECOND_GRAPH_CARD_QUERY
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.add_segmentation_card('Devices', 'Total Cores', 'test segmentation pie', 'pie')
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.click_segmentation_pie_card()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_search_value() == self.SEGMENTATION_PIE_CARD_QUERY
+        assert self.devices_page.count_entities() == 22
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.remove_segmentation_histogram_card()
+        self.dashboard_page.remove_segmentation_pie_card()
 
     def test_dashboard_search(self):
         string_to_search = 'be'
