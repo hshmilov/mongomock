@@ -493,7 +493,7 @@ export const onboarding = {
 					content: 'Choose configuration options for system functionality.'
 				},
 				'lifecycleRate': {
-					id: 'discovery_settings', title: 'DISCOVERY RUN FREQUENCY', align: 'top',
+					id: 'system_research_rate', title: 'DISCOVERY RUN FREQUENCY', align: 'top',
 					content: 'Set the number of hours between discovery runs.',
 					actions: [
 						{ title: 'Next', state: 'lifecycleRun' }

@@ -2,7 +2,7 @@
     <md-card>
         <md-card-expand>
             <md-card-expand-trigger>
-                <md-button class="x-btn link" :disabled="readOnly">ADVANCED SETTINGS</md-button>
+                <md-button class="x-btn link" :disabled="readOnly" id="maintenance_settings">ADVANCED SETTINGS</md-button>
             </md-card-expand-trigger>
             <md-card-expand-content>
                 <md-card-content>
