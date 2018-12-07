@@ -1,13 +1,17 @@
 import time
+import re
 from copy import copy
 
 from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts import adapter_consts
+from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.pages.page import X_BODY
+from ui_tests.tests.ui_consts import LOCAL_DEFAULT_USER_PATTERN
 from ui_tests.tests.ui_test_base import TestBase
 
 JSON_ADAPTER_SEARCH = 'json'
@@ -165,6 +169,10 @@ class TestAdapters(TestBase):
         self.adapters_page.fill_creds(**dict_)
         self.adapters_page.click_save()
 
+        ad_log_tester = AdService().log_tester
+        pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
+        ad_log_tester.is_pattern_in_log(re.escape(pattern))
+
     def test_icon_color(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
@@ -188,6 +196,10 @@ class TestAdapters(TestBase):
                 self.fill_ad_creds_with_junk()
                 self.adapters_page.click_save()
                 self.adapters_page.wait_for_server_red()
+
+                ad_log_tester = AdService().log_tester
+                pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_FAILURE_LINE}'
+                ad_log_tester.is_pattern_in_log(re.escape(pattern))
 
                 self.adapters_page.switch_to_page()
 
