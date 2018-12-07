@@ -14,9 +14,15 @@ class DashboardPage(Page):
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
     UNCOVERED_PIE_SLICE_CSS = 'svg > g#managed_coverage_1 > text.scaling'
     COVERED_PIE_SLICE_CSS = 'svg > g#managed_coverage_2 > text.scaling'
+    INTERSECTION_PIE_INTERSECTION_SLICE_CSS = '#test_intersection > div.pie > svg > g:nth-child(4) > text'
+    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = '#test_intersection > div.pie > svg > g:nth-child(2) > text'
+    SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = '#test_intersection > div.pie > svg > g:nth-child(3) > text'
+    SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = '#test_intersection > div.pie > svg > g:nth-child(1) > text'
     COVERAGE_CARD_CSS = 'div.x-card.coverage'
     NEW_CARD_WIZARD_CSS = '#dashboard_wizard'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
+    INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
+    INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS = '#intersectingSecond > div'
     WIZARD_OPTIONS_CSS = 'div.x-select-options > div.x-select-option'
     CHART_MODULE_DROP_DOWN_CSS = 'div.x-chart-metric.grid-span2 > div.x-dropdown.x-select.x-select-symbol'
     CHART_FIELD_DROP_DOWN_CSS = '.x-dropdown.x-select.field-select'
@@ -26,10 +32,12 @@ class DashboardPage(Page):
     SUMMARY_CARD_CSS = '#test_summary > div.x-summary-chart > div.summary'
     SEGMENTATION_HISTOGRAM_CARD_CSS = '#test_segmentation_histogram'
     SEGMENTATION_PIE_CARD_CSS = '#test_segmentation_pie'
+    INTERSECTION_PIE_CARD_CSS = '#test_intersection'
     CARD_CLOSE_BTN_CSS = '{id} > div.x-header > div.x-remove'
     SUMMARY_CARD_CLOSE_BTN_CSS = CARD_CLOSE_BTN_CSS.format(id='#test_summary')
     SEGMENTATION_HISTOGRAM_CARD_CLOSE_BTN_CSS = CARD_CLOSE_BTN_CSS.format(id=SEGMENTATION_HISTOGRAM_CARD_CSS)
     SEGMENTATION_PIE_CARD_CLOSE_BTN_CSS = CARD_CLOSE_BTN_CSS.format(id=SEGMENTATION_PIE_CARD_CSS)
+    INTERSECTION_CARD_CLOSE_BTN_CSS = CARD_CLOSE_BTN_CSS.format(id=INTERSECTION_PIE_CARD_CSS)
 
     @property
     def root_page_css(self):
@@ -82,6 +90,14 @@ class DashboardPage(Page):
     def select_chart_metric(self, option):
         self.select_option_without_search(self.CHART_METRIC_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS, option, parent=None)
 
+    def select_intersection_chart_first_query(self, query):
+        self.select_option_without_search(self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS,
+                                          self.WIZARD_OPTIONS_CSS, query, parent=None)
+
+    def select_intersection_chart_second_query(self, query):
+        self.select_option_without_search(self.INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS,
+                                          self.WIZARD_OPTIONS_CSS, query, parent=None)
+
     def select_chart_wizard_module(self, entity):
         self.select_option_without_search(self.CHART_MODULE_DROP_DOWN_CSS, self.WIZARD_OPTIONS_CSS,
                                           entity, parent=None)
@@ -93,6 +109,16 @@ class DashboardPage(Page):
 
     def select_chart_summary_function(self, func_name):
         self.select_option_without_search(self.CHART_FUNCTION_CSS, self.WIZARD_OPTIONS_CSS, func_name, parent=None)
+
+    def add_intersection_card(self, module, first_query, second_query, title):
+        self.open_new_card_wizard()
+        self.select_chart_metric('Query Intersection')
+        self.select_chart_wizard_module(module)
+        self.select_intersection_chart_first_query(first_query)
+        self.select_intersection_chart_second_query(second_query)
+        self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+        self.click_button('Save')
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
     def add_summary_card(self, module, field, func_name, title):
         self.open_new_card_wizard()
@@ -137,6 +163,9 @@ class DashboardPage(Page):
     def remove_summary_card(self):
         self.driver.find_element_by_css_selector(self.SUMMARY_CARD_CLOSE_BTN_CSS).click()
 
+    def remove_intersection_card(self):
+        self.driver.find_element_by_css_selector(self.INTERSECTION_CARD_CLOSE_BTN_CSS).click()
+
     def remove_segmentation_histogram_card(self):
         self.driver.find_element_by_css_selector(self.SEGMENTATION_HISTOGRAM_CARD_CLOSE_BTN_CSS).click()
 
@@ -153,15 +182,24 @@ class DashboardPage(Page):
         return int(pie.find_element_by_css_selector(self.COVERED_PIE_SLICE_CSS).text.rstrip('%'))
 
     def click_uncovered_pie_slice(self):
-        self.click_managed_device_pie_slice(self.UNCOVERED_PIE_SLICE_CSS)
+        self.click_pie_slice(self.UNCOVERED_PIE_SLICE_CSS, self.COVERAGE_CARD_CSS)
 
     def click_covered_pie_slice(self):
-        self.click_managed_device_pie_slice(self.COVERED_PIE_SLICE_CSS)
+        self.click_pie_slice(self.COVERED_PIE_SLICE_CSS, self.COVERAGE_CARD_CSS)
 
-    def click_managed_device_pie_slice(self, slice_css):
-        self.wait_for_element_present_by_css(self.COVERAGE_CARD_CSS)
-        mdc_card = self.find_managed_device_coverage_card()
-        pie = self.get_pie_chart_from_card(mdc_card)
+    def click_intersection_pie_slice(self):
+        self.click_pie_slice(self.INTERSECTION_PIE_INTERSECTION_SLICE_CSS, '#test_intersection')
+
+    def click_symmetric_difference_base_query_pie_slice(self):
+        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS, '#test_intersection')
+
+    def click_symmetric_difference_first_query_pie_slice(self):
+        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, '#test_intersection')
+
+    def click_pie_slice(self, slice_css, card_css):
+        self.wait_for_element_present_by_css(card_css)
+        card = self.driver.find_element_by_css_selector(card_css)
+        pie = self.get_pie_chart_from_card(card)
         pie.find_element_by_css_selector(slice_css).click()
 
     @staticmethod

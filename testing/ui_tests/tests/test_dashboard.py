@@ -8,8 +8,12 @@ class TestDashboard(TestBase):
                       '(not(specific_data.adapter_properties == "Agent"))'
     COVERED_QUERY = 'specific_data.adapter_properties in [\'Manager\',\'Agent\']'
     SUMMARY_CARD_QUERY = 'specific_data.data.hostname == exists(true)'
-    SEGMENTATION_HISTOGRAM_FIRST_GRAPH_CARD_QUERY = 'specific_data.data.os.type == "Windows"'
-    SEGMENTATION_HISTOGRAM_SECOND_GRAPH_CARD_QUERY = 'specific_data.data.os.type == exists(false)'
+    OS_WINDOWS_QUERY = 'specific_data.data.os.type == "Windows"'
+    LAST_SEEN_7_DAY_QUERY = 'specific_data.data.last_seen < date("NOW - 7d")'
+    INTERSECTION_QUERY = f'({OS_WINDOWS_QUERY}) and ({LAST_SEEN_7_DAY_QUERY})'
+    SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY = f'({OS_WINDOWS_QUERY}) and not ({LAST_SEEN_7_DAY_QUERY})'
+    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY = f'not (({OS_WINDOWS_QUERY}) or ({LAST_SEEN_7_DAY_QUERY}))'
+    NO_OS_QUERY = 'specific_data.data.os.type == exists(false)'
     SEGMENTATION_PIE_CARD_QUERY = 'specific_data.data.total_number_of_cores == exists(false)'
 
     @pytest.mark.skip('TBD')
@@ -70,6 +74,29 @@ class TestDashboard(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.COVERED_QUERY
 
+    def test_dashboard_intersection_chart(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_intersection_card('Devices', 'Windows Operating System',
+                                                  'Devices Not Seen In Last 7 Days', 'test intersection')
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.click_intersection_pie_slice()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_search_value() == self.INTERSECTION_QUERY
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.click_symmetric_difference_first_query_pie_slice()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_search_value() == self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.click_symmetric_difference_base_query_pie_slice()
+        self.devices_page.wait_for_table_to_load()
+        assert self.devices_page.find_search_value() == self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.remove_intersection_card()
+
     def test_dashboard_summary_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -98,7 +125,7 @@ class TestDashboard(TestBase):
         line.click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == first_result_count
-        assert self.devices_page.find_search_value() == self.SEGMENTATION_HISTOGRAM_FIRST_GRAPH_CARD_QUERY
+        assert self.devices_page.find_search_value() == self.OS_WINDOWS_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
         shc_card = self.dashboard_page.get_segmentation_histogram_card()
@@ -108,7 +135,7 @@ class TestDashboard(TestBase):
         line.click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == second_result_count
-        assert self.devices_page.find_search_value() == self.SEGMENTATION_HISTOGRAM_SECOND_GRAPH_CARD_QUERY
+        assert self.devices_page.find_search_value() == self.NO_OS_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
         self.dashboard_page.add_segmentation_card('Devices', 'Total Cores', 'test segmentation pie', 'pie')
