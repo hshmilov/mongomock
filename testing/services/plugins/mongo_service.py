@@ -5,7 +5,7 @@ import psutil
 
 from axonius.plugin_base import EntityType
 from services.docker_service import DockerService
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_NAME
 from services.ports import DOCKER_PORTS
 
 
@@ -154,3 +154,9 @@ class MongoService(DockerService):
 
     def gui_users_collection(self):
         return self.client['gui']['users']
+
+    def get_gui_entity_fields(self, entity_type: EntityType):
+        if entity_type == EntityType.Users:
+            return self.client[GUI_NAME]['users_fields']
+        if entity_type == EntityType.Devices:
+            return self.client[GUI_NAME]['devices_fields']

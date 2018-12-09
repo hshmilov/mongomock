@@ -2,10 +2,10 @@
     <div class="x-data-entity">
         <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
-        <tabs v-if="!loading" @click="determineState" @updated="initTourState">
+        <tabs v-show="!loading" @click="determineState" @updated="initTourState">
             <tab title="Adapters Data" id="specific" key="specific" v-if="!singleAdapter" :selected="true">
                 <tabs :vertical="true">
-                    <tab v-for="item, i in sortedSpecificData" :id="item.id" :key="item.id" :selected="!i"
+                    <tab v-for="item, i in sortedSpecificData" :id="item.id" :key="i" :selected="!i"
                          :title="item.plugin_name" :logo="true" :outdated="item.outdated">
                         <div class="d-flex content-header">
                             <div class="flex-expand server-info">
@@ -22,7 +22,7 @@
                 </tabs>
             </tab>
             <tab title="General Data" id="generic" key="generic" :selected="singleAdapter">
-                <tabs :vertical="true">
+                <tabs :vertical="true" v-if="entity.generic && fields.generic">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
                         <x-schema-list :data="entity.generic.basic" :schema="{ type: 'array', items: fields.generic }"/>
                     </tab>
@@ -121,6 +121,9 @@
                 },
                 tableView(state) {
                 	return state.configuration.data.system.tableView
+                },
+                fetchingData(state) {
+                    return state[this.module].current.fetching || state[this.module].fields.fetching
                 }
             }),
             ...mapGetters({ singleAdapter: SINGLE_ADAPTER }),
@@ -182,16 +185,19 @@
                 return res
 			},
             entityExtendedData() {
+                if (!this.entity.generic || !this.entity.generic.data) return []
                 return this.entity.generic.data.filter(item => item.name !== 'Notes')
             },
             entityNotes() {
+                if (!this.entity.generic || !this.entity.generic.data) return []
                 let notes = this.entity.generic.data.find(item => item.name === 'Notes')
                 if (!notes) return []
                 return notes.data
             },
             loading() {
-            	return (!this.fields || !this.fields.generic || !this.fields.schema)
-                    || (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate)
+            	return this.fetchingData || !this.fields || !this.fields.generic || !this.fields.schema
+                    || !this.entity || this.entity.internal_axon_id !== this.entityId
+                    || this.entityDate !== this.historyDate
             },
             entityDate() {
                 if (!this.entity.accurate_for_datetime) return null
@@ -241,6 +247,7 @@
             	this.viewBasic = !this.viewBasic
             },
             adapterSchema(name, merged) {
+                if (!this.fields || !this.fields.schema) return {}
             	let items = !merged? [
 					{ type: 'array', ...this.fields.schema.generic, name: 'data', title: 'SEPARATOR' },
 					{ type: 'array', ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }

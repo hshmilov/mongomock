@@ -5,21 +5,23 @@
                 <template v-if="field.predefined">
                     <x-select :options="currentFieldOptions(field.name)" v-model="field.name" placeholder="Field..."
                               :searchable="true" :read-only="!field.new" :container="$refs.fields" @input="onInputValue"
-                              :class="{'border-error': empty(field.name)}" />
+                              :class="{'border-error': empty(field.name), 'item-name': true}" />
                     <component v-if="field.name" :is="fieldMap[field.name].type" :schema="fieldMap[field.name]" v-model="field.value"
-                               @input="onInputValue" :class="{'border-error': empty(field.value)}" /><div v-else></div>
+                               @input="onInputValue" :class="{'border-error': empty(field.value), 'item-value': true}" />
+                    <div v-else></div>
                 </template>
                 <template v-else>
                     <div class="item-type">
                         <x-select :options="typeOptions" v-model="field.type" placeholder="Type..." :searchable="true"
-                                  :class="{'border-error': empty(field.type)}" />
+                                  :class="{'border-error': empty(field.type), 'item-type': true}" />
                         <input type="text" v-model="field.name" @keypress="validateFieldName" @input="onInputValue"
-                               :class="{'border-error': empty(field.name) || duplicateFieldName(field.name)}">
+                               :class="{'border-error': empty(field.name) || duplicateFieldName(field.name), 'item-name': true}">
                     </div>
                     <component v-if="field.type" :is="field.type" :schema="{ type: field.type }" v-model="field.value"
-                               @input="onInputValue" :class="{'border-error': empty(field.value)}" /><div v-else></div>
+                               @input="onInputValue" :class="{'border-error': empty(field.value), 'item-value': true}" />
+                    <div v-else></div>
                 </template>
-                <div v-if="field.new" @click="removeField(i)" class="x-btn link">X</div><div v-else></div>
+                <button v-if="field.new" @click="removeField(i)" class="x-btn link">X</button><div v-else></div>
             </div>
         </div>
         <div class="footer">
@@ -75,6 +77,9 @@
                     return map
                 }, {})
             },
+            fieldTitles() {
+                return this.fieldOptions.map(field => field.title.toLowerCase())
+            },
             typeOptions() {
                 return [
                     {
@@ -124,6 +129,7 @@
                     }
                     return map
                 }, {}))
+                if (valid) this.error = ''
                 this.$emit('validate', valid)
             },
             removeField(index) {
@@ -152,7 +158,7 @@
                         return this.fieldMap[field].title === fieldName
                     }
                     return field === fieldName
-                }).length > 1 || Object.keys(this.fieldMap).includes(fieldName)) {
+                }).length > 1 || this.fieldTitles.includes(fieldName.toLowerCase())) {
                     this.$emit('validate', false)
                     this.error = 'Custom Field Name is already in use by another field'
                     return true

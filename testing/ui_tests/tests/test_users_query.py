@@ -23,7 +23,7 @@ class TestUsersQuery(TestBase):
         self.users_page.wait_for_table_to_load()
         self.users_page.click_query_wizard()
         self.users_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD)
-        assert self.users_page.get_query_field() == 'ID'
+        assert self.users_page.get_query_field() == self.users_page.ID_FIELD
         assert self.users_page.get_query_comp_op() == self.users_page.QUERY_COMP_EXISTS
 
     def test_over_20_query(self):

@@ -9,13 +9,14 @@ from ui_tests.pages.page import Page
 
 
 class EntitiesPage(Page):
+    DROPDOWN_TEXT_BOX_CSS = 'div.search-input.x-select-search > input'
+    DROPDOWN_SELECTED_OPTIONS_CSS = 'div.x-select-options'
+    DROPDOWN_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
+
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.filter .expression'
     QUERY_FIELD_DROPDOWN_CSS = '.x-dropdown.x-select.field-select'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
-    QUERY_TEXT_BOX_CSS = 'div.search-input.x-select-search > input'
-    QUERY_SELECTED_OPTIONS_CSS = 'div.x-select-options'
-    QUERY_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.x-select-comp'
     QUERY_VALUE_COMPONENT_CSS = '.expression-value'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
@@ -67,6 +68,7 @@ class EntitiesPage(Page):
 
     NOTES_TAB_CSS = 'li#notes'
     TAGS_CSS = 'li#tags'
+    CUSTOM_DATA_TAB_CSS = 'li#gui_unique'
 
     NOTES_CREATED_TOASTER = 'New note was created'
     NOTES_EDITED_TOASTER = 'Existing note was edited'
@@ -75,7 +77,19 @@ class EntitiesPage(Page):
     NOTES_SEARCH_BY_TEXT = 'div[title={note_text}]'
 
     CONFIG_ADVANCED_TEXT = 'View advanced'
+    ADVANCED_VIEW_RAW_FIELD = '"raw":'
     CONFIG_BASIC_TEXT = 'View basic'
+
+    ID_FIELD = 'ID'
+    ENTITY_FIELD_VALUE_XPATH = '//div[@class=\'object\' and child::label[text()=\'{field_name}\']]/div'
+
+    CUSTOM_DATA_EDIT_BTN = 'Edit Fields'
+    CUSTOM_DATA_PREDEFINED_FIELD_CSS = '.custom-fields .fields-item .x-select.item-name'
+    CUSTOM_DATA_NEW_FIELD_TYPE_CSS = '.custom-fields .fields-item .x-select.item-type'
+    CUSTOM_DATA_NEW_FIELD_NAME_CSS = '.custom-fields .fields-item input.item-name'
+    CUSTOM_DATA_FIELD_VALUE_CSS = '.custom-fields .fields-item .item-value'
+    CUSTOM_DATA_FIELD_ITEM = '.custom-fields .fields-item'
+    CUSTOM_DATA_ERROR_CSS = '.footer .error-text'
 
     @property
     def url(self):
@@ -90,8 +104,8 @@ class EntitiesPage(Page):
 
     def select_query_field(self, text, parent=None):
         self.select_option(self.QUERY_FIELD_DROPDOWN_CSS,
-                           self.QUERY_TEXT_BOX_CSS,
-                           self.QUERY_SELECTED_OPTION_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
                            text,
                            parent=parent)
 
@@ -100,8 +114,8 @@ class EntitiesPage(Page):
 
     def select_query_adapter(self, text, parent=None):
         self.select_option(self.QUERY_ADAPTER_DROPDOWN_CSS,
-                           self.QUERY_TEXT_BOX_CSS,
-                           self.QUERY_SELECTED_OPTION_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
                            text,
                            parent=parent)
 
@@ -110,11 +124,11 @@ class EntitiesPage(Page):
 
     def get_query_adapters_list(self):
         self.open_query_adapters_list()
-        return self.driver.find_element_by_css_selector(self.QUERY_SELECTED_OPTIONS_CSS).text
+        return self.driver.find_element_by_css_selector(self.DROPDOWN_SELECTED_OPTIONS_CSS).text
 
     def select_query_comp_op(self, text, parent=None):
         self.select_option_without_search(self.QUERY_COMP_OP_DROPDOWN_CSS,
-                                          self.QUERY_SELECTED_OPTION_CSS,
+                                          self.DROPDOWN_SELECTED_OPTION_CSS,
                                           text,
                                           parent=parent)
 
@@ -126,8 +140,8 @@ class EntitiesPage(Page):
 
     def select_query_value(self, text, parent=None):
         self.select_option(self.QUERY_VALUE_COMPONENT_CSS,
-                           self.QUERY_TEXT_BOX_CSS,
-                           self.QUERY_SELECTED_OPTION_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
                            text, parent=parent)
 
     def get_query_value(self):
@@ -135,7 +149,7 @@ class EntitiesPage(Page):
         return el.get_attribute('value')
 
     def select_query_logic_op(self, text, parent=None):
-        self.select_option_without_search(self.QUERY_LOGIC_DROPDOWN_CSS, self.QUERY_SELECTED_OPTION_CSS, text,
+        self.select_option_without_search(self.QUERY_LOGIC_DROPDOWN_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, text,
                                           parent=parent)
 
     def click_search(self):
@@ -290,7 +304,7 @@ class EntitiesPage(Page):
         self.wait_for_spinner_to_end()
         self.close_edit_columns()
 
-    def is_text_error(self, text=None):
+    def is_query_error(self, text=None):
         if not text:
             return self.wait_for_element_absent_by_css(self.QUERY_ERROR_CSS)
         return text == self.driver.find_element_by_css_selector(self.QUERY_ERROR_CSS).text
@@ -318,8 +332,11 @@ class EntitiesPage(Page):
             # Already closed
             pass
 
-    def clear_showing_results(self):
+    def click_remove_sign(self):
         self.click_button('X', partial_class=True, should_scroll_into_view=False)
+
+    def clear_showing_results(self):
+        self.click_remove_sign()
 
     def run_filter_and_save(self, query_name, query_filter):
         self.fill_filter(query_filter)
@@ -354,6 +371,9 @@ class EntitiesPage(Page):
 
     def click_tags_tab(self):
         self.driver.find_element_by_css_selector(self.TAGS_CSS).click()
+
+    def click_custom_data_tab(self):
+        self.driver.find_element_by_css_selector(self.CUSTOM_DATA_TAB_CSS).click()
 
     def fill_save_note(self, note_text, toast_text):
         self.fill_text_field_by_css_selector('.text-input', note_text)
@@ -437,6 +457,18 @@ class EntitiesPage(Page):
         self.enter_search()
         self.wait_for_table_to_load()
 
+    def find_advanced_view(self):
+        return self.get_button(self.CONFIG_ADVANCED_TEXT, partial_class=True)
+
+    def click_advanced_view(self):
+        self.find_advanced_view().click()
+
+    def find_basic_view(self):
+        return self.get_button(self.CONFIG_BASIC_TEXT, partial_class=True)
+
+    def click_basic_view(self):
+        self.find_basic_view().click()
+
     def load_notes(self, entities_filter=None):
         self.switch_to_page()
         if entities_filter:
@@ -446,3 +478,80 @@ class EntitiesPage(Page):
         self.click_row()
         self.wait_for_spinner_to_end()
         self.click_notes_tab()
+
+    def load_custom_data(self, entities_filter=None):
+        self.switch_to_page()
+        if entities_filter:
+            self.fill_filter(entities_filter)
+            self.enter_search()
+        self.wait_for_table_to_load()
+        self.click_row()
+        self.wait_for_spinner_to_end()
+        self.click_custom_data_tab()
+
+    def get_entity_id(self):
+        return self.find_element_by_text(self.ID_FIELD).text
+
+    def find_custom_data_edit(self):
+        return self.get_button(self.CUSTOM_DATA_EDIT_BTN)
+
+    def click_custom_data_edit(self):
+        return self.find_custom_data_edit().click()
+
+    def click_custom_data_add_predefined(self):
+        return self.click_button('+ Predefined field', partial_class=True)
+
+    def click_custom_data_add_new(self):
+        return self.click_button('+ New field', partial_class=True)
+
+    def find_custom_data_save(self):
+        return self.get_button(self.OK_BUTTON, partial_class=True)
+
+    def find_custom_fields_items(self):
+        return self.driver.find_elements_by_css_selector(self.CUSTOM_DATA_FIELD_ITEM)
+
+    def find_custom_data_predefined_field(self, parent=None):
+        if not parent:
+            parent = self.driver
+        return parent.find_element_by_css_selector(self.CUSTOM_DATA_PREDEFINED_FIELD_CSS)
+
+    def find_custom_data_new_field_name(self, parent=None):
+        if not parent:
+            parent = self.driver
+        return parent.find_element_by_css_selector(self.CUSTOM_DATA_NEW_FIELD_NAME_CSS)
+
+    def find_custom_data_new_field_type(self, parent=None):
+        if not parent:
+            parent = self.driver
+        return parent.find_element_by_css_selector(self.CUSTOM_DATA_NEW_FIELD_TYPE_CSS)
+
+    def find_custom_data_value(self, parent=None):
+        if not parent:
+            parent = self.driver
+        return parent.find_element_by_css_selector(self.CUSTOM_DATA_FIELD_VALUE_CSS)
+
+    def select_custom_data_field(self, field_name, parent=None):
+        self.select_option(self.CUSTOM_DATA_PREDEFINED_FIELD_CSS, self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS, field_name, parent)
+
+    def select_custom_data_field_type(self, field_type, parent=None):
+        self.select_option(self.CUSTOM_DATA_NEW_FIELD_TYPE_CSS, self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS, field_type, parent)
+
+    def fill_custom_data_field_name(self, field_name, parent=None):
+        self.fill_text_field_by_css_selector(self.CUSTOM_DATA_NEW_FIELD_NAME_CSS, field_name, parent)
+
+    def fill_custom_data_value(self, field_value, parent=None):
+        self.fill_text_field_by_css_selector(self.CUSTOM_DATA_FIELD_VALUE_CSS, field_value, parent)
+
+    def save_custom_data(self):
+        self.find_custom_data_save().click()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
+    def clear_custom_data_field(self):
+        self.click_remove_sign()
+
+    def is_custom_error(self, error_text=None):
+        if not error_text:
+            return self.wait_for_element_absent_by_css(self.CUSTOM_DATA_ERROR_CSS)
+        return error_text == self.driver.find_element_by_css_selector(self.CUSTOM_DATA_ERROR_CSS).text

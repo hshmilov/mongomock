@@ -799,7 +799,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'adapters.data.id': True
         }))
 
-        entity_to_add = self._new_device_adapter()
+        entity_to_add = self._new_device_adapter() if entity_type == EntityType.Devices else self._new_user_adapter()
         for k, v in post_data['data'].items():
             allowed_types = [str, int, bool, float]
             if type(v) not in allowed_types:

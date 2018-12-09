@@ -152,6 +152,9 @@ class TestBase:
         self.axonius_system.get_system_users_db().update_one(
             {'user_name': DEFAULT_USER['user_name']}, {'$set': {'password': bcrypt.hash(DEFAULT_USER['password'])}})
 
+        self.axonius_system.db.get_gui_entity_fields(EntityType.Users).remove()
+        self.axonius_system.db.get_gui_entity_fields(EntityType.Devices).remove()
+
     def change_base_url(self, new_url):
         old_base_url = self.base_url
         self.base_url = new_url

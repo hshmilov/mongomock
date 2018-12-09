@@ -216,8 +216,8 @@ class TestDevicesTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
 
-        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.JSON_ADAPTER_FILTER, '"raw":',
-                                         self.devices_page.FIELD_ASSET_NAME)
+        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.JSON_ADAPTER_FILTER,
+                                         self.devices_page.ADVANCED_VIEW_RAW_FIELD, self.devices_page.FIELD_ASSET_NAME)
         self.check_toggle_advanced_basic(self.devices_page, self.devices_page.AD_ADAPTER_FILTER, '"cn":',
                                          self.devices_page.FIELD_HOSTNAME_TITLE)
 

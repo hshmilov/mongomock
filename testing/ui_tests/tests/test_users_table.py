@@ -89,8 +89,8 @@ class TestUsersTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
 
-        self.check_toggle_advanced_basic(self.users_page, self.users_page.JSON_ADAPTER_FILTER, '"raw":',
-                                         self.users_page.FIELD_USERNAME_TITLE)
+        self.check_toggle_advanced_basic(self.users_page, self.users_page.JSON_ADAPTER_FILTER,
+                                         self.users_page.ADVANCED_VIEW_RAW_FIELD, self.users_page.FIELD_USERNAME_TITLE)
         self.check_toggle_advanced_basic(self.users_page, self.users_page.AD_ADAPTER_FILTER, '"name":',
                                          self.users_page.FIELD_USERNAME_TITLE)
 

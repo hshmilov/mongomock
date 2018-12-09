@@ -81,6 +81,7 @@ class Page:
     MODAL_OVERLAY_CSS = '.modal-overlay'
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'
+    OK_BUTTON = 'OK'
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'
     ACTIONS_BUTTON = 'Actions'
@@ -89,6 +90,8 @@ class Page:
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_ROWS_CSS = 'tbody .x-row.clickable'
     TABLE_COUNTER = 'div.count'
+
+    JSON_ADAPTER_NAME = 'JSON File'
 
     def __init__(self, driver, base_url, local_browser: bool):
         self.driver = driver
@@ -526,3 +529,11 @@ class Page:
         if self.is_saved_queries_opened():
             logger.info('Saved Queries is opened! Closing it!')
             self.close_saved_queries()
+
+    @staticmethod
+    def is_element_disabled(element):
+        return 'disabled' in element.get_attribute('class')
+
+    @staticmethod
+    def is_input_error(input_element):
+        return 'border-error' in input_element.get_attribute('class')
