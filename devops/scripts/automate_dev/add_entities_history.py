@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from services.axonius_service import AxoniusService
 from random import randint
 from datetime import datetime, timedelta

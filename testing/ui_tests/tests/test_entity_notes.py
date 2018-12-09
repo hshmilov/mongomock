@@ -136,3 +136,17 @@ class TestEntityNotes(TestBase):
         self._test_notes_search(self.devices_page)
         self._test_notes_sort(self.devices_page)
         self._test_notes_historical(self.devices_page, EntityType.Devices)
+
+    # pylint: disable=anomalous-backslash-in-string
+    def test_long_note(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_sort_column(self.devices_page.FIELD_ASSET_NAME)
+        self.devices_page.load_notes()
+        long_text = 'a' * 256
+        self.devices_page.create_note(long_text)
+        note_box = self.devices_page.get_note_by_text(long_text)
+        user_box = self.devices_page.get_note_by_text('internal\/admin')
+        assert note_box.rect['x'] + note_box.rect['width'] < user_box.rect['x']
