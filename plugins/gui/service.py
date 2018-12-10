@@ -1789,6 +1789,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             user['permissions'] = {
                 k.name: v.name for k, v in user['permissions'].items()
             }
+            log_metric(logger, 'LOGIN_MARKER', 0)
             return jsonify(beautify_user_entry(user)), 200
 
         log_in_data = self.get_request_data_as_object()
