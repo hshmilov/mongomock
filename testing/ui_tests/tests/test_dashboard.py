@@ -15,6 +15,11 @@ class TestDashboard(TestBase):
     SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY = f'not (({OS_WINDOWS_QUERY}) or ({LAST_SEEN_7_DAY_QUERY}))'
     NO_OS_QUERY = 'specific_data.data.os.type == exists(false)'
     SEGMENTATION_PIE_CARD_QUERY = 'specific_data.data.total_number_of_cores == exists(false)'
+    LONG_TEXT_FOR_CARD_TITLE = 'a very long chart name with more than 30 characters in the chart title'
+    TEST_SUMMARY_TITLE = 'test summary'
+    TEST_INTERSECTION_TITLE = 'test intersection'
+    TEST_SEGMENTATION_HISTOGRAM_TITLE = 'test segmentation histogram'
+    TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
 
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
@@ -78,47 +83,60 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.dashboard_page.add_intersection_card('Devices', 'Windows Operating System',
-                                                  'Devices Not Seen In Last 7 Days', 'test intersection')
+                                                  'Devices Not Seen In Last 7 Days', self.TEST_INTERSECTION_TITLE)
         self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.click_intersection_pie_slice()
+        self.dashboard_page.click_intersection_pie_slice(self.TEST_INTERSECTION_TITLE)
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.INTERSECTION_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.click_symmetric_difference_first_query_pie_slice()
+        self.dashboard_page.click_symmetric_difference_first_query_pie_slice(self.TEST_INTERSECTION_TITLE)
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.click_symmetric_difference_base_query_pie_slice()
+        self.dashboard_page.click_symmetric_difference_base_query_pie_slice(self.TEST_INTERSECTION_TITLE)
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.remove_intersection_card()
+        self.dashboard_page.remove_card(self.TEST_INTERSECTION_TITLE)
 
     def test_dashboard_summary_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', 'test summary')
+        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', self.TEST_SUMMARY_TITLE)
         self.dashboard_page.wait_for_spinner_to_end()
-        summary_chart = self.dashboard_page.get_summary_card()
+        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE)
         result_count = int(summary_chart.text)
         summary_chart.click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == result_count
         assert self.devices_page.find_search_value() == self.SUMMARY_CARD_QUERY
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.remove_summary_card()
+        self.dashboard_page.remove_card(self.TEST_SUMMARY_TITLE)
+
+    def test_new_chart_stress(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        for i in range(10):
+            self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', f'{self.TEST_SUMMARY_TITLE}{i}')
+            self.dashboard_page.wait_for_spinner_to_end()
+            self.dashboard_page.get_card(f'{self.TEST_SUMMARY_TITLE}{i}')
+        last_card = self.dashboard_page.get_all_cards()[-1]
+        assert self.dashboard_page.get_title_from_card(last_card) == 'New Chart'
+        for j in range(10):
+            self.dashboard_page.remove_card(f'{self.TEST_SUMMARY_TITLE}{j}')
+            self.dashboard_page.wait_for_spinner_to_end()
 
     def test_dashboard_segmentation_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         # 'network interfaces' is not one of the options, it suppose to return false
         assert not self.dashboard_page.add_segmentation_card('Devices', 'network interfaces', 'test segmentation')
-        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', 'test segmentation histogram')
+        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.wait_for_spinner_to_end()
-        shc_card = self.dashboard_page.get_segmentation_histogram_card()
+        shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
         line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 1)
         first_result_count = int(line.text)
@@ -128,7 +146,7 @@ class TestDashboard(TestBase):
         assert self.devices_page.find_search_value() == self.OS_WINDOWS_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
-        shc_card = self.dashboard_page.get_segmentation_histogram_card()
+        shc_card = self.dashboard_page.get_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         shc_chart = self.dashboard_page.get_histogram_chart_from_card(shc_card)
         line = self.dashboard_page.get_histogram_line_from_histogram(shc_chart, 2)
         second_result_count = int(line.text)
@@ -138,15 +156,15 @@ class TestDashboard(TestBase):
         assert self.devices_page.find_search_value() == self.NO_OS_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.add_segmentation_card('Devices', 'Total Cores', 'test segmentation pie', 'pie')
+        self.dashboard_page.add_segmentation_card('Devices', 'Total Cores', self.TEST_SEGMENTATION_PIE_TITLE, 'pie')
         self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.click_segmentation_pie_card()
+        self.dashboard_page.click_segmentation_pie_card(self.TEST_SEGMENTATION_PIE_TITLE)
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.SEGMENTATION_PIE_CARD_QUERY
         assert self.devices_page.count_entities() == 22
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.remove_segmentation_histogram_card()
-        self.dashboard_page.remove_segmentation_pie_card()
+        self.dashboard_page.remove_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        self.dashboard_page.remove_card(self.TEST_SEGMENTATION_PIE_TITLE)
 
     def test_dashboard_search(self):
         string_to_search = 'be'
