@@ -434,6 +434,9 @@ def bytes_image_to_base64(value):
             header = "png"
         elif header == b"47494638":
             header = "gif"
+        elif header == b'49492a00':
+            # This is a tiff image, browser do not support displaying it.
+            return None
         else:
             raise ValueError(f"Invalid image. header is {header}, cannot determine if jpeg/png/gif."
                              f"This could be a legitimate error, some iamges aren't parsable")

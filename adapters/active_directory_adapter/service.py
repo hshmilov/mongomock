@@ -518,7 +518,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     if thumbnail_photo is not None:
                         if type(thumbnail_photo) == list:
                             thumbnail_photo = thumbnail_photo[0]  # I think this can happen from some reason..
-                        user.image = bytes_image_to_base64(thumbnail_photo)
+                        if len(thumbnail_photo) > 1024 * 1024:
+                            # We can not afford an image that is more than 1mb.
+                            for attr in ['thumbnailPhoto', 'exchangePhoto', 'jpegPhoto', 'photo', 'thumbnailLogo']:
+                                user_raw.pop(attr, None)
+                        else:
+                            user.image = bytes_image_to_base64(thumbnail_photo)
                 except Exception:
                     logger.exception(f"Exception while setting thumbnailPhoto for user {user.id}.")
 
