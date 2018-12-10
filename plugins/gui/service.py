@@ -849,7 +849,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                      EntityType.Devices,
-                                     default_sort=self._system_settings['defaultSort'],
+                                     default_sort=self._system_settings.get('defaultSort') or True,
                                      history_date=history))
 
     @gui_helpers.historical()
@@ -860,7 +860,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                                             PermissionLevel.ReadOnly)})
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices,
-                                         default_sort=self._system_settings['defaultSort'], history=history)
+                                         default_sort=self._system_settings.get('defaultSort') or True,
+                                         history=history)
         output = make_response(csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
         output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
