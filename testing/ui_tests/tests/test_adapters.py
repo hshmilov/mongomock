@@ -1,11 +1,11 @@
-import time
 import re
+import time
 from copy import copy
-
 from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts import adapter_consts
+from axonius.utils.wait import wait_until
 from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
 from services.adapters.gotoassist_service import GotoassistService
@@ -214,3 +214,62 @@ class TestAdapters(TestBase):
             self.add_ad_server()
             self.base_page.wait_for_stop_research()
             self.base_page.wait_for_run_research()
+
+    @staticmethod
+    def _are_ad_entities_present(page, field):
+        page.switch_to_page()
+        page.wait_for_table_to_load()
+        page.run_filter_query(page.AD_ADAPTER_FILTER)
+        page.wait_for_table_to_load()
+        all_entity_field_values = page.get_column_data(field)
+        return len(all_entity_field_values) > 1
+
+    def _are_ad_devices_present(self):
+        return self._are_ad_entities_present(self.devices_page, self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+
+    def _are_ad_users_present(self):
+        return self._are_ad_entities_present(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
+
+    def _check_ad_adapter_client_deletion(self, with_entities_deletion):
+        # Prepare test
+        assert wait_until(self._are_ad_devices_present)
+        assert wait_until(self._are_ad_users_present)
+
+        # Execute action
+
+        self.adapters_page.clean_adapter_servers(AD_NAME, with_entities_deletion)
+
+        # check action was executed
+
+        if with_entities_deletion:
+            wait_until(lambda: not self._are_ad_devices_present())
+            wait_until(lambda: not self._are_ad_users_present())
+        else:
+            assert self._are_ad_devices_present()
+            assert self._are_ad_users_present()
+
+    def _check_delete_adapter(self, associated_entities):
+        self.adapters_page.switch_to_page()
+        self.adapters_page.wait_for_spinner_to_end()
+        try:
+            try:
+                self._check_ad_adapter_client_deletion(with_entities_deletion=associated_entities)
+            finally:
+                self.adapters_page.clean_adapter_servers(AD_NAME)
+        finally:
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_spinner_to_end()
+            self.add_ad_server()
+
+    def test_delete_adapter_without_associated_entities(self):
+        self.add_ad_server()
+        self.base_page.wait_for_stop_research()
+        self.base_page.wait_for_run_research()
+        self._check_delete_adapter(False)
+
+    def test_delete_adapter_with_associated_entities(self):
+        self.base_page.wait_for_stop_research()
+        self.base_page.wait_for_run_research()
+        self._check_delete_adapter(True)
+        self.base_page.wait_for_stop_research()
+        self.base_page.wait_for_run_research()

@@ -33,6 +33,8 @@ class AdaptersPage(EntitiesPage):
 
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
 
+    DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID = 'deleteEntitiesCheckbox'
+
     @property
     def url(self):
         return f'{self.base_url}/adapter'
@@ -123,7 +125,7 @@ class AdaptersPage(EntitiesPage):
     def wait_for_problem_connecting_to_server(self):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_PROBLEM)
 
-    def clean_adapter_servers(self, name):
+    def clean_adapter_servers(self, name, delete_associated_entities=False):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
         self.click_adapter(name)
@@ -135,6 +137,12 @@ class AdaptersPage(EntitiesPage):
         except NoSuchElementException:
             # we dont have element to remove, just return...
             return
+
+        if delete_associated_entities:
+            self.wait_for_element_present_by_id(self.DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID)
+            self.click_toggle_button(self.driver.find_element_by_id(self.DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID),
+                                     make_yes=True, scroll_to_toggle=False)
+
         self.approve_remove_selected()
 
     def fill_creds(self, **kwargs):

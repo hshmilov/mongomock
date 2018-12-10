@@ -434,9 +434,7 @@ class EntitiesPage(Page):
                 assert ui_row in data_row
 
     def query_json_adapter(self):
-        self.fill_filter(self.JSON_ADAPTER_FILTER)
-        self.enter_search()
-        self.wait_for_table_to_load()
+        self.run_filter_query(self.JSON_ADAPTER_FILTER)
 
     def run_filter_query(self, filter_value):
         self.fill_filter(filter_value)
