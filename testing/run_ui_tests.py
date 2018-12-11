@@ -13,7 +13,15 @@ from services.standalone_services.selenium_service import SeleniumService
 from devops.scripts.automate_dev import credentials_inputer
 
 
+def print_frame(frame):
+    print(f'{frame.f_code} at {frame.f_lineno}')
+    if frame.f_back:
+        print_frame(frame.f_back)
+
+
 def signal_term_handler(signal_, frame):
+    print(f'{signal_} signal handler')
+    print_frame(frame)
     raise TimeoutError
 
 
