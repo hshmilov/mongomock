@@ -750,6 +750,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         if (session.get('user') or {}).get('user_name') == AXONIUS_USER_NAME:
             return
+
+        if request.args.get('is_refresh') != '1':
+            filter_obj = request.args.get('filter')
+            log_metric(logger, 'query.gui', filter_obj)
+
         if view_filter and not skip:
             # getting the original filter text on purpose - we want to pass it
             view_filter = request.args.get('filter')

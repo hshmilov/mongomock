@@ -178,19 +178,23 @@
         methods: {
             ...mapMutations({updateView: UPDATE_DATA_VIEW}),
 			...mapActions({fetchContent: FETCH_DATA_CONTENT}),
-            fetchContentPages(loading) {
+            fetchContentPages(loading, isRefresh) {
             	if (!this.pageLinkNumbers || !this.pageLinkNumbers.length) {
-            	    return this.fetchContentSegment(0, this.view.pageSize)
+            	    return this.fetchContentSegment(0, this.view.pageSize, isRefresh)
                 }
                 if (loading) {
             		this.loading = true
                 }
                 return this.fetchContentSegment(
-                    this.pageLinkNumbers[0] * this.view.pageSize, this.pageLinkNumbers.length * this.view.pageSize)
+                    this.pageLinkNumbers[0] * this.view.pageSize,
+                    this.pageLinkNumbers.length * this.view.pageSize,
+                    isRefresh
+                )
             },
-            fetchContentSegment(skip, limit) {
+            fetchContentSegment(skip, limit, isRefresh) {
                 return this.fetchContent({
-                    module: this.module, section: this.section, skip, limit
+                    module: this.module, section: this.section,
+                    skip, limit, isRefresh
                 }).then(() => {
                     if (!this.content.fetching) {
                         this.loading = false
@@ -227,7 +231,7 @@
             },
             startRefreshTimeout() {
 				const fetchAuto = () => {
-					this.fetchContentPages().then(() => {
+					this.fetchContentPages(false, true).then(() => {
 						if (this._isDestroyed) return
 						this.timer = setTimeout(fetchAuto, this.refresh * 1000)
 					})

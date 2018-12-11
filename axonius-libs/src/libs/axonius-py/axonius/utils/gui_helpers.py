@@ -130,7 +130,6 @@ def filtered():
                 filter_expr = request.args.get('filter')
                 if filter_expr and filter_expr != '':
                     filter_obj = parse_filter(filter_expr)
-                    log_metric(logger, 'query.gui', filter_obj)
             except Exception as e:
                 logger.exception('Failed in mongo filter')
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)

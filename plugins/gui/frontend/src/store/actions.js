@@ -127,6 +127,9 @@ const createContentRequest = (state, payload) => {
 		params.push(`sort=${view.sort.field}`)
 		params.push(`desc=${view.sort.desc? '1' : '0'}`)
 	}
+	if (payload.isRefresh) {
+		params.push('is_refresh=1')
+	}
 	return params.join('&')
 }
 
