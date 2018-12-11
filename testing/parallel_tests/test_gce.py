@@ -37,3 +37,7 @@ class TestGceAdapter(AdapterTestBase):
     @pytest.mark.skip("No reachability test")
     def test_check_reachability(self):
         pass
+
+    @pytest.mark.skip('AX-2800')
+    def test_fetch_devices(self):
+        pass
