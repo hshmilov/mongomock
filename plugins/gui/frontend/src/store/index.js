@@ -27,6 +27,7 @@ import {
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
+    UPDATE_WINDOW_WIDTH, updateWindowWidth,
 	UPDATE_DATA_CONTENT, updateDataContent,
 	UPDATE_DATA_COUNT, updateDataCount,
 	UPDATE_DATA_VIEW, updateDataView,
@@ -68,7 +69,8 @@ export default new Vuex.Store({
             General controls that the system uses throughout pages
          */
         interaction: {
-            collapseSidebar: true
+            collapseSidebar: true,
+            windowWidth: 0
         },
 		configuration: { fetching: false, data: null, error: '' }
     },
@@ -80,6 +82,7 @@ export default new Vuex.Store({
 	},
     mutations: {
         [ TOGGLE_SIDEBAR ]: toggleSidebar,
+        [ UPDATE_WINDOW_WIDTH ]: updateWindowWidth,
         [ UPDATE_DATA_CONTENT ]: updateDataContent,
         [ UPDATE_DATA_COUNT ]: updateDataCount,
         [ UPDATE_DATA_VIEW ]: updateDataView,

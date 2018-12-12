@@ -110,7 +110,7 @@
             }
         }
     }
-    .collapse .x-nested-nav {
+    .x-side-bar.collapse .x-nested-nav {
         overflow: visible;
         .x-nested-nav-item {
             overflow: hidden;

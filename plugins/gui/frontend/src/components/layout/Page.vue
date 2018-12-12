@@ -1,5 +1,5 @@
 <template>
-    <div class="x-page" :class="{ collapse: interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
+    <div class="x-page" :class="{ collapse: collapseSidebar }">
         <div v-if="title || breadcrumbs" class="x-header">
             <h4 class="x-title" v-if="title">{{ title }}</h4>
             <h4 class="x-title" v-else>
@@ -24,7 +24,11 @@
 	export default {
 		name: 'x-page',
 		props: ['title', 'breadcrumbs'],
-		computed: mapState(['interaction']),
+		computed: mapState({
+            collapseSidebar(state) {
+                return state.interaction.collapseSidebar || state.interaction.windowWidth <= 1200
+            }
+		}),
 	}
 </script>
 

@@ -1,5 +1,5 @@
 <template>
-    <header class="x-top-bar" :class="{ 'minimize': collapseSidebar || ($resize && $mq.below(1200)) }">
+    <header class="x-top-bar" :class="{ 'minimize': collapseSidebar }">
         <div class="bar-toggle">
             <a class="toggle-link" @click="toggleSidebar">
                 <svg-icon name="navigation/menu" :original="true" height="20"/>
@@ -72,7 +72,7 @@
 		computed: {
             ...mapState({
                 collapseSidebar(state) {
-                	return state.interaction.collapseSidebar
+                	return state.interaction.collapseSidebar || state.interaction.windowWidth <= 1200
                 },
                 emptyStates(state) {
                 	return state.onboarding.emptyStates

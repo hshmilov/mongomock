@@ -1,5 +1,5 @@
 <template>
-    <aside class="x-side-bar" v-bind:class="{ collapse: collapseSidebar || ($resize && $mq.below(1200)) }">
+    <aside class="x-side-bar" v-bind:class="{ collapse: collapseSidebar }">
         <div class="x-user">
             <div class="x-user-profile">
                 <img :src="userDetails.pic" />
@@ -54,7 +54,7 @@
                 return state.auth.currentUser.data.permissions
             },
             collapseSidebar(state) {
-                return state.interaction.collapseSidebar
+                return state.interaction.collapseSidebar || state.interaction.windowWidth <= 1200
             }
         }),
         methods: {

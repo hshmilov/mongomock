@@ -6,6 +6,11 @@ export const toggleSidebar = (state) => {
     state.interaction.collapseSidebar = !state.interaction.collapseSidebar
 }
 
+export const UPDATE_WINDOW_WIDTH = 'UPDATE_WINDOW_WIDTH'
+export const updateWindowWidth = (state) => {
+	state.interaction.windowWidth = document.documentElement.clientWidth
+}
+
 export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
 export const updateDataCount = (state, payload) => {
 	let module = getModule(state, payload)
