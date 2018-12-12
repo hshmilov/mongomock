@@ -23,7 +23,6 @@ class TestNexposeAdapter(AdapterTestBase):
         return SOME_DEVICE_ID
 
     @flaky(max_runs=2)
-    @pytest.mark.skip('Not working')
     def test_fetch_devices(self):
         """
         test fetch devices is different because no permanent ID on scanners.
@@ -42,7 +41,3 @@ class TestNexposeAdapter(AdapterTestBase):
         nexpose_device = list(filter(lambda device: device.get('hostname', '').upper() == FETCHED_DEVICE_EXAMPLE['hostname'].upper(),
                                      devices_list))
         assert nexpose_device[0]['raw']['mac'] == FETCHED_DEVICE_EXAMPLE['raw']['mac']
-
-    @pytest.mark.skip('Not working')
-    def test_check_reachability(self):
-        pass
