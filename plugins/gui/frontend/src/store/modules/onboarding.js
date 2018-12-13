@@ -68,6 +68,7 @@ export const onboarding = {
 						{ title: 'Juniper', state: 'juniper' },
 						{ title: 'Fortinet', state: 'fortinet' },
 						{ title: 'Infoblox', state: 'infoblox' },
+						{ title: 'Aruba', state: 'aruba_general' },
 						{ title: 'SKIP', state: 'virtualizationCloud' }
 					]
 				},
@@ -100,6 +101,7 @@ export const onboarding = {
 						{ title: 'Juniper', state: 'juniper' },
 						{ title: 'Fortinet', state: 'fortinet' },
 						{ title: 'Infoblox', state: 'infoblox' },
+						{ title: 'Aruba', state: 'aruba_general' },
 						{ title: 'SKIP', state: 'virtualizationCloud' }
 					]
 				},
@@ -125,6 +127,35 @@ export const onboarding = {
 					content: 'Which other major switch/router do you use?',
 					actions: [
 						{ title: 'Cisco', state: 'cisco' },
+						{ title: 'Fortinet', state: 'fortinet' },
+						{ title: 'Infoblox', state: 'infoblox' },
+						{ title: 'Aruba', state: 'aruba_general' },
+						{ title: 'SKIP', state: 'virtualizationCloud' }
+					]
+				},
+				'aruba_general': {
+					title: 'Aruba ADAPTERS', align: 'center',
+					content: 'Which Aruba management solution do you use?',
+					actions: [
+						{ title: 'Aruba Airwave or Direct Switch', state: 'aruba' },
+						{ title: 'Aruba Clearpass', state: 'arubaClearpass' },
+						{ title: 'SKIP', state: 'networkNoAruba' }
+					]
+				},
+				'aruba': {
+					id: 'aruba_adapter', title: 'Aruba Airwave or Direct Switch ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'arubaClearpass': {
+					id: 'clearpass_adapter', title: 'Aruba Clearpass ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'networkNoAruba': {
+					title: 'NETWORK ADAPTERS', align: 'center', queue: 'adapters',
+					content: 'Which other major switch/router do you use?',
+					actions: [
+						{ title: 'Cisco', state: 'cisco' },
+						{ title: 'Juniper', state: 'juniper' },
 						{ title: 'Fortinet', state: 'fortinet' },
 						{ title: 'Infoblox', state: 'infoblox' },
 						{ title: 'SKIP', state: 'virtualizationCloud' }

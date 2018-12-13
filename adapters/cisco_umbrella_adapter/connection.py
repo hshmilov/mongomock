@@ -10,18 +10,29 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class CiscoUmbrellaConnection(RESTConnection):
     """ rest client for CiscoUmbrella adapter """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, network_api_key, network_api_secret,
+                 management_api_key, management_api_secret, **kwargs):
+        self._network_api_key = network_api_key
+        self._network_api_secret = network_api_secret
+        self._management_api_key = management_api_key
+        self._management_api_secret = management_api_secret
         super().__init__(*args, url_base_prefix='v1', headers={'Content-Type': 'application/json',
                                                                'Accept': 'application/json'}, **kwargs)
 
     def _connect(self):
-        if self._username and self._password:
-            self._get(f'organizations/', do_basic_auth=True)
-        else:
-            raise RESTException('No username or password')
+        if not self._network_api_key or not self._network_api_secret \
+                or not self._management_api_key or not self._management_api_secret:
+            raise RESTException('Missing API keys')
+        self._username = self._network_api_key
+        self._password = self._network_api_secret
+        self._get(f'organizations/', do_basic_auth=True)
 
     def get_device_list(self):
+        self._username = self._network_api_key
+        self._password = self._network_api_secret
         organizations = self._get(f'organizations/', do_basic_auth=True)
+        self._username = self._management_api_key
+        self._password = self._management_api_secret
         for org_raw in organizations:
             try:
                 yield from self.get_device_list_from_org(org_raw.get('organizationId'))
@@ -31,7 +42,7 @@ class CiscoUmbrellaConnection(RESTConnection):
     def get_device_list_from_org(self, org_id):
         if not org_id:
             return
-        devices_raw = self._get(f'organizations/{self._org_id}/roamingcomputers',
+        devices_raw = self._get(f'organizations/{org_id}/roamingcomputers',
                                 do_basic_auth=True,
                                 url_params={'page': 1,
                                             'limit': DEVICE_PER_PAGE})

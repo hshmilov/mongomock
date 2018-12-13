@@ -28,25 +28,28 @@ class CiscoUmbrellaAdapter(AdapterBase):
     def _get_client_id(client_config):
         return get_client_id(client_config)
 
-    @staticmethod
-    def _test_reachability(client_config):
+    def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
-    @staticmethod
-    def _connect_client(client_config):
+    def _connect_client(self, client_config):
         try:
-            with CiscoUmbrellaConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                                         username=client_config['api_key'], password=client_config['api_secret'],
-                                         https_proxy=client_config.get('https_proxy')) as connection:
-                return connection
+            connection = CiscoUmbrellaConnection(domain=client_config['domain'],
+                                                 verify_ssl=client_config.get('verify_ssl') or False,
+                                                 network_api_key=client_config.get('network_api_key'),
+                                                 network_api_secret=client_config.get('network_api_secret'),
+                                                 management_api_key=client_config.get('management_api_key'),
+                                                 management_api_secret=client_config.get('management_api_secret'),
+                                                 https_proxy=client_config.get('https_proxy'))
+            with connection:
+                pass
+            return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -58,8 +61,7 @@ class CiscoUmbrellaAdapter(AdapterBase):
         with client_data:
             yield from client_data.get_device_list()
 
-    @staticmethod
-    def _clients_schema():
+    def _clients_schema(self):
         """
         The schema CiscoUmbrellaAdapter expects from configs
 
@@ -73,13 +75,24 @@ class CiscoUmbrellaAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
-                    'name': 'api_key',
-                    'title': 'API Key',
+                    'name': 'network_api_key',
+                    'title': 'Network API Key',
                     'type': 'string'
                 },
                 {
-                    'name': 'api_secret',
-                    'title': 'API Secret',
+                    'name': 'network_api_secret',
+                    'title': 'Network API Secret',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': 'management_api_key',
+                    'title': 'Management API Key',
+                    'type': 'string'
+                },
+                {
+                    'name': 'management_api_secret',
+                    'title': 'Management API Secret',
                     'type': 'string',
                     'format': 'password'
                 },

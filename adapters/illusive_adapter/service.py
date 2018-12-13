@@ -117,7 +117,8 @@ class IllusiveAdapter(AdapterBase):
                     logger.exception(f'Probelm getting OS for {device_raw}')
                 device.last_seen = parse_date(device_raw.get('lastDeployment'))
                 try:
-                    device.last_used_users = (device_raw.get('lastSeenUser') or '').split(',')
+                    if 'Unable to find' not in (device_raw.get('lastSeenUser') or ''):
+                        device.last_used_users = (device_raw.get('lastSeenUser') or '').split(',')
                 except Exception:
                     logger.exception(f'Problem getting users at {device_raw}')
                 device.policy_name = device_raw.get('policyName')

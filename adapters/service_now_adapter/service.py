@@ -46,6 +46,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         assigned_to_location = Field(str, 'Assigned To Location')
         purchase_date = Field(datetime.datetime, 'Purchase date')
         substatus = Field(str, 'Substatus')
+        u_shared = Field(str, 'Shared')
+        u_loaner = Field(str, 'Loaner')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -199,6 +201,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             users_table_dict = table_devices_data.get(USERS_TABLE_KEY)
             snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
             snow_location_table_dict = table_devices_data.get(LOCATION_TABLE_KEY)
+            snow_alm_asset_table_dict = table_devices_data.get(ALM_ASSET_TABLE)
             for device_raw in table_devices_data[DEVICES_KEY]:
                 try:
                     device = self._new_device_adapter()
@@ -284,7 +287,13 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                             device.snow_department = snow_department.get('name')
                     except Exception:
                         logger.exception(f'Problem adding assigned_to to {device_raw}')
-
+                    try:
+                        snow_asset = snow_alm_asset_table_dict.get((device_raw.get('asset') or {}).get('value'))
+                        if snow_asset:
+                            device.u_loaner = snow_asset.get('u_loaner')
+                            device.u_shared = snow_asset.get('u_shared')
+                    except Exception:
+                        logger.exception(f'Problem at asset table information {device_raw}')
                     try:
                         snow_location = snow_location_table_dict.get((device_raw.get('location') or {}).get('value'))
                         if snow_location:

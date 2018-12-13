@@ -180,13 +180,18 @@ class NVDSearcher(object):
         if vendor_name == "0":
             logger.error(f"Error, got vendor name 0")
             return []
+        if vendor_name == "":
+            empty_vendor = True
+        else:
+            empty_vendor = False
 
         with self.__use_lock:
             for db_vendor_name, db_vendor_products in self.__products_db.items():
                 # we have to replace all '_' with spaces from now on.
-                if str(db_vendor_name).lower() in vendor_name or vendor_name == "":
+                if str(db_vendor_name).lower() in vendor_name or empty_vendor:
                     for db_vendor_product, db_vendor_product_versions in db_vendor_products.items():
-                        if str(db_vendor_product).lower() in product_name:
+                        if (str(db_vendor_product).lower() in product_name and not empty_vendor) or \
+                                (str(db_vendor_product).lower() == product_name and empty_vendor):
                             for db_version, db_version_cves in db_vendor_product_versions.items():
                                 if str(db_version).lower() == product_version:
                                     return [self.__cve_db[v] for v in db_version_cves]

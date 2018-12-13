@@ -639,8 +639,10 @@ def is_snow_adapter(adapter_device):
 
 
 def is_only_host_adapter_not_localhost(adapter_device):
-    return (adapter_device.get('plugin_name') in ['deep_security_adapter', 'cisco_umbrella_adapter']) and \
-           (not adapter_device.get('data').get('hostname') or
+    return (adapter_device.get('plugin_name') in ['deep_security_adapter',
+                                                  'cisco_umbrella_adapter',
+                                                  'carbonblack_defense_adapter']) and \
+        (not adapter_device.get('data').get('hostname') or
             'localhost' not in adapter_device.get('data').get('hostname').strip().lower())
 
 
@@ -848,7 +850,9 @@ def normalize_hostname(adapter_data):
             final_hostname = remove_trailing(final_hostname, extension)
         split_hostname = final_hostname.split('.')
         for extension in DEFAULT_MAC_EXTENSIONS:
-            split_hostname[0] = remove_trailing(split_hostname[0], extension)
+            no_trail = remove_trailing(split_hostname[0], extension)
+            if no_trail:
+                split_hostname[0] = no_trail
         if len(split_hostname[0]) == 15 and (adapter_data.get('os') or {}).get('type') == "OS X":
             if split_hostname[0].endswith('-MB'):
                 split_hostname[0] = remove_trailing(split_hostname[0], '-MB')

@@ -289,7 +289,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 },
                 {
                     "name": "user",
-                    "title": "User",
+                    "title": "Username (DOMAIN\\USERNAME)",
                     "type": "string"
                 },
                 {

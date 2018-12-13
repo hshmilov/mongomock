@@ -15,12 +15,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CarbonblackDefenseAdapter(AdapterBase):
 
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         av_status = Field(str, 'AV Status')
         status = Field(str, 'Agent Status')
         sensor_version = Field(str, 'Sensor Version')
         policy_name = Field(str, 'Policy Name')
         public_ip = Field(str, 'Public IP')
+        email = Field(str, 'Email')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -113,7 +115,7 @@ class CarbonblackDefenseAdapter(AdapterBase):
                 device = self._new_device_adapter()
                 device_id = device_raw.get('deviceId')
                 if device_id is not None and device_id != '':
-                    device.id = str(device_id)
+                    device.id = str(device_id) + (device_raw.get('name') or '')
                 else:
                     logger.warning(f'Bad device ID {device_raw}')
                     continue
@@ -147,6 +149,7 @@ class CarbonblackDefenseAdapter(AdapterBase):
                     logger.exception('Problem getting Last seen in CarbonBlackDefense')
                 device.av_status = str(device_raw.get('avStatus'))
                 device.status = device_raw.get('status')
+                device.email = device_raw.get('email')
                 device.sensor_version = device_raw.get('sensorVersion')
                 device.policy_name = device_raw.get('policyName')
                 device.public_ip = device_raw.get('lastExternalIpAddress')

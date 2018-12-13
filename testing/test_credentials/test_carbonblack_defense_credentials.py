@@ -5,4 +5,4 @@ client_details = {
     "verify_ssl": True
 }
 
-SOME_DEVICE_ID = '827716'
+SOME_DEVICE_ID = '827716TESTSECDOMAIN\WIN-TV9UBKLP1KN'

@@ -35,6 +35,7 @@ class ServiceNowConnection(RESTConnection):
                 logger.exception(f'Problem getting manager for user {user}')
             yield user_to_yield
 
+    # pylint: disable=R0912
     def get_device_list(self):
         tables_devices = []
         users_table = []
@@ -69,6 +70,16 @@ class ServiceNowConnection(RESTConnection):
             if department.get('sys_id'):
                 department_table_dict[department.get('sys_id')] = department
 
+        alm_asset_table = []
+        try:
+            alm_asset_table = list(self.__get_devices_from_table(consts.ALM_ASSET_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting location')
+        alm_asset_table_dict = dict()
+        for alm_asset in alm_asset_table:
+            if alm_asset.get('sys_id'):
+                alm_asset_table_dict[alm_asset.get('sys_id')] = alm_asset
+
         self.__users_table = users_table_dict
         for table_details in consts.TABLES_DETAILS:
             new_table_details = table_details.copy()
@@ -77,6 +88,7 @@ class ServiceNowConnection(RESTConnection):
             new_table_details[consts.USERS_TABLE_KEY] = users_table_dict
             new_table_details[consts.LOCATION_TABLE_KEY] = location_table_dict
             new_table_details[consts.DEPARTMENT_TABLE_KEY] = department_table_dict
+            new_table_details[consts.ALM_ASSET_TABLE] = alm_asset_table_dict
             tables_devices.append(new_table_details)
 
         return tables_devices

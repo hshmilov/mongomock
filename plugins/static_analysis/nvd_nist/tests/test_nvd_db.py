@@ -49,7 +49,7 @@ def test_nvd_returns_empty_results_when_there_is_no_cve():
 
 def test_nvd_works_with_empty_vendor_name():
     start_time = time.time()
-    raw = db.search_vuln("", "Adobe Acrobat Reader DC", "15.006.30060")
+    raw = db.search_vuln("", "Acrobat Reader DC", "15.006.30060")
     assert time.time() - start_time < 5  # max 5 seconds
 
     # We only check that the cve exists since we already checked its info in test_nvd_search

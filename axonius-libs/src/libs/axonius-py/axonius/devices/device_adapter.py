@@ -237,6 +237,7 @@ class DeviceAdapter(SmartJsonClass):
     hostname = Field(str, 'Host Name')
     description = Field(str, 'Description')
     last_seen = Field(datetime.datetime, 'Last Seen')
+    fetch_time = Field(datetime.datetime, 'Fetch Time')
     network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces')
     os = Field(DeviceAdapterOS, 'OS')
     last_used_users = ListField(str, "Last Used User")

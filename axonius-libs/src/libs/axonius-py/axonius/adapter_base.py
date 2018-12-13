@@ -875,6 +875,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
+            parsed_device.fetch_time = datetime.now()
 
             # All scanners should have this automatically
             if self.plugin_subtype == PluginSubtype.ScannerAdapter:

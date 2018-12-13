@@ -31,6 +31,7 @@ class NexposeV3Client(NexposeClient):
                     current_page_response_as_json = self._send_get_request(
                         'assets', {'page': current_page_num, 'size': self.num_of_simultaneous_devices})
                     devices = current_page_response_as_json.get('resources', [])
+                    num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                     for item in devices:
                         item.update({"API": '3'})
 
@@ -104,7 +105,6 @@ class NexposeV3Client(NexposeClient):
 
                             yield current_device
 
-                    num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                 except Exception:
                     logger.exception(f"Got exception while fetching page {current_page_num+1} "
                                      f"(api page {current_page_num}).")

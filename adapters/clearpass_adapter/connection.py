@@ -17,11 +17,11 @@ class ClearpassConnection(RESTConnection):
 
     def _connect(self):
         if self._username and self._password:
-            response = self._post('oauth2', body_params={'grant_type': 'password',
-                                                         'username': self._username,
-                                                         'password': self._password,
-                                                         'client_id': self._client_id,
-                                                         'client_secret': self._client_secret})
+            response = self._post('oauth', body_params={'grant_type': 'password',
+                                                        'username': self._username,
+                                                        'password': self._password,
+                                                        'client_id': self._client_id,
+                                                        'client_secret': self._client_secret})
             if 'access_token' not in response:
                 logger.exception(f'Bad login. Got this response {response}')
                 raise RESTException('Bad login Credentials')

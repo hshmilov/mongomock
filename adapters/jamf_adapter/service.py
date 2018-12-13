@@ -230,7 +230,6 @@ class JamfAdapter(AdapterBase, Configurable):
                         device.last_used_users = []
                         for user_raw in users_raw:
                             try:
-                                logger.info(f"Adding user {user_raw.get('realname')}")
                                 user_name_raw = user_raw.get('name')
                                 user_inverntory_raw = inventory_users_dict.get(user_name_raw) or {}
                                 if user_name_raw:
@@ -474,8 +473,7 @@ class JamfAdapter(AdapterBase, Configurable):
                 'fetch_department',
                 'should_fetch_policies',
                 'num_of_threads',
-                'should_not_keepalive',
-                'threads_time_sleep'
+                'should_not_keepalive'
             ],
             "pretty_name": "Jamf Configuration",
             "type": "array"

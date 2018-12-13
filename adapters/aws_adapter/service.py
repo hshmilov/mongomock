@@ -294,7 +294,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 sts_client = current_session.client('sts', config=client_config.get(AWS_CONFIG))
                 assumed_role_object = sts_client.assume_role(
                     RoleArn=role_arn,
-                    DurationSeconds=60 * 60 * 3,    # 3 hours of a session
+                    DurationSeconds=60 * 60 * 1,    # 3 hours of a session
                     RoleSessionName="Axonius"
                 )
 

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    malwarebytes_adapter: {
+        title: 'Malwarebytes - BETA',
+        description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
+    },
     oracle_cloud_adapter: {
         title: 'Oracle Cloud Infrastructure',
         description: 'Oracle Cloud is a computing service providing servers, storage, network, applications and services.'

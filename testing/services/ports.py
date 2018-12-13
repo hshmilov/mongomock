@@ -98,6 +98,7 @@ DOCKER_PORTS = {
     'azure-ad-adapter':                 6036,
     'static-analysis':                  6037,
     'alibaba-adapter':                  6038,
+    'malwarebytes-adapter':             6040,
     'datadog-adapter':                  6041,
     'dropbox-adapter':                  6042,
     'nimbul-adapter':                   6043,
