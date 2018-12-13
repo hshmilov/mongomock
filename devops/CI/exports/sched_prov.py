@@ -56,7 +56,7 @@ def provision():
     shutil.rmtree('/etc/chef')
     Path('/etc/chef').mkdir(mode=0o750)
 
-    client_rb_template = f'chef_server_url  "https://manage.chef.io/organizations/axonius"\n' + \
+    client_rb_template = f'chef_server_url  "https://diag-c.axonius.com/organizations/axonius"\n' + \
                          f'node_name  "{node_name}"\n' + \
                          f'validation_key "/home/ubuntu/axonius-validator.pem"\n' + \
                          f'validation_client_name "axonius-validator"\n'
