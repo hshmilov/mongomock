@@ -25,7 +25,7 @@ PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
 
 IMAGE_ID = "ami-0cd429efcede712c7"  # Our own imported ubuntu 16.04 Server.
-OVA_IMAGE_NAME = "Axonius-operational-export-105"
+OVA_IMAGE_NAME = "Axonius-operational-export-106"
 
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
