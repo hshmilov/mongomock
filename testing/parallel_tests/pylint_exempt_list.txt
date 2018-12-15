@@ -313,7 +313,6 @@ plugins/gui/api.py
 plugins/gui/consts.py
 plugins/gui/okta_login.py
 plugins/gui/report_generator.py
-plugins/gui/service.py
 plugins/gui/frontend/tests/mocks/main.py
 plugins/gui/frontend/tests/mocks/database/CreateFakeData.py
 plugins/pm_status/service.py

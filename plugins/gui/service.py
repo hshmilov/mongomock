@@ -8,7 +8,6 @@ import secrets
 import shutil
 import tarfile
 import threading
-import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
@@ -22,44 +21,6 @@ import pymongo
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
-from axonius.fields import Field
-
-from axonius.users.user_adapter import UserAdapter
-
-from axonius.devices.device_adapter import DeviceAdapter
-
-from axonius.adapter_base import AdapterProperty
-from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.clients.ldap.exceptions import LdapException
-from axonius.clients.ldap.ldap_connection import LdapConnection
-from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME,
-                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION,
-                                          METADATA_PATH, NOTES_DATA_TAG, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
-                                          SYSTEM_SCHEDULER_PLUGIN_NAME, SYSTEM_SETTINGS, AXONIUS_USER_NAME)
-from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.scheduler_consts import Phases, ResearchPhases, SchedulerState
-from axonius.email_server import EmailServer
-from axonius.entities import AXONIUS_ENTITY_BY_CLASS
-from axonius.logging.metric_helper import log_metric
-from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import Triggerable
-from axonius.plugin_base import EntityType, PluginBase, return_error
-from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
-from axonius.utils import gui_helpers
-from axonius.utils.datetime import next_weekday, time_from_now
-from axonius.utils.files import create_temp_file, get_local_config_file
-from axonius.utils.gui_helpers import (Permission, PermissionLevel,
-                                       PermissionType, ReadOnlyJustForGet,
-                                       beautify_user_entry, check_permissions,
-                                       deserialize_db_permissions,
-                                       get_historized_filter, get_entity_labels, add_labels_to_entities)
-from axonius.utils.mongo_administration import get_collection_storage_size, get_collection_capped_size, \
-    get_collection_stats
-from axonius.utils.parsing import bytes_image_to_base64, parse_filter
-from axonius.utils.threading import run_and_forget
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
@@ -68,20 +29,78 @@ from flask import (after_this_request, jsonify, make_response, redirect,
                    request, send_file, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
+from onelogin.saml2.auth import OneLogin_Saml2_Auth
+from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
+from axonius.adapter_base import AdapterProperty
+from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.clients.ldap.exceptions import LdapException
+from axonius.clients.ldap.ldap_connection import LdapConnection
+from axonius.clients.rest.connection import RESTConnection
+from axonius.consts import adapter_consts
+from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT,
+                                       EXEC_REPORT_FILE_NAME,
+                                       EXEC_REPORT_THREAD_ID,
+                                       EXEC_REPORT_TITLE, GOOGLE_KEYPAIR_FILE,
+                                       PREDEFINED_ROLE_ADMIN,
+                                       PREDEFINED_ROLE_READONLY,
+                                       PREDEFINED_ROLE_RESTRICTED,
+                                       RANGE_UNIT_DAYS, ROLES_COLLECTION,
+                                       TEMP_MAINTENANCE_THREAD_ID,
+                                       USERS_COLLECTION, ChartFuncs,
+                                       ChartMetrics, ChartRangeTypes,
+                                       ChartRangeUnits, ChartViews,
+                                       ResearchStatus)
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
+                                          AXONIUS_USER_NAME,
+                                          CONFIGURABLE_CONFIGS_COLLECTION,
+                                          CORE_UNIQUE_NAME,
+                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
+                                          GUI_SYSTEM_CONFIG_COLLECTION,
+                                          METADATA_PATH, NOTES_DATA_TAG,
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                          SYSTEM_SETTINGS)
+from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
+                                             SchedulerState)
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.email_server import EmailServer
+from axonius.entities import AXONIUS_ENTITY_BY_CLASS
+from axonius.fields import Field
+from axonius.logging.metric_helper import log_metric
+from axonius.mixins.configurable import Configurable
+from axonius.mixins.triggerable import Triggerable
+from axonius.plugin_base import EntityType, PluginBase, return_error
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
+                                     COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
+                                     SSLState)
+from axonius.users.user_adapter import UserAdapter
+from axonius.utils import gui_helpers
+from axonius.utils.datetime import next_weekday, time_from_now
+from axonius.utils.files import create_temp_file, get_local_config_file
+from axonius.utils.gui_helpers import (Permission, PermissionLevel,
+                                       PermissionType, ReadOnlyJustForGet,
+                                       add_labels_to_entities,
+                                       beautify_user_entry, check_permissions,
+                                       deserialize_db_permissions,
+                                       get_entity_labels,
+                                       get_historized_filter)
+from axonius.utils.mongo_administration import (get_collection_capped_size,
+                                                get_collection_stats)
+from axonius.utils.parsing import bytes_image_to_base64, parse_filter
+from axonius.utils.threading import run_and_forget
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
-from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT, EXEC_REPORT_FILE_NAME, EXEC_REPORT_THREAD_ID,
-                                       EXEC_REPORT_TITLE, TEMP_MAINTENANCE_THREAD_ID, RANGE_UNIT_DAYS, ResearchStatus,
-                                       ChartFuncs, ChartMetrics, ChartViews, ChartRangeTypes, ChartRangeUnits,
-                                       GOOGLE_KEYPAIR_FILE, ROLES_COLLECTION, USERS_COLLECTION,
-                                       PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_READONLY, PREDEFINED_ROLE_RESTRICTED)
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
-from onelogin.saml2.auth import OneLogin_Saml2_Auth
-from onelogin.saml2.utils import OneLogin_Saml2_Utils
-from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
-from axonius.clients.rest.connection import RESTConnection
+
+# pylint: disable=line-too-long,superfluous-parens,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,dangerous-default-value,unidiomatic-typecheck,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme
+
+# TODO: the following ones are real errors, we should fix them first
+# pylint: disable=invalid-sequence-index,method-hidden
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -100,7 +119,7 @@ def session_connection(func, required_permissions: Iterable[Permission]):
             return return_error('You are not connected', 401)
         permissions = user.get('permissions')
         if not check_permissions(permissions, required_permissions, request.method) and not user.get('admin'):
-            return return_error("You are lacking some permissions for this request", 401)
+            return return_error('You are lacking some permissions for this request', 401)
 
         return func(self, *args, **kwargs)
 
@@ -139,14 +158,14 @@ def gzipped_downloadable(filename, extension):
                 compressed = io.BytesIO()
 
                 tar = tarfile.open(mode='w:gz', fileobj=compressed)
-                tarinfo = tarfile.TarInfo(f"{filename}.{extension}")
+                tarinfo = tarfile.TarInfo(f'{filename}.{extension}')
                 tarinfo.size = len(response.data)
                 tar.addfile(tarinfo, fileobj=uncompressed)
                 tar.close()
 
                 response.data = compressed.getbuffer()
-                if "Content-Disposition" not in response.headers:
-                    response.headers["Content-Disposition"] = f"attachment;filename={filename}.tar.gz"
+                if 'Content-Disposition' not in response.headers:
+                    response.headers['Content-Disposition'] = f'attachment;filename={filename}.tar.gz'
                 return response
 
             return f(*args, **kwargs)
@@ -189,7 +208,7 @@ def refill_passwords_fields(data, data_from_db):
                 data[key] = refill_passwords_fields(data[key], data_from_db[key])
         return data
     if isinstance(data, list):
-        raise RuntimeError("We shouldn't have lists in schemas")
+        raise RuntimeError('We shouldn\'t have lists in schemas')
 
     return data
 
@@ -342,7 +361,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     metadata_bytes = metadata_file.read()[:-1].replace('\\', '\\\\')
                     return json.loads(metadata_bytes)
         except Exception:
-            logger.exception(f"Bad __build_metadata file {metadata_bytes}")
+            logger.exception(f'Bad __build_metadata file {metadata_bytes}')
             return ''
 
     def add_default_views(self, entity_type: EntityType, default_views_ini_path):
@@ -428,7 +447,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return result.upserted_id
 
     def _insert_report_config(self, name, report):
-        reports_collection = self._get_collection("reports_config")
+        reports_collection = self._get_collection('reports_config')
         existed_report = reports_collection.find_one({'name': name})
         if existed_report is not None and not existed_report.get('archived'):
             logger.info(f'Report {name} already exists under id: {existed_report["_id"]}')
@@ -439,7 +458,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         logger.info(f'Added report {name} id: {result.upserted_id}')
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data):
-        dashboard_collection = self._get_collection("dashboard")
+        dashboard_collection = self._get_collection('dashboard')
         existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
             logger.info(f'Report {dashboard_name} already exists under id: {existed_dashboard_chart["_id"]}')
@@ -528,7 +547,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'adapters_data': 0
         })
         if entity is None:
-            return return_error("Entity ID wasn't found", 404)
+            return return_error('Entity ID wasn\'t found', 404)
         for specific in entity['specific_data']:
             if not specific.get('data') or not specific['data'].get('raw'):
                 continue
@@ -562,31 +581,31 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     def _disable_entity(self, entity_type: EntityType, mongo_filter):
         entity_map = {
-            EntityType.Devices: ("Devicedisabelable", "devices/disable"),
-            EntityType.Users: ("Userdisabelable", "users/disable")
+            EntityType.Devices: ('Devicedisabelable', 'devices/disable'),
+            EntityType.Users: ('Userdisabelable', 'users/disable')
         }
         if entity_type not in entity_map:
-            raise Exception("Weird entity type given")
+            raise Exception('Weird entity type given')
 
         featurename, urlpath = entity_map[entity_type]
 
         entities_selection = self.get_request_data_as_object()
         if not entities_selection:
-            return return_error("No entity selection provided")
+            return return_error('No entity selection provided')
         entity_disabelables_adapters, entity_ids_by_adapters = self._find_entities_by_uuid_for_adapter_with_feature(
             entities_selection, featurename, entity_type, mongo_filter)
 
-        err = ""
+        err = ''
         for adapter_unique_name in entity_disabelables_adapters:
             entitys_by_adapter = entity_ids_by_adapters.get(adapter_unique_name)
             if entitys_by_adapter:
                 response = self.request_remote_plugin(urlpath, adapter_unique_name, method='POST',
                                                       json=entitys_by_adapter)
                 if response.status_code != 200:
-                    logger.error(f"Error on disabling on {adapter_unique_name}: {response.content}")
-                    err += f"Error on disabling on {adapter_unique_name}: {response.content}\n"
+                    logger.error(f'Error on disabling on {adapter_unique_name}: {response.content}')
+                    err += f'Error on disabling on {adapter_unique_name}: {response.content}\n'
 
-        return return_error(err, 500) if err else ("", 200)
+        return return_error(err, 500) if err else ('', 200)
 
     def _find_entities_by_uuid_for_adapter_with_feature(self, entities_selection, feature, entity_type: EntityType, mongo_filter):
         """
@@ -594,7 +613,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return: plugin_unique_names of entity with given features, dict of plugin_unique_name -> id of adapter entity
         """
         with self._get_db_connection() as db_connection:
-            query_op = "$in" if entities_selection['include'] else "$nin"
+            query_op = '$in' if entities_selection['include'] else '$nin'
             entities = list(self._entity_db_map.get(entity_type).find({
                 '$and': [
                     {'internal_axon_id': {
@@ -614,13 +633,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                        filter={
                                                            'supported_features': feature,
                                                            PLUGIN_UNIQUE_NAME: {
-                                                               "$in": list(entities_ids_by_adapters.keys())
+                                                               '$in': list(entities_ids_by_adapters.keys())
                                                            }
                                                        },
                                                        projection={
                                                            PLUGIN_UNIQUE_NAME: 1
-                                                       }
-                    )]
+                                                       })]
         return entitydisabelables_adapters, entities_ids_by_adapters
 
     def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter):
@@ -637,7 +655,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if not view.get('predefined'):
                     return True
                 for expression in view['view']['query'].get('expressions', []):
-                    adapter_matches = re.findall('adapters_data\.(\w*)\.', expression.get('field', ''))
+                    adapter_matches = re.findall(r'adapters_data\.(\w*)\.', expression.get('field', ''))
                     if adapter_matches and list(filter(lambda x: x not in fielded_plugins, adapter_matches)):
                         return False
                 return True
@@ -668,7 +686,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             query_ids = self.get_request_data_as_object()
             entity_views_collection.update_many({'_id': {'$in': [ObjectId(i) for i in query_ids]}},
                                                 {'$set': {'archived': True}})
-            return ""
+            return ''
 
     def _entity_labels(self, db, namespace, mongo_filter):
         """
@@ -683,9 +701,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         # Now handling POST and DELETE - they determine if the label is an added or removed one
         entities_and_labels = self.get_request_data_as_object()
         if not entities_and_labels.get('entities'):
-            return return_error("Cannot label entities without list of entities.", 400)
+            return return_error('Cannot label entities without list of entities.', 400)
         if not entities_and_labels.get('labels'):
-            return return_error("Cannot label entities without list of labels.", 400)
+            return return_error('Cannot label entities without list of labels.', 400)
         try:
             select_include = entities_and_labels['entities'].get('include', True)
             select_ids = entities_and_labels['entities'].get('ids', [])
@@ -701,7 +719,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             add_labels_to_entities(
                 db, namespace, internal_axon_ids, entities_and_labels['labels'], request.method == 'DELETE')
         except Exception as e:
-            logger.exception(f"Tagging did not complete")
+            logger.exception(f'Tagging did not complete')
             return return_error(f'Tagging did not complete. First error: {e}', 400)
 
         return str(len(internal_axon_ids)), 200
@@ -843,7 +861,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in("devices", methods=['GET', 'DELETE'],
+    @gui_add_rule_logged_in('devices', methods=['GET', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              ReadOnlyJustForGet)})
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
@@ -861,7 +879,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in("devices/csv", required_permissions={Permission(PermissionType.Devices,
+    @gui_add_rule_logged_in('devices/csv', required_permissions={Permission(PermissionType.Devices,
                                                                             PermissionLevel.ReadOnly)})
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices,
@@ -874,7 +892,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return output
 
     @gui_helpers.historical()
-    @gui_add_rule_logged_in("devices/<device_id>", methods=['GET'],
+    @gui_add_rule_logged_in('devices/<device_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadOnly)})
     def device_by_id(self, device_id, history: datetime):
@@ -885,20 +903,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @gui_helpers.filtered()
     @gui_helpers.historical()
-    @gui_add_rule_logged_in("devices/count", required_permissions={Permission(PermissionType.Devices,
+    @gui_add_rule_logged_in('devices/count', required_permissions={Permission(PermissionType.Devices,
                                                                               PermissionLevel.ReadOnly)})
     def get_devices_count(self, mongo_filter, history: datetime):
         return gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
                                               history_date=history)
 
-    @gui_add_rule_logged_in("devices/fields", required_permissions={Permission(PermissionType.Devices,
+    @gui_add_rule_logged_in('devices/fields', required_permissions={Permission(PermissionType.Devices,
                                                                                PermissionLevel.ReadOnly)})
     def device_fields(self):
         return jsonify(gui_helpers.entity_fields(EntityType.Devices))
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("devices/views", methods=['GET', 'POST', 'DELETE'],
+    @gui_add_rule_logged_in('devices/views', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              ReadOnlyJustForGet)})
     def device_views(self, limit, skip, mongo_filter):
@@ -909,14 +927,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter))
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("devices/labels", methods=['GET', 'POST', 'DELETE'],
+    @gui_add_rule_logged_in('devices/labels', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              ReadOnlyJustForGet)})
     def device_labels(self, mongo_filter):
         return self._entity_labels(self.devices_db_view, self.devices, mongo_filter)
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("devices/disable", methods=['POST'],
+    @gui_add_rule_logged_in('devices/disable', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
     def disable_device(self, mongo_filter):
@@ -927,14 +945,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def device_notes(self, device_id):
         return self._entity_notes(EntityType.Devices, device_id)
 
-    @gui_add_rule_logged_in("devices/<device_id>/notes/<note_id>", methods=['POST'],
+    @gui_add_rule_logged_in('devices/<device_id>/notes/<note_id>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
     def device_notes_update(self, device_id, note_id):
         return self._entity_notes_update(EntityType.Devices, device_id, note_id)
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("devices/custom", methods=['POST'],
+    @gui_add_rule_logged_in('devices/custom', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
     def devices_custom_Data(self, mongo_filter):
@@ -953,7 +971,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in("users", methods=['GET', 'DELETE'], required_permissions={Permission(PermissionType.Users,
+    @gui_add_rule_logged_in('users', methods=['GET', 'DELETE'], required_permissions={Permission(PermissionType.Users,
                                                                                                  ReadOnlyJustForGet)})
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         if request.method == 'DELETE':
@@ -970,12 +988,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in("users/csv", required_permissions={Permission(PermissionType.Users,
+    @gui_add_rule_logged_in('users/csv', required_permissions={Permission(PermissionType.Users,
                                                                           PermissionLevel.ReadOnly)})
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         # Deleting image from the CSV (we dont need this base64 blob in the csv)
-        if "specific_data.data.image" in mongo_projection:
-            del mongo_projection["specific_data.data.image"]
+        if 'specific_data.data.image' in mongo_projection:
+            del mongo_projection['specific_data.data.image']
         csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users,
                                          default_sort=self._system_settings['defaultSort'], history=history)
         output = make_response(csv_string.getvalue().encode('utf-8'))
@@ -985,7 +1003,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return output
 
     @gui_helpers.historical()
-    @gui_add_rule_logged_in("users/<user_id>", methods=['GET'], required_permissions={Permission(PermissionType.Users,
+    @gui_add_rule_logged_in('users/<user_id>', methods=['GET'], required_permissions={Permission(PermissionType.Users,
                                                                                                  PermissionLevel.ReadOnly)})
     def user_by_id(self, user_id, history: datetime):
         return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'],
@@ -993,33 +1011,33 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @gui_helpers.historical()
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("users/count", required_permissions={Permission(PermissionType.Users,
+    @gui_add_rule_logged_in('users/count', required_permissions={Permission(PermissionType.Users,
                                                                             PermissionLevel.ReadOnly)})
     def get_users_count(self, mongo_filter, history: datetime):
         return gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Users),
                                               history_date=history)
 
-    @gui_add_rule_logged_in("users/fields", required_permissions={Permission(PermissionType.Users,
+    @gui_add_rule_logged_in('users/fields', required_permissions={Permission(PermissionType.Users,
                                                                              PermissionLevel.ReadOnly)})
     def user_fields(self):
         return jsonify(gui_helpers.entity_fields(EntityType.Users))
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("users/disable", methods=['POST'], required_permissions={Permission(PermissionType.Users,
+    @gui_add_rule_logged_in('users/disable', methods=['POST'], required_permissions={Permission(PermissionType.Users,
                                                                                                 PermissionLevel.ReadWrite)})
     def disable_user(self, mongo_filter):
         return self._disable_entity(EntityType.Users, mongo_filter)
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("users/views", methods=['GET', 'POST', 'DELETE'],
+    @gui_add_rule_logged_in('users/views', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users,
                                                              ReadOnlyJustForGet)})
     def user_views(self, limit, skip, mongo_filter):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("users/labels", methods=['GET', 'POST', 'DELETE'],
+    @gui_add_rule_logged_in('users/labels', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users,
                                                              ReadOnlyJustForGet)})
     def user_labels(self, mongo_filter):
@@ -1030,14 +1048,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def user_notes(self, user_id):
         return self._entity_notes(EntityType.Users, user_id)
 
-    @gui_add_rule_logged_in("users/<user_id>/notes/<note_id>", methods=['POST'],
+    @gui_add_rule_logged_in('users/<user_id>/notes/<note_id>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Users,
                                                              PermissionLevel.ReadWrite)})
     def user_notes_update(self, user_id, note_id):
         return self._entity_notes_update(EntityType.Users, user_id, note_id)
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("users/custom", methods=['POST'],
+    @gui_add_rule_logged_in('users/custom', methods=['POST'],
                             required_permissions={Permission(PermissionType.Users,
                                                              PermissionLevel.ReadWrite)})
     def users_custom_data(self, mongo_filter):
@@ -1065,7 +1083,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return {}
         return {'clients': clients_value.get('schema')}
 
-    @gui_add_rule_logged_in("adapters", required_permissions={Permission(PermissionType.Adapters,
+    @gui_add_rule_logged_in('adapters', required_permissions={Permission(PermissionType.Adapters,
                                                                          PermissionLevel.ReadOnly)})
     def adapters(self):
         """
@@ -1113,7 +1131,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
             return jsonify(adapters_to_return)
 
-    @gui_add_rule_logged_in("adapter_features")
+    @gui_add_rule_logged_in('adapter_features')
     def adapter_features(self):
         """
         Getting the features of each registered adapter, as they are saved in core's "configs" db.
@@ -1143,21 +1161,21 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def _test_client_connectivity(self, adapter_unique_name, data_from_db_for_unchanged=None):
         client_to_test = request.get_json(silent=True)
         if client_to_test is None:
-            return return_error("Invalid client", 400)
+            return return_error('Invalid client', 400)
         if data_from_db_for_unchanged:
             client_to_test = refill_passwords_fields(client_to_test, data_from_db_for_unchanged['client_config'])
         # adding client to specific adapter
-        response = self.request_remote_plugin("client_test", adapter_unique_name, method='post', json=client_to_test)
+        response = self.request_remote_plugin('client_test', adapter_unique_name, method='post', json=client_to_test)
         return response.text, response.status_code
 
     def _query_client_for_devices(self, adapter_unique_name, data_from_db_for_unchanged=None):
         client_to_add = request.get_json(silent=True)
         if client_to_add is None:
-            return return_error("Invalid client", 400)
+            return return_error('Invalid client', 400)
         if data_from_db_for_unchanged:
             client_to_add = refill_passwords_fields(client_to_add, data_from_db_for_unchanged['client_config'])
         # adding client to specific adapter
-        response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
+        response = self.request_remote_plugin('clients', adapter_unique_name, method='put', json=client_to_add)
         if response.status_code == 200:
             self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
                                                      response.json()['client_id'], client_to_add)
@@ -1166,16 +1184,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def _fetch_after_clients_thread(self, adapter_unique_name, client_id, client_to_add):
         # if there's no aggregator, that's fine
         try:
-            logger.info(f"Stopping research phase after adding client {client_id}")
+            logger.info(f'Stopping research phase after adding client {client_id}')
             response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
             response.raise_for_status()
-            logger.info(f"Requesting {adapter_unique_name} to fetch data from newly added client {client_id}")
-            response = self.request_remote_plugin(f"trigger/insert_to_db",
+            logger.info(f'Requesting {adapter_unique_name} to fetch data from newly added client {client_id}')
+            response = self.request_remote_plugin(f'trigger/insert_to_db',
                                                   adapter_unique_name, method='POST',
                                                   json={
                                                       'client_name': client_id
                                                   })
-            logger.info(f"{adapter_unique_name} finished fetching data for {client_id}")
+            logger.info(f'{adapter_unique_name} finished fetching data for {client_id}')
             if not (response.status_code == 400 and response.json()['message'] == 'Gracefully stopped'):
                 response.raise_for_status()
                 response = self.request_remote_plugin('trigger/execute?blocking=False',
@@ -1184,11 +1202,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 response.raise_for_status()
         except Exception:
             # if there's no aggregator, there's nothing we can do
-            logger.exception(f"Error fetching devices from {adapter_unique_name} for client {client_to_add}")
+            logger.exception(f'Error fetching devices from {adapter_unique_name} for client {client_to_add}')
             pass
         return
 
-    @gui_add_rule_logged_in("adapters/<adapter_unique_name>/upload_file", methods=['POST'],
+    @gui_add_rule_logged_in('adapters/<adapter_unique_name>/upload_file', methods=['POST'],
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadWrite)})
     def adapter_upload_file(self, adapter_unique_name):
@@ -1197,17 +1215,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def _upload_file(self, plugin_unique_name):
         field_name = request.form.get('field_name')
         if not field_name:
-            return return_error("Field name must be specified", 401)
-        file = request.files.get("userfile")
+            return return_error('Field name must be specified', 401)
+        file = request.files.get('userfile')
         if not file or file.filename == '':
-            return return_error("File must exist", 401)
+            return return_error('File must exist', 401)
         filename = file.filename
         with self._get_db_connection() as db_connection:
             fs = gridfs.GridFS(db_connection[plugin_unique_name])
             written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    @gui_add_rule_logged_in("adapters/<adapter_unique_name>/clients", methods=['PUT', 'POST'],
+    @gui_add_rule_logged_in('adapters/<adapter_unique_name>/clients', methods=['PUT', 'POST'],
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadWrite)})
     def adapters_clients(self, adapter_unique_name):
@@ -1222,7 +1240,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         else:
             return self._test_client_connectivity(adapter_unique_name)
 
-    @gui_add_rule_logged_in("adapters/<adapter_unique_name>/clients/<client_id>",
+    @gui_add_rule_logged_in('adapters/<adapter_unique_name>/clients/<client_id>',
                             methods=['PUT', 'DELETE'], required_permissions={Permission(PermissionType.Adapters,
                                                                                         PermissionLevel.ReadWrite)})
     def adapters_clients_update(self, adapter_unique_name, client_id=None):
@@ -1250,28 +1268,28 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             {
                                 'adapters': {
                                     '$elemMatch': {
-                                        "$and": [
+                                        '$and': [
                                             {
                                                 PLUGIN_NAME: plugin_name
                                             },
                                             {
                                                 # and the device must be from this adapter
-                                                "client_used": local_client_id
+                                                'client_used': local_client_id
                                             }
                                         ]
                                     }
                                 }
                             },
                             {
-                                "$set": {
-                                    "adapters.$[i].pending_delete": True
+                                '$set': {
+                                    'adapters.$[i].pending_delete': True
                                 }
                             },
                             array_filters=[
                                 {
-                                    "$and": [
-                                        {f"i.{PLUGIN_NAME}": plugin_name},
-                                        {"i.client_used": local_client_id}
+                                    '$and': [
+                                        {f'i.{PLUGIN_NAME}': plugin_name},
+                                        {'i.client_used': local_client_id}
                                     ]
                                 }
                             ]
@@ -1281,13 +1299,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             {
                                 'adapters': {
                                     '$elemMatch': {
-                                        "$and": [
+                                        '$and': [
                                             {
                                                 PLUGIN_NAME: plugin_name
                                             },
                                             {
                                                 # and the device must be from this adapter
-                                                "client_used": local_client_id
+                                                'client_used': local_client_id
                                             }
                                         ]
                                     }
@@ -1296,9 +1314,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             projection={'internal_axon_id': 1}
                         ))
 
-                        logger.info(f"Set pending_delete on {res.modified_count} axonius entities "
-                                    f"(or some adapters in them) " +
-                                    f"from {res.matched_count} matches, rebuilding {len(to_rebuild)} entities")
+                        logger.info(f'Set pending_delete on {res.modified_count} axonius entities '
+                                    f'(or some adapters in them) ' +
+                                    f'from {res.matched_count} matches, rebuilding {len(to_rebuild)} entities')
 
                         if not to_rebuild:
                             continue
@@ -1307,13 +1325,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             {
                                 'adapters': {
                                     '$elemMatch': {
-                                        "$and": [
+                                        '$and': [
                                             {
                                                 PLUGIN_NAME: plugin_name
                                             },
                                             {
                                                 # and the device must be from this adapter
-                                                "client_used": local_client_id
+                                                'client_used': local_client_id
                                             }
                                         ]
                                     }
@@ -1333,7 +1351,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                         for adapter in entity['adapters']:
                                             if adapter.get('client_used') == local_client_id and \
                                                     adapter[PLUGIN_NAME] == plugin_name:
-                                                logger.debug("deleting " + adapter['data']['id'])
+                                                logger.debug('deleting ' + adapter['data']['id'])
                                                 self.delete_adapter_entity(entity_type, adapter[PLUGIN_UNIQUE_NAME],
                                                                            adapter['data']['id'])
                                     except Exception as e:
@@ -1355,7 +1373,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         if request.method == 'PUT':
             client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
-        self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
+        self.request_remote_plugin('clients/' + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
             return self._query_client_for_devices(adapter_unique_name,
                                                   data_from_db_for_unchanged=client_from_db)
@@ -1387,7 +1405,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("actions/<action_type>", methods=['POST'],
+    @gui_add_rule_logged_in('actions/<action_type>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
     def actions_run(self, action_type, mongo_filter):
@@ -1395,7 +1413,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         action_data['action_type'] = action_type
         return self.run_actions(action_data, mongo_filter)
 
-    @gui_add_rule_logged_in("actions/upload_file", methods=['POST'],
+    @gui_add_rule_logged_in('actions/upload_file', methods=['POST'],
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadWrite)})
     def actions_upload_file(self):
@@ -1415,8 +1433,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         entity = EntityType(report_to_add['viewEntity'])
         views_collection = self.gui_dbs.entity_query_views_db_map[entity]
         if views_collection.find_one({'name': view_name}) is None:
-            return return_error(f"Missing view {view_name} requested for creating alert")
-        response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
+            return return_error(f'Missing view {view_name} requested for creating alert')
+        response = self.request_remote_plugin('reports', 'reports', method='put', json=report_to_add)
         return response.text, response.status_code
 
     def delete_alert(self, alert_selection):
@@ -1426,20 +1444,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.error('No alert provided to be deleted')
             return ''
 
-        response = self.request_remote_plugin("reports", "reports", method='DELETE',
+        response = self.request_remote_plugin('reports', 'reports', method='DELETE',
                                               json=alert_selection['ids'] if alert_selection['include'] else [
                                                   str(report['_id']) for report in self.reports_collection.find(
                                                       {}, projection={'_id': 1}) if str(report['_id'])
                                                   not in alert_selection['ids']])
         if response is None:
-            return return_error("No response whether alert was removed")
+            return return_error('No response whether alert was removed')
         return response.text, response.status_code
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in("alert", methods=['GET', 'PUT', 'DELETE'],
+    @gui_add_rule_logged_in('alert', methods=['GET', 'PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Alerts,
                                                              ReadOnlyJustForGet)})
     def alert(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
@@ -1460,14 +1478,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return self.delete_alert(alert_selection)
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("alert/count", required_permissions={Permission(PermissionType.Alerts,
+    @gui_add_rule_logged_in('alert/count', required_permissions={Permission(PermissionType.Alerts,
                                                                             PermissionLevel.ReadOnly)})
     def alert_count(self, mongo_filter):
         with self._get_db_connection() as db_connection:
             report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
             return jsonify(db_connection[report_service]['reports'].count_documents(mongo_filter))
 
-    @gui_add_rule_logged_in("alert/<alert_id>", methods=['POST'],
+    @gui_add_rule_logged_in('alert/<alert_id>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Alerts,
                                                              PermissionLevel.ReadWrite)})
     def alerts_update(self, alert_id):
@@ -1482,16 +1500,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         assert view_entity in [x.value for x in EntityType.__members__.values()]
         views = self.gui_dbs.entity_query_views_db_map[EntityType(view_entity)]
         if views.find_one({'name': view_name}) is None:
-            return return_error(f"Missing view {view_name} requested for updating alert")
+            return return_error(f'Missing view {view_name} requested for updating alert')
 
-        response = self.request_remote_plugin(f"reports/{alert_id}", "reports", method='post',
+        response = self.request_remote_plugin(f'reports/{alert_id}', 'reports', method='post',
                                               json=alert_to_update)
         if response is None:
-            return return_error("No response whether alert was updated")
+            return return_error('No response whether alert was updated')
 
         return response.text, response.status_code
 
-    @gui_add_rule_logged_in("plugins")
+    @gui_add_rule_logged_in('plugins')
     def plugins(self):
         """
         Get all plugins configured in core and update each one's status.
@@ -1508,11 +1526,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
-                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME,
-                                                                                  "gui",
-                                                                                  "watch_service",
-                                                                                  "execution",
-                                                                                  "system_scheduler"]:
+                if plugin['plugin_type'] != 'Plugin' or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME,
+                                                                                  'gui',
+                                                                                  'watch_service',
+                                                                                  'execution',
+                                                                                  'system_scheduler']:
                     continue
 
                 processed_plugin = {'plugin_name': plugin['plugin_name'],
@@ -1523,15 +1541,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
                     processed_plugin['status'] = 'warning'
                     response = self.request_remote_plugin(
-                        "trigger_state/execute", plugin[PLUGIN_UNIQUE_NAME])
+                        'trigger_state/execute', plugin[PLUGIN_UNIQUE_NAME])
                     if response.status_code != 200:
-                        logger.error("Error getting state of plugin {0}".format(
+                        logger.error('Error getting state of plugin {0}'.format(
                             plugin[PLUGIN_UNIQUE_NAME]))
                         processed_plugin['status'] = 'error'
                     else:
                         processed_plugin['state'] = response.json()
-                        if (processed_plugin['state']['state'] != 'Disabled'):
-                            processed_plugin['status'] = "success"
+                        if processed_plugin['state']['state'] != 'Disabled':
+                            processed_plugin['status'] = 'success'
                 plugins_to_return.append(processed_plugin)
 
             return jsonify(plugins_to_return)
@@ -1547,17 +1565,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         for schema in schemas:
             associated_config = [c for c in configs if c['config_name'] == schema['config_name']]
             if not associated_config:
-                logger.error(f"Found schema without associated config for {plugin_unique_name}" +
-                             f" - {schema['config_name']}")
+                logger.error(f'Found schema without associated config for {plugin_unique_name}' +
+                             f' - {schema["config_name"]}')
                 continue
             associated_config = associated_config[0]
             plugin_data[associated_config['config_name']] = {
-                "schema": schema['schema'],
-                "config": associated_config['config']
+                'schema': schema['schema'],
+                'config': associated_config['config']
             }
         return plugin_data
 
-    @gui_add_rule_logged_in("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST', 'GET'],
+    @gui_add_rule_logged_in('plugins/configs/<plugin_unique_name>/<config_name>', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Settings,
                                                              ReadOnlyJustForGet)})
     def plugins_configs_set(self, plugin_unique_name, config_name):
@@ -1567,7 +1585,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'POST':
             config_to_set = request.get_json(silent=True)
             if config_to_set is None:
-                return return_error("Invalid config", 400)
+                return return_error('Invalid config', 400)
             email_settings = config_to_set.get('email_settings')
             if plugin_unique_name == 'core' and config_name == CORE_CONFIG_NAME and email_settings and email_settings.get(
                     'enabled') is True:
@@ -1592,7 +1610,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     logger.exception(message)
                     return return_error(message, 400)
             self._update_plugin_config(plugin_unique_name, config_name, config_to_set)
-            return ""
+            return ''
         if request.method == 'GET':
             with self._get_db_connection() as db_connection:
                 config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION]
@@ -1600,7 +1618,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
                                 'schema': schema_collection.find_one({'config_name': config_name})['schema']})
 
-    @gui_add_rule_logged_in("configuration", methods=['GET'])
+    @gui_add_rule_logged_in('configuration', methods=['GET'])
     def system_config(self):
         """
         Get only the GUIs settings as well as whether Mail Server and Syslog Server are enabled.
@@ -1627,16 +1645,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         with self._get_db_connection() as db_connection:
             config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION]
-            config_collection.replace_one(filter={
-                'config_name': config_name
-            },
-                replacement={
-                    "config_name": config_name,
-                    "config": config_to_set
-            })
-            self.request_remote_plugin("update_config", plugin_unique_name, method='POST')
+            config_collection.replace_one(filter={'config_name': config_name},
+                                          replacement={
+                                              'config_name': config_name,
+                                              'config': config_to_set})
+            self.request_remote_plugin('update_config', plugin_unique_name, method='POST')
 
-    @gui_add_rule_logged_in("plugins/<plugin_unique_name>/<command>", methods=['POST'],
+    @gui_add_rule_logged_in('plugins/<plugin_unique_name>/<command>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadOnly)})
     def run_plugin(self, plugin_unique_name, command):
@@ -1648,12 +1663,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         request_data = self.get_request_data_as_object()
-        response = self.request_remote_plugin(f"{command}/{request_data['trigger']}", plugin_unique_name, method='post')
+        response = self.request_remote_plugin(f'{command}/{request_data["trigger"]}', plugin_unique_name, method='post')
         if response and response.status_code == 200:
-            return ""
+            return ''
         return response.json(), response.status_code
 
-    @gui_add_rule_logged_in("config/<config_name>", methods=['POST', 'GET'],
+    @gui_add_rule_logged_in('config/<config_name>', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Settings,
                                                              ReadOnlyJustForGet)})
     def config(self, config_name):
@@ -1670,16 +1685,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if request.method == 'POST':
             config_to_add = request.get_json(silent=True)
             if config_to_add is None:
-                return return_error("Invalid filter", 400)
+                return return_error('Invalid filter', 400)
             configs_collection.update({'name': config_name},
                                       {'name': config_name, 'value': config_to_add},
                                       upsert=True)
-            return ""
+            return ''
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
-    @gui_add_rule_logged_in("notifications", methods=['POST', 'GET'],
+    @gui_add_rule_logged_in('notifications', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              ReadOnlyJustForGet)})
     def notifications(self, limit, skip, mongo_filter, mongo_sort):
@@ -1696,9 +1711,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if request.method == 'GET':
                 should_aggregate = request.args.get('aggregate', False)
                 if should_aggregate:
-                    pipeline = [{"$group": {"_id": "$title", "count": {"$sum": 1}, "date": {"$last": "$_id"},
-                                            "severity": {"$last": "$severity"}, "seen": {"$last": "$seen"}}},
-                                {"$addFields": {"title": "$_id"}}]
+                    pipeline = [{'$group': {'_id': '$title', 'count': {'$sum': 1}, 'date': {'$last': '$_id'},
+                                            'severity': {'$last': '$severity'}, 'seen': {'$last': '$seen'}}},
+                                {'$addFields': {'title': '$_id'}}]
                     notifications = []
                     for n in notification_collection.aggregate(pipeline):
                         n['_id'] = n['date']
@@ -1710,8 +1725,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     if not sort:
                         sort.append(('_id', pymongo.DESCENDING))
                     notifications = [gui_helpers.beautify_db_entry(n) for n in notification_collection.find(
-                        mongo_filter, projection={"_id": 1, "who": 1, "plugin_name": 1, "type": 1, "title": 1,
-                                                  "seen": 1, "severity": 1}).sort(sort).skip(skip).limit(limit)]
+                        mongo_filter, projection={'_id': 1, 'who': 1, 'plugin_name': 1, 'type': 1, 'title': 1,
+                                                  'seen': 1, 'severity': 1}).sort(sort).skip(skip).limit(limit)]
 
                 return jsonify(notifications)
             # POST
@@ -1720,15 +1735,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 notifications_to_see = request.get_json(silent=True)
                 if notifications_to_see is None or len(notifications_to_see['notification_ids']) == 0:
                     update_result = notification_collection.update_many(
-                        {"seen": False}, {"$set": {'seen': notifications_to_see.get('seen', True)}})
+                        {'seen': False}, {'$set': {'seen': notifications_to_see.get('seen', True)}})
                 else:
                     update_result = notification_collection.update_many(
-                        {"_id": {"$in": [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
-                         }, {"$set": {'seen': True}})
+                        {'_id': {'$in': [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
+                         }, {'$set': {'seen': True}})
                 return str(update_result.modified_count), 200
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in("notifications/count", methods=['GET'],
+    @gui_add_rule_logged_in('notifications/count', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def notifications_count(self, mongo_filter):
@@ -1742,7 +1757,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             notification_collection = db['core']['notifications']
             return str(notification_collection.count_documents(mongo_filter))
 
-    @gui_add_rule_logged_in("notifications/<notification_id>", methods=['GET'],
+    @gui_add_rule_logged_in('notifications/<notification_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def notifications_by_id(self, notification_id):
@@ -1756,30 +1771,30 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return jsonify(
                 gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
-    @gui_helpers.add_rule_unauth("get_login_options")
+    @gui_helpers.add_rule_unauth('get_login_options')
     def get_login_options(self):
         return jsonify({
-            "okta": {
+            'okta': {
                 'enabled': self.__okta['enabled'],
-                "client_id": self.__okta['client_id'],
-                "url": self.__okta['url'],
-                "gui2_url": self.__okta['gui2_url']
+                'client_id': self.__okta['client_id'],
+                'url': self.__okta['url'],
+                'gui2_url': self.__okta['gui2_url']
             },
-            "google": {
+            'google': {
                 'enabled': self.__google['enabled'],
                 'client': self.__google['client']
             },
-            "ldap": {
+            'ldap': {
                 'enabled': self.__ldap_login['enabled'],
                 'default_domain': self.__ldap_login['default_domain']
             },
-            "saml": {
+            'saml': {
                 'enabled': self.__saml_login['enabled'],
                 'idp_name': self.__saml_login['idp_name']
             }
         })
 
-    @gui_helpers.add_rule_unauth("login", methods=['GET', 'POST'])
+    @gui_helpers.add_rule_unauth('login', methods=['GET', 'POST'])
     def login(self):
         """
         Get current user or login
@@ -1800,23 +1815,23 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
-            return return_error("No login data provided", 400)
+            return return_error('No login data provided', 400)
         user_name = log_in_data.get('user_name')
         password = log_in_data.get('password')
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
-            return return_error("remember_me isn't boolean", 401)
+            return return_error('remember_me isn\'t boolean', 401)
         user_from_db = self.__users_collection.find_one(filter_archived({
             'user_name': user_name,
             'source': 'internal'  # this means that the user must be a local user and not one from an external service
         }))
         if user_from_db is None:
-            logger.info(f"Unknown user {user_name} tried logging in")
-            return return_error("Wrong user name or password", 401)
+            logger.info(f'Unknown user {user_name} tried logging in')
+            return return_error('Wrong user name or password', 401)
 
         if not bcrypt.verify(password, user_from_db['password']):
-            logger.info(f"User {user_name} tried logging in with wrong password")
-            return return_error("Wrong user name or password", 401)
+            logger.info(f'User {user_name} tried logging in with wrong password')
+            return return_error('Wrong user name or password', 401)
         if request and request.referrer and 'localhost' not in request.referrer \
                 and '127.0.0.1' not in request.referrer \
                 and 'diag-l.axonius.com' not in request.referrer \
@@ -1825,7 +1840,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
         self.__perform_login_with_user(user_from_db, remember_me)
-        return ""
+        return ''
 
     def __perform_login_with_user(self, user, remember_me=False):
         """
@@ -1907,11 +1922,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             user = self.__users_collection.find_one(filter_archived(match_user))
         return user
 
-    @gui_helpers.add_rule_unauth("okta-redirect")
+    @gui_helpers.add_rule_unauth('okta-redirect')
     def okta_redirect(self):
         okta_settings = self.__okta
         if not okta_settings['enabled']:
-            return return_error("Okta login is disabled", 400)
+            return return_error('Okta login is disabled', 400)
         claims = try_connecting_using_okta(okta_settings)
         if claims:
             # Notice! If you change the first parameter, then our CURRENT customers will have their
@@ -1924,14 +1939,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 claims.get('family_name', '')
             )
 
-        return redirect("/", code=302)
+        return redirect('/', code=302)
 
-    @gui_helpers.add_rule_unauth("login/ldap", methods=['POST'])
+    @gui_helpers.add_rule_unauth('login/ldap', methods=['POST'])
     def ldap_login(self):
         try:
             log_in_data = self.get_request_data_as_object()
             if log_in_data is None:
-                return return_error("No login data provided", 400)
+                return return_error('No login data provided', 400)
             user_name = log_in_data.get('user_name')
             password = log_in_data.get('password')
             domain = log_in_data.get('domain')
@@ -1949,35 +1964,35 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                       private_key=create_temp_file(self._grab_file_contents(
                                           ldap_login['ca_file'])) if ldap_login['ca_file'] else None)
             except LdapException:
-                logger.exception("Failed login")
-                return return_error("Failed logging into AD")
+                logger.exception('Failed login')
+                return return_error('Failed logging into AD')
             except Exception:
-                logger.exception("Unexpected exception")
-                return return_error("Failed logging into AD")
+                logger.exception('Unexpected exception')
+                return return_error('Failed logging into AD')
 
             user = conn.get_user(user_name)
             if not user:
-                return return_error("Failed login")
+                return return_error('Failed login')
 
-            needed_group = ldap_login["group_cn"]
+            needed_group = ldap_login['group_cn']
             if needed_group:
                 # This does not check for nested groups. see AX-2339
                 groups = user.get('memberOf', [])
                 if not any((f'CN={needed_group}' in group) for group in groups):
-                    return return_error(f"The provided user is not in the group {needed_group}")
+                    return return_error(f'The provided user is not in the group {needed_group}')
             image = None
             try:
-                thumbnail_photo = user.get("thumbnailPhoto") or \
-                    user.get("exchangePhoto") or \
-                    user.get("jpegPhoto") or \
-                    user.get("photo") or \
-                    user.get("thumbnailLogo")
+                thumbnail_photo = user.get('thumbnailPhoto') or \
+                    user.get('exchangePhoto') or \
+                    user.get('jpegPhoto') or \
+                    user.get('photo') or \
+                    user.get('thumbnailLogo')
                 if thumbnail_photo is not None:
                     if type(thumbnail_photo) == list:
                         thumbnail_photo = thumbnail_photo[0]  # I think this can happen from some reason..
                     image = bytes_image_to_base64(thumbnail_photo)
             except Exception:
-                logger.exception(f"Exception while setting thumbnailPhoto for user {user_name}")
+                logger.exception(f'Exception while setting thumbnailPhoto for user {user_name}')
 
             # Notice! If you change the first parameter, then our CURRENT customers will have their
             # users re-created next time they log in. This is bad! If you change this, please change
@@ -1987,12 +2002,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                              user.get('givenName') or '',
                                              user.get('sn') or '',
                                              image or self.DEFAULT_AVATAR_PIC)
-            return ""
+            return ''
         except ldap3.core.exceptions.LDAPException:
-            return return_error("LDAP verification has failed, please try again")
+            return return_error('LDAP verification has failed, please try again')
         except Exception:
-            logger.exception("LDAP Verification error")
-            return return_error("An error has occurred while verifying your account")
+            logger.exception('LDAP Verification error')
+            return return_error('An error has occurred while verifying your account')
 
     def __get_flask_request_for_saml(self, req):
         axonius_external_url = str(self.__saml_login.get('axonius_external_url') or '').strip()
@@ -2043,7 +2058,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             else:
                 try:
                     certificate = self._grab_file_contents(settings['certificate']).decode('utf-8').strip().splitlines()
-                    if "BEGIN CERTIFICATE" in certificate[0].upper():
+                    if 'BEGIN CERTIFICATE' in certificate[0].upper():
                         # we must remove the header and footer
                         certificate = certificate[1:-1]
 
@@ -2063,7 +2078,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception(f'Failed to create Saml2_Auth object, saml_settings: {saml_settings}')
             raise
 
-    @gui_helpers.add_rule_unauth("login/saml/metadata/", methods=['GET', 'POST'])
+    @gui_helpers.add_rule_unauth('login/saml/metadata/', methods=['GET', 'POST'])
     def saml_login_metadata(self):
         saml_settings = self.__saml_login
         # Metadata can always exist, no need to check if SAML has been activated.
@@ -2081,7 +2096,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         else:
             return return_error(', '.join(errors))
 
-    @gui_helpers.add_rule_unauth("login/saml/", methods=['GET', 'POST'])
+    @gui_helpers.add_rule_unauth('login/saml/', methods=['GET', 'POST'])
     def saml_login(self):
         self_url, req = self.__get_flask_request_for_saml(request)
         saml_settings = self.__saml_login
@@ -2132,12 +2147,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 logger.info(f'SAML Login success with name id {name_id}')
                 return redirect('/', code=302)
             else:
-                return return_error(', '.join(errors) + f" - Last error reason: {auth.get_last_error_reason()}")
+                return return_error(', '.join(errors) + f' - Last error reason: {auth.get_last_error_reason()}')
 
         else:
             return redirect(auth.login())
 
-    @gui_helpers.add_rule_unauth("login/google", methods=['POST'])
+    @gui_helpers.add_rule_unauth('login/google', methods=['POST'])
     def google_login(self):
         """
         Login with google
@@ -2146,7 +2161,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             from google.oauth2 import id_token
             from google.auth.transport import requests
         except ImportError:
-            return return_error("Import error, Google login isn't available")
+            return return_error('Import error, Google login isn\'t available')
         google_creds = self.__google
 
         if not google_creds['enabled']:
@@ -2154,11 +2169,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
-            return return_error("No login data provided", 400)
+            return return_error('No login data provided', 400)
 
         token = log_in_data.get('id_token')
         if token is None:
-            return return_error("No id_token provided", 400)
+            return return_error('No id_token provided', 400)
 
         try:
             # Specify the CLIENT_ID of the app that accesses the backend:
@@ -2174,7 +2189,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if google_creds['allowed_group']:
                 user_id = idinfo.get('sub')
                 if not user_id:
-                    return return_error("No user id present")
+                    return return_error('No user id present')
                 auth_file = json.loads(self._grab_file_contents(google_creds[GOOGLE_KEYPAIR_FILE]))
                 from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
                 connection = GSuiteAdminConnection(auth_file, google_creds['account_to_impersonate'],
@@ -2182,7 +2197,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if not any(google_creds['allowed_group'] in group.get('name', '')
                            for group
                            in connection.get_user_groups(user_id)):
-                    return return_error(f"You're not in the allowed group {google_creds['allowed_group']}")
+                    return return_error(f'You\'re not in the allowed group {google_creds["allowed_group"]}')
 
             # ID token is valid. Get the user's Google Account ID from the decoded token.
             # Notice! If you change the first parameter, then our CURRENT customers will have their
@@ -2193,23 +2208,23 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                              idinfo.get('given_name') or 'unamed',
                                              idinfo.get('family_name') or 'unamed',
                                              idinfo.get('picture') or self.DEFAULT_AVATAR_PIC)
-            return ""
+            return ''
         except ValueError:
-            logger.exception("Invalid token")
-            return return_error("Invalid token")
+            logger.exception('Invalid token')
+            return return_error('Invalid token')
         except Exception:
-            logger.exception("Unknown exception")
-            return return_error("Error logging in, please try again")
+            logger.exception('Unknown exception')
+            return return_error('Error logging in, please try again')
 
-    @gui_add_rule_logged_in("logout", methods=['GET'])
+    @gui_add_rule_logged_in('logout', methods=['GET'])
     def logout(self):
         """
         Clears session, logs out
         :return:
         """
-        logger.info(f"User {session} has logged out")
+        logger.info(f'User {session} has logged out')
         session['user'] = None
-        return ""
+        return ''
 
     @gui_helpers.paginated()
     @gui_add_rule_logged_in('system/users', methods=['GET', 'PUT'],
@@ -2231,10 +2246,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                    'user_name': {
                                        '$ne': self.ALTERNATIVE_USER['user_name']
                                    }
-                               })).sort(
-                               [
-                                   ('_id', pymongo.ASCENDING)
-                               ])
+                               })).sort([('_id', pymongo.ASCENDING)])
                            .skip(skip)
                            .limit(limit))
         # Handle PUT - only option left
@@ -2242,14 +2254,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         post_data['password'] = bcrypt.hash(post_data['password'])
         # Make sure user is unique by combo of name and source (no two users can have same name and same source)
         if self.__users_collection.find_one(filter_archived({
-            'user_name': post_data['user_name'],
-            'source': 'internal'
-        })):
-            return return_error("User already exists", 400)
+                'user_name': post_data['user_name'],
+                'source': 'internal'})):
+            return return_error('User already exists', 400)
         self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
                                            picname=None, source='internal', password=post_data['password'],
                                            role_name=post_data.get('role_name'))
-        return ""
+        return ''
 
     @gui_add_rule_logged_in('system/users/<user_id>/password', methods=['POST'])
     def system_users_password(self, user_id):
@@ -2263,18 +2274,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         post_data = self.get_request_data_as_object()
         user = session.get('user')
         if str(user['_id']) != user_id:
-            return return_error("Login to your user first")
+            return return_error('Login to your user first')
         if not bcrypt.verify(post_data['old'], user['password']):
-            return return_error("Given password is wrong")
+            return return_error('Given password is wrong')
 
         self.__users_collection.update({'_id': ObjectId(user_id)},
-                                       {
-                                           "$set": {
-                                               'password': bcrypt.hash(post_data['new'])
-                                           }
-        })
+                                       {'$set': {'password': bcrypt.hash(post_data['new'])}})
         self.__invalidate_sessions(user_id)
-        return "", 200
+        return '', 200
 
     @gui_add_rule_logged_in('system/users/<user_id>/access', methods=['POST'],
                             required_permissions={Permission(PermissionType.Settings,
@@ -2289,11 +2296,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         post_data = self.get_request_data_as_object()
         self.__users_collection.update({'_id': ObjectId(user_id)},
-                                       {
-                                           "$set": post_data
-        })
+                                       {'$set': post_data})
         self.__invalidate_sessions(user_id)
-        return ""
+        return ''
 
     @gui_add_rule_logged_in('system/users/<user_id>', methods=['DELETE'],
                             required_permissions={Permission(PermissionType.Settings,
@@ -2303,13 +2308,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Allows changing a users' permission set
         """
         self.__users_collection.update({'_id': ObjectId(user_id)},
-                                       {
-                                           "$set": {
-                                               'archived': True
-                                           }
-        })
+                                       {'$set': {'archived': True}})
         self.__invalidate_sessions(user_id)
-        return ""
+        return ''
 
     @gui_add_rule_logged_in('roles', methods=['GET', 'PUT', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
@@ -2362,7 +2363,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     'permissions': role_data['permissions']
                 }
             })
-        return ""
+        return ''
 
     @gui_add_rule_logged_in('roles/default', methods=['GET', 'POST'],
                             required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
@@ -2391,7 +2392,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         }, upsert=True)
         return ''
 
-    @gui_helpers.add_rule_unauth("get_constants")
+    @gui_helpers.add_rule_unauth('get_constants')
     def get_constants(self):
         """
         Returns a dictionary between all string names and string values in the system.
@@ -2421,7 +2422,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if d.get('user') and str(d['user'].get('_id')) == user_id:
                 d['user'] = None
 
-    @gui_add_rule_logged_in("api_key", methods=['GET', 'POST'])
+    @gui_add_rule_logged_in('api_key', methods=['GET', 'POST'])
     def api_creds(self):
         """
         Get or change the API key
@@ -2434,7 +2435,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     '_id': session['user']['_id'],
                 },
                 {
-                    "$set": {
+                    '$set': {
                         'api_key': new_api_key,
                         'api_secret': new_token
                     }
@@ -2449,7 +2450,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         })
 
     @gui_helpers.paginated()
-    @gui_add_rule_logged_in("logs")
+    @gui_add_rule_logged_in('logs')
     def logs(self, limit, skip):
         """
         Maybe this should be datewise paginated, perhaps the whole scheme will change.
@@ -2468,7 +2469,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DASHBOARD #
     #############
 
-    @gui_add_rule_logged_in("dashboard/first_use", methods=['GET'])
+    @gui_add_rule_logged_in('dashboard/first_use', methods=['GET'])
     def dashboard_first(self):
         """
         __is_first_time_use maintains whether any adapter was connected with a client.
@@ -2505,7 +2506,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 historical_views.append({'for_date': latest_date, **view})
 
             except Exception:
-                logger.exception(f"When dealing with {view_name} and {view['entity']}")
+                logger.exception(f'When dealing with {view_name} and {view["entity"]}')
                 continue
         if not historical_views:
             return []
@@ -2549,7 +2550,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return latest_date['accurate_for_datetime']
 
     @gui_helpers.historical_range(force=True)
-    @gui_add_rule_logged_in("saved_card_results/<card_uuid>", methods=['GET'],
+    @gui_add_rule_logged_in('saved_card_results/<card_uuid>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def saved_card_results(self, card_uuid: str, from_date: datetime, to_date: datetime):
@@ -2560,7 +2561,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         card = self._get_collection('dashboard').find_one({'_id': ObjectId(card_uuid)})
         if not card:
-            return return_error("Card doesn't exist")
+            return return_error('Card doesn\'t exist')
 
         res = None
         try:
@@ -2576,12 +2577,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception(f'Card {card["name"]} must have metric field in order to be fetched')
 
         if res is None:
-            logger.error(f"Unexpected card found - {card['name']} {card['metric']}")
-            return return_error("Unexpected error")
+            logger.error(f'Unexpected card found - {card["name"]} {card["metric"]}')
+            return return_error('Unexpected error')
 
         return jsonify({x['name']: x for x in res})
 
-    @gui_add_rule_logged_in("first_historical_date", methods=['GET'],
+    @gui_add_rule_logged_in('first_historical_date', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def first_historical_date(self):
@@ -2604,7 +2605,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify(dates)
 
     @gui_helpers.paginated()
-    @gui_add_rule_logged_in("dashboard", methods=['POST', 'GET'],
+    @gui_add_rule_logged_in('dashboard', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              ReadOnlyJustForGet)})
     def get_dashboard(self, skip, limit):
@@ -2633,7 +2634,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         :return:
         """
-        logger.info("Getting dashboard")
+        logger.info('Getting dashboard')
         for dashboard in self._get_collection('dashboard').find(filter=filter_archived(), skip=skip, limit=limit):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
@@ -2692,7 +2693,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             # But since list is very short the simpler and more readable implementation is fine
             entity_name = view.get('entity', EntityType.Devices.value)
             entity = EntityType(entity_name)
-            view_dict = self._find_filter_by_name(entity, view["name"])
+            view_dict = self._find_filter_by_name(entity, view['name'])
             if not view_dict:
                 continue
 
@@ -2765,12 +2766,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
         if not total:
             return [{'name': base or 'ALL', 'value': 0, 'remainder': True,
-                     'view': {**base_view, 'query': {'filter': base_view["query"]["filter"]}}, 'module': entity.value}]
+                     'view': {**base_view, 'query': {'filter': base_view['query']['filter']}}, 'module': entity.value}]
 
         child1_view = self._find_filter_by_name(entity, intersecting[0])
         child1_filter = child1_view['query']['filter']
         child1_query = parse_filter(child1_filter)
-        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view["query"]["filter"] else ''
+        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
         child2_filter = ''
         if len(intersecting) == 1:
             # Fetch the only child, intersecting with parent
@@ -2797,13 +2798,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
             # Intersection
             data.append(
-                {'name': ' + '.join(intersecting), 'intersection': True, 'value': data_collection.count_documents({
-                    '$and': base_queries + [
-                        child1_query, child2_query
-                    ]
-                }) / total, 'view': {**base_view,
-                                     'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
-                    'module': entity.value})
+                {'name': ' + '.join(intersecting),
+                 'intersection': True,
+                 'value': data_collection.count_documents({
+                     '$and': base_queries + [
+                         child1_query, child2_query
+                     ]}) / total,
+                 'view': {**base_view, 'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
+                 'module': entity.value})
 
             # Child2 + Parent - Intersection
             child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
@@ -2887,10 +2889,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 }
             }
         ])
-        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view["query"]["filter"] else ''
+        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
         data = []
         for item in aggregate_results:
-            field_value = item["name"]
+            field_value = item['name']
             if field_value == 'No Value':
                 field_value = 'exists(false)'
             else:
@@ -2898,7 +2900,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     field_value = f'\"{field_value}\"'
                 if (isinstance(field_value, bool)):
                     field_value = str(field_value).lower()
-            data.append({'name': str(item["name"]), 'value': item["value"], 'module': entity.value,
+            data.append({'name': str(item['name']), 'value': item['value'], 'module': entity.value,
                          'view': {**base_view, 'query': {'filter': f'{base_filter}{field["name"]} == {field_value}'}}})
 
         if chart_view == ChartViews.pie:
@@ -3102,7 +3104,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 points[item['_id'].strftime('%m/%d/%Y')] = item.get('count', 0)
         return points
 
-    @gui_add_rule_logged_in("dashboard/<dashboard_id>", methods=['DELETE'],
+    @gui_add_rule_logged_in('dashboard/<dashboard_id>', methods=['DELETE'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadWrite)})
     def remove_dashboard(self, dashboard_id):
@@ -3116,7 +3118,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
         return ''
 
-    @gui_add_rule_logged_in("dashboard/lifecycle", methods=['GET'],
+    @gui_add_rule_logged_in('dashboard/lifecycle', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def get_system_lifecycle(self):
@@ -3131,7 +3133,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
-            return return_error(f"Error fetching status of system scheduler. Reason: {state_response.text}")
+            return return_error(f'Error fetching status of system scheduler. Reason: {state_response.text}')
 
         state_response = state_response.json()
         state = SchedulerState(**state_response['state'])
@@ -3162,7 +3164,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         run_time_response = self.request_remote_plugin('next_run_time', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if run_time_response.status_code != 200:
-            return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
+            return return_error(f'Error fetching run time of system scheduler. Reason: {run_time_response.text}')
 
         return jsonify({
             'sub_phases': sub_phases,
@@ -3187,15 +3189,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         # If an Axonius entity has 2 adapter entities from the same plugin it will be counted for each time it is there
         entities_per_adapters = defaultdict(lambda: {'value': 0, 'meta': 0})
         for res in entity_collection.aggregate([
-            {
-                "$group": {
-                    "_id": "$adapters",
-                    "count": {
-                        "$sum": 1
+                {
+                    '$group': {
+                        '_id': '$adapters',
+                        'count': {
+                            '$sum': 1
+                        }
                     }
-                }
-            }
-        ]):
+                }]):
             for plugin_name in set(res['_id']):
                 entities_per_adapters[plugin_name]['value'] += res['count']
                 adapter_entities['seen'] += res['count']
@@ -3208,7 +3209,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return adapter_entities
 
-    @gui_add_rule_logged_in("dashboard/adapter_data/<entity_name>", methods=['GET'],
+    @gui_add_rule_logged_in('dashboard/adapter_data/<entity_name>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def get_adapter_data(self, entity_name):
@@ -3232,7 +3233,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         :return:
         """
-        logger.info("Getting dashboard coverage")
+        logger.info('Getting dashboard coverage')
         devices_total = self.devices_db_view.count_documents({})
         if not devices_total:
             return []
@@ -3255,22 +3256,22 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             item['portion'] = devices_property / devices_total
         return coverage_list
 
-    @gui_add_rule_logged_in("dashboard/coverage", methods=['GET'],
+    @gui_add_rule_logged_in('dashboard/coverage', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def get_dashboard_coverage(self):
         return jsonify(self._get_dashboard_coverage())
 
-    @gui_add_rule_logged_in("get_latest_report_date", methods=['GET'],
+    @gui_add_rule_logged_in('get_latest_report_date', methods=['GET'],
                             required_permissions={Permission(PermissionType.Reports,
                                                              PermissionLevel.ReadOnly)})
     def get_latest_report_date(self):
-        recent_report = self._get_collection("reports").find_one({'filename': 'most_recent_report'})
+        recent_report = self._get_collection('reports').find_one({'filename': 'most_recent_report'})
         if recent_report is not None:
             return jsonify(recent_report['time'])
         return ''
 
-    @gui_add_rule_logged_in("research_phase", methods=['POST'],
+    @gui_add_rule_logged_in('research_phase', methods=['POST'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadWrite)})
     def schedule_research_phase(self):
@@ -3287,20 +3288,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return ''
 
-    @gui_add_rule_logged_in("stop_research_phase", methods=['POST'],
+    @gui_add_rule_logged_in('stop_research_phase', methods=['POST'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadWrite)})
     def stop_research_phase(self):
         """
         Stops currently running research phase.
         """
-        logger.info("Stopping research phase")
+        logger.info('Stopping research phase')
         response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
         if response.status_code != 200:
             logger.error(
-                f"Could not stop research phase. returned code: {response.status_code}, reason: {str(response.content)}")
-            return return_error(f"Could not stop research phase {str(response.content)}", response.status_code)
+                f'Could not stop research phase. returned code: {response.status_code}, reason: {str(response.content)}')
+            return return_error(f'Could not stop research phase {str(response.content)}', response.status_code)
 
         return ''
 
@@ -3339,10 +3340,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 # Exception thrown if adapter is down or report missing, and section will appear with views only
                 adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
                 adapter_reports_db = self._get_db_connection()[adapter_unique_name]
-                found_report = adapter_reports_db['report'].find_one({"name": "report"}) or {}
+                found_report = adapter_reports_db['report'].find_one({'name': 'report'}) or {}
                 adapter_clients_report = found_report.get('data', {})
             except Exception:
-                logger.exception(f"Error contacting the report db for adapter {adapter_unique_name} {adapter}")
+                logger.exception(f'Error contacting the report db for adapter {adapter_unique_name} {adapter}')
 
             adapter_data.append({'name': adapter['title'], 'queries': views, 'views': adapter_clients_report})
         return adapter_data
@@ -3366,7 +3367,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     name_to_title[field['name']] = field['title']
             return name_to_title
 
-        logger.info("Getting views data")
+        logger.info('Getting views data')
         views_data = []
         for entity in EntityType:
             field_to_title = _get_field_titles(entity)
@@ -3403,13 +3404,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                                   default_sort=self._system_settings['defaultSort']))
                         })
                 except Exception:
-                    logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")
+                    logger.exception(f'Problem with View {str(i)} ViewDoc {str(view_doc)}')
         return views_data
 
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
-            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
-            return return_error("Got bad trigger request for non-existent job", 400)
+            logger.error(f'Got bad trigger request for non-existent job: {job_name}')
+            return return_error('Got bad trigger request for non-existent job', 400)
         self.dump_metrics()
         return self.generate_new_report_offline()
 
@@ -3421,7 +3422,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return: "Success" if successful, error if there is an error
         """
 
-        logger.info("Rendering Report.")
+        logger.info('Rendering Report.')
         # generate_report() renders the report html
         report_html = self.generate_report()
         # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
@@ -3430,13 +3431,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             report_data.seek(0)
             # Uploads the report to the db and returns a uuid to retrieve it
             uuid = self._upload_report(report_data)
-            logger.info(f"Report was saved to the db {uuid}")
+            logger.info(f'Report was saved to the db {uuid}')
             # Stores the uuid in the db in the "reports" collection
-            self._get_collection("reports").replace_one(
+            self._get_collection('reports').replace_one(
                 {'filename': 'most_recent_report'},
                 {'uuid': uuid, 'filename': 'most_recent_report', 'time': datetime.now()}, True
             )
-        return "Success"
+        return 'Success'
 
     def _upload_report(self, report):
         """
@@ -3445,16 +3446,16 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         if not report:
-            return return_error("Report must exist", 401)
+            return return_error('Report must exist', 401)
 
         # First, need to delete the old report
         self._delete_last_report()
 
-        report_name = "most_recent_report"
+        report_name = 'most_recent_report'
         with self._get_db_connection() as db_connection:
             fs = gridfs.GridFS(db_connection[GUI_NAME])
             written_file_id = fs.put(report, filename=report_name)
-            logger.info("Report successfully placed in the db")
+            logger.info('Report successfully placed in the db')
         return str(written_file_id)
 
     def _delete_last_report(self):
@@ -3462,7 +3463,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Deletes the last version of the report pdf to avoid having too many saved versions
         :return:
         """
-        report_collection = self._get_collection("reports")
+        report_collection = self._get_collection('reports')
         if report_collection != None:
             most_recent_report = report_collection.find_one({'filename': 'most_recent_report'})
             if most_recent_report != None:
@@ -3491,7 +3492,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                          attachment_filename=report_path)
 
     def _get_existing_executive_report(self):
-        report = self._get_collection("reports").find_one({'filename': 'most_recent_report'})
+        report = self._get_collection('reports').find_one({'filename': 'most_recent_report'})
         if not report:
             self.generate_new_report_offline()
 
@@ -3507,7 +3508,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Generates the report and returns html.
         :return: the generated report file path.
         """
-        logger.info("Starting to generate report")
+        logger.info('Starting to generate report')
         report_data = {
             'adapter_devices': self._adapter_data(EntityType.Devices),
             'adapter_users': self._adapter_data(EntityType.Users),
@@ -3530,7 +3531,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         try:
             recipients = self.get_request_data_as_object()
             self._send_report_thread(recipients=recipients)
-            return ""
+            return ''
         except Exception as e:
             logger.exception('Failed sending test report by email.')
             return return_error(f'Problem testing report by email:\n{str(e.args[0]) if e.args else e}', 400)
@@ -3541,7 +3542,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return settings_object or {}
 
     def _schedule_exec_report(self, exec_reports_settings_collection, exec_report_data):
-        logger.info("rescheduling exec_report")
+        logger.info('rescheduling exec_report')
         time_period = exec_report_data['period']
         current_date = datetime.now()
         next_run_time = None
@@ -3563,7 +3564,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             next_run_time = next_run_time.replace(hour=8, minute=0)
             new_interval_triggger = CronTrigger(year='*', month='*', week='*', day_of_week='0-4', hour=8, minute=0)
         else:
-            raise ValueError("period have to be in ('daily', 'monthly', 'weekly').")
+            raise ValueError('period have to be in (\'daily\', \'monthly\', \'weekly\').')
 
         exec_report_job = self._job_scheduler.get_job(EXEC_REPORT_THREAD_ID)
 
@@ -3580,8 +3581,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             self._job_scheduler.reschedule_job(EXEC_REPORT_THREAD_ID, trigger=new_interval_triggger)
 
         exec_reports_settings_collection.replace_one({}, exec_report_data, upsert=True)
-        logger.info(f"Scheduling an exec_report sending for {next_run_time} and period of {time_period}.")
-        return "Scheduled next run."
+        logger.info(f'Scheduling an exec_report sending for {next_run_time} and period of {time_period}.')
+        return 'Scheduled next run.'
 
     @gui_add_rule_logged_in('exec_report', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Reports,
@@ -3611,8 +3612,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     email.add_pdf(EXEC_REPORT_FILE_NAME, bytes(report_file.read()))
                 email.send(EXEC_REPORT_EMAIL_CONTENT)
             else:
-                logger.info("Email cannot be sent because no email server is configured")
-                raise RuntimeWarning("No email server configured")
+                logger.info('Email cannot be sent because no email server is configured')
+                raise RuntimeWarning('No email server configured')
 
     def _stop_temp_maintenance(self):
         logger.info('Stopping Support Access')
@@ -3728,10 +3729,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 col = self._historical_entity_views_db_map[entity_type]
 
                 # find the date of the last historical point
-                last_date = col.find_one(projection={
-                    'accurate_for_datetime': 1
-                },
-                    sort=[('accurate_for_datetime', -1)])['accurate_for_datetime']
+                last_date = col.find_one(projection={'accurate_for_datetime': 1},
+                                         sort=[('accurate_for_datetime', -1)])['accurate_for_datetime']
 
                 axonius_entities_in_last_historical_point = col.count_documents({
                     'accurate_for_datetime': last_date
@@ -3749,7 +3748,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             except Exception:
                 logger.exception(f'failed calculating stats for {entity_type}')
 
-        disk_usage = shutil.disk_usage("/")
+        disk_usage = shutil.disk_usage('/')
         return jsonify({
             'disk_free': disk_usage.free,
             'disk_used': disk_usage.used,
@@ -3872,7 +3871,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]
 
     def _on_config_update(self, config):
-        logger.info(f"Loading GuiService config: {config}")
+        logger.info(f'Loading GuiService config: {config}')
         self.__okta = config['okta_login_settings']
         self.__google = config['google_login_settings']
         self.__saml_login = config['saml_login_settings']
@@ -3917,256 +3916,256 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @classmethod
     def _db_config_schema(cls) -> dict:
         return {
-            "items": [
+            'items': [
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": "refreshRate",
-                            "title": "Auto-Refresh Rate (seconds)",
-                            "type": "number"
+                            'name': 'refreshRate',
+                            'title': 'Auto-Refresh Rate (seconds)',
+                            'type': 'number'
                         },
                         {
-                            "name": "singleAdapter",
-                            "title": "Use Single Adapter View",
-                            "type": "bool"
+                            'name': 'singleAdapter',
+                            'title': 'Use Single Adapter View',
+                            'type': 'bool'
                         },
                         {
-                            "name": "multiLine",
-                            "title": "Use Table Multi Line View",
-                            "type": "bool"
+                            'name': 'multiLine',
+                            'title': 'Use Table Multi Line View',
+                            'type': 'bool'
                         },
                         {
-                            "name": "defaultSort",
-                            "title": "Sort by Number of Adapters in Default View",
-                            "type": "bool"
+                            'name': 'defaultSort',
+                            'title': 'Sort by Number of Adapters in Default View',
+                            'type': 'bool'
                         },
                         {
-                            "name": "percentageThresholds",
-                            "title": "Percentage Fields Severity Scopes",
-                            "type": "array",
-                            "items": [
+                            'name': 'percentageThresholds',
+                            'title': 'Percentage Fields Severity Scopes',
+                            'type': 'array',
+                            'items': [
                                 {
-                                    "name": "error",
-                                    "title": "Poor under:",
-                                    "type": "integer"
+                                    'name': 'error',
+                                    'title': 'Poor under:',
+                                    'type': 'integer'
                                 },
                                 {
-                                    "name": "warning",
-                                    "title": "Average under:",
-                                    "type": "integer"
+                                    'name': 'warning',
+                                    'title': 'Average under:',
+                                    'type': 'integer'
                                 },
                                 {
-                                    "name": "success",
-                                    "title": "Good under:",
-                                    "type": "integer"
+                                    'name': 'success',
+                                    'title': 'Good under:',
+                                    'type': 'integer'
                                 }
                             ],
-                            "required": ["error", "warning", "success"]
+                            'required': ['error', 'warning', 'success']
                         },
                         {
-                            "name": "tableView",
-                            "title": "Present advanced General Data of entity in a table",
-                            "type": "bool"
+                            'name': 'tableView',
+                            'title': 'Present advanced General Data of entity in a table',
+                            'type': 'bool'
                         }
                     ],
-                    "required": ["refreshRate", "singleAdapter", "multiLine", "defaultSort", "tableView"],
-                    "name": SYSTEM_SETTINGS,
-                    "title": "System Settings",
-                    "type": "array"
+                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'tableView'],
+                    'name': SYSTEM_SETTINGS,
+                    'title': 'System Settings',
+                    'type': 'array'
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": "enabled",
-                            "title": "Allow Okta logins",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Allow Okta logins',
+                            'type': 'bool'
                         },
                         {
-                            "name": "client_id",
-                            "title": "Okta application client id",
-                            "type": "string"
+                            'name': 'client_id',
+                            'title': 'Okta application client id',
+                            'type': 'string'
                         },
                         {
-                            "name": "client_secret",
-                            "title": "Okta application client secret",
-                            "type": "string",
+                            'name': 'client_secret',
+                            'title': 'Okta application client secret',
+                            'type': 'string',
                             'format': 'password'
                         },
                         {
-                            "name": "url",
-                            "title": "Okta application URL",
-                            "type": "string"
+                            'name': 'url',
+                            'title': 'Okta application URL',
+                            'type': 'string'
                         },
                         {
-                            "name": "gui2_url",
-                            "title": "The URL of Axonius GUI",
-                            "type": "string"
+                            'name': 'gui2_url',
+                            'title': 'The URL of Axonius GUI',
+                            'type': 'string'
                         }
                     ],
-                    "required": ["enabled", "client_id", "client_secret", "url", "gui2_url"],
-                    "name": "okta_login_settings",
-                    "title": "Okta Login Settings",
-                    "type": "array"
+                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url'],
+                    'name': 'okta_login_settings',
+                    'title': 'Okta Login Settings',
+                    'type': 'array'
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": "enabled",
-                            "title": "Allow Google logins",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Allow Google logins',
+                            'type': 'bool'
                         },
                         {
-                            "name": "client",
-                            "title": "Google client id",
-                            "type": "string"
+                            'name': 'client',
+                            'title': 'Google client id',
+                            'type': 'string'
                         },
                         {
-                            "name": "account_to_impersonate",
-                            "title": "Email of an admin account to impersonate",
-                            "type": "string"
+                            'name': 'account_to_impersonate',
+                            'title': 'Email of an admin account to impersonate',
+                            'type': 'string'
                         },
                         {
-                            "name": GOOGLE_KEYPAIR_FILE,
-                            "title": "JSON Key pair for the service account",
-                            "description": "The binary contents of the keypair file",
-                            "type": "file",
+                            'name': GOOGLE_KEYPAIR_FILE,
+                            'title': 'JSON Key pair for the service account',
+                            'description': 'The binary contents of the keypair file',
+                            'type': 'file',
                         },
                         {
-                            "name": "allowed_domain",
-                            "title": "Allowed G Suite domain (Leave empty for all domains)",
-                            "type": "string"
+                            'name': 'allowed_domain',
+                            'title': 'Allowed G Suite domain (Leave empty for all domains)',
+                            'type': 'string'
                         },
                         {
-                            "name": "allowed_group",
-                            "title": "Only users in this group will be allowed (Leave empty for all groups)",
-                            "type": "string"
+                            'name': 'allowed_group',
+                            'title': 'Only users in this group will be allowed (Leave empty for all groups)',
+                            'type': 'string'
                         }
                     ],
-                    "required": ["enabled", "client", 'account_to_impersonate', GOOGLE_KEYPAIR_FILE],
-                    "name": "google_login_settings",
-                    "title": "Google Login Settings",
-                    "type": "array"
+                    'required': ['enabled', 'client', 'account_to_impersonate', GOOGLE_KEYPAIR_FILE],
+                    'name': 'google_login_settings',
+                    'title': 'Google Login Settings',
+                    'type': 'array'
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": "enabled",
-                            "title": "Allow LDAP logins",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Allow LDAP logins',
+                            'type': 'bool'
                         },
                         {
-                            "name": "dc_address",
-                            "title": "The host domain controller IP or DNS",
-                            "type": "string"
+                            'name': 'dc_address',
+                            'title': 'The host domain controller IP or DNS',
+                            'type': 'string'
                         },
                         {
-                            "name": "group_cn",
-                            "title": "A group the user must be a part of",
-                            "type": "string"
+                            'name': 'group_cn',
+                            'title': 'A group the user must be a part of',
+                            'type': 'string'
                         },
                         {
-                            "name": "default_domain",
-                            "title": "Default domain to present to the user",
-                            "type": "string"
+                            'name': 'default_domain',
+                            'title': 'Default domain to present to the user',
+                            'type': 'string'
                         },
                         *COMMON_SSL_CONFIG_SCHEMA
                     ],
-                    "required": ["enabled", "dc_address"],
-                    "name": "ldap_login_settings",
-                    "title": "Ldap Login Settings",
-                    "type": "array"
+                    'required': ['enabled', 'dc_address'],
+                    'name': 'ldap_login_settings',
+                    'title': 'Ldap Login Settings',
+                    'type': 'array'
                 },
                 {
-                    "items": [
+                    'items': [
                         {
-                            "name": "enabled",
-                            "title": "Allow SAML-Based logins",
-                            "type": "bool"
+                            'name': 'enabled',
+                            'title': 'Allow SAML-Based logins',
+                            'type': 'bool'
                         },
                         {
-                            "name": "idp_name",
-                            "title": "The name of the Identity Provider",
-                            "type": "string"
+                            'name': 'idp_name',
+                            'title': 'The name of the Identity Provider',
+                            'type': 'string'
                         },
                         {
-                            "name": "metadata_url",
-                            "title": "Metadata URL",
-                            "type": "string"
+                            'name': 'metadata_url',
+                            'title': 'Metadata URL',
+                            'type': 'string'
                         },
                         {
-                            "name": "axonius_external_url",
-                            "title": "Axonius External URL",
-                            "type": "string"
+                            'name': 'axonius_external_url',
+                            'title': 'Axonius External URL',
+                            'type': 'string'
                         },
                         {
-                            "name": "sso_url",
-                            "title": "Single Sign-On Service URL",
-                            "type": "string"
+                            'name': 'sso_url',
+                            'title': 'Single Sign-On Service URL',
+                            'type': 'string'
                         },
                         {
-                            "name": "entity_id",
-                            "title": "Entity ID",
-                            "type": "string"
+                            'name': 'entity_id',
+                            'title': 'Entity ID',
+                            'type': 'string'
                         },
                         {
-                            "name": "certificate",
-                            "title": "Signing Certificate (Base64 Encoded)",
-                            "type": "file"
+                            'name': 'certificate',
+                            'title': 'Signing Certificate (Base64 Encoded)',
+                            'type': 'file'
                         }
                     ],
-                    "required": ["enabled", "idp_name"],
-                    "name": "saml_login_settings",
-                    "title": "SAML-Based Login Settings",
-                    "type": "array"
+                    'required': ['enabled', 'idp_name'],
+                    'name': 'saml_login_settings',
+                    'title': 'SAML-Based Login Settings',
+                    'type': 'array'
                 }
             ],
-            "type": "array"
+            'type': 'array'
         }
 
     @classmethod
     def _db_config_default(cls):
         return {
-            "okta_login_settings": {
-                "enabled": False,
-                "client_id": "",
-                "client_secret": "",
-                "url": "https://yourname.okta.com",
-                "gui2_url": "https://127.0.0.1"
+            'okta_login_settings': {
+                'enabled': False,
+                'client_id': '',
+                'client_secret': '',
+                'url': 'https://yourname.okta.com',
+                'gui2_url': 'https://127.0.0.1'
             },
-            "ldap_login_settings": {
-                "enabled": False,
-                "dc_address": "",
-                "default_domain": "",
-                "group_cn": "",
+            'ldap_login_settings': {
+                'enabled': False,
+                'dc_address': '',
+                'default_domain': '',
+                'group_cn': '',
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
-            "google_login_settings": {
-                "enabled": False,
-                "client": None,
-                "allowed_domain": None,
-                "allowed_group": None,
+            'google_login_settings': {
+                'enabled': False,
+                'client': None,
+                'allowed_domain': None,
+                'allowed_group': None,
                 'account_to_impersonate': None,
                 GOOGLE_KEYPAIR_FILE: None
             },
-            "saml_login_settings": {
-                "enabled": False,
-                "idp_name": None,
-                "metadata_url": None,
-                "axonius_external_url": None,
-                "sso_url": None,
-                "entity_id": None,
-                "certificate": None
+            'saml_login_settings': {
+                'enabled': False,
+                'idp_name': None,
+                'metadata_url': None,
+                'axonius_external_url': None,
+                'sso_url': None,
+                'entity_id': None,
+                'certificate': None
             },
             SYSTEM_SETTINGS: {
-                "refreshRate": 30,
-                "singleAdapter": False,
-                "multiLine": False,
-                "defaultSort": True,
-                "percentageThresholds": {
-                    "error": 40,
-                    "warning": 60,
-                    "success": 100,
+                'refreshRate': 30,
+                'singleAdapter': False,
+                'multiLine': False,
+                'defaultSort': True,
+                'percentageThresholds': {
+                    'error': 40,
+                    'warning': 60,
+                    'success': 100,
                 },
-                "tableView": True
+                'tableView': True
             }
         }
