@@ -83,7 +83,7 @@
         },
         data() {
 		    return {
-                customAdapterData: {}
+                customAdapterData: { id: 'unique' }
             }
         },
         methods: {
