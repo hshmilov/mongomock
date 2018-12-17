@@ -42,9 +42,11 @@
                     @activated="tour('queryField')">
             <div slot="trigger" class="x-btn link" id="query_wizard">+ Query Wizard</div>
             <div slot="content">
-                <x-schema-filter :schema="filterSchema" v-model="queryExpressions" ref="filter"
+                <x-schema-filter :module="module" v-model="queryExpressions" ref="filter"
                                  @change="updateFilter" @error="filterValid = false"/>
-                <md-switch v-model="isUniqueAdapters" :disabled="!queryFilter">Include outdated Adapter {{prettyModule}} in query</md-switch>
+                <md-switch v-model="isUniqueAdapters" :disabled="!queryFilter">Include outdated Adapter {{prettyModule}}
+                    in query
+                </md-switch>
                 <div class="place-right">
                     <button class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</button>
                     <button class="x-btn" @click="compileFilter" @keyup.enter="compileFilter">Search</button>
@@ -70,11 +72,11 @@
     import xSchemaFilter from '../schema/SchemaFilter.vue'
     import Modal from '../../components/popover/Modal.vue'
     import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
-    import {GET_DATA_FIELD_BY_PLUGIN} from '../../store/getters'
+    import {GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME} from '../../store/getters'
     import {UPDATE_DATA_VIEW} from '../../store/mutations'
     import {FETCH_DATA_VIEWS, SAVE_DATA_VIEW} from '../../store/actions'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
-    import {expression} from '../../constants/filter'
+    import {expression, nestedExpression} from '../../constants/filter'
 
     const INCLUDE_OUDATED_MAGIC = 'INCLUDE OUTDATED: '
 
@@ -101,20 +103,14 @@
                     return state[this.module].view.fields
                 }
             }),
-            ...mapGetters({getDataFieldsByPlugin: GET_DATA_FIELD_BY_PLUGIN}),
+            ...mapGetters({
+                getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
+            }),
             prettyModule() {
                 return this.module[0].toUpperCase() + this.module.slice(1)
             },
-            schema() {
-                return this.getDataFieldsByPlugin(this.module)
-            },
-            schemaByField() {
-                return this.schema.reduce((map, item) => {
-                    item.fields.forEach(field => {
-                        map[field.name] = field
-                    })
-                    return map
-                }, {})
+            schemaByName() {
+                return this.getDataSchemaByName(this.module)
             },
             queryExpressions: {
                 get() {
@@ -146,7 +142,7 @@
                 },
                 set(isUniqueAdapters) {
                     this.queryFilter = isUniqueAdapters ? `${INCLUDE_OUDATED_MAGIC}${this.queryFilter}`
-                                                        : this.queryFilter.replace(INCLUDE_OUDATED_MAGIC, '')
+                        : this.queryFilter.replace(INCLUDE_OUDATED_MAGIC, '')
                 }
             },
             disableSaveQuery() {
@@ -166,27 +162,14 @@
             },
             textSearchPattern() {
                 /* Create a template for the search everywhere filter, from all currently selected fields */
-                if (!this.schema || !this.schema.length) return ''
+                if (!this.selected || !this.selected.length) return ''
                 let patternParts = []
                 this.selected.forEach((field) => {
                     // Filter fields containing image data, since it is not relevant for searching
-                    if (this.schemaByField[field].format === 'image') return
+                    if (this.schemaByName[field].format === 'image') return
                     patternParts.push(field + ' == regex("{val}", "i")')
                 })
                 return patternParts.join(' or ')
-            },
-            filterSchema() {
-                if (!this.schema || !this.schema.length) return []
-
-                /* Compose a schema by which to offer fields and values for building query expressions in the wizard */
-                return [{
-                    ...this.schema[0], fields: [{
-                        name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
-                        enum: this.savedViews.map((view) => {
-                            return {name: view.view.query.filter, title: view.name}
-                        })
-                    }, ...this.schema[0].fields]
-                }, ...this.schema.slice(1)]
             },
             queryMenuCount() {
                 /* Total items to appear in the search input dropdown */
@@ -269,7 +252,9 @@
             },
             clearFilter() {
                 // Restart the expressions, search input and filter
-                this.queryExpressions = [{...expression}]
+                this.queryExpressions = [{...expression,
+                    i: 0, nested: [{...nestedExpression, i: 0}]
+                }]
                 this.searchValue = ''
                 this.queryFilter = ''
             },
@@ -396,9 +381,6 @@
         .query-wizard {
             .content {
                 padding: 12px;
-                .x-btn.link {
-                    margin-right: 8px;
-                }
             }
         }
         .query-save {

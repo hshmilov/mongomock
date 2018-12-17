@@ -1,7 +1,7 @@
 <template>
     <div class="filter">
         <div class="title">Show only data:</div>
-        <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i" :fields="schema"
+        <x-schema-expression v-for="(expression, i) in expressions" :key="expression.i" :first="!i" :module="module"
                              v-model="expressions[i]" ref="expression"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
         <div class="footer">
@@ -13,12 +13,12 @@
 
 <script>
 	import xSchemaExpression from './SchemaExpression.vue'
-    import { expression } from '../../constants/filter'
+    import {expression, nestedExpression} from '../../constants/filter'
 
-	export default {
+    export default {
 		name: 'x-schema-filter',
 		components: { xSchemaExpression },
-		props: { schema: { required: true }, value: {} },
+		props: { module: { required: true }, value: {} },
         computed: {
 			isFilterEmpty() {
 				return !this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)
@@ -75,7 +75,10 @@
 				this.$emit('change', this.filters.join(' '))
 			},
 			addExpression () {
-				this.expressions.push({...expression, i: this.expressions.length})
+				this.expressions.push({...expression,
+                    i: this.expressions.length,
+                    nested: [ {...nestedExpression, i: 0 }]
+                })
 				this.$emit('input', this.expressions)
 			},
 			removeExpression (index) {

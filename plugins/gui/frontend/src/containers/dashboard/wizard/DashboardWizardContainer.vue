@@ -19,7 +19,7 @@
                     </template>
                 </div>
                 <component :is="dashboard.metric" v-model="dashboard.config" :views="views" :entities="entityOptions"
-                           :fields="fields" class="grid-span2" @state="nextWizardState" @validate="configValid = $event" />
+                           class="grid-span2" @state="nextWizardState" @validate="configValid = $event" />
             </template>
 
             <!-- Last name to appear as a title above the chart -->
@@ -42,11 +42,10 @@
     import timeline from './ChartTimeline.vue'
     import { entities } from '../../../constants/entities'
 
-	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_DATA_VIEWS } from '../../../store/actions'
     import { SAVE_DASHBOARD } from '../../../store/modules/dashboard'
     import { NEXT_TOUR_STATE, CHANGE_TOUR_STATE } from '../../../store/modules/onboarding'
-    import { GET_DATA_FIELD_BY_PLUGIN } from '../../../store/getters'
 
 	const dashboard = {
 		metric: '', view: '', name: '', config: {}
@@ -76,7 +75,6 @@
                     }).map(entity => entity.name)
                 }
 			}),
-			...mapGetters({ getDataFieldsByPlugin: GET_DATA_FIELD_BY_PLUGIN }),
             metricOptions() {
 				return [
 					{ name: 'intersect', title: 'Query Intersection' },
@@ -89,12 +87,6 @@
 			entityOptions() {
 				return entities
 			},
-            fields () {
-				return this.availableModules.reduce((map, module) => {
-					map[module] = this.getDataFieldsByPlugin(module)
-					return map
-				}, {})
-            },
             availableViews() {
 				if (this.dashboard.metric === 'compare' || this.dashboard.metric === 'segment') {
 					return ['histogram', 'pie']

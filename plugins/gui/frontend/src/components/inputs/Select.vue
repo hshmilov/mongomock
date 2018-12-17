@@ -34,7 +34,8 @@
         computed: {
 			currentOptions() {
 				if (!this.options) return []
-				return this.options.filter(option => option.title.toLowerCase().includes(this.searchValue.toLowerCase()))
+				return this.options.filter(option =>
+                    option.title && option.title.toLowerCase().includes(this.searchValue.toLowerCase()))
             },
             selectedOption() {
 				if (!this.value || !this.options || !this.options.length) return undefined

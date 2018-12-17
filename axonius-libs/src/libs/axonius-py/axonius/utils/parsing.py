@@ -16,6 +16,7 @@ from typing import Callable, NewType
 
 import dateutil.parser
 import pql
+import json
 import pytz
 
 import axonius
@@ -1222,7 +1223,11 @@ def parse_filter(filter_str):
     while matches:
         filter_str = filter_str.replace(matches.group(0), f'not ({matches.group(1)})')
         matches = re.search('NOT\s*\[(.*)\]', filter_str)
-    logger.info(filter_str)
+
+    matches = re.findall(re.compile(r'match\s*\((\[.*?\])\)'), filter_str)
+    for match in matches:
+        filter_str = filter_str.replace(match, json.dumps(pql.find(match[1:-1])))
+
     res = translate_filter_not(pql.find(filter_str))
     if not include_outdated:
         add_duplicates_filtering(res)

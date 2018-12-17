@@ -118,7 +118,7 @@
             }
         }
     }
-    .schema-form .object .upload-file input {
+    .schema-form .array .object .upload-file input {
         width: 10px;
     }
 </style>

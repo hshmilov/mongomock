@@ -1,6 +1,6 @@
 <template>
     <div class="x-select-typed-field">
-        <x-select-symbol :options="fields" v-model="fieldType" @input="updateAutoField" :class="{'no-text': hideText}" />
+        <x-select-symbol v-if="isTyped" :options="options" v-model="fieldType" :class="{'no-text': hideText}" />
         <x-select :options="currentFields" :value="value" @input="$emit('input', $event)" placeholder="field..."
                   :searchable="true" class="field-select" :id="id" />
     </div>
@@ -13,16 +13,21 @@
 	export default {
 		name: 'select-typed-field',
         components: { xSelectSymbol, xSelect },
-        props: { fields: { required: true }, value: {}, id: {}, hideText: { default: true } },
+        props: {
+		    options: { required: true }, value: {}, id: {}, hideText: { default: true }
+        },
         computed: {
+		    isTyped() {
+		        return this.options && this.options.length && this.options[0].fields
+            },
 			currentFields() {
-				if (!this.fields || !this.fields.length) return []
-				if (!this.fieldType) return this.fields[0].fields
-				return this.fields.filter(item => item.name === this.fieldType)[0].fields
+				if (!this.isTyped) return this.options
+				if (!this.fieldType) return this.options[0].fields
+				return this.options.find(item => item.name === this.fieldType).fields
 			},
             firstType() {
-				if (!this.fields || !this.fields.length) return 'axonius'
-				return this.fields[0].name
+				if (!this.options || !this.options.length) return 'axonius'
+				return this.options[0].name
             }
         },
         data() {
@@ -33,7 +38,7 @@
         watch: {
 			value(newValue, oldValue) {
                 if (newValue && newValue !== oldValue) {
-                	this.updateFieldSpace()
+                	this.updateFieldType()
                 } else if (!newValue) {
                 	this.fieldType = 'axonius'
                 }
@@ -46,27 +51,27 @@
 			},
             firstType(newFirstType) {
 				this.fieldType = newFirstType
+            },
+            fieldType() {
+                if (this.isTyped && this.fieldType !== '' && this.fieldType !== 'axonius') {
+                    this.$emit('input', `adapters_data.${this.fieldType}.id`)
+                }
             }
         },
         methods: {
-			updateFieldSpace() {
+			updateFieldType() {
 				let fieldSpaceMatch = /adapters_data\.(\w+)\./.exec(this.value)
 				if (fieldSpaceMatch && fieldSpaceMatch.length > 1) {
 					this.fieldType = fieldSpaceMatch[1]
 				} else {
 					this.fieldType = 'axonius'
 				}
-			},
-            updateAutoField() {
-				if (this.fieldType !== '' && this.fieldType !== 'axonius') {
-					this.$emit('input', `adapters_data.${this.fieldType}.id`)
-                }
-            }
+			}
         },
         created() {
 			this.fieldType = this.firstType
 			if (this.value) {
-				this.updateFieldSpace()
+				this.updateFieldType()
                 this.$emit('input', this.value)
             }
         }

@@ -1,266 +1,188 @@
 <template>
     <div class="expression">
         <!-- Choice of logical operator, available from second expression --->
-        <x-select v-if="!first" :options="logicOps" placeholder="op..." v-model="expression.logicOp" class="x-select-logic"/>
+        <x-select v-if="!first" :options="logicOps" placeholder="op..." v-model="expression.logicOp"
+                  class="x-select-logic"/>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
         <label class="x-btn light checkbox-label expression-bracket-left" :class="{'active': expression.leftBracket}">
             <input type="checkbox" v-model="expression.leftBracket">(</label>
-        <label class="x-btn light checkbox-label expression-not" :class="{active: expression.not, disabled: disableNot}">
+        <label class="x-btn light checkbox-label expression-not" :class="{ active: expression.not }">
             <input type="checkbox" v-model="expression.not">NOT</label>
-        <x-select-typed-field :fields="fields" v-model="expression.field" :id="first? 'query_field': undefined" />
-        <!-- Choice of function to compare by and value to compare, according to chosen field -->
-        <template v-if="fieldSchema.type">
-            <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length"
-                      placeholder="func..." :id="first? 'query_op': undefined" class="x-select-comp" />
-            <template v-if="showValue">
-                <component :is="valueSchema.type" :schema="valueSchema" v-model="expression.value" class="expression-value"
-                           :class="{'grid-span2': !fieldOpsList.length}" :id="first? 'query_value': undefined" />
-            </template>
-            <template v-else>
-                <!-- No need for value, since function is boolean, not comparison -->
-                <div></div>
-            </template>
-        </template>
-        <template v-else><div/><div/></template>
+        <label class="x-btn light checkbox-label expression-obj" :class="{ active: expression.obj }">
+            <input type="checkbox" v-model="expression.obj">OBJ</label>
+        <x-schema-condition :module="module" v-model="expressionCond" :first="first" :is-parent="expression.obj"
+                            @change="onChangeCondition" @error="onErrorCondition" />
+
         <!-- Option to add ')' and to remove the expression -->
         <label class="x-btn light checkbox-label expression-bracket-right" :class="{'active': expression.rightBracket}">
             <input type="checkbox" v-model="expression.rightBracket">)</label>
         <div class="x-btn link expression-remove" @click="$emit('remove')">x</div>
+
+        <template v-if="expression.obj && expression.field">
+            <template v-for="(nestedExpr, i) in expression.nested">
+                <div class="grid-span4" ></div>
+                <x-schema-condition :module="module" v-model="nestedExpr.expression" :parent-field="expression.field"
+                                    @change="onChangeCondition($event, i)" @error="onErrorCondition" :key="nestedExpr.i" />
+                <button class="x-btn link" @click="removeNestedExpression(i)">x</button>
+                <div></div>
+            </template>
+            <div class="grid-span4" ></div>
+            <button class="x-btn link expression-nest" @click="addNestedExpression">+</button>
+        </template>
     </div>
 </template>
 
 <script>
     import xSelect from '../inputs/Select.vue'
     import xSelectTypedField from '../inputs/SelectTypedField.vue'
-	import string from '../controls/string/StringEdit.vue'
-	import number from '../controls/numerical/NumberEdit.vue'
-	import integer from '../controls/numerical/IntegerEdit.vue'
-	import bool from '../controls/boolean/BooleanEdit.vue'
-	import array from '../controls/array/ArrayFilter.vue'
-	import IP from 'ip'
-	import { compOps } from '../../constants/filter'
+    import xSchemaCondition from './SchemaCondition.vue'
+    import {nestedExpression} from '../../constants/filter'
 
-    import { mapMutations } from 'vuex'
-	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
+    import {mapMutations} from 'vuex'
+    import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
-	export default {
-		components: {
-			xSelect, xSelectTypedField, string, number, integer, bool, array,
-		},
-		name: 'x-schema-expression',
-		props: {
-			value: {}, fields: {required: true}, first: {default: false}
-		},
-		computed: {
-			logicOps () {
-				return [{name: 'and', title: 'and'}, {name: 'or', title: 'or'}]
-			},
-			fieldMap () {
-				return this.fields.reduce((map, item) => {
-					if (item.fields) {
-						item.fields.forEach((field) => {
-							map[field.name] = field
-                        })
-					} else {
-					    map[item.name] = item
+
+    export default {
+        name: 'x-schema-expression',
+        components: {
+            xSelect, xSelectTypedField, xSchemaCondition
+        },
+        props: {
+            value: {}, module: {required: true}, first: {default: false}
+        },
+        computed: {
+            logicOps() {
+                return [{
+                    name: 'and', title: 'and'
+                }, {
+                    name: 'or', title: 'or'
+                }]
+            },
+            expressionCond: {
+                get() {
+                    return {
+                        field: this.expression.field, compOp: this.expression.compOp, value: this.expression.value
                     }
-					return map
-				}, {})
-			},
-			fieldSchema () {
-				if (!this.expression.field || !this.fieldMap[this.expression.field]) return {}
-
-				return this.fieldMap[this.expression.field]
-			},
-			valueSchema () {
-				if (this.fieldSchema && this.fieldSchema.type === 'array'
-					&& ['contains', 'equals', 'subnet'].includes(this.expression.compOp)) {
-					return this.fieldSchema.items
-				}
-                if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
-                    && ['days'].includes(this.expression.compOp)) {
-					return { type: 'integer' }
-                }
-				return this.fieldSchema
-			},
-			fieldOps () {
-				if (!this.fieldSchema || !this.fieldSchema.type) return {}
-				let isArray = this.fieldSchema.type === 'array'
-                let ops = isArray? compOps['array'] : {}
-				let schema = isArray? this.fieldSchema.items : this.fieldSchema
-                if (schema.enum && schema.format !== 'predefined') {
-                    ops = { ...ops, equals: compOps[schema.type].equals }
-                } else if (schema.format) {
-                    ops = { ...ops, ...compOps[schema.format] }
-                } else {
-					ops = { ...ops, ...compOps[schema.type] }
-                }
-                if (isArray && ops.exists) {
-                    ops.exists = {
-                        pattern: `(${ops.exists.pattern} and {field} != [])`,
-                        notPattern: `not (${ops.exists.pattern} and {field} != [])`
+                },
+                set(condition) {
+                    this.expression = {...this.expression,
+                        field: condition.field, compOp: condition.compOp, value: condition.value
                     }
-                }
-				return ops
-			},
-			fieldOpsList () {
-				return Object.keys(this.fieldOps).map((op ) => {
-					return { name: op, title: op }
-				})
-
-			},
-			showValue () {
-				return this.fieldSchema.format === 'predefined'
-					|| (this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
-						&& this.fieldOps[this.expression.compOp].pattern.includes('{val}'))
-			},
-            disableNot() {
-				return this.expression.field && this.expression.format === 'predefined'
-            }
-		},
-		data () {
-			return {
-				expression: { ...this.value },
-				processedValue: '',
-                newExpression: false
-			}
-		},
-		watch: {
-			value (newValue) {
-                if (newValue.field !== this.expression.field) {
-                	this.expression = { ...newValue }
-					this.newExpression = true
                 }
             },
-			valueSchema (newSchema, oldSchema) {
-				if (!oldSchema.type && !oldSchema.format) return
-				if (!this.newExpression && (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format)) {
-					this.expression.value = null
-				}
-				this.newExpression = false
-			}
-		},
-		methods: {
-            ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
-			checkErrors () {
-				if (!this.first && !this.expression.logicOp) {
-					return 'Logical operator is needed to add expression to the filter'
-				} else if ((!this.expression.compOp && this.fieldOpsList.length) ||
-                    (this.fieldOpsList.length && !this.fieldOps[this.expression.compOp])) {
-                    this.expression.compOp = ''
-					return 'Comparison operator is needed to add expression to the filter'
-				} else if (this.showValue && (typeof this.expression.value !== 'number' || isNaN(this.expression.value))
-                    && (!this.expression.value || !this.expression.value.length)) {
-					return 'A value to compare is needed to add expression to the filter'
+            nestedExpressionCond() {
+                return this.expression.nested
+                    .filter(item => item.condition)
+                    .map(item => item.condition)
+                    .join(' and ')
+            }
+        },
+        data() {
+            return {
+                expression: {...this.value},
+                condition: '',
+                error: ''
+            }
+        },
+        watch: {
+            value(newValue) {
+                if (newValue.field !== this.expression.field) {
+                    this.expression = {...newValue}
                 }
-			},
-			formatExpression () {
-				this.processedValue = ''
-				if (this.fieldSchema.format && this.fieldSchema.format === 'ip' && this.expression.compOp === 'subnet') {
-					let val = this.expression.value
-					if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
-						return 'Specify <address>/<CIDR> to filter IP by subnet'
-					}
-					try {
-						let subnetInfo = IP.cidrSubnet(val)
-						this.processedValue = [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)]
-					} catch (err) {
-						return 'Specify <address>/<CIDR> to filter IP by subnet'
-					}
-				}
-				if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.expression.value) {
-					let exists = this.fieldSchema.enum.filter((item) => {
-						return (item.name) ? (item.name === this.expression.value) : item === this.expression.value
-					})
-					if (!exists || !exists.length) return 'Specify a valid value for enum field'
-				}
-				return ''
-			},
-			composeCondition () {
-				let cond = '({val})'
-				let selectedOp = this.fieldOps[this.expression.compOp]
-				if (selectedOp && selectedOp.pattern && selectedOp.notPattern) {
-					cond = (this.expression.not) ? selectedOp.notPattern : selectedOp.pattern
-					cond = cond.replace(/{field}/g, this.expression.field)
-				} else if (this.fieldOpsList.length) {
-					this.expression.compOp = ''
-					this.expression.value = ''
-					return ''
-				} else if (this.fieldSchema.format === 'predefined' && this.expression.not) {
-					// Expression with some existing query is negated by a preceding NOT
-					cond = `not ({val})`
+            }
+        },
+        methods: {
+            ...mapMutations({changeState: CHANGE_TOUR_STATE}),
+            checkErrors() {
+                if (this.error) return
+                if (!this.first && !this.expression.logicOp) {
+                    this.error = 'Logical operator is needed to add expression to the filter'
+                } else if (this.expression.obj && !this.expression.field) {
+                    this.error = 'Select an object to add nested conditions'
                 }
-
-				let val = this.processedValue ? this.processedValue : this.expression.value
-				let iVal = Array.isArray(val) ? -1 : undefined
-				return cond.replace(/{val}/g, () => {
-					if (iVal === undefined) return val
-					iVal = (iVal + 1) % val.length
-					return val[iVal]
-				})
-			},
-			compileExpression () {
-            	if (!this.expression.i) {
-            		this.expression.logicOp = ''
+            },
+            compileExpression() {
+                if (!this.expression.i) {
+                    this.expression.logicOp = ''
                 }
-				if (!this.expression.compOp && !this.expression.value && this.expression.field.includes('id')) {
-                    this.expression.compOp = 'exists'
+                this.$emit('input', this.expression)
+                this.checkErrors()
+                if (this.error) {
+                    this.$emit('change', {error: this.error})
                     return
                 }
-				this.$emit('input', this.expression)
                 if (!this.expression.field) return
-				let error = this.checkErrors() || this.formatExpression()
-				if (error) {
-					this.$emit('change', {error})
-					return
-				}
-				let filterStack = []
-				if (this.expression.logicOp) {
-					filterStack.push(this.expression.logicOp + ' ')
-				}
+                let filterStack = []
+                if (this.expression.logicOp) {
+                    filterStack.push(this.expression.logicOp + ' ')
+                }
                 let bracketWeight = 0
                 if (this.expression.leftBracket) {
                     filterStack.push('(')
                     bracketWeight -= 1
                 }
-                filterStack.push(this.composeCondition())
+                if (this.expression.not) {
+                    filterStack.push('not ')
+                }
+                if (this.expression.obj) {
+                    filterStack.push(`${this.expression.field} == match([${this.nestedExpressionCond}])`)
+                } else {
+                    filterStack.push(this.condition)
+                }
                 if (this.expression.rightBracket) {
                     filterStack.push(')')
                     bracketWeight += 1
                 }
-				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
-			}
-		},
-		updated () {
-			this.compileExpression()
+                this.$emit('change', {filter: filterStack.join(''), bracketWeight})
+            },
+            addNestedExpression() {
+                this.expression.nested.push({...nestedExpression, i: this.expression.nested.length})
+            },
+            onChangeCondition(condition, nestedIndex) {
+                if (nestedIndex !== undefined) {
+                    this.expression.nested[nestedIndex].condition = condition
+                } else {
+                    this.condition = condition
+                }
+                this.compileExpression()
+            },
+            onErrorCondition(error) {
+                this.error = error
+            },
+            removeNestedExpression(index) {
+                this.expression.nested.splice(index, 1)
+            }
+        },
+        updated() {
+            this.compileExpression()
             if (this.first) {
-				if (this.expression.field && this.expression.compOp && !this.expression.value) {
-					this.changeState({ name: 'queryValue' })
+                if (this.expression.field && this.expression.compOp && !this.expression.value) {
+                    this.changeState({name: 'queryValue'})
                 } else if (this.expression.field && !this.expression.compOp) {
-					this.changeState({ name: 'queryOp' })
+                    this.changeState({name: 'queryOp'})
                 }
             }
-		},
+        },
         created() {
-			if (this.expression.field) {
-				this.compileExpression()
+            if (this.expression.field) {
+                this.compileExpression()
             }
         }
-	}
+    }
 </script>
 
 <style lang="scss">
     .expression {
         display: grid;
-        grid-template-columns: 56px 30px 30px 240px 80px auto 30px 30px;
+        grid-template-columns: 56px 30px 30px 30px auto 30px 30px;
         grid-template-rows: 40px;
         justify-items: stretch;
         align-items: center;
         grid-gap: 8px;
         margin-bottom: 20px;
         select, input:not([type=checkbox]) {
-            height: 30px;
+            height: 32px;
             width: 100%;
         }
         .checkbox-label {
@@ -279,8 +201,8 @@
                 visibility: hidden;
             }
         }
-        .link {
-            margin: auto;
+        .expression-nest {
+            text-align: left;
         }
     }
 </style>

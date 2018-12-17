@@ -4,7 +4,7 @@
         <x-select :options="views[config.entity] || []" :searchable="true" v-model="config.view"
                   placeholder="query (or empty for all)" />
         <div></div><div></div>
-        <x-select-typed-field :fields="fieldOptions" :value="config.field.name" @input="updateField" />
+        <x-select-typed-field :options="fieldOptions" :value="config.field.name" @input="updateField" />
         <div></div>
     </div>
 </template>
@@ -15,31 +15,28 @@
 	import xSelectTypedField from '../../../components/inputs/SelectTypedField.vue'
 	import ChartMixin from './chart'
 
+    import { mapGetters } from 'vuex'
+    import { GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters'
+
 	export default {
 		name: 'x-chart-segment',
         components: { xSelect, xSelectSymbol, xSelectTypedField },
 		mixins: [ ChartMixin ],
-        props: { fields: { required: true }},
         computed: {
+            ...mapGetters({
+                getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
+            }),
 			fieldOptions() {
-				if (!this.config.entity || !this.fields[this.config.entity]) return []
-				return this.fields[this.config.entity].map(category => {
+				if (!this.config.entity) return []
+				return this.getDataFieldsByPlugin(this.config.entity).map(category => {
                     return { ...category, fields: category.fields.filter(field => {
                     	    return !field.branched && field.type !== 'array'
                         })}
                 })
             },
-			fieldMap() {
-				return this.fieldOptions.reduce((map, item) => {
-					if (item.fields) {
-						item.fields.forEach((field) => {
-							map[field.name] = field
-						})
-					} else {
-						map[item.name] = item
-					}
-					return map
-				}, {})
+			schemaByName() {
+                if (!this.config.entity) return {}
+				return this.getDataSchemaByName(this.config.entity)
 			}
         },
 		data() {
@@ -49,7 +46,7 @@
 		},
         methods: {
 			updateField(fieldName) {
-				this.config.field = this.fieldMap[fieldName]
+				this.config.field = this.schemaByName[fieldName]
 			},
 			validate() {
 				this.$emit('validate', this.config.field.name)

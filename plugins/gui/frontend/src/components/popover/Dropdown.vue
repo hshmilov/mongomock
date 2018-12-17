@@ -113,7 +113,7 @@
             border-radius: 4px;
             box-shadow: $popup-shadow;
             &.expand {
-                width: 100%;
+                min-width: 100%;
             }
         }
         .x-dropdown-bg {

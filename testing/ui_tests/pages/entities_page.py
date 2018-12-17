@@ -17,7 +17,7 @@ class EntitiesPage(Page):
     QUERY_EXPRESSIONS_CSS = '.filter .expression'
     QUERY_FIELD_DROPDOWN_CSS = '.x-dropdown.x-select.field-select'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
-    QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.x-select-comp'
+    QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.expression-comp'
     QUERY_VALUE_COMPONENT_CSS = '.expression-value'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'

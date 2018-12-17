@@ -44,7 +44,8 @@ import {
     UPDATE_SYSTEM_CONFIG, updateSystemConfig
 } from './mutations'
 import {
-	GET_DATA_FIELD_BY_PLUGIN, getDataFieldsByPlugin,
+	GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
+    GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
 	GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
 	GET_DATA_BY_ID, getDataByID,
 	SINGLE_ADAPTER, singleAdapter
@@ -75,7 +76,8 @@ export default new Vuex.Store({
 		configuration: { fetching: false, data: null, error: '' }
     },
 	getters: {
-        [ GET_DATA_FIELD_BY_PLUGIN ]: getDataFieldsByPlugin,
+        [ GET_DATA_FIELDS_BY_PLUGIN ]: getDataFieldsByPlugin,
+        [ GET_DATA_SCHEMA_BY_NAME ]: getDataSchemaByName,
         [ GET_DATA_FIELD_LIST_SPREAD ]: getDataFieldListSpread,
         [ GET_DATA_BY_ID ]: getDataByID,
         [ SINGLE_ADAPTER ]: singleAdapter
