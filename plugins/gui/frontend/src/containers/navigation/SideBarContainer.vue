@@ -16,16 +16,8 @@
         </div>
         <x-nested-nav>
             <x-nested-nav-item v-bind="navigationLinkProps('Dashboard')" icon="dashboard" :exact="true" id="dashboard" />
-            <x-nested-nav-item v-bind="navigationLinkProps('Devices')" icon="devices" id="devices" >
-                <x-nested-nav nest-level="1" class="collapse" v-if="!isRestricted('Devices')">
-                    <x-nested-nav-item name="Saved Queries" path="/devices/query/saved" id="devices-queries"/>
-                </x-nested-nav>
-            </x-nested-nav-item>
-            <x-nested-nav-item v-bind="navigationLinkProps('Users')" icon="users" id="users">
-                <x-nested-nav nest-level="1" class="collapse" v-if="!isRestricted('Users')">
-                    <x-nested-nav-item name="Saved Queries" path="/users/query/saved"/>
-                </x-nested-nav>
-            </x-nested-nav-item>
+            <x-nested-nav-item v-bind="navigationLinkProps('Devices')" icon="devices" id="devices" />
+            <x-nested-nav-item v-bind="navigationLinkProps('Users')" icon="users" id="users" />
             <x-nested-nav-item v-bind="navigationLinkProps('Alerts')" icon="alert" id="alerts" />
             <x-nested-nav-item v-bind="navigationLinkProps('Adapters')" icon="adapter" id="adapters" />
             <x-nested-nav-item v-bind="navigationLinkProps('Reports')" icon="report" id="reports" />

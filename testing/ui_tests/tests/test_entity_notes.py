@@ -143,7 +143,6 @@ class TestEntityNotes(TestBase):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_sort_column(self.devices_page.FIELD_ASSET_NAME)
         self.devices_page.load_notes()
         long_text = 'a' * 256
         self.devices_page.create_note(long_text)

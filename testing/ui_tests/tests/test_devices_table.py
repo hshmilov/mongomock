@@ -20,10 +20,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
-        # 'saved queries' button is hiding the first row of the table
-        # using a click on the table removes the 'saved queries' from the screen
-        self.devices_page.click_sort_column(self.devices_page.FIELD_TAGS)
-        self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row_checkbox()
         self.devices_page.add_new_tag(self.LABELS_TEXTBOX_TEXT)
         assert self.LABELS_TEXTBOX_TEXT in self.devices_page.get_first_row_tags()
@@ -53,10 +49,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        # 'saved queries' button is hiding the first row of the table
-        # using a click on the table removes the 'saved queries' from the screen
-        self.devices_page.click_sort_column(self.devices_page.FIELD_TAGS)
         self.devices_page.wait_for_table_to_load()
         self.devices_page.select_all_page_rows_checkbox()
         self.devices_page.add_new_tag(self.LABELS_TEXTBOX_TEXT, 20)
@@ -137,7 +129,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.switch_to_page()
 
         self.devices_page.query_json_adapter()
-        self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row_checkbox()
         self.devices_page.open_delete_dialog()

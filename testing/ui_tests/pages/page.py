@@ -10,7 +10,6 @@ from selenium.common.exceptions import (ElementNotVisibleException,
                                         WebDriverException)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
 
 from services.axon_service import TimeoutException
 from ui_tests.tests.ui_consts import TEMP_FILE_NAME
@@ -119,14 +118,9 @@ class Page:
         full_url = urllib.parse.urljoin(self.base_url, url)
         self.driver.get(full_url)
 
-    def switch_to_page(self, allow_saved_queries=False):
+    def switch_to_page(self):
         logger.info(f'Switching to {self.root_page_css}')
         self.wait_for_element_present_by_css(self.root_page_css)
-
-        # If Saved Queries is opened, it sometimes messes up switch_to_page
-        if not allow_saved_queries:
-            self.close_saved_queries_if_opened()
-
         self.driver.find_element_by_css_selector(self.root_page_css).click()
         logger.info(f'Finished switching to {self.root_page_css}')
 
@@ -459,10 +453,6 @@ class Page:
     def wait_for_table_to_load(self):
         self.wait_for_element_present_by_xpath(TABLE_SPINNER_NOT_DISPLAYED_XPATH)
 
-    def hover_element_by_css(self, css_selector):
-        element = self.wait_for_element_present_by_css(css_selector)
-        ActionChains(self.driver).move_to_element(element).perform()
-
     def get_all_checkboxes(self):
         return self.driver.find_elements_by_css_selector(self.CHECKBOX_CSS)
 
@@ -521,14 +511,6 @@ class Page:
     def is_saved_queries_opened(self):
         saved_queries = self.driver.find_elements_by_css_selector('button[title="Saved Queries"] > span')
         return any(elem.is_displayed() for elem in saved_queries)
-
-    def close_saved_queries(self):
-        self.driver.find_element_by_css_selector('circle[pid="0"]').click()
-
-    def close_saved_queries_if_opened(self):
-        if self.is_saved_queries_opened():
-            logger.info('Saved Queries is opened! Closing it!')
-            self.close_saved_queries()
 
     @staticmethod
     def is_element_disabled(element):

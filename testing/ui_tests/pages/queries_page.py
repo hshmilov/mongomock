@@ -1,5 +1,6 @@
-from services.axon_service import TimeoutException
+import logging
 from ui_tests.pages.page import Page
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class QueriesPage(Page):
@@ -18,15 +19,12 @@ class QueriesPage(Page):
     def parent_root_page_css(self):
         raise NotImplementedError
 
-    def switch_to_page(self, allow_saved_queries=True):
-        # This is a sub-page and therefore is found by hovering the button leading to the parent
-        try:
-            self.wait_for_table_to_load()
-        # might be on a page without a table
-        except TimeoutException:
-            pass
-        self.hover_element_by_css(self.parent_root_page_css)
-        super().switch_to_page(allow_saved_queries=allow_saved_queries)
+    def switch_to_page(self):
+        logger.info(f'Switching to {self.parent_root_page_css}')
+        self.wait_for_element_present_by_css(self.parent_root_page_css)
+        self.driver.find_element_by_css_selector(self.parent_root_page_css).click()
+        logger.info(f'Finished switching to {self.parent_root_page_css}')
+        self.click_button('Saved Queries', partial_class=True)
 
     def find_query_row_by_name(self, query_name):
         return self.driver.find_element_by_xpath(self.QUERY_ROW_BY_NAME_XPATH.format(query_name=query_name))

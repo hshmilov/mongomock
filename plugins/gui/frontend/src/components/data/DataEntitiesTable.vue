@@ -9,6 +9,7 @@
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu :module="module" />
                 <div class="x-btn link" @click="exportCSV">Export CSV</div>
+                <button class="x-btn link" @click="navigateSavedQueries">Saved Queries</button>
             </template>
         </x-data-table>
     </div>
@@ -86,6 +87,9 @@
             },
             exportCSV() {
                 this.fetchContentCSV({ module: this.module })
+            },
+            navigateSavedQueries() {
+                this.$router.push({path: `/${this.module}/query/saved`})
             }
         }
     }
