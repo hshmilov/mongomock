@@ -9,6 +9,7 @@ import boto3
 import datetime
 import json
 import paramiko
+import awsutils
 import redis
 import random
 from pymongo import MongoClient
@@ -23,6 +24,7 @@ KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
 PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
 PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
+DEFAULT_SECURITY_GROUP = "sg-8e00dce6"
 
 IMAGE_ID = "ami-0cd429efcede712c7"  # Our own imported ubuntu 16.04 Server.
 OVA_IMAGE_NAME = "Axonius-operational-export-106"
@@ -65,6 +67,24 @@ class BuildsManager(object):
 
         # Not Used
         # self.redis_client = redis.StrictRedis(host=BUILDS_HOST)
+
+    def get_cloud_options(self):
+        """
+        Returns options provided by our cloud provider about instanaces options.
+        :return:
+        """
+
+        cloud_options = dict()
+
+        security_groups_dict = dict()
+        for security_group_raw_answer in awsutils.get_paginated_next_token_api(
+                self.ec2_client.describe_security_groups):
+            for security_group in security_group_raw_answer['SecurityGroups']:
+                security_groups_dict[security_group['GroupId']] = security_group['GroupName']
+
+        cloud_options['security_groups'] = security_groups_dict
+
+        return cloud_options
 
     def postImageDetails(self, repositoryName, imageDigest, forms):
         """
@@ -196,7 +216,7 @@ class BuildsManager(object):
         else:
             exports = self.db.exports.find({'status': {"$in": status}}, {"_id": 0})
 
-        return list(exports)
+        return list(exports)[::-1]
 
     def getExportManifest(self, key):
         """ Returns the stored manifest of a specific key. """
@@ -256,6 +276,7 @@ class BuildsManager(object):
             ec2_i["public_ip_address"] = i.public_ip_address or ''
             ec2_i["state"] = i.state["Name"]
             ec2_i["vpc_name"] = ""
+            ec2_i['security_groups'] = [sec_group.get('GroupName', 'Unknown') for sec_group in i.security_groups]
 
             # search for the instance status
             for status in instance_statuses:
@@ -328,7 +349,7 @@ class BuildsManager(object):
 
     def add_instance(self, name, owner, ec2_type, configuration_code, fork, branch,
                      public=False, image_id=IMAGE_ID, key_name=KEY_NAME, subnet_id=PRIVATE_SUBNET_ID,
-                     vm_type=BUILDS_INSTANCE_VM_TYPE):
+                     vm_type=BUILDS_INSTANCE_VM_TYPE, security_group_id=DEFAULT_SECURITY_GROUP):
         """As the name suggests, make a new instance."""
 
         # Give names to our instance and volume
@@ -347,7 +368,7 @@ class BuildsManager(object):
         tags_specifications = [ts1, ts2]
 
         subnet_id = subnet_id if not public else PUBLIC_SUBNET_ID
-        security_group_id = PUBLIC_SECURITY_GROUP if public else ''
+        security_group_id = PUBLIC_SECURITY_GROUP if public else security_group_id
         termination_protection = False if vm_type == BUILDS_INSTANCE_VM_TYPE else True
 
         args = {
@@ -366,8 +387,7 @@ class BuildsManager(object):
             "DisableApiTermination": termination_protection
         }
 
-        if public:
-            args["SecurityGroupIds"] = [security_group_id]
+        args["SecurityGroupIds"] = [security_group_id]
 
         ec2_instances = self.ec2.create_instances(**args)
 

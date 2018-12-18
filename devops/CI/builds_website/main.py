@@ -230,6 +230,8 @@ def instances():
         else:
             raise ValueError("Got unsupported ec2 type")
 
+        security_group = request.form['security_group']
+
         json_result = (bm.add_instance(
             request.form["name"],
             (session['builds_user_full_name'], session['builds_user_id']),
@@ -238,7 +240,8 @@ def instances():
             request.form["fork"],
             request.form["branch"],
             request.form["public"] == 'true',
-            vm_type=instance_type
+            vm_type=instance_type,
+            security_group_id=security_group
         ))
 
     return jsonify({"result": json_result, "current": bm.getInstances(vm_type=instance_type)})
@@ -262,6 +265,12 @@ def instance(instance_id):
             json_result = (bm.stopInstance(ec2_id=instance_id))
 
     return jsonify({"result": json_result, "current": bm.getInstances()})
+
+
+@app.route("/cloud_options")
+@authorize
+def cloud_options():
+    return jsonify({"result": bm.get_cloud_options()})
 
 
 @app.route("/instances/<instance_id>/bot_monitoring",  methods=['POST'])

@@ -364,12 +364,21 @@
                         </td>
                     </tr>
                     <tr>
-                        <td width="20%">Instance Type</td>
+                        <td width="20%">Instance Type & Security Group</td>
                         <td>
-                            <select class="form-control" id="new_vm_ec2_instance_type">
-                                <option value="normal"> Normal (8gb)</option>
-                                <option value="strong"> Strong (32gb)</option>
-                            </select>
+                            <div class="content row">
+                                <div class="col-xs-6">
+                                    <select class="form-control" id="new_vm_ec2_instance_type">
+                                        <option value="normal"> Normal (8gb)</option>
+                                        <option value="strong"> Strong (32gb)</option>
+                                    </select>
+                                </div>
+                                <div class="col-xs-6">
+                                <select class="form-control" id='new_vm_security_group' onchange="last_selected_regular_sg = this.value">
+                                    <option>Loading...</option>
+                                </select>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     <tr>

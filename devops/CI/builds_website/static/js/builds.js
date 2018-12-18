@@ -20,9 +20,18 @@
     var last_custom_configuration_code = "";
     var is_in_custom_configuration_code = false;
     var github_token = "githubreadonly@axonius.com:3Zc0kRElHCzhHbM1u0LX";
+    var possible_security_groups = [];
+
+    var default_regular_sg = 'sg-8e00dce6';
+    var default_demo_sg = 'sg-f5742f9e';
+    var last_selected_regular_sg = default_regular_sg;
+
 
     /* Global functions */
     function capitalize_str(str) {
+        if (str === undefined || str.length == 0) {
+            return "Unknown";
+        }
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
     function update_panel(panel_id, data) {
@@ -225,7 +234,7 @@
             ["Instance Type", inst['ec2']['instance_type']],
             ["Key Name", inst['ec2']['key_name']],
             ["Private IP Address", inst['ec2']['private_ip_address']],
-            ["VPC Name", inst['ec2']['vpc_name']],
+            ["Security Groups", inst['ec2']['security_groups'].join(',')],
             ["Subnet", inst['ec2']['subnet']]
         ];
         //("elastic_ip_id" in db && db.elastic_ip_id !== '') ? "<a href='https://" + ec2.public_ip_address  + "' target='_blank'>https://" + ec2.public_ip_address + "</a>": '';
@@ -306,7 +315,7 @@
             ["Instance Type", inst['ec2']['instance_type']],
             ["Key Name", inst['ec2']['key_name']],
             ["Private IP Address", inst['ec2']['private_ip_address']],
-            ["VPC Name", inst['ec2']['vpc_name']],
+            ["Security Groups", inst['ec2']['security_groups'].join(',')],
             ["Subnet", inst['ec2']['subnet']]
         ];
 
@@ -503,6 +512,8 @@
         // $("#new_instance_configuration_code_cell").show();
         // $("#new_instance_adapters_cell").hide();
         $("#new_vm_empty_server_label").show();
+        $("#new_vm_security_group").val(last_selected_regular_sg);
+        $("#new_vm_security_group").removeAttr('disabled');
         $('#new_instance_modal').modal();
     }
     function add_demo_modal() {
@@ -511,6 +522,8 @@
         // $("#new_instance_configuration_code_cell").hide();
         // $("#new_instance_adapters_cell").show();
         $("#new_vm_empty_server_label").hide();
+        $("#new_vm_security_group").val(default_demo_sg);
+        $("#new_vm_security_group").attr('disabled', 'disabled');
         $('#new_instance_modal').modal();
     }
     function add_export_modal() {
@@ -661,6 +674,7 @@
 
         data["name"] = $("#new_vm_name")[0].value;
         data["ec2_type"] = $("#new_vm_ec2_instance_type")[0].value;
+        data['security_group'] = $("#new_vm_security_group").val();
         data["public"] = is_public;
         data["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
         data["empty"] = $("#new_vm_empty_server")[0].checked;
@@ -1089,6 +1103,17 @@
 
     /* Initialization and menu */
     $(document).ready(function() {
+        // load cloud options
+        flush_url("/cloud_options", function(data) {
+            var cloud_options = data['result'];
+            possible_security_groups = cloud_options['security_groups']
+            var select = $("#new_vm_security_group").html("");
+            for (var key in possible_security_groups) {
+                select.append($("<option>").attr("value", key).text(possible_security_groups[key]));
+            }
+            $("#new_vm_security_group").val(default_regular_sg)
+        });
+
         load_fork_list();
         new_instance_modal_fork_change('axonius/cortex', 1);
         load_release_list(1);
