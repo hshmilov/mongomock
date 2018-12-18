@@ -23,7 +23,7 @@ export const settings = {
         }
     },
     mutations: {
-        [ CHANGE_PLUGIN_CONFIG ] (state, payload) {
+        [CHANGE_PLUGIN_CONFIG](state, payload) {
             if (!state.configurable[payload.pluginId]) {
                 state.configurable[payload.pluginId] = {}
             }
@@ -39,7 +39,7 @@ export const settings = {
                 }
             }
         },
-        [ UPDATE_MAINTENANCE_CONFIG ] (state, payload) {
+        [UPDATE_MAINTENANCE_CONFIG](state, payload) {
             if (payload.data) {
                 state.advanced.maintenance = {
                     ...state.advanced.maintenance, ...payload.data
@@ -48,7 +48,7 @@ export const settings = {
         }
     },
     actions: {
-        [ SAVE_PLUGIN_CONFIG ] ({dispatch, commit}, payload) {
+        [SAVE_PLUGIN_CONFIG]({dispatch, commit}, payload) {
             /*
                 Call API to save given config to adapter by the given adapter unique name
              */
@@ -65,13 +65,13 @@ export const settings = {
                     commit(CHANGE_PLUGIN_CONFIG, {
                         pluginId: payload.pluginId,
                         configName: payload.configName,
-                        config: payload.config,
+                        config: payload.config
                     })
                 }
                 return response
             })
         },
-        [ LOAD_PLUGIN_CONFIG ] ({ dispatch, commit }, payload) {
+        [LOAD_PLUGIN_CONFIG]({dispatch, commit}, payload) {
             /*
                 Call API to save given config to adapter by the given adapter unique name
              */
@@ -79,7 +79,7 @@ export const settings = {
 
             let rule = `plugins/configs/${payload.pluginId}/${payload.configName}`
             return dispatch(REQUEST_API, {
-                rule,
+                rule
             }).then(response => {
                 if (response.data) {
                     commit(CHANGE_PLUGIN_CONFIG, {
@@ -91,13 +91,18 @@ export const settings = {
                 }
             })
         },
-        [ FETCH_MAINTENANCE_CONFIG ] ({ dispatch }) {
+        [FETCH_MAINTENANCE_CONFIG]({dispatch}) {
             return dispatch(REQUEST_API, {
                 rule: 'config/maintenance',
                 type: UPDATE_MAINTENANCE_CONFIG
             })
         },
-        [ SAVE_MAINTENANCE_CONFIG ] ({ dispatch, commit }, payload) {
+        [SAVE_MAINTENANCE_CONFIG]({dispatch, commit}, payload) {
+            if (payload.provision) {
+                payload = { ...payload,
+                    analytics: true, troubleshooting: true, timeout: null
+                }
+            }
             return dispatch(REQUEST_API, {
                 rule: 'config/maintenance',
                 method: 'POST',
@@ -110,7 +115,7 @@ export const settings = {
                 }
             })
         },
-        [ START_MAINTENANCE_CONFIG ] ({ dispatch, commit }, payload) {
+        [START_MAINTENANCE_CONFIG]({dispatch, commit}, payload) {
             return dispatch(REQUEST_API, {
                 rule: 'config/maintenance',
                 method: 'PUT',
@@ -123,7 +128,7 @@ export const settings = {
                 }
             })
         },
-        [ STOP_MAINTENANCE_CONFIG ] ({ dispatch, commit }) {
+        [STOP_MAINTENANCE_CONFIG]({dispatch, commit}) {
             return dispatch(REQUEST_API, {
                 rule: 'config/maintenance',
                 method: 'DELETE'

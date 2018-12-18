@@ -6,10 +6,10 @@
             </md-card-expand-trigger>
             <md-card-expand-content>
                 <md-card-content>
-                    <x-checkbox v-model="allowProvision" label="Remote Support" />
+                    <x-checkbox v-model="allowProvision" label="Remote Support" ref="provision" />
                     <div v-if="allowProvision" class="x-content">
                         <div class="x-section">
-                            <x-checkbox v-model="allowAnalytics" label="Anonymized Analytics" />
+                            <x-checkbox v-model="allowAnalytics" label="Anonymized Analytics" ref="analytics" />
                             <div v-if="allowAnalytics">
                                 <div class="title">Warning:</div>
                                 <div class="content">{{ disableWarnings['analytics'] }}</div>
@@ -17,7 +17,7 @@
                             <div v-else class="title">Turning on this feature allows Axonius to proactively detect issues and notify about errors</div>
                         </div>
                         <div class="x-section">
-                            <x-checkbox v-model="allowTroubleshooting" label="Remote Access" />
+                            <x-checkbox v-model="allowTroubleshooting" label="Remote Access" ref="troubleshooting" />
                             <div v-if="allowTroubleshooting">
                                 <div class="title">Warning:</div>
                                 <div class="content">{{ disableWarnings['troubleshooting'] }}</div>
@@ -46,8 +46,7 @@
                 </md-card-content>
             </md-card-expand-content>
         </md-card-expand>
-        <x-modal v-if="disableToConfirm" @confirm="approveDisable" @close="disableToConfirm = null"
-                 approve-text="Confirm">
+        <x-modal v-if="disableToConfirm" @confirm="approveDisable" @close="cancelDisable" approve-text="Confirm">
             <div slot="body">
                 <div>
                     <div class="title">Warning:</div>
@@ -118,11 +117,11 @@
                 return {
                     'analytics': 'Turning off this feature prevents Axonius from proactively detecting issues and notifying about errors',
                     'troubleshooting': 'Turning off this feature prevents Axonius from updating the system and can lead to slower issue resolution time',
-                    'provision': 'Turning off this feature prevents Axonius from proactively detecting issues and notifying about errors'
+                    'provision': 'Turning off this feature prevents Axonius from any remote support, including Anonymized Analytics and Remote Access'
                 }
             },
             enableStartAccess() {
-                return this.accessDuration > 0
+                return this.accessDuration > 0 && this.accessDuration < 100000000
             }
         },
         data() {
@@ -137,6 +136,7 @@
                 startMaintenance: START_MAINTENANCE_CONFIG, stopMaintenance: STOP_MAINTENANCE_CONFIG
             }),
             onMaintenanceChange(type, value) {
+                if (value === this.maintenance[type]) return
                 if (value) {
                     this.saveMaintenance({ [ type ]: value })
                 } else {
@@ -145,6 +145,10 @@
             },
             approveDisable() {
                 this.saveMaintenance({ [ this.disableToConfirm ]: false })
+                this.disableToConfirm = null
+            },
+            cancelDisable() {
+                this.$refs[this.disableToConfirm].$el.click()
                 this.disableToConfirm = null
             },
             validateNumber,
