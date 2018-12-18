@@ -105,6 +105,7 @@ DOCKER_PORTS = {
     'ibm-tivoli-taddm-adapter':         6044,
     'clearpass-adapter':                6045,
     'cisco-umbrella-adapter':           6046,
+    'linux-ssh-adapter':                6047,
     'mongo':                            27017,
     'mongo-slave':                      27018,
 }

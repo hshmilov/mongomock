@@ -134,9 +134,7 @@ class API:
     @api_add_rule(f"devices/<device_id>", required_permissions={Permission(PermissionType.Devices,
                                                                            PermissionLevel.ReadOnly)})
     def api_device_by_id(self, device_id):
-        return self._entity_by_id(EntityType.Devices, device_id, ["installed_software", "security_patches",
-                                                                  "available_security_patches", "users",
-                                                                  "connected_hardware", "local_admins"])
+        return self._device_entity_by_id(device_id)
 
     @gui_helpers.filtered()
     @api_add_rule("devices/labels", methods=['GET', 'POST', 'DELETE'],
@@ -178,7 +176,7 @@ class API:
     @api_add_rule(f"users/<user_id>", required_permissions={Permission(PermissionType.Users,
                                                                        PermissionLevel.ReadOnly)})
     def api_user_by_id(self, user_id):
-        return self._entity_by_id(EntityType.Users, user_id, ["associated_devices"])
+        return self._user_entity_by_id(user_id)
 
     @gui_helpers.filtered()
     @api_add_rule("users/labels", methods=['GET', 'POST', 'DELETE'],

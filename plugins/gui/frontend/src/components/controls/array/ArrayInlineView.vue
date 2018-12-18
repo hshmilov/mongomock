@@ -12,6 +12,7 @@
 	import string from '../string/StringView.vue'
 	import number from '../numerical/NumberView.vue'
 	import integer from '../numerical/IntegerView.vue'
+	import array from '../array/ArrayInlineView.vue'
 	import bool from '../boolean/BooleanView.vue'
 	import file from './FileView.vue'
 
@@ -20,7 +21,7 @@
 	export default {
 		name: 'array',
 		mixins: [ArrayMixin],
-		components: { string, number, integer, bool, file },
+		components: { string, number, integer, bool, file, array },
 		props: { },
         computed: {
 			limit() {

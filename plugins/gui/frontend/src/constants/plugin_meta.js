@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    linux_ssh_adapter: {
+        title: 'Linux SSH Adapter',
+        description: 'Linux Secure Shell Adapter uses remote command execution over the SSH protocol in order to gather information about the endpoint Linux machine.'
+    },
     malwarebytes_adapter: {
         title: 'Malwarebytes - BETA',
         description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'

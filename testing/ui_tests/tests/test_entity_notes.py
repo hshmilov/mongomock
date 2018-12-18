@@ -26,9 +26,9 @@ class TestEntityNotes(TestBase):
     def _execute_notes_basic_operations(self, entities_page):
         entities_page.load_notes()
         entities_page.create_note(self.NOTE_1_TEXT)
-        assert [self.NOTE_1_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+        assert [self.NOTE_1_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
         entities_page.edit_note(self.NOTE_2_TEXT)
-        assert [self.NOTE_2_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+        assert [self.NOTE_2_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
         entities_page.remove_note()
 
     def _test_notes_basic_operations(self, entities_page):
@@ -43,17 +43,17 @@ class TestEntityNotes(TestBase):
         self.login_page.switch_user(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD)
         entities_page.load_notes()
         entities_page.create_note(self.NOTE_2_TEXT)
-        admins_note = entities_page.find_row_readonly()
+        admins_note = entities_page.find_notes_row_readonly()
         assert len(admins_note) == 1
         assert self.NOTE_1_TEXT in admins_note[0].text
         self.login_page.switch_user(self.username, self.password)
         entities_page.load_notes()
         edited_note = f'Now my {self.NOTE_2_TEXT}!!!'
         entities_page.edit_note(edited_note)
-        assert edited_note in entities_page.get_column_data(NOTE_COLUMN)
+        assert edited_note in entities_page.get_notes_column_data(NOTE_COLUMN)
         self.login_page.switch_user(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD)
         entities_page.load_notes()
-        assert len(entities_page.find_row_readonly()) == 2
+        assert len(entities_page.find_notes_row_readonly()) == 2
         self.login_page.switch_user(self.username, self.password)
         entities_page.load_notes()
         entities_page.remove_note()
@@ -63,9 +63,9 @@ class TestEntityNotes(TestBase):
         entities_page.load_notes()
         entities_page.create_note(self.NOTE_1_TEXT)
         entities_page.search_note(self.NOTE_1_TEXT[6:])
-        assert [self.NOTE_1_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+        assert [self.NOTE_1_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
         entities_page.search_note(self.username)
-        assert [self.NOTE_1_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+        assert [self.NOTE_1_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
         entities_page.search_note(ui_consts.NOTES_USERNAME)
         assert not len(entities_page.get_all_data())
         entities_page.search_note('This text should not be in table')
@@ -83,9 +83,11 @@ class TestEntityNotes(TestBase):
         self.login_page.switch_user(self.username, self.password)
         entities_page.load_notes()
         entities_page.click_sort_column(NOTE_COLUMN)
-        assert [self.NOTE_3_TEXT, self.NOTE_1_TEXT, self.NOTE_2_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+        assert [self.NOTE_3_TEXT, self.NOTE_1_TEXT,
+                self.NOTE_2_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
         entities_page.click_sort_column(NOTE_COLUMN)
-        assert [self.NOTE_2_TEXT, self.NOTE_1_TEXT, self.NOTE_3_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+        assert [self.NOTE_2_TEXT, self.NOTE_1_TEXT,
+                self.NOTE_3_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
         entities_page.remove_note()
         entities_page.remove_note()
         entities_page.remove_note()
@@ -110,7 +112,7 @@ class TestEntityNotes(TestBase):
             if entities_page.get_all_data():
                 entities_page.click_row()
                 entities_page.click_notes_tab()
-                assert [self.NOTE_1_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+                assert [self.NOTE_1_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
                 entities_page.switch_to_page()
             entities_page.clear_showing_results()
 
@@ -119,7 +121,7 @@ class TestEntityNotes(TestBase):
         entities_page.wait_for_table_to_load()
         entities_page.click_row()
         entities_page.click_notes_tab()
-        assert [self.NOTE_2_TEXT] == entities_page.get_column_data(NOTE_COLUMN)
+        assert [self.NOTE_2_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
 
     def test_notes_sanity(self):
         self.settings_page.switch_to_page()

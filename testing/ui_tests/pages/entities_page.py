@@ -69,8 +69,10 @@ class EntitiesPage(Page):
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
 
+    NOTES_CONTENT_CSS = '.x-entity-notes'
+
     NOTES_TAB_CSS = 'li#notes'
-    TAGS_CSS = 'li#tags'
+    TAGS_TAB_CSS = 'li#tags'
     CUSTOM_DATA_TAB_CSS = 'li#gui_unique'
 
     NOTES_CREATED_TOASTER = 'New note was created'
@@ -250,11 +252,14 @@ class EntitiesPage(Page):
         header_columns = headers.find_elements_by_tag_name('th')
         return [head.text for head in header_columns if head.text]
 
-    def count_sort_column(self, col_name):
+    def count_sort_column(self, col_name, parent=None):
         # Return the position of given col_name in list of column headers, 1-based
+        if not parent:
+            parent = self.driver
+
         try:
             return [element.text.strip() for element in
-                    self.driver.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
+                    parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
         except ValueError:
             # Unfortunately col_name is not in the composed list
             return 0
@@ -262,12 +267,19 @@ class EntitiesPage(Page):
     def get_note_by_text(self, note_text):
         return self.driver.find_element_by_css_selector(self.NOTES_SEARCH_BY_TEXT.format(note_text=note_text))
 
-    def get_column_data(self, col_name):
-        col_position = self.count_sort_column(col_name)
+    def get_notes_column_data(self, col_name):
+        parent = self.driver.find_element_by_css_selector(self.NOTES_CONTENT_CSS)
+        return self.get_column_data(col_name, parent)
+
+    def get_column_data(self, col_name, parent=None):
+        if not parent:
+            parent = self.driver
+
+        col_position = self.count_sort_column(col_name, parent)
         if not col_position:
             return []
         return [el.text.strip() for el in
-                self.driver.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]
+                parent.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]
 
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
@@ -386,7 +398,7 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.NOTES_TAB_CSS).click()
 
     def click_tags_tab(self):
-        self.driver.find_element_by_css_selector(self.TAGS_CSS).click()
+        self.driver.find_element_by_css_selector(self.TAGS_TAB_CSS).click()
 
     def click_custom_data_tab(self):
         self.driver.find_element_by_css_selector(self.CUSTOM_DATA_TAB_CSS).click()
@@ -411,8 +423,14 @@ class EntitiesPage(Page):
         self.approve_remove_selected()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
-    def find_row_readonly(self):
-        return self.driver.find_elements_by_css_selector('.x-row:not(.clickable)')
+    def find_notes_row_readonly(self):
+        parent = self.driver.find_element_by_css_selector(self.NOTES_CONTENT_CSS)
+        return self.find_row_readonly(parent)
+
+    def find_row_readonly(self, parent=None):
+        if not parent:
+            parent = self.driver
+        return parent.find_elements_by_css_selector('.x-row:not(.clickable)')
 
     def search_note(self, search_text):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)

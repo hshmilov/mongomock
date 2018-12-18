@@ -158,7 +158,7 @@ class TestDevicesTable(TestEntitiesTable):
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS)
             self.devices_page.click_tab('General Data')
-            assert self.devices_page.find_vertical_tabs() == ['Basic Info']
+            assert self.devices_page.find_vertical_tabs() == ['Basic Info', 'Network Interfaces']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
             assert not self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS).is_displayed()
             self.devices_page.click_tab('Tags')

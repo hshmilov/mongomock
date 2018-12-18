@@ -37,3 +37,11 @@ def escape_dict(to_escape: object):
     if isinstance(to_escape, list):
         return [escape_dict(x) for x in to_escape]
     return to_escape
+
+
+def unescape_dict(to_unescape: object):
+    if isinstance(to_unescape, dict):
+        return {unescape_key(str(k)): unescape_dict(v) for k, v in to_unescape.items()}
+    if isinstance(to_unescape, list):
+        return [unescape_dict(x) for x in to_unescape]
+    return to_unescape

@@ -29,7 +29,7 @@
                     <tab v-for="item, i in entityGenericAdvancedRegular" :title="item.title" :id="item.name" :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
                         <x-schema-table v-if="tableView && item.schema.format && item.schema.format === 'table'"
-                                 :data="item.data" :fields="item.schema.items.items" />
+                                 :data="item.data" :fields="getTableSchema(item)" />
                         <x-schema-list :data="item.data" :schema="item.schema" v-else />
                     </tab>
                 </tabs>
@@ -322,7 +322,11 @@
             },
             removeToast() {
                 this.toastMessage = ''
+            },
+            getTableSchema(fields) {
+                return fields.schema.items.items.filter(field => !field.name.includes('raw'))
             }
+
         },
 		created () {
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate) {

@@ -18,6 +18,7 @@ def test_escaping_random():
 
 def test_recursive_escaping():
     d = {"a.b": {"c.d": "aaa", "x.k": [1, 2, 3]}, 55: "aa"}
+    assert unescape_dict(escape_dict(d)) == {str(k): v for k, v in d.items()}
     escaped = escape_dict(d)
     for key in escaped:
         if isinstance(key, str):
@@ -34,6 +35,7 @@ def test_similar_names():
         "a.b": 1,
         "a##b": 2
     }
+    assert unescape_dict(escape_dict(d)) == d
     escaped_d = escape_dict(dict(d))
     assert len(d) == len(escaped_d)
 
@@ -42,6 +44,7 @@ def test_fractions():
     d = {
         1.5: "asd"
     }
+    assert unescape_dict(escape_dict(d)) == {str(k): v for k, v in d.items()}
     assert str(list(escape_dict(d).keys())[0]) != "1.5"
 
 
@@ -53,6 +56,7 @@ def test_lists():
             }
         ]
     }
+    assert unescape_dict(escape_dict(d)) == d
     assert list(escape_dict(d)['a'][0].keys()) == ['a_DOT__DOT_a']
 
 

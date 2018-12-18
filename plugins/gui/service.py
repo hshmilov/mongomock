@@ -106,6 +106,12 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
 
+DEVICE_ADVANCED_FILEDS = ['installed_software', 'software_cves',
+                          'security_patches', 'available_security_patches', 'network_interfaces',
+                          'users', 'connected_hardware', 'local_admins', 'hard_drives', 'connected_devices']
+
+USER_ADVANCED_FILEDS = ['associated_devices']
+
 
 def session_connection(func, required_permissions: Iterable[Permission]):
     """
@@ -531,6 +537,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 },
                 history_date), projection=projection)
 
+    def _user_entity_by_id(self, entity_id, history_date: datetime = None):
+        return self._entity_by_id(EntityType.Users, entity_id, USER_ADVANCED_FILEDS, history_date)
+
+    def _device_entity_by_id(self, entity_id, history_date: datetime = None):
+        return self._entity_by_id(EntityType.Devices, entity_id, DEVICE_ADVANCED_FILEDS, history_date)
+
     def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[], history_date: datetime = None):
         """
         Retrieve or delete device by the given id, from current devices DB or update it
@@ -896,10 +908,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadOnly)})
     def device_by_id(self, device_id, history: datetime):
-        return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'software_cves',
-                                                                  'security_patches', 'available_security_patches',
-                                                                  'users', 'connected_hardware', 'local_admins'],
-                                  history_date=history)
+        return self._device_entity_by_id(device_id, history_date=history)
 
     @gui_helpers.filtered()
     @gui_helpers.historical()
@@ -1006,8 +1015,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in('users/<user_id>', methods=['GET'], required_permissions={Permission(PermissionType.Users,
                                                                                                  PermissionLevel.ReadOnly)})
     def user_by_id(self, user_id, history: datetime):
-        return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'],
-                                  history_date=history)
+        return self._user_entity_by_id(user_id, history_date=history)
 
     @gui_helpers.historical()
     @gui_helpers.filtered()

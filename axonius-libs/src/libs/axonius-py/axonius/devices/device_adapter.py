@@ -1,15 +1,17 @@
+import datetime
 import logging
+import typing
+from enum import Enum, auto
+
+from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
+from axonius.smart_json_class import SmartJsonClass
+from axonius.utils.mongo_escaping import escape_dict, unescape_dict
+from axonius.utils.parsing import (figure_out_os, format_ip, format_ip_raw,
+                                   format_mac, format_subnet,
+                                   get_manufacturer_from_mac, normalize_mac)
 
 logger = logging.getLogger(f'axonius.{__name__}')
-import datetime
-import typing
 
-from axonius.fields import Field, ListField, JsonStringFormat, JsonArrayFormat
-from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw, format_subnet, \
-    get_manufacturer_from_mac, normalize_mac
-from axonius.smart_json_class import SmartJsonClass
-from axonius.utils.mongo_escaping import escape_dict
-from enum import Enum, auto
 
 """
     For adding new fields, see https://axonius.atlassian.net/wiki/spaces/AX/pages/398819372/Adding+New+Field
@@ -120,11 +122,12 @@ class DeviceAdapterHD(SmartJsonClass):
     On linux and mac, we need to think what it is (not sure its mounts...) """
 
     path = Field(str, "Path")
-    description = Field(str, 'Description')
+    device = Field(str, "Device Name")
+    file_system = Field(str, "Filesystem")
     total_size = Field(float, "Size (GB)")
     free_size = Field(float, "Free Size (GB)")
     is_encrypted = Field(bool, "Encrypted")
-    file_system = Field(str, "Filesystem")
+    description = Field(str, 'Description')
 
 
 class DeviceAdapterCPU(SmartJsonClass):
@@ -159,6 +162,7 @@ class DeviceAdapterUser(SmartJsonClass):
     is_admin = Field(bool, "Is Admin")
     user_department = Field(str, "Department")
     password_max_age = Field(int, "Password Max Age")
+    interpreter = Field(str, "Interpreter")
 
     # Where did this user really come from?
     origin_unique_adapter_name = Field(str)
@@ -205,6 +209,8 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     vendor = Field(str, "Software Vendor")
     name = Field(str, "Software Name")
     version = Field(str, "Software Version")
+    architecture = Field(str, "Software Architecture")
+    description = Field(str, "Software Description")
 
 
 class DeviceAdapterSoftwareCVE(SmartJsonClass):
@@ -238,7 +244,8 @@ class DeviceAdapter(SmartJsonClass):
     description = Field(str, 'Description')
     last_seen = Field(datetime.datetime, 'Last Seen')
     fetch_time = Field(datetime.datetime, 'Fetch Time')
-    network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces')
+    network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces',
+                                   json_format=JsonArrayFormat.table)
     os = Field(DeviceAdapterOS, 'OS')
     last_used_users = ListField(str, "Last Used User")
     installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software",
@@ -251,7 +258,8 @@ class DeviceAdapter(SmartJsonClass):
     connected_hardware = ListField(DeviceAdapterConnectedHardware, "Connected Hardware",
                                    json_format=JsonArrayFormat.table)
 
-    connected_devices = ListField(DeviceAdapterNeighbor, "Connected Devices")
+    connected_devices = ListField(DeviceAdapterNeighbor, "Connected Devices",
+                                  json_format=JsonArrayFormat.table)
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
@@ -268,7 +276,7 @@ class DeviceAdapter(SmartJsonClass):
                                           "Maximum", "Mobile"])
     physical_location = Field(str, 'Physical Location')
     number_of_processes = Field(int, "Number Of Processes")
-    hard_drives = ListField(DeviceAdapterHD, "Hard Drives")
+    hard_drives = ListField(DeviceAdapterHD, "Hard Drives", json_format=JsonArrayFormat.table)
     cpus = ListField(DeviceAdapterCPU, "CPUs")
     boot_time = Field(datetime.datetime, 'Boot Time')
     time_zone = Field(str, 'Time Zone')
@@ -325,6 +333,9 @@ class DeviceAdapter(SmartJsonClass):
         self._raw_data = raw_data
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
+
+    def get_raw(self):
+        return unescape_dict(self._raw_data)
 
     def set_related_ips(self, ips):
         related_ips = DeviceAdapterRelatedIps()

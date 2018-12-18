@@ -93,3 +93,4 @@ pefile==2018.8.8
 psutil==5.4.8
 dataclasses==0.6
 dataclasses-json==0.2.0
+pymemfd==0.1
