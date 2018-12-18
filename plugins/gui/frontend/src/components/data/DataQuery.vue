@@ -72,7 +72,7 @@
     import xSchemaFilter from '../schema/SchemaFilter.vue'
     import Modal from '../../components/popover/Modal.vue'
     import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
-    import {GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME} from '../../store/getters'
+    import {GET_DATA_FIELDS_BY_PLUGIN} from '../../store/getters'
     import {UPDATE_DATA_VIEW} from '../../store/mutations'
     import {FETCH_DATA_VIEWS, SAVE_DATA_VIEW} from '../../store/actions'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
@@ -104,13 +104,10 @@
                 }
             }),
             ...mapGetters({
-                getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
+                getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN
             }),
             prettyModule() {
                 return this.module[0].toUpperCase() + this.module.slice(1)
-            },
-            schemaByName() {
-                return this.getDataSchemaByName(this.module)
             },
             queryExpressions: {
                 get() {
@@ -166,7 +163,7 @@
                 let patternParts = []
                 this.selected.forEach((field) => {
                     // Filter fields containing image data, since it is not relevant for searching
-                    if (this.schemaByName[field].format === 'image') return
+                    if (field === 'image') return
                     patternParts.push(field + ' == regex("{val}", "i")')
                 })
                 return patternParts.join(' or ')

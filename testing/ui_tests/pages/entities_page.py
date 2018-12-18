@@ -15,6 +15,7 @@ class EntitiesPage(Page):
 
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.filter .expression'
+    QUERY_CONDITIONS_CSS = '.x-schema-condition'
     QUERY_FIELD_DROPDOWN_CSS = '.x-dropdown.x-select.field-select'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.expression-comp'
@@ -23,9 +24,11 @@ class EntitiesPage(Page):
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'
     QUERY_SEARCH_EVERYWHERE_XPATH = '//div[@class=\'query-quick\']//div[contains(text(), \'Search in table:\')]'
     QUERY_ADD_EXPRESSION_CSS = '.filter .footer .x-btn'
+    QUERY_NEST_EXPRESSION_CSS = '.filter .expression .x-btn.expression-nest'
     QUERY_BRACKET_LEFT_CSS = '.expression-bracket-left'
     QUERY_BRACKET_RIGHT_CSS = '.expression-bracket-right'
     QUERY_NOT_CSS = '.expression-not'
+    QUERY_OBJ_CSS = '.expression-obj'
     QUERY_REMOVE_EXPRESSION_CSS = '.x-btn.expression-remove'
     QUERY_LOGIC_DROPDOWN_CSS = 'div.x-select.x-select-logic'
     QUERY_ERROR_CSS = '.filter .error-text'
@@ -205,6 +208,9 @@ class EntitiesPage(Page):
     def toggle_not(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click()
 
+    def toggle_obj(self, expression_element):
+        expression_element.find_element_by_css_selector(self.QUERY_OBJ_CSS).click()
+
     def remove_query_expression(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_REMOVE_EXPRESSION_CSS).click()
 
@@ -219,6 +225,16 @@ class EntitiesPage(Page):
 
     def find_expressions(self):
         return self.driver.find_elements_by_css_selector(self.QUERY_EXPRESSIONS_CSS)
+
+    def find_conditions(self, parent=None):
+        if not parent:
+            parent = self.driver
+        return parent.find_elements_by_css_selector(self.QUERY_CONDITIONS_CSS)
+
+    def add_query_obj_condition(self, parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_element_by_css_selector(self.QUERY_NEST_EXPRESSION_CSS).click()
 
     def find_rows_with_data(self):
         return self.driver.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)

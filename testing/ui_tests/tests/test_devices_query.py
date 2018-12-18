@@ -1,4 +1,7 @@
 from ui_tests.tests.ui_test_base import TestBase
+from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
+                                                    DEVICE_THIRD_IP,
+                                                    DEVICE_MAC)
 
 
 class TestDevicesQuery(TestBase):
@@ -188,12 +191,54 @@ class TestDevicesQuery(TestBase):
         assert not len(self.devices_page.get_all_data())
         self.devices_page.clear_query_wizard()
 
+    def _test_complex_obj(self):
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        # Prepare OBJ query with 2 nested conditions
+        self.devices_page.toggle_obj(expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES, expressions[0])
+        self.devices_page.add_query_obj_condition(expressions[0])
+        conditions = self.devices_page.find_conditions(expressions[0])
+        assert len(conditions) == 3
+
+        # DEVICE_MAC and DEVICE_FIRST_IP are on same Network Interface, so Device will return
+        self.devices_page.select_query_field(self.devices_page.FIELD_IPS, conditions[1])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, conditions[1])
+        self.devices_page.fill_query_value(DEVICE_FIRST_IP, conditions[1])
+        conditions = self.devices_page.find_conditions(expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_MAC, conditions[2])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, conditions[2])
+        self.devices_page.fill_query_value(DEVICE_MAC, conditions[2])
+        self.devices_page.wait_for_table_to_load()
+        assert len(self.devices_page.get_all_data()) == 1
+
+        # DEVICE_MAC and DEVICE_THIRD_IP are not on same Network Interface, so Device will not return
+        self.devices_page.fill_query_value(DEVICE_THIRD_IP, conditions[1])
+        assert len(self.devices_page.get_all_data()) == 0
+
+        # However, this MAC and IP will return the device, when not using the OBJ feature
+        self.devices_page.clear_query_wizard()
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 2
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
+        self.devices_page.fill_query_value(DEVICE_THIRD_IP, expressions[0])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[1])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
+        self.devices_page.fill_query_value(DEVICE_MAC, expressions[1])
+        self.devices_page.wait_for_table_to_load()
+        assert len(self.devices_page.get_all_data()) == 1
+        self.devices_page.clear_query_wizard()
+
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
 
+        self._test_complex_obj()
         self._test_comp_op_change()
         self._test_and_expression()
         self._test_last_seen_query()

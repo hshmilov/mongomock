@@ -24,7 +24,7 @@
                 <div class="grid-span4" ></div>
                 <x-schema-condition :module="module" v-model="nestedExpr.expression" :parent-field="expression.field"
                                     @change="onChangeCondition($event, i)" @error="onErrorCondition" :key="nestedExpr.i" />
-                <button class="x-btn link" @click="removeNestedExpression(i)">x</button>
+                <button class="x-btn link condition-remove" @click="removeNestedExpression(i)">x</button>
                 <div></div>
             </template>
             <div class="grid-span4" ></div>
@@ -112,7 +112,10 @@
                     this.$emit('change', {error: this.error})
                     return
                 }
-                if (!this.expression.field) return
+                if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
+                    this.$emit('change', {filter: '', bracketWeight: 0})
+                    return
+                }
                 let filterStack = []
                 if (this.expression.logicOp) {
                     filterStack.push(this.expression.logicOp + ' ')
@@ -152,6 +155,9 @@
             },
             removeNestedExpression(index) {
                 this.expression.nested.splice(index, 1)
+                if (!this.expression.nested.length) {
+                    this.addNestedExpression()
+                }
             }
         },
         updated() {

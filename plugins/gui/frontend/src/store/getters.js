@@ -30,9 +30,8 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
 }
 
 const prepareSchemaObjects = (schema, prefix) => {
-    // return flattenSchemaNames(schema, prefix).items.filter(item => item.type === 'object')
     return schema.items
-        .filter(item => (item.type === 'array' && (Array.isArray(item.items) || item.items.type === 'array')))
+        .filter(item => (item.type === 'array' && item.items.type === 'array'))
         .map(item => {
             return { ...item,
                 name: `${prefix}.${item.name}`,
@@ -40,21 +39,6 @@ const prepareSchemaObjects = (schema, prefix) => {
                 items: item.items.type === 'array' ? item.items.items : item.items
             }
         })
-}
-
-const flattenSchemaNames = (schema, prefix) => {
-    let name = schema.name ? `${prefix}.${schema.name}` : prefix
-    if (schema.type !== 'array' || (!Array.isArray(schema.items) && schema.items.type !== 'array')) {
-        return {...schema, name}
-    }
-    if (schema.items.type === 'array') {
-        schema.items = schema.items.items
-    }
-    return {
-        ...schema,
-        name, type: 'object',
-        items: schema.items.map(item => flattenSchemaNames(item, name))
-    }
 }
 
 export const GET_DATA_SCHEMA_BY_NAME = 'GET_DATA_SCHEMA_BY_NAME'

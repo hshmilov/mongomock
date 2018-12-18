@@ -51,11 +51,14 @@
 					this.$emit('error')
 					return
 				}
-				if (!payload.filter) return
-				this.filters[index] = payload.filter
-                if (!this.filters[0]) {
-					this.$emit('error')
-                    return
+				if (!payload.filter) {
+				    this.filters.splice(index, 1)
+                } else {
+                    this.filters[index] = payload.filter
+                    if (!this.filters[0]) {
+                        this.$emit('error')
+                        return
+                    }
                 }
 				this.bracketWeights[index] = payload.bracketWeight
                 if (!this.validateBrackets()) return

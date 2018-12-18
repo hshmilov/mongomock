@@ -4,6 +4,8 @@ from test_helpers.file_mock_credentials import FileForCredentialsMock
 USER_NAME_UNICODE = 'אבידור'
 DEVICE_FIRST_IP = '10.0.2.1'
 DEVICE_SECOND_IP = '10.0.2.2'
+DEVICE_THIRD_IP = '10.0.2.3'
+DEVICE_MAC = '06:3A:9B:D7:D7:A8'
 
 client_details = {
     DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, '''
@@ -14,8 +16,10 @@ client_details = {
             "name": "CB 1",
             "hostname": "CB First",
             "network_interfaces": [{
-                "mac": "06:3A:9B:D7:D7:A8",
-                "ips": ["''' + DEVICE_FIRST_IP + '''", "''' + DEVICE_SECOND_IP + '''", "10.0.2.3"]
+                "mac": "''' + DEVICE_MAC + '''",
+                "ips": ["''' + DEVICE_FIRST_IP + '''", "''' + DEVICE_SECOND_IP + '''"]
+            }, {
+                "ips": ["''' + DEVICE_THIRD_IP + '''"]
             }],
             "av_status": "active",
             "last_contact": "-",
