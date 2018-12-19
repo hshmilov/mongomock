@@ -60,7 +60,7 @@ def provision():
                          f'node_name  "{node_name}"\n' + \
                          f'validation_key "/home/ubuntu/axonius-validator.pem"\n' + \
                          f'validation_client_name "axonius-validator"\n' + \
-                         f'automatic_attribute_blacklist[["filesystem", "by_mountpoint"], ["filesystem", "by_pair"]]\n'
+                         f'automatic_attribute_blacklist [["filesystem", "by_mountpoint"], ["filesystem", "by_pair"]]\n'
 
     proxy_line = read_proxy_data()
     if proxy_line:
