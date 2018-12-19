@@ -227,7 +227,8 @@ else:
               f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.'
               f'{COLOR.get("reset", ">")}')
         try:
-            result = subprocess.check_output(docker_up, cwd=self.service_dir, env=my_env, timeout=20).decode("utf-8")
+            result = subprocess.check_output(docker_up, cwd=self.service_dir,
+                                             env=my_env, timeout=60 * 3).decode("utf-8")
         except subprocess.TimeoutExpired as exc:
             self.restart()
         except subprocess.CalledProcessError as exc:
