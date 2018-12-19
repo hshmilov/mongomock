@@ -5,7 +5,7 @@ import paramiko
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.linux_ssh.data import ALL_COMMANDS
-from axonius.utils.files import temp_memfd
+from axonius.utils.memfiles import temp_memfd
 from linux_ssh_adapter.consts import NETWORK_TIMEOUT
 
 logger = logging.getLogger(f'axonius.{__name__}')

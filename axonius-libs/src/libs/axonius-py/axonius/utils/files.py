@@ -1,9 +1,6 @@
 import os
 import tempfile
 import time
-from contextlib import contextmanager
-
-import memfd
 
 CONFIG_FILE_NAME = 'config.ini'
 UPLOADED_FILES_DIR = '/home/axonius/uploaded_files'
@@ -40,10 +37,3 @@ def get_random_uploaded_path_name(filename_suffix):
     filename = f'{time.time()}_{filename_suffix}'
     full_path = os.path.join(UPLOADED_FILES_DIR, filename)
     return full_path
-
-
-@contextmanager
-def temp_memfd(name, data: bytes):
-    with memfd.open(name) as mfd:
-        mfd.write(data)
-        yield f'/proc/{os.getpid()}/fd/{mfd.fileno()}'
