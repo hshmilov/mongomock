@@ -36,7 +36,7 @@ def run_tunnler():
     host_ip = [x for x in host_ip.split() if '--dns' in x][0]
     host_ip = host_ip[len('--dns='):]
     command = shlex.split(
-        'docker run -d --restart=always --name tunnle alpine/socat ' +
+        'docker run -d --restart=always --name tunnler alpine/socat ' +
         f'tcp-listen:9958,reuseaddr,fork,forever tcp:{host_ip}:22')
 
     my_env = os.environ.copy()
