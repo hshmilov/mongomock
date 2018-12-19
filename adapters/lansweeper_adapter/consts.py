@@ -1,0 +1,11 @@
+PASSWORD = 'password'
+USER = 'username'
+LANSWEEPER_HOST = 'server'
+LANSWEEPER_PORT = 'port'
+LANSWEEPER_DATABASE = 'database'
+DRIVER = 'driver'
+DEFAULT_LANSWEEPER_PORT = 1433
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+LANSWEEPER_QUERY_DEVICES = 'Select * from tblAssets'
+QUERY_SOFTWARE = 'Select * from tblSoftware'
+QUERY_SOFTWARE_2 = 'Select * from tblSoftwareUni'

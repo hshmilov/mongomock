@@ -1,4 +1,16 @@
 export const pluginMeta = {
+    absolute_adapter: {
+        title: 'Absolute - BETA',
+        description: 'Absolute® Software specializes in software and services for the management and security of computers and smartphones.'
+    },
+    landesk_adapter: {
+        title: 'Ivanti Landesk - BETA',
+        description: 'Ivanti Unified Endpoint Manager discovers network devices and automates software delivery.'
+    },
+    lansweeper_adapter: {
+        title: 'Lansweeper - BETA',
+        description: 'Lansweeper is an agentless IT asset management and Network Inventory software tool for Microsoft Windows OS.'
+    },
     linux_ssh_adapter: {
         title: 'Linux SSH Adapter',
         description: 'Linux Secure Shell Adapter uses remote command execution over the SSH protocol in order to gather information about the endpoint Linux machine.'
@@ -7,16 +19,20 @@ export const pluginMeta = {
         title: 'Malwarebytes - BETA',
         description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
     },
+    cybereason_adapter: {
+        title: 'Cybereason - BETA',
+        description: 'The Cybereason Deep Hunting Platform delivers endpoint detection and response (EDR), next-generation antivirus (NGAV), managed threat hunting, and threat intelligence.'
+    },
     oracle_cloud_adapter: {
         title: 'Oracle Cloud Infrastructure',
         description: 'Oracle Cloud is a computing service providing servers, storage, network, applications and services.'
     },
     cisco_umbrella_adapter: {
-        title: 'Cisco Umbrella - BETA',
+        title: 'Cisco Umbrella',
         description: 'Cisco Umbrella is a secure internet gateway in the cloud, and includes capabilities from the Cloud Web Security proxy, and Advanced Malware Protection (AMP) for file inspection.'
     },
     clearpass_adapter: {
-        title: 'Aruba ClearPass - BETA',
+        title: 'Aruba ClearPass',
         description: 'Aruba ClearPass is a network access control (NAC) solution that allows enterprises to identify devices, enforce policies, and remediate threats.'
     },
     ibm_tivoli_taddm_adapter: {
@@ -32,7 +48,7 @@ export const pluginMeta = {
         description: 'Tripwire® Enterprise is a security configuration management (SCM) suite that provides fully integrated solutions for policy, file integrity and remediation management.'
     },
     dropbox_adapter: {
-        title: 'Dropbox - BETA',
+        title: 'Dropbox',
         description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud and client software.'
     },
     azure_ad_adapter: {
@@ -52,7 +68,7 @@ export const pluginMeta = {
         description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'
     },
     claroty_adapter: {
-        title: 'Claroty - BETA',
+        title: 'Claroty',
         description: 'Claroty’s integrated ICS suite protects the safety of people, assets, and critical processes from cyberattacks.'
     },
     solarwinds_orion_adapter: {
@@ -248,7 +264,7 @@ export const pluginMeta = {
         description: 'The Juniper Junos Adapter connects to Juniper switches and routers.'
     },
     bitdefender_adapter: {
-        title: 'Bitdefender GravityZone - BETA',
+        title: 'Bitdefender GravityZone',
         description: 'Bitdefender GravityZone Business Security uses machine learning and heuristics to offer protection against malware, phishing, ransomware, exploits and zero-days.'
     },
     bomgar_adapter: {
@@ -352,7 +368,7 @@ export const pluginMeta = {
         description: 'The Symantec Asset Management Suite enables organizations to take control, uncover savings, and ensure compliance of IT assets, by giving a picture of assets throughout their lifecycle.'
     },
     azure_adapter: {
-        title: 'Microsoft Azure Compute - BETA',
+        title: 'Microsoft Azure Compute',
         description: 'Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers.'
     },
     okta_adapter: {
@@ -360,7 +376,7 @@ export const pluginMeta = {
         description: 'Okta provides cloud software that helps companies manage their employees\' passwords, by providing a “single sign-on” experience.'
     },
     alibaba_adapter: {
-        title: 'Alibaba Cloud - BETA',
+        title: 'Alibaba Cloud',
         description: 'Alibaba Cloud provides cloud computing services to online businesses and Alibaba Group\'s own e-commerce ecosystem'
     }
 }

@@ -256,10 +256,6 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem getting serial at {device_raw}')
                     try:
-                        device.install_status = install_status_dict.get(device_raw.get('install_status'))
-                    except Exception:
-                        logger.exception(f'Problem getting install status for {device_raw}')
-                    try:
                         ram_mb = device_raw.get('ram', '')
                         if ram_mb != '' and ram_mb != '-1' and ram_mb != -1:
                             device.total_physical_memory = int(ram_mb) / 1024.0
@@ -290,6 +286,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     try:
                         snow_asset = snow_alm_asset_table_dict.get((device_raw.get('asset') or {}).get('value'))
                         if snow_asset:
+                            try:
+                                device.install_status = install_status_dict.get(snow_asset.get('install_status'))
+                            except Exception:
+                                logger.exception(f'Problem getting install status for {device_raw}')
                             device.u_loaner = snow_asset.get('u_loaner')
                             device.u_shared = snow_asset.get('u_shared')
                     except Exception:

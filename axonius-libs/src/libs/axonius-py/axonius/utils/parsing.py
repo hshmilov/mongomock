@@ -248,7 +248,7 @@ def figure_out_os(s):
                     assert isinstance(found_values[0], str)
                     distribution = found_values[0]
                     break
-    elif ('os x' in s) or ('osx' in s) or ('macos' in s) \
+    elif ('os x' in s) or ('osx' in s) or ('macos' in s) or ('mac os' in s) \
             or any(elem in s for elem in OSX_NAMES):
         os_type = 'OS X'
         version = osx_version_full.findall(s)

@@ -1,0 +1,179 @@
+import logging
+import datetime
+
+from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.mssql.connection import MSSQLConnection
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.fields import Field
+from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import (get_exception_string, is_domain_valid,
+                                   parse_date)
+from axonius.clients.rest.connection import RESTConnection
+from lansweeper_adapter import consts
+from lansweeper_adapter.client_id import get_client_id
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class LansweeperAdapter(AdapterBase):
+    # pylint: disable=R0902
+    class MyDeviceAdapter(DeviceAdapter):
+        agent_version = Field(str, 'Agent Version')
+
+    def __init__(self):
+        super().__init__(get_local_config_file(__file__))
+        self.__devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
+
+    @staticmethod
+    def _get_client_id(client_config):
+        return get_client_id(client_config)
+
+    def _test_reachability(self, client_config):
+        RESTConnection.test_reachability(client_config.get(consts.LANSWEEPER_HOST),
+                                         port=client_config.get(consts.LANSWEEPER_PORT,
+                                                                consts.DEFAULT_LANSWEEPER_PORT))
+
+    def _connect_client(self, client_config):
+        try:
+            connection = MSSQLConnection(database=client_config.get(consts.LANSWEEPER_DATABASE),
+                                         server=client_config[consts.LANSWEEPER_HOST],
+                                         port=client_config.get(consts.LANSWEEPER_PORT,
+                                                                consts.DEFAULT_LANSWEEPER_PORT),
+                                         devices_paging=self.__devices_fetched_at_a_time)
+            connection.set_credentials(username=client_config[consts.USER],
+                                       password=client_config[consts.PASSWORD])
+            with connection:
+                pass  # check that the connection credentials are valid
+            return connection
+        except Exception as err:
+            message = f'Error connecting to client host: {client_config[consts.LANSWEEPER_HOST]}  ' \
+                      f'database: ' \
+                      f'{client_config.get(consts.LANSWEEPER_DATABASE)}'
+            logger.exception(message)
+            raise ClientConnectionException(get_exception_string())
+
+    def _query_devices_by_client(self, client_name, client_data):
+        with client_data:
+            soft_id_to_soft_data_dict = dict()
+            try:
+                for soft_data in client_data.query(consts.QUERY_SOFTWARE_2):
+                    soft_id_to_soft_data_dict[soft_data.get('SoftID')] = soft_data
+            except Exception:
+                logger.exception(f'Problem getting query software 2')
+            asset_software_dict = dict()
+            try:
+                for asset_soft_data in client_data.query(consts.QUERY_SOFTWARE):
+                    asset_id = asset_soft_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_software_dict:
+                        asset_software_dict[asset_id] = []
+                    asset_software_dict[asset_id].append(asset_soft_data)
+            except Exception:
+                logger.exception(f'Problem getting query software')
+
+            for device_raw in client_data.query(consts.LANSWEEPER_QUERY_DEVICES):
+                yield device_raw, asset_software_dict, soft_id_to_soft_data_dict
+
+    def _clients_schema(self):
+        return {
+            'items': [
+                {
+                    'name': consts.LANSWEEPER_HOST,
+                    'title': 'MSSQL Server',
+                    'type': 'string'
+                },
+                {
+                    'name': consts.LANSWEEPER_PORT,
+                    'title': 'Port',
+                    'type': 'integer',
+                    'default': consts.DEFAULT_LANSWEEPER_PORT,
+                    'format': 'port'
+                },
+                {
+                    'name': consts.LANSWEEPER_DATABASE,
+                    'title': 'Database',
+                    'type': 'string'
+                },
+                {
+                    'name': consts.USER,
+                    'title': 'User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': consts.PASSWORD,
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                }
+            ],
+            'required': [
+                consts.LANSWEEPER_HOST,
+                consts.USER,
+                consts.PASSWORD,
+                consts.LANSWEEPER_DATABASE
+            ],
+            'type': 'array'
+        }
+
+    # pylint: disable=R0912,R0915,R0914
+    def _parse_raw_data(self, devices_raw_data):
+        # pylint: disable=R1702
+        for device_raw, asset_software_dict, soft_id_to_soft_data_dict in devices_raw_data:
+            try:
+                device = self._new_device_adapter()
+                device_id = device_raw.get('AssetUnique')
+                if not device_id:
+                    logger.error(f'Found a device with no id: {device_raw}, skipping')
+                    continue
+                device.id = device_id + '_' + (device_raw.get('FQDN') or '')
+                try:
+                    asset_software_list = asset_software_dict.get(device_id)
+                    for asset_software in asset_software_list:
+                        if asset_software.get('softID'):
+                            software_data = soft_id_to_soft_data_dict.get(asset_software.get('softID'))
+                            if software_data:
+                                device.add_installed_software(name=software_data.get('softwareName'),
+                                                              vendor=software_data.get('SoftwarePublisher'),
+                                                              version=asset_software.get('softwareVersion'))
+                except Exception:
+                    logger.exception(f'Problem adding software to {device_raw}')
+                domain = device_raw.get('Domain')
+                if is_domain_valid(domain):
+                    device.domain = domain
+                    device.part_of_domain = True
+                else:
+                    device.part_of_domain = False
+                device.hostname = device_raw.get('FQDN')
+                try:
+                    mac = device_raw.get('Mac') if device_raw.get('Mac') else None
+                    ips = [device_raw.get('IP')] if device_raw.get('IP') else None
+                    if mac or ips:
+                        device.add_nic(mac, ips)
+                except Exception:
+                    logger.exception(f'Problem adding NIC to {device_raw}')
+                if isinstance(device_raw.get('Uptime'), int):
+                    device.boot_time = datetime.datetime.now() - datetime.timedelta(seconds=device_raw.get('Uptime'))
+                device.last_seen = parse_date(device_raw.get('Lastseen'))
+                try:
+                    device.total_physical_memory = device_raw.get('Memory') / 1024 if device_raw.get('Memory') else None
+                except Exception:
+                    logger.exception(f'Problem getting memory for {device_raw}')
+                device.agent_version = device_raw.get('LsAgentVersion')
+                username = device_raw.get('Username')
+                user_domain = device_raw.get('Userdomain')
+                if username:
+                    if is_domain_valid(user_domain):
+                        device.last_used_users = [f'{user_domain}\\{username}']
+                    else:
+                        device.last_used_users = [username]
+                device.description = device_raw.get('Description')
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f'Problem adding device: {str(device_raw)}')
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Assets]

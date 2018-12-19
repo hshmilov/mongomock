@@ -7,24 +7,25 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-from axonius.utils.parsing import parse_date
+from axonius.utils.parsing import parse_date, normalize_var_name
+from axonius.mixins.configurable import Configurable
 from clearpass_adapter.connection import ClearpassConnection
 from clearpass_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ClearpassAdapter(AdapterBase):
+class ClearpassAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         endpoint_status = Field(str, 'Endpoint Status')
-        endpoint_attributes = Field(str, 'Endpoint Attributes')
         spt = Field(str, 'System Posture Token')
         is_conflict = Field(bool, 'Is Conflict')
         is_online = Field(bool, 'Is Online')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+        self.__get_extended_info = True
 
     @staticmethod
     def _get_client_id(client_config):
@@ -39,10 +40,7 @@ class ClearpassAdapter(AdapterBase):
         try:
             with ClearpassConnection(domain=client_config['domain'],
                                      verify_ssl=client_config['verify_ssl'],
-                                     username=client_config['username'],
-                                     password=client_config['password'],
-                                     client_id=client_config['client_id'],
-                                     client_secret=client_config['client_secret'],
+                                     client_id=client_config['client_id'], client_secret=client_config['client_secret'],
                                      https_proxy=client_config.get('https_proxy')) as connection:
                 return connection
         except RESTException as e:
@@ -78,17 +76,6 @@ class ClearpassAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
-                    'name': 'username',
-                    'title': 'User Name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'password',
-                    'title': 'Password',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
                     'name': 'client_id',
                     'title': 'Client ID',
                     'type': 'string'
@@ -112,15 +99,14 @@ class ClearpassAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'username',
-                'password',
-                'client_id',
                 'client_secret',
+                'client_id',
                 'verify_ssl'
             ],
             'type': 'array'
         }
 
+    # pylint: disable=R0912,R0915,R1702
     def _create_endpoint_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -135,14 +121,35 @@ class ClearpassAdapter(AdapterBase):
                 device.add_nic(mac, None)
             device.description = device_raw.get('description')
             device.endpoint_status = device_raw.get('status')
-            device.endpoint_attributes = device_raw.get('attributes')
+            endpoint_attributes = device_raw.get('attributes')
+            hostname = None
+            last_seen = None
+            if isinstance(endpoint_attributes, dict):
+                try:
+                    for column_name, column_value in endpoint_attributes.items():
+                        try:
+                            normalized_column_name = 'clearpass_' + normalize_var_name(column_name)
+                            if not device.does_field_exist(normalized_column_name):
+                                # Currently we treat all columns as str
+                                cn_capitalized = ' '.join([word.capitalize() for word in column_name.split(' ')])
+                                device.declare_new_field(normalized_column_name,
+                                                         Field(str, f'Clearpass {cn_capitalized}'))
+                            device[normalized_column_name] = column_value
+                        except Exception:
+                            logger.exception(f'Could not parse column {column_name} with value {column_value}')
+                        device.device_serial = endpoint_attributes.get('Serial Number')
+                        hostname = endpoint_attributes.get('Display Name')
+                        device.hostname = hostname
+                        last_seen = parse_date(endpoint_attributes.get('Last Check In'))
+                        device.last_seen = last_seen
+                except Exception:
+                    logger.exception(f'Problem with attributes on {device_raw}')
             extended_info = device_raw.get('extended_info')
             if extended_info:
                 try:
                     device.domain = extended_info.get('domain')
                     device.last_used_users = [extended_info.get('user')] if extended_info.get('user') else None
                     device.spt = extended_info.get('spt')
-                    device.hostname = extended_info.get('device_name')
                     try:
                         device.figure_os(extended_info.get('device_category'))
                     except Exception:
@@ -151,7 +158,8 @@ class ClearpassAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem adding extend info for {device_raw}')
                 try:
-                    device.last_seen = parse_date(extended_info.get('updated_at'))
+                    if not last_seen:
+                        device.last_seen = parse_date(extended_info.get('updated_at'))
                 except Exception:
                     logger.exception(f'Problem with last seen at {device_raw}')
                 device.is_online = extended_info.get('is_online')
@@ -175,7 +183,7 @@ class ClearpassAdapter(AdapterBase):
                 logger.warning(f'Bad device with no id {device_raw}')
                 return None
             if ip_address:
-                device.add_nic(ip_address, None)
+                device.add_nic(None, [ip_address])
             device.description = device_raw.get('description')
             device.device_manufacturer = device_raw.get('vendor_name')
             device.set_raw(device_raw)

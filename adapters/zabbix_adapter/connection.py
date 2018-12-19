@@ -1,6 +1,7 @@
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.exception import RESTException
 from zabbix_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -12,13 +13,16 @@ class ZabbixConnection(RESTConnection):
         self._permanent_headers = {'Content-Type': 'application/json-rpc', 'Accept': 'application/json'}
 
     def _connect(self):
-        self._auth = self._post(consts.API_PATH, body_params={consts.JSON_RPC_KEY_NAME: consts.JSON_RPC_VALUE,
+        _auth_json = self._post(consts.API_PATH, body_params={consts.JSON_RPC_KEY_NAME: consts.JSON_RPC_VALUE,
                                                               consts.METHOD_KEY_NAME: consts.LOGIN_METHOD_NAME,
                                                               consts.PARMAS_KEY_NAME:
                                                               {consts.USERNAME_KEY_NAME_IN_PARAMS: self._username,
                                                                consts.PASSWORD_KEY_NAME_IN_PARAMS: self._password},
                                                               consts.ID_KEY_NAME: consts.RANDOM_ID_LOGIN,
-                                                              consts.AUTH_KEY_NAME: None})[consts.RESULT_ATTRIBUTE_NAME]
+                                                              consts.AUTH_KEY_NAME: None})
+        if consts.RESULT_ATTRIBUTE_NAME not in _auth_json:
+            raise RESTException((_auth_json.get('error') or {}).get('data') or 'Invalid Params')
+        self._auth = _auth_json[consts.RESULT_ATTRIBUTE_NAME]
 
     def get_device_list(self):
         # I think these two shouldn't be consts because they are the only thing which is super specific to getHosts

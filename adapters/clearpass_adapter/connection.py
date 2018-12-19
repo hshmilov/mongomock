@@ -16,19 +16,17 @@ class ClearpassConnection(RESTConnection):
         self._client_secret = client_secret
 
     def _connect(self):
-        if self._username and self._password:
-            response = self._post('oauth', body_params={'grant_type': 'password',
-                                                        'username': self._username,
-                                                        'password': self._password,
-                                                        'client_id': self._client_id,
-                                                        'client_secret': self._client_secret})
-            if 'access_token' not in response:
-                logger.exception(f'Bad login. Got this response {response}')
-                raise RESTException('Bad login Credentials')
-            token = response['access_token']
-            self._session_headers['Authorization'] = f'Bearer {token}'
-        else:
-            raise RESTException('No username or password')
+        if not self._client_id or not self._client_secret:
+            raise RESTException('No client id or secret')
+        response = self._post('oauth', body_params={'grant_type': 'client_credentials',
+                                                    'client_id': self._client_id,
+                                                    'client_secret': self._client_secret
+                                                    })
+        if 'access_token' not in response:
+            logger.exception(f'Bad login. Got this response {response}')
+            raise RESTException('Bad login Credentials')
+        token = response['access_token']
+        self._session_headers['Authorization'] = f'Bearer {token}'
 
     # pylint: disable=arguments-differ
     def get_device_list(self, get_extended_info):
@@ -36,7 +34,7 @@ class ClearpassConnection(RESTConnection):
         yield from self._get_device_list_from_api('network-device', 'network-device', get_extended_info=False)
 
     def _get_device_list_from_api(self, api_name, device_type, get_extended_info):
-        response = self._get(api_name, url_params={'calculate_count': True,
+        response = self._get(api_name, url_params={'calculate_count': 'true',
                                                    'offset': 0, 'limit': DEVICE_PER_PAGE})
         devices_raw = response['_embedded']['items']
         for device_raw in devices_raw:
@@ -56,7 +54,7 @@ class ClearpassConnection(RESTConnection):
         # pylint: disable=R1702
         while offset < min(count, MAX_NUMBER_OF_DEVICES):
             try:
-                response = self._get(api_name, url_params={'calculate_count': False,
+                response = self._get(api_name, url_params={'calculate_count': 'false',
                                                            'offset': offset, 'limit': DEVICE_PER_PAGE})
                 devices_raw = response['_embedded']['items']
                 if not devices_raw:
