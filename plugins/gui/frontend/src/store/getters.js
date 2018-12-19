@@ -15,7 +15,7 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
             let title = pluginMeta[name] ? pluginMeta[name].title : name
             return {
                 title, name, fields: objectView ?
-                    prepareSchemaObjects(fields.schema.specific[name], 'adapters_data.data') :
+                    prepareSchemaObjects(fields.schema.specific[name], `adapters_data.${name}`) :
                     fields.specific[name]
             }
         }).sort((first, second) => {

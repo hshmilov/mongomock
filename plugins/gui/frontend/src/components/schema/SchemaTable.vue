@@ -96,7 +96,9 @@
 					this.selected = []
                 }
                 this.$emit('input', this.selected)
-                this.clickAllHandler(isSelected)
+                if (this.clickAllHandler) {
+                    this.clickAllHandler(isSelected)
+                }
             },
             onSelect() {
 				this.$emit('input', this.selected)

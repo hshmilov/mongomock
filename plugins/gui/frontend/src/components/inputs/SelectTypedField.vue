@@ -1,8 +1,9 @@
 <template>
     <div class="x-select-typed-field">
-        <x-select-symbol v-if="isTyped" :options="options" v-model="fieldType" :class="{'no-text': hideText}" />
+        <x-select-symbol v-if="isTyped" :options="options" v-model="fieldType" @input="updateAutoField"
+                         :class="{'no-text': hideText}" />
         <x-select :options="currentFields" :value="value" @input="$emit('input', $event)" placeholder="field..."
-                  :searchable="true" class="field-select" :id="id" />
+                  :searchable="true" class="field-select" :class="{linked: isTyped}" :id="id" />
     </div>
 </template>
 
@@ -18,7 +19,7 @@
         },
         computed: {
 		    isTyped() {
-		        return this.options && this.options.length && this.options[0].fields
+		        return Boolean(this.options && this.options.length && this.options[0].fields)
             },
 			currentFields() {
 				if (!this.isTyped) return this.options
@@ -51,11 +52,6 @@
 			},
             firstType(newFirstType) {
 				this.fieldType = newFirstType
-            },
-            fieldType() {
-                if (this.isTyped && this.fieldType !== '' && this.fieldType !== 'axonius') {
-                    this.$emit('input', `adapters_data.${this.fieldType}.id`)
-                }
             }
         },
         methods: {
@@ -66,7 +62,13 @@
 				} else {
 					this.fieldType = 'axonius'
 				}
-			}
+			},
+            updateAutoField() {
+                if (this.isTyped && this.fieldType !== '' && this.fieldType !== 'axonius'
+                    && this.currentFields.find(field => field.name.includes('.id'))) {
+                    this.$emit('input', `adapters_data.${this.fieldType}.id`)
+                }
+            }
         },
         created() {
 			this.fieldType = this.firstType
@@ -91,10 +93,14 @@
         }
         .field-select {
             flex: 1 0 auto;
-            margin-left: -2px;
-            border-bottom-left-radius: 0;
-            border-top-left-radius: 0;
-            width: 180px;
+            width: 120px;
+            margin-left: 60px;
+            &.linked {
+                width: 180px;
+                margin-left: -2px;
+                border-bottom-left-radius: 0;
+                border-top-left-radius: 0;
+            }
         }
     }
 </style>

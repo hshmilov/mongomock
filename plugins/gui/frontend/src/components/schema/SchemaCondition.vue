@@ -234,13 +234,10 @@
 <style lang="scss">
     .x-schema-condition {
         display: grid;
-        grid-template-columns: 200px 80px auto;
+        grid-template-columns: 240px 80px auto;
         justify-items: stretch;
         align-items: center;
         grid-gap: 8px;
-        .x-select-typed-field .x-select {
-            width: auto;
-        }
         .expression-value {
             width: auto;
         }

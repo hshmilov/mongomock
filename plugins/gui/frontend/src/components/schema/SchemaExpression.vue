@@ -158,6 +158,7 @@
                 if (!this.expression.nested.length) {
                     this.addNestedExpression()
                 }
+                this.compileExpression()
             }
         },
         updated() {
