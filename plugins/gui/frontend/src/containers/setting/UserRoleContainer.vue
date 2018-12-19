@@ -124,9 +124,10 @@
                         this.permissionSchemeItem('Alerts'),
                         this.permissionSchemeItem('Reports'),
                         this.permissionSchemeItem('Settings'),
+                        this.permissionSchemeItem('Instances'),
                     ],
                     required: [
-                        'Settings', 'Adapters', 'Users', 'Devices', 'Alerts', 'Dashboard', 'Reports'
+                        'Settings', 'Adapters', 'Users', 'Devices', 'Alerts', 'Dashboard', 'Reports', 'Instances'
                     ],
                     type: 'array'
                 }

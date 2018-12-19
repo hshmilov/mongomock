@@ -28,7 +28,7 @@ fi
 # We must delete old data, or else tests will fail.
 # In order to delete them, we must stop the current containers first. We are going to do that anyway
 # in the integration tests.
-RUNNING_DOCKERS=$( docker ps -a -q )
+RUNNING_DOCKERS=$( docker ps -aq | grep -v -E $(docker ps -aq --filter='name=weave' | paste -sd "|" -) )
 if [ "$RUNNING_DOCKERS" != "" ]; then
     docker rm -f ${RUNNING_DOCKERS}
 fi

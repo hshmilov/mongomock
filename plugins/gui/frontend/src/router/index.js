@@ -17,6 +17,7 @@ import NotificationsContainer from '../containers/notification/NotificationConta
 import NotificationViewContainer from '../containers/notification/NotificationViewContainer.vue'
 import ReportContainer from '../containers/report/ReportContainer.vue'
 import AccountContainer from '../containers/auth/AccountContainer.vue'
+import InstancesContainer from '../containers/instances/InstancesContainer.vue'
 
 Vue.use(Router)
 export default new Router({
@@ -102,6 +103,11 @@ export default new Router({
 			path: '/account',
 			name: 'My Account',
 			component: AccountContainer
-		}
+		},
+        {
+            path: '/instances',
+            name: 'Instances',
+            component: InstancesContainer
+        }
     ]
 })

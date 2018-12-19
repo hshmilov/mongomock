@@ -32,21 +32,32 @@ export const adapter = {
 			state.adapterList.fetching = payload.fetching
 			if (payload.data) {
 				state.adapterList.data = []
-				payload.data.forEach((adapter) => {
-					let pluginTitle = adapter.plugin_name
-					let pluginDescription = ''
-					if (pluginMeta[adapter.plugin_name]) {
-						pluginDescription = pluginMeta[adapter.plugin_name].description
-						pluginTitle = pluginMeta[adapter.plugin_name].title
-					}
-					state.adapterList.data.push({
-						...adapter,
-						id: adapter.unique_plugin_name,
-						title: pluginTitle,
-						description: pluginDescription,
-						supported_features: adapter.supported_features
+				for (let pluginName in payload.data) {
+					let current_plugin_data = payload.data[pluginName]
+                    let pluginTitle = pluginName
+                    let pluginDescription = ''
+                    if (pluginMeta[pluginName]) {
+                        pluginDescription = pluginMeta[pluginName].description
+                        pluginTitle = pluginMeta[pluginName].title
+                    }
+                    let status = ''
+					current_plugin_data.forEach((unique_adapter) => {
+						if (unique_adapter.status === "error") {
+							status = "warning"
+						}
+						else if (unique_adapter.status !== "" &&  status !== "warning") {
+							status = unique_adapter.status
+						}
 					})
-				})
+                    state.adapterList.data.push({
+                        ...current_plugin_data,
+                        id: pluginName,
+                        title: pluginTitle,
+						status: status,
+                        description: pluginDescription,
+                        supported_features: current_plugin_data[0].supported_features
+                    })
+				}
 				state.adapterList.data.sort((first, second) => {
 					// Sort by adapter plugin name (the one that is shown in the gui).
 					let firstText = first.title.toLowerCase()
@@ -57,7 +68,7 @@ export const adapter = {
 				})
 				if (state.currentAdapter && state.currentAdapter.id) {
 					state.currentAdapter = state.adapterList.data.find(
-						adapter => adapter.unique_plugin_name === state.currentAdapter.id)
+						adapter => adapter.id === state.currentAdapter.id)
 				}
 			}
 			if (payload.error) {
@@ -65,26 +76,25 @@ export const adapter = {
 			}
 		},
 		[ UPDATE_CURRENT_ADAPTER ] (state, adapterId) {
-			state.currentAdapter = state.adapterList.data.find(adapter => adapter.unique_plugin_name === adapterId)
+			state.currentAdapter = state.adapterList.data.find(adapter => adapter.id === adapterId)
 		},
 		[ UPDATE_ADAPTER_SERVER ] (state, payload) {
 			if (!payload.uuid) {
-				state.currentAdapter.clients = [ payload, ...state.currentAdapter.clients]
+                Object.values(state.currentAdapter).filter(field => (field.clients && field.node_id === payload.client_config.instanceName))[0].clients.push(payload)
 				return
 			}
-			state.currentAdapter.clients.forEach((client, index) => {
-				if (client.uuid === payload.uuid) {
-					state.currentAdapter.clients[index] = payload
-				}
-			})
+            Object.values(state.currentAdapter).filter(field => (field.clients)).forEach((adapter) => {
+                adapter.clients.forEach((client) => {
+                    if (client.uuid === payload.uuid) {
+                        client = payload
+                    }
+                })
+            })
 		},
 		[ REMOVE_SERVER ] (state, serverId) {
-			state.currentAdapter = {
-				...state.currentAdapter,
-				clients: state.currentAdapter.clients.filter((server) => {
-					return server.uuid !== serverId
+			Object.values(state.currentAdapter).filter(field => (field.clients)).forEach((adapter) => {
+				adapter.clients = adapter.clients.filter(currentClient => currentClient.uuid !== serverId)
 				})
-			}
 		},
 		[ UPDATE_ADAPTER_STATUS ] (state, adapterId) {
 			state.adapterList.data = state.adapterList.data.map((item) => {
@@ -152,7 +162,8 @@ export const adapter = {
 			}
 			dispatch(REQUEST_API, {
 				rule: `adapters/${payload.adapterId}/clients/${payload.serverId}${param}`,
-				method: 'DELETE'
+				method: 'DELETE',
+				data: {instanceName: payload.nodeId}
 			}).then((response) => {
 				if (response.data !== '') {
 					return

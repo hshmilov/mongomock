@@ -17,8 +17,8 @@
             <div class="header x-btn link" :class="{ disabled: isReadOnly }" @click="toggleSettings">
                 <svg-icon name="navigation/settings" :original="true" height="20"/>Advanced Settings</div>
             <div class="content">
-                <tabs v-if="currentAdapter && advancedSettings" class="growing-y" ref="tabs">
-                    <tab v-for="config, configName, i in currentAdapter.config" :key="i"
+                <tabs v-if="currentAdapter && currentAdapter[0] && advancedSettings" class="growing-y" ref="tabs">
+                    <tab v-for="config, configName, i in currentAdapter[0].config" :key="i"
                          :title="config.schema.pretty_name || configName" :id="configName" :selected="!i">
                         <div class="configuration">
                             <x-schema-form :schema="config.schema" v-model="config.config" @validate="validateConfig"/>
@@ -43,6 +43,10 @@
                                @submit="saveServer" @validate="validateServer" />
             </div>
             <template slot="footer">
+                <div v-if="instances && instances.length > 0" id="serverInstancesList">
+                    <label for="serverInstance" align="left">Choose Instance</label>
+                    <x-select id="serverInstance" align="left" :options="instances" v-model="serverModal.instanceName"  />
+                </div>
                 <button @click="toggleServerModal" class="x-btn link">Cancel</button>
                 <button id="test_reachability" @click="testServer"
                         class="x-btn" :class="{disabled: !serverModal.valid}">Test Connectivity</button>
@@ -70,6 +74,7 @@
 	import Tab from '../../components/tabs/Tab.vue'
     import xLogoName from '../../components/titles/LogoName.vue'
     import xToast from '../../components/popover/Toast.vue'
+    import xSelect from '../../components/inputs/Select.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import {
@@ -81,11 +86,11 @@
 
     export default {
 		name: 'adapter-config-container',
-		components: { xPage, xTableActions, xTable, Tabs, Tab, Modal, xLogoName, xSchemaForm, xToast },
+		components: { xPage, xTableActions, xTable, Tabs, Tab, Modal, xLogoName, xSchemaForm, xToast, xSelect },
 		computed: {
 			...mapState({
                 currentAdapter(state) {
-					return state.adapter.currentAdapter
+                    return state.adapter.currentAdapter
                 },
                 isReadOnly(state) {
                     let user = state.auth.currentUser.data
@@ -97,31 +102,49 @@
 				return this.$route.params.id
 			},
 			adapterPluginName () {
-				return this.adapterId.match(/(.*_adapter)_\d*/)[1]
+				return this.adapterId
 			},
 			adapterName () {
 				if (!pluginMeta[this.adapterPluginName]) { return this.adapterPluginName }
 				return pluginMeta[this.adapterPluginName].title
 			},
             adapterClients () {
-				if (!this.currentAdapter || !this.currentAdapter.clients) return []
-				return this.currentAdapter.clients.map((client) => {
-					return {
-						uuid: client.uuid,
-						status: client.status,
-                        ...client.client_config,
-                        error: client.error
+				if (!this.currentAdapter) return []
+                let clients = []
+                Object.values(this.currentAdapter).filter(field => (field.clients && field.clients.length > 0)).forEach(currentAdapter =>
+                    currentAdapter.clients.forEach(currentClient =>
+                        clients.push({
+                            uuid: currentClient.uuid,
+                            status: currentClient.status,
+                            node_id: currentClient.node_id,
+                            node_name: currentAdapter.node_name,
+                            ...currentClient.client_config,
+                            error: currentClient.error
+                        })
+                    )
+                )
+                return clients
+            },
+            instances () {
+                if (!this.currentAdapter) return []
+                let instancesList = Object.values(this.currentAdapter).filter(field => (field.node_id)).map((adapter) => {
+                    if (adapter.node_name && adapter.node_name !== '') {
+                        return { name: adapter.node_id, title: adapter.node_name}
+                    } else if (adapter.node_id) {
+                        return { name: adapter.node_id, title: adapter.node_id}
                     }
                 })
+                return instancesList
             },
             adapterSchema () {
 				if (!this.currentAdapter) return null
-				return this.currentAdapter.schema
+				return this.currentAdapter[0].schema
             },
             tableFields () {
 				if (!this.adapterSchema || !this.adapterSchema.items) return []
 				return [
 					{ name: 'status', title: '', type: 'string', format: 'icon' },
+                    { name: 'node_name', title: 'Instance Name', type: 'string'},
                     ...this.adapterSchema.items.filter(field => (field.type !== 'file' && field.format !== 'password')),
                 ]
             }
@@ -132,6 +155,7 @@
 				serverModal: {
 					open: false,
 					serverData: {},
+                    instanceName: '',
                     error: '',
                     serverName: 'New Server',
                     uuid: null,
@@ -160,12 +184,18 @@
             	this.message = ''
 				this.serverModal.valid = true
 				if (serverId === 'new') {
+                    this.serverModal.instanceName = this.instances[0].name
 					this.serverModal = { ...this.serverModal,
-                        serverData: {}, serverName: 'New Server', uuid: serverId, error: '', valid: false }
+                        serverData: {instanceName: null}, serverName: 'New Server', uuid: serverId, error: '', valid: false }
 				} else {
-					let server = this.currentAdapter.clients.find(server => (server.uuid === serverId))
+				    let server = null
+                    Object.values(this.currentAdapter).filter(field => (field.clients && field.clients.length > 0)).forEach((unique_adapter) => {
+                        if (unique_adapter.clients.find(client => (client.uuid === serverId))) {
+                            server = unique_adapter.clients.find(client => (client.uuid === serverId))
+                        }
+                    })
                     this.serverModal = { ...this.serverModal,
-                        serverData: { ...server.client_config }, serverName: server.client_id,
+                        serverData: { ...server.client_config, oldInstanceName: server.node_id}, instanceName: server.node_id, serverName: server.client_id,
                         uuid: server.uuid, error: server.error, valid: true
                     }
 				}
@@ -180,6 +210,7 @@
 			},
             doRemoveServers() {
                 this.selectedServers.forEach(serverId => this.archiveServer({
+                    nodeId: this.adapterClients.find(client => (client.uuid === serverId)).node_id,
 					adapterId: this.adapterId,
 					serverId: serverId,
                     deleteEntities: this.deleteEntities
@@ -201,7 +232,7 @@
                 this.message = 'Connecting to Server...'
 				this.updateServer({
 					adapterId: this.adapterId,
-					serverData: this.serverModal.serverData,
+					serverData: { ...this.serverModal.serverData, instanceName: this.serverModal.instanceName },
                     uuid: this.serverModal.uuid
 				}).then((updateRes) => {
 					this.fetchAdapters().then(() => {
@@ -223,7 +254,7 @@
                 this.message = 'Testing server connection...'
                 this.testAdapter({
                     adapterId: this.adapterId,
-                    serverData: this.serverModal.serverData,
+                    serverData: { ...this.serverModal.serverData, instanceName: this.serverModal.instanceName },
                     uuid: this.serverModal.uuid
                 }).then((updateRes) => {
                     if (updateRes.data.status === 'error') {
@@ -289,6 +320,9 @@
         width: auto;
         margin-right: 5px;
     }
+    #serverInstancesList {
+        width: 45%
+    }
     .adapter-config {
         .x-table-actionable {
             height: auto;
@@ -335,6 +369,9 @@
                 .error-text {
                     margin-left: 8px;
                 }
+            }
+            .x-select {
+                margin-bottom: 24px;
             }
         }
     }

@@ -4,12 +4,18 @@ import secrets
 
 import requests
 
-from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED,
-                                       ROLES_COLLECTION, CONFIG_COLLECTION)
-from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION,
-                                          DASHBOARD_COLLECTION, GUI_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME)
+from axonius.consts.gui_consts import (CONFIG_COLLECTION,
+                                       PREDEFINED_ROLE_ADMIN,
+                                       PREDEFINED_ROLE_RESTRICTED,
+                                       ROLES_COLLECTION)
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
+                                          CONFIGURABLE_CONFIGS_COLLECTION,
+                                          DASHBOARD_COLLECTION, GUI_NAME,
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME)
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
+
+SYSTEM_SETTINGS_DIR_NAME = '.axonius_settings'
 
 
 class GuiService(PluginService):
@@ -32,6 +38,8 @@ class GuiService(PluginService):
             self._update_schema_version_5()
         if self.db_schema_version < 6:
             self._update_schema_version_6()
+        if self.db_schema_version < 7:
+            self._update_schema_version_7()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -272,6 +280,22 @@ class GuiService(PluginService):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 6. Details: {e}')
 
+    def _update_schema_version_7(self):
+        print('upgrade to schema 7')
+        try:
+            # If Instances screen default doesn't exist add it with Resticted default.
+            self.db.get_collection(GUI_NAME, ROLES_COLLECTION).update_many(
+                {f'permissions.{PermissionType.Instances.name}': {'$exists': False}},
+                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
+
+            # Update Admin role with ReadWrite
+            self.db.get_collection(GUI_NAME, ROLES_COLLECTION).find_one_and_update(
+                {'name': PREDEFINED_ROLE_ADMIN},
+                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.ReadWrite.name}})
+            self.db_schema_version = 7
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 7. Details: {e}')
+
     @property
     def exposed_ports(self):
         """
@@ -282,17 +306,25 @@ class GuiService(PluginService):
 
     @property
     def volumes_override(self):
+        # Creating a settings dir outside of cortex (on production machines
+        # this will be /home/ubuntu/.axonius_settings) for login marker and weave encryption key.
+        settings_path = os.path.abspath(os.path.join(self.cortex_root_dir, SYSTEM_SETTINGS_DIR_NAME))
+        os.makedirs(settings_path, exist_ok=True)
+        volumes = [f'{settings_path}:/home/axonius/.axonius_settings']
+
         # GUI supports debug, but to use, you have to build your *local* node modules
         local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
         local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
         if os.path.isdir(local_npm) and os.path.isdir(local_dist):
-            return super().volumes_override
+            volumes.extend(super().volumes_override)
+            return volumes
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
-        volumes = [f'{libs}:/home/axonius/libs:ro']
+        volumes.extend([f'{libs}:/home/axonius/libs:ro'])
 
         # extend volumes by mapping specifically each python file, to be able to debug much better.
         volumes.extend([f'{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro'
                         for fn in os.listdir(self.service_dir) if fn.endswith('.py')])
+
         return volumes
 
     def get_dockerfile(self, mode=''):

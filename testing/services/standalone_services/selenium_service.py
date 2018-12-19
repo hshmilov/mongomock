@@ -3,7 +3,7 @@ import subprocess
 import shlex
 import time
 
-from services.docker_service import DockerService
+from services.docker_service import DockerService, is_weave_up
 from services.ports import DOCKER_PORTS
 
 
@@ -29,8 +29,13 @@ class SeleniumService(DockerService):
               hard=False,
               show_print=True,
               expose_port=False,
-              extra_flags=None):
-        extra_flags = ['-e', 'TZ="Asia/Jerusalem"', '--link=gui:okta.axonius.local', '--privileged']
+              extra_flags=None,
+              env_vars=None):
+        extra_flags = ['-e', 'TZ="Asia/Jerusalem"', '--privileged']
+
+        if not is_weave_up():
+            extra_flags.append('--link=gui:gui.axonius.local')
+
         super().start(mode=mode,
                       allow_restart=allow_restart,
                       rebuild=rebuild,

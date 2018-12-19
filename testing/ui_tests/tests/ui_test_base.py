@@ -70,7 +70,7 @@ class TestBase:
             self.driver = webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
                                            desired_capabilities=self._get_desired_capabilities())
             logger.info('After webdriver.Remote')
-            self.base_url = 'https://gui'
+            self.base_url = 'https://gui.axonius.local'
 
     @staticmethod
     def _get_desired_capabilities():

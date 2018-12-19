@@ -78,6 +78,9 @@ def system_entry_point(args):
                         help='Puts the version name in generated metadata.')
     parser.add_argument('--rebuild-libs', action='store_true', default=False, help='Rebuild axonius-libs first')
     parser.add_argument('--yes-hard', default=False, action='store_true')
+    parser.add_argument('--env', metavar='N', type=str, nargs='*', action=ExtendAction,
+                        help='environment vars to start the containers with',
+                        default=[])
 
     try:
         args = parser.parse_args(args)
@@ -124,9 +127,9 @@ def system_entry_point(args):
 
         # Optimization - async build first
         axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
-
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db)
-        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip)
+        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip,
+                                     env_vars=args.env)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
@@ -151,6 +154,12 @@ def service_entry_point(target, args):
     parser.add_argument('--pull-base-image', action='store_true', default=False, help='Pull base image before rebuild')
     parser.add_argument('--rebuild-libs', action='store_true', default=False, help='Rebuild axonius-libs first')
     parser.add_argument('--yes-hard', default=False, action='store_true')
+    parser.add_argument('--exclude', metavar='N', type=str, nargs='*', action=ExtendAction,
+                        help='Adapters and Services to exclude',
+                        default=[])
+    parser.add_argument('--env', metavar='N', type=str, nargs='*', action=ExtendAction,
+                        help='environment vars to start the containers with',
+                        default=[])
 
     try:
         args = parser.parse_args(args)
@@ -158,13 +167,22 @@ def service_entry_point(target, args):
         print(parser.usage())
         sys.exit(1)
 
-    adapters = []
-    services = []
+    axonius_system = get_service()
 
     if target == 'adapter':
-        adapters.append(args.name)
+        adapters = [name for name, _ in axonius_system.get_all_adapters()] if args.name == 'all' else [args.name]
+        services = []
     else:
-        services.append(args.name)
+        services = [name for name, _ in axonius_system.get_all_plugins()] if args.name == 'all' else [args.name]
+        adapters = []
+
+    if args.exclude:
+        # for name in args.exclude:
+        #     if name not in services and name not in adapters:
+        #         raise ValueError(f'Excluded name {name} not found')
+
+        services = [name for name in services if name not in args.exclude]
+        adapters = [name for name in adapters if name not in args.exclude]
 
     axonius_system = get_service()
     if args.hard:
@@ -177,7 +195,7 @@ def service_entry_point(target, args):
     if args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, 'prod' if args.prod else '', args.restart, args.rebuild,
-                                     args.hard)
+                                     args.hard, env_vars=args.env)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')

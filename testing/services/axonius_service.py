@@ -2,16 +2,24 @@ import glob
 import importlib
 import inspect
 import os
+import shlex
 import subprocess
+import sys
 import time
 from datetime import datetime, timedelta
 
-from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
-                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, AXONIUS_NETWORK)
+from axonius.consts.plugin_consts import (AXONIUS_NETWORK,
+                                          CONFIGURABLE_CONFIGS_COLLECTION,
+                                          ENCRYPTION_KEY_FILENAME,
+                                          PLUGIN_UNIQUE_NAME,
+                                          AXONIOUS_SETTINGS_DIR_NAME, SYSTEM_SETTINGS,
+                                          WEAVE_NETWORK,
+                                          WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from services import adapters, plugins
 from services.axon_service import TimeoutException
+from services.docker_service import is_weave_up
 from services.plugins.aggregator_service import AggregatorService
 from services.plugins.core_service import CoreService
 from services.plugins.execution_service import ExecutionService
@@ -19,7 +27,8 @@ from services.plugins.gui_service import GuiService
 from services.plugins.mongo_service import MongoService
 from services.plugins.reports_service import ReportsService
 from services.plugins.static_correlator_service import StaticCorrelatorService
-from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
+from services.plugins.static_users_correlator_service import \
+    StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
@@ -32,7 +41,7 @@ def get_service():
 
 
 class AxoniusService:
-    _NETWORK_NAME = AXONIUS_NETWORK
+    _NETWORK_NAME = WEAVE_NETWORK if 'linux' in sys.platform.lower() else AXONIUS_NETWORK
 
     def __init__(self):
         self.db = MongoService()
@@ -50,21 +59,53 @@ class AxoniusService:
 
     @classmethod
     def get_is_network_exists(cls):
-        return cls._NETWORK_NAME in subprocess.check_output(['docker', 'network', 'ls', '--filter',
-                                                             f'name={cls._NETWORK_NAME}']).decode('utf-8')
+        if cls._NETWORK_NAME == WEAVE_NETWORK:
+            return is_weave_up()
+        else:
+            return cls._NETWORK_NAME in subprocess.check_output(['docker', 'network', 'ls', '--filter',
+                                                                 f'name={cls._NETWORK_NAME}']).decode('utf-8')
 
     @classmethod
     def create_network(cls):
         if cls.get_is_network_exists():
             return
-        subprocess.check_call(['docker', 'network', 'create', '--subnet=171.17.0.0/16', cls._NETWORK_NAME],
-                              stdout=subprocess.PIPE)
+
+        if 'linux' in sys.platform.lower():
+            # Getting network encryption key.
+            key_file_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), '..', '..', AXONIOUS_SETTINGS_DIR_NAME,
+                             ENCRYPTION_KEY_FILENAME))
+            if os.path.exists(key_file_path):
+                with open(key_file_path, 'r') as encryption_key_file:
+                    encryption_key = encryption_key_file.read()
+            else:
+                # Creating a new one if it doesn't exist yet.
+                encryption_key = subprocess.check_output(
+                    'dd if=/dev/random bs=1 count=32 2>/dev/null | base64 -w 0 | rev | cut -b 2- | rev',
+                    shell=True).decode("utf-8")
+                os.makedirs(
+                    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', AXONIOUS_SETTINGS_DIR_NAME)),
+                    exist_ok=True)
+                with open(key_file_path, 'w') as encryption_key_file:
+                    encryption_key_file.write(encryption_key)
+
+            subprocess.check_call(
+                [WEAVE_PATH, 'launch', '--dns-domain="axonius.local"', '--password', encryption_key],
+                stdout=subprocess.PIPE)
+        else:
+            subprocess.check_call(['docker', 'network', 'create', '--subnet=171.17.0.0/16', cls._NETWORK_NAME],
+                                  stdout=subprocess.PIPE)
 
     @classmethod
     def delete_network(cls):
         if not cls.get_is_network_exists():
             return
-        subprocess.check_call(['docker', 'network', 'rm', cls._NETWORK_NAME], stdout=subprocess.PIPE)
+
+        print('Deleting docker network')
+        if 'linux' in sys.platform.lower() and is_weave_up():
+            subprocess.check_call([WEAVE_PATH, 'reset'], stdout=subprocess.PIPE)
+        else:
+            subprocess.check_call(['docker', 'network', 'rm', cls._NETWORK_NAME], stdout=subprocess.PIPE)
 
     def stop(self, **kwargs):
         # Not critical but lets stop in reverse order
@@ -310,7 +351,7 @@ class AxoniusService:
         return cls._get_docker_service('adapters', name)
 
     def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
-                      skip=False, show_print=True):
+                      skip=False, show_print=True, env_vars=None):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
 
         if allow_restart:
@@ -321,7 +362,8 @@ class AxoniusService:
             if plugin.get_is_container_up():
                 if skip:
                     continue
-            plugin.start(mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
+            plugin.start(mode, allow_restart=allow_restart, rebuild=rebuild,
+                         hard=hard, show_print=show_print, env_vars=env_vars)
         timeout = 60
         start = time.time()
         first = True
@@ -387,17 +429,35 @@ class AxoniusService:
     def get_all_adapters(self):
         return self._get_all_docker_services('adapters', adapters)
 
+    def _pull_image(self, image_name, repull=False, show_print=True):
+        image_exists = image_name in subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
+        if image_exists and not repull:
+            if show_print:
+                print(f'Image {image_name} already exists - skipping pull step')
+            return image_name
+        runner = ParallelRunner()
+        runner.append_single('axonius-image-pull', ['docker', 'pull', image_name])
+        assert runner.wait_for_all() == 0
+        return image_name
+
+    def pull_weave_images(self, repull=False, show_print=True):
+        weave_images = ['weaveworks/weavedb', 'weaveworks/weaveexec:2.5.0', 'weaveworks/weave:2.5.0']
+        for current_weave_image in weave_images:
+            self._pull_image(current_weave_image, repull, show_print)
+        return weave_images
+
+    def pull_curl_image(self, repull=False, show_print=True):
+        curl_image = 'appropriate/curl'
+        return self._pull_image(curl_image, repull, show_print)
+
+    def pull_tunnler(self, repull=False, show_print=True):
+        # Tunnler is a tunnel to host:22 for ssh and scp from master to nodes.
+        tunnler_image = 'alpine/socat'
+        return self._pull_image(tunnler_image, repull, show_print)
+
     def pull_base_image(self, repull=False, show_print=True):
         base_image = 'axonius/axonius-base-image'
-        base_image_exists = base_image in subprocess.check_output(['docker', 'images', base_image]).decode('utf-8')
-        if base_image_exists and not repull:
-            if show_print:
-                print('Base image already exists - skipping pull step')
-            return base_image
-        runner = ParallelRunner()
-        runner.append_single('axonius-base-image', ['docker', 'pull', base_image])
-        assert runner.wait_for_all() == 0
-        return base_image
+        return self._pull_image(base_image, repull, show_print)
 
     def build_libs(self, rebuild=False, show_print=True):
         image_name = 'axonius/axonius-libs'

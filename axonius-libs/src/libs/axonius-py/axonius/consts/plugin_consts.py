@@ -1,6 +1,14 @@
+from pathlib import Path
+
 # PATHS #
 VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
-METADATA_PATH = '/home/axonius/shared_readonly_files/__build_metadata'
+SHARED_READONLY_DIR_NAME = 'shared_readonly_files'
+SHARED_READONLY_FULL_PATH = Path('/home/axonius') / SHARED_READONLY_DIR_NAME
+AXONIOUS_SETTINGS_DIR_NAME = '.axonius_settings'
+METADATA_PATH = SHARED_READONLY_FULL_PATH / '__build_metadata'
+ENCRYPTION_KEY_FILENAME = '.__key'
+ENCRYPTION_KEY_PATH = SHARED_READONLY_FULL_PATH / ENCRYPTION_KEY_FILENAME
+
 
 # SERVICES #
 CORE_UNIQUE_NAME = 'core'
@@ -14,6 +22,10 @@ DEVICE_CONTROL_PLUGIN_NAME = 'device_control'
 ADAPTERS_LIST_LENGTH = 'adapter_list_length'
 PLUGIN_UNIQUE_NAME = 'plugin_unique_name'
 PLUGIN_NAME = 'plugin_name'
+NODE_ID = 'node_id'
+NODE_USER_PASSWORD = 'node_user_password'
+NODE_INIT_NAME = 'node_init_name'
+NODE_NAME = 'node_name'
 NOTES_DATA_TAG = 'Notes'
 
 # SETTINGS #
@@ -38,3 +50,5 @@ X_UI_USER = 'x-ui-user'
 X_UI_USER_SOURCE = 'x-ui-user-source'
 
 AXONIUS_NETWORK = 'axonius'
+WEAVE_NETWORK = 'axonius-weave'
+WEAVE_PATH = '/usr/local/bin/weave'

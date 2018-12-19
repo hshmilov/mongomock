@@ -1,16 +1,35 @@
+import datetime
 import os
 import subprocess
+import sys
 from abc import abstractmethod
-from typing import Iterable
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterable
 
-from axonius.consts.plugin_consts import AXONIUS_NETWORK
+from retrying import retry
+
+from axonius.consts.plugin_consts import (AXONIUS_NETWORK, WEAVE_NETWORK,
+                                          WEAVE_PATH)
+from axonius.utils.debug import COLOR
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
-from axonius.utils.debug import COLOR
+
+
+def is_weave_up():
+    if 'linux' in sys.platform.lower():
+        cmd = [WEAVE_PATH, 'status']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return p.wait() == 0
+    else:
+        return False
+
+
+def retry_if_timeout(exception):
+    """Return True if we should retry (in this case when it's a TimeoutException), False otherwise"""
+    return isinstance(exception, TimeoutException)
 
 
 class DockerService(AxonService):
@@ -30,9 +49,6 @@ class DockerService(AxonService):
         self._process_owner = False
         self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
         self.override_exposed_port = False
-
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
 
     def take_process_ownership(self):
         self._process_owner = True
@@ -112,7 +128,7 @@ else:
 
     @property
     def docker_network(self):
-        return AXONIUS_NETWORK
+        return WEAVE_NETWORK if 'linux' in sys.platform.lower() and is_weave_up() else AXONIUS_NETWORK
 
     @property
     def _additional_parameters(self) -> Iterable[str]:
@@ -130,17 +146,25 @@ else:
               hard=False,
               show_print=True,
               expose_port=False,
-              extra_flags=None):
+              extra_flags=None,
+              env_vars=None):
         self._migrate_db()
         assert mode in ('prod', '')
         assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
 
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+
         logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
+        weave_is_up = is_weave_up()
 
-        docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
+        if 'linux' in sys.platform.lower() and weave_is_up:
+            docker_up = ['docker', 'run', '--name', self.container_name, '--detach']
+        else:
+            docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
+                         '--network-alias', self.fqdn, '--detach']
 
-        if self.docker_network == AXONIUS_NETWORK:
-            docker_up += ['--network-alias', self.fqdn]
+        docker_up = list(filter(lambda x: x != '' and x is not None, docker_up))
 
         max_allowed_memory = self.max_allowed_memory
         if max_allowed_memory:
@@ -164,6 +188,10 @@ else:
             docker_up.extend(['--volume', volume])
         for env in self.environment:
             docker_up.extend(['--env', env])
+
+        if env_vars is not None:
+            for env in env_vars:
+                docker_up.extend(['--env', env])
         docker_up.extend(['--env', 'DOCKER=true'])
 
         if extra_flags:
@@ -189,17 +217,45 @@ else:
         if hard:
             self.remove_volume()
 
+        my_env = os.environ.copy()
+
+        if 'linux' in sys.platform.lower() and weave_is_up:
+            my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
+
         # print(' '.join(docker_up))
         print(f'{COLOR.get("light_green", "<")}'
               f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.'
               f'{COLOR.get("reset", ">")}')
-        subprocess.check_call(docker_up, cwd=self.service_dir, stdout=subprocess.PIPE)
+        try:
+            result = subprocess.check_output(docker_up, cwd=self.service_dir, env=my_env, timeout=20).decode("utf-8")
+        except subprocess.TimeoutExpired as exc:
+            self.restart()
+        except subprocess.CalledProcessError as exc:
+            if any(['could not create veth pair' in x.decode("utf-8") for x in [exc.output, exc.stdout, exc.stderr] if
+                    isinstance(x, bytes)]):
+                self.restart()
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows
             os.system(f'start /B cmd /c "docker logs -f {self.container_name} >> {logsfile} 2>&1"')
         else:  # good stuff
             os.system(f'docker logs -f {self.container_name} >> {logsfile} 2>&1 &')
+
+    def restart(self):
+        container_id = self.get_container_id(True)
+        if container_id != u'\n' and container_id != '':
+            print(f'{COLOR.get("yellow", "<")}Restarting raised container {self.container_name} due to weave false start...'
+                  f'{COLOR.get("reset", ">")}')
+            command = ['docker', 'restart', container_id[:-1]]
+
+            my_env = os.environ.copy()
+
+            if 'linux' in sys.platform.lower() and is_weave_up():
+                my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
+
+            subprocess.check_call(command, cwd=self.service_dir, stdout=subprocess.PIPE, env=my_env)
+        else:
+            self.start()
 
     def build(self, mode='', runner=None):
         docker_build = ['docker', 'build', '.']
@@ -240,8 +296,10 @@ else:
             docker_cmd.append('--all')
         return self.container_name in subprocess.check_output(docker_cmd).decode('utf-8')
 
-    def get_container_id(self):
+    def get_container_id(self, stopped=False):
         docker_cmd = ['docker', 'ps', '--filter', f'name={self.container_name}', '-q']
+        if stopped:
+            docker_cmd.append('-a')
         return subprocess.check_output(docker_cmd).decode('utf-8')
 
     def get_image_exists(self):
@@ -297,13 +355,20 @@ else:
         self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard)
         self.wait_for_service()
 
+    def restart_and_wait(self):
+        """
+        Take notice that the constructor should have already called 'start' method.
+        """
+        self.restart()
+        self.wait_for_service()
+
+    @retry(stop_max_attempt_number=5, stop_max_delay=1000 * 10, wait_fixed=2000)
     def get_file_contents_from_container(self, file_path):
         """
         Gets the contents of an internal file.
         :param file_path: the absolute path inside the container.
         :return: the contents
         """
-
         p = subprocess.Popen(['docker', 'exec', self.container_name, 'cat', file_path],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
@@ -314,6 +379,9 @@ else:
             raise
 
         if p.returncode != 0:
+            if 'is not running' in err.decode("utf-8"):
+                self.restart_and_wait()
+
             raise DockerException('Failed to run \'cat\' on docker {0}'.format(self.container_name))
 
         return out, err, p.returncode
@@ -338,10 +406,11 @@ else:
     def is_up(self):
         pass
 
-    def wait_for_service(self, timeout=180):
+    @retry(stop_max_attempt_number=5, retry_on_exception=retry_if_timeout)
+    def wait_for_service(self, timeout=250):
         if timeout > 3:
             try:
-                super().wait_for_service(timeout=3)
+                super().wait_for_service(timeout=5)
             except TimeoutException:
                 try:
                     if subprocess.check_output(['docker', 'exec', '-it',
@@ -353,7 +422,8 @@ else:
         try:
             super().wait_for_service(timeout=timeout)
         except TimeoutException:
-            raise TimeoutException(f'Service {self.container_name} failed to start')
+            self.restart()
+            raise
 
     def _migrate_db(self):
         """

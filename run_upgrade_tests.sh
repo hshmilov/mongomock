@@ -33,6 +33,7 @@ echo "#### Installer created"
 
 echo "#### Cleaning env"
 set +e; ./clean_dockers.sh images &>/dev/null; set -e # can fail and its ok; also images
+weave reset
 echo "#### Cleaning done"
 
 # install latest stable version from scratch (can fetch from aws or exports).

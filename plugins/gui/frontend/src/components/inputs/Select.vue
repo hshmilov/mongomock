@@ -39,7 +39,7 @@
             },
             selectedOption() {
 				if (!this.value || !this.options || !this.options.length) return undefined
-				return this.options.find(option => (option.name === this.value))
+				return this.options.find(option => (option && option.name === this.value))
             }
         },
         data() {

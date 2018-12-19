@@ -282,7 +282,7 @@ class TestAlert(TestBase):
             self.settings_page.click_global_settings()
             toggle = self.settings_page.find_syslog_toggle()
             self.settings_page.click_toggle_button(toggle, make_yes=True)
-            self.settings_page.fill_syslog_host(syslog_server.name)
+            self.settings_page.fill_syslog_host(f'{syslog_server.name}.axonius.local')
             self.settings_page.fill_syslog_port(syslog_server.tcp_port)
             self.settings_page.select_syslog_ssl('Unencrypted')
             self.settings_page.click_save_button()

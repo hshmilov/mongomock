@@ -9,7 +9,6 @@ The final installer zip is comprised of:
 import argparse
 import imp
 import inspect
-import pip
 import os
 import re
 import subprocess
@@ -19,10 +18,14 @@ import time
 import zipfile
 from pathlib import Path
 
+import pip
+from pip._vendor.packaging import markers as pip_markers
+
 import lists
-from services.axonius_service import get_service
-from utils import AutoOutputFlush, CORTEX_PATH, SOURCES_FOLDER_NAME, print_state
 from devops.axonius_system import get_metadata
+from services.axonius_service import get_service
+from utils import (CORTEX_PATH, SOURCES_FOLDER_NAME, AutoOutputFlush,
+                   print_state)
 
 if pip.__version__.startswith('9.'):
     import pip.pep425tags as pip_pep425tags
@@ -32,7 +35,6 @@ else:
     import pip._internal.pep425tags as pip_pep425tags
     import pip._internal.utils.glibc as pip_glibc
     from pip._internal import main as pip_main
-from pip._vendor.packaging import markers as pip_markers
 
 
 def main():
@@ -145,6 +147,9 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
     if pull:
         rebuild = True
     images.append(axonius_system.pull_base_image(pull, show_print=False))
+    images.append(axonius_system.pull_tunnler(pull, show_print=False))
+    images.append(axonius_system.pull_curl_image(pull, show_print=False))
+    images.extend(axonius_system.pull_weave_images(pull, show_print=False))
     print_state(f'Building all images')
     images.append(axonius_system.build_libs(rebuild, show_print=False))
     services = [name for name, variable in axonius_system.get_all_plugins()]

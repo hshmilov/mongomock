@@ -6,18 +6,19 @@ import sys
 import docker
 
 
-def destroy(keep_diag=True):
+def destroy(keep_diag=True, keep_tunnler=True):
     """
     - stops all running containers (can keep diag)
     - remove all containers (can keep diag)
     - *removes all "axonius/" images*
     - optionally, removes all log files (unless --keep-logs is specified)
     :param keep_diag: should keep diag (running container and the image)
+    :param keep_tunnler: should keep tunnler for instance host connection(running container and the image)
     """
     client = docker.from_env()
 
     for container in client.containers.list():
-        if keep_diag and container.name == 'diagnostics':
+        if (keep_diag and container.name == 'diagnostics') or (keep_tunnler and container.name == 'tunnler'):
             print(f'Skipping {container.name}')
             continue
 
@@ -60,6 +61,7 @@ def destroy(keep_diag=True):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--keep-diag', action='store_true', default=True)
+    parser.add_argument('--keep-tunnler', action='store_true', default=True)
 
     try:
         args = parser.parse_args()

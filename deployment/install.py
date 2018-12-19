@@ -6,17 +6,19 @@ This script installs the system from scratch (using --first-time) or as an upgra
 """
 import argparse
 import datetime
+import getpass
 import os
+import pwd
 import shutil
-import subprocess
 import stat
+import subprocess
 import sys
 import time
 import zipfile
-import getpass
 
-from utils import AutoOutputFlush, AXONIUS_DEPLOYMENT_PATH, SOURCES_FOLDER_NAME, print_state, \
-    current_file_system_path, AXONIUS_OLD_ARCHIVE_PATH, VENV_WRAPPER
+from utils import (AXONIUS_DEPLOYMENT_PATH, AXONIUS_OLD_ARCHIVE_PATH, CWD,
+                   SOURCES_FOLDER_NAME, VENV_WRAPPER, AutoOutputFlush,
+                   current_file_system_path, print_state)
 
 timestamp = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
@@ -25,6 +27,19 @@ VENV_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'venv')
 STATE_OUTPUT_PATH = os.path.join(os.path.dirname(current_file_system_path), 'encrypted.state')
 ARCHIVE_PATH = AXONIUS_OLD_ARCHIVE_PATH.format(timestamp)
 TEMPORAL_PATH = f'{AXONIUS_DEPLOYMENT_PATH}_TEMP_{timestamp}'
+INSTANCES_SCRIPT_PATH = 'devops/scripts/instances'
+WEAVE_PATH = '/usr/local/bin/weave'
+DELETE_INSTANCES_USER_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
+                                                      'delete_instances_user.py')
+RESTART_SYSTEM_ON_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
+                                                       'restart_system_on_reboot.py')
+INSTANCES_SETUP_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH, 'setup_node.py')
+INSTANCE_SETTINGS_DIR_NAME = '.axonius_settings'
+INSTANCE_IS_MASTER_MARKER_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME, '.logged_in')
+BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(
+    AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME, '.booted_for_production')
+INSTANCE_CONNECT_USER_NAME = 'node_maker'
+INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
 
 
 def main():
@@ -64,6 +79,8 @@ def install(first_time, root_pass):
     print('Venv activated!')
     # from this line on - we can use venv!
 
+    setup_host()
+
     if not first_time:
         stop_old(keep_diag=True)
 
@@ -75,6 +92,7 @@ def install(first_time, root_pass):
     if not first_time:
         archive_old_source()
         chown_folder(root_pass, TEMPORAL_PATH)
+        set_booted_for_production()
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
     chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)  # new sources
@@ -87,6 +105,84 @@ def validate_old_state(root_pass):
         sys.exit(-1)
     else:
         chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
+
+    if not os.path.exists(WEAVE_PATH):
+        name = os.path.basename(WEAVE_PATH)
+        print(f"{name} binary wasn't found at {WEAVE_PATH}. please install weave and try again.")
+        raise FileNotFoundError(f'{name} binary wasn\'t found at {WEAVE_PATH}')
+
+
+def setup_instances_user():
+    try:
+        pwd.getpwnam(INSTANCE_CONNECT_USER_NAME)
+        print_state(f'{INSTANCE_CONNECT_USER_NAME} user exists')
+    except KeyError:
+        if not os.path.exists(INSTANCE_IS_MASTER_MARKER_PATH):
+            print_state(f'Generating {INSTANCE_CONNECT_USER_NAME} user')
+            for current_file in [INSTANCES_SETUP_SCRIPT_PATH, 'axonius.sh', 'prepare_python_env.sh']:
+                subprocess.check_call(['chmod', '+xr', os.path.join(AXONIUS_DEPLOYMENT_PATH, current_file)])
+            subprocess.check_call(['/usr/sbin/useradd', '-s',
+                                   INSTANCES_SETUP_SCRIPT_PATH, '-G', 'docker,sudo', INSTANCE_CONNECT_USER_NAME])
+            subprocess.check_call(
+                f'usermod --password $(openssl passwd -1 {INSTANCE_CONNECT_USER_PASSWORD}) node_maker',
+                shell=True)
+
+            sudoers = open('/etc/sudoers', 'r').read()
+            if INSTANCE_CONNECT_USER_NAME not in sudoers:
+                subprocess.check_call(
+                    f'echo "{INSTANCE_CONNECT_USER_NAME} ALL=(ALL) NOPASSWD: /usr/sbin/usermod" | EDITOR="tee -a" visudo', shell=True)
+
+
+def create_cronjob(script_path, cronjob_timing):
+    print_state(f'Creating {script_path} cronjob')
+    crontab_command = 'crontab -l | {{ cat; echo "{timing} /etc/cron.d/{script_name} > ' \
+                      '/var/log/{log_name} 2>&1"; }} | crontab -'
+
+    shutil.copyfile(script_path,
+                    f'/etc/cron.d/{os.path.basename(script_path)}')
+    subprocess.check_call(
+        ['chown', 'root:root', f'/etc/cron.d/{os.path.basename(script_path)}'])
+    subprocess.check_call(['chmod', '0700', f'/etc/cron.d/{os.path.basename(script_path)}'])
+    try:
+        cron_jobs = subprocess.check_output(['crontab', '-l']).decode('utf-8')
+    except subprocess.CalledProcessError as exc:
+        cron_jobs = ''
+
+    if os.path.basename(script_path) not in cron_jobs:
+        subprocess.check_call(crontab_command.format(timing=cronjob_timing, script_name=os.path.basename(script_path),
+                                                     log_name=f'{os.path.basename(script_path).split(".")[0]}.log'),
+                              shell=True)
+
+
+def setup_instances_cronjobs():
+    create_cronjob(DELETE_INSTANCES_USER_CRON_SCRIPT_PATH, '*/1 * * * *')
+    create_cronjob(RESTART_SYSTEM_ON_BOOT_CRON_SCRIPT_PATH, '@reboot')
+
+
+def push_old_instances_settings():
+    print_state('Copying old settings (weave encryption key, master marker and first boot marker')
+    if os.path.exists(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME)):
+        shutil.copytree(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME),
+                        os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME))
+
+
+def setup_instances():
+    # Save old weave pass:
+    push_old_instances_settings()
+
+    # Setup user
+    setup_instances_user()
+
+    # Setup cron-job
+    setup_instances_cronjobs()
+
+
+def setup_host():
+    setup_instances()
+
+
+def set_booted_for_production():
+    open(BOOTED_FOR_PRODUCTION_MARKER_PATH, 'a').close()
 
 
 def chown_folder(root_pass, path):

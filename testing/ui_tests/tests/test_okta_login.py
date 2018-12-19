@@ -1,11 +1,21 @@
+import shlex
+import subprocess
+import sys
+
 from test_credentials.test_okta_credentials import (OKTA_CLIENT_LOGIN_DETAILS,
                                                     OKTA_LOGIN_DETAILS)
+from testing.services.docker_service import is_weave_up
+from axonius.consts.plugin_consts import WEAVE_PATH
 from ui_tests.tests import hosts_file_modifier
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestOktaLogin(TestBase):
     def test_okta_login(self):
+        if 'linux' in sys.platform.lower() and is_weave_up():
+            cmd = f'{WEAVE_PATH} dns-add gui -h okta.axonius.local'
+            subprocess.check_call(shlex.split(cmd))
+
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
         self.settings_page.wait_for_spinner_to_end()

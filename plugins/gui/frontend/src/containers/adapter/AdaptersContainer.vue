@@ -20,8 +20,8 @@
                             </div>
                             <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
                         </td>
-                        <td class="row-data" :id="item.plugin_name">
-                            <x-logo-name :name="item.plugin_name" :title="item.title"/>
+                        <td class="row-data" :id="item.id">
+                            <x-logo-name :name="item.id" :title="item.title"/>
                         </td>
                         <td class="row-data">
                             <div class="content">{{ item.description }}</div>
@@ -49,9 +49,11 @@
         computed: {
             ...mapState({
                 adaptersData(state) {
-                	return state.adapter.adapterList.data.filter(adapter => {
-                		return adapter.title.toLowerCase().includes(this.searchText.toLowerCase())
-                    })
+                    if (state.adapter.adapterList.data.length > 0) {
+                        return state.adapter.adapterList.data.filter(adapter => {
+                            return adapter.title.toLowerCase().includes(this.searchText.toLowerCase())
+                        })
+                    }
                 },
                 tourAdapters(state) {
                 	return state.onboarding.tourStates.queues.adapters

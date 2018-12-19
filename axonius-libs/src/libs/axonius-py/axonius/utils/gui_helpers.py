@@ -87,6 +87,7 @@ class PermissionType(Enum):
     Alerts = 'Alerts'
     Dashboard = 'Dashboard'
     Reports = 'Reports'
+    Instances = 'Instances'
 
 
 # Represent a permission in the system

@@ -27,7 +27,7 @@ class TestReport(TestBase):
             self.settings_page.click_global_settings()
             toggle = self.settings_page.find_send_emails_toggle()
             self.settings_page.click_toggle_button(toggle, make_yes=True)
-            self.settings_page.fill_email_host(smtp_service.name)
+            self.settings_page.fill_email_host(smtp_service.fqdn)
             self.settings_page.fill_email_port(smtp_service.port)
             self.settings_page.click_save_button()
 
@@ -56,7 +56,7 @@ class TestReport(TestBase):
             self.settings_page.click_global_settings()
             toggle = self.settings_page.find_send_emails_toggle()
             self.settings_page.click_toggle_button(toggle, make_yes=True)
-            self.settings_page.fill_email_host(smtp_service.name)
+            self.settings_page.fill_email_host(smtp_service.fqdn)
             self.settings_page.fill_email_port(smtp_service.port)
             goguerrilla_basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                '../../services/standalone_services/goguerrilla'))

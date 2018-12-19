@@ -21,6 +21,7 @@
             <x-nested-nav-item v-bind="navigationLinkProps('Alerts')" icon="alert" id="alerts" />
             <x-nested-nav-item v-bind="navigationLinkProps('Adapters')" icon="adapter" id="adapters" />
             <x-nested-nav-item v-bind="navigationLinkProps('Reports')" icon="report" id="reports" />
+            <x-nested-nav-item v-bind="navigationLinkProps('Instances')" icon="instances" id="instances" />
         </x-nested-nav>
     </aside>
 </template>

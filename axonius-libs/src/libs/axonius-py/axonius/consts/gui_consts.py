@@ -1,4 +1,6 @@
 from enum import Enum, auto
+from pathlib import Path
+from axonius.consts.plugin_consts import AXONIOUS_SETTINGS_DIR_NAME, ENCRYPTION_KEY_FILENAME
 
 
 class ChartMetrics(Enum):
@@ -101,3 +103,10 @@ PREDEFINED_ROLE_RESTRICTED = 'Restricted User'
 #######################
 
 GOOGLE_KEYPAIR_FILE = 'keypair_file'
+
+####################
+# Instances consts #
+####################
+AXONIOUS_SETTINGS_PATH = Path('/home/axonius/') / AXONIOUS_SETTINGS_DIR_NAME
+ENCRYPTION_KEY_PATH = AXONIOUS_SETTINGS_PATH / ENCRYPTION_KEY_FILENAME
+LOGGED_IN_MARKER_PATH = AXONIOUS_SETTINGS_PATH / '.logged_in'

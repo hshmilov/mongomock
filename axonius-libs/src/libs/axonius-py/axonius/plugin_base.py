@@ -55,7 +55,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME, GUI_NAME,
                                           PLUGIN_UNIQUE_NAME,
-                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, X_UI_USER, X_UI_USER_SOURCE,
+                                          NODE_ID,
+                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, NODE_INIT_NAME, X_UI_USER, X_UI_USER_SOURCE,
                                           PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW,
                                           NOTIFICATIONS_SETTINGS, NOTIFY_ADAPTERS_FETCH)
 from axonius.consts.core_consts import CORE_CONFIG_NAME
@@ -269,6 +270,7 @@ class PluginBase(Configurable, Feature):
         self.plugin_name = os.path.basename(os.path.dirname(self.config_file_path))
         self.plugin_unique_name = None
         self.api_key = None
+        self.node_id = None
 
         # MyDeviceAdapter things.
         self._entity_adapter_fields = {entity_type: {
@@ -294,7 +296,7 @@ class PluginBase(Configurable, Feature):
                 self.host = "0.0.0.0"
                 self.port = 443  # We listen on https.
                 # This should be dns resolved.
-                self.core_address = "https://core/api"
+                self.core_address = "https://core.axonius.local/api"
 
         if requested_unique_plugin_name is not None:
             self.plugin_unique_name = requested_unique_plugin_name
@@ -302,12 +304,15 @@ class PluginBase(Configurable, Feature):
         try:
             self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
             self.api_key = self.temp_config['registration']['api_key']
+            self.node_id = self.temp_config['registration'][NODE_ID]
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
 
         if not core_data:
-            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
+            core_data = self._register(self.core_address + "/register",
+                                       self.plugin_unique_name, self.api_key, self.node_id,
+                                       os.environ.get('NODE_INIT_NAME', None))
         if not core_data or core_data['status'] == 'error':
             raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data['message']))
         if 'registration' not in self.temp_config:
@@ -316,8 +321,10 @@ class PluginBase(Configurable, Feature):
         if core_data[PLUGIN_UNIQUE_NAME] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
             self.plugin_unique_name = core_data[PLUGIN_UNIQUE_NAME]
             self.api_key = core_data['api_key']
+            self.node_id = core_data[NODE_ID]
             self.temp_config['registration'][PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
             self.temp_config['registration']['api_key'] = self.api_key
+            self.temp_config['registration'][NODE_ID] = self.node_id
 
         with open(VOLATILE_CONFIG_PATH, 'w') as self.temp_config_file:
             self.temp_config.write(self.temp_config_file)
@@ -589,13 +596,13 @@ class PluginBase(Configurable, Feature):
         """Function for check that the plugin is still registered.
 
         This function will issue a get request to the Core to see if we are still registered.
-        I case we arent, this function will stop this application (and let the docker manager to run it again)
+        I case we aren't, this function will stop this application (and let the docker manager to run it again)
 
         :param int retries: Number of retries before exiting the plugin.
         """
         try:
             response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name), timeout=5)
-            if response.status_code in [404, 499, 502]:  # Fault values
+            if response.status_code in [404, 499, 502, 409]:  # Fault values
                 logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
                 # TODO: Think about a better way for exiting this process
                 os._exit(1)
@@ -616,7 +623,7 @@ class PluginBase(Configurable, Feature):
     @retry(wait_fixed=10 * 1000,
            stop_max_delay=60 * 5 * 1000,
            retry_on_exception=retry_if_connection_error)  # Try every 10 seconds for 5 minutes
-    def _register(self, core_address, plugin_unique_name=None, api_key=None):
+    def _register(self, core_address, plugin_unique_name=None, api_key=None, node_id=None, node_init_name=None):
         """Create registration of the adapter to core.
 
         :param str core_address: The address of the core plugin
@@ -639,6 +646,10 @@ class PluginBase(Configurable, Feature):
             register_doc[PLUGIN_UNIQUE_NAME] = plugin_unique_name
             if api_key is not None:
                 register_doc['api_key'] = api_key
+            if node_id is not None:
+                register_doc[NODE_ID] = node_id
+            if node_init_name is not None:
+                register_doc[NODE_INIT_NAME] = node_init_name
 
         try:
             response = requests.post(core_address, data=json.dumps(register_doc))
@@ -708,7 +719,7 @@ class PluginBase(Configurable, Feature):
             data = json.loads(decoded_data, object_hook=json_util.object_hook)
             return data
         else:
-            return None
+            return {}
 
     def get_caller_plugin_name(self):
         """
@@ -801,20 +812,28 @@ class PluginBase(Configurable, Feature):
                                                                          seen=False)).inserted_id
 
     @cachetools.cached(cachetools.TTLCache(maxsize=10, ttl=20))
-    def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
+    def get_plugin_by_name(self, plugin_name, node_id=None, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
-        :param plugin_name: str for plugin_name or plugin_unique_name
+        :param plugin_name: str for plugin_name or plugin_unique_name.
+        :param node_id: str uuid of the node adapter is attached to.
         :param verify_single: If True, will raise if many instances are found.
         :param verify_exists: If True, will raise if no instances are found.
         :return: if verify_single: single plugin data or None; if not verify_single: all plugin datas
         """
         # using requests directly so the api key won't be sent, so the core will give a list of the plugins
         plugins_available = self.get_available_plugins_from_core_uncached()
-        found_plugins = [x
-                         for x
-                         in plugins_available.values()
-                         if x['plugin_name'] == plugin_name or x[PLUGIN_UNIQUE_NAME] == plugin_name]
+        if node_id is not None:
+            found_plugins = [x
+                             for x
+                             in plugins_available.values()
+                             if (x['plugin_name'] == plugin_name and x[NODE_ID] == node_id)]
+        else:
+            found_plugins = [x
+                             for x
+                             in plugins_available.values()
+                             if (
+                                 x[PLUGIN_UNIQUE_NAME] == plugin_name) or (x['plugin_name'] == plugin_name)]
 
         if verify_single:
             if len(found_plugins) == 0:
