@@ -90,7 +90,7 @@ class AxoniusService:
                     encryption_key_file.write(encryption_key)
 
             subprocess.check_call(
-                [WEAVE_PATH, 'launch', '--dns-domain="axonius.local"', '--password', encryption_key],
+                [WEAVE_PATH, 'launch', '--dns-domain="axonius.local"', '--password', encryption_key.strip()],
                 stdout=subprocess.PIPE)
         else:
             subprocess.check_call(['docker', 'network', 'create', '--subnet=171.17.0.0/16', cls._NETWORK_NAME],
