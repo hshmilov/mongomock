@@ -34,7 +34,9 @@ export const settings = {
                     [payload.configName]: {
                         ...state.configurable[payload.pluginId][payload.configName],
                         config: payload.config,
-                        schema: payload.schema
+                        schema: payload.schema?
+                            payload.schema:
+                            state.configurable[payload.pluginId][payload.configName].schema
                     }
                 }
             }

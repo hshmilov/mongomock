@@ -129,8 +129,9 @@ def filtered():
             filter_obj = dict()
             try:
                 filter_expr = request.args.get('filter')
+                history_date = request.args.get('history')
                 if filter_expr and filter_expr != '':
-                    filter_obj = parse_filter(filter_expr)
+                    filter_obj = parse_filter(filter_expr, history_date)
             except Exception as e:
                 logger.exception('Failed in mongo filter')
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)

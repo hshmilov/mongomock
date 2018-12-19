@@ -568,7 +568,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         def _basic_generic_field_names():
             return filter(lambda field: field != 'adapters' and field != 'labels' and
-                          len([category for category in advanced_fields if category == field]) == 0,
+                          not any([category in field.split('.') for category in advanced_fields]),
                           list(map(lambda field: field.get('name'), gui_helpers.entity_fields(entity_type)['generic'])))
 
         entity = self._fetch_historical_entity(entity_type, entity_id, history_date, projection={
@@ -1735,7 +1735,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in('config/<config_name>', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Settings,
                                                              ReadOnlyJustForGet)})
-    def config(self, config_name):
+    def configuration(self, config_name):
         """
         Get or set config by name
         :param config_name: Config to fetch

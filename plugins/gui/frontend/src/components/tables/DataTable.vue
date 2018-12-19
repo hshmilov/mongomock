@@ -3,8 +3,7 @@
         <x-actionable-table :title="tableTitle" :count="count.data" :loading="loading" :error="content.error">
             <div slot="state" v-if="selectionCount" class="selection">
                 <div>[ {{ selectionCount }} selected.</div>
-                <button v-if="enableSelectAll && !allSelected" @click="selectAllData" class="x-btn link">Select all
-                </button>
+                <button v-if="enableSelectAll && !allSelected" @click="selectAllData" class="x-btn link">Select all</button>
                 <button v-else-if="allSelected" @click="clearAllData" class="x-btn link">Clear all</button>
                 <div>]</div>
             </div>
@@ -245,6 +244,10 @@
                 }
                 let newIds = this.selectionExcludePage.concat(
                     this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
+                if (this.allSelected && newIds.length === this.count.data) {
+                    this.allSelected = false
+                    newIds = []
+                }
                 this.$emit('input', {
                     ids: newIds, include: !this.allSelected
                 })

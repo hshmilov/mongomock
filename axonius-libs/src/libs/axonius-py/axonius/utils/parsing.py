@@ -1179,7 +1179,7 @@ def add_duplicates_filtering(find):
 INCLUDE_OUTDATED = 'INCLUDE OUTDATED: '
 
 
-def parse_filter(filter_str):
+def parse_filter(filter_str, history_date=None):
     """
     Translates a string representing of a filter to a valid MongoDB query
 
@@ -1206,7 +1206,7 @@ def parse_filter(filter_str):
     # Handle predefined sequence representing a range of some time units from now back
     matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
     while matches:
-        computed_date = datetime.datetime.now()
+        computed_date = datetime.datetime.now() if not history_date else parse_date(history_date)
         # Create the start date intended
         if matches.group(2) == 'h':
             computed_date -= datetime.timedelta(hours=int(matches.group(1)))
