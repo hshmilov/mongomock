@@ -8,15 +8,11 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
 
     return [
         {
-            name: 'axonius', title: 'General', fields: objectView ?
-                prepareSchemaObjects(fields.schema.generic, 'specific_data.data') :
-                fields.generic
+            name: 'axonius', title: 'General', fields: selectFields(fields.generic, objectView)
         }, ...Object.keys(fields.specific).map((name) => {
             let title = pluginMeta[name] ? pluginMeta[name].title : name
             return {
-                title, name, fields: objectView ?
-                    prepareSchemaObjects(fields.schema.specific[name], `adapters_data.${name}`) :
-                    fields.specific[name]
+                title, name, fields: selectFields(fields.specific[name], objectView)
             }
         }).sort((first, second) => {
             // Sort by adapter plugin name (the one that is shown in the gui).
@@ -29,16 +25,10 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
     ]
 }
 
-const prepareSchemaObjects = (schema, prefix) => {
-    return schema.items
-        .filter(item => (item.type === 'array' && item.items.type === 'array'))
-        .map(item => {
-            return { ...item,
-                name: `${prefix}.${item.name}`,
-                // If this is a list of objects, take the definition of the object
-                items: item.items.type === 'array' ? item.items.items : item.items
-            }
-        })
+const selectFields = (schema, objectView) => {
+    return objectView ?
+        schema.filter(field => field.items && Array.isArray(field.items)) :
+        schema.filter(field => !field.items || !Array.isArray(field.items))
 }
 
 export const GET_DATA_SCHEMA_BY_NAME = 'GET_DATA_SCHEMA_BY_NAME'

@@ -33,7 +33,7 @@
         },
         computed: {
 			currentOptions() {
-				if (!this.options) return []
+				if (!this.options || !Array.isArray(this.options)) return []
 				return this.options.filter(option =>
                     option.title && option.title.toLowerCase().includes(this.searchValue.toLowerCase()))
             },

@@ -131,6 +131,8 @@
         watch: {
             isParent() {
                 this.condition.field = ''
+                this.condition.compOp = ''
+                this.condition.value = null
                 this.$emit('error', '')
             },
             value(newValue) {
@@ -206,12 +208,9 @@
                     this.condition.compOp = 'exists'
                     return
                 }
-                if (!this.condition.field) return
                 this.$emit('input', this.condition)
-                if (this.isParent) {
-                    return
-                }
-                if (!this.condition.field) return
+                if (!this.condition.field || this.isParent) return
+
                 let error = this.checkErrors() || this.formatCondition()
                 this.$emit('error', error)
                 if (error) {

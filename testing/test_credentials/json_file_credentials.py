@@ -6,6 +6,9 @@ DEVICE_FIRST_IP = '10.0.2.1'
 DEVICE_SECOND_IP = '10.0.2.2'
 DEVICE_THIRD_IP = '10.0.2.3'
 DEVICE_MAC = '06:3A:9B:D7:D7:A8'
+DEVICE_FIRST_VLAN_NAME = 'vlan0'
+DEVICE_SECOND_VLAN_NAME = 'vlan1'
+DEVICE_FIRST_VLAN_TAGID = '1'
 
 client_details = {
     DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, '''
@@ -17,7 +20,12 @@ client_details = {
             "hostname": "CB First",
             "network_interfaces": [{
                 "mac": "''' + DEVICE_MAC + '''",
-                "ips": ["''' + DEVICE_FIRST_IP + '''", "''' + DEVICE_SECOND_IP + '''"]
+                "ips": ["''' + DEVICE_FIRST_IP + '''", "''' + DEVICE_SECOND_IP + '''"],
+                "vlan_list": [{
+                    "name": "''' + DEVICE_FIRST_VLAN_NAME + '''", "tagid": ''' + DEVICE_FIRST_VLAN_TAGID + '''
+                }, {
+                    "name": "''' + DEVICE_SECOND_VLAN_NAME + '''", "tagid": 2
+                }]
             }, {
                 "ips": ["''' + DEVICE_THIRD_IP + '''"]
             }],

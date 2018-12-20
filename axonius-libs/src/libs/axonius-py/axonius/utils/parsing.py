@@ -1224,7 +1224,7 @@ def parse_filter(filter_str, history_date=None):
         filter_str = filter_str.replace(matches.group(0), f'not ({matches.group(1)})')
         matches = re.search('NOT\s*\[(.*)\]', filter_str)
 
-    matches = re.findall(re.compile(r'match\s*\((\[.*?\])\)'), filter_str)
+    matches = re.findall(re.compile(r'match\s*\((\[.*\])\)'), filter_str)
     for match in matches:
         filter_str = filter_str.replace(match, json.dumps(pql.find(match[1:-1])))
 
