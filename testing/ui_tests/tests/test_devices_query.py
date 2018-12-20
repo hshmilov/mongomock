@@ -272,6 +272,9 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_all_data())
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_VLANS, expressions[0])
+        self.devices_page.add_query_obj_condition()
+        conditions = self.devices_page.find_conditions(expressions[0])
+        assert len(conditions) == 3
         self.devices_page.select_query_field(self.devices_page.FIELD_VLAN_NAME, conditions[1])
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, conditions[1])
         self.devices_page.fill_query_value(DEVICE_SECOND_VLAN_NAME, conditions[1])

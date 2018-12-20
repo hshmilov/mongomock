@@ -59,6 +59,14 @@
                     name: 'or', title: 'or'
                 }]
             },
+            expression: {
+                get() {
+                    return this.value
+                },
+                set(expression) {
+                    this.$emit('input', expression)
+                }
+            },
             expressionCond: {
                 get() {
                     return {
@@ -71,6 +79,9 @@
                     }
                 }
             },
+            expressionField() {
+                return this.expression.field
+            },
             nestedExpressionCond() {
                 return this.expression.nested
                     .filter(item => item.condition)
@@ -80,16 +91,17 @@
         },
         data() {
             return {
-                expression: {...this.value},
                 condition: '',
                 error: ''
             }
         },
         watch: {
-            value(newValue) {
-                if (newValue.field !== this.expression.field) {
-                    this.expression = {...newValue}
+            expressionField() {
+                if (this.expression.obj) {
+                    this.expression.nested = []
+                    this.addNestedExpression()
                 }
+
             }
         },
         methods: {
@@ -106,7 +118,6 @@
                 if (!this.expression.i) {
                     this.expression.logicOp = ''
                 }
-                this.$emit('input', this.expression)
                 this.checkErrors()
                 if (this.error) {
                     this.$emit('change', {error: this.error})

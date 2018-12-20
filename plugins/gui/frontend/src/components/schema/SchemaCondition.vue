@@ -40,6 +40,9 @@
             ...mapGetters({
                 getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME
             }),
+            conditionField() {
+                return this.condition.field
+            },
             schema() {
                 if (this.isParent) {
                     return this.schemaObject
@@ -140,7 +143,13 @@
                     this.condition = {...newValue}
                 }
             },
+            conditionField() {
+                if (this.condition.field.includes('id')) {
+                    this.condition.compOp = 'exists'
+                }
+            },
             valueSchema(newSchema, oldSchema) {
+                if (!newSchema || !oldSchema || this.isParent) return
                 if (!oldSchema.type && !oldSchema.format) return
                 if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
                     this.condition.value = null
@@ -204,10 +213,6 @@
                 })
             },
             compileCondition() {
-                if (!this.condition.compOp && !this.condition.value && this.condition.field.includes('id')) {
-                    this.condition.compOp = 'exists'
-                    return
-                }
                 this.$emit('input', this.condition)
                 if (!this.condition.field || this.isParent) return
 
@@ -239,6 +244,7 @@
         grid-gap: 8px;
         .expression-value {
             width: auto;
+            min-width: 0;
         }
     }
 </style>
