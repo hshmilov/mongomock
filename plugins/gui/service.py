@@ -1448,7 +1448,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             str(entry['internal_axon_id']) for entry in self.devices_db_view.find({
                 '$and': [
                     mongo_filter, {
-                        '$nin': entities_selection['ids']
+                        'internal_axon_id': {
+                            '$nin': entities_selection['ids']
+                        }
                     }
                 ]
             }, projection={'internal_axon_id': 1})]

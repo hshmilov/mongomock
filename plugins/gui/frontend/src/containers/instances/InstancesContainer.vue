@@ -5,7 +5,6 @@
         </div>
         <x-table-actions title="Edit, Tag or Remove Instances" :loading="loading">
             <template slot="actions">
-                <!--<div v-if="selectedInstance && selectedInstance.length" @click="tagInstance" class="x-btn link">Tag</div>-->
                 <div v-if="selectedInstance && selectedInstance.length" @click="removeServers" class="x-btn link">Remove</div>
             </template>
             <x-table v-if="instances" slot="table" id-field="node_id" :data="instances" :fields="fields"
@@ -93,7 +92,7 @@
                     rule: 'instances',
                     method: 'POST',
                     data: {node_id: this.instanceChangeId, node_name: this.newInstanceName}
-                }).then((response) => {
+                }).then(() => {
                     this.loading = true
                     this.loadData()
                     this.renaming = false
@@ -104,9 +103,6 @@
                 this.instanceChangeId = instanceId
                 this.renaming = true
             },
-            tagInstance() {
-                this.renaming = false
-            },
             removeServers () {
                 if (this.isReadOnly) return
                 this.deleting = true
@@ -116,9 +112,7 @@
                     rule: 'instances',
                     method: 'DELETE',
                     data: {nodeIds: this.selectedInstance, deleteEntities: this.deleteEntities}
-                }).then((response) => {
-                    this.closeConfirmDelete()
-                })
+                }).then(() => this.closeConfirmDelete())
             },
             closeConfirmDelete() {
                 this.deleting = false
@@ -149,13 +143,9 @@
 </script>
 
 <style lang="scss">
-    .x-data-queries {
-        height: 100%;
-        .x-table-actionable {
-            height: calc(100% - 72px);
+    .x-instances {
+        .modal-wrapper .modal-container {
+            width: auto;
         }
-    }
-    .modal-wrapper .modal-container {
-        width: auto;
     }
 </style>
