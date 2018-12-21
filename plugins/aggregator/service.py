@@ -219,7 +219,7 @@ class AggregatorService(PluginBase, Triggerable):
             db.create_index([('specific_data.data.id', pymongo.ASCENDING)], background=True)
             db.create_index([(f'specific_data.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
             db.create_index([(f'specific_data.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.adapter_properties', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.adapter_properties', pymongo.ASCENDING)], background=True)
             # this is used for when you want to see a single snapshot in time
             db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)], background=True)
             # this is commonly filtered by

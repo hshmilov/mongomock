@@ -560,19 +560,36 @@ def entity_fields(entity_type: EntityType):
     all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
 
     generic_fields = _get_generic_fields()
+
+    adapters_json = {
+        'name': 'adapters',
+        'title': 'Adapters',
+        'type': 'array',
+        'items': {
+                'type': 'string',
+                'format': 'logo',
+                'enum': []
+        },
+        'sort': True,
+        'unique': True
+    }
+
+    tags_json = {
+        'name': 'labels',
+        'title': 'Tags',
+        'type': 'array',
+        'items': {
+                'type': 'string',
+                'format': 'tag'
+        }
+    }
+
     fields = {
         'schema': {'generic': generic_fields, 'specific': {}},
-        'generic': [{
-            'name': 'adapters', 'title': 'Adapters', 'type': 'array', 'items': {
-                'type': 'string', 'format': 'logo', 'enum': []
-            }, 'sort': True, 'unique': True}, {
-            'name': 'specific_data.adapter_properties', 'title': 'Adapter Properties', 'type': 'string',
-            'enum': all_supported_properties
-        }] + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [{
-            'name': 'labels', 'title': 'Tags', 'type': 'array', 'items': {'type': 'string', 'format': 'tag'}
-        }],
-        'specific': {}
+        'generic': [adapters_json] + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [tags_json],
+        'specific': {},
     }
+
     plugins_available = PluginBase.Instance.get_available_plugins_from_core()
     exclude_specific_schema = [item['name'] for item in generic_fields.get('items', [])]
     with PluginBase.Instance._get_db_connection() as db_connection:

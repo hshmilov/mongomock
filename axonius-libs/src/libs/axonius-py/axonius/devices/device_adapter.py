@@ -18,6 +18,29 @@ logger = logging.getLogger(f'axonius.{__name__}')
 """
 
 
+class AdapterProperty(Enum):
+    """
+    Possible properties of the adapter
+    """
+
+    # pylint: disable=no-self-argument
+    def _generate_next_value_(name, *args):
+        return name
+
+    # Naming scheme: Underscore is replaced with space for the facade, so "Antivirus_System" will show
+    # as "Antivirus System" (see above _generate_next_value_)
+    # Otherwise - provide a name: `AVSystem = "Antivirus System"`
+    # TODO: Make the GUI actually support this
+    Agent = auto()
+    Endpoint_Protection_Platform = auto()
+    Network = auto()
+    Firewall = auto()
+    Manager = auto()
+    Vulnerability_Assessment = auto()
+    Assets = auto()
+    UserManagement = auto()
+
+
 class DeviceRunningState(Enum):
     """
     Defines the state of device. i.e. if it is turned on or not
@@ -299,6 +322,7 @@ class DeviceAdapter(SmartJsonClass):
     tags = ListField(DeviceTagKeyValue, "Tags")
     cloud_provider = Field(str, "Cloud Provider")
     cloud_id = Field(str, "Cloud ID")
+    adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
 

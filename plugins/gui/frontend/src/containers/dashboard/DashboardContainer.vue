@@ -186,10 +186,10 @@
             runCoverageFilter(properties, covered) {
                 if (!properties || !properties.length) return
                 if (covered === 2) {
-                    this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`, 'devices')
+                    this.runFilter(`specific_data.data.adapter_properties in ['${properties.join("','")}']`, 'devices')
                 } else {
                     this.runFilter(properties.map((property) => {
-                        return `(not(specific_data.adapter_properties == "${property}"))`
+                        return `(not(specific_data.data.adapter_properties == "${property}"))`
                     }).join(' and '), 'devices')
                 }
             },

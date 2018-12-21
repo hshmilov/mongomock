@@ -18,7 +18,7 @@ from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
+from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable
@@ -42,29 +42,6 @@ def is_plugin_adapter(plugin_type: str) -> bool:
     :return:
     """
     return plugin_type == adapter_consts.ADAPTER_PLUGIN_TYPE
-
-
-class AdapterProperty(Enum):
-    """
-    Possible properties of the adapter
-    """
-
-    # pylint: disable=no-self-argument
-    def _generate_next_value_(name, *args):
-        return name
-
-    # Naming scheme: Underscore is replaced with space for the facade, so "Antivirus_System" will show
-    # as "Antivirus System" (see above _generate_next_value_)
-    # Otherwise - provide a name: `AVSystem = "Antivirus System"`
-    # TODO: Make the GUI actually support this
-    Agent = auto()
-    Endpoint_Protection_Platform = auto()
-    Network = auto()
-    Firewall = auto()
-    Manager = auto()
-    Vulnerability_Assessment = auto()
-    Assets = auto()
-    UserManagement = auto()
 
 
 class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
@@ -1107,9 +1084,11 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         See doc for super class
         """
-        parsed_to_insert = super()._create_axonius_entity(client_name, data, entity_type)
         if entity_type == EntityType.Devices:
-            parsed_to_insert['adapter_properties'] = [x.name for x in self.adapter_properties()]
+            if not data.get('adapter_properties'):
+                data['adapter_properties'] = [x.name for x in self.adapter_properties()]
+
+        parsed_to_insert = super()._create_axonius_entity(client_name, data, entity_type)
         return parsed_to_insert
 
     @property

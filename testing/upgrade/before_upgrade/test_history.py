@@ -38,9 +38,9 @@ SAMPLE_DOC = '''
                 "last_contact" : "-",
                 "sensor_version" : "0.4.1",
                 "test_alert_change" : 5,
-                "pretty_id" : "AX-86"
-            },
-            "adapter_properties" : []
+                "pretty_id" : "AX-86",
+                "adapter_properties" : []
+            }
         }
     ],
     "adapters" : [ 

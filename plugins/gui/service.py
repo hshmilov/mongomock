@@ -3319,7 +3319,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         ]
         for item in coverage_list:
             devices_property = self.devices_db_view.count_documents({
-                'specific_data.adapter_properties':
+                'specific_data.data.adapter_properties':
                     {'$in': item['properties']}
             })
             item['portion'] = devices_property / devices_total

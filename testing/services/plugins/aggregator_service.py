@@ -31,6 +31,8 @@ class AggregatorService(PluginService):
             self._update_schema_version_3()
         if self.db_schema_version < 4:
             self._update_schema_version_4()
+        if self.db_schema_version < 5:
+            self._update_schema_version_5()
 
     def __create_capped_collections(self):
         """
@@ -104,7 +106,7 @@ class AggregatorService(PluginService):
             devices_db = self.db.client[self.plugin_name]['devices_db']
 
             for device in devices_db.find({
-                'tags.plugin_unique_name': 'gui'
+                    'tags.plugin_unique_name': 'gui'
             }):
                 relevant_tags = [
                     x
@@ -224,6 +226,35 @@ class AggregatorService(PluginService):
             self.db_schema_version = 4
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 4. Details: {e}')
+            traceback.print_exc()
+
+    def _update_schema_version_5(self):
+        try:
+            devices_db = self.db.client[self.plugin_name]['devices_db']
+
+            filter_ = {'adapters': {
+                '$elemMatch': {
+                    'adapter_properties': {
+                        '$exists': True,
+                    }
+                }
+            }
+            }
+
+            for device in devices_db.find(filter_):
+                for adapter in device.get('adapters', []):
+                    id_filter = {'internal_axon_id': device['internal_axon_id']}
+                    update = {'$set':
+                              {'adapters.$[i].data.adapter_properties': adapter.get('adapter_properties', [])}
+                              }
+                    array_filter = [{
+                        f'i.{PLUGIN_UNIQUE_NAME}': adapter[PLUGIN_UNIQUE_NAME],
+                        'i.data.id': adapter['data']['id']}]
+                    devices_db.update_one(id_filter, update, array_filters=array_filter)
+
+            self.db_schema_version = 5
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 5. Details: {e}')
             traceback.print_exc()
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
