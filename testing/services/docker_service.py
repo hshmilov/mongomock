@@ -158,7 +158,9 @@ else:
         logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
         weave_is_up = is_weave_up()
 
-        if 'linux' in sys.platform.lower() and weave_is_up:
+        if self.docker_network == 'host':
+            docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
+        elif 'linux' in sys.platform.lower() and weave_is_up:
             docker_up = ['docker', 'run', '--name', self.container_name, '--detach']
         else:
             docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
