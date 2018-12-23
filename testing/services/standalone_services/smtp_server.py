@@ -57,7 +57,7 @@ class SMTPService(DockerService):
         CMD ["/go/src/app/go-guerrilla/guerrillad", "serve"]
         '''[1:]
 
-    @retry(stop_max_attempt_number=100, wait_fixed=100)
+    @retry(stop_max_attempt_number=200, wait_fixed=500)
     def verify_email_send(self, recipient: str):
         """
         Verifies that an email has been sent to the given address
