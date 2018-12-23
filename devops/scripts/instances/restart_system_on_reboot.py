@@ -23,8 +23,9 @@ def reset_weave():
     ENCRYPTION_KEY_PATH.write_bytes(new_encryption_key)
 
     weave_encryption_key = ENCRYPTION_KEY_PATH.read_text('utf-8').strip()
-    subprocess.check_call(['/usr/local/bin/weave', 'launch', '--dns-domain=axonius.local',
-                           '--password', weave_encryption_key])
+    subprocess.check_call(
+        ['/usr/local/bin/weave', 'launch', '--ipalloc-range', '171.17.0.0/16', '--dns-domain=axonius.local',
+         '--password', weave_encryption_key])
 
 
 def shut_down_system():

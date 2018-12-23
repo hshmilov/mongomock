@@ -23,7 +23,7 @@ if [[ "$machine" == "Linux" ]]; then
     password=$(dd if=/dev/random bs=1 count=32 2>/dev/null | base64 -w 0 | rev | cut -b 2- | rev)
     mkdir -p ./.axonius_settings
     echo $password > ./.axonius_settings/.__key
-    weave launch --dns-domain="axonius.local" --password $password
+    weave launch --dns-domain="axonius.local" --ipalloc-range 171.17.0.0/16 --password $password
     eval $(weave env)
 else
     docker network create --subnet=171.17.0.0/16 axonius
