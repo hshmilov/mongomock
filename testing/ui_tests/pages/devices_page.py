@@ -10,6 +10,7 @@ class DevicesPage(EntitiesPage):
     FIELD_NETWORK_INTERFACES = 'Network Interfaces'
     FIELD_IPS = 'IPs'
     FIELD_MAC = 'Mac'
+    FIELD_NETWORK_INTERFACES_SUBNETS = 'Network Interfaces: Subnets'
     FIELD_SUBNETS = 'Subnets'
     FIELD_NETWORK_INTERFACES_VLANS = 'Network Interfaces: Vlans'
     FIELD_VLANS_VLAN_NAME = 'Vlans: Vlan Name'

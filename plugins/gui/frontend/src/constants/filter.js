@@ -50,15 +50,20 @@ export const compOps = {
         'isIPv6': '{field} == regex(":")',
         exists: exists_str
     },
-    'tag': {
+    subnet: {
         contains,
         equals,
         exists: exists_str
     },
-    'image': {
+    tag: {
+        contains,
+        equals,
         exists: exists_str
     },
-    'string': {
+    image: {
+        exists: exists_str
+    },
+    string: {
         contains,
         equals,
         starts: '{field} == regex("^{val}", "i")',

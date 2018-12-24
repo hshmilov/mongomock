@@ -24,6 +24,7 @@ class QueriesPage(Page):
         self.wait_for_element_present_by_css(self.parent_root_page_css)
         self.driver.find_element_by_css_selector(self.parent_root_page_css).click()
         logger.info(f'Finished switching to {self.parent_root_page_css}')
+        self.wait_for_table_to_load()
         self.click_button('Saved Queries', partial_class=True)
 
     def find_query_row_by_name(self, query_name):

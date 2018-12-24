@@ -50,6 +50,7 @@ class TestDevicesQuery(TestBase):
         assert not len(self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
 
     def _check_search_text_result(self, text):
+        self.devices_page.wait_for_table_to_load()
         all_data = self.devices_page.get_all_data()
         assert len(all_data)
         assert any(text in x.lower() for x in all_data)
