@@ -82,7 +82,7 @@ def install(first_time, root_pass):
     setup_host()
 
     if not first_time:
-        stop_old(keep_diag=True)
+        stop_old(keep_diag=True, keep_tunnel=True)
 
     load_images()
 
@@ -190,10 +190,10 @@ def chown_folder(root_pass, path):
     run_as_root(cmd.split(), root_pass)
 
 
-def stop_old(keep_diag=True):
+def stop_old(keep_diag=True, keep_tunnel=True):
     print_state('Stopping old containers, and removing old <containers + images> [except diagnostics]')
     from destroy import destroy
-    destroy(keep_diag=keep_diag)
+    destroy(keep_diag=keep_diag, keep_tunnel=keep_tunnel)
 
 
 def archive_old_source():
