@@ -109,13 +109,13 @@ class TestDevicesTable(TestEntitiesTable):
         initial_value = self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
         updated_value = f'{initial_value} improved!'
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, initial_value, updated_value)
-        time.sleep(31)
+        time.sleep(71)
         assert updated_value == self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
 
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, updated_value, initial_value)
         updated_value = f'{initial_value} \\ edited \\\\'
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, initial_value, updated_value)
-        time.sleep(31)
+        time.sleep(71)
         assert updated_value == self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, updated_value, initial_value)
 

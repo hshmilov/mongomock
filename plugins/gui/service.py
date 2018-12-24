@@ -4288,7 +4288,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'certificate': None
             },
             SYSTEM_SETTINGS: {
-                'refreshRate': 30,
+                'refreshRate': 60,
                 'singleAdapter': False,
                 'multiLine': False,
                 'defaultSort': True,

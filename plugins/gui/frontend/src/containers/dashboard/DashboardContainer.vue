@@ -261,7 +261,7 @@
                     this.fetchDashboard(), this.fetchDashboardCoverage()
                 ]).then(() => {
                     if (this._isDestroyed) return
-                    this.timer = setTimeout(getDashboardData, 10000)
+                    this.timer = setTimeout(getDashboardData, 30000)
                 })
             }
             getDashboardData().then(() => {
