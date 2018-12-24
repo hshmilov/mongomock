@@ -7,7 +7,7 @@ import requests
 from axonius.consts.gui_consts import (CONFIG_COLLECTION,
                                        PREDEFINED_ROLE_ADMIN,
                                        PREDEFINED_ROLE_RESTRICTED,
-                                       ROLES_COLLECTION)
+                                       ROLES_COLLECTION, USERS_COLLECTION)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           DASHBOARD_COLLECTION, GUI_NAME,
@@ -40,6 +40,8 @@ class GuiService(PluginService):
             self._update_schema_version_6()
         if self.db_schema_version < 7:
             self._update_schema_version_7()
+        if self.db_schema_version < 8:
+            self._update_schema_version_8()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -295,6 +297,26 @@ class GuiService(PluginService):
             self.db_schema_version = 7
         except Exception as e:
             print(f'Exception while upgrading gui db to version 7. Details: {e}')
+
+    def _update_schema_version_8(self):
+        print('upgrade to schema 8')
+        try:
+            # If Instances screen default doesn't exist add it with Resticted default.
+            self.db.get_collection(GUI_NAME, USERS_COLLECTION).update_many(
+                {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
+                 '$or': [{'admin': False}, {'admin': {'$exists': False}}],
+                 'role_name': {'$ne': PREDEFINED_ROLE_ADMIN}},
+                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
+
+            # Update Admin role with ReadWrite
+            self.db.get_collection(GUI_NAME, USERS_COLLECTION).update_many(
+                {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
+                 '$or': [{'admin': False}, {'admin': {'$exists': False}}],
+                 'role_name': PREDEFINED_ROLE_ADMIN},
+                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.ReadWrite.name}})
+            self.db_schema_version = 8
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 8. Details: {e}')
 
     @property
     def exposed_ports(self):

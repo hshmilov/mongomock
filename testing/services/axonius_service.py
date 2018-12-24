@@ -8,13 +8,12 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-from axonius.consts.plugin_consts import (AXONIUS_NETWORK,
+from axonius.consts.plugin_consts import (AXONIOUS_SETTINGS_DIR_NAME,
+                                          AXONIUS_NETWORK,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           ENCRYPTION_KEY_FILENAME,
-                                          PLUGIN_UNIQUE_NAME,
-                                          AXONIOUS_SETTINGS_DIR_NAME, SYSTEM_SETTINGS,
-                                          WEAVE_NETWORK,
-                                          WEAVE_PATH)
+                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS,
+                                          WEAVE_NETWORK, WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from services import adapters, plugins
@@ -89,10 +88,11 @@ class AxoniusService:
                 with open(key_file_path, 'w') as encryption_key_file:
                     encryption_key_file.write(encryption_key)
 
-            subprocess.check_call(
-                [WEAVE_PATH, 'launch', '--dns-domain="axonius.local"', '--ipalloc-range',
-                    '171.17.0.0/16',  '--password', encryption_key.strip()],
-                stdout=subprocess.PIPE)
+            weave_launch_command = [WEAVE_PATH, 'launch',
+                                    '--dns-domain="axonius.local"', '--ipalloc-range', '171.17.0.0/16', '--password',
+                                    encryption_key.strip()]
+
+            subprocess.check_call(weave_launch_command)
         else:
             subprocess.check_call(['docker', 'network', 'create', '--subnet=171.17.0.0/16', cls._NETWORK_NAME],
                                   stdout=subprocess.PIPE)
@@ -177,7 +177,7 @@ class AxoniusService:
             }, 'labels': [BLACKLIST_LABEL]
         })
         assert result.status_code == 200, f'Failed adding label. reason: ' \
-                                          f'{str(result.status_code)}, {str(result.content)}'
+            f'{str(result.status_code)}, {str(result.content)}'
 
     def get_devices_db(self):
         return self.db.get_entity_db(EntityType.Devices)

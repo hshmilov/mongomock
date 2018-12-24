@@ -191,6 +191,11 @@ else:
         for env in self.environment:
             docker_up.extend(['--env', env])
 
+        if 'linux' in sys.platform.lower() and weave_is_up:
+            dns_search_list = ['axonius.local']
+            dns_search_list.extend(self.get_dns_search_list())
+            docker_up.extend([f'--dns-search={dns_search_entry}' for dns_search_entry in dns_search_list])
+
         if env_vars is not None:
             for env in env_vars:
                 docker_up.extend(['--env', env])
@@ -243,6 +248,16 @@ else:
             os.system(f'start /B cmd /c "docker logs -f {self.container_name} >> {logsfile} 2>&1"')
         else:  # good stuff
             os.system(f'docker logs -f {self.container_name} >> {logsfile} 2>&1 &')
+
+    def get_dns_search_list(self):
+        dns_search_list = []
+        with open('/etc/resolv.conf', 'r') as resolv_file:
+            for current_line in resolv_file.readlines():
+                if 'search' in current_line:
+                    for search_path in current_line.split()[1:]:
+                        dns_search_list.append(search_path.strip())
+
+        return dns_search_list
 
     def restart(self):
         container_id = self.get_container_id(True)
