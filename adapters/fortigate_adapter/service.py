@@ -136,6 +136,7 @@ class FortigateAdapter(AdapterBase, Configurable):
                     device.add_nic(None, [ip])
             except Exception:
                 logger.exception(f'Problem adding NIC to {device_raw}')
+            device.adapter_properties = [AdapterProperty.Manager.name, AdapterProperty.Network.name]
             device.set_raw({})
             return device
         except Exception:

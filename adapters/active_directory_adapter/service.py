@@ -990,6 +990,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 subnets_list = list(set(subnets_list))
                 device.add_nic(ips=ips_list, subnets=subnets_list)
 
+                device.adapter_properties = [AdapterProperty.Assets.name, AdapterProperty.Manager.name]
                 device.set_raw(device_raw)
 
                 yield device

@@ -122,6 +122,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             try:
                 device = self._new_device_adapter()
                 if 'DHCP' in device_type:
+                    device.adapter_properties = [AdapterProperty.Network.name]
                     mac = device_raw.get('mac')
                     hostname = device_raw.get('hostname')
                     if not mac and not hostname:
@@ -156,6 +157,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                     device.splunk_source = "AD DHCP"
 
                 elif 'Cisco' in device_type:
+                    device.adapter_properties = [AdapterProperty.Network.name]
                     mac = device_raw.get('mac')
                     if not mac:
                         logger.warning(f'Bad device no MAC {device_raw}')
@@ -174,6 +176,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                     macs_set.add(mac)
                     device.splunk_source = "Cisco"
                 elif 'VPN' in device_type:
+                    device.adapter_properties = [AdapterProperty.Network.name]
                     hostname = device_raw.get('hostname')
                     if not hostname:
                         logger.warning(f'Bad device no hostname {device_raw}')
@@ -190,6 +193,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                     device.vpn_source_ip = device_raw.get('vpn_source_ip')
                     device.splunk_source = 'VPN'
                 elif 'Windows Login' in device_type:
+                    device.adapter_properties = [AdapterProperty.Manager.name]
                     hostname = device_raw.get('hostname')
                     if not hostname:
                         logger.warning(f'Bad device no hostname {device_raw}')
@@ -202,6 +206,8 @@ class SplunkAdapter(AdapterBase, Configurable):
 
                     device.splunk_source = 'Windows Login'
                 elif 'Nexpose' in device_type:
+                    device.adapter_properties = [AdapterProperty.Network.name,
+                                                 AdapterProperty.Vulnerability_Assessment.name]
                     device_id = device_raw['asset_id']
                     if device_id in nexpose_asset_id_set:
                         continue

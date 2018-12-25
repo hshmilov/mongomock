@@ -165,4 +165,4 @@ class BlackberryUemAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Agent]
+        return [AdapterProperty.Agent, AdapterProperty.MDM]

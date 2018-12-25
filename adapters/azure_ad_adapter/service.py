@@ -139,7 +139,7 @@ class AzureAdAdapter(AdapterBase):
                 device.ad_on_premise_trust_type = raw_device_data.get('trustType')
                 device.figure_os(raw_device_data.get('operatingSystem', ''))
                 device.os.build = raw_device_data.get('operatingSystemVersion')
-
+                device.adapter_properties = [AdapterProperty.Assets.name, AdapterProperty.Manager.name]
                 device.set_raw(raw_device_data)
                 yield device
             except Exception:
@@ -207,4 +207,4 @@ class AzureAdAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Assets, AdapterProperty.Manager, AdapterProperty.UserManagement]
+        return [AdapterProperty.UserManagement]

@@ -123,4 +123,4 @@ class HyperVAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Manager]
+        return [AdapterProperty.Virtualization, AdapterProperty.Assets]

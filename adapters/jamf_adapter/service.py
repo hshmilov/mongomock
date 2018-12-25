@@ -437,7 +437,7 @@ class JamfAdapter(AdapterBase, Configurable):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Agent]
+        return [AdapterProperty.Agent, AdapterProperty.MDM]
 
     @classmethod
     def _db_config_schema(cls) -> dict:

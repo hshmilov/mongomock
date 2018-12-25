@@ -112,4 +112,4 @@ class LinuxSshAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Assets]
+        return [AdapterProperty.Manager, AdapterProperty.Assets]

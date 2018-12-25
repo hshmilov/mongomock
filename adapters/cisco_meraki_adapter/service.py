@@ -148,6 +148,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.network_id = device_raw.get("network_name")
                 device.notes = device_raw.get('notes')
                 device.cisco_tags = device_raw.get('tags')
+                device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
                 device.set_raw(device_raw)
                 yield device
             except Exception:

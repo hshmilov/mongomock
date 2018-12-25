@@ -224,4 +224,4 @@ class EsxAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Assets]
+        return [AdapterProperty.Assets, AdapterProperty.Virtualization]

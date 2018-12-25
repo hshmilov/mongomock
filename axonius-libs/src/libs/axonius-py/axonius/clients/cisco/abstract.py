@@ -1,9 +1,9 @@
 import logging
 import itertools
 from functools import reduce
-
 from collections import defaultdict
 
+from axonius.adapter_base import AdapterProperty
 from axonius.devices.device_adapter import (DeviceAdapter, Field,
                                             DeviceAdapterNeighbor, DeviceAdapterNetworkInterface)
 
@@ -247,6 +247,7 @@ class BasicInfoData(AbstractCiscoData):
         device = super()._get_devices(instance, create_device_callback)
         if device:
             device.fetch_proto = 'CLIENT'
+            device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
         return device
 
     def get_protocol_type(self):
@@ -265,6 +266,7 @@ class ArpCiscoData(AbstractCiscoData):
         device = super()._get_devices(instance, create_device_callback)
         if device:
             device.fetch_proto = 'ARP'
+            device.adapter_properties = [AdapterProperty.Network.name]
 
         return device
 
@@ -320,6 +322,7 @@ class CdpCiscoData(AbstractCiscoData):
         device = super()._get_devices(instance, create_device_callback)
         if device:
             device.fetch_proto = 'CDP'
+            device.adapter_properties = [AdapterProperty.Network.name]
         return device
 
     def get_protocol_type(self):

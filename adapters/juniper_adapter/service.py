@@ -67,6 +67,7 @@ class JuniperAdapter(AdapterBase):
                     device.device_model = f'{str(juno_device.platform)} {str(juno_device.OSVersion)}'
                     ip_address = str(juno_device.ipAddr)
                     device.add_nic(None, [ip_address] if ip_address is not None else None)
+                    device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
                     device.set_raw({})
                     yield device
                 except Exception:

@@ -39,6 +39,9 @@ class AdapterProperty(Enum):
     Vulnerability_Assessment = auto()
     Assets = auto()
     UserManagement = auto()
+    Cloud_Provider = auto()
+    Virtualization = auto()
+    MDM = auto()
 
 
 class DeviceRunningState(Enum):

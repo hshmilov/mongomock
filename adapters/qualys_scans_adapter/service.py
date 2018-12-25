@@ -142,6 +142,7 @@ class QualysScansAdapter(ScannerAdapterBase):
 
             except Exception:
                 logger.exception(f'Problem adding scans to {device_raw}')
+            device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name, AdapterProperty.Network.name]
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -185,6 +186,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                         logger.exception(f'Problem with software {software_raw}')
             except Exception:
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
+            device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name, AdapterProperty.Agent.name]
             device.set_raw(device_raw)
             return device
         except Exception:

@@ -2,7 +2,8 @@ import logging
 from axonius.devices.device_adapter import (DeviceAdapter,
                                             DeviceAdapterNetworkInterface,
                                             DeviceAdapterVlan,
-                                            DeviceAdapterNeighbor)
+                                            DeviceAdapterNeighbor,
+                                            AdapterProperty)
 from axonius.fields import Field
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 
@@ -43,6 +44,7 @@ def create_lldp_device(create_device_func, raw_device):
             device = create_device_func()
             device.id = id_
             device.device_type = 'LLDP Device'
+            device.adapter_properties = [AdapterProperty.Network.name]
             all_macs = []
             for connected_device_name, entry in lldp_raw_device:
                 mac = ''
@@ -109,6 +111,7 @@ def create_arp_device(create_device_func, raw_device):
             device.id = '_'.join(['JUINPER_ARP', arp_raw_device['mac_address'], first_name])
             device.add_nic(arp_raw_device['mac_address'])
             device.device_type = 'ARP Device'
+            device.adapter_properties = [AdapterProperty.Network.name]
             try:
                 device.set_related_ips(list(arp_raw_device['related_ips']))
             except Exception:
@@ -160,6 +163,7 @@ def _create_fdb_device(create_device_func, mac, fdb_raw_device):
     device.id = '_'.join(['JUINPER_FDB', mac, first_name])
     device.add_nic(mac)
     device.device_type = 'FDB Device'
+    device.adapter_properties = [AdapterProperty.Network.name]
 
     for connected_device_name, connected_device_data in fdb_raw_device.items():
         try:
@@ -317,6 +321,7 @@ def create_juniper_device(create_device_func, raw_device):
     try:
         device = create_device_func()
         device.device_type = 'Juniper Device'
+        device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
         device.figure_os('junos')
 
         id_ = _get_id_for_juniper(raw_device)

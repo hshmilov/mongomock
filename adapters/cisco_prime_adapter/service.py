@@ -262,6 +262,7 @@ class CiscoPrimeAdapter(AdapterBase):
                 type_, raw_device = raw_device
                 if type_ == 'cisco':
                     device = self.create_cisco_device(raw_device)
+                    device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
                     if device:
                         yield device
                 elif type_ == 'neighbor':
@@ -269,6 +270,7 @@ class CiscoPrimeAdapter(AdapterBase):
                 elif type_ == 'client':
                     device = self.create_prime_client_device(raw_device)
                     if device:
+                        device.adapter_properties = [AdapterProperty.Network.name]
                         yield device
                 else:
                     raise ValueError(f'invalid type {type_}')

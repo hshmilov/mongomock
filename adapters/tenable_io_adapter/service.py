@@ -200,6 +200,8 @@ class TenableIoAdapter(ScannerAdapterBase):
                     device.has_agent = True
                     device.status = agent_raw.get('status')
                     device.agent_version = agent_raw.get('core_version')
+                    device.adapter_properties = [AdapterProperty.Agent.name,
+                                                 AdapterProperty.Vulnerability_Assessment.name]
                     device.set_raw(agent_raw)
                     yield device
                 except Exception:

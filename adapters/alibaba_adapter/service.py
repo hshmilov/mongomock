@@ -151,7 +151,7 @@ class AlibabaAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Assets]
+        return [AdapterProperty.Assets, AdapterProperty.Cloud_Provider]
 
     def _test_reachability(self, client_config):
         # We must actually try the request and see that it fails with the correct exception.

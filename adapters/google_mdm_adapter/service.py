@@ -93,6 +93,7 @@ class GoogleMdmAdapter(AdapterBase):
         mac = raw_device_data.get('wifiMacAddress')
         if mac:
             device.add_nic(mac)
+        device.adapter_properties = [AdapterProperty.Agent.name, AdapterProperty.MDM.name]
         return device
 
     def _parse_raw_data(self, raw_data):
@@ -139,4 +140,4 @@ class GoogleMdmAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Agent]
+        return [AdapterProperty.UserManagement]
