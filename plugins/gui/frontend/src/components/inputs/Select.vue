@@ -28,8 +28,8 @@
 		name: 'x-select',
         components: { xDropdown, SearchInput },
         props: {
-		    options: {}, value: {}, placeholder: {}, searchable: { default: false }, id: {}, size: {},
-		    container: {}, readOnly: { default: false }
+		    options: {}, value: {}, placeholder: {}, searchable: { default: false }, id: {},
+            size: {}, alignAgile: {default: true}, container: {}, readOnly: { default: false }
         },
         computed: {
 			currentOptions() {

@@ -1,6 +1,6 @@
 <template>
     <div class="x-dropdown" v-bind:class="{ active: isActive, disabled: readOnly }">
-        <div :class="{trigger: true, arrow: arrow}" data-toggle="dropdown" aria-haspopup="true" :aria-expanded="isActive"
+        <div :class="{trigger: true, arrow}" data-toggle="dropdown" aria-haspopup="true" :aria-expanded="isActive"
              @click="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
             <slot name="trigger"></slot>
         </div>
@@ -19,6 +19,7 @@
             size: {default: ''},
             align: {default: 'left'},
             alignSpace: {default: 0},
+            alignAgile: {default: true},
             arrow: {default: true},
             readOnly: { default: false },
             container: { }
@@ -32,7 +33,7 @@
                 } else {
                     styles['right'] = 'auto'
                 }
-                if (this.activated || !this.$refs.content) return styles
+                if (this.activated || !this.$refs.content || !this.alignAgile) return styles
 
                 let bottomDistance = this.calcOffsetTop(this.$el) + this.$refs.content.offsetHeight
                 if ((this.container && this.container.offsetHeight + this.container.offsetTop < bottomDistance)

@@ -13,7 +13,7 @@
                     <input id="alert_name" v-model="alert.name" @input="tour('alertQuery')">
                     <label for="alert_query">Select saved query:</label>
                     <x-select :options="currentQueryOptions" v-model="currentQuery" placeholder="query..."
-                              :searchable="true" id="alert_query" @input="tour('alertIncreased')" />
+                              :searchable="true" id="alert_query" @input="tour('alertIncreased')" :align-agile="false" />
                 </div>
 
                 <!-- Section for defining the condition which match of will trigger the alert -->
