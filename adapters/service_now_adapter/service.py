@@ -48,6 +48,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         substatus = Field(str, 'Substatus')
         u_shared = Field(str, 'Shared')
         u_loaner = Field(str, 'Loaner')
+        u_casper_status = Field(str, 'Casper Status')
+        u_altiris_status = Field(str, 'Altiris Status')
+        first_deployed = Field(datetime.datetime, 'First Deployed')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -262,14 +265,6 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem getting ram at {device_raw}')
                     try:
-                        device.substatus = device_raw.get('hardware_substatus')
-                    except Exception:
-                        logger.exception(f'Problem adding hardware status to {device_raw}')
-                    try:
-                        device.purchase_date = parse_date(device_raw.get('purchase_date'))
-                    except Exception:
-                        logger.exception(f'Problem adding purchase date to {device_raw}')
-                    try:
                         host_name = device_raw.get('host_name') or device_raw.get('fqdn')
                         if host_name and name and name.lower() in host_name.lower():
                             device.hostname = host_name
@@ -292,14 +287,29 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                 logger.exception(f'Problem getting install status for {device_raw}')
                             device.u_loaner = snow_asset.get('u_loaner')
                             device.u_shared = snow_asset.get('u_shared')
+                            try:
+                                device.first_deployed = parse_date(snow_asset.get('u_first_deployed'))
+                            except Exception:
+                                logger.exception(f'Problem getting first deployed at {device_raw}')
+                            device.u_altiris_status = snow_asset.get('u_altiris_status')
+                            device.u_casper_status = snow_asset.get('u_casper_statu')
+                            try:
+                                device.substatus = snow_asset.get('substatus')
+                            except Exception:
+                                logger.exception(f'Problem adding hardware status to {device_raw}')
+                            try:
+                                device.purchase_date = parse_date(snow_asset.get('purchase_date'))
+                            except Exception:
+                                logger.exception(f'Problem adding purchase date to {device_raw}')
+                            try:
+                                snow_location = snow_location_table_dict.get(
+                                    (snow_asset.get('location') or {}).get('value'))
+                                if snow_location:
+                                    device.snow_location = snow_location.get('name')
+                            except Exception:
+                                logger.exception(f'Problem adding assigned_to to {device_raw}')
                     except Exception:
                         logger.exception(f'Problem at asset table information {device_raw}')
-                    try:
-                        snow_location = snow_location_table_dict.get((device_raw.get('location') or {}).get('value'))
-                        if snow_location:
-                            device.snow_location = snow_location.get('name')
-                    except Exception:
-                        logger.exception(f'Problem adding assigned_to to {device_raw}')
 
                     try:
                         assigned_to = users_table_dict.get((device_raw.get('assigned_to') or {}).get('value'))

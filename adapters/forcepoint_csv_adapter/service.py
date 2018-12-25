@@ -1,13 +1,17 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-import csv
+import requests
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.utils.parsing import make_dict_from_csv
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ForcepointCsvAdapter(AdapterBase):
@@ -26,55 +30,75 @@ class ForcepointCsvAdapter(AdapterBase):
         raise NotImplementedError()
 
     def _connect_client(self, client_config):
+        if not client_config.get('csv_http') and 'csv' not in client_config:
+            raise ClientConnectionException('Bad params. No File or URL for CSV')
+        if client_config.get('csv_http'):
+            r = requests.get(client_config.get('csv_http'),
+                             verify=False,
+                             timeout=DEFAULT_TIMEOUT).content
+            r.raise_for_status()
         return client_config
 
     def _query_devices_by_client(self, client_name, client_data):
-        filedata = self._grab_file_contents(client_data['csv'])
-        csv_data = filedata.decode('utf-8')
+        csv_data = None
+        if client_data.get('csv_http'):
+            try:
+                csv_data = requests.get(client_data.get('csv_http'),
+                                        verify=False,
+                                        timeout=DEFAULT_TIMEOUT).content
+            except Exception:
+                logger.exception(f'Couldn\'t get csv info from URL')
+        if csv_data is None:
+            filedata = self._grab_file_contents(client_data['csv'])
+            csv_data = filedata.decode('utf-8')
         return make_dict_from_csv(csv_data)
 
     def _clients_schema(self):
         return {
-            "items": [
+            'items': [
                 {
-                    "name": "user_id",
-                    "title": "CSV File ID",
-                    "type": "string"
+                    'name': 'user_id',
+                    'title': 'CSV File ID',
+                    'type': 'string'
                 },
                 {
-                    "name": "csv",
-                    "title": "CSV File",
-                    "description": "The binary contents of the csv",
-                    "type": "file",
+                    'name': 'csv',
+                    'title': 'CSV File',
+                    'description': 'The binary contents of the csv',
+                    'type': 'file',
 
                 },
+                {
+                    'name': 'csv_http',
+                    'title': 'CSV URL Path',
+                    'type': 'string'
+                }
             ],
-            "required": [
-                "user_id",
-                "csv",
+            'required': [
+                'user_id'
             ],
-            "type": "array"
+            'type': 'array'
         }
 
-    def _parse_raw_data(self, raw_data):
-        if "Hostname" not in raw_data.fieldnames:
-            logger.error(f"Bad fields names{str(raw_data.fieldnames)}")
-            raise GetDevicesError(f"Bad fields names{str(raw_data.fieldnames)}")
-        for device_raw in raw_data:
+    def _parse_raw_data(self, devices_raw_data):
+        if 'Hostname' not in devices_raw_data.fieldnames:
+            logger.error(f'Bad fields names{str(devices_raw_data.fieldnames)}')
+            raise GetDevicesError(f'Bad fields names{str(devices_raw_data.fieldnames)}')
+        for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device.hostname = device_raw.get("Hostname")
+                device.hostname = device_raw.get('Hostname')
                 device.id = device.hostname
-                device.client_status = device_raw.get("Client Status")
-                device.client_version = device_raw.get("Client Installation Version")
-                device.endpoint_server = device_raw.get("Endpoint Server")
-                device.add_nic(None, device_raw.get("IP Address", "").split(','))
-                device.last_used_users = device_raw.get("Logged-in Users", "").split(',')
-                device.last_seen = parse_date(str(device_raw.get("Last Update", "")))
+                device.client_status = device_raw.get('Client Status')
+                device.client_version = device_raw.get('Client Installation Version')
+                device.endpoint_server = device_raw.get('Endpoint Server')
+                device.add_nic(None, device_raw.get('IP Address', '').split(','))
+                device.last_used_users = device_raw.get('Logged-in Users', '').split(',')
+                device.last_seen = parse_date(str(device_raw.get('Last Update', '')))
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception(f"Problem adding device: {str(device_raw)}")
+                logger.exception(f'Problem adding device: {str(device_raw)}')
 
     @classmethod
     def adapter_properties(cls):

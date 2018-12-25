@@ -1,10 +1,13 @@
 import logging
+import requests
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
+from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from axonius.fields import Field
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import make_dict_from_csv, normalize_var_name
 from csv_adapter import consts
@@ -30,20 +33,46 @@ class CsvAdapter(AdapterBase):
         raise NotImplementedError()
 
     def _connect_client(self, client_config):
+        if not client_config.get('csv_http') and 'csv' not in client_config:
+            raise ClientConnectionException('Bad params. No File or URL for CSV')
+        if client_config.get('csv_http'):
+            r = requests.get(client_config.get('csv_http'),
+                             verify=False,
+                             timeout=DEFAULT_TIMEOUT).content
+            r.raise_for_status()
         return client_config
 
     def _query_users_by_client(self, key, data):
         is_users_csv = data.get('is_users_csv', False)
         if not is_users_csv:
             return None
-        csv_data = self._grab_file_contents(data['csv']).decode('utf-8')
+        csv_data = None
+        if data.get('csv_http'):
+            try:
+                csv_data = requests.get(data.get('csv_http'),
+                                        verify=False,
+                                        timeout=DEFAULT_TIMEOUT).content
+            except Exception:
+                logger.exception(f'Couldn\'t get csv info from URL')
+        if 'csv' in data and csv_data is None:
+            csv_data = self._grab_file_contents(data['csv']).decode('utf-8')
         return make_dict_from_csv(csv_data), True
 
     def _query_devices_by_client(self, client_name, client_data):
         is_users_csv = client_data.get('is_users_csv', False)
         if is_users_csv:
             return None
-        csv_data = self._grab_file_contents(client_data['csv']).decode('utf-8')
+        csv_data = None
+        if client_data.get('csv_http'):
+            try:
+                csv_data = requests.get(client_data.get('csv_http'),
+                                        verify=False,
+                                        timeout=DEFAULT_TIMEOUT).content
+            except Exception:
+                logger.exception(f'Couldn\'t get csv info from URL')
+
+        if 'csv' in client_data and csv_data is None:
+            csv_data = self._grab_file_contents(client_data['csv']).decode('utf-8')
         return make_dict_from_csv(csv_data), True
 
     def _clients_schema(self):
@@ -64,11 +93,15 @@ class CsvAdapter(AdapterBase):
                     'title': 'CSV File',
                     'description': 'The binary contents of the csv',
                     'type': 'file'
+                },
+                {
+                    'name': 'csv_http',
+                    'title': 'CSV URL Path',
+                    'type': 'string'
                 }
             ],
             'required': [
                 'user_id',
-                'csv',
             ],
             'type': 'array'
         }

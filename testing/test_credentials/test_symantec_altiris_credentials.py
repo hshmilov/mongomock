@@ -8,4 +8,4 @@ client_details = {
     "password": "Password2",
 }
 
-SOME_DEVICE_ID = 'c4941237-ddda-c54f-a6cb-2a3da1ed8461'  # our altiris server
+SOME_DEVICE_ID = 'c4941237-ddda-c54f-a6cb-2a3da1ed8461_WIN-I8QNMLDIKHR'  # our altiris server

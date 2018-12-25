@@ -276,7 +276,8 @@ class DeviceAdapter(SmartJsonClass):
     last_used_users = ListField(str, "Last Used User")
     installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software",
                                    json_format=JsonArrayFormat.table)
-    software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software")
+    software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software",
+                              json_format=JsonArrayFormat.table)
     security_patches = ListField(DeviceAdapterSecurityPatch, "OS Installed Security Patches",
                                  json_format=JsonArrayFormat.table)
     available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches",

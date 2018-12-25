@@ -107,7 +107,7 @@ class SymantecAltirisAdapter(AdapterBase):
                     logger.error(f'Got a device with no distinguished name {device_raw}')
                     continue
                 device = self._new_device_adapter()
-                device.id = device_id
+                device.id = device_id + '_' + (device_raw.get('Name') or '')
                 domain = device_raw.get('Domain')
                 if not is_domain_valid(domain):
                     domain = None
