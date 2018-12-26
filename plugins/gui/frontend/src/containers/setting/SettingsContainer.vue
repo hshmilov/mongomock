@@ -6,7 +6,7 @@
                     <template v-if="schedulerSettings">
                         <x-schema-form :schema="schedulerSettings.schema" v-model="schedulerSettings.config"
                                        @validate="updateSchedulerValidity" :read-only="isReadOnly"
-                                       api-upload="adapters/system_scheduler"/>
+                                       api-upload="plugins/system_scheduler"/>
                         <div class="place-right">
                             <button class="x-btn" id="research-settings-save"
                                     :class="{ disabled: !schedulerComplete || !validResearchRate || isReadOnly }"
@@ -19,7 +19,7 @@
                 <div class="tab-settings">
                     <template v-if="coreSettings">
                         <x-schema-form :schema="coreSettings.schema" @validate="updateCoreValidity"
-                                       :read-only="isReadOnly" v-model="coreSettings.config" api-upload="adapters/core"/>
+                                       :read-only="isReadOnly" v-model="coreSettings.config" api-upload="plugins/core"/>
                         <div class="footer">
                             <x-maintenance-container :read-only="isReadOnly" v-if="$refs.global && $refs.global.isActive" />
                             <button class="x-btn" :class="{ disabled: !coreComplete || isReadOnly }"
@@ -33,7 +33,7 @@
                     <template v-if="guiSettings">
                         <x-schema-form :schema="guiSettings.schema" @validate="updateGuiValidity"
                                        :read-only="isReadOnly"
-                                       v-model="guiSettings.config" api-upload="adapters/gui"/>
+                                       v-model="guiSettings.config" api-upload="plugins/gui"/>
                         <div class="place-right">
                             <button class="x-btn" id="gui-settings-save" :class="{ disabled: !guiComplete || isReadOnly }"
                                     @click="saveGuiSettings">Save</button>

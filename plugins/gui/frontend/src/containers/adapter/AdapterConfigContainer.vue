@@ -39,7 +39,7 @@
                     <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
                     <div class="error-text">{{serverModal.error}}</div>
                 </div>
-                <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" :api-upload="`adapters/${adapterId}`"
+                <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" :api-upload="`adapters/${adapterId}/${serverModal.instanceName}`"
                                @submit="saveServer" @validate="validateServer" />
             </div>
             <template slot="footer">

@@ -22,7 +22,8 @@ def shut_down_system():
 
 def connect_to_master(master_ip, weave_pass):
     subprocess.check_call(['weave', 'reset'])
-    subprocess.check_call(['weave', 'launch', '--dns-domain=axonius.local', '--password', weave_pass])
+    subprocess.check_call(
+        ['weave', 'launch', '--dns-domain=axonius.local', '--ipalloc-range', '171.17.0.0/16', '--password', weave_pass])
     subprocess.check_call(['weave', 'connect', master_ip])
 
 

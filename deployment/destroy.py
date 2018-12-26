@@ -17,12 +17,14 @@ def destroy(keep_diag=True, keep_tunnel=True):
     host connection(running container and the image)
     """
     client = docker.from_env()
-    docker_tunnel_container_list = ['tunnler', 'weave', 'weavevolumes', 'weavedb']
+    instances_dockers_container_names_substrings_to_keep = ['tunnler', 'weave']
+    instances_docker_tag_substring_to_keep = ['socat', 'weave']
 
     for container in client.containers.list():
         if (keep_diag and container.name == 'diagnostics') or (
-                keep_tunnel and any([True for current_container_name in docker_tunnel_container_list if
-                                     current_container_name in container.name])):
+                keep_tunnel and [current_container_name for current_container_name in
+                                 instances_dockers_container_names_substrings_to_keep if
+                                 current_container_name in container.name]):
             print(f'Skipping {container.name}')
             continue
 
@@ -50,7 +52,12 @@ def destroy(keep_diag=True, keep_tunnel=True):
                 print(f'Skipping {image}')
                 continue
 
-            if keep_diag and 'diagnostics' in tags:
+            # Checking if the current image tags is 'diagnostics' or if any of the tags
+            # contain any of the instances_dockers_to_keep as a substring
+            if (keep_diag and 'diagnostics' in tags) or (
+                    keep_tunnel and [instances_docker_name for instances_docker_name in
+                                     instances_docker_tag_substring_to_keep for
+                                     tag in tags if instances_docker_name in tag]):
                 print(f'Skipping {image}')
                 continue
 
