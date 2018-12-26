@@ -56,7 +56,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORE_UNIQUE_NAME, GUI_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           NODE_ID,
-                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, NODE_INIT_NAME, X_UI_USER, X_UI_USER_SOURCE,
+                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, NODE_INIT_NAME, X_UI_USER,
+                                          X_UI_USER_SOURCE,
                                           PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW,
                                           NOTIFICATIONS_SETTINGS, NOTIFY_ADAPTERS_FETCH)
 from axonius.consts.core_consts import CORE_CONFIG_NAME
@@ -800,6 +801,20 @@ class PluginBase(Configurable, Feature):
         if sync:
             return make_request()
         run_and_forget(make_request)
+
+    def _request_gui_dashboard_cache_clear(self, clear_slow: bool = False):
+        """
+        Sometimes the system will make changes that will need to trigger a dashboard change
+        :param clear_slow: Whether or not to also clear cache for historical dashboards that rarely change
+        """
+
+        def _inner():
+            self.request_remote_plugin(f'trigger/clear_dashboard_cache?blocking=False', GUI_NAME, method='post',
+                                       json={
+                                           'clear_slow': clear_slow
+                                       })
+
+        run_and_forget(_inner)
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
         with self._get_db_connection() as db:

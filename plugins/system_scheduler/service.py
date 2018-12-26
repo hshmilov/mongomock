@@ -236,6 +236,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
             # Fetch Devices Data.
             self._run_aggregator_phase(PluginSubtype.AdapterBase)
+            self._request_gui_dashboard_cache_clear()
 
             # Fetch Scanners Data.
             _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
@@ -243,6 +244,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
             # Clean old devices.
             _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
+            self._request_gui_dashboard_cache_clear()
 
             for adapter in self.__get__all_adapters():
                 try:
@@ -263,6 +265,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             self._run_plugins(PluginSubtype.Correlator)
 
             self._request_db_rebuild(sync=True)
+            self._request_gui_dashboard_cache_clear()
 
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins(PluginSubtype.PostCorrelation)
@@ -273,6 +276,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 self._run_historical_phase()
 
             self._request_db_rebuild(sync=True)
+            self._request_gui_dashboard_cache_clear(clear_slow=True)
+
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             if self._notify_on_adapters is True:
                 self.create_notification(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')

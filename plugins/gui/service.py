@@ -2,6 +2,7 @@ import configparser
 import io
 import json
 import logging
+import operator
 import os
 import re
 import secrets
@@ -22,7 +23,9 @@ import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from bson import ObjectId
+from cachetools import cachedmethod, TTLCache
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
 from elasticsearch import Elasticsearch
@@ -347,6 +350,30 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.encryption_key = self.load_encryption_key()
         self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
         self._set_first_time_use()
+
+        self.__setup_dashboard_caching()
+
+    def __setup_dashboard_caching(self):
+        """
+        Dashboard creating is heavy, so it is cached, so this guards from recalculating it
+        """
+        self.__dashboard_creation_locks = defaultdict(threading.RLock)
+        self._dashboard_lock = threading.RLock()
+        self._fast_dashboard_lock = threading.RLock()
+
+        # this is for non-heavy dashboards, i.e not history
+        self._fast_dashboard_cache = TTLCache(maxsize=1000,  # this is a reasonable size
+                                              ttl=120)
+
+        # this is for heavy dashboards, i.e history
+        self._dashboard_cache = TTLCache(maxsize=1000,
+                                         ttl=3600 * 24)  # ttl is a just-in-case
+        self._trigger('clear_dashboard_cache', blocking=False)
+        self._job_scheduler.add_job(func=self._get_dashboard,
+                                    trigger=IntervalTrigger(seconds=60),
+                                    name='hot_cache_dashboard',
+                                    id='hot_cache_dashboard',
+                                    max_instances=1)
 
     def _mark_demo_views(self):
         """
@@ -758,6 +785,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         }})
         self._request_db_rebuild(
             sync=True, internal_axon_ids=entities_selection['ids'] if entities_selection['include'] else None)
+        self._trigger('clear_dashboard_cache')
 
         return '', 200
 
@@ -879,6 +907,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         self._save_field_names_to_db(entity_type)
         self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in entities])
+        self._trigger('clear_dashboard_cache')
 
     ##########
     # DEVICE #
@@ -1428,6 +1457,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             pool.map_async(delete_adapters, entities_to_delete).get()
 
                         self._request_db_rebuild(sync=True)
+                        self._trigger('clear_dashboard_cache')
 
                     # while we can quickly mark all adapters to be pending_delete
                     # we still want to run a background task to delete them
@@ -1438,6 +1468,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if entities_to_rebuild:
                     self._request_db_rebuild(sync=True,
                                              internal_axon_ids=[x['internal_axon_id'] for x in entities_to_rebuild])
+                    self._trigger('clear_dashboard_cache')
+
             return client_from_db
 
     def run_actions(self, action_data, mongo_filter):
@@ -2693,6 +2725,56 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error('Error saving dashboard chart', 400)
         return str(update_result.upserted_id)
 
+    def __clear_dashboard_cache(self, clear_slow=False):
+        """
+        Clears the calculated dashboard cache, and async recalculates all dashboards
+        :param clear_slow: Also clear the slow cache
+        """
+        if clear_slow:
+            with self._dashboard_lock:
+                self._dashboard_cache.clear()
+        with self._fast_dashboard_lock:
+            self._fast_dashboard_cache.clear()
+        run_and_forget(self._get_dashboard)
+
+    def __generate_dashboard_uncached(self, dashboard):
+        """
+        See _get_dashboard
+        """
+        dashboard_metric = ChartMetrics[dashboard['metric']]
+        handler_by_metric = {
+            ChartMetrics.compare: self._fetch_chart_compare,
+            ChartMetrics.intersect: self._fetch_chart_intersect,
+            ChartMetrics.segment: self._fetch_chart_segment,
+            ChartMetrics.abstract: self._fetch_chart_abstract,
+            ChartMetrics.timeline: self._fetch_chart_timeline
+        }
+        config = {**dashboard['config']}
+        if config.get('entity'):
+            # _fetch_chart_compare crashed in the wild because it got entity as a param.
+            # We don't understand how such a dasbhoard chart was created. But at lease we won't crash now
+            config['entity'] = EntityType(dashboard['config']['entity'])
+            if self._fetch_chart_compare == handler_by_metric[dashboard_metric]:
+                del config['entity']
+        dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
+        return gui_helpers.beautify_db_entry(dashboard)
+
+    @cachedmethod(operator.attrgetter('_dashboard_cache'), lambda self, dashboard: dashboard['_id'],
+                  operator.attrgetter('_dashboard_lock'))
+    def __generate_dashboard(self, dashboard):
+        """
+        See _get_dashboard
+        """
+        return self.__generate_dashboard_uncached(dashboard)
+
+    @cachedmethod(operator.attrgetter('_fast_dashboard_cache'), lambda self, dashboard: dashboard['_id'],
+                  operator.attrgetter('_fast_dashboard_lock'))
+    def __generate_dashboard_fast(self, dashboard):
+        """
+        See _get_dashboard
+        """
+        return self.__generate_dashboard_uncached(dashboard)
+
     def _get_dashboard(self, skip=0, limit=0):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
@@ -2705,6 +2787,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         logger.info('Getting dashboard')
         for dashboard in self._get_collection('dashboard').find(filter=filter_archived(), skip=skip, limit=limit):
+            dashboard_name = dashboard.get('name')
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
@@ -2712,24 +2795,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             else:
                 # Let's fetch and execute them query filters, depending on the chart's type
                 try:
-                    dashboard_metric = ChartMetrics[dashboard['metric']]
-                    handler_by_metric = {
-                        ChartMetrics.compare: self._fetch_chart_compare,
-                        ChartMetrics.intersect: self._fetch_chart_intersect,
-                        ChartMetrics.segment: self._fetch_chart_segment,
-                        ChartMetrics.abstract: self._fetch_chart_abstract,
-                        ChartMetrics.timeline: self._fetch_chart_timeline
-                    }
-                    config = {**dashboard['config']}
-                    if config.get('entity'):
-                        # _fetch_chart_compare crashed in the wild because it got entity as a param.
-                        # We don't understand how such a dasbhoard chart was created. But at lease we won't crash now
-                        config['entity'] = EntityType(dashboard['config']['entity'])
-                        if self._fetch_chart_compare == handler_by_metric[dashboard_metric]:
-                            del config['entity']
-                    dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
-                    yield gui_helpers.beautify_db_entry(dashboard)
-                except Exception as e:
+                    with self.__dashboard_creation_locks[dashboard_name]:
+                        dashboard_metric = ChartMetrics[dashboard['metric']]
+                        if dashboard_metric == ChartMetrics.timeline:
+                            # slow dashboard cache
+                            yield self.__generate_dashboard(dashboard)
+                        else:
+                            yield self.__generate_dashboard_fast(dashboard)
+                except Exception:
                     # Since there is no data, not adding this chart to the list
                     logger.exception(f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]})')
 
@@ -3477,11 +3550,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return views_data
 
     def _triggered(self, job_name: str, post_json: dict, *args):
-        if job_name != 'execute':
-            logger.error(f'Got bad trigger request for non-existent job: {job_name}')
-            return return_error('Got bad trigger request for non-existent job', 400)
-        self.dump_metrics()
-        return self.generate_new_report_offline()
+        if job_name == 'clear_dashboard_cache':
+            self.__clear_dashboard_cache(clear_slow=post_json is not None and post_json.get('clear_slow') is True)
+        elif job_name == 'execute':
+            # GUI is a post correlation plugin, thus this is called near the end of the cycle
+            self._trigger('clear_dashboard_cache')
+            self.dump_metrics()
+            return self.generate_new_report_offline()
+        raise RuntimeError(f'GUI was called with a wrong job name {job_name}')
 
     def generate_new_report_offline(self):
         """
