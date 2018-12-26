@@ -55,7 +55,7 @@ class Saml:
 
 class Notes:
     note1_text = 'note1_text'
-    note1_device_filter = 'DESKTOP-MPP10U1'
+    note1_device_filter = 'Big-Export'
 
 
 class History:
