@@ -131,8 +131,7 @@
         .fill-intersection-1-2 {
             fill: url(#intersection-1-2);
             background: repeating-linear-gradient(45deg, nth($extra-colours, 1), nth($extra-colours, 1) 4px,
-                    nth($extra-colours, 2) 4px, nth($extra-colours, 2) 8px
-            );
+                    nth($extra-colours, 2) 4px, nth($extra-colours, 2) 8px);
         }
         g {
             cursor: pointer;

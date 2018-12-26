@@ -3036,14 +3036,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         for item in aggregate_results:
             field_value = item['name']
             if field_value == 'No Value':
-                field_value = 'exists(false)'
-            else:
-                if (isinstance(field_value, str)):
-                    field_value = f'\"{field_value}\"'
-                if (isinstance(field_value, bool)):
-                    field_value = str(field_value).lower()
+                value_filter = f'not ({field["name"]} == exists(true))'
+            elif (isinstance(field_value, str)):
+                value_filter = f'{field["name"]} == \"{field_value}\"'
+            elif (isinstance(field_value, bool)):
+                value_filter = f'{field["name"]} == {str(field_value).lower()}'
             data.append({'name': str(item['name']), 'value': item['value'], 'module': entity.value,
-                         'view': {**base_view, 'query': {'filter': f'{base_filter}{field["name"]} == {field_value}'}}})
+                         'view': {**base_view, 'query': {'filter': f'{base_filter}{value_filter}'}}})
 
         if chart_view == ChartViews.pie:
             total = data_collection.count_documents(base_query)
