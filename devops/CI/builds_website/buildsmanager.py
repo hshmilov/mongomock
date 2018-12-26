@@ -232,7 +232,7 @@ class BuildsManager(object):
         """Gets all the current exports in progress."""
         export_tasks = self.db.exports.find({'status': 'InProgress'}, projection={"_id": 0})
 
-        return list(export_tasks)
+        return list(export_tasks)[::-1]
 
     def update_last_user_interaction_time(self, ec2_id):
         self.db.instances.update_one({"ec2_id": ec2_id}, {"$set": {"last_user_interaction": datetime.datetime.now()}})

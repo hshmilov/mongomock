@@ -51,7 +51,8 @@ class AzureAdAdapter(AdapterBase):
         try:
             connection = AzureAdClient(client_id=client_config[AZURE_CLIENT_ID],
                                        client_secret=client_config[AZURE_CLIENT_SECRET],
-                                       tenant_id=client_config[AZURE_TENANT_ID])
+                                       tenant_id=client_config[AZURE_TENANT_ID],
+                                       https_proxy=client_config.get('https_proxy'))
             connection.test_connection()
             return connection
         except Exception as e:
@@ -88,6 +89,11 @@ class AzureAdAdapter(AdapterBase):
                     'title': 'Azure Tenant ID',
                     'type': 'string'
                 },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
             ],
             'required': [
                 AZURE_CLIENT_ID,

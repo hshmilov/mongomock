@@ -186,7 +186,9 @@ class ChefAdapter(AdapterBase):
                     device.total_physical_memory = float((memory.get('total') or '0kb')[:-2]) / 1024.0 / 1024.0
                     device.free_physical_memory = float((memory.get('free') or '0kb')[:-2]) / 1024.0 / 1024.0
                     if device.total_physical_memory:
-                        device.physical_memory_percentage = 100 * device.free_physical_memory / device.total_physical_memory
+                        used_ram = device.total_physical_memory - device.free_physical_memory
+                        used_ram = used_ram / device.total_physical_memory
+                        device.physical_memory_percentage = round(100 * used_ram, 2)
                 except Exception as e:
                     logger.exception(f"Problem getting memory or boot time for chef device {e}")
                 try:

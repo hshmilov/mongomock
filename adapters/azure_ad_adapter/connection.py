@@ -62,7 +62,7 @@ class AzureAdClient(RESTConnection):
 
     def _connect(self):
         try:
-            context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}')
+            context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}', proxies=self._proxies)
             token_answer = context.acquire_token_with_client_credentials(
                 GRAPH_API_URL,
                 self._client_id,

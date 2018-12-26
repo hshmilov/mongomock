@@ -8,12 +8,6 @@
             </nested-menu>
         </x-dropdown>
         <x-tag-modal title="Tag..." :module="module" :entities="entities" :value="currentTags" />
-        <x-data-action-item title="Disable..." :handle-save="disableEntities" :message="`Disabled ${module}`"
-                            action-text="Disable">
-            <div>You are about to disable {{ selectionCount }} {{ module }}.</div>
-            <div>These {{module}} will not appear in further scans.</div>
-            <div>Are you sure you want to continue?</div>
-        </x-data-action-item>
         <x-data-action-item title="Delete..." :handle-save="deleteEntities" :message="`Deleted ${module}`"
                             action-text="Delete">
             <div class="warn-delete">You are about to delete {{ selectionCount }} {{module}}.</div>
