@@ -506,8 +506,10 @@ def find_entity_field(entity_data, field_path):
                     return value not in children
                 if isinstance(value, dict):
                     # For a dict, check if there is an element of whom all keys are identical to value's keys
-                    return not [item for item in children if
-                                len([key for key in item.keys() if same_string(item[key], value.get(key))]) > 0]
+                    for inner_item in children:
+                        if inner_item == value:
+                            return False
+                    return True
                 return True
 
             if type(child_value) == list:
