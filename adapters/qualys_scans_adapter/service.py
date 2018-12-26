@@ -1,5 +1,6 @@
 import logging
 from itertools import groupby
+import datetime
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -21,12 +22,33 @@ class QualysVulnerability(SmartJsonClass):
     results = Field(str, 'Results')
 
 
+class QualysAgentVuln(SmartJsonClass):
+    qid = Field(str, 'QID')
+    vuln_id = Field(str, 'Vuln ID')
+    first_found = Field(datetime.datetime, 'First Found')
+    last_found = Field(datetime.datetime, 'Last Found')
+
+
+class QualysAgentPort(SmartJsonClass):
+    port = Field(int, 'Port')
+    protocol = Field(str, 'Protocol')
+    service_name = Field(str, 'Service Name')
+
+
 class QualysScansAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         qualys_scan_id = Field(str, 'Scan ID given by Qualys')
         severity_results = ListField(QualysVulnerability, 'Vulnerability')
+        qualys_agent_vulns = ListField(QualysAgentVuln, 'Agent Vulnerability')
+        qualys_agnet_ports = ListField(QualysAgentPort, 'Agent Open Ports')
         agent_version = Field(str, 'Qualys agent version')
         agent_status = Field(str, 'Agent Status')
+
+        def add_qualys_vuln(self, **kwargs):
+            self.qualys_agent_vulns.append(QualysAgentVuln(**kwargs))
+
+        def add_qualys_port(self, **kwargs):
+            self.qualys_agnet_ports.append(QualysAgentPort(**kwargs))
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -149,6 +171,7 @@ class QualysScansAdapter(ScannerAdapterBase):
             logger.exception(f'Problem with device {device_raw}')
             return None
 
+    # pylint: disable=R0912
     def _create_agent_device(self, device_raw):
         try:
             device_raw = device_raw.get('HostAsset')
@@ -186,6 +209,33 @@ class QualysScansAdapter(ScannerAdapterBase):
                         logger.exception(f'Problem with software {software_raw}')
             except Exception:
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
+            try:
+                for vuln_raw in (device_raw.get('vuln') or {}).get('list') or []:
+                    try:
+                        device.add_qualys_vuln(vuln_id=(vuln_raw.get('HostAssetVuln') or {}).get('hostInstanceVulnId'),
+                                               last_found=parse_date((vuln_raw.get('HostAssetVuln') or
+                                                                      {}).get('lastFound')),
+                                               qid=(vuln_raw.get('HostAssetVuln') or {}).get('qid'),
+                                               first_found=parse_date((vuln_raw.get('HostAssetVuln') or
+                                                                       {}).get('firstFound')))
+                    except Exception:
+                        logger.exception(f'Problem with vuln {vuln_raw}')
+            except Exception:
+                logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
+
+            try:
+                for port_raw in (device_raw.get('openPort') or {}).get('list') or []:
+                    try:
+                        device.add_qualys_port(port=(port_raw.get('HostAssetOpenPort') or {}).get('port'),
+                                               protocol=(port_raw.get('HostAssetOpenPort') or {}).get('protocol'),
+                                               service_name=(port_raw.get('HostAssetOpenPort') or
+                                                             {}).get('serviceName'),
+                                               )
+                    except Exception:
+                        logger.exception(f'Problem with port {port_raw}')
+            except Exception:
+                logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
+
             device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name, AdapterProperty.Agent.name]
             device.set_raw(device_raw)
             return device
