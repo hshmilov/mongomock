@@ -596,7 +596,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         def _basic_generic_field_names():
             return filter(lambda field: field != 'adapters' and field != 'labels' and
                           not any([category in field.split('.') for category in advanced_fields]),
-                          list(map(lambda field: field.get('name'), gui_helpers.entity_fields(entity_type)['generic'])))
+                          map(lambda field: field.get('name'), gui_helpers.entity_fields(entity_type)['generic']))
 
         entity = self._fetch_historical_entity(entity_type, entity_id, history_date, projection={
             'adapters_data': 0

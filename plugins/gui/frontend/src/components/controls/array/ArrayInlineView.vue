@@ -3,8 +3,7 @@
         <div class="item" v-for="item in limitedItems" v-if="!empty(processedData[item.name])">
             <component :is="item.type" :schema="item" :value="processedData[item.name]"/>
         </div>
-        <div class="item" v-if="limit && schemaItems.length > limit"
-        >+{{schemaItems.length - limit}}</div>
+        <div class="item" v-if="limit && filteredItems.length > limit">+{{remainder}}</div>
     </div>
 </template>
 
@@ -24,8 +23,14 @@
 		components: { string, number, integer, bool, file, array },
 		props: { },
         computed: {
+            filteredItems() {
+                return this.schemaItems.filter(item => !this.empty(this.processedData[item.name]))
+            },
 			limit() {
-				if (this.schemaItems.length && this.schemaItems[0].format === 'logo') {
+                if (this.$parent && this.$parent.schema && this.$parent.schema.type === 'array') {
+                    return 10000
+                }
+				if (this.filteredItems.length && this.filteredItems[0].format === 'logo') {
 					return 8
                 }
                 return 2
@@ -42,14 +47,17 @@
                 return { ...items }
             },
 			limitedItems() {
-				if (!this.schemaItems || !this.limit || (this.schemaItems.length <= this.limit)) {
-					return this.schemaItems
+				if (!this.filteredItems || !this.limit || (this.filteredItems.length <= this.limit)) {
+					return this.filteredItems
 				}
-                return this.schemaItems.slice(0, this.limit)
+                return this.filteredItems.slice(0, this.limit)
             },
             allItems() {
 				if (Array.isArray(this.processedData)) return this.processedData.join(',')
 				return Object.values(this.processedData).join(',')
+            },
+            remainder() {
+			    return this.filteredItems.length - this.limit
             }
         }
 	}

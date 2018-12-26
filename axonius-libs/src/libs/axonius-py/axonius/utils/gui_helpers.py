@@ -219,7 +219,7 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
 def historical_range(force: bool = False):
     """
     Decorator stating that the view supports '?date_from=DATE&date_to=DATE' for historical views
-    :param force: If true, then empty date will not be accepted
+    :param force: If True, then empty date will not be accepted
     """
     def wrap(func):
         def raise_or_return(err):
