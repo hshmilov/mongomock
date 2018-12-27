@@ -1181,11 +1181,14 @@ class PluginBase(Configurable, Feature):
                                     PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
                                     'data.id': correlated_id
                                 }
-                            }},
-                            {
-                                "$addToSet": {
-                                    "adapters": parsed_to_insert
-                                }
+                            }
+                        }, {
+                            "$addToSet": {
+                                "adapters": parsed_to_insert
+                            },
+                            '$inc': {
+                                ADAPTERS_LIST_LENGTH: 1
+                            }
                         })
                         if modified_count == 0:
                             logger.error("No devices update for case B for scanner device "
