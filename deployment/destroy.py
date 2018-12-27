@@ -8,17 +8,16 @@ import docker
 
 def destroy(keep_diag=True, keep_tunnel=True):
     """
-    - stops all running containers (can keep diag)
-    - remove all containers (can keep diag)
+    - stops all running containers (can keep some, see flags)
+    - remove all containers (can keep some, see flags)
     - *removes all "axonius/" images*
-    - optionally, removes all log files (unless --keep-logs is specified)
     :param keep_diag: should keep diag (running container and the image)
     :param keep_tunnel: should keep tunnler and weave containers for instance
     host connection(running container and the image)
     """
     client = docker.from_env()
-    instances_dockers_container_names_substrings_to_keep = ['tunnler', 'weave']
-    instances_docker_tag_substring_to_keep = ['socat', 'weave']
+    instances_dockers_container_names_substrings_to_keep = ['tunnler', 'weave', 'grid']
+    instances_docker_tag_substring_to_keep = ['socat', 'weave', 'selenium']
 
     for container in client.containers.list():
         if (keep_diag and container.name == 'diagnostics') or (
@@ -54,13 +53,10 @@ def destroy(keep_diag=True, keep_tunnel=True):
 
             # Checking if the current image tags is 'diagnostics' or if any of the tags
             # contain any of the instances_dockers_to_keep as a substring
-            if (keep_diag and 'diagnostics' in tags) or (
-                    keep_tunnel and [instances_docker_name for instances_docker_name in
-                                     instances_docker_tag_substring_to_keep for
-                                     tag in tags if instances_docker_name in tag]):
+            cond = [x for x in instances_docker_tag_substring_to_keep if x in tags]
+            if (keep_diag and 'diagnostics' in tags) or (keep_tunnel and cond):
                 print(f'Skipping {image}')
                 continue
-
             try:
                 print(f'Removing {image}')
                 client.images.remove(image.id, force=False)
