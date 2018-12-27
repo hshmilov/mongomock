@@ -16,17 +16,17 @@ import sys
 import time
 import zipfile
 
-from utils import (AXONIUS_DEPLOYMENT_PATH, AXONIUS_OLD_ARCHIVE_PATH, CWD,
+from utils import (AXONIUS_DEPLOYMENT_PATH, AXONIUS_OLD_ARCHIVE_PATH,
                    SOURCES_FOLDER_NAME, VENV_WRAPPER, AutoOutputFlush,
                    current_file_system_path, print_state)
 
-timestamp = datetime.datetime.now().strftime('%y%m%d-%H%M')
+TIMESTAMP = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
 DEPLOYMENT_FOLDER_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment')
 VENV_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'venv')
 STATE_OUTPUT_PATH = os.path.join(os.path.dirname(current_file_system_path), 'encrypted.state')
-ARCHIVE_PATH = AXONIUS_OLD_ARCHIVE_PATH.format(timestamp)
-TEMPORAL_PATH = f'{AXONIUS_DEPLOYMENT_PATH}_TEMP_{timestamp}'
+ARCHIVE_PATH = AXONIUS_OLD_ARCHIVE_PATH.format(TIMESTAMP)
+TEMPORAL_PATH = f'{AXONIUS_DEPLOYMENT_PATH}_TEMP_{TIMESTAMP}'
 INSTANCES_SCRIPT_PATH = 'devops/scripts/instances'
 WEAVE_PATH = '/usr/local/bin/weave'
 DELETE_INSTANCES_USER_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
@@ -75,6 +75,7 @@ def install(first_time, root_pass):
 
     print('Activating venv!')
     activate_this_file = os.path.join(VENV_PATH, 'bin', 'activate_this.py')
+    # pylint: disable=exec-used
     exec(open(activate_this_file).read(), dict(__file__=activate_this_file))
     print('Venv activated!')
     # from this line on - we can use venv!
@@ -101,14 +102,14 @@ def install(first_time, root_pass):
 def validate_old_state(root_pass):
     if not os.path.isdir(AXONIUS_DEPLOYMENT_PATH):
         name = os.path.basename(AXONIUS_DEPLOYMENT_PATH)
-        print(f"{name} folder wasn't found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)")
+        print(f'{name} folder wasn\'t found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)')
         sys.exit(-1)
     else:
         chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
 
     if not os.path.exists(WEAVE_PATH):
         name = os.path.basename(WEAVE_PATH)
-        print(f"{name} binary wasn't found at {WEAVE_PATH}. please install weave and try again.")
+        print(f'{name} binary wasn\'t found at {WEAVE_PATH}. please install weave and try again.')
         raise FileNotFoundError(f'{name} binary wasn\'t found at {WEAVE_PATH}')
 
 
@@ -130,7 +131,9 @@ def setup_instances_user():
             sudoers = open('/etc/sudoers', 'r').read()
             if INSTANCE_CONNECT_USER_NAME not in sudoers:
                 subprocess.check_call(
-                    f'echo "{INSTANCE_CONNECT_USER_NAME} ALL=(ALL) NOPASSWD: /usr/sbin/usermod" | EDITOR="tee -a" visudo', shell=True)
+                    f'echo "{INSTANCE_CONNECT_USER_NAME} ALL=(ALL) NOPASSWD: '
+                    f'/usr/sbin/usermod" | EDITOR="tee -a" visudo',
+                    shell=True)
 
 
 def create_cronjob(script_path, cronjob_timing):
@@ -212,6 +215,7 @@ def load_images():
     with zipfile.ZipFile(current_file_system_path, 'r') as zip_file:
         zip_resource = zip_file.open('images.tar', 'r')
         state = 0
+        # pylint: disable=protected-access
         size = zip_resource._left
         while True:
             current = zip_resource.read(4 * 1024 * 1024)
@@ -238,6 +242,7 @@ def load_new_source():
     zip_folder_source_path = f'{SOURCES_FOLDER_NAME}/'
     os.makedirs(AXONIUS_DEPLOYMENT_PATH, exist_ok=True)
     # Extracting source files from currently running python zip to AXONIUS_DEPLOYMENT_PATH
+    # pylint: disable=protected-access
     for zip_path in zip_loader._files.keys():
         zip_path = zip_path.replace('\\', '/')
         if not zip_path.startswith(zip_folder_source_path):
@@ -267,7 +272,7 @@ def create_venv():
 
 def run_as_root(args, passwd):
     sudo = f'sudo -S' if passwd != '' else 'sudo'
-    print(" ".join(sudo.split() + args))
+    print(' '.join(sudo.split() + args))
     proc = subprocess.Popen(sudo.split() + args, stdin=subprocess.PIPE)
     proc.communicate(passwd.encode() + b'\n')
 
@@ -297,8 +302,8 @@ def install_requirements():
 
 def start_axonius():
     print_state('Starting up axonius system')
-    from devops.axonius_system import main
-    main('system up --all --prod --exclude nimbul diagnostics'.split())
+    from devops.axonius_system import main as system_main
+    system_main('system up --all --prod'.split())
     print_state('System is up')
 
     print_state('Starting discovery')

@@ -3,12 +3,18 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 
+from axonius.consts.plugin_consts import AXONIOUS_SETTINGS_DIR_NAME
+from exclude_helper import ExcludeHelper
 from services.axonius_service import get_service
 import subprocess
 
 CORTEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
+SYSTEM_CONF_PATH = Path(CORTEX_PATH) / 'system_conf.json'
+CUSTOMER_CONF_RELATIVE_PATH = Path(AXONIOUS_SETTINGS_DIR_NAME) / 'customer_conf.json'
+CUSTOMER_CONF_PATH = Path(CORTEX_PATH) / CUSTOMER_CONF_RELATIVE_PATH
 
 
 def main(command):
@@ -97,15 +103,19 @@ def system_entry_point(args):
     axonius_system = get_service()
     if args.all:
         assert len(args.services) == 0 and len(args.adapters) == 0
-        args.services = [name for name, variable in axonius_system.get_all_plugins()]
+        args.services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics']
         args.adapters = [name for name, variable in axonius_system.get_all_adapters()]
 
-    if args.exclude:
-        for name in args.exclude:
-            if name not in args.services and name not in args.adapters:
-                raise ValueError(f'Excluded name {name} not found in {args.services} and {args.adapters}')
-        args.services = [name for name in args.services if name not in args.exclude]
-        args.adapters = [name for name in args.adapters if name not in args.exclude]
+        conf_exclude = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
+        conf_exclude = ExcludeHelper(CUSTOMER_CONF_PATH).process_exclude(conf_exclude)
+        args.exclude = set(conf_exclude).union(args.exclude)
+
+    for name in args.exclude:
+        if name not in args.services and name not in args.adapters:
+            raise ValueError(f'Excluded name {name} not found in {args.services} and {args.adapters}')
+
+    args.services = [name for name in args.services if name not in args.exclude]
+    args.adapters = [name for name in args.adapters if name not in args.exclude]
 
     axonius_system.take_process_ownership()
     if args.hard:
@@ -177,10 +187,6 @@ def service_entry_point(target, args):
         adapters = []
 
     if args.exclude:
-        # for name in args.exclude:
-        #     if name not in services and name not in adapters:
-        #         raise ValueError(f'Excluded name {name} not found')
-
         services = [name for name in services if name not in args.exclude]
         adapters = [name for name in adapters if name not in args.exclude]
 

@@ -1,0 +1,8 @@
+{
+  "exclude-list": {
+    "add-to-exclude": [
+      "nimbul"
+    ],
+    "remove-from-exclude": []
+  }
+}
