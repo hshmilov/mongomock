@@ -190,6 +190,7 @@ def projected():
 
     return wrap
 
+
 # Caution! These decorators must come BEFORE @add_rule
 
 
@@ -221,6 +222,7 @@ def historical_range(force: bool = False):
     Decorator stating that the view supports '?date_from=DATE&date_to=DATE' for historical views
     :param force: If True, then empty date will not be accepted
     """
+
     def wrap(func):
         def raise_or_return(err):
             if force:
@@ -257,6 +259,7 @@ def historical():
     """
     Decorator stating that the view supports '?history=EXACT_DATE' for historical views
     """
+
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
             history = request.args.get('history', None)
@@ -544,6 +547,22 @@ def get_sort(view):
     return sort_obj
 
 
+def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str]):
+    """
+    Returns a schema that consists only of fields that exist in "existing_fields"
+    :param field_schema: See "devices_fields" collection in any adapter, where name=parsed
+    :param existing_fields: See "devices_fields" collection in any adapter, where name=exist
+    """
+
+    def valid_items():
+        for item in field_schema['items']:
+            name = item['name']
+            if name in existing_fields or any(x.startswith(name + '.') for x in existing_fields):
+                yield item
+
+    field_schema['items'] = list(valid_items())
+
+
 def entity_fields(entity_type: EntityType):
     """
     Get generic fields schema as well as adapter-specific parsed fields schema.
@@ -557,11 +576,14 @@ def entity_fields(entity_type: EntityType):
             return DeviceAdapter.get_fields_info()
         elif entity_type == EntityType.Users:
             return UserAdapter.get_fields_info()
-        return dict()
-
-    all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
+        raise AssertionError
 
     generic_fields = _get_generic_fields()
+    existing_fields = PluginBase.Instance._all_fields_db_map[entity_type].find_one({'name': 'exist'},
+                                                                                   projection={'fields': 1})
+
+    if existing_fields:
+        _filter_out_nonexisting_fields(generic_fields, existing_fields['fields'])
 
     adapters_json = {
         'name': 'adapters',
@@ -599,11 +621,13 @@ def entity_fields(entity_type: EntityType):
             if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
                 continue
             plugin_fields = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
-            if not plugin_fields:
-                continue
             plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
             if not plugin_fields_record:
                 continue
+            plugin_fields_existing = plugin_fields.find_one({'name': 'exist'}, projection={'fields': 1})
+            if plugin_fields_existing:
+                _filter_out_nonexisting_fields(plugin_fields_record['schema'], plugin_fields_existing['fields'])
+
             fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
                 'type': plugin_fields_record['schema']['type'],
                 'required': plugin_fields_record['schema'].get('required', []),

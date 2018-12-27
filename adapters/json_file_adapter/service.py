@@ -1,7 +1,8 @@
+from axonius.entities import EntityType
+from axonius.smart_json_class import SmartJsonClass
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
-from axonius.plugin_base import EntityType
 
 import json
 
@@ -33,6 +34,7 @@ class JsonFileAdapter(AdapterBase):
         def get_fields_info(cls, *args, **kwargs):
             base = super().get_fields_info(*args, **kwargs).copy()
             base['items'].extend(JsonFileAdapter.additional())
+            SmartJsonClass.all_fields_found.update(x['name'] for x in JsonFileAdapter.additional())
             return base
 
     class MyUserAdapter(UserAdapter):
@@ -41,6 +43,7 @@ class JsonFileAdapter(AdapterBase):
         def get_fields_info(cls, *args, **kwargs):
             base = super().get_fields_info(*args, **kwargs).copy()
             base['items'].extend(JsonFileAdapter.additional())
+            SmartJsonClass.all_fields_found.update(x['name'] for x in JsonFileAdapter.additional())
             return base
 
     def __init__(self):
@@ -78,8 +81,10 @@ class JsonFileAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        self._fields_set = set(devices_raw_data['fields'])
-        self._raw_fields_set = set(devices_raw_data['raw_fields'])
+        SmartJsonClass.all_fields_found.update(x for x in devices_raw_data['fields'])
+        SmartJsonClass.all_fields_found.update(x for x in devices_raw_data['raw_fields'])
+        self._entity_adapter_fields[EntityType.Devices]['fields_set'] = set(devices_raw_data['fields'])
+        self._entity_adapter_fields[EntityType.Devices]['raw_fields_set'] = set(devices_raw_data['raw_fields'])
         self.set_additional(devices_raw_data['additional_schema'])
 
         for device_raw in devices_raw_data['devices']:
@@ -88,8 +93,10 @@ class JsonFileAdapter(AdapterBase):
             yield device
 
     def _parse_users_raw_data(self, raw_data):
-        self._fields_set = set(raw_data['fields'])
-        self._raw_fields_set = set(raw_data['raw_fields'])
+        SmartJsonClass.all_fields_found.update(x for x in raw_data['fields'])
+        SmartJsonClass.all_fields_found.update(x for x in raw_data['raw_fields'])
+        self._entity_adapter_fields[EntityType.Users]['fields_set'] = set(raw_data['fields'])
+        self._entity_adapter_fields[EntityType.Users]['raw_fields_set'] = set(raw_data['raw_fields'])
         self.set_additional(raw_data['additional_schema'])
 
         for user_raw in raw_data['users']:

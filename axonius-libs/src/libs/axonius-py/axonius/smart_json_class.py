@@ -73,6 +73,7 @@ class SmartJsonClassMetaclass(type):
 class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
     fields_info = []  # will hold the list of fields that were defined for this class
     required = []  # should contain a list of required fields, if such a list is needed
+    all_fields_found = set()  # holds a set of all fields even inserted by any entity
 
     def __init__(self, **kwargs):
         """ Creates a new SmartJsonClass and assigns the kwargs as field-values to this instance. """
@@ -111,9 +112,11 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                 if sub_name not in self._names:
                     self._define_new_name(sub_name)
                     self._names.add(sub_name)
+                    self.all_fields_found.add(sub_name)
         elif name not in self._names:
             self._define_new_name(name)
             self._names.add(name)
+            self.all_fields_found.add(name)
 
     def _define_new_name(self, name: str):
         """ Defines a new full-field-name """

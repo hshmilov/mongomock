@@ -428,6 +428,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # since this tag isn't associated to a specific adapter.
             adapterdata_user.id = username
             user.add_adapterdata(adapterdata_user.to_dict(), client_used=client_used or '')
+            self._save_field_names_to_db(EntityType.Users)
 
         logger.info('Finished associating users with devices')
 
@@ -502,6 +503,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                 action_if_exists='update',  # If the tag exists, we update it using deep merge (and not replace it).
                 client_used=executer_info['adapter_client_used']
             )
+            self._save_field_names_to_db(EntityType.Devices)
 
             if len(all_error_logs) > 0:
                 is_execution_exception = True

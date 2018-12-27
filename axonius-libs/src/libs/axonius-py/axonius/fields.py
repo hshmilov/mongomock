@@ -282,6 +282,7 @@ class ListField(Field):
             """
             if name not in self._dict:
                 self._dict[name] = _List()  # creates a new instance of type-checking list for this type
+            SmartJsonClass.all_fields_found.add(name)
             return self._dict[name]
 
         def setter(self: SmartJsonClass, value):

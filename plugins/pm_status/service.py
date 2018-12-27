@@ -329,6 +329,7 @@ class PmStatusService(PluginBase, Triggerable):
                 action_if_exists="update",  # If the tag exists, we update it using deep merge (and not replace it).
                 client_used=executer_info["adapter_client_used"]
             )
+            self._save_field_names_to_db(EntityType.Devices)
 
             if len(all_error_logs) > 0:
                 is_execution_exception = True

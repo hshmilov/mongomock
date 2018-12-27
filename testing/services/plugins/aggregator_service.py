@@ -3,6 +3,7 @@ import traceback
 from collections import defaultdict
 from typing import List, Tuple
 
+from bson import Code
 from retrying import retry
 
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
@@ -255,6 +256,86 @@ class AggregatorService(PluginService):
             self.db_schema_version = 5
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 5. Details: {e}')
+            traceback.print_exc()
+
+    def _update_schema_version_5(self):
+        # https://axonius.atlassian.net/browse/AX-2639
+        def get_fields_from_collection(col, plugin_unique_name=None) -> List[str]:
+            map_function = Code('''
+                                function() {
+                                recursion = function(name, val) {
+                                    if (!val) {
+                                        emit(name, null);
+                                        return;
+                                    }
+                                    if (val.constructor === Array) {
+                                        for (var i = 0; i < val.length; i++) {
+                                            recursion(name, val[i]);
+                                        }
+                                        return;
+                                    }
+
+                                    if (val.constructor !== Object) {
+                                        emit(name, null);
+                                        return;
+                                    }
+                                    for (var key in val) {
+                                        if (name == null) {
+                                            recursion(key, val[key]); 
+                                        }
+                                        else {
+                                            recursion(name + '.' + key, val[key]); 
+                                        }
+                                    }
+                                }
+                                for (var i = 0; i < this.adapters.length; ++i) {
+                                    if (@PUN@ === true || this.adapters[i].plugin_unique_name == @PUN@) {
+                                        recursion(null, this.adapters[i].data);
+                                    }
+                                }
+                              }
+                                '''.replace('@PUN@', f'\'{plugin_unique_name}\'' if plugin_unique_name else 'true'))
+            reduce_function = Code('''function(key, stuff) { return null; }''')
+
+            all_fields = col.map_reduce(
+                map_function,
+                reduce_function,
+                {
+                    'inline': 1
+                })['results']
+            return [x['_id'] for x in all_fields]
+
+        try:
+            for entity_type in EntityType:
+                entities_db = self._entity_db_map[entity_type]
+                fields_db = self.db.client['aggregator'][entity_type.value + '_fields']
+                fields_db.update_one({
+                    'name': 'exist'
+                }, {
+                    '$set': {
+                        'fields': get_fields_from_collection(entities_db)
+                    }
+                },
+                    upsert=True
+                )
+                for adapter in self.db.client['core']['configs'].find({
+                    'supported_features': 'Adapter'
+                }):
+                    plugin_unique_name = adapter['plugin_unique_name']
+                    fields_db = self.db.client[plugin_unique_name][entity_type.value + '_fields']
+                    fields_db.update_one({
+                        'name': 'exist'
+                    }, {
+                        '$set': {
+                            'fields': get_fields_from_collection(entities_db, plugin_unique_name)
+                        }
+                    },
+                        upsert=True
+                    )
+
+            self.db_schema_version = 6
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 6. Details: {e}')
             traceback.print_exc()
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)

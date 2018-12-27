@@ -5,6 +5,8 @@ from typing import Iterable, Tuple, Dict
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
+from axonius.entities import EntityType
+
 from axonius.consts.plugin_subtype import PluginSubtype
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -170,6 +172,7 @@ class StaticAnalysisService(PluginBase, Triggerable):
                         'hidden_for_gui': True
                     }
                 )
+                self._save_field_names_to_db(EntityType.Devices)
         except Exception:
             logger.exception(f'Exception while processing device {device}')
 

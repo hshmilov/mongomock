@@ -14,7 +14,7 @@ class TestDashboard(TestBase):
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY = f'({OS_WINDOWS_QUERY}) and not ({LAST_SEEN_7_DAY_QUERY})'
     SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY = f'not (({OS_WINDOWS_QUERY}) or ({LAST_SEEN_7_DAY_QUERY}))'
     NO_OS_QUERY = 'not (specific_data.data.os.type == exists(true))'
-    SEGMENTATION_PIE_CARD_QUERY = 'not (specific_data.data.total_number_of_cores == exists(true))'
+    SEGMENTATION_PIE_CARD_QUERY = 'specific_data.data.hostname == '
     LONG_TEXT_FOR_CARD_TITLE = 'a very long chart name with more than 30 characters in the chart title'
     TEST_SUMMARY_TITLE = 'test summary'
     TEST_INTERSECTION_TITLE = 'test intersection'
@@ -156,12 +156,12 @@ class TestDashboard(TestBase):
         assert self.devices_page.find_search_value() == self.NO_OS_QUERY
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.add_segmentation_card('Devices', 'Total Cores', self.TEST_SEGMENTATION_PIE_TITLE, 'pie')
+        self.dashboard_page.add_segmentation_card('Devices', 'Host Name', self.TEST_SEGMENTATION_PIE_TITLE, 'pie')
         self.dashboard_page.wait_for_spinner_to_end()
         self.dashboard_page.click_segmentation_pie_card(self.TEST_SEGMENTATION_PIE_TITLE)
         self.devices_page.wait_for_table_to_load()
-        assert self.devices_page.find_search_value() == self.SEGMENTATION_PIE_CARD_QUERY
-        assert self.devices_page.count_entities() == 22
+        assert self.SEGMENTATION_PIE_CARD_QUERY in self.devices_page.find_search_value()
+        assert self.devices_page.count_entities() == 1
         self.dashboard_page.switch_to_page()
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_PIE_TITLE)

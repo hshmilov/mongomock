@@ -413,6 +413,11 @@ class PluginBase(Configurable, Feature):
             EntityType.Devices: self.historical_devices_db_view,
         }
 
+        self._all_fields_db_map = {
+            EntityType.Users: self.aggregator_db_connection['users_fields'],
+            EntityType.Devices: self.aggregator_db_connection['devices_fields'],
+        }
+
         self._my_adapters_map = {
             EntityType.Users: self.MyUserAdapter,
             EntityType.Devices: self.MyDeviceAdapter
@@ -522,7 +527,7 @@ class PluginBase(Configurable, Feature):
         collection_name = f"{entity_type.value}_fields"
         my_entity = self._my_adapters_map[entity_type]
 
-        if my_entity is None:
+        if not my_entity:
             return
 
         # Do note that we are saving the schema each time this function is called, instead of just once.
@@ -564,6 +569,21 @@ class PluginBase(Configurable, Feature):
             fields_collection.update({'name': 'parsed'},
                                      {'name': 'parsed', 'schema': current_schema},
                                      upsert=True)
+
+            def insert_fields(col):
+                # insert all the fields that at least one entity has a value for them
+                col.update_one({
+                    'name': 'exist'
+                }, {
+                    '$addToSet': {
+                        'fields': {
+                            '$each': list(my_entity.all_fields_found)
+                        }
+                    }
+                }, upsert=True)
+
+            insert_fields(fields_collection)
+            insert_fields(self._all_fields_db_map[entity_type])
 
     def _new_device_adapter(self) -> DeviceAdapter:
         """ Returns a new empty device associated with this adapter. """
