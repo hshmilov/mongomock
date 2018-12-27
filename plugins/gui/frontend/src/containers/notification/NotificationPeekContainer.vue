@@ -22,8 +22,8 @@
                 </div>
                 <div><!-- Place for Delete --></div>
             </div>
-            <div v-if="!notificationAggregatedList.length">
-                <i class="icon-checkmark2"></i>
+            <div v-if="!notificationAggregatedList.length" class="t-center">
+                <svg-icon name="symbol/success" :original="true" height="20px"></svg-icon>
             </div>
             <div @click="navigateNotifications" class="x-btn link">View All</div>
         </div>

@@ -6,9 +6,9 @@
                 <pulse-loader :loading="true" color="#FF7D46"></pulse-loader>
             </template>
             <template v-else-if="status.success">
-                <div class="text-center">
-                    <i class="icon-checkmark2 success-icon"></i>
-                    <div>{{ message }}</div>
+                <div class="t-center">
+                    <svg-icon name="symbol/success" :original="true" height="48px"></svg-icon>
+                    <div class="mt-12">{{ message }}</div>
                 </div>
             </template>
             <template v-else-if="status.error">
@@ -81,9 +81,6 @@
 <style lang="scss">
     .feedback-modal-body {
         min-height: 120px;
-        .success-icon {
-            font-size: 48px;
-            color: $color-success;
-        }
+        position: relative;
     }
 </style>

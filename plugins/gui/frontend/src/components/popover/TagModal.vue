@@ -47,7 +47,7 @@
                 isActive: false,
                 selected: [],
                 searchValue: '',
-                taggedCount: null
+                taggedCount: 0
 			}
 		},
 		watch: {
@@ -83,6 +83,7 @@
                         }
 					})
                 ]).then(response => {
+                    if (!response || !response.length || (!response[0] && !response[1])) return
                     this.taggedCount = response[0]? response[0].data : response[1].data
                 })
 			},

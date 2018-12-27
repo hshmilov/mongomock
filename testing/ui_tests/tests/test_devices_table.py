@@ -7,6 +7,7 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_IP,
                                                     DEVICE_SUBNET)
 from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import TAG_NAME
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -143,7 +144,6 @@ class TestDevicesTable(TestEntitiesTable):
             self.settings_page.click_global_settings()
             self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True)
             self.settings_page.save_and_wait_for_toaster()
-
             self.base_page.run_discovery()
 
             # Testing regular Adapter
@@ -162,11 +162,15 @@ class TestDevicesTable(TestEntitiesTable):
             assert self.devices_page.find_vertical_tabs() == ['Basic Info', 'Network Interfaces']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME)
             assert not self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS).is_displayed()
-            self.devices_page.click_tab('Tags')
-            assert self.devices_page.find_element_by_text('Edit Tags')
+            self.devices_page.click_tab(self.devices_page.FIELD_TAGS)
+            self.devices_page.open_edit_tags()
+            self.devices_page.create_save_tag(TAG_NAME)
+            self.devices_page.wait_for_spinner_to_end()
+            assert self.devices_page.find_element_by_text(TAG_NAME).is_displayed()
+            self.devices_page.switch_to_page()
+            assert TAG_NAME in self.devices_page.get_column_data(self.devices_page.FIELD_TAGS)
 
             # Testing AD Adapter
-            self.devices_page.switch_to_page()
             self.devices_page.fill_filter(self.devices_page.AD_WMI_ADAPTER_FILTER)
             self.devices_page.enter_search()
             self.devices_page.wait_for_table_to_load()

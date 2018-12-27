@@ -50,7 +50,9 @@
                                      :read-only="readOnly || history !== null" />
             </tab>
             <tab title="Tags" id="tags" key="tags">
-                <div @click="activateTag" class="x-btn link tag-edit" :class="{ disabled: readOnly }">Edit Tags</div>
+                <div class="tag-edit">
+                    <button @click="activateTag" class="x-btn link" :class="{disabled: readOnly}">Edit Tags</button>
+                </div>
                 <div class="x-grid x-grid-col-2 w-lg">
                     <template v-for="label in entity.labels">
                         <div>{{ label }}</div>
@@ -59,7 +61,7 @@
                 </div>
             </tab>
         </tabs>
-        <x-tag-modal :module="module" :entities="entities" :tags="entity.labels" ref="tagModal" />
+        <x-tag-modal :module="module" :entities="{ids: entities, include: true}" :value="entity.labels" ref="tagModal" />
         <x-modal v-if="fieldsEditor.active" @confirm="saveFieldsEditor" @close="closeFieldsEditor" :disabled="!fieldsEditor.valid">
             <x-data-custom-fields slot="body" :module="module" v-model="fieldsEditor.data" :fields="customFields"
                                   @validate="validateFieldsEditor" />
@@ -393,7 +395,7 @@
                     }
                 }
             }
-            .tag-edit {
+            .tag-edit .x-btn {
                 text-align: right;
             }
         }

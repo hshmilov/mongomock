@@ -23,5 +23,8 @@
         color: $theme-black;
         max-height: 360px;
         overflow: auto;
+        .x-checkbox {
+            line-height: 24px;
+        }
     }
 </style>

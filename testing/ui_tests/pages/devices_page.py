@@ -37,7 +37,7 @@ class DevicesPage(EntitiesPage):
     TAG_SAVE_BUTTON_CSS = 'div.modal-container.w-xl > div.modal-footer > div > button:nth-child(2)'
     LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.search-input > input'
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
-    TAGGING_X_DEVICE_XPATH = './/div[contains(@class, \'text-center\') and .//text()=\'{message}\']'
+    TAGGING_X_DEVICE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
 
@@ -70,6 +70,9 @@ class DevicesPage(EntitiesPage):
 
     def add_new_tag(self, tag_text, number=1):
         self.open_tag_dialog()
+        self.create_save_tag(tag_text, number)
+
+    def create_save_tag(self, tag_text, number=1):
         self.fill_text_field_by_css_selector(self.LABELS_TEXTBOX_CSS, tag_text)
         self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
         self.click_tag_save_button()

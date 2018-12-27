@@ -346,6 +346,9 @@ class EntitiesPage(Page):
     def click_actions_tag_button(self):
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_TAG_CSS).click()
 
+    def open_edit_tags(self):
+        self.click_button('Edit Tags', partial_class=True)
+
     def click_save_query_save_button(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
 
