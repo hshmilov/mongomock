@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import List, Tuple
 
 from bson import Code
+from pymongo.errors import OperationFailure
 from retrying import retry
 
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
@@ -34,6 +35,8 @@ class AggregatorService(PluginService):
             self._update_schema_version_4()
         if self.db_schema_version < 5:
             self._update_schema_version_5()
+        if self.db_schema_version < 6:
+            self._update_schema_version_6()
 
     def __create_capped_collections(self):
         """
@@ -258,7 +261,7 @@ class AggregatorService(PluginService):
             print(f'Could not upgrade aggregator db to version 5. Details: {e}')
             traceback.print_exc()
 
-    def _update_schema_version_5(self):
+    def _update_schema_version_6(self):
         # https://axonius.atlassian.net/browse/AX-2639
         def get_fields_from_collection(col, plugin_unique_name=None) -> List[str]:
             map_function = Code('''
@@ -297,12 +300,18 @@ class AggregatorService(PluginService):
                                 '''.replace('@PUN@', f'\'{plugin_unique_name}\'' if plugin_unique_name else 'true'))
             reduce_function = Code('''function(key, stuff) { return null; }''')
 
-            all_fields = col.map_reduce(
-                map_function,
-                reduce_function,
-                {
-                    'inline': 1
-                })['results']
+            try:
+                all_fields = col.map_reduce(
+                    map_function,
+                    reduce_function,
+                    {
+                        'inline': 1
+                    })['results']
+            except OperationFailure as operation_failure:
+                if 'namespace does not exist' in operation_failure.args:
+                    all_fields = []
+                else:
+                    raise
             return [x['_id'] for x in all_fields]
 
         try:
