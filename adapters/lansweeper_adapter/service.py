@@ -129,14 +129,15 @@ class LansweeperAdapter(AdapterBase):
                     continue
                 device.id = device_id + '_' + (device_raw.get('FQDN') or '')
                 try:
-                    asset_software_list = asset_software_dict.get(device_id)
-                    for asset_software in asset_software_list:
-                        if asset_software.get('softID'):
-                            software_data = soft_id_to_soft_data_dict.get(asset_software.get('softID'))
-                            if software_data:
-                                device.add_installed_software(name=software_data.get('softwareName'),
-                                                              vendor=software_data.get('SoftwarePublisher'),
-                                                              version=asset_software.get('softwareVersion'))
+                    asset_software_list = asset_software_dict.get(device_raw.get('AssetID'))
+                    if isinstance(asset_software_list, list):
+                        for asset_software in asset_software_list:
+                            if asset_software.get('softID'):
+                                software_data = soft_id_to_soft_data_dict.get(asset_software.get('softID'))
+                                if software_data:
+                                    device.add_installed_software(name=software_data.get('softwareName'),
+                                                                  vendor=software_data.get('SoftwarePublisher'),
+                                                                  version=asset_software.get('softwareVersion'))
                 except Exception:
                     logger.exception(f'Problem adding software to {device_raw}')
                 domain = device_raw.get('Domain')
@@ -146,15 +147,20 @@ class LansweeperAdapter(AdapterBase):
                 else:
                     device.part_of_domain = False
                 device.hostname = device_raw.get('FQDN')
+                device.name = device_raw.get('AssetName')
                 try:
                     mac = device_raw.get('Mac') if device_raw.get('Mac') else None
-                    ips = [device_raw.get('IP')] if device_raw.get('IP') else None
+                    ips = [device_raw.get('IPAddress')] if device_raw.get('IPAddress') else None
                     if mac or ips:
                         device.add_nic(mac, ips)
                 except Exception:
                     logger.exception(f'Problem adding NIC to {device_raw}')
-                if isinstance(device_raw.get('Uptime'), int):
-                    device.boot_time = datetime.datetime.now() - datetime.timedelta(seconds=device_raw.get('Uptime'))
+                try:
+                    if device_raw.get('Uptime'):
+                        device.boot_time = datetime.datetime.now() - \
+                            datetime.timedelta(seconds=int(device_raw.get('Uptime')))
+                except Exception:
+                    logger.exception(f'Problem adding boot time to {device_raw}')
                 device.last_seen = parse_date(device_raw.get('Lastseen'))
                 try:
                     device.total_physical_memory = device_raw.get('Memory') / 1024 if device_raw.get('Memory') else None
@@ -169,7 +175,10 @@ class LansweeperAdapter(AdapterBase):
                     else:
                         device.last_used_users = [username]
                 device.description = device_raw.get('Description')
-                device.set_raw(device_raw)
+                raw_dict = dict()
+                for key in device_raw:
+                    raw_dict[key] = str(device_raw[key])
+                device.set_raw(raw_dict)
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device: {str(device_raw)}')

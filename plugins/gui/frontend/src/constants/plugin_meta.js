@@ -8,7 +8,7 @@ export const pluginMeta = {
         description: 'Ivanti Unified Endpoint Manager discovers network devices and automates software delivery.'
     },
     lansweeper_adapter: {
-        title: 'Lansweeper - BETA',
+        title: 'Lansweeper',
         description: 'Lansweeper is an agentless IT asset management and Network Inventory software tool for Microsoft Windows OS.'
     },
     linux_ssh_adapter: {

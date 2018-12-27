@@ -97,7 +97,7 @@ class HostnameCommand(LocalInfoCommand):
 
 
 class IfaceCommand(LocalInfoCommand):
-    COMMAND = 'ip a'
+    COMMAND = '/sbin/ip a'
     NAME = 'iface'
 
     @staticmethod
