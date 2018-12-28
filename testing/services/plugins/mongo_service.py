@@ -1,7 +1,8 @@
-import pymongo
+import os
 import time
 
 import psutil
+import pymongo
 
 from axonius.plugin_base import EntityType
 from services.docker_service import DockerService
@@ -27,9 +28,17 @@ class MongoService(WeaveService):
 
     @property
     def max_allowed_memory(self):
-        # Returns tha max allowed memory in mb.
-        total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
-        total_memory = int(total_memory * 0.75)  # We want mongodb to always catch 75% of ram.
+        # If we are inside a container (tests), then "--memory" does not affect what the system reports,
+        # its just a kernel limitation that makes "malloc" fail at some stage. so we try to understand first if we
+        # have the memory constraints form the parent container.
+        # also this allows us to set a custom size using an environment variable.
+        mongo_ram_limit = os.environ.get('MONGO_RAM_LIMIT_IN_GB')
+        if mongo_ram_limit:
+            total_memory = int(mongo_ram_limit) * 1024   # turn to mb
+        else:
+            total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
+            total_memory = int(total_memory * 0.75)  # We want mongodb to always catch 75% of ram.
+        print(f'Mongodb memory constraint: {int(total_memory / 1024)}gb')
         return total_memory
 
     @property

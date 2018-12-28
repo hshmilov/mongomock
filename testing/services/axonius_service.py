@@ -2,7 +2,9 @@ import glob
 import importlib
 import inspect
 import os
+import random
 import shlex
+import string
 import subprocess
 import sys
 import time
@@ -79,21 +81,22 @@ class AxoniusService:
                     encryption_key = encryption_key_file.read()
             else:
                 # Creating a new one if it doesn't exist yet.
-                encryption_key = subprocess.check_output(
-                    'dd if=/dev/random bs=1 count=32 2>/dev/null | base64 -w 0 | rev | cut -b 2- | rev',
-                    shell=True).decode("utf-8")
+                encryption_key = ''.join(random.SystemRandom().choices(string.ascii_uppercase +
+                                                                       string.ascii_lowercase + string.digits, k=32))
                 os.makedirs(
                     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', AXONIOUS_SETTINGS_DIR_NAME)),
                     exist_ok=True)
                 with open(key_file_path, 'w') as encryption_key_file:
                     encryption_key_file.write(encryption_key)
 
+            print(f'Creating weave network')
             weave_launch_command = [WEAVE_PATH, 'launch',
                                     '--dns-domain="axonius.local"', '--ipalloc-range', '171.17.0.0/16', '--password',
                                     encryption_key.strip()]
 
             subprocess.check_call(weave_launch_command)
         else:
+            print(f'Creating regular axonius network')
             subprocess.check_call(['docker', 'network', 'create', '--subnet=171.17.0.0/16', cls._NETWORK_NAME],
                                   stdout=subprocess.PIPE)
 
@@ -138,6 +141,8 @@ class AxoniusService:
                 return
             service_to_start.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard,
                                    show_print=show_print)
+
+        self.create_network()
 
         if allow_restart:
             for service in self.axonius_services:

@@ -31,8 +31,8 @@ client_details = [
     ({
         "aws_access_key_id": EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
         "aws_secret_access_key": EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY,
-        "region_name": "",
-        'get_all_regions': True,
+        "region_name": "us-east-1",
+        'get_all_regions': False,
         'roles_to_assume_list': FileForCredentialsMock(
             'file.txt',
             'arn:aws:iam::817364327683:role/AxoniusDevRole, arn:aws:iam::802876684602:role/Axonius-Readonly-Role'

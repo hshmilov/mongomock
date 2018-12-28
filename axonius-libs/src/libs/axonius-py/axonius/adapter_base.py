@@ -847,7 +847,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         skipped_count = 0
         last_seen_cutoff, _ = self.__device_time_cutoff()
-        devices_ids = []
+        device_ids_and_last_seen = {}
         should_check_for_unique_ids = self.plugin_subtype == PluginSubtype.AdapterBase
 
         for parsed_device in self._parse_raw_data(raw_devices):
@@ -860,10 +860,17 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
             if should_check_for_unique_ids:
                 parsed_device_id = parsed_device.id  # we must have an id (its definitely not a scanner)
-                if parsed_device_id in devices_ids:
-                    logger.error(f"Error! device with id {parsed_device_id} already yielded! skipping")
+                try:
+                    parsed_device_last_seen = parsed_device.last_seen
+                except Exception:
+                    # not all adapters have that
+                    parsed_device_last_seen = None
+                if parsed_device_id in device_ids_and_last_seen.keys():
+                    logger.error(f"Error! device with id {parsed_device_id} already yielded! "
+                                 f"First device last seen: {str(device_ids_and_last_seen.get(parsed_device_id))}, "
+                                 f"current yielded last seen: {str(parsed_device_last_seen)}. skipping")
                     continue
-                devices_ids.append(parsed_device_id)
+                device_ids_and_last_seen[parsed_device_id] = parsed_device_last_seen
 
             parsed_device = parsed_device.to_dict()
             parsed_device = self._remove_big_keys(parsed_device, parsed_device.get('id', 'unidentified device'))

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import random
+import string
 import subprocess
 import time
 from pathlib import Path
@@ -17,10 +19,9 @@ def reset_weave():
     # This will practically happen on machines that clients raise first time in their network
     # and generate a new encryption key for weave.
     print('Creating a new encryption key for weave net')
-    new_encryption_key = subprocess.check_output(
-        'dd if=/dev/random bs=1 count=32 2>/dev/null | base64 -w 0 | rev | cut -b 2- | rev',
-        shell=True)
-    ENCRYPTION_KEY_PATH.write_bytes(new_encryption_key)
+    new_encryption_key = ''.join(random.SystemRandom().choices(string.ascii_uppercase +
+                                                               string.ascii_lowercase + string.digits, k=32))
+    ENCRYPTION_KEY_PATH.write_text(new_encryption_key)
 
     weave_encryption_key = ENCRYPTION_KEY_PATH.read_text('utf-8').strip()
     weave_launch_command = ['/usr/local/bin/weave', 'launch',

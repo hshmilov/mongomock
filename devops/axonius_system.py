@@ -129,7 +129,6 @@ def system_entry_point(args):
         axonius_system.build_libs(args.rebuild_libs)
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
-        axonius_system.create_network()
         mode = 'prod' if args.prod else ''
         if args.restart:
             # clear old containers if exists...

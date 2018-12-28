@@ -1,5 +1,0 @@
-passlib
-flask
-elasticsearch
-configparser
-pymongo

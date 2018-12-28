@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+import os
 import shlex
 import subprocess
 import signal
 import sys
 
-import pytest
+import run_pytest
 
 from services.axonius_service import get_service
 from services.adapters.ad_service import AdService
@@ -26,6 +27,8 @@ def signal_term_handler(signal_, frame):
 
 
 def main():
+    current_hostname = subprocess.check_output('cat /etc/hostname', shell=True).decode('utf-8').strip()
+    print(f'running ui tests on hostname {current_hostname}')
     signal.signal(signal.SIGTERM, signal_term_handler)
     axonius_system = get_service()
     ad_service = AdService()
@@ -52,18 +55,25 @@ def main():
         credentials_inputer.main()
 
         print('Running UI tests')
-        return pytest.main(
-            ['-s', '-vv', '--showlocals', '--durations=0'] + sys.argv)
+        return run_pytest.run_pytest(sys.argv[1:])
     finally:
-        axonius_system.stop(should_delete=True)
         # selenium_service.stop(should_delete=True)
+        selenium_inner_logs = os.path.join(selenium_service.log_dir, 'selenium_inner_logs.log')
+        cmd = f'docker exec grid /bin/sh -c "cat /var/log/cont/*" > {selenium_inner_logs}'
+        subprocess.Popen(cmd, shell=True).communicate()
+        # try to exit gracefully
+        rc = subprocess.call(['docker', 'exec', 'grid', 'stop'], stderr=subprocess.STDOUT)
+        print(f'return code from from exec grid stop: {rc}')
+        rc = subprocess.call(['docker', 'stop', 'grid'], stderr=subprocess.STDOUT)
+        print(f'return code from stop grid: {rc}')
         cmd = 'docker kill grid'
         subprocess.Popen(shlex.split(cmd)).communicate()
-        cmd = 'docker rm grid'
+        cmd = 'docker rm -f grid'
         subprocess.Popen(shlex.split(cmd)).communicate()
 
         ad_service.stop(should_delete=True)
         json_service.stop(should_delete=True)
+        axonius_system.stop(should_delete=True)
 
 
 if __name__ == '__main__':

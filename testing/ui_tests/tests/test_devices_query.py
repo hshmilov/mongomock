@@ -22,6 +22,8 @@ class TestDevicesQuery(TestBase):
         self.devices_page.click_search()
 
     def test_devices_query_wizard_default_operators(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()

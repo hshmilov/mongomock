@@ -1,3 +1,4 @@
+import os
 INCORRECT_PASSWORD = 'Incorrect!'
 UNMATCHED_PASSWORD1 = 'Unmatched!'
 UNMATCHED_PASSWORD2 = 'Unmatched!2'
@@ -6,7 +7,8 @@ BAD_USERNAME = 'BadUsername'
 BAD_PASSWORD = 'BadPassword'
 VALID_EMAIL = 'lalala@lalala.com'
 
-GUI_LOG_PATH = '../logs/gui/gui.axonius.log'
+ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..')
+GUI_LOG_PATH = os.path.join(ROOT_DIR, 'logs', 'gui', 'gui.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
 FIRST_NAME = 'FirstName'

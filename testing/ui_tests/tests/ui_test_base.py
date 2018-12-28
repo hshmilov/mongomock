@@ -3,6 +3,7 @@ import logging
 import logging.handlers
 import os
 import sys
+import re
 from datetime import datetime, timedelta
 
 import pytest
@@ -29,18 +30,17 @@ from ui_tests.pages.notification_page import NotificationPage
 from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
+from ui_tests.tests.ui_consts import ROOT_DIR
 
 
-UI_ARTIFACTS_FOLDER = 'screenshots'
+SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
+LOGS_FOLDER = os.path.join(ROOT_DIR, 'logs', 'ui_logger')
 
 
 def create_ui_tests_logger():
-    folder = os.path.join(UI_ARTIFACTS_FOLDER, 'ui_logger')
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-    file_path = os.path.join(
-        folder,
-        'ui_tests.log')
+    if not os.path.exists(LOGS_FOLDER):
+        os.makedirs(LOGS_FOLDER)
+    file_path = os.path.join(LOGS_FOLDER, 'ui_tests.log')
     file_handler = logging.handlers.RotatingFileHandler(file_path,
                                                         maxBytes=5 * 1024 * 1024,
                                                         backupCount=3)
@@ -95,11 +95,47 @@ class TestBase:
             return webdriver.Firefox()
         raise AssertionError('Invalid browser selected')
 
-    def _save_screenshot(self, method, text=''):
+    @staticmethod
+    def _get_current_test_id():
+        """
+        Returns the current running test, formatted as a teamcity test id.
+        The code is taken from teamcity-messages-1.21, pytest plguin, format_test_id method.
+        :return:
+        """
+        test_id = os.environ['PYTEST_CURRENT_TEST'].split(' ')[0]
+        if test_id:
+            if test_id.find('::') < 0:
+                test_id += '::top_level'
+        else:
+            test_id = 'top_level'
+
+        first_bracket = test_id.find('[')
+        if first_bracket > 0:
+            # [] -> (), make it look like nose parameterized tests
+            params = '(' + test_id[first_bracket + 1:]
+            if params.endswith(']'):
+                params = params[:-1] + ')'
+            test_id = test_id[:first_bracket]
+            if test_id.endswith('::'):
+                test_id = test_id[:-2]
+        else:
+            params = ''
+
+        test_id = test_id.replace('::()::', '::')
+        test_id = re.sub(r'\.pyc?::', r'::', test_id)
+        test_id = test_id.replace('.', '_').replace(os.sep, '.').replace('/', '.').replace('::', '.')
+
+        if params:
+            params = params.replace('.', '_')
+            test_id += params
+
+        return test_id
+
+    def _save_screenshot(self, text=''):
         if not self.driver:
             return
         try:
-            folder = os.path.join(UI_ARTIFACTS_FOLDER, method.__name__)
+            folder = os.path.join(SCREENSHOTS_FOLDER, self._get_current_test_id())
             if not os.path.exists(folder):
                 os.makedirs(folder)
             current_time = datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')
@@ -110,12 +146,12 @@ class TestBase:
         except Exception:
             logger.exception('Error while saving screenshot')
 
-    def _save_js_logs(self, method):
+    def _save_js_logs(self):
         if not self.driver:
             return
         try:
             # this is copied as-is from _save_screenshot so it will appear in the same directory
-            folder = os.path.join('screenshots', method.__name__)
+            folder = os.path.join(SCREENSHOTS_FOLDER, self._get_current_test_id())
             if not os.path.exists(folder):
                 os.makedirs(folder)
             current_time = datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')
@@ -183,8 +219,8 @@ class TestBase:
 
     def teardown_method(self, method):
         logger.info(f'starting teardown_method {method.__name__}')
-        self._save_screenshot(method, text='before_teardown')
-        self._save_js_logs(method)
+        self._save_screenshot(text='before_teardown')
+        self._save_js_logs()
         if not pytest.config.option.teardown_keep_db:
             self._clean_db()
         if self.driver:

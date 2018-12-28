@@ -1,3 +1,4 @@
+import glob
 import multiprocessing
 import os
 import signal
@@ -20,6 +21,7 @@ EXCLUDE_PATHS = [
     '.venv'
 ]
 ACTUAL_PARENT_FOLDER = os.path.realpath(os.path.dirname(__file__))
+ABSOLUTE_ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..')
 BASE_PATH = os.path.realpath(os.path.dirname(os.path.dirname(ACTUAL_PARENT_FOLDER)))
 PYLINT_EXEMPT_FILE_NAME = os.path.join(ACTUAL_PARENT_FOLDER, 'pylint_exempt_list.txt')
 PYLINTRC_FILE = os.path.join(BASE_PATH, 'pylintrc.txt')
@@ -66,9 +68,9 @@ def _is_pylint_ok(file_name, is_success_expected):
     good_file = child.returncode == GOOD_EXIT_CODE and \
         any(report in decoded for report in (PERFECT_PYLINT_MESSAGE, PYLINT_EMPTY_FILE))
     if not good_file and is_success_expected:
-        print(f'ERROR: Found bad pylinted file {file_name}')
-        print(decoded)
-    return file_name, good_file
+        sys.stderr.write(f'ERROR: Found bad pylinted file {file_name}')
+        sys.stderr.write(decoded)
+    return file_name, good_file, f'{good_file}:\n{decoded}'
 
 
 def _get_file_content(file_name):
@@ -133,16 +135,17 @@ def _get_unexpected_pylint_state(is_success_expected):
     process_pool.close()
     process_pool.join()
 
-    return [item[0] for item in mapped_values if is_success_expected != item[1]]
+    return [(item[0], item[2]) for item in mapped_values if is_success_expected != item[1]]
 
 
 class TestCode:
     @staticmethod
     def test_no_broken_pylint_files():
         """Test that every file besides the ones in the exempt list pass pylint"""
-        broken_files = _get_unexpected_pylint_state(is_success_expected=True)
-        invalid_files = bool(broken_files)
-        assert not invalid_files, 'Broken files found: {}'.format('\n'.join(broken_files))
+        broken_files_list = _get_unexpected_pylint_state(is_success_expected=True)
+        invalid_files = bool(broken_files_list)
+        assert not invalid_files, \
+            'Broken files found: {}'.format('\n'.join([file_desc[1] for file_desc in broken_files_list]))
 
     @staticmethod
     def test_no_proper_files_in_exempt_list():
@@ -151,4 +154,63 @@ class TestCode:
             is_success_expected=False)
         invalid_files = bool(exempted_proper_files)
         assert not invalid_files, 'Proper files found in exempt list: Please remove {} from {}'.format(
-            '\n'.join(exempted_proper_files), PYLINT_EXEMPT_FILE_NAME)
+            '\n'.join([files[0] for files in exempted_proper_files]), PYLINT_EXEMPT_FILE_NAME)
+
+    @staticmethod
+    def test_formatting():
+        child = subprocess.Popen(
+            ['/bin/bash', '-c', 'git ls-files | grep "\\.py" | xargs autopep8 --max-line-length 120 --diff'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=ABSOLUTE_ROOT_DIR
+        )
+        stdout, stderr = child.communicate(timeout=60 * 5)
+        stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
+        assert child.returncode == 0, f'Return code is {child.returncode}\nstdout:\n{stdout}stderr:\n{stderr}'
+        assert not stdout.strip(), f'Code is not formatted!\n{stdout}'
+        assert not stderr.strip(), f'Code is not formatted!\n{stderr}'
+
+    @staticmethod
+    def test_bare_except():
+        child = subprocess.Popen(
+            ['/bin/bash', '-c', 'git ls-files | grep "\\.py" | xargs autopep8 --select=E722 --diff -a'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=ABSOLUTE_ROOT_DIR
+        )
+        stdout, stderr = child.communicate(timeout=60 * 5)
+        stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
+        assert child.returncode == 0, f'Return code is {child.returncode}\nstdout:\n{stdout}stderr:\n{stderr}'
+        assert not stdout.strip(), f'Code contains "except:"!\n{stdout}'
+        assert not stderr.strip(), f'Code contains "except:"!\n{stderr}'
+
+    @staticmethod
+    def test_crlf():
+        child = subprocess.Popen(
+            ['/bin/bash', '-c',
+             'git ls-files | grep -E "(\\.py|\\.sh|\\.yml|Dockerfile)" | xargs grep $(printf "\r") -r'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=ABSOLUTE_ROOT_DIR
+        )
+        stdout, stderr = child.communicate(timeout=60 * 5)
+        stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
+        # 123 is a legitimate value since if we do not have any bad files then xargs will return 123
+        assert child.returncode in [0, 123], f'Return code is {child.returncode}\nstdout:\n{stdout}stderr:\n{stderr}'
+        assert not stdout.strip(), f'CRLF found!\n{stdout}'
+        assert not stderr.strip(), f'CRLF found!\n{stderr}'
+
+    @staticmethod
+    def test_requirements_files():
+        bad_lines = []
+        for file_path in glob.iglob(os.path.join(BASE_PATH, '**', 'requirements.txt'), recursive=True):
+            with open(file_path, 'rt') as file:
+                for line in file.readlines():
+                    if '==' not in line:
+                        bad_lines.append(f'{file_path}: found line with no "==": {line}')
+
+        bad_lines = '\n'.join(bad_lines)
+        assert not bad_lines, f'Found requirements.txt files with "==": \n{bad_lines}'

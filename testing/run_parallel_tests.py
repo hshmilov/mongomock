@@ -8,15 +8,23 @@ from services.axonius_service import get_service
 
 
 class ParallelTestsRunner(ParallelRunner):
-    def append_test_pattern(self, pattern, extra_flags, **kwargs):
-        for file in sorted(glob.glob(pattern)):
-            test_case = os.path.basename(file).split(".")[0]
-            args = f"pytest -s -vv --showlocals --durations=0"
+    def append_test_pattern(self, paths, extra_flags, **kwargs):
+        files = []
+        for path in paths:
+            if os.path.isfile(path):
+                files.append(path)
+            else:
+                for file in glob.glob(path):
+                    files.append(file)
+
+        for file in sorted(files):
+            test_case_name = os.path.basename(file).split('.')[0]
+            args = ['python3', '-u', os.path.join(os.path.abspath(os.path.dirname(__file__)), 'run_pytest.py')]
             if extra_flags:
-                args = f"{args} {extra_flags}"
-            args = f"{args} {file}".split(' ')
-            print(f'adding {file} to run!')
-            self.append_single(test_case, args, **kwargs)
+                args.extend(extra_flags)
+            args.append(file)
+            print(f'Adding {file} to run!')
+            self.append_single(test_case_name, args, **kwargs)
 
 
 def main():
@@ -32,10 +40,16 @@ def main():
 
         # Run all parallel tests
         runner = ParallelTestsRunner()
-        pattern = sys.argv[-1]
-        extra_flags = ' '.join(sys.argv[1:-1])
-        print(f"Running in parallel for pattern {pattern}")
-        runner.append_test_pattern(pattern, extra_flags=extra_flags)
+        extra_flags = []
+        paths = []
+        for arg in sys.argv[1:]:
+            if arg.startswith('-'):
+                extra_flags.append(arg)
+            else:
+                paths.append(arg)
+
+        print(f"Running in parallel, extra flags are {str(extra_flags)}, paths are {str(paths)}")
+        runner.append_test_pattern(paths, extra_flags=extra_flags)
         return runner.wait_for_all(120 * 60)
     finally:
         axonius_system.stop(should_delete=True)

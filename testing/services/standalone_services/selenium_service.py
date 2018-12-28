@@ -1,14 +1,13 @@
 import os
 import subprocess
-import shlex
 import time
 
 from services.weave_service import is_weave_up, WeaveService
 from services.ports import DOCKER_PORTS
 
 
+# pylint: disable=too-many-locals
 class SeleniumService(WeaveService):
-
     def is_up(self):
         return True
 
@@ -38,6 +37,8 @@ class SeleniumService(WeaveService):
         if not is_weave_up():
             extra_flags.append('--link=gui:gui.axonius.local')
 
+        start_time = time.time()
+
         super().start(mode=mode,
                       allow_restart=allow_restart,
                       rebuild=rebuild,
@@ -47,8 +48,8 @@ class SeleniumService(WeaveService):
                       extra_flags=extra_flags,
                       docker_internal_env_vars=docker_internal_env_vars,
                       run_env=run_env)
-        cmd = 'docker exec grid wait_all_done 30s'
-        subprocess.Popen(shlex.split(cmd)).communicate()
+        subprocess.check_output(['docker', 'exec', self.container_name, 'wait_all_done', '60s'])
+        print(f'Selenium start ended successfully after {time.time() - start_time}.')
         time.sleep(60)  # bug in selenium time causes tests to fail on servers the first time after docker cleanup
 
     def get_dockerfile(self, mode=''):
@@ -81,7 +82,4 @@ class SeleniumService(WeaveService):
     # pylint: disable=arguments-differ
     def wait_for_service(self, **kwargs):
         super().wait_for_service(**kwargs)
-        p = subprocess.Popen(['docker', 'exec', self.container_name, 'wait_all_done', '30s'],
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        p.communicate()
+        subprocess.check_output(['docker', 'exec', self.container_name, 'wait_all_done', '60s'])

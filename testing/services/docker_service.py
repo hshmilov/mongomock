@@ -5,8 +5,6 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable
 
-from retrying import retry
-
 from axonius.consts.plugin_consts import (AXONIUS_NETWORK, WEAVE_NETWORK)
 from axonius.utils.debug import COLOR
 from services.axon_service import AxonService, TimeoutException
@@ -357,7 +355,6 @@ else:
         self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard)
         self.wait_for_service()
 
-    @retry(stop_max_attempt_number=5, stop_max_delay=1000 * 10, wait_fixed=2000)
     def get_file_contents_from_container(self, file_path):
         """
         Gets the contents of an internal file.

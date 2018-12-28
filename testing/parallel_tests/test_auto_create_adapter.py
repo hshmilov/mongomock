@@ -1,6 +1,8 @@
 import codecs
 import os
 
+import pytest
+
 from devops.scripts.automate_dev.create_adapter import get_action_table
 
 
@@ -40,6 +42,7 @@ def test_no_utf():
             assert is_valid_utf8(filename), 'fFilename {filename} contains non utf-8 chars'
 
 
+@pytest.mark.skip(f'AX-2945')
 def test_pylint():
     try:
         gitpylint = os.path.join(get_cortex_dir(), 'devops/scripts/git-pylint.sh')
