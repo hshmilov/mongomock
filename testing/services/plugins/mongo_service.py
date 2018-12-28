@@ -7,9 +7,10 @@ from axonius.plugin_base import EntityType
 from services.docker_service import DockerService
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_NAME
 from services.ports import DOCKER_PORTS
+from services.weave_service import WeaveService
 
 
-class MongoService(DockerService):
+class MongoService(WeaveService):
     def __init__(self):
         super().__init__('mongo', '../infrastructures/database')
         self.client = None

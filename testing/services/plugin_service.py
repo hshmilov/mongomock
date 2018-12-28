@@ -15,9 +15,9 @@ from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
 from services.debug_template import (py_charm_debug_port_template,
                                      py_charm_debug_template)
-from services.docker_service import DockerService
 from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
+from services.weave_service import WeaveService
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from test_helpers.log_tester import LogTester
 
@@ -25,7 +25,7 @@ API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
 
 
-class PluginService(DockerService):
+class PluginService(WeaveService):
     def __init__(self, container_name, service_dir=None):
         if service_dir is None:
             service_dir = f'../plugins/{container_name.replace("-", "_")}'

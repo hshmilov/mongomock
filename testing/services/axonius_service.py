@@ -18,7 +18,6 @@ from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from services import adapters, plugins
 from services.axon_service import TimeoutException
-from services.docker_service import is_weave_up
 from services.plugins.aggregator_service import AggregatorService
 from services.plugins.core_service import CoreService
 from services.plugins.execution_service import ExecutionService
@@ -29,6 +28,7 @@ from services.plugins.static_correlator_service import StaticCorrelatorService
 from services.plugins.static_users_correlator_service import \
     StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
+from services.weave_service import is_weave_up
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
@@ -364,7 +364,7 @@ class AxoniusService:
                 if skip:
                     continue
             plugin.start(mode, allow_restart=allow_restart, rebuild=rebuild,
-                         hard=hard, show_print=show_print, env_vars=env_vars)
+                         hard=hard, show_print=show_print, docker_internal_env_vars=env_vars)
         timeout = 60
         start = time.time()
         first = True

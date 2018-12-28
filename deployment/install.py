@@ -165,8 +165,8 @@ def setup_instances_cronjobs():
 def push_old_instances_settings():
     print_state('Copying old settings (weave encryption key, master marker and first boot marker')
     if os.path.exists(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME)):
-        shutil.copytree(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME),
-                        os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME))
+        os.rename(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME),
+                  os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME))
 
 
 def setup_instances():

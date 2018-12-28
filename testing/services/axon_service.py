@@ -17,7 +17,7 @@ class AxonService(ABC):
         pass
 
     @abstractmethod
-    def stop(self):
+    def stop(self, **kwargs):
         pass
 
     @abstractmethod

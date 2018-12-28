@@ -3,11 +3,12 @@ import subprocess
 import shlex
 import time
 
-from services.docker_service import DockerService, is_weave_up
+from services.weave_service import is_weave_up, WeaveService
 from services.ports import DOCKER_PORTS
 
 
-class SeleniumService(DockerService):
+class SeleniumService(WeaveService):
+
     def is_up(self):
         return True
 
@@ -30,7 +31,8 @@ class SeleniumService(DockerService):
               show_print=True,
               expose_port=False,
               extra_flags=None,
-              env_vars=None):
+              docker_internal_env_vars=None,
+              run_env=None):
         extra_flags = ['-e', 'TZ="Asia/Jerusalem"', '--privileged']
 
         if not is_weave_up():
@@ -42,7 +44,9 @@ class SeleniumService(DockerService):
                       hard=hard,
                       show_print=show_print,
                       expose_port=expose_port,
-                      extra_flags=extra_flags)
+                      extra_flags=extra_flags,
+                      docker_internal_env_vars=docker_internal_env_vars,
+                      run_env=run_env)
         cmd = 'docker exec grid wait_all_done 30s'
         subprocess.Popen(shlex.split(cmd)).communicate()
         time.sleep(60)  # bug in selenium time causes tests to fail on servers the first time after docker cleanup

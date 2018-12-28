@@ -4,7 +4,7 @@ import sys
 
 from test_credentials.test_okta_credentials import (OKTA_CLIENT_LOGIN_DETAILS,
                                                     OKTA_LOGIN_DETAILS)
-from testing.services.docker_service import is_weave_up
+from testing.services.weave_service import is_weave_up
 from axonius.consts.plugin_consts import WEAVE_PATH
 from ui_tests.tests import hosts_file_modifier
 from ui_tests.tests.ui_test_base import TestBase

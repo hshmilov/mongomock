@@ -1,7 +1,5 @@
-import datetime
 import os
 import subprocess
-import sys
 from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
@@ -9,22 +7,12 @@ from typing import Iterable
 
 from retrying import retry
 
-from axonius.consts.plugin_consts import (AXONIUS_NETWORK, WEAVE_NETWORK,
-                                          WEAVE_PATH)
+from axonius.consts.plugin_consts import (AXONIUS_NETWORK, WEAVE_NETWORK)
 from axonius.utils.debug import COLOR
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
-
-
-def is_weave_up():
-    if 'linux' in sys.platform.lower():
-        cmd = [WEAVE_PATH, 'status']
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return p.wait() == 0
-    else:
-        return False
 
 
 def retry_if_timeout(exception):
@@ -70,6 +58,10 @@ class DockerService(AxonService):
     @property
     def image(self):
         return f'axonius/{self.container_name}'
+
+    @property
+    def run_timeout(self):
+        return 60 * 3
 
     @property
     def volumes(self):
@@ -128,7 +120,7 @@ else:
 
     @property
     def docker_network(self):
-        return WEAVE_NETWORK if 'linux' in sys.platform.lower() and is_weave_up() else AXONIUS_NETWORK
+        return AXONIUS_NETWORK
 
     @property
     def _additional_parameters(self) -> Iterable[str]:
@@ -139,6 +131,61 @@ else:
         """
         return []
 
+    def _get_basic_docker_run_command_with_network(self):
+        if self.docker_network == 'host':
+            docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
+        elif self.docker_network == WEAVE_NETWORK:
+            docker_up = ['docker', 'run', '--name', self.container_name, '--detach']
+        else:
+            docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
+                         '--network-alias', self.fqdn, '--detach']
+
+        return docker_up
+
+    def _get_allowed_memory(self):
+        allowed_memory = []
+        if self.max_allowed_memory:
+            allowed_memory = [f'--memory={self.max_allowed_memory}m',
+                              '--oom-kill-disable']  # don't kill my container
+
+        return allowed_memory
+
+    def _get_exposed_ports(self, mode, expose_port):
+        publish_ports = []
+        publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
+        if mode != 'prod' or self.override_exposed_port or expose_port:
+            publish_port_mode = ''  # if in debug mode or override_exposed_port is set, bind on all ips on host
+
+        for exposed in self.exposed_ports:
+            publish_ports.extend(['--publish', f'{publish_port_mode}{exposed[0]}:{exposed[1]}'])
+
+        return publish_ports
+
+    def _get_volumes(self):
+        all_volumes = []
+        volumes = self.volumes
+
+        volumes.extend(self.volumes_override)
+
+        for volume in volumes:
+            all_volumes.extend(['--volume', volume])
+
+        return all_volumes
+
+    def _get_env_varaibles(self, docker_internal_env_vars):
+        env_variables = []
+        for env in self.environment:
+            env_variables.extend(['--env', env])
+
+        if docker_internal_env_vars is not None:
+            for env in docker_internal_env_vars:
+                env_variables.extend(['--env', env])
+
+        env_variables.extend(['--env', 'DOCKER=true'])
+
+        return env_variables
+
+    # pylint: disable=arguments-differ
     def start(self,
               mode='',
               allow_restart=False,
@@ -147,7 +194,8 @@ else:
               show_print=True,
               expose_port=False,
               extra_flags=None,
-              env_vars=None):
+              docker_internal_env_vars=None,
+              run_env=None):
         self._migrate_db()
         assert mode in ('prod', '')
         assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
@@ -156,53 +204,20 @@ else:
             os.makedirs(self.log_dir)
 
         logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
-        weave_is_up = is_weave_up()
 
-        if self.docker_network == 'host':
-            docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
-        elif 'linux' in sys.platform.lower() and weave_is_up:
-            docker_up = ['docker', 'run', '--name', self.container_name, '--detach']
-        else:
-            docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
-                         '--network-alias', self.fqdn, '--detach']
+        docker_up = self._get_basic_docker_run_command_with_network()
 
-        docker_up = list(filter(lambda x: x != '' and x is not None, docker_up))
+        docker_up.extend(self._get_allowed_memory())
 
-        max_allowed_memory = self.max_allowed_memory
-        if max_allowed_memory:
-            docker_up += [f'--memory={max_allowed_memory}m',
-                          '--oom-kill-disable']  # don't kill my container
-
-        publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
-        if mode != 'prod' or self.override_exposed_port or expose_port:
-            publish_port_mode = ''  # if in debug mode or override_exposed_port is set, bind on all ips on host
-
-        for exposed in self.exposed_ports:
-            docker_up.extend(['--publish', f'{publish_port_mode}{exposed[0]}:{exposed[1]}'])
-
-        volumes = self.volumes
+        docker_up.extend(self._get_exposed_ports(mode, expose_port))
 
         docker_up.extend(['--restart', 'always'])
 
-        volumes.extend(self.volumes_override)
+        docker_up.extend(self._get_volumes())
 
-        for volume in volumes:
-            docker_up.extend(['--volume', volume])
-        for env in self.environment:
-            docker_up.extend(['--env', env])
+        docker_up.extend(self._get_env_varaibles(docker_internal_env_vars))
 
-        if 'linux' in sys.platform.lower() and weave_is_up:
-            dns_search_list = ['axonius.local']
-            dns_search_list.extend(self.get_dns_search_list())
-            docker_up.extend([f'--dns-search={dns_search_entry}' for dns_search_entry in dns_search_list])
-
-        if env_vars is not None:
-            for env in env_vars:
-                docker_up.extend(['--env', env])
-        docker_up.extend(['--env', 'DOCKER=true'])
-
-        if extra_flags:
-            docker_up.extend(extra_flags)
+        docker_up.extend(extra_flags or [])
 
         docker_up.append(self.image)
 
@@ -224,56 +239,25 @@ else:
         if hard:
             self.remove_volume()
 
-        my_env = os.environ.copy()
-
-        if 'linux' in sys.platform.lower() and weave_is_up:
-            my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
-
-        # print(' '.join(docker_up))
+        cmd = ' '.join(docker_up)
+        print(f'{cmd}')
         print(f'{COLOR.get("light_green", "<")}'
               f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.'
               f'{COLOR.get("reset", ">")}')
-        try:
-            result = subprocess.check_output(docker_up, cwd=self.service_dir,
-                                             env=my_env, timeout=60 * 3).decode("utf-8")
-        except subprocess.TimeoutExpired as exc:
-            self.restart()
-        except subprocess.CalledProcessError as exc:
-            if any(['could not create veth pair' in x.decode("utf-8") for x in [exc.output, exc.stdout, exc.stderr] if
-                    isinstance(x, bytes)]):
-                self.restart()
+
+        docker_run_process = subprocess.Popen(docker_up, cwd=self.service_dir, env=run_env, stdout=subprocess.PIPE,
+                                              stderr=subprocess.PIPE)
+        all_output = docker_run_process.communicate(timeout=self.run_timeout)
+
+        if docker_run_process.returncode != 0:
+            all_output = ' '.join([current_output_stream.decode('utf-8') for current_output_stream in all_output])
+            raise Exception(f'Failed to start container {self.container_name}', f'failure output is: {all_output}')
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows
             os.system(f'start /B cmd /c "docker logs -f {self.container_name} >> {logsfile} 2>&1"')
         else:  # good stuff
             os.system(f'docker logs -f {self.container_name} >> {logsfile} 2>&1 &')
-
-    def get_dns_search_list(self):
-        dns_search_list = []
-        with open('/etc/resolv.conf', 'r') as resolv_file:
-            for current_line in resolv_file.readlines():
-                if 'search' in current_line:
-                    for search_path in current_line.split()[1:]:
-                        dns_search_list.append(search_path.strip())
-
-        return dns_search_list
-
-    def restart(self):
-        container_id = self.get_container_id(True)
-        if container_id != u'\n' and container_id != '':
-            print(f'{COLOR.get("yellow", "<")}Restarting raised container {self.container_name} due to weave false start...'
-                  f'{COLOR.get("reset", ">")}')
-            command = ['docker', 'restart', container_id[:-1]]
-
-            my_env = os.environ.copy()
-
-            if 'linux' in sys.platform.lower() and is_weave_up():
-                my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
-
-            subprocess.check_call(command, cwd=self.service_dir, stdout=subprocess.PIPE, env=my_env)
-        else:
-            self.start()
 
     def build(self, mode='', runner=None):
         docker_build = ['docker', 'build', '.']
@@ -373,13 +357,6 @@ else:
         self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard)
         self.wait_for_service()
 
-    def restart_and_wait(self):
-        """
-        Take notice that the constructor should have already called 'start' method.
-        """
-        self.restart()
-        self.wait_for_service()
-
     @retry(stop_max_attempt_number=5, stop_max_delay=1000 * 10, wait_fixed=2000)
     def get_file_contents_from_container(self, file_path):
         """
@@ -397,9 +374,6 @@ else:
             raise
 
         if p.returncode != 0:
-            if 'is not running' in err.decode("utf-8"):
-                self.restart_and_wait()
-
             raise DockerException('Failed to run \'cat\' on docker {0}'.format(self.container_name))
 
         return out, err, p.returncode
@@ -424,11 +398,10 @@ else:
     def is_up(self):
         pass
 
-    @retry(stop_max_attempt_number=5, retry_on_exception=retry_if_timeout)
-    def wait_for_service(self, timeout=250):
+    def wait_for_service(self, timeout=180):
         if timeout > 3:
             try:
-                super().wait_for_service(timeout=5)
+                super().wait_for_service(timeout=3)
             except TimeoutException:
                 try:
                     if subprocess.check_output(['docker', 'exec', '-it',
@@ -440,8 +413,7 @@ else:
         try:
             super().wait_for_service(timeout=timeout)
         except TimeoutException:
-            self.restart()
-            raise
+            raise TimeoutException(f'Service {self.container_name} failed to start')
 
     def _migrate_db(self):
         """

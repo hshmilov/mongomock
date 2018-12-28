@@ -1,10 +1,10 @@
 import os
 from typing import Iterable
 
-from services.docker_service import DockerService
+from services.weave_service import WeaveService
 
 
-class SyslogService(DockerService):
+class SyslogService(WeaveService):
     def __init__(self):
         super().__init__(self.name, '')
         self.__syslog_dir = os.path.abspath(os.path.join(self.log_dir, 'syslogs/'))

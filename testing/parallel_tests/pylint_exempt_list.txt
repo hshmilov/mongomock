@@ -380,7 +380,6 @@ testing/parallel_tests/test_tenable_security_center.py
 testing/parallel_tests/test_traiana_lab_machines.py
 testing/services/axonius_service.py
 testing/services/debug_template.py
-testing/services/docker_service.py
 testing/services/plugin_service.py
 testing/services/adapters/ad_service.py
 testing/services/adapters/airwatch_service.py

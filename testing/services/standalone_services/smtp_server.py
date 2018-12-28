@@ -4,8 +4,8 @@ import uuid
 from typing import Iterable
 from retrying import retry
 
-from services.docker_service import DockerService
 from services.ports import DOCKER_PORTS
+from services.weave_service import WeaveService
 
 
 def generate_random_valid_email() -> str:
@@ -15,7 +15,7 @@ def generate_random_valid_email() -> str:
     return f'{uuid.uuid4().hex}@avigdor.ru'
 
 
-class SMTPService(DockerService):
+class SMTPService(WeaveService):
     def __init__(self):
         super().__init__(self.name, 'services/standalone_services')
         self.__conf_dir = os.path.abspath(
