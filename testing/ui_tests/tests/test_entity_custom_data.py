@@ -18,6 +18,7 @@ class TestEntityCustomData(TestBase):
     CUSTOM_BOOL_TYPE = 'Bool'
     CUSTOM_BOOL_NAME = 'Is Available'
     DUPLICATE_FIELD_ERROR = 'Custom Field Name is already in use by another field'
+    CUSTOM_BULK_FIELD_VALUE = 'Best Bulk Value'
 
     @staticmethod
     def _test_init_state(entities_page):
@@ -121,6 +122,29 @@ class TestEntityCustomData(TestBase):
         assert not entities_page.is_element_disabled(entities_page.find_custom_data_save())
         entities_page.save_custom_data()
 
+    def _test_custom_data_bulk(self, entities_page, field_name):
+        entities_page.switch_to_page()
+        entities_page.click_query_wizard()
+        entities_page.toggle_not()
+        entities_page.select_query_adapter(entities_page.CUSTOM_ADAPTER_NAME)
+        entities_page.select_query_field(entities_page.ID_FIELD, partial_text=False)
+        entities_page.click_search()
+        entities_page.wait_for_table_to_load()
+        entities_page.click_row_checkbox()
+        entities_page.click_row_checkbox(index=2)
+        entities_page.open_custom_data_bulk()
+        entities_page.click_custom_data_add_predefined()
+        entities_page.select_custom_data_field(field_name)
+        entities_page.fill_custom_data_value(self.CUSTOM_BULK_FIELD_VALUE)
+        entities_page.save_custom_data(
+            context=self.driver.find_element_by_css_selector(entities_page.CUSTOM_DATA_BULK_CONTAINER_CSS))
+        entities_page.wait_for_table_to_load()
+        entities_page.click_query_wizard()
+        entities_page.toggle_not()
+        entities_page.click_search()
+        entities_page.wait_for_table_to_load()
+        assert len(entities_page.get_all_data()) == 3
+
     def test_custom_data(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -130,9 +154,11 @@ class TestEntityCustomData(TestBase):
         self._test_first_data(self.devices_page, self.devices_page.FIELD_ASSET_NAME)
         self._test_new_fields(self.devices_page)
         self._test_error_fields(self.devices_page, self.devices_page.FIELD_ASSET_NAME)
+        self._test_custom_data_bulk(self.devices_page, self.devices_page.FIELD_ASSET_NAME)
 
         self.users_page.load_custom_data(self.users_page.JSON_ADAPTER_FILTER)
         self._test_init_state(self.users_page)
         self._test_first_data(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
         self._test_new_fields(self.users_page)
         self._test_error_fields(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
+        self._test_custom_data_bulk(self.users_page, self.users_page.FIELD_USERNAME_TITLE)

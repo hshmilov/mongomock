@@ -62,7 +62,7 @@
             </tab>
         </tabs>
         <x-tag-modal :module="module" :entities="{ids: entities, include: true}" :value="entity.labels" ref="tagModal" />
-        <x-modal v-if="fieldsEditor.active" @confirm="saveFieldsEditor" @close="closeFieldsEditor" :disabled="!fieldsEditor.valid">
+        <x-modal v-if="fieldsEditor.active" @confirm="saveFieldsEditor" @close="closeFieldsEditor" :disabled="!fieldsEditor.valid" approve-text="Save">
             <x-data-custom-fields slot="body" :module="module" v-model="fieldsEditor.data" :fields="customFields"
                                   @validate="validateFieldsEditor" />
         </x-modal>

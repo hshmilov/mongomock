@@ -42,8 +42,9 @@ class EntitiesPage(Page):
     TABLE_SELECT_ALL_CHECKBOX_CSS = 'thead .x-checkbox'
     TABLE_COUNT_CSS = '.x-table-header .x-title .count'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
+    TABLE_SECOND_ROW_CSS = 'tbody .x-row.clickable:nth-child(2)'
     TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
-    TABLE_FIRST_ROW_CHECKBOX_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(1) .x-checkbox'
+    TABLE_ROW_CHECKBOX_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
@@ -56,6 +57,7 @@ class EntitiesPage(Page):
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
+    TABLE_ACTION_ITEM_XPATH = '//div[@class=\'x-actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
@@ -95,6 +97,7 @@ class EntitiesPage(Page):
     CUSTOM_DATA_FIELD_VALUE_CSS = '.custom-fields .fields-item .item-value'
     CUSTOM_DATA_FIELD_ITEM = '.custom-fields .fields-item'
     CUSTOM_DATA_ERROR_CSS = '.footer .error-text'
+    CUSTOM_DATA_BULK_CONTAINER_CSS = '.x-actions'
 
     @property
     def url(self):
@@ -107,12 +110,13 @@ class EntitiesPage(Page):
     def click_query_wizard(self):
         self.driver.find_element_by_id(self.QUERY_WIZARD_ID).click()
 
-    def select_query_field(self, text, parent=None):
+    def select_query_field(self, text, parent=None, partial_text=True):
         self.select_option(self.QUERY_FIELD_DROPDOWN_CSS,
                            self.DROPDOWN_TEXT_BOX_CSS,
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            text,
-                           parent=parent)
+                           parent=parent,
+                           partial_text=partial_text)
 
     def get_query_field(self):
         return self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).text
@@ -167,8 +171,8 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).click()
         self.wait_for_spinner_to_end()
 
-    def click_row_checkbox(self):
-        self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CHECKBOX_CSS).click()
+    def click_row_checkbox(self, index=1):
+        self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index)).click()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -207,7 +211,9 @@ class EntitiesPage(Page):
     def toggle_right_bracket(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_BRACKET_RIGHT_CSS).click()
 
-    def toggle_not(self, expression_element):
+    def toggle_not(self, expression_element=None):
+        if not expression_element:
+            expression_element = self.driver
         expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click()
 
     def toggle_obj(self, expression_element):
@@ -539,8 +545,8 @@ class EntitiesPage(Page):
     def click_custom_data_add_new(self):
         return self.click_button('+ New field', partial_class=True)
 
-    def find_custom_data_save(self):
-        return self.get_button(self.OK_BUTTON, partial_class=True)
+    def find_custom_data_save(self, context=None):
+        return self.get_button(self.SAVE_BUTTON, partial_class=True, context=context)
 
     def find_custom_fields_items(self):
         return self.driver.find_elements_by_css_selector(self.CUSTOM_DATA_FIELD_ITEM)
@@ -579,8 +585,8 @@ class EntitiesPage(Page):
     def fill_custom_data_value(self, field_value, parent=None):
         self.fill_text_field_by_css_selector(self.CUSTOM_DATA_FIELD_VALUE_CSS, field_value, parent)
 
-    def save_custom_data(self):
-        self.find_custom_data_save().click()
+    def save_custom_data(self, context=None):
+        self.find_custom_data_save(context).click()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def clear_custom_data_field(self):
@@ -590,3 +596,7 @@ class EntitiesPage(Page):
         if not error_text:
             return self.wait_for_element_absent_by_css(self.CUSTOM_DATA_ERROR_CSS)
         return error_text == self.driver.find_element_by_css_selector(self.CUSTOM_DATA_ERROR_CSS).text
+
+    def open_custom_data_bulk(self):
+        self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
+        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data...')).click()

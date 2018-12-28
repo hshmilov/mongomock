@@ -91,6 +91,7 @@ class Page:
     TABLE_COUNTER = 'div.count'
 
     JSON_ADAPTER_NAME = 'JSON File'
+    CUSTOM_ADAPTER_NAME = 'Custom Data'
 
     def __init__(self, driver, base_url, local_browser: bool):
         self.driver = driver
@@ -416,13 +417,18 @@ class Page:
                       text_box_css_selector,
                       selected_option_css_selector,
                       choice,
-                      parent=None):
+                      parent=None,
+                      partial_text=True):
         if not parent:
             parent = self.driver
         parent.find_element_by_css_selector(dropdown_css_selector).click()
         text_box = self.driver.find_element_by_css_selector(text_box_css_selector)
         self.send_keys(text_box, choice)
-        self.driver.find_element_by_css_selector(selected_option_css_selector).click()
+        if partial_text:
+            self.driver.find_element_by_css_selector(selected_option_css_selector).click()
+        else:
+            next(el for el in self.driver.find_elements_by_css_selector(selected_option_css_selector) if
+                 el.text == choice).click()
 
     def select_option_without_search(self,
                                      dropdown_css_selector,

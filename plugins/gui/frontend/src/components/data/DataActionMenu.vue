@@ -17,7 +17,7 @@
         <slot></slot>
         <x-data-action-item :title="`Add custom data...`" :handle-save="saveFields" :message="`Custom data saved`"
                             action-text="Save">
-            <x-data-adapter-editor :module="module" v-model="customAdapterData" :fields="fields" />
+            <x-data-custom-fields :module="module" v-model="customAdapterData" :fields="fields" />
         </x-data-action-item>
     </div>
 </template>
@@ -28,7 +28,7 @@
 	import NestedMenuItem from '../../components/menus/NestedMenuItem.vue'
     import xDataActionItem from '../../components/data/DataActionItem.vue'
 	import xTagModal from '../../components/popover/TagModal.vue'
-    import xDataAdapterEditor from './DataCustomFields.vue'
+    import xDataCustomFields from './DataCustomFields.vue'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
     import { GET_DATA_BY_ID } from '../../store/getters'
@@ -38,7 +38,7 @@
 		name: 'x-data-action-menu',
         components: {
 			xDropdown, 'nested-menu': NestedMenu, 'nested-menu-item': NestedMenuItem,
-            xDataActionItem, xTagModal, xDataAdapterEditor
+            xDataActionItem, xTagModal, xDataCustomFields
         },
         props: { module: {required: true}, entities: {required: true} },
         computed: {
