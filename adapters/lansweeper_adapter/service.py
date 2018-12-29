@@ -53,6 +53,7 @@ class LansweeperAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
+    # pylint: disable=R0912
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
             soft_id_to_soft_data_dict = dict()
@@ -73,8 +74,27 @@ class LansweeperAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting query software')
 
+            hotfix_id_to_hotfix_data_dict = dict()
+            try:
+                for hotfix_data in client_data.query(consts.QUERY_HOTFIX_2):
+                    hotfix_id_to_hotfix_data_dict[hotfix_data.get('QFEID')] = hotfix_data
+            except Exception:
+                logger.exception(f'Problem getting query hotfix 2')
+            asset_hotfix_dict = dict()
+            try:
+                for asset_hotfix_data in client_data.query(consts.QUERY_HOTFIX):
+                    asset_id = asset_hotfix_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_hotfix_dict:
+                        asset_hotfix_dict[asset_id] = []
+                    asset_hotfix_dict[asset_id].append(asset_hotfix_data)
+            except Exception:
+                logger.exception(f'Problem getting query hotfix')
+
             for device_raw in client_data.query(consts.LANSWEEPER_QUERY_DEVICES):
-                yield device_raw, asset_software_dict, soft_id_to_soft_data_dict
+                yield device_raw, asset_software_dict, soft_id_to_soft_data_dict,\
+                    asset_hotfix_dict, hotfix_id_to_hotfix_data_dict
 
     def _clients_schema(self):
         return {
@@ -120,7 +140,11 @@ class LansweeperAdapter(AdapterBase):
     # pylint: disable=R0912,R0915,R0914
     def _parse_raw_data(self, devices_raw_data):
         # pylint: disable=R1702
-        for device_raw, asset_software_dict, soft_id_to_soft_data_dict in devices_raw_data:
+        for device_raw, \
+                asset_software_dict,\
+                soft_id_to_soft_data_dict,\
+                asset_hotfix_dict,\
+                hotfix_id_to_hotfix_data_dict in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('AssetUnique')
@@ -140,6 +164,29 @@ class LansweeperAdapter(AdapterBase):
                                                                   version=asset_software.get('softwareVersion'))
                 except Exception:
                     logger.exception(f'Problem adding software to {device_raw}')
+
+                try:
+                    asset_hotfix_list = asset_hotfix_dict.get(device_raw.get('AssetID'))
+                    if isinstance(asset_hotfix_list, list):
+                        for asset_hotfix in asset_hotfix_list:
+                            if asset_hotfix.get('QFEID'):
+                                hotfix_data = hotfix_id_to_hotfix_data_dict.get(asset_hotfix.get('QFEID'))
+                                if hotfix_data:
+                                    patch_description = hotfix_data.get('Description') or ''
+                                    if hotfix_data.get('FixComments'):
+                                        patch_description += ' Hotfix Comments:' + hotfix_data.get('FixComments')
+                                    if not patch_description:
+                                        patch_description = None
+                                    installed_on = None
+                                    try:
+                                        installed_on = parse_date(asset_hotfix.get('InstalledOn'))
+                                    except Exception:
+                                        logger.exception(f'Problem getting installed on for patch {asset_hotfix}')
+                                    device.add_security_patch(security_patch_id=hotfix_data.get('HotFixID'),
+                                                              installed_on=installed_on,
+                                                              patch_description=patch_description)
+                except Exception:
+                    logger.exception(f'Problem adding patch to {device_raw}')
                 domain = device_raw.get('Domain')
                 if is_domain_valid(domain):
                     device.domain = domain

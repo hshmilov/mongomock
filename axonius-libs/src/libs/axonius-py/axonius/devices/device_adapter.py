@@ -209,6 +209,7 @@ class DeviceAdapterSecurityPatch(SmartJsonClass):
 
     security_patch_id = Field(str, "Security Patch Name")
     installed_on = Field(datetime.datetime)
+    patch_description = Field(str, 'Patch Description')
 
 
 class DeviceAdapterMsrcAvailablePatch(SmartJsonClass):
