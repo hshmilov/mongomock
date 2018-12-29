@@ -323,7 +323,7 @@ class EntitiesPage(Page):
         return any(text in item for item in self.get_column_data(col_name))
 
     def open_edit_columns(self):
-        self.click_button('Edit Columns', partial_class=True)
+        self.click_button('Edit Columns', partial_class=True, should_scroll_into_view=False)
 
     def select_column_name(self, col_name):
         self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=col_name)).click()
