@@ -3560,6 +3560,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name == 'clear_dashboard_cache':
             self.__clear_dashboard_cache(clear_slow=post_json is not None and post_json.get('clear_slow') is True)
+            return ''
         elif job_name == 'execute':
             # GUI is a post correlation plugin, thus this is called near the end of the cycle
             self._trigger('clear_dashboard_cache')
