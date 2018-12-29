@@ -78,7 +78,7 @@ class DashboardPage(Page):
         self.click_button('View in Users', partial_class=True, should_scroll_into_view=False)
 
     def open_new_card_wizard(self):
-        self.driver.find_element_by_css_selector(self.NEW_CARD_WIZARD_CSS).click()
+        self.wait_for_element_present_by_css(self.NEW_CARD_WIZARD_CSS).click()
 
     def select_chart_metric(self, option):
         self.wait_for_element_present_by_css(self.CHART_METRIC_DROP_DOWN_CSS)

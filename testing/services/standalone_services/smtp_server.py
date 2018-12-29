@@ -59,12 +59,13 @@ class SMTPService(WeaveService):
 
     @retry(stop_max_attempt_number=200, wait_fixed=500)
     def verify_email_send(self, recipient: str):
-        """
+        '''
         Verifies that an email has been sent to the given address
         :param recipient: the email address that the email was sent to
-        """
+        '''
         last_log = list(self.get_emails_sent())[-10:]
-        assert any(bytes(recipient, 'ascii') in l for l in last_log)
+        rec = bytes(recipient, 'ascii')
+        assert any(rec in l for l in last_log), f'Expected to find {recipient} in {str(last_log)}'
 
     def get_emails_sent(self) -> Iterable[str]:
         """

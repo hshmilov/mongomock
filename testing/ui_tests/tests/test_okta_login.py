@@ -29,7 +29,7 @@ class TestOktaLogin(TestBase):
                                                                    self.login_page.OKTA_URL)
 
         try:
-            self.change_base_url(f'https://{self.login_page.OKTA_URL}')
+            self.change_base_url(f'https://{self.login_page.OKTA_URL}:{self.port}')
             self.login_page.wait_for_login_page_to_load()
             self.login_page.click_login_with_okta()
             self.login_page.fill_okta_client_login_details(OKTA_CLIENT_LOGIN_DETAILS)

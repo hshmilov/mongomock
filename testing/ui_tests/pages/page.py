@@ -12,7 +12,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
 from services.axon_service import TimeoutException
-from ui_tests.tests.ui_consts import TEMP_FILE_NAME
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -280,9 +279,9 @@ class Page:
                 element = self.find_element(by, value, element)
                 if element:
                     return element
-                time.sleep(interval)
             except NoSuchElementException:
                 pass
+            time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for {value}')
 
     def wait_for_element_absent_by_id(self, element_id, *vargs, **kwargs):
@@ -305,9 +304,9 @@ class Page:
                 element = self.find_element(by, value, element)
                 if not element:
                     return True
-                time.sleep(interval)
             except (NoSuchElementException, StaleElementReferenceException):
                 return True
+            time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for {value} to disappear')
 
     def wait_for_toaster_to_end(self,
@@ -319,9 +318,9 @@ class Page:
                 toaster = self.find_toaster(text)
                 if not toaster:
                     return True
-                time.sleep(interval)
             except NoSuchElementException:
                 return True
+            time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for toaster {text} to disappear')
 
     def find_element(self, how, what, element=None):
@@ -346,9 +345,9 @@ class Page:
                 toaster = self.find_toaster(text)
                 if toaster:
                     return toaster
-                time.sleep(interval)
             except NoSuchElementException:
                 pass
+            time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for {text}')
 
     def find_element_by_text(self, text, element=None):
@@ -383,9 +382,9 @@ class Page:
                 element = self.find_element_by_text(text, element=element)
                 if element:
                     return element
-                time.sleep(interval)
             except NoSuchElementException:
                 pass
+            time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for {text}')
 
     @staticmethod
@@ -486,16 +485,10 @@ class Page:
         self.driver.find_element_by_id(input_id).send_keys(file_path)
 
     def upload_file_by_id(self, input_id, file_content):
-        if self.local_browser:
-            with NamedTemporaryFile(delete=False) as temp_file:
-                temp_file.write(bytes(file_content, 'ascii'))
-                temp_file.file.flush()
-                return self.__upload_file_by_id(input_id, temp_file.name)
-
-        file_path = os.path.join(self.ui_tests_dir, 'selenium_tests', 'temp_file_upload')
-        with open(file_path, 'w') as file_ref:
-            file_ref.write(file_content)
-        return self.__upload_file_by_id(input_id, f'/home/seluser/selenium_tests/{TEMP_FILE_NAME}')
+        with NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(bytes(file_content, 'ascii'))
+            temp_file.file.flush()
+            return self.__upload_file_by_id(input_id, temp_file.name)
 
     def close_dropdown(self):
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()

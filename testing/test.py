@@ -25,7 +25,10 @@ from testing.test_helpers.ci_helper import TeamcityHelper
 DEFAULT_AXONIUS_INSTANCE_RAM_IN_GB = 32
 DEFAULT_MAX_PARALLEL_TESTS_IN_INSTANCE = 5
 MAX_PARALLEL_PREPARE_CI_ENV_JOBS = 10   # prepare_ci_env is a very resource-consuming task, we have to limit it
+GB_NEEDED_FOR_GRID = 4
+GB_NEEDED_FOR_CHROME_INSTANCE = 2
 AXONIUS_INSTANCES_PREFIX = 'axonius-'
+SELENIUM_INSTANCE_PREFIX = 'selenium-'
 AXONIUS_HOST_IMAGE_TAG = 'axonius/axonius-host-image'
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 ARTIFACTS_DIR_RELATIVE = 'artifacts'
@@ -46,6 +49,7 @@ FIRST_BASH_COMMANDS_BEFORE_EACH_TEST = 'set -e; source ./prepare_python_env.sh; 
 MAX_SECONDS_FOR_ONE_JOB = 60 * 90  # no job (test / bunch of jobs) should take more than an hour an a half
 MAX_SECONDS_FOR_THREAD_POOL = 60 * 120  # Just an extra caution for a timeout
 AXONIUS_DNS_SERVER = 'dns.axonius.lan'
+DOCKER_NETWORK_DEFAULT_GATEWAY = '172.17.0.1'
 TC = TeamcityHelper()
 
 
@@ -163,6 +167,7 @@ class InstanceManager:
         # and fetch everything at once, and we also do not have hundreds of thousands of devices, so this is unneeded.
         # but mongodb tends to catch everything it can so it reduces the effectiveness of other services.
         environment['MONGO_RAM_LIMIT_IN_GB'] = int(self.instance_memory * 0.5)
+        environment['PUBLIC_HTTPS_PORT'] = https_port
 
         # Copy environment variables by teamcity.
         # Uncomment this if you need the inner containers to have specific environment variables, but do notice
@@ -281,25 +286,13 @@ class InstanceManager:
 
         yield from tp_execute(what_to_run, len(self.__instances))
 
-    def spawn_axonius_instances(self, do_not_use_cache: bool):
+    def spawn_axonius_instances(self, number_of_instances: int, do_not_use_cache: bool):
         """
         Creates {number_of_instances} independent containers with as much requirements already built and ready on them.
+        :param number_of_instances: the number of instances to spawn
         :param bool do_not_use_cache: whether or not we should use caching for building axonius.
         :return:
         """
-        current_machine_ram_in_gb = int(psutil.virtual_memory().total / (1024 ** 3))
-        if current_machine_ram_in_gb < self.instance_memory:
-            print(f'Warning: Axonius requires at least {self.instance_memory}gb ram, '
-                  f'but this machine has {current_machine_ram_in_gb}gb.')
-            # This is to allow people to run tests on their own machine which is usually weaker.
-            number_of_instances = 1
-        else:
-            number_of_instances = int(
-                current_machine_ram_in_gb / self.instance_memory)
-
-        print(f'Spawning {number_of_instances} Axonius instances '
-              f'with {"no caching" if do_not_use_cache else "caching"}')
-
         # Build the host image. In case it changed, it means that the current instances we think we have
         # also changed, since they inherit from an old image. In that case we have to remove them.
         self.__build_host_image()
@@ -369,6 +362,96 @@ class InstanceManager:
                                              max_parallel=MAX_PARALLEL_PREPARE_CI_ENV_JOBS):
             with TC.block(f'Finished building axonius on {instance_name}, took {overall_time} seconds'):
                 print(ret)
+
+    def spawn_selenium_instances(self, number_of_instances: int):
+        """
+        Creates {number_of_instances} independent containers with as much requirements already built and ready on them.
+        :param number_of_instances: the number of instances to spawn
+        :return:
+        """
+
+        # Since this is so fast to create we will just shut down whatever we have on now
+        for container in self.__docker.containers.list(
+                all=True,
+                filters={
+                    'name': f'{SELENIUM_INSTANCE_PREFIX}*'
+                }
+        ):
+            print(f'Killing container {container.name.strip()}')
+            container.remove(force=True, v=True)    # Force removal + remove volume
+
+        # Lets pull the newest version, to test on the latest grid + latest chrome.
+        print(f'Downloading new versions of selenium')
+        self.__docker.images.pull('selenium/hub', 'latest')
+        self.__docker.images.pull('selenium/node-chrome-debug', 'latest')
+
+        selenium_hub_container_name = f'{SELENIUM_INSTANCE_PREFIX}hub'
+        print(f'Raising hub {selenium_hub_container_name}')
+        self.__docker.containers.run(
+            'selenium/hub',
+            name=selenium_hub_container_name,
+            detach=True,
+            ports={
+                4444: 4444
+            },
+            volumes={
+                '/dev/shm': {'bind': '/dev/shm', 'mode': 'rw'}
+            },
+            environment={
+                'TZ': 'Asia/Jerusalem'
+            }
+        )
+
+        for i in range(number_of_instances):
+            selenium_node_container_name = f'{SELENIUM_INSTANCE_PREFIX}chrome-{i}'
+            print(f'Raising node {selenium_node_container_name}')
+            self.__docker.containers.run(
+                'selenium/node-chrome-debug',
+                name=selenium_node_container_name,
+                detach=True,
+                volumes={
+                    '/dev/shm': {'bind': '/dev/shm', 'mode': 'rw'}
+                },
+                links={
+                    selenium_hub_container_name: 'hub'
+                },
+                ports={
+                    5900: (5900 + i + 1)    # VNC Port
+                },
+                environment={
+                    'TZ': 'Asia/Jerusalem'
+                },
+                extra_hosts={
+                    'okta.axonius.local': DOCKER_NETWORK_DEFAULT_GATEWAY
+                }
+            )
+
+    def prepare_host_machine(self, do_not_use_cache):
+        # self.instance_memory is the amount of memory we give to each instance. In addition we give 4gb for grid
+        # and 2gb for each container for its chrome instance.
+        current_machine_ram_in_gb = int(psutil.virtual_memory().total / (1024 ** 3))
+        if current_machine_ram_in_gb < self.instance_memory:
+            print(f'Warning: Axonius requires at least {self.instance_memory}gb ram, '
+                  f'but this machine has {current_machine_ram_in_gb}gb.')
+            # This is to allow people to run tests on their own machine which is usually weaker.
+            number_of_instances = 1
+        else:
+            number_of_instances = int(
+                (current_machine_ram_in_gb - GB_NEEDED_FOR_GRID) /
+                (self.instance_memory + GB_NEEDED_FOR_CHROME_INSTANCE)
+            )
+
+        print(f'Spawning {number_of_instances} Selenium instances '
+              f'with {"no caching" if do_not_use_cache else "caching"}')
+
+        self.spawn_selenium_instances(number_of_instances)
+
+        print(f'Spawning {number_of_instances} Axonius instances '
+              f'with {"no caching" if do_not_use_cache else "caching"}')
+
+        self.spawn_axonius_instances(number_of_instances, do_not_use_cache)
+
+        print(f'Done preparing host machine')
 
     def execute_jobs(self, jobs: Dict):
         """
@@ -555,7 +638,7 @@ def main():
     if args.action == 'prepare':
         if args.distributed:
             instance_manager = InstanceManager(args.instance_memory)
-            instance_manager.spawn_axonius_instances(no_cache)
+            instance_manager.prepare_host_machine(no_cache)
         else:
             with TC.block(f'Preparing this host. Building Axonius'):
                 child = subprocess.Popen(
@@ -616,7 +699,7 @@ def main():
 
             return {
                 'ui_' + test_module.split('.py')[0]:
-                    f'python3 -u ./testing/run_ui_tests.py {os.path.join(DIR_MAP["ui"], test_module)}'
+                    f'python3 -u ./testing/run_ui_tests.py --host-hub {os.path.join(DIR_MAP["ui"], test_module)}'
                 for test_module in ui_tests
             }
 

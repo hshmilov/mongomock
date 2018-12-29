@@ -35,6 +35,7 @@ from ui_tests.tests.ui_consts import ROOT_DIR
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(ROOT_DIR, 'logs', 'ui_logger')
+DOCKER_NETWORK_DEFAULT_GATEWAY = '172.17.0.1'
 
 
 def create_ui_tests_logger():
@@ -64,8 +65,20 @@ class TestBase:
             self.local_browser = True
             self.driver = self._get_local_browser()
             self.base_url = 'https://127.0.0.1'
+            self.port = 443
+        elif pytest.config.option.host_hub:
+            self.local_browser = False
+            self.port = os.environ.get('PUBLIC_HTTPS_PORT') or 443
+            remote_hub = f'http://{DOCKER_NETWORK_DEFAULT_GATEWAY}:4444/wd/hub'
+            self.base_url = f'https://{DOCKER_NETWORK_DEFAULT_GATEWAY}:{self.port}'
+            logger.info(f'Base Url: {self.base_url}')
+            logger.info(f'Connecting to the remote hub {remote_hub}..')
+            self.driver = webdriver.Remote(command_executor=remote_hub,
+                                           desired_capabilities=self._get_desired_capabilities())
+            logger.info('Connected successfully!')
         else:
             self.local_browser = False
+            self.port = 443
             logger.info('Before webdriver.Remote')
             self.driver = webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
                                            desired_capabilities=self._get_desired_capabilities())

@@ -18,6 +18,7 @@ def retry_if_timeout(exception):
     return isinstance(exception, TimeoutException)
 
 
+# pylint: disable=too-many-branches
 class DockerService(AxonService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__()
@@ -59,7 +60,7 @@ class DockerService(AxonService):
 
     @property
     def run_timeout(self):
-        return 60 * 3
+        return 60 * 10
 
     @property
     def volumes(self):
