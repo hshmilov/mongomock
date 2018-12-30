@@ -383,7 +383,7 @@ class InstanceManager:
         # Lets pull the newest version, to test on the latest grid + latest chrome.
         print(f'Downloading new versions of selenium')
         self.__docker.images.pull('selenium/hub', 'latest')
-        self.__docker.images.pull('selenium/node-chrome-debug', 'latest')
+        self.__docker.images.pull('selenium/node-chrome', 'latest')
 
         selenium_hub_container_name = f'{SELENIUM_INSTANCE_PREFIX}hub'
         print(f'Raising hub {selenium_hub_container_name}')
@@ -406,7 +406,7 @@ class InstanceManager:
             selenium_node_container_name = f'{SELENIUM_INSTANCE_PREFIX}chrome-{i}'
             print(f'Raising node {selenium_node_container_name}')
             self.__docker.containers.run(
-                'selenium/node-chrome-debug',
+                'selenium/node-chrome',
                 name=selenium_node_container_name,
                 detach=True,
                 volumes={

@@ -21,7 +21,9 @@ class TestOktaLogin(TestBase):
         self.settings_page.wait_for_spinner_to_end()
         toggle = self.settings_page.find_allow_okta_logins_toggle()
         self.settings_page.click_toggle_button(toggle)
-        self.settings_page.fill_okta_login_details(**OKTA_LOGIN_DETAILS)
+        okta_login_details = OKTA_LOGIN_DETAILS.copy()
+        okta_login_details['gui2_url'] += f':{self.port}'
+        self.settings_page.fill_okta_login_details(**okta_login_details)
         self.settings_page.click_save_button()
         self.login_page.logout()
         # To support running with local browser

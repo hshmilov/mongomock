@@ -9,8 +9,10 @@ from services.adapters.stresstest_scanner_service import StresstestScannerServic
 from services.adapters.stresstest_service import StresstestService, Stresstest_fixture
 from test_credentials import test_infinite_sleep_credentials
 from test_credentials.test_gui_credentials import DEFAULT_USER
+from axonius.utils.wait import wait_until
 
 pytestmark = pytest.mark.sanity
+MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3   # the amount of time we expect a cycle to end, without async plugins in bg
 
 
 def test_aggregator_in_configs(axonius_fixture):
@@ -67,12 +69,12 @@ def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixtur
     assert len(StresstestScanner_fixture.clients()) == 1
     assert len(Stresstest_fixture.clients()) == 1
 
-    time.sleep(1)
     scheduler.wait_for_scheduler(True)
-
     scheduler.start_research()
-    time.sleep(1)
     scheduler.wait_for_scheduler(True)
+    wait_until(lambda: scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10),
+               total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
+    axonius_fixture.aggregator.rebuild_views()
 
     gui.login_user(DEFAULT_USER)
     devices = gui.get_devices(params={

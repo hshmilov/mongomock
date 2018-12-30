@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
 from services.axon_service import TimeoutException
+from ui_tests.tests.ui_consts import TEMP_FILE_PREFIX
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -485,7 +486,7 @@ class Page:
         self.driver.find_element_by_id(input_id).send_keys(file_path)
 
     def upload_file_by_id(self, input_id, file_content):
-        with NamedTemporaryFile(delete=False) as temp_file:
+        with NamedTemporaryFile(delete=False, prefix=TEMP_FILE_PREFIX) as temp_file:
             temp_file.write(bytes(file_content, 'ascii'))
             temp_file.file.flush()
             return self.__upload_file_by_id(input_id, temp_file.name)
