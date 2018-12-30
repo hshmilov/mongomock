@@ -325,6 +325,7 @@ account_data.tmp
 # Selenium
 *chromedriver.exe
 *geckodriver.exe
+screenshots/*
 testing/screenshots/*
 testing/upgrade/*/screenshots/
 testing/upgrade/*/screenshots/
