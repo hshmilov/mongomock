@@ -27,8 +27,9 @@ def signal_term_handler(signal_, frame):
 
 
 def main():
-    current_hostname = subprocess.check_output('cat /etc/hostname', shell=True).decode('utf-8').strip()
-    print(f'running ui tests on hostname {current_hostname}')
+    if os.name != 'nt':
+        current_hostname = subprocess.check_output('cat /etc/hostname', shell=True).decode('utf-8').strip()
+        print(f'running ui tests on hostname {current_hostname}')
     # This is not the most generic way to get this flag but since we are going to (possibly) remove
     # this mechanism soon i think its a good-enough way for now.
     # The other solution (best one) is to change this whole file into fixtures that raise the system automatically

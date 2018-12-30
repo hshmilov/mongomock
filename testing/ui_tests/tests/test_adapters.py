@@ -8,8 +8,11 @@ from axonius.consts import adapter_consts
 from axonius.utils.wait import wait_until
 from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
+from services.adapters.eset_service import EsetService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
+from test_credentials.test_gotoassist_credentials import client_details
+from test_credentials.test_eset_credentials import eset_details
 from ui_tests.pages.page import X_BODY
 from ui_tests.tests.ui_consts import LOCAL_DEFAULT_USER_PATTERN
 from ui_tests.tests.ui_test_base import TestBase
@@ -22,6 +25,7 @@ JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
 GOTOASSIST_NAME = 'GoToAssist'
 CISCO_NAME = 'Cisco'
 AD_NAME = 'Active Directory'
+ESET_NAME = 'ESET Endpoint Security'
 
 
 class TestAdapters(TestBase):
@@ -77,6 +81,48 @@ class TestAdapters(TestBase):
             except NoSuchElementException:
                 return
         assert False, 'Adapter still up'
+
+    def test_adapters_page_sanity(self):
+        try:
+            with GotoassistService().contextmanager(take_ownership=True):
+                self.wait_for_adapter(GOTOASSIST_NAME)
+                self.adapters_page.click_adapter(GOTOASSIST_NAME)
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_table_to_load()
+                self.adapters_page.click_new_server()
+                self.adapters_page.fill_creds(**client_details)
+                self.adapters_page.click_save()
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.switch_to_page()
+                with EsetService().contextmanager(take_ownership=True):
+                    self.wait_for_adapter(ESET_NAME)
+                    self.adapters_page.click_adapter(ESET_NAME)
+                    self.adapters_page.wait_for_spinner_to_end()
+                    self.adapters_page.wait_for_table_to_load()
+                    self.adapters_page.click_new_server()
+                    self.adapters_page.fill_creds(**eset_details)
+                    self.adapters_page.click_save()
+                    self.adapters_page.wait_for_spinner_to_end()
+                    self.base_page.run_discovery()
+                    self.devices_page.switch_to_page()
+                    self.devices_page.wait_for_table_to_load()
+                    self.devices_page.click_query_wizard()
+                    adapters_from_query_wizard = self.devices_page.get_query_adapters_list()
+                    self.devices_page.close_dropdown()
+                    assert adapters_from_query_wizard == sorted(adapters_from_query_wizard)
+                    self.devices_page.close_dropdown()
+                    self.devices_page.open_edit_columns()
+                    adapters_from_edit_columns = self.devices_page.get_edit_columns_adapters_list()
+                    assert adapters_from_edit_columns == sorted(adapters_from_edit_columns)
+                    assert adapters_from_edit_columns == adapters_from_query_wizard
+                    self.devices_page.close_dropdown()
+                    self.devices_page.close_edit_columns()
+                    self.adapters_page.switch_to_page()
+                    self.adapters_page.clean_adapter_servers(GOTOASSIST_NAME)
+                    self.adapters_page.clean_adapter_servers(ESET_NAME)
+        finally:
+            self.wait_for_adapter_down(GOTOASSIST_NAME)
+            self.wait_for_adapter_down(ESET_NAME)
 
     def test_connectivity(self):
         try:

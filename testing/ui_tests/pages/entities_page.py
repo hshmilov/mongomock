@@ -13,6 +13,7 @@ class EntitiesPage(Page):
     DROPDOWN_SELECTED_OPTIONS_CSS = 'div.x-select-options'
     DROPDOWN_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
 
+    EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = 'div.x-dropdown.x-select.x-select-symbol'
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.filter .expression'
     QUERY_CONDITIONS_CSS = '.x-schema-condition'
@@ -133,7 +134,19 @@ class EntitiesPage(Page):
 
     def get_query_adapters_list(self):
         self.open_query_adapters_list()
-        return self.driver.find_element_by_css_selector(self.DROPDOWN_SELECTED_OPTIONS_CSS).text
+        return self.get_adapters_list()
+
+    def open_edit_columns_adapters_list(self):
+        self.driver.find_element_by_css_selector(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS).click()
+
+    def get_edit_columns_adapters_list(self):
+        self.open_edit_columns_adapters_list()
+        return self.get_adapters_list()
+
+    def get_adapters_list(self):
+        adapters_list = self.driver.find_element_by_css_selector(self.DROPDOWN_SELECTED_OPTIONS_CSS).text.split('\n')
+        adapters_list.remove('General')
+        return adapters_list
 
     def select_query_comp_op(self, text, parent=None):
         self.select_option_without_search(self.QUERY_COMP_OP_DROPDOWN_CSS,
