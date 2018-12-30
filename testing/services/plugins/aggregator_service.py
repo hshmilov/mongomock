@@ -300,6 +300,7 @@ class AggregatorService(PluginService):
                                 '''.replace('@PUN@', f'\'{plugin_unique_name}\'' if plugin_unique_name else 'true'))
             reduce_function = Code('''function(key, stuff) { return null; }''')
 
+            all_fields = []
             try:
                 all_fields = col.map_reduce(
                     map_function,
@@ -308,9 +309,7 @@ class AggregatorService(PluginService):
                         'inline': 1
                     })['results']
             except OperationFailure as operation_failure:
-                if 'namespace does not exist' in operation_failure.args:
-                    all_fields = []
-                else:
+                if 'namespace does not exist' not in str(operation_failure):
                     raise
             return [x['_id'] for x in all_fields]
 
