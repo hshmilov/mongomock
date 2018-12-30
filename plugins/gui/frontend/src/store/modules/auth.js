@@ -170,9 +170,6 @@ export const auth = {
 			dispatch(REQUEST_API, {
 				rule: 'logout',
 				type: INIT_USER
-			}).then(() => {
-				// this is needed because google login only works from top page
-				if (window.location.pathname !== '/') window.location.pathname = '/'
 			})
 		},
 		[ GET_ALL_USERS ] ({dispatch}) {

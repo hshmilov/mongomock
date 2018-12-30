@@ -25,7 +25,6 @@ from apscheduler.executors.pool import \
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from bson import ObjectId
-from cachetools import cachedmethod, TTLCache
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
 from elasticsearch import Elasticsearch
@@ -33,6 +32,7 @@ from flask import (after_this_request, jsonify, make_response, redirect,
                    request, send_file, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
+from cachetools import cachedmethod, TTLCache
 
 from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -1272,12 +1272,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             pass
         return
 
-    @gui_add_rule_logged_in('plugins/<plugin_name>/upload_file', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Adapters,
-                                                             PermissionLevel.ReadWrite)})
-    def plugins_upload_file(self, plugin_name):
-        return self._upload_file(plugin_name)
-
     @gui_add_rule_logged_in('adapters/<adapter_name>/<node_id>/upload_file', methods=['POST'],
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadWrite)})
@@ -1774,6 +1768,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if response and response.status_code == 200:
             return ''
         return response.json(), response.status_code
+
+    @gui_add_rule_logged_in('plugins/<plugin_name>/upload_file', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Adapters,
+                                                             PermissionLevel.ReadWrite)})
+    def plugins_upload_file(self, plugin_name):
+        return self._upload_file(plugin_name)
 
     @gui_add_rule_logged_in('config/<config_name>', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Settings,

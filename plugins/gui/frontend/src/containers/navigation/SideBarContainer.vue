@@ -6,7 +6,7 @@
                 <h5>{{ userDetails.name }}</h5>
             </div>
             <div class="x-user-actions">
-                <a @click="logout" title="Logout">
+                <a @click="onLogout" title="Logout">
                     <svg-icon name="navigation/logout" height="16" :original="true" />
                 </a>
                 <router-link :to="{name: 'My Account'}" active-class="active" @click.native="$emit('click')" title="My Account">
@@ -65,6 +65,12 @@
             },
             notifyAccess(name) {
                 this.$emit('access-violation', name)
+            },
+            onLogout() {
+                if (window.location.pathname !== '/') {
+                    this.$router.push('/')
+                }
+                this.logout()
             }
         }
     }
