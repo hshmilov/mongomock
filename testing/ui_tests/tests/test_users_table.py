@@ -27,6 +27,7 @@ class TestUsersTable(TestEntitiesTable):
         assert f'users/{first_id}' in self.driver.current_url
 
     def _test_user_sort_result(self, col_name, desc=True):
+        self.users_page.wait_for_spinner_to_end()
         self.users_page.click_sort_column(col_name)
         self.users_page.wait_for_spinner_to_end()
         usernames = self.users_page.get_column_data(col_name)
