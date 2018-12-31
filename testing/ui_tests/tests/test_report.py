@@ -66,6 +66,7 @@ class TestReport(TestBase):
             private_data = open(os.path.join(goguerrilla_basedir, 'client.test.key'), 'r').read()
 
             self.settings_page.set_email_ssl_files(ca_data, cert_data, private_data)
+            self.settings_page.set_email_ssl_verification('Unverified')
             self.settings_page.click_save_button()
 
             self.report_page.switch_to_page()

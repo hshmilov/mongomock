@@ -351,6 +351,11 @@ class SettingsPage(Page):
         self.upload_file_by_id('cert_file', cert_data)
         self.upload_file_by_id('private_key', private_data)
 
+    def set_email_ssl_verification(self, verification_status):
+        self.driver.find_element_by_css_selector('[for=use_ssl]+div>div>div>div').click()
+        self.fill_text_field_by_css_selector('input.input-value', verification_status)
+        self.driver.find_element_by_css_selector(self.SELECT_OPTION_CSS).click()
+
     def get_google_keypair_file(self):
         return self.driver.find_element_by_id(GOOGLE_KEYPAIR_FILE)
 
