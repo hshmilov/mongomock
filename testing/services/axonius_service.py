@@ -10,8 +10,8 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-from axonius.consts.plugin_consts import (AXONIOUS_SETTINGS_DIR_NAME,
-                                          AXONIUS_NETWORK,
+from axonius.consts.plugin_consts import (AXONIUS_NETWORK,
+                                          AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           ENCRYPTION_KEY_FILENAME,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS,
@@ -74,7 +74,7 @@ class AxoniusService:
         if 'linux' in sys.platform.lower():
             # Getting network encryption key.
             key_file_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), '..', '..', AXONIOUS_SETTINGS_DIR_NAME,
+                os.path.join(os.path.dirname(__file__), '..', '..', AXONIUS_SETTINGS_DIR_NAME,
                              ENCRYPTION_KEY_FILENAME))
             if os.path.exists(key_file_path):
                 with open(key_file_path, 'r') as encryption_key_file:
@@ -84,7 +84,7 @@ class AxoniusService:
                 encryption_key = ''.join(random.SystemRandom().choices(string.ascii_uppercase +
                                                                        string.ascii_lowercase + string.digits, k=32))
                 os.makedirs(
-                    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', AXONIOUS_SETTINGS_DIR_NAME)),
+                    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', AXONIUS_SETTINGS_DIR_NAME)),
                     exist_ok=True)
                 with open(key_file_path, 'w') as encryption_key_file:
                     encryption_key_file.write(encryption_key)

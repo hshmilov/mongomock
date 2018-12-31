@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from axonius.consts.plugin_consts import AXONIOUS_SETTINGS_DIR_NAME
+from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
 from exclude_helper import ExcludeHelper
 from services.axonius_service import get_service
 import subprocess
@@ -13,7 +13,7 @@ import subprocess
 CORTEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
 SYSTEM_CONF_PATH = Path(CORTEX_PATH) / 'system_conf.json'
-CUSTOMER_CONF_RELATIVE_PATH = Path(AXONIOUS_SETTINGS_DIR_NAME) / 'customer_conf.json'
+CUSTOMER_CONF_RELATIVE_PATH = Path(AXONIUS_SETTINGS_DIR_NAME) / 'customer_conf.json'
 CUSTOMER_CONF_PATH = Path(CORTEX_PATH) / CUSTOMER_CONF_RELATIVE_PATH
 
 

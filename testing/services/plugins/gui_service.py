@@ -9,13 +9,12 @@ from axonius.consts.gui_consts import (CONFIG_COLLECTION,
                                        PREDEFINED_ROLE_RESTRICTED,
                                        ROLES_COLLECTION, USERS_COLLECTION)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
+                                          AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           DASHBOARD_COLLECTION, GUI_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME)
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
-
-SYSTEM_SETTINGS_DIR_NAME = '.axonius_settings'
 
 
 class GuiService(PluginService):
@@ -330,9 +329,10 @@ class GuiService(PluginService):
     def volumes_override(self):
         # Creating a settings dir outside of cortex (on production machines
         # this will be /home/ubuntu/.axonius_settings) for login marker and weave encryption key.
-        settings_path = os.path.abspath(os.path.join(self.cortex_root_dir, SYSTEM_SETTINGS_DIR_NAME))
+        settings_path = os.path.abspath(os.path.join(self.cortex_root_dir, AXONIUS_SETTINGS_DIR_NAME))
         os.makedirs(settings_path, exist_ok=True)
-        volumes = [f'{settings_path}:/home/axonius/.axonius_settings']
+        container_settings_dir_path = os.path.join('/home/axonius/', AXONIUS_SETTINGS_DIR_NAME)
+        volumes = [f'{settings_path}:{container_settings_dir_path}']
 
         # GUI supports debug, but to use, you have to build your *local* node modules
         local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
