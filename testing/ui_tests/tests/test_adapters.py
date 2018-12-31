@@ -1,6 +1,6 @@
 import re
 import time
-from copy import copy
+
 from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
@@ -13,6 +13,7 @@ from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_gotoassist_credentials import client_details
 from test_credentials.test_eset_credentials import eset_details
+from ui_tests.pages.adapters_page import AD_NAME
 from ui_tests.pages.page import X_BODY
 from ui_tests.tests.ui_consts import LOCAL_DEFAULT_USER_PATTERN
 from ui_tests.tests.ui_test_base import TestBase
@@ -24,7 +25,6 @@ JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
 
 GOTOASSIST_NAME = 'GoToAssist'
 CISCO_NAME = 'Cisco'
-AD_NAME = 'Active Directory'
 ESET_NAME = 'ESET Endpoint Security'
 
 
@@ -103,6 +103,7 @@ class TestAdapters(TestBase):
                     self.adapters_page.fill_creds(**eset_details)
                     self.adapters_page.click_save()
                     self.adapters_page.wait_for_spinner_to_end()
+                    self.base_page.wait_for_run_research()
                     self.base_page.run_discovery()
                     self.devices_page.switch_to_page()
                     self.devices_page.wait_for_table_to_load()
@@ -202,23 +203,6 @@ class TestAdapters(TestBase):
             # Cisco should not be in the adapters list because its dose not have a client
             assert CISCO_NAME not in adapters
 
-    def add_ad_server(self):
-        self.adapters_page.switch_to_page()
-        self.adapters_page.wait_for_spinner_to_end()
-        self.adapters_page.click_adapter(AD_NAME)
-        self.adapters_page.wait_for_spinner_to_end()
-        self.adapters_page.click_new_server()
-
-        dict_ = copy(ad_client1_details)
-        dict_.pop('use_ssl')
-
-        self.adapters_page.fill_creds(**dict_)
-        self.adapters_page.click_save()
-
-        ad_log_tester = AdService().log_tester
-        pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
-        ad_log_tester.is_pattern_in_log(re.escape(pattern))
-
     def test_icon_color(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
@@ -227,7 +211,7 @@ class TestAdapters(TestBase):
             self.adapters_page.wait_for_data_collection_toaster_absent()
             try:
 
-                self.add_ad_server()
+                self.adapters_page.add_ad_server(ad_client1_details)
                 self.adapters_page.wait_for_server_green()
 
                 self.adapters_page.switch_to_page()
@@ -257,7 +241,7 @@ class TestAdapters(TestBase):
         finally:
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
-            self.add_ad_server()
+            self.adapters_page.add_ad_server(ad_client1_details)
             self.base_page.wait_for_stop_research()
             self.base_page.wait_for_run_research()
 
@@ -305,10 +289,10 @@ class TestAdapters(TestBase):
         finally:
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
-            self.add_ad_server()
+            self.adapters_page.add_ad_server(ad_client1_details)
 
     def test_delete_adapter_without_associated_entities(self):
-        self.add_ad_server()
+        self.adapters_page.add_ad_server(ad_client1_details)
         self.base_page.wait_for_stop_research()
         self.base_page.wait_for_run_research()
         self._check_delete_adapter(False)
@@ -319,3 +303,9 @@ class TestAdapters(TestBase):
         self._check_delete_adapter(True)
         self.base_page.wait_for_stop_research()
         self.base_page.wait_for_run_research()
+
+    def test_add_ad_server(self):
+        self.adapters_page.add_ad_server(ad_client1_details)
+        ad_log_tester = AdService().log_tester
+        pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
+        ad_log_tester.is_pattern_in_log(re.escape(pattern))

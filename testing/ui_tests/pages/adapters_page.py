@@ -1,4 +1,5 @@
 from collections import namedtuple
+from copy import copy
 
 from selenium.common.exceptions import NoSuchElementException
 
@@ -8,6 +9,7 @@ from ui_tests.pages.page import X_BODY
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
 Adapter = namedtuple('Adapter', 'name description')
+AD_NAME = 'Active Directory'
 
 
 class AdaptersPage(EntitiesPage):
@@ -152,3 +154,16 @@ class AdaptersPage(EntitiesPage):
 
     def wait_for_data_collection_toaster_absent(self):
         self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
+
+    def add_ad_server(self, ad_client):
+        self.switch_to_page()
+        self.wait_for_spinner_to_end()
+        self.click_adapter(AD_NAME)
+        self.wait_for_spinner_to_end()
+        self.click_new_server()
+
+        dict_ = copy(ad_client)
+        dict_.pop('use_ssl')
+
+        self.fill_creds(**dict_)
+        self.click_save()

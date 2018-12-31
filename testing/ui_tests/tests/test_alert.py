@@ -1,4 +1,5 @@
 import datetime
+import time
 from typing import List
 
 import pytest
@@ -61,8 +62,11 @@ class TestAlert(TestBase):
         self.alert_page.find_missing_email_server_notification()
 
     def test_remove_alert(self):
-        self.alert_page.create_outputting_notification_alert(ALERT_NAME, COMMON_ALERT_QUERY)
+        # Added to wait for another discovery that happens at the beginning before adding the alert.
+        time.sleep(10)
+        self.base_page.wait_for_run_research()
 
+        self.alert_page.create_outputting_notification_alert(ALERT_NAME, COMMON_ALERT_QUERY)
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
         assert self.notification_page.is_text_in_peek_notifications(ALERT_NAME)
