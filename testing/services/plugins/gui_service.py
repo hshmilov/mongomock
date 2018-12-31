@@ -444,6 +444,9 @@ RUN cd ./gui/frontend/ && npm run {dev}build
     def troubleshooting(self):
         return self.get('troubleshooting').content
 
+    def provision(self):
+        return self.get('provision').content
+
     def get_api_version(self, *vargs, **kwargs):
         return self.get(f'api', *vargs, **kwargs).json()
 

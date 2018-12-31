@@ -36,7 +36,7 @@
                                 </template>
                                 <template v-else>
                                     <div class="mr-8">Give temporary Remote Support for</div>
-                                    <input type="number" v-model="accessDuration" @keypress="validateNumber" class="mr-8" />
+                                    <input type="number" v-model="accessDuration" @keypress="validateNumber" class="mr-8" id="remote-access-timer"/>
                                     <div class="mr-12">Hours</div>
                                     <button class="x-btn" :class="{disabled: !enableStartAccess}" @click="startTempAccess">Start</button>
                                 </template>

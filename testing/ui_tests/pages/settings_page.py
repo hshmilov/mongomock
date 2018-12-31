@@ -144,12 +144,8 @@ class SettingsPage(Page):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
 
     def toggle_advanced_settings(self):
-        try:
-            self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=X_BODY)
-            time.sleep(0.5)
-        except NoSuchElementException:
-            # In version 1.15 this does not yet exist
-            pass
+        self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=X_BODY)
+        time.sleep(0.5)
 
     def find_remote_support_toggle(self):
         try:
@@ -469,3 +465,6 @@ class SettingsPage(Page):
 
     def fill_proxy_address(self, proxy_addr):
         self.fill_text_field_by_element_id('proxy_addr', proxy_addr)
+
+    def fill_remote_access_timeout(self, timeout):
+        self.fill_text_field_by_element_id('remote-access-timer', timeout)

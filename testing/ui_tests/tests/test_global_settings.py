@@ -88,11 +88,13 @@ class TestGlobalSettings(TestBase):
         self.settings_page.toggle_advanced_settings()
 
         self.settings_page.set_provision_toggle(make_yes=False)
+        self.settings_page.fill_remote_access_timeout('0.01')  # 36 seconds
         self.settings_page.click_start_remote_access()
         wait_until(
             lambda: LogTester(GUI_LOG_PATH).is_pattern_in_log(
                 '(Creating a job for stopping the maintenance|Job already existing - updating its run time to)', 10))
-        self.settings_page.click_stop_remote_access()
+        assert self.axonius_system.gui.provision().strip() == b'true'
+        wait_until(lambda: self.axonius_system.gui.provision().strip() == b'false', total_timeout=60 * 1.5)
 
     def test_proxy_settings(self):
         self.settings_page.switch_to_page()
