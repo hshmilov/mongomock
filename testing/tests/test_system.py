@@ -59,6 +59,7 @@ def test_system_is_up(axonius_fixture):
         service.wait_for_service()
 
 
+@pytest.mark.skip('AX-2955')
 def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixture, Stresstest_fixture):
     scheduler = axonius_fixture.scheduler
     gui = axonius_fixture.gui
