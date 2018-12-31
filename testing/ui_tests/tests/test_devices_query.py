@@ -323,3 +323,20 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_spinner_to_end()
         assert self.devices_page.is_query_error()
         assert not len(self.devices_page.get_all_data())
+
+    def test_empty_fields_arent_there(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
+        fields = list(self.devices_page.get_all_fields_in_field_selection())
+        assert 'Cloud ID' not in fields
+        assert 'Last Seen' in fields
+        assert 'AD Use DES Key Only' not in fields
+        self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
+        fields = list(self.devices_page.get_all_fields_in_field_selection())
+        assert 'AD Use DES Key Only' in fields

@@ -119,6 +119,14 @@ class EntitiesPage(Page):
                            parent=parent,
                            partial_text=partial_text)
 
+    def get_all_fields_in_field_selection(self):
+        self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).click()
+        try:
+            for element in self.driver.find_elements_by_css_selector('.x-select-option'):
+                yield element.text
+        finally:
+            self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).click()
+
     def get_query_field(self):
         return self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).text
 
