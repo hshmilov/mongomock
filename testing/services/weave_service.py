@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 from abc import abstractmethod
+
 from retrying import retry
 
 from axonius.consts.plugin_consts import (AXONIUS_NETWORK, WEAVE_NETWORK,
@@ -79,15 +80,28 @@ class WeaveService(DockerService):
         except subprocess.TimeoutExpired:
             print(
                 'Restarting container due TimeoutExpired exception on start (probably due to weave docker run issue.)')
-            self.restart()
+            self.restart(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print,
+                         expose_port=expose_port, extra_flags=extra_flags,
+                         docker_internal_env_vars=docker_internal_env_vars, run_env=my_env)
         except Exception as exc:
-            if 'could not create veth pair' in exc.args[1]:
-                print('Restarting container due to network veth pair exception')
-                self.restart()
+            if 'could not create veth pair' in exc.args[1] or 'error setting up interface' in exc.args[1]:
+                print('Restarting container due to weave network exception.')
+                self.restart(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print,
+                             expose_port=expose_port, extra_flags=extra_flags,
+                             docker_internal_env_vars=docker_internal_env_vars, run_env=my_env)
             else:
                 raise
 
-    def restart(self):
+    def restart(self,
+                mode='',
+                allow_restart=False,
+                rebuild=False,
+                hard=False,
+                show_print=True,
+                expose_port=False,
+                extra_flags=None,
+                docker_internal_env_vars=None,
+                run_env=None):
         container_id = self.get_container_id(True)
         if container_id not in (u'\n', ''):
             print(f'{COLOR.get("yellow", "<")}Restarting raised container \
@@ -104,15 +118,24 @@ class WeaveService(DockerService):
                                                   stderr=subprocess.PIPE,
                                                   env=my_env)
 
-            all_output = docker_run_process.communicate(timeout=self.run_timeout)
-            all_output = ' '.join([current_output_stream.decode('utf-8') for current_output_stream in all_output])
+            try:
+                all_output = docker_run_process.communicate(timeout=self.run_timeout)
+                all_output = ' '.join([current_output_stream.decode('utf-8') for current_output_stream in all_output])
+            except subprocess.TimeoutExpired:
+                print('Container restart timedout.')
+                self.start(mode=mode, allow_restart=True, rebuild=rebuild, hard=hard, show_print=show_print,
+                           expose_port=expose_port, extra_flags=extra_flags,
+                           docker_internal_env_vars=docker_internal_env_vars, run_env=run_env)
+                return
 
             if docker_run_process.returncode != 0:
                 raise Exception(f'Failed to restart container {self.container_name} with id:{container_id}',
                                 f'failure output is: {all_output}')
         else:
             print('Container was not started correctly trying again.')
-            self.start()
+            self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print,
+                       expose_port=expose_port, extra_flags=extra_flags,
+                       docker_internal_env_vars=docker_internal_env_vars, run_env=my_env)
 
     @retry(stop_max_attempt_number=5, retry_on_exception=retry_if_timeout, wait_fixed=30)
     def wait_for_service(self, timeout=250):
