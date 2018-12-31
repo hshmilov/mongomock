@@ -11,10 +11,17 @@ from axonius.consts.gui_consts import (CONFIG_COLLECTION,
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
-                                          DASHBOARD_COLLECTION, GUI_NAME,
-                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME)
+                                          DASHBOARD_COLLECTION,
+                                          GUI_NAME,
+                                          PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME,
+                                          MAINTENANCE_TYPE,
+                                          GUI_SYSTEM_CONFIG_COLLECTION)
+
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from services.plugin_service import PluginService
+
+MAINTENANCE_FILTER = {'type': MAINTENANCE_TYPE}
 
 
 class GuiService(PluginService):
@@ -476,3 +483,13 @@ RUN cd ./gui/frontend/ && npm run {dev}build
 
     def get_saml_settings(self):
         return self.get_configurable_config(CONFIG_COLLECTION)
+
+    def get_maintenance_flags(self):
+        flags = self.db.get_collection(self.plugin_name, GUI_SYSTEM_CONFIG_COLLECTION).find_one(MAINTENANCE_FILTER)
+        del flags['_id']
+        return flags
+
+    def set_maintenance_flags(self, flags):
+        self.db.get_collection(self.plugin_name, GUI_SYSTEM_CONFIG_COLLECTION).update_one(MAINTENANCE_FILTER, {
+            '$set': flags
+        })
