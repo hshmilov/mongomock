@@ -233,6 +233,7 @@
                 this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
             },
 			getAdvancedFieldSchema(field) {
+                if (!this.fields.schema || !this.fields.schema.generic) return {}
                 let schema = this.fields.schema.generic.items.find(schema => schema.name === field)
                 if (schema) return schema
 				return Object.values(this.fields.schema.specific)[0].items.find(schema => schema.name === field)
