@@ -91,7 +91,6 @@ def install(first_time, root_pass):
     set_logrotate(root_pass)
 
     if not first_time:
-        archive_old_source()
         chown_folder(root_pass, TEMPORAL_PATH)
         set_booted_for_production()
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
@@ -197,15 +196,6 @@ def stop_old(keep_diag=True, keep_tunnel=True):
     print_state('Stopping old containers, and removing old <containers + images> [except diagnostics]')
     from destroy import destroy
     destroy(keep_diag=keep_diag, keep_tunnel=keep_tunnel)
-
-
-def archive_old_source():
-    if sys.platform.startswith('win'):
-        print_state(f'[SKIPPING] Archiving old source folder - not supported on windows')
-        return
-
-    print_state(f'Archiving old source folder to: {ARCHIVE_PATH}')
-    subprocess.check_output(['tar', '-zcvf', ARCHIVE_PATH, TEMPORAL_PATH])
 
 
 def load_images():
