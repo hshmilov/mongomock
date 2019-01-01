@@ -220,6 +220,6 @@ export const updateSystemConfig = (state, payload) => {
 	state.configuration.fetching = payload.fetching
 	state.configuration.error = payload.error
 	if (payload.data) {
-		state.configuration.data = payload.data
+		state.configuration.data = {...state.configuration.data, ...payload.data}
 	}
 }

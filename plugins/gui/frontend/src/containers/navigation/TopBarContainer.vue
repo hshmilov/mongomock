@@ -64,7 +64,8 @@
     import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
     import { UPDATE_EMPTY_STATE, START_TOUR } from '../../store/modules/onboarding'
 	import { TOGGLE_SIDEBAR } from '../../store/mutations'
-    import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
+    import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE, FETCH_DATA_FIELDS } from '../../store/actions'
+    import { entities } from '../../constants/entities'
 
 	export default {
 		components: { NotificationPeekContainer, xTipInfo },
@@ -92,6 +93,9 @@
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
                     return user.permissions.Dashboard === 'ReadWrite' || user.admin
+                },
+                userPermissions(state) {
+                    return state.auth.currentUser.data.permissions
                 }
             }),
             mailSettingsTip: {
@@ -132,6 +136,7 @@
                 fetchLifecycle: FETCH_LIFECYCLE,
                 startResearch: START_RESEARCH_PHASE,
                 stopResearch: STOP_RESEARCH_PHASE,
+                fetchDataFields: FETCH_DATA_FIELDS
 
 			}),
             startResearchNow() {
@@ -154,12 +159,21 @@
                 } else {
 				    this.$router.push({name: 'Settings'})
                 }
+            },
+            entityRestricted(entity) {
+                return this.userPermissions[entity] === 'Restricted'
             }
 		},
 		created () {
 			const updateLifecycle = () => {
 				this.fetchLifecycle().then(() => {
 					if (this._isDestroyed) return
+                    if (this.researchStatusLocal !== 'done' && this.researchStatus === 'done') {
+                        entities.forEach(entity => {
+                            if (this.entityRestricted(entity.title)) return
+                            this.fetchDataFields({module: entity.name})
+                        })
+                    }
                     this.researchStatusLocal = this.researchStatus
                     this.timer = setTimeout(updateLifecycle, 3000)
 				})

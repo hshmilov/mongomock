@@ -69,6 +69,7 @@ export const settings = {
                         configName: payload.configName,
                         config: payload.config
                     })
+
                 }
                 return response
             })

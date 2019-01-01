@@ -6,8 +6,9 @@
 
 
 <script>
-    import { mapState } from 'vuex'
+    import { mapState, mapActions } from 'vuex'
     import XDateEdit from '../controls/string/DateEdit.vue'
+    import { FETCH_FIRST_HISTORICAL_DATE, FETCH_ALLOWED_DATES } from '../../store/modules/constants'
 
     export default {
         name: 'x-historical-date-picker',
@@ -37,6 +38,9 @@
             }
         },
         methods: {
+            ...mapActions({
+                fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE, fetchAllowedDates: FETCH_ALLOWED_DATES
+            }),
             isDateUnavailable(date) {
                 if (date < this.firstHistoricalDate || date > this.currentDate) return true
 
@@ -47,6 +51,10 @@
             onInput(historical) {
                 this.$emit('input', historical)
             }
+        },
+        created() {
+            this.fetchFirstHistoricalDate()
+            this.fetchAllowedDates()
         }
     }
 </script>

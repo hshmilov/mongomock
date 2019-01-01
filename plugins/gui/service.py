@@ -1720,7 +1720,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         Get only the GUIs settings as well as whether Mail Server and Syslog Server are enabled.
         This is needed for the case that user is restricted from the settings but can view pages that use them.
-        They pages should render the same, so these settings must be permitted to read anyway.
+        The pages should render the same, so these settings must be permitted to read anyway.
 
         :return: Settings for the system and Global settings, indicating if Mail and Syslog are enabled
         """

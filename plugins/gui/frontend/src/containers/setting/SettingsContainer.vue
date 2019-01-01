@@ -65,7 +65,8 @@
     import xMaintenanceContainer from './MaintenanceContainer.vue'
 
     import { mapState, mapActions, mapMutations } from 'vuex'
-    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/settings";
+    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from '../../store/modules/settings'
+    import {UPDATE_SYSTEM_CONFIG} from '../../store/mutations'
     import {REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE} from '../../store/actions'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
@@ -125,7 +126,9 @@
         },
         methods: {
             ...mapMutations({
-                changePluginConfig: CHANGE_PLUGIN_CONFIG, changeState: CHANGE_TOUR_STATE
+                changePluginConfig: CHANGE_PLUGIN_CONFIG,
+                updateSystemConfig: UPDATE_SYSTEM_CONFIG,
+                changeState: CHANGE_TOUR_STATE
             }),
             ...mapActions({
                 fetchData: REQUEST_API,
@@ -146,6 +149,14 @@
                     config: this.coreSettings.config
                 }).then(response => {
                     this.createToast(response)
+                    this.updateSystemConfig({
+                        data: {
+                            global: {
+                                mail: this.coreSettings.config.email_settings.enabled,
+                                syslog: this.coreSettings.config.syslog_settings.enabled
+                            }
+                        }
+                    })
                 }).catch(error => {
                     if (error.response.status === 400) {
                         this.message = error.response.data.message
@@ -183,6 +194,11 @@
                     config: this.guiSettings.config
                 }).then(response => {
                     this.createToast(response)
+                    this.updateSystemConfig({
+                        data: {
+                            system: this.guiSettings.config.system_settings
+                        }
+                    })
                 })
             },
             removeToast() {
