@@ -1,4 +1,5 @@
-from services.adapters.carbonblack_protection_service import carbonblack_protection_fixture, CarbonblackProtectionService
+from services.adapters.carbonblack_protection_service import carbonblack_protection_fixture, \
+    CarbonblackProtectionService
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_carbonblack_protection_credentials import *
 import pytest
@@ -20,3 +21,7 @@ class TestCarbonblackProtectionAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip('AX-2962')
+    def test_fetch_devices(self):
+        pass
