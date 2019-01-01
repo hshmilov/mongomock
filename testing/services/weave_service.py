@@ -15,6 +15,10 @@ MAX_NUMBER_OF_RUN_TRIES = 2
 
 
 def is_weave_up():
+    """
+    Executes "Weave status" (if we're running on a linux machine) and checks that weave is up.
+    :return: bool that signifies if weave is up.
+    """
     if 'linux' in sys.platform.lower():
         cmd = [WEAVE_PATH, 'status']
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -24,6 +28,11 @@ def is_weave_up():
 
 
 def get_dns_search_list():
+    """
+    Get's all the configured dns search list from /etc/resolv.conf and appends them to a list.
+    Also handles case of multiple "search" lines in /etc/resolv.conf
+    :return: A list of dns suffixes.
+    """
     dns_search_list = []
     with open('/etc/resolv.conf', 'r') as resolv_file:
         for current_line in resolv_file.readlines():
@@ -102,8 +111,16 @@ class WeaveService(DockerService):
                 extra_flags=None,
                 docker_internal_env_vars=None,
                 run_env=None):
+        """
+        Weave has two bugs that causes us to restart the docker container if they appear:
+        1. The docker daemon returns an id on docker run but the docker run process doesn't end (usually
+           that container would also not have proper network).
+        2. The docker daemon doesn't actually raise the container and we need to run start again.
+
+        Gets the same params as start and calls it with allow_restart true on timeout.
+        """
         container_id = self.get_container_id(True)
-        if container_id not in (u'\n', ''):
+        if container_id.strip() != '':
             print(f'{COLOR.get("yellow", "<")}Restarting raised container \
             {self.container_name} due to weave false start...'
                   f'{COLOR.get("reset", ">")}')
