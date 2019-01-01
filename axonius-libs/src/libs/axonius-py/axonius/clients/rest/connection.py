@@ -197,7 +197,7 @@ class RESTConnection(ABC):
     # pylint: disable=R0912, R0913, R0914
     def _do_request(self, method, name, url_params=None, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
-                    do_digest_auth=False, return_response_raw=False):
+                    do_digest_auth=False, return_response_raw=False, alternative_auth_dict=None):
         """ Serves a GET request to REST API
 
         :param str name: the name of the request
@@ -208,6 +208,7 @@ class RESTConnection(ABC):
         :param bool use_json_in_response: Use response.json() before returning results
         :param bool use_json_in_body: Whether or not to use json or data param in post function
         :param bool do_digest_auth: Use specific kind of auth called digest
+        :param tuple alternative_auth_dict: Tuple for auth params if you don't want the regular username+pwd
         :param bool return_response_raw: Whether to return the response body as is or not
         :return: the response
         :rtype: dict
@@ -230,9 +231,12 @@ class RESTConnection(ABC):
                 request_data = body_params
             auth_dict = None
             if do_basic_auth:
-                if self._username is None or self._password is None:
-                    raise RESTConnectionError('No user name or password')
-                auth_dict = (self._username, self._password)
+                if alternative_auth_dict:
+                    auth_dict = alternative_auth_dict
+                else:
+                    if self._username is None or self._password is None:
+                        raise RESTConnectionError('No user name or password')
+                    auth_dict = (self._username, self._password)
             if do_digest_auth:
                 auth_dict = requests.auth.HTTPDigestAuth(self._username, self._password)
 

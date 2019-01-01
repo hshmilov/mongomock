@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    mobi_control_adapter: {
+        title: 'Soti Mobi Control - BETA',
+        description: 'MobiControl is a software system for managing mobile devices in the enterprise.'
+    },
     absolute_adapter: {
         title: 'Absolute - BETA',
         description: 'Absolute® Software specializes in software and services for the management and security of computers and smartphones.'
@@ -73,7 +77,7 @@ export const pluginMeta = {
     },
     solarwinds_orion_adapter: {
         title: 'Solarwinds Network Performance Manager',
-        description: 'Solarwinds is a unified IT system management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hyrbid environment, or in the cloud.'
+        description: 'Solarwinds is a unified IT systems management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hybrid environment, or in the cloud.'
     },
     pingidentity_adapter: {
         title: 'Ping Identity',

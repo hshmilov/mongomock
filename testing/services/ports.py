@@ -62,6 +62,7 @@ DOCKER_PORTS = {
     'qualys-scans-adapter':             5777,
     'oracle-cloud-adapter':             5779,
     'splunk-adapter':                   5781,
+    'mobi-control-adapter':             5784,
     'infoblox-adapter':                 5794,
     'nessus-csv-adapter':               5796,
     'tanium-adapter':                   5797,
