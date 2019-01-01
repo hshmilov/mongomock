@@ -31,7 +31,6 @@ class JsonStringFormat(JsonFormat):
     ipv6 = auto()
     uri = auto()
     image = auto()
-    associated_device = auto()
     subnet = auto()
 
 

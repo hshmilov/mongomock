@@ -88,11 +88,13 @@
         }
 
         .body {
+            height: calc(100% - 48px);
             background-color: $theme-white;
             border-top: 0;
             border-bottom-right-radius: 4px;
             border-bottom-left-radius: 4px;
             padding: 12px;
+            overflow: auto;
         }
 
         &.vertical {

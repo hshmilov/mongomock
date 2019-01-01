@@ -592,12 +592,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
-
-        def _basic_generic_field_names():
-            return filter(lambda field: field != 'adapters' and field != 'labels' and
-                          not any([category in field.split('.') for category in advanced_fields]),
-                          map(lambda field: field.get('name'), gui_helpers.entity_fields(entity_type)['generic']))
-
         entity = self._fetch_historical_entity(entity_type, entity_id, history_date, projection={
             'adapters_data': 0
         })
@@ -617,15 +611,32 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if item.get('name') == 'Notes' and item.get('data'):
                 item['data'] = [{**note, **{'user_id': str(note['user_id'])}} for note in item['data']]
 
+        generic_fields = gui_helpers.entity_fields(entity_type)['generic']
+        basic_generic_fields = [field['name'] for field in filter(
+            lambda field: field['name'] != 'adapters' and field['name'] != 'labels' and not any(
+                [category in field['name'].split('.') for category in advanced_fields]), generic_fields)]
+
+        def _advanced_generic_data(category):
+            category_schema = next(filter(lambda field: category == field['name'].split('.')[-1], generic_fields), {})
+            if not category_schema:
+                return None
+            category_data = gui_helpers.parse_entity_fields(entity, [category_schema['name']])
+            if category_schema['name'] not in category_data:
+                return None
+            # Flatten items of this advanced field list, for presentation in table
+            return [gui_helpers.parse_entity_fields(val_item, [field['name'] for field in category_schema['items']])
+                    for val_item in category_data[category_schema['name']]]
+
         # Specific is returned as is, to show all adapter datas.
         # Generic fields are divided to basic which are all merged through all adapter datas
         # and advanced, of which the main field is merged and data is given in original structure.
         return jsonify({
             'specific': entity['specific_data'],
             'generic': {
-                'basic': gui_helpers.parse_entity_fields(entity, _basic_generic_field_names()),
+                'basic': gui_helpers.parse_entity_fields(entity, basic_generic_fields),
                 'advanced': [{
-                    'name': category, 'data': gui_helpers.find_entity_field(entity, f'specific_data.data.{category}')
+                    'name': category,
+                    'data': _advanced_generic_data(category)
                 } for category in advanced_fields],
                 'data': entity['generic_data']
             },

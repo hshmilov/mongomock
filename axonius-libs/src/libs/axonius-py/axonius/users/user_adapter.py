@@ -5,7 +5,7 @@ import datetime
 import typing
 
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
-from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.fields import Field, JsonStringFormat, JsonArrayFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict, unescape_dict
 
@@ -35,7 +35,7 @@ class UserAdapter(SmartJsonClass):
     last_seen_in_devices = Field(datetime.datetime, 'Last Seen In Devices')
     last_seen = Field(datetime.datetime, 'Last Seen In Domain')
     associated_devices = ListField(UserAdapterDevice, 'Associated Devices',
-                                   json_format=JsonStringFormat.associated_device)
+                                   json_format=JsonArrayFormat.table)
     is_local = Field(bool, 'Is Local')  # If true, its a local user (self.domain == computer). else, its a domain user.
     is_locked = Field(bool, 'Is Locked')  # If true, account is locked, and the time of lockout is last_lockout_time
     last_lockout_time = Field(datetime.datetime, 'Last Lockout time')

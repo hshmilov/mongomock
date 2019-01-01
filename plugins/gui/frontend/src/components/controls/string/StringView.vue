@@ -3,7 +3,7 @@
     <img :src="require(`Logos/${value}.png`)" height="24"
          v-else-if="schema.format && schema.format === 'logo'" class="logo md-image">
     <svg-icon :name="`symbol/${value}`" :original="true" v-else-if="schema.format && schema.format === 'icon'" height="16" />
-    <div :class="{tag: schema.format && schema.format === 'tag'}" :title="processedData" v-else>{{ processedData }}</div>
+    <div :class="{tag: schema.format && schema.format === 'tag'}" :title="completeData" v-else>{{ processedData }}</div>
 </template>
 
 <script>
@@ -16,6 +16,12 @@
 					let remainder = this.value.length - 2
 					return this.value.slice(0, 2).map(item => this.format(item))
                         .join(', ') + (remainder > 0? ` +${remainder}`: '')
+                }
+                return this.format(this.value)
+            },
+            completeData() {
+                if (Array.isArray(this.value)) {
+                    return this.value.map(item => this.format(item)).join(', ')
                 }
                 return this.format(this.value)
             }

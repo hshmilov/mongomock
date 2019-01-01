@@ -535,7 +535,9 @@ def parse_entity_fields(entity_data, fields):
     """
     field_to_value = {}
     for field in fields:
-        field_to_value[field] = find_entity_field(entity_data, field)
+        val = find_entity_field(entity_data, field)
+        if val is not None and ((type(val) != str and type(val) != list) or len(val)):
+            field_to_value[field] = val
     return field_to_value
 
 

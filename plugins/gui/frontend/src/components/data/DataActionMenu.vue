@@ -65,8 +65,9 @@
                     : this.allIDs.filter(id => !this.entities.ids.includes(id))
                 if (!currentIds.length) return []
                 return currentIds.slice(1).reduce((labels, id) => {
+                    if (!this.dataByID[id].labels) return []
 				    return labels.filter(label => this.dataByID[id].labels.includes(label))
-                }, this.dataByID[currentIds[0]].labels)
+                }, this.dataByID[currentIds[0]].labels || [])
             },
             selectionCount() {
 			    if (this.entities.include === undefined || this.entities.include) {

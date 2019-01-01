@@ -29,7 +29,7 @@
                     <tab v-for="item, i in entityGenericAdvancedRegular" :title="item.title" :id="item.name" :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
                         <x-schema-table v-if="tableView && item.schema.format && item.schema.format === 'table'"
-                                 :data="item.data" :fields="getTableSchema(item)" />
+                                        :data="item.data" :fields="item.schema.items" />
                         <x-schema-list :data="item.data" :schema="item.schema" v-else />
                     </tab>
                 </tabs>
@@ -137,15 +137,19 @@
 				return this.$route.query.history
             },
 			entityGenericAdvanced() {
-				if (!this.entity.generic || !this.entity.generic.advanced) return []
+				if (!this.entity.generic || !this.entity.generic.advanced || !this.fields || !this.fields.generic)
+				    return []
 				return this.entity.generic.advanced
                     .filter(item => item.data && (item.data.length || Object.keys(item.data).length))
-                    .map((item) => {
-                        let schema = this.getAdvancedFieldSchema(item.name) || {}
-                        return { ...item,
-                            title: schema.title,
-                            schema: { ...schema, title: undefined }
+                    .map(item => {
+                        let schema = this.fields.generic.find(schema => schema.name.match(`\\.${item.name}$`)) || {}
+                        item.title = schema.title
+                        schema.title = undefined
+                        if (Array.isArray(schema.items)) {
+                            schema.items = schema.items.filter(field =>
+                                !field.name.includes('raw') && (!field.items || !Array.isArray(field.items)))
                         }
+                        return {...item, schema}
                     })
 			},
 			entityGenericAdvancedRegular() {
@@ -232,12 +236,6 @@
             fetchCurrentEntity() {
                 this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
             },
-			getAdvancedFieldSchema(field) {
-                if (!this.fields.schema || !this.fields.schema.generic) return {}
-                let schema = this.fields.schema.generic.items.find(schema => schema.name === field)
-                if (schema) return schema
-				return Object.values(this.fields.schema.specific)[0].items.find(schema => schema.name === field)
-			},
 			removeTag (label) {
 				if (!this.$refs || !this.$refs.tagModal ||this.readOnly) return
 				this.$refs.tagModal.removeEntitiesLabels([label])
@@ -325,11 +323,7 @@
             },
             removeToast() {
                 this.toastMessage = ''
-            },
-            getTableSchema(fields) {
-                return fields.schema.items.items.filter(field => !field.name.includes('raw'))
             }
-
         },
 		created () {
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate) {
@@ -349,8 +343,6 @@
             width: 100%;
             height: 100%;
             .body {
-                overflow: auto;
-                height: calc(100% - 80px);
                 .content-header {
                     padding-bottom: 4px;
                     margin-bottom: 12px;

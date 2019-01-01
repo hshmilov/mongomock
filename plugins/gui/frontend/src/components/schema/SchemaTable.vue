@@ -107,6 +107,7 @@
 			    if (Array.isArray(item[field.name]) && this.sort && field.name === this.sort.field && !this.sort.desc) {
                     return [...item[field.name]].reverse()
                 }
+			    if (!field.name) return item
 			    return field.name.split('->').reduce((item, field_segment) => item[field_segment], item)
             }
         }
