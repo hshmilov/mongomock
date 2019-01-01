@@ -11,88 +11,6 @@ from ui_tests.tests.ui_consts import TAG_NAME
 
 
 class TestDevicesTable(TestEntitiesTable):
-    LABELS_TEXTBOX_TEXT = 'Connection Error'
-    DELETE_DIALOG_TEXT = 'You are about to delete 1 devices.'
-    QUERY_FILTER_DEVICES = 'specific_data.data.hostname%20%3D%3D%20regex(%22w%22%2C%20%22i%22)'
-    QUERY_FIELDS = 'adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.os.type,' \
-                   'specific_data.data.network_interfaces.ips,specific_data.data.network_interfaces.mac,labels'
-
-    def test_devices_action_add_and_remove_tag(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_row_checkbox()
-        self.devices_page.add_new_tag(self.LABELS_TEXTBOX_TEXT)
-        assert self.LABELS_TEXTBOX_TEXT in self.devices_page.get_first_row_tags()
-        self.devices_page.remove_first_tag()
-        assert not self.devices_page.get_first_row_tags()
-
-    def test_devices_action_remove_plugin_tag(self):
-        with GeneralInfoService().contextmanager(take_ownership=True):
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-            toggle = self.settings_page.find_execution_toggle()
-            self.settings_page.click_toggle_button(toggle, make_yes=True)
-            self.base_page.run_discovery()
-            self.devices_page.switch_to_page()
-            self.devices_page.wait_for_table_to_load()
-            wait_until(lambda: any(self.devices_page.get_column_data(
-                self.devices_page.FIELD_TAGS)), total_timeout=60 * 5)
-            self.settings_page.switch_to_page()
-            self.devices_page.switch_to_page()
-            self.devices_page.click_sort_column(self.devices_page.FIELD_TAGS)
-            self.devices_page.click_row_checkbox()
-            tag_to_remove = self.devices_page.get_first_tag_text()
-            self.devices_page.remove_tag(tag_to_remove)
-            assert tag_to_remove not in self.devices_page.get_first_row_tags()
-
-    def test_add_same_tag_from_user_and_plugin(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.select_all_page_rows_checkbox()
-        self.devices_page.add_new_tag(self.LABELS_TEXTBOX_TEXT, 20)
-        with GeneralInfoService().contextmanager(take_ownership=True):
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-            toggle = self.settings_page.find_execution_toggle()
-            self.settings_page.click_toggle_button(toggle, make_yes=True)
-            self.base_page.run_discovery()
-            self.devices_page.switch_to_page()
-            self.devices_page.wait_for_table_to_load()
-            time.sleep(150)
-            self.settings_page.switch_to_page()
-            self.base_page.run_discovery()
-            self.devices_page.switch_to_page()
-            time.sleep(150)
-            tags_list = self.devices_page.get_column_data('Tags')
-            for tag in tags_list:
-                # general info can remove tag if its not relevant so we are checking if
-                # there is zero or one from the label we entered at the beginning of the test
-                assert tag.count(self.LABELS_TEXTBOX_TEXT) < 2
-
-    def test_devices_save_query(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-
-        self.devices_page.customize_view_and_save('test_save_query', 50, self.devices_page.FIELD_HOSTNAME_TITLE,
-                                                  [self.devices_page.FIELD_LAST_SEEN, self.devices_page.FIELD_OS_TYPE],
-                                                  self.devices_page.JSON_ADAPTER_FILTER)
-        view_data = self.devices_page.get_all_data()
-
-        # Load some default view, to change it and test the saved view's influence
-        self.devices_page.execute_saved_query('Windows Operating System')
-        assert self.devices_page.get_all_data() != view_data
-
-        self.devices_page.clear_filter()
-        self.devices_page.execute_saved_query('test_save_query')
-
-        # Check loaded data is equal to original one whose view was saved
-        assert self.devices_page.get_all_data() == view_data
-
     def _update_device_field(self, field_name, from_value, to_value):
         self.axonius_system.db.get_entity_db_view(EntityType.Devices).update_one({
             f'specific_data.data.{field_name}': from_value
@@ -102,41 +20,31 @@ class TestDevicesTable(TestEntitiesTable):
             }
         })
 
+    def _get_first_hostname(self):
+        return self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
+
     def test_devices_data_consistency(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
 
-        initial_value = self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
+        initial_value = wait_until(self._get_first_hostname, exc_list=(IndexError,))
         updated_value = f'{initial_value} improved!'
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, initial_value, updated_value)
         time.sleep(71)
-        assert updated_value == self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
+        assert updated_value == self._get_first_hostname()
 
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, updated_value, initial_value)
         updated_value = f'{initial_value} \\ edited \\\\'
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, initial_value, updated_value)
         time.sleep(71)
-        assert updated_value == self.devices_page.get_column_data(self.devices_page.FIELD_HOSTNAME_TITLE)[0]
+        assert updated_value == self._get_first_hostname()
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, updated_value, initial_value)
 
         self.devices_page.query_json_adapter()
         all_ips = self.devices_page.get_column_data(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
         assert len(all_ips) == 1
         assert all_ips[0] == f'{DEVICE_FIRST_IP}\n{DEVICE_SECOND_IP}\n+1'
-
-    def test_devices_delete(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-
-        self.devices_page.query_json_adapter()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_row_checkbox()
-        self.devices_page.open_delete_dialog()
-        wait_until(lambda: self.DELETE_DIALOG_TEXT in self.devices_page.read_delete_dialog())
-        self.devices_page.confirm_delete()
-        wait_until(lambda: not self.devices_page.count_entities())
 
     def test_devices_config(self):
         with GeneralInfoService().contextmanager(take_ownership=True):
@@ -183,8 +91,15 @@ class TestDevicesTable(TestEntitiesTable):
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
             self.devices_page.click_tab('Active Directory')
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AD_NAME)
-            self.devices_page.click_tab('General Data')
-            assert 'Installed Software' in self.devices_page.find_vertical_tabs()
+
+            def _check_installed_software():
+                # If it causes blank pages, we need to remove this and find and alternative (long wait before this)
+                self.driver.refresh()
+                self.devices_page.wait_for_table_to_load()
+                self.devices_page.click_tab('General Data')
+                return 'Installed Software' in self.devices_page.find_vertical_tabs()
+
+            wait_until(_check_installed_software, check_return_value=True, total_timeout=60 * 3)
 
     def test_multi_table_and_single_adapter_view(self):
         try:
@@ -216,18 +131,6 @@ class TestDevicesTable(TestEntitiesTable):
                                          self.devices_page.ADVANCED_VIEW_RAW_FIELD, self.devices_page.FIELD_ASSET_NAME)
         self.check_toggle_advanced_basic(self.devices_page, self.devices_page.AD_ADAPTER_FILTER, '"cn":',
                                          self.devices_page.FIELD_HOSTNAME_TITLE)
-
-    def test_devices_export_csv(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        # filter the ui to fit the QUERY_FILTER_DEVICES of the csv
-        self.devices_page.query_hostname_contains('w')
-
-        result = self.devices_page.generate_csv('devices',
-                                                self.QUERY_FIELDS,
-                                                self.QUERY_FILTER_DEVICES)
-        self.devices_page.assert_csv_match_ui_data(result)
 
     def test_table_grey_out(self):
         self.settings_page.switch_to_page()
