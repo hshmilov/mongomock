@@ -195,6 +195,11 @@ class EntitiesPage(Page):
     def click_row_checkbox(self, index=1):
         self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index)).click()
 
+    def click_specific_row_checkbox(self, field_name, field_value):
+        values = self.get_column_data(field_name)
+        row_num = values.index(field_value)
+        self.click_row_checkbox(row_num + 1)
+
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
 

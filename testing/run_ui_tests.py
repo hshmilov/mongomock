@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 import os
 import shlex
-import subprocess
 import signal
+import subprocess
 import sys
 
 import run_pytest
-
-from services.axonius_service import get_service
+from devops.scripts.automate_dev import credentials_inputer
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
+from services.axonius_service import get_service
 from services.standalone_services.selenium_service import SeleniumService
-from devops.scripts.automate_dev import credentials_inputer
 
 
 def print_frame(frame):
@@ -27,7 +26,7 @@ def signal_term_handler(signal_, frame):
 
 
 def main():
-    if os.name != 'nt':
+    if 'linux' in sys.platform.lower():
         current_hostname = subprocess.check_output('cat /etc/hostname', shell=True).decode('utf-8').strip()
         print(f'running ui tests on hostname {current_hostname}')
     # This is not the most generic way to get this flag but since we are going to (possibly) remove

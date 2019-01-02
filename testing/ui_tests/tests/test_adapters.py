@@ -12,9 +12,10 @@ from services.adapters.csv_service import CsvService
 from services.adapters.eset_service import EsetService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
-from test_credentials.test_gotoassist_credentials import client_details
-from test_credentials.test_csv_credentials import client_details as csv_client_details
+from test_credentials.test_csv_credentials import \
+    client_details as csv_client_details
 from test_credentials.test_eset_credentials import eset_details
+from test_credentials.test_gotoassist_credentials import client_details
 from ui_tests.pages.adapters_page import AD_NAME
 from ui_tests.pages.page import X_BODY
 from ui_tests.tests.ui_consts import LOCAL_DEFAULT_USER_PATTERN
@@ -238,7 +239,7 @@ class TestAdapters(TestBase):
             self.adapters_page.wait_for_data_collection_toaster_absent()
             try:
 
-                self.adapters_page.add_ad_server(ad_client1_details)
+                self.adapters_page.add_server(ad_client1_details)
                 self.adapters_page.wait_for_server_green()
 
                 self.adapters_page.switch_to_page()
@@ -268,7 +269,7 @@ class TestAdapters(TestBase):
         finally:
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
-            self.adapters_page.add_ad_server(ad_client1_details)
+            self.adapters_page.add_server(ad_client1_details)
             self.base_page.wait_for_stop_research()
             self.base_page.wait_for_run_research()
 
@@ -316,10 +317,10 @@ class TestAdapters(TestBase):
         finally:
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
-            self.adapters_page.add_ad_server(ad_client1_details)
+            self.adapters_page.add_server(ad_client1_details)
 
     def test_delete_adapter_without_associated_entities(self):
-        self.adapters_page.add_ad_server(ad_client1_details)
+        self.adapters_page.add_server(ad_client1_details)
         self.base_page.wait_for_stop_research()
         self.base_page.wait_for_run_research()
         self._check_delete_adapter(False)
@@ -331,8 +332,10 @@ class TestAdapters(TestBase):
         self.base_page.wait_for_stop_research()
         self.base_page.wait_for_run_research()
 
-    def test_add_ad_server(self):
-        self.adapters_page.add_ad_server(ad_client1_details)
+    def test_add_server(self):
+        self.adapters_page.add_server(ad_client1_details)
         ad_log_tester = AdService().log_tester
         pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
         ad_log_tester.is_pattern_in_log(re.escape(pattern))
+        self.base_page.wait_for_stop_research()
+        self.base_page.wait_for_run_research()

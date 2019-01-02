@@ -34,7 +34,7 @@ class TestExecutionSettings(TestBase):
             self.settings_page.find_saved_successfully_toaster()
 
             # Add AD server
-            self.adapters_page.add_ad_server(ad_client1_details)
+            self.adapters_page.add_server(ad_client1_details)
             self.base_page.wait_for_stop_research()
             self.base_page.wait_for_run_research()
 
@@ -62,6 +62,7 @@ class TestExecutionSettings(TestBase):
         self.settings_page.click_toggle_button(toggle, make_yes=False)
         self.settings_page.click_save_button()
         self.adapters_page.clean_adapter_servers(AD_NAME, delete_associated_entities=True)
-        self.adapters_page.add_ad_server(ad_client1_details)
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.add_server(ad_client1_details)
         self.base_page.wait_for_stop_research()
         self.base_page.wait_for_run_research()

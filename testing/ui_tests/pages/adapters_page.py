@@ -35,6 +35,7 @@ class AdaptersPage(EntitiesPage):
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
 
     DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID = 'deleteEntitiesCheckbox'
+    AD_SERVER_SEARCH_FIELD = ('dc_name', 'DC Address')
 
     @property
     def url(self):
@@ -126,12 +127,19 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_PROBLEM)
 
     def clean_adapter_servers(self, name, delete_associated_entities=False):
+        self.remove_server(None, name, delete_associated_entities=delete_associated_entities)
+
+    def remove_server(self, ad_client=None, adapter_name=AD_NAME, adapter_search_field=AD_SERVER_SEARCH_FIELD,
+                      delete_associated_entities=False):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
-        self.click_adapter(name)
+        self.click_adapter(adapter_name)
         self.wait_for_spinner_to_end()
         self.wait_for_table_to_load()
-        self.select_all_servers()
+        if ad_client is None:
+            self.select_all_servers()
+        else:
+            self.click_specific_row_checkbox(adapter_search_field[1], ad_client[adapter_search_field[0]])
         try:
             self.remove_selected()
         except NoSuchElementException:
@@ -153,15 +161,16 @@ class AdaptersPage(EntitiesPage):
     def wait_for_data_collection_toaster_absent(self):
         self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
 
-    def add_ad_server(self, ad_client):
+    def add_server(self, ad_client, adapter_name=AD_NAME):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
-        self.click_adapter(AD_NAME)
+        self.click_adapter(adapter_name)
         self.wait_for_spinner_to_end()
         self.click_new_server()
 
         dict_ = copy(ad_client)
-        dict_.pop('use_ssl')
+        dict_.pop('use_ssl', None)
+        dict_.pop('fetch_disabled_users', None)
 
         self.fill_creds(**dict_)
         self.click_save()

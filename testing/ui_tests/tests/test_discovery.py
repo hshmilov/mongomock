@@ -3,6 +3,7 @@ import time
 
 from ui_tests.tests.test_adapters import JSON_ADAPTER_SEARCH, JSON_ADAPTER_NAME, JSON_ADAPTER_PLUGIN_NAME
 from ui_tests.tests.ui_test_base import TestBase
+from test_credentials.test_ad_credentials import ad_client1_details, ad_client2_details
 
 
 class TestDiscovery(TestBase):
@@ -110,3 +111,28 @@ class TestDiscovery(TestBase):
         # make sure the adapter haven't brough them again
         all_devices = self.devices_page.get_all_data_proper()
         assert not any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
+
+    def test_stop_discovery_sanity(self):
+        # Add AD clients.
+        self.adapters_page.add_server(ad_client1_details)
+        self.adapters_page.add_server(ad_client2_details)
+
+        # Wait for discovery to start.
+        self.base_page.wait_for_stop_research()
+        time.sleep(10)
+
+        # Stop discovery
+        self.base_page.stop_discovery()
+
+        # Removing TestSecDomain, edit and save the TestDomain
+        self.adapters_page.remove_server(ad_client2_details)
+        self.adapters_page.click_row()
+        self.adapters_page.click_save()
+        self.adapters_page.wait_for_server_green()
+        self.adapters_page.wait_for_data_collection_toaster_absent()
+
+        # Remove And re-add == TestDomain
+        self.adapters_page.remove_server(ad_client1_details)
+        self.adapters_page.add_server(ad_client1_details)
+        self.adapters_page.wait_for_server_green()
+        self.adapters_page.wait_for_data_collection_toaster_absent()
