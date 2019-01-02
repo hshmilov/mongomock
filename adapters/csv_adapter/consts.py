@@ -2,7 +2,7 @@
 
 IDENTIFIERS = {
     'id': ['id', 'identifier', 'serialnumber', 'assetid'],
-    'name': ['name', 'vmname', 'displayname', 'assetname', 'machinename', 'instancename'],
+    'name': ['name', 'vmname', 'displayname', 'assetname', 'machinename', 'instancename', 'samaccountname'],
     'hostname': ['fqdn', 'fullyqualifieddomainname', 'hostname'],
     'mac_address': ['mac', 'macaddress', 'macaddresses', 'macs'],
     'ip': ['ip', 'ipaddress', 'ipaddresses', 'ips'],

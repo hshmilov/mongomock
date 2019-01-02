@@ -170,7 +170,8 @@ class BigfixAdapter(AdapterBase):
                 except Exception:
                     logger.exception('Problem adding nic to Bigfix')
                 device.agent_version = device_raw.get('Agent Version')
-                device.last_used_users = (device_raw.get('User Name') or '').split(',')
+                if isinstance(device_raw.get('User Name'), str) and '<none>' not in device_raw.get('User Name'):
+                    device.last_used_users = device_raw.get('User Name').split(',')
                 last_report_time = device_raw.get('Last Report Time')
                 try:
                     device.last_seen = parse_date(last_report_time)

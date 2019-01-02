@@ -162,7 +162,8 @@ class TenableIoAdapter(ScannerAdapterBase):
                     device.plugin_and_severity.append(f"{plugin_name}__{severity}")
             except Exception:
                 logger.exception(f"Problem getting vuln raw {vuln_raw}")
-        device.set_raw(device_raw)
+        # This is too much info for our poor raw deivice. It made the collection too big
+        device.set_raw({})
         return device
 
     def _parse_raw_data(self, devices_raw_data_all):
@@ -194,7 +195,8 @@ class TenableIoAdapter(ScannerAdapterBase):
                     if ip:
                         device.add_nic(None, [ip])
                     try:
-                        device.last_seen = datetime.datetime.fromtimestamp(agent_raw.get('last_connect'))
+                        if agent_raw.get('last_connect'):
+                            device.last_seen = datetime.datetime.fromtimestamp(agent_raw.get('last_connect'))
                     except Exception:
                         logger.exception(f'Problem getting last seen at {agent_raw}')
                     device.has_agent = True

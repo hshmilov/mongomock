@@ -19,7 +19,7 @@ class CylanceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         is_safe = Field(str, 'Is Safe')
-        device_state = Field(str, 'Device State')
+        device_state = Field(str, 'Device State', enum=['Online', 'Offline'])
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -147,7 +147,7 @@ class CylanceAdapter(AdapterBase):
                 try:
                     if device_raw.get('date_offline'):
                         device.last_seen = parse_date(str(device_raw.get('date_offline')))
-                    else:
+                    elif device_raw.get('state') == 'Online':
                         device.last_seen = datetime.datetime.now()
                 except Exception:
                     logger.exception(f'Problem getting last seen for {device_raw}')
