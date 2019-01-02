@@ -46,6 +46,9 @@ export default {
 		},
 		dataSchemaItems() {
 			return this.schemaItems.filter(item => !this.empty(this.data[item.name]))
+				.map(item =>{
+					return {...item, path: (this.schema.path ? this.schema.path : item.path).concat([item.name])}
+				})
 		},
 		isHidden() {
 			return this.data['enabled'] === false

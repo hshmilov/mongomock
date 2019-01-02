@@ -1,18 +1,22 @@
 <template>
     <div v-if="typeof processedData !== 'boolean'"></div>
-    <div v-else-if="processedData">
-        <div class="checkmark"></div>
-    </div>
-    <x-cross v-else />
+    <component v-else :is="hyperlink? 'a' : 'div'" @click="valueClicked(hyperlink)" :href="hyperlink.href">
+        <div v-if="processedData">
+            <div class="checkmark"></div>
+        </div>
+        <x-cross v-else/>
+    </component>
 </template>
 
 <script>
+    import HyperlinkMixin from '../hyperlink.js'
     import xCross from '../../patterns/Cross.vue'
 
 	export default {
 		name: 'x-bool-view',
         components: { xCross },
         props: ['schema', 'value'],
+        mixins: [HyperlinkMixin],
         computed: {
 			processedData() {
 				if (Array.isArray(this.value)) {

@@ -11,6 +11,7 @@ export const devices = {
 			historical: null
 		},
 		fields: { data: {}, fetching: false, error: ''},
+		hyperlinks: {data: [], fetching: false, error: ''},
 		views: {
 			saved: { data: [], fetching: false, error: ''},
 			history: { data: [], fetching: false, error: ''}

@@ -86,7 +86,7 @@
 
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { SINGLE_ADAPTER } from '../../store/getters'
-    import { FETCH_DATA_BY_ID, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../store/actions'
+    import { FETCH_DATA_BY_ID, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS, FETCH_DATA_HYPERLINKS} from '../../store/actions'
     import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
     import { guiPluginName, initCustomData } from '../../constants/entities'
 
@@ -231,7 +231,8 @@
                 changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE
             }),
             ...mapActions({
-                fetchDataByID: FETCH_DATA_BY_ID, saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS
+                fetchDataByID: FETCH_DATA_BY_ID, saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS,
+                fetchDataHyperlinks: FETCH_DATA_HYPERLINKS
             }),
             fetchCurrentEntity() {
                 this.fetchDataByID({ module: this.module, id: this.entityId, history: this.history })
@@ -247,12 +248,24 @@
             toggleView() {
             	this.viewBasic = !this.viewBasic
             },
-            adapterSchema(name, merged) {
+            adapterSchema(name) {
                 if (!this.fields || !this.fields.schema) return {}
-            	let items = !merged? [
-					{ type: 'array', ...this.fields.schema.generic, name: 'data', title: 'SEPARATOR' },
-					{ type: 'array', ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }
-				]: [ ...this.fields.schema.generic.items, ...this.fields.schema.specific[name].items ]
+            	let items = [
+					{
+					    type: 'array',
+                        ...this.fields.schema.generic,
+                        name: 'data',
+                        title: 'SEPARATOR',
+                        path: [this.module, 'aggregator']
+                    },
+					{
+					    type: 'array',
+                        ...this.fields.schema.specific[name],
+                        name: 'data',
+                        title: 'SEPARATOR',
+                        path: [this.module, name]
+					}
+				]
                 if (name === guiPluginName) {
                     items[0].items = items[0].items.filter(item => item.name !== 'id')
                 }
@@ -326,6 +339,7 @@
             }
         },
 		created () {
+		    this.fetchDataHyperlinks({ module: this.module})
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate) {
 				this.fetchCurrentEntity()
 			} else {

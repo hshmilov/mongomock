@@ -69,7 +69,7 @@
         methods: {
             ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
             ...mapActions({
-                fetchContentCSV: FETCH_DATA_CONTENT_CSV, fetchDataFields: FETCH_DATA_FIELDS
+                fetchContentCSV: FETCH_DATA_CONTENT_CSV, fetchDataFields: FETCH_DATA_FIELDS,
             }),
             configEntity (entityId) {
                 if (this.hasSelection) return

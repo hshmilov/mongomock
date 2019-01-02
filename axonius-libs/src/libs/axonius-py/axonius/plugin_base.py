@@ -271,7 +271,8 @@ class PluginBase(Configurable, Feature):
 
         self.version = self.config['DEFAULT']['version']
         self.lib_version = self.version  # no meaning to axonius-libs right now, when we are in one repo.
-        self.plugin_name = os.path.basename(os.path.dirname(self.config_file_path))
+        self.__adapter_base_directory = os.path.dirname(self.config_file_path)
+        self.plugin_name = os.path.basename(self.__adapter_base_directory)
         self.plugin_unique_name = None
         self.api_key = None
         self.node_id = None
@@ -478,6 +479,7 @@ class PluginBase(Configurable, Feature):
 
         self._update_schema()
         self._update_config_inner()
+        self.__save_hyperlinks_to_db()
 
         run_and_forget(self.__call_delayed_initialization)
 
@@ -523,6 +525,34 @@ class PluginBase(Configurable, Feature):
         :return:
         """
         pass
+
+    def __save_hyperlinks_to_db(self):
+        """
+        See
+        https://axonius.atlassian.net/browse/AX-2691
+        https://axonius.atlassian.net/wiki/spaces/AX/pages/830472463/GUI+Hyperlinks
+        """
+        filenames = {
+            EntityType.Devices: os.path.join(self.__adapter_base_directory, 'devices_hyperlinks.js'),
+            EntityType.Users: os.path.join(self.__adapter_base_directory, 'users_hyperlinks.js'),
+        }
+
+        for entity_type in EntityType:
+            collection = self._all_fields_db_map[entity_type]
+            filename = filenames[entity_type]
+            try:
+                js_code = open(filename).read()
+            except FileNotFoundError:
+                logger.info(f'Can\'t find {filename}')
+                continue
+            collection.update_one({
+                'name': 'hyperlinks',
+                PLUGIN_NAME: self.plugin_name
+            }, {
+                '$set': {
+                    'code': f'let ___ = {js_code}; ___'
+                }
+            }, upsert=True)
 
     def _save_field_names_to_db(self, entity_type: EntityType):
         """ Saves fields_set and raw_fields_set to the Plugin's DB """

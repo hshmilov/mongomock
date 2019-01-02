@@ -13,7 +13,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Dict
 from uuid import uuid4
 
 import OpenSSL
@@ -921,6 +921,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in entities])
         self._trigger('clear_dashboard_cache')
 
+    def __get_entity_hyperlinks(self, entity_type: EntityType) -> Dict[str, str]:
+        """
+        Get all hyperlinks codes from all adapters for the given entity type
+        :return: dict between the plugin_name and the JS code all entities
+        """
+        collection = self._all_fields_db_map[entity_type]
+        documents = collection.find({
+            'name': 'hyperlinks'
+        }, projection={
+            PLUGIN_NAME: 1,
+            'code': 1
+        })
+        return {x[PLUGIN_NAME]: x['code'] for x in documents}
+
     ##########
     # DEVICE #
     ##########
@@ -1028,6 +1042,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._entity_custom_data(EntityType.Devices, mongo_filter)
         return '', 200
 
+    @gui_add_rule_logged_in('devices/hyperlinks', required_permissions={Permission(PermissionType.Users,
+                                                                                   PermissionLevel.ReadOnly)})
+    def device_hyperlinks(self):
+        return jsonify(self.__get_entity_hyperlinks(EntityType.Devices))
+
     #########
     # USER #
     #########
@@ -1129,6 +1148,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         self._entity_custom_data(EntityType.Users, mongo_filter)
         return '', 200
+
+    @gui_add_rule_logged_in('users/hyperlinks', required_permissions={Permission(PermissionType.Users,
+                                                                                 PermissionLevel.ReadOnly)})
+    def user_hyperlinks(self):
+        return jsonify(self.__get_entity_hyperlinks(EntityType.Users))
 
     ###########
     # ADAPTER #

@@ -178,6 +178,7 @@ class StresstestAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
             device.id = f"{device_raw['sa_name']}-{device_raw['index']}"
+            device.part_of_domain = True
             device.name = f"avigdor no# {device_raw['index']}"
             device.figure_os(device_raw['config']['guestFullName'])
             for iface in device_raw.get('networking', []):

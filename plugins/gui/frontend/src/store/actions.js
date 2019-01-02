@@ -7,7 +7,8 @@ import {
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
     UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
-	UPDATE_REMOVED_DATA_VIEW, UPDATE_SYSTEM_CONFIG
+	UPDATE_REMOVED_DATA_VIEW, UPDATE_SYSTEM_CONFIG,
+	UPDATE_DATA_HYPERLINKS
 } from './mutations'
 
 let host = ''
@@ -246,6 +247,16 @@ export const fetchDataFields = ({state, dispatch}, payload) => {
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/fields',
 		type: UPDATE_DATA_FIELDS,
+		payload: {module: payload.module}
+	})
+}
+
+export const FETCH_DATA_HYPERLINKS = 'FETCH_DATA_HYPERLINKS'
+export const fetchDataHyperlinks = ({state, dispatch}, payload) => {
+	if (!getModule(state, payload)) return
+	dispatch(REQUEST_API, {
+		rule: payload.module + '/hyperlinks',
+		type: UPDATE_DATA_HYPERLINKS,
 		payload: {module: payload.module}
 	})
 }
