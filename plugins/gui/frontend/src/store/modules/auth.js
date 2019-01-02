@@ -3,7 +3,6 @@ import { REQUEST_API } from '../actions'
 export const GET_USER = 'GET_USER'
 export const LOGIN = 'LOGIN'
 export const LDAP_LOGIN = 'LDAP_LOGIN'
-export const GOOGLE_LOGIN = 'GOOGLE_LOGIN'
 export const SET_USER = 'SET_USER'
 export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
@@ -120,30 +119,6 @@ export const auth = {
 			}
 			dispatch(REQUEST_API, {
 				rule: 'login/ldap',
-				method: 'POST',
-				data: payload
-			}).then((response) => {
-				if (!response || !response.status) {
-					commit(SET_USER, { error: 'Login failed.'})
-
-				} else if (response.status === 200) {
-					dispatch(GET_USER)
-				} else {
-					commit(SET_USER, { error: response.data.message, fetching: false })
-				}
-			}).catch((error) => {
-				commit(SET_USER, { error: error.response.data.message})
-			})
-		},
-		[ GOOGLE_LOGIN ] ({dispatch, commit}, payload) {
-			/*
-				Request from server to login a user according to its Google token id
-			 */
-			if (!payload || !payload.id_token) {
-				return
-			}
-			dispatch(REQUEST_API, {
-				rule: 'login/google',
 				method: 'POST',
 				data: payload
 			}).then((response) => {

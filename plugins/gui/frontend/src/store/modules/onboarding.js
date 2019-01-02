@@ -591,13 +591,6 @@ export const onboarding = {
 					id: 'okta_login_settings', title: 'LOGIN WITH OKTA', align: 'top',
 					content: 'If you use Okta, you can log in to Axonius by entering Okta details.',
 					actions: [
-						{ title: 'Next', state: 'google' }
-					]
-				},
-				'google': {
-					id: 'google_login_settings', title: 'LOGIN WITH Google', align: 'top',
-					content: 'If you use Google (G-Suite), you can log in to Axonius by entering G-Suite settings.',
-					actions: [
 						{ title: 'Next', state: 'ldap' }
 					]
 				},

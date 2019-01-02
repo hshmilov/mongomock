@@ -46,7 +46,7 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
                                        EXEC_REPORT_THREAD_ID,
-                                       EXEC_REPORT_TITLE, GOOGLE_KEYPAIR_FILE,
+                                       EXEC_REPORT_TITLE,
                                        LOGGED_IN_MARKER_PATH,
                                        PREDEFINED_ROLE_ADMIN,
                                        PREDEFINED_ROLE_READONLY,
@@ -1910,10 +1910,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'url': self.__okta['url'],
                 'gui2_url': self.__okta['gui2_url']
             },
-            'google': {
-                'enabled': self.__google['enabled'],
-                'client': self.__google['client']
-            },
             'ldap': {
                 'enabled': self.__ldap_login['enabled'],
                 'default_domain': self.__ldap_login['default_domain']
@@ -1991,11 +1987,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                     picname: str = None,
                                     remember_me: bool = False):
         """
-        Our system supports external login systems, such as LDAP, Okta and Google.
+        Our system supports external login systems, such as LDAP, and Okta.
         To generically support such systems with our permission model we must normalize the login mechanism.
         Once the code that handles the login with the external source finishes it must call this method
         to finalize the login.
-        :param source: the name of the service that made the connection, i.e. 'Google'
+        :param source: the name of the service that made the connection, i.e. 'LDAP'
         :param username: the username from the service, could also be an email
         :param first_name: the first name of the user (optional)
         :param last_name: the last name of the user (optional)
@@ -2284,70 +2280,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         else:
             return redirect(auth.login())
-
-    @gui_helpers.add_rule_unauth('login/google', methods=['POST'])
-    def google_login(self):
-        """
-        Login with google
-        """
-        try:
-            from google.oauth2 import id_token
-            from google.auth.transport import requests as google_requests
-        except ImportError:
-            return return_error('Import error, Google login isn\'t available')
-        google_creds = self.__google
-
-        if not google_creds['enabled']:
-            return return_error('Google login is disabled', 400)
-
-        log_in_data = self.get_request_data_as_object()
-        if log_in_data is None:
-            return return_error('No login data provided', 400)
-
-        token = log_in_data.get('id_token')
-        if token is None:
-            return return_error('No id_token provided', 400)
-
-        try:
-            # Specify the CLIENT_ID of the app that accesses the backend:
-            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), google_creds['client'])
-
-            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-                raise ValueError('Wrong issuer.')
-
-            # If auth request is from a G Suite domain:
-            if google_creds['allowed_domain'] and idinfo.get('hd') != google_creds['allowed_domain']:
-                return return_error('Wrong hosted domain.')
-
-            if google_creds['allowed_group']:
-                user_id = idinfo.get('sub')
-                if not user_id:
-                    return return_error('No user id present')
-                auth_file = json.loads(self._grab_file_contents(google_creds[GOOGLE_KEYPAIR_FILE]))
-                from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
-                connection = GSuiteAdminConnection(auth_file, google_creds['account_to_impersonate'],
-                                                   ['https://www.googleapis.com/auth/admin.directory.group.readonly'])
-                if not any(google_creds['allowed_group'] in group.get('name', '')
-                           for group
-                           in connection.get_user_groups(user_id)):
-                    return return_error(f'You\'re not in the allowed group {google_creds["allowed_group"]}')
-
-            # ID token is valid. Get the user's Google Account ID from the decoded token.
-            # Notice! If you change the first parameter, then our CURRENT customers will have their
-            # users re-created next time they log in. This is bad! If you change this, please change
-            # the upgrade script as well.
-            self.__exteranl_login_successful('google',  # look at the comment above
-                                             idinfo.get('name') or 'unamed',
-                                             idinfo.get('given_name') or 'unamed',
-                                             idinfo.get('family_name') or 'unamed',
-                                             idinfo.get('picture') or self.DEFAULT_AVATAR_PIC)
-            return ''
-        except ValueError:
-            logger.exception('Invalid token')
-            return return_error('Invalid token')
-        except Exception:
-            logger.exception('Unknown exception')
-            return return_error('Error logging in, please try again')
 
     @gui_add_rule_logged_in('logout', methods=['GET'])
     def logout(self):
@@ -4112,7 +4044,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def _on_config_update(self, config):
         logger.info(f'Loading GuiService config: {config}')
         self.__okta = config['okta_login_settings']
-        self.__google = config['google_login_settings']
         self.__saml_login = config['saml_login_settings']
         self.__ldap_login = config['ldap_login_settings']
         self._system_settings = config[SYSTEM_SETTINGS]
@@ -4250,45 +4181,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow Google logins',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'client',
-                            'title': 'Google client id',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'account_to_impersonate',
-                            'title': 'Email of an admin account to impersonate',
-                            'type': 'string'
-                        },
-                        {
-                            'name': GOOGLE_KEYPAIR_FILE,
-                            'title': 'JSON Key pair for the service account',
-                            'description': 'The binary contents of the keypair file',
-                            'type': 'file',
-                        },
-                        {
-                            'name': 'allowed_domain',
-                            'title': 'Allowed G Suite domain (Leave empty for all domains)',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'allowed_group',
-                            'title': 'Only users in this group will be allowed (Leave empty for all groups)',
-                            'type': 'string'
-                        }
-                    ],
-                    'required': ['enabled', 'client', 'account_to_impersonate', GOOGLE_KEYPAIR_FILE],
-                    'name': 'google_login_settings',
-                    'title': 'Google Login Settings',
-                    'type': 'array'
-                },
-                {
-                    'items': [
-                        {
-                            'name': 'enabled',
                             'title': 'Allow LDAP logins',
                             'type': 'bool'
                         },
@@ -4377,14 +4269,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'default_domain': '',
                 'group_cn': '',
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
-            },
-            'google_login_settings': {
-                'enabled': False,
-                'client': None,
-                'allowed_domain': None,
-                'allowed_group': None,
-                'account_to_impersonate': None,
-                GOOGLE_KEYPAIR_FILE: None
             },
             'saml_login_settings': {
                 'enabled': False,

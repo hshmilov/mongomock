@@ -100,12 +100,6 @@ PREDEFINED_ROLE_ADMIN = 'Admin'
 PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted User'
 
-#######################
-# Google Login consts #
-#######################
-
-GOOGLE_KEYPAIR_FILE = 'keypair_file'
-
 ####################
 # Instances consts #
 ####################

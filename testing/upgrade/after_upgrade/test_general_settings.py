@@ -1,4 +1,3 @@
-from axonius.consts.gui_consts import GOOGLE_KEYPAIR_FILE
 from services.standalone_services.syslog_server import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
@@ -67,10 +66,6 @@ class TestGeneralSettings(TestBase):
 
         assert self.settings_page.get_single_adapter_checkbox()
         assert self.settings_page.get_okta_login_details() == OKTA_LOGIN_DETAILS
-        # See before_upgrade - not setting the Google login
-        # assert self.settings_page.get_google_keypair_file() == (CLIENT_ID, account_to_impersonate, service_json_data)
-
-        assert self.settings_page.get_filename_by_input_id(GOOGLE_KEYPAIR_FILE).startswith(TEMP_FILE_PREFIX)
 
         assert self.settings_page.get_dc_address() == ad_client1_details['dc_name']
 

@@ -10,13 +10,11 @@ d<template>
                 <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="onValidate"
                                @submit="onLogin" :error="auth.currentUser.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
-                <div v-if="oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled || googleConfig.enabled" class="t-center mt-12">Or</div>
+                <div v-if="oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled" class="t-center mt-12">Or</div>
                 <div class="login-options">
                     <a @click="onOktaLogin" v-if="oktaConfig.enabled" id="okta_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with Okta</a>
                     <a @click="onSamlLogin" v-if="samlConfig.enabled" id="saml_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with {{ samlConfig.idp_name }}</a>
                     <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" id="ldap_login_link" class="x-btn link" :class="{'grid-span2': singleLoginMethod}">Login with LDAP</a>
-                    <google-login v-if="googleConfig.enabled" :client_id="googleConfig.client"
-                                  v-on:success="onGoogleSignIn" :class="{'grid-span2': singleLoginMethod}"/>
                 </div>
             </div>
         </div>
@@ -39,15 +37,14 @@ d<template>
 <script>
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
     import Modal from '../../components/popover/Modal.vue'
-    import GoogleLogin from '../../components/login_providers/GoogleLogin.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
-    import { LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS, GOOGLE_LOGIN } from '../../store/modules/auth'
+    import { LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS } from '../../store/modules/auth'
     import * as OktaAuth from '@okta/okta-auth-js';
 
     export default {
         name: 'login-container',
-        components: {xSchemaForm, Modal, GoogleLogin},
+        components: {xSchemaForm, Modal},
         watch: {
             oktaConfig() {
                 if (this.oktaConfig.enabled === true && this.$route.query.login_type  === 'okta_login') {
@@ -78,7 +75,7 @@ d<template>
                 }
             },
             singleLoginMethod() {
-			    return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled + this.googleConfig.enabled) === 1
+			    return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled) === 1
             }
 
         },
@@ -107,15 +104,12 @@ d<template>
                 },
                 ldapConfig: {
                     enabled: false
-                },
-                googleConfig: {
-                    enabled: false
                 }
             }
         },
         methods: {
             ...mapMutations({ initError: INIT_ERROR }),
-            ...mapActions({ getLoginSettings: GET_LOGIN_OPTIONS, login: LOGIN, ldapLogin: LDAP_LOGIN, googleLogin: GOOGLE_LOGIN}),
+            ...mapActions({ getLoginSettings: GET_LOGIN_OPTIONS, login: LOGIN, ldapLogin: LDAP_LOGIN }),
             onValidate(valid) {
                 this.complete = valid
             },
@@ -153,10 +147,6 @@ d<template>
             },
             toggleLdapLogin() {
                 this.ldapData.active = !this.ldapData.active
-            },
-            onGoogleSignIn(googleUser) {
-                let id_token = googleUser.getAuthResponse().id_token
-                this.googleLogin({id_token: id_token})
             }
         },
         created() {
@@ -165,7 +155,6 @@ d<template>
                     this.oktaConfig = response.data.okta
                     this.samlConfig = response.data.saml
                     this.ldapConfig = response.data.ldap
-                    this.googleConfig = response.data.google
                 }
             })
         }

@@ -2,7 +2,6 @@ from copy import deepcopy
 from services.standalone_services.syslog_server import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
-from test_credentials.test_google_mdm_credentials import service_json_data, account_to_impersonate, CLIENT_ID
 
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import EmailSettings, FreshServiceSettings, Saml
@@ -96,9 +95,6 @@ class TestPrepareGlobalSettings(TestBase):
             self.settings_page.fill_okta_login_details(**old_okta_login)
         except Exception:
             self.settings_page.fill_okta_login_details(**OKTA_LOGIN_DETAILS)
-
-        # Input for uploading file, with id 'keypair_file' is not found
-        self.settings_page.fill_google_login_details(CLIENT_ID, account_to_impersonate, service_json_data)
 
         toggle = self.settings_page.find_allow_ldap_logins_toggle()
         self.settings_page.click_toggle_button(toggle)

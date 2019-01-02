@@ -1,9 +1,7 @@
-from json import dumps
 import time
 
 from selenium.common.exceptions import NoSuchElementException
 
-from axonius.consts.gui_consts import GOOGLE_KEYPAIR_FILE
 from services.axon_service import TimeoutException
 from ui_tests.pages.page import X_BODY, Page
 
@@ -317,31 +315,6 @@ class SettingsPage(Page):
     def get_single_adapter_checkbox(self):
         return self.is_toggle_selected(self.find_checkbox_by_label(self.SINGLE_ADAPTER_VIEW))
 
-    def set_google_clients_login(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.ALLOW_GOOGLE_LOGINS)
-        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
-
-    def get_google_clients_login(self):
-        return self.is_toggle_selected(self.find_checkbox_by_label(self.ALLOW_GOOGLE_LOGINS))
-
-    def set_google_client_id(self, text):
-        try:
-            self.fill_text_field_by_element_id(self.GOOGLE_CLIENT_ID, text)
-        except NoSuchElementException:
-            self.fill_text_field_by_element_id(self.GOOGLE_CLIENT_ID_OLD, text)
-
-    def get_google_client_id(self):
-        return self.driver.find_element_by_id(self.GOOGLE_CLIENT_ID).get_attribute('value')
-
-    def set_google_email_account(self, text):
-        self.fill_text_field_by_element_id(self.GOOGLE_EMAIL_OF_ADMIN, text)
-
-    def get_google_email_account(self):
-        return self.driver.find_element_by_id(self.GOOGLE_EMAIL_OF_ADMIN).get_attribute('value')
-
-    def set_google_keypair_file(self, text):
-        self.upload_file_by_id(GOOGLE_KEYPAIR_FILE, text)
-
     def set_email_ssl_files(self, ca_data, cert_data, private_data):
         self.upload_file_by_id('ca_file', ca_data)
         self.upload_file_by_id('cert_file', cert_data)
@@ -351,18 +324,6 @@ class SettingsPage(Page):
         self.driver.find_element_by_css_selector('[for=use_ssl]+div>div>div>div').click()
         self.fill_text_field_by_css_selector('input.input-value', verification_status)
         self.driver.find_element_by_css_selector(self.SELECT_OPTION_CSS).click()
-
-    def get_google_keypair_file(self):
-        return self.driver.find_element_by_id(GOOGLE_KEYPAIR_FILE)
-
-    def fill_google_login_details(self, client_id, email_account, keypair_data):
-        self.set_google_clients_login()
-        self.set_google_client_id(client_id)
-        self.set_google_email_account(email_account)
-        self.set_google_keypair_file(dumps(keypair_data))
-
-    def get_google_login_details(self):
-        return self.get_google_client_id(), self.get_google_email_account(), self.get_google_keypair_file()
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
