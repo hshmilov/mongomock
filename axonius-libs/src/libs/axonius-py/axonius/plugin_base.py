@@ -12,6 +12,7 @@ import multiprocessing
 import os
 import socket
 import ssl
+import subprocess
 import sys
 import threading
 import traceback
@@ -68,12 +69,14 @@ from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.types.correlation import CorrelationResult, CorrelateException
-from axonius.types.ssl_state import COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS, SSLState
+from axonius.types.ssl_state import COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS, SSLState, \
+    MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS, MANDATORY_SSL_CONFIG_SCHEMA
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import get_exception_string
+from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
 from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper, run_and_forget
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -1088,7 +1091,7 @@ class PluginBase(Configurable, Feature):
             return self._historical_entity_views_db_map[entity_type]
         return self._entity_views_db_map[entity_type]
 
-    def _grab_file(self, field_data, stored_locally=True):
+    def _grab_file(self, field_data, stored_locally=True) -> gridfs.GridOut:
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
@@ -1100,7 +1103,7 @@ class PluginBase(Configurable, Feature):
             db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
             return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid']))
 
-    def _grab_file_contents(self, field_data, stored_locally=True):
+    def _grab_file_contents(self, field_data, stored_locally=True) -> gridfs.GridOut:
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
@@ -2166,8 +2169,24 @@ class PluginBase(Configurable, Feature):
         self._service_now_settings = config['service_now_settings']
         self._fresh_service_settings = config['fresh_service_settings']
 
-        self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].update_one(
-            filter={'config_name': CORE_CONFIG_NAME}, update={"$set": {"config": config}})
+        global_ssl = config['global_ssl']
+        if global_ssl.get('enabled'):
+            config_cert = self._grab_file_contents(global_ssl.get('cert_file'), stored_locally=False)
+            config_key = self._grab_file_contents(global_ssl.get('private_key'), stored_locally=False)
+
+            current_cert = open(SSL_CERT_PATH, 'rb').read()
+            current_key = open(SSL_KEY_PATH, 'rb').read()
+
+            if config_cert != current_cert or config_key != current_key:
+                open(SSL_CERT_PATH, 'wb').write(config_cert)
+                open(SSL_KEY_PATH, 'wb').write(config_key)
+
+                # Restart Openresty (NGINX)
+                subprocess.check_call(['openresty', '-s', 'reload'])
+
+        else:
+            pass
+            # TODO: Restore default SSL keys, for now we will just continue using them
 
     def __create_syslog_handler(self, syslog_settings: dict):
         """
@@ -2437,6 +2456,25 @@ class PluginBase(Configurable, Feature):
                     "required": ["smtpHost", "smtpPort"]
                 },
                 {
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Override default SSL settings',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'hostname',
+                            'title': 'This site\'s hostname',
+                            'type': 'string'
+                        },
+                        *MANDATORY_SSL_CONFIG_SCHEMA,
+                    ],
+                    'name': 'global_ssl',
+                    'title': 'SSL Settings',
+                    'type': 'array',
+                    'required': ['enabled', 'hostname', 'cert_file', 'private_key']
+                },
+                {
                     "items": [
                         {
                             "name": "enabled",
@@ -2557,6 +2595,7 @@ class PluginBase(Configurable, Feature):
                 'enabled': False,
                 'domain': None,
                 'servicedesk_id': None,
+                'request_type_id': None,
                 'username': None,
                 'apikey': None,
                 'https_proxy': None,
@@ -2583,6 +2622,11 @@ class PluginBase(Configurable, Feature):
                 "syslogHost": None,
                 "syslogPort": logging.handlers.SYSLOG_UDP_PORT,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
+            },
+            'global_ssl': {
+                'enabled': False,
+                'hostname': None,
+                **MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             'https_log_settings': {
                 "enabled": False,

@@ -5,7 +5,6 @@ from concurrent.futures import ALL_COMPLETED, wait, as_completed, ThreadPoolExec
 from contextlib import contextmanager
 from datetime import datetime
 
-import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -53,7 +52,6 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
         self._research_phase_scheduler.add_job(func=self._trigger,
                                                trigger=IntervalTrigger(hours=self.__system_research_rate),
-                                               next_run_time=datetime.now(),
                                                name=scheduler_consts.RESEARCH_THREAD_ID,
                                                id=scheduler_consts.RESEARCH_THREAD_ID,
                                                max_instances=1)

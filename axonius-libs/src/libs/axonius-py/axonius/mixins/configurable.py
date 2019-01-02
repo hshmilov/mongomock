@@ -154,7 +154,7 @@ class Configurable(object):
 
     def _update_schema(self):
         """
-        Updates DB with the schema and default configs (if no other config exists)
+        Updates DB with the schema and default configs
         """
         schemas = self._get_collection("config_schemas")
         configs = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION)

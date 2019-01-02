@@ -16,6 +16,7 @@ from multiprocessing.pool import ThreadPool
 from typing import Iterable, Tuple
 from uuid import uuid4
 
+import OpenSSL
 import gridfs
 import ldap3
 import pymongo
@@ -1694,29 +1695,40 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             config_to_set = request.get_json(silent=True)
             if config_to_set is None:
                 return return_error('Invalid config', 400)
-            email_settings = config_to_set.get('email_settings')
-            if plugin_name == 'core' and config_name == CORE_CONFIG_NAME and email_settings and email_settings.get(
-                    'enabled') is True:
+            if plugin_name == 'core' and config_name == CORE_CONFIG_NAME:
 
-                if not email_settings.get('smtpHost') or not email_settings.get('smtpPort'):
-                    return return_error('Host and Port are required to connect to email server', 400)
-                email_server = EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
-                                           email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
-                                           ssl_state=SSLState[email_settings.get('use_ssl', SSLState.Unencrypted.name)],
-                                           keyfile_data=self._grab_file_contents(email_settings.get('private_key'),
-                                                                                 stored_locally=False),
-                                           certfile_data=self._grab_file_contents(email_settings.get('cert_file'),
-                                                                                  stored_locally=False),
-                                           ca_file_data=self._grab_file_contents(email_settings.get('ca_file'),
-                                                                                 stored_locally=False), )
-                try:
-                    with email_server:
-                        # Just to test connection
-                        logger.info(f'Connection to email server with host {email_settings["smtpHost"]}')
-                except Exception:
-                    message = f'Could not connect to mail server "{email_settings["smtpHost"]}"'
-                    logger.exception(message)
-                    return return_error(message, 400)
+                email_settings = config_to_set.get('email_settings')
+                if email_settings and email_settings.get('enabled') is True:
+                    if not email_settings.get('smtpHost') or not email_settings.get('smtpPort'):
+                        return return_error('Host and Port are required to connect to email server', 400)
+                    email_server = EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
+                                               email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
+                                               ssl_state=SSLState[email_settings.get(
+                                                   'use_ssl', SSLState.Unencrypted.name)],
+                                               keyfile_data=self._grab_file_contents(email_settings.get('private_key'),
+                                                                                     stored_locally=False),
+                                               certfile_data=self._grab_file_contents(email_settings.get('cert_file'),
+                                                                                      stored_locally=False),
+                                               ca_file_data=self._grab_file_contents(email_settings.get('ca_file'),
+                                                                                     stored_locally=False), )
+                    try:
+                        with email_server:
+                            # Just to test connection
+                            logger.info(f'Connection to email server with host {email_settings["smtpHost"]}')
+                    except Exception:
+                        message = f'Could not connect to mail server "{email_settings["smtpHost"]}"'
+                        logger.exception(message)
+                        return return_error(message, 400)
+
+                global_ssl = config_to_set.get('global_ssl')
+                if global_ssl and global_ssl.get('enabled') is True:
+                    config_cert = self._grab_file_contents(global_ssl.get('cert_file'), stored_locally=False)
+                    parsed_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, config_cert)
+                    cn = dict(parsed_cert.get_subject().get_components())[b'CN'].decode('utf8')
+                    if cn != global_ssl['hostname']:
+                        return return_error(f'Hostname does not match the hostname in the certificate file, '
+                                            f'hostname in given cert is {cn}', 400)
+
             self._update_plugin_config(plugin_name, config_name, config_to_set)
             return ''
         if request.method == 'GET':

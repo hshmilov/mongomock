@@ -7,6 +7,26 @@ class SSLState(Enum):
     Unverified = auto()
 
 
+MANDATORY_SSL_CONFIG_SCHEMA = [
+    {
+        'name': 'cert_file',
+        'title': 'Certificate File',
+        'description': 'The binary contents of the cert_file',
+        'type': 'file',
+    },
+    {
+        'name': 'private_key',
+        'title': 'Private Key File',
+        'description': 'The binary contents of the private_key',
+        'type': 'file',
+    }
+]
+
+MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS = {
+    'cert_file': None,
+    'private_key': None
+}
+
 COMMON_SSL_CONFIG_SCHEMA = [
     {
         'name': 'use_ssl',
@@ -21,23 +41,11 @@ COMMON_SSL_CONFIG_SCHEMA = [
         'description': 'The binary contents of the ca_file',
         'type': 'file',
     },
-    {
-        'name': 'cert_file',
-        'title': 'Certificate File',
-        'description': 'The binary contents of the cert_file',
-        'type': 'file',
-    },
-    {
-        'name': 'private_key',
-        'title': 'Private Key File',
-        'description': 'The binary contents of the private_key',
-        'type': 'file',
-    },
+    *MANDATORY_SSL_CONFIG_SCHEMA
 ]
 
 COMMON_SSL_CONFIG_SCHEMA_DEFAULTS = {
     'use_ssl': SSLState.Unencrypted.name,
     'ca_file': None,
-    'cert_file': None,
-    'private_key': None
+    **MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS
 }
