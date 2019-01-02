@@ -27,7 +27,6 @@ def reset_weave():
     weave_launch_command = ['/usr/local/bin/weave', 'launch',
                             '--dns-domain=axonius.local', '--ipalloc-range', '171.17.0.0/16', '--password',
                             weave_encryption_key]
-    print(f'Creating weave network: {weave_launch_command}')
     subprocess.check_call(weave_launch_command)
 
 
@@ -43,7 +42,7 @@ def shut_down_system():
 
 
 def raise_system():
-    subprocess.check_call(['./axonius.sh', 'system', 'up', '--all', '--exclude', 'nimbul', 'diagnostics'],
+    subprocess.check_call(['./axonius.sh', 'system', 'up', '--all', '--prod'],
                           cwd=str(CORTEX_PATH))
 
 
