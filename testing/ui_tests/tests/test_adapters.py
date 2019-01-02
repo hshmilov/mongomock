@@ -8,10 +8,12 @@ from axonius.consts import adapter_consts
 from axonius.utils.wait import wait_until
 from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
+from services.adapters.csv_service import CsvService
 from services.adapters.eset_service import EsetService
 from services.adapters.gotoassist_service import GotoassistService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_gotoassist_credentials import client_details
+from test_credentials.test_csv_credentials import client_details as csv_client_details
 from test_credentials.test_eset_credentials import eset_details
 from ui_tests.pages.adapters_page import AD_NAME
 from ui_tests.pages.page import X_BODY
@@ -22,9 +24,11 @@ JSON_ADAPTER_SEARCH = 'json'
 JSON_ADAPTER_TEXT_FROM_DESCRIPTION = 'formatted'
 JSON_ADAPTER_NAME = 'JSON File'
 JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
-
+CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
+CSV_FILE_NAME = 'csv'
 GOTOASSIST_NAME = 'GoToAssist'
 CISCO_NAME = 'Cisco'
+CSV_NAME = 'CSV Serials'
 ESET_NAME = 'ESET Endpoint Security'
 
 
@@ -124,6 +128,29 @@ class TestAdapters(TestBase):
         finally:
             self.wait_for_adapter_down(GOTOASSIST_NAME)
             self.wait_for_adapter_down(ESET_NAME)
+
+    def test_upload_csv_file(self):
+        try:
+            with CsvService().contextmanager(take_ownership=True):
+                self.wait_for_adapter(CSV_NAME)
+                self.adapters_page.click_adapter(CSV_NAME)
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_table_to_load()
+                self.adapters_page.click_new_server()
+                self.adapters_page.upload_file_by_id(CSV_FILE_NAME, csv_client_details[CSV_FILE_NAME].file_contents)
+                self.adapters_page.fill_creds(user_id=CSV_FILE_NAME)
+                self.adapters_page.click_save()
+                self.adapters_page.wait_for_spinner_to_end()
+                self.base_page.run_discovery()
+                self.devices_page.switch_to_page()
+                self.devices_page.fill_filter(CSV_ADAPTER_QUERY)
+                self.devices_page.enter_search()
+                self.devices_page.wait_for_table_to_load()
+                assert self.devices_page.count_entities() > 0
+                self.adapters_page.switch_to_page()
+                self.adapters_page.clean_adapter_servers(CSV_NAME, True)
+        finally:
+            self.wait_for_adapter_down(CSV_NAME)
 
     def test_connectivity(self):
         try:

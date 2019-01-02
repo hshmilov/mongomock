@@ -32,7 +32,6 @@ class AdaptersPage(EntitiesPage):
     RED_COLOR_ID = 'svgicon-symbol-error-b'
     GREEN_COLOR_ID = 'svgicon-symbol-success-b'
     NEW_SERVER_BUTTON_ID = 'new_server'
-
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
 
     DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID = 'deleteEntitiesCheckbox'
