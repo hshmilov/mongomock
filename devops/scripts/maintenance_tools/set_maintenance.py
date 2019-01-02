@@ -7,8 +7,6 @@ from testing.services.plugins.gui_service import GuiService
 
 
 def main(args):
-    print(args)
-
     if args.read:
         print('Reading:')
         print(GuiService().get_maintenance_flags())
@@ -21,8 +19,6 @@ def main(args):
 def set_maintanence_in_db(provision, analytics, troubleshooting):
     gs = GuiService()
     flags = gs.get_maintenance_flags()
-
-    print(provision, analytics, troubleshooting)
 
     if provision is not None:
         flags['provision'] = provision == 'True'
