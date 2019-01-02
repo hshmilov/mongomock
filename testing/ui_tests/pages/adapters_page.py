@@ -76,8 +76,7 @@ class AdaptersPage(EntitiesPage):
         self.click_button(self.TEST_CONNECTIVITY)
 
     def assert_new_server_button_is_disabled(self):
-        element = self.driver.find_element_by_id(self.NEW_SERVER_BUTTON_ID)
-        assert 'disabled' in element.get_attribute('class')
+        assert self.is_element_disabled_by_id(self.NEW_SERVER_BUTTON_ID)
 
     def click_new_server(self):
         self.click_button_by_id(self.NEW_SERVER_BUTTON_ID,

@@ -364,7 +364,8 @@ class SettingsPage(Page):
                   'Users',
                   'Alerts',
                   'Reports',
-                  'Settings')
+                  'Settings',
+                  'Instances')
         return labels
 
     def click_remove_user(self):

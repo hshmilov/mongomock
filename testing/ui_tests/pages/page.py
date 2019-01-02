@@ -516,6 +516,10 @@ class Page:
     def is_element_disabled(element):
         return 'disabled' in element.get_attribute('class')
 
+    def is_element_disabled_by_id(self, single_id):
+        element = self.driver.find_element_by_id(single_id)
+        return self.is_element_disabled(element)
+
     @staticmethod
     def is_input_error(input_element):
         return 'border-error' in input_element.get_attribute('class')

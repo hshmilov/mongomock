@@ -30,6 +30,7 @@ from ui_tests.pages.notification_page import NotificationPage
 from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.users_page import UsersPage
+from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.tests.ui_consts import ROOT_DIR
 
 
@@ -255,13 +256,15 @@ class TestBase:
         self.notification_page = NotificationPage(**params)
         self.dashboard_page = DashboardPage(**params)
         self.account_page = AccountPage(**params)
+        self.instances_page = InstancesPage(**params)
 
     def get_all_screens(self):
         screens = (self.devices_page,
                    self.users_page,
                    self.alert_page,
                    self.adapters_page,
-                   self.report_page)
+                   self.report_page,
+                   self.instances_page)
         return screens
 
     def login(self):

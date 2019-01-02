@@ -72,6 +72,10 @@ class TestUserPermissions(TestBase):
         with pytest.raises(NoSuchElementException):
             self.devices_page.add_new_tag(ui_consts.TAG_NAME)
 
+        self.instances_page.switch_to_page()
+        self.instances_page.wait_for_table_to_load()
+        assert self.instances_page.is_connect_node_disabled()
+
     def test_user_restricted_entity(self):
         self.settings_page.switch_to_page()
 
