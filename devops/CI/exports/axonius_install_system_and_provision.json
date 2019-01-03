@@ -81,7 +81,7 @@
           "ovftool ./output-axonius-{{user `build_name` }}-build/*.vmx ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/{{user `build_name`}}_export.ova",
           "echo 'Password2' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/nopassshare/Releases/",
           "echo 'Password2' | sudo -S chmod -R 0777 /mnt/smb_share/nopassshare/Releases/{{user `build_name`}}",
-          "aws s3 sync ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/updater s3://axonius-releases/{{user `build_name`}}/ --acl public-read"
+          "/home/ubuntu/.local/bin/aws s3 sync ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/updater s3://axonius-releases/{{user `build_name`}}/ --acl public-read"
         ]
       },
       {

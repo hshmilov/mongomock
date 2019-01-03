@@ -32,6 +32,7 @@ OVA_IMAGE_NAME = "Axonius-operational-export-106"
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
 S3_BUCKET_NAME_FOR_OVA = "axonius-releases"
+S3_BUCKET_NAME_FOR_EXPORT_LOGS = "axonius-export-logs"
 S3_ACCELERATED_ENDPOINT = "http://s3-accelerate.amazonaws.com"
 S3_EXPORT_URL_TIMEOUT = 604700  # a week to use it before we generate a new one.
 
@@ -497,12 +498,17 @@ class BuildsManager(object):
                 version, fork, branch, OVA_IMAGE_NAME),
             "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME),
-            "curl -k -v -F \"status=$?\" -F \"log=@./build_{0}.log\" https://{1}/exports/{0}/status".format(
+            "curl -k -v -F \"status=$?\" https://{1}/exports/{0}/status".format(
                 version, BUILDS_HOST),
-            "rm -f ./build_{0}.log".format(version)
+            "/home/ubuntu/.local/bin/aws s3 cp ./build_{0}.log s3://{1}/".format(
+                version, S3_BUCKET_NAME_FOR_EXPORT_LOGS)
         ])
 
-        channel.exec_command(' ; '.join(commands))
+        commands = ' ; '.join(commands)
+
+        # Deletes the build log after upload to s3 but only if the upload was successful (&&).
+        commands += " && rm -f ./build_{0}.log".format(version)
+        channel.exec_command(commands)
 
         owner_full_name, owner_slack_id = owner
 
@@ -529,7 +535,13 @@ class BuildsManager(object):
         with ssh.open_sftp().open('/home/ubuntu/exports/build_{0}.log'.format(export_version), 'r') as remote_file:
             return {'value': remote_file.read().decode('utf-8')}
 
-    def update_export_status(self, export_id, status, log):
+    def update_export_status(self, export_id, status):
+        try:
+            log = self.s3_client.get_object(Bucket=S3_BUCKET_NAME_FOR_EXPORT_LOGS, Key='build_{0}.log'.format(export_id))[
+                'Body'].read().decode('utf-8')
+        except Exception as exc:
+            log = 'Failed to get log from s3. Check s3 for more details.\n'
+            log += str(exc)
         export = self.db.exports.find_one({"version": export_id})
         ami_id_match = re.search("^us-east-2: (.*)$", log, re.MULTILINE)
         ami_id = ami_id_match.group(1) if ami_id_match else ''
