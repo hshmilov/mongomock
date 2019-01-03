@@ -191,7 +191,7 @@ def figure_out_os(s):
         # this means we don't know anything
         return {}
     orig_s = s
-    s = s.strip().lower()
+    s = s.strip().lower().replace('®', '')
 
     makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64', 'Win64']
     makes_32bit = ['32-bit', 'x86']
@@ -222,7 +222,7 @@ def figure_out_os(s):
         # XP must reamin the last item in the list because there is a chance it will be found in "s" by chacne
         windows_distribution = ['Vista', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
                                 'Windows Server 2003', 'Win10', 'Win7', 'Win8', 'Windows 2016',
-                                'Windows 2008', 'Windows 2012',
+                                'Windows 2008', 'Windows 2012', 'Windows 2000',
                                 'Windows Server 2008', 'Windows Server 2012', 'Windows Server 2016', 'XP',
                                 'WindowsServer 2003', 'WindowsServer 2008', 'WindowsServer 2012', 'WindowsServer 2016']
         for dist in windows_distribution:
