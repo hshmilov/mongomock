@@ -498,10 +498,10 @@ class BuildsManager(object):
                 version, fork, branch, OVA_IMAGE_NAME),
             "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME),
-            "curl -k -v -F \"status=$?\" https://{1}/exports/{0}/status".format(
-                version, BUILDS_HOST),
             "/home/ubuntu/.local/bin/aws s3 cp ./build_{0}.log s3://{1}/".format(
-                version, S3_BUCKET_NAME_FOR_EXPORT_LOGS)
+                version, S3_BUCKET_NAME_FOR_EXPORT_LOGS),
+            "curl -k -v -F \"status=$?\" https://{1}/exports/{0}/status".format(
+                version, BUILDS_HOST)
         ])
 
         commands = ' ; '.join(commands)
@@ -540,7 +540,7 @@ class BuildsManager(object):
             log = self.s3_client.get_object(Bucket=S3_BUCKET_NAME_FOR_EXPORT_LOGS, Key='build_{0}.log'.format(export_id))[
                 'Body'].read().decode('utf-8')
         except Exception as exc:
-            log = 'Failed to get log from s3. Check s3 for more details.\n'
+            log = 'Failed to get log for build_{0}.log from s3. Check s3 for more details.\n'.format(export_id)
             log += str(exc)
         export = self.db.exports.find_one({"version": export_id})
         ami_id_match = re.search("^us-east-2: (.*)$", log, re.MULTILINE)
