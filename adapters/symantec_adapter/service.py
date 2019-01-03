@@ -17,6 +17,7 @@ class SymantecAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         online_status = Field(str, 'Online Status')
         agent_version = Field(str, 'Agent Version')
+        cids_defset_version = Field(str, 'Definition Set Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -167,6 +168,7 @@ class SymantecAdapter(AdapterBase):
                         device.last_used_users = device_raw.get('logonUserName').split(',')
                 except Exception:
                     logger.exception(f'Problem adding user to {device_raw}')
+                device.cids_defset_version = device_raw.get('cidsDefsetVersion')
                 device.set_raw(device_raw)
                 yield device
         except Exception:
