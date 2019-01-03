@@ -130,6 +130,8 @@ class TestAdapters(TestBase):
             self.wait_for_adapter_down(GOTOASSIST_NAME)
             self.wait_for_adapter_down(ESET_NAME)
 
+    # Sometimes upload file to CSV adapter does not work
+    @flaky(max_runs=2)
     def test_upload_csv_file(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
@@ -141,8 +143,8 @@ class TestAdapters(TestBase):
                 self.adapters_page.upload_file_by_id(CSV_FILE_NAME, csv_client_details[CSV_FILE_NAME].file_contents)
                 self.adapters_page.fill_creds(user_id=CSV_FILE_NAME)
                 self.adapters_page.click_save()
-                self.adapters_page.wait_for_spinner_to_end()
-                self.base_page.run_discovery()
+                self.base_page.wait_for_stop_research()
+                self.base_page.wait_for_run_research()
                 self.devices_page.switch_to_page()
                 self.devices_page.fill_filter(CSV_ADAPTER_QUERY)
                 self.devices_page.enter_search()
