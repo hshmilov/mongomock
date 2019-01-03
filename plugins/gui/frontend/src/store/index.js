@@ -55,13 +55,13 @@ import {
 import { devices } from './modules/devices'
 import { users } from './modules/users'
 import { explorer } from './modules/explorer'
-import { adapter } from './modules/adapter'
+import { adapters } from './modules/adapters'
 import { alert } from './modules/alert'
 import { notifications } from './modules/notifications'
 import { auth } from './modules/auth'
 import { constants } from './modules/constants'
 import { dashboard } from './modules/dashboard'
-import { report } from './modules/report'
+import { reports } from './modules/reports'
 import { settings } from './modules/settings'
 import { onboarding } from './modules/onboarding'
 
@@ -136,13 +136,13 @@ export default new Vuex.Store({
         devices,
 		users,
 		explorer,
-		adapter,
+		adapter: adapters,
 		alert,
         notifications,
         auth,
         constants,
         dashboard,
-		report,
+		report: reports,
 		settings,
 		onboarding
     }

@@ -47,13 +47,13 @@ module.exports = {
                     {
                         loader: 'sass-resources-loader',
                         options: {
-                            resources: path.resolve(__dirname, './src/scss/config.scss')
+                            resources: path.resolve(__dirname, './src/assets/scss/config.scss')
                         }
                     },
                     {
                         loader: 'sass-resources-loader',
                         options: {
-                            resources: path.resolve(__dirname, './src/scss/custom_config.scss')
+                            resources: path.resolve(__dirname, './src/assets/scss/custom_config.scss')
                         }
                     }
                 ]

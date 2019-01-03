@@ -1,23 +1,23 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import DashboardContainer from '../containers/dashboard/DashboardContainer.vue'
-import DashboardExplorerContainer from '../containers/dashboard/explorer/DashboardExplorerContainer.vue'
-import DevicesContainer from '../containers/device/DevicesContainer.vue'
-import DeviceConfigContainer from '../containers/device/DeviceConfigContainer.vue'
-import DeviceQueriesContainer from '../containers/device/DeviceQueriesContainer.vue'
-import UsersContainer from '../containers/user/UsersContainer.vue'
-import UserConfigContainer from '../containers/user/UserConfigContainer.vue'
-import UserQueriesContainer from '../containers/user/UserQueriesContainer.vue'
-import AdaptersContainer from '../containers/adapter/AdaptersContainer.vue'
-import AdapterConfigContainer from '../containers/adapter/AdapterConfigContainer.vue'
-import AlertsContainer from '../containers/alert/AlertsContainer.vue'
-import AlertConfigContainer from '../containers/alert/AlertConfigContainer.vue'
-import SettingsContainer from '../containers/setting/SettingsContainer.vue'
-import NotificationsContainer from '../containers/notification/NotificationContainer.vue'
-import NotificationViewContainer from '../containers/notification/NotificationViewContainer.vue'
-import ReportContainer from '../containers/report/ReportContainer.vue'
-import AccountContainer from '../containers/auth/AccountContainer.vue'
-import InstancesContainer from '../containers/instances/InstancesContainer.vue'
+import Account from '../components/pages/Account.vue'
+import Adapter from '../components/pages/Adapter.vue'
+import Adapters from '../components/pages/Adapters.vue'
+import Alert from '../components/pages/Alert.vue'
+import Alerts from '../components/pages/Alerts.vue'
+import Dashboard from '../components/pages/Dashboard.vue'
+import DashboardExplorer from '../components/pages/DashboardExplorer.vue'
+import Device from '../components/pages/Device.vue'
+import Devices from '../components/pages/Devices.vue'
+import DevicesQuery from '../components/pages/DevicesQuery.vue'
+import Instances from '../components/pages/Instances.vue'
+import Notification from '../components/pages/Notification.vue'
+import Notifications from '../components/pages/Notifications.vue'
+import Reports from '../components/pages/Reports.vue'
+import Settings from '../components/pages/Settings.vue'
+import User from '../components/pages/User.vue'
+import Users from '../components/pages/Users.vue'
+import UsersQuery from '../components/pages/UsersQuery.vue'
 
 Vue.use(Router)
 export default new Router({
@@ -27,87 +27,87 @@ export default new Router({
         {
             path: '/',
             name: 'Dashboard',
-			component: DashboardContainer
+			component: Dashboard
         },
 		{
-			path: '/dashboard/explorer',
+			path: '/cards/explorer',
 			name: 'Insights Explorer',
-			component: DashboardExplorerContainer
+			component: DashboardExplorer
 		},
         {
             path: '/devices',
             name: 'Devices',
-            component: DevicesContainer,
+            component: Devices,
         },
 		{
 			path: '/devices/:id',
-			component: DeviceConfigContainer,
+			component: Device,
 		},
 		{
 			path: '/devices/query/saved',
 			name: 'Device Queries',
-			component: DeviceQueriesContainer
+			component: DevicesQuery
 		},
 		{
 			path: '/users',
 			name: 'Users',
-			component: UsersContainer
+			component: Users
 		},
 		{
 			path: '/users/:id',
-			component: UserConfigContainer
+			component: User
 		},
 		{
 			path: '/users/query/saved',
 			name: 'User Queries',
-			component: UserQueriesContainer
+			component: UsersQuery
 		},
         {
-            path: '/adapter',
+            path: '/adapters',
             name: 'Adapters',
-            component: AdaptersContainer
+            component: Adapters
         },
 		{
-			path: '/adapter/:id',
-			component: AdapterConfigContainer
+			path: '/adapters/:id',
+			component: Adapter
 		},
         {
-            path: '/alert',
+            path: '/alerts',
             name: 'Alerts',
-            component: AlertsContainer
+            component: Alerts
         },
 		{
-			path: '/alert/:id',
-			component: AlertConfigContainer
+			path: '/alerts/:id',
+			component: Alert
 		},
         {
             path: '/settings',
             name: 'Settings',
-            component: SettingsContainer
+            component: Settings
         },
 		{
-			path: '/notification',
+			path: '/notifications',
 			name: 'Notifications',
-			component: NotificationsContainer
+			component: Notifications
 		},
 		{
-			path: '/notification/:id',
-			component: NotificationViewContainer
+			path: '/notifications/:id',
+			component: Notification
 		},
 		{
-			path: '/report',
+			path: '/reports',
 			name: 'Reports',
-			component: ReportContainer
+			component: Reports
 		},
 		{
 			path: '/account',
 			name: 'My Account',
-			component: AccountContainer
+			component: Account
 		},
         {
             path: '/instances',
             name: 'Instances',
-            component: InstancesContainer
+            component: Instances
         }
     ]
 })

@@ -12,7 +12,7 @@ class UsersPage(EntitiesPage):
 
     @property
     def root_page_css(self):
-        return 'li#users.x-nested-nav-item'
+        return 'li#users.x-nav-item'
 
     def assert_screen_is_restricted(self):
         self.switch_to_page()

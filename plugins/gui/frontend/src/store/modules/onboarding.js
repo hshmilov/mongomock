@@ -39,7 +39,7 @@ export const onboarding = {
 				},
 				'addServer': {
 					id: 'new_server', title: 'CONFIGURE YOUR SERVER', align: 'left',
-					content: 'This adapter can connect to any server you have credentials for.\nClick to fill them in.'
+					content: 'This adapters can connect to any server you have credentials for.\nClick to fill them in.'
 				},
 				'saveServer': {
 					id: 'save_server', title: 'SAVE CREDENTIALS', align: 'right', fixed: true,
@@ -493,11 +493,11 @@ export const onboarding = {
 				},
 				'alertNew': {
 					id: 'alert_new', title: 'NEW ALERT', align: 'left', queue: 'alerts',
-					content: 'Click to create an alert for the query we just saved.'
+					content: 'Click to create an alerts for the query we just saved.'
 				},
 				'alertName': {
 					id: 'alert_name', title: 'ALERT NAME', align: 'right',
-					content: 'Give the alert a meaningful name that you\'ll recognize later.'
+					content: 'Give the alerts a meaningful name that you\'ll recognize later.'
 				},
 				'alertQuery': {
 					id: 'alert_query', title: 'ALERT QUERY', align: 'right',
@@ -505,19 +505,19 @@ export const onboarding = {
 				},
 				'alertIncreased': {
 					id: 'alert_increased', title: 'ALERT TRIGGER', align: 'right',
-					content: 'Select how this alert should be triggered.'
+					content: 'Select how this alerts should be triggered.'
 				},
 				'alertAbove': {
 					id: 'alert_above', title: 'ALERT TRIGGER', align: 'bottom',
-					content: 'Choose the number of results that will trigger the alert.'
+					content: 'Choose the number of results that will trigger the alerts.'
 				},
 				'alertAction': {
 					id: 'alert_notification', title: 'ALERT ACTION', align: 'right',
-					content: 'Choose the action to take when the alert is triggered.'
+					content: 'Choose the action to take when the alerts is triggered.'
 				},
 				'alertSave': {
 					id: 'alert_save', title: 'SAVE THE ALERT', align: 'left',
-					content: 'Click to save the alert.'
+					content: 'Click to save the alerts.'
 				},
 				'settings': {
 					id: 'settings', title: 'SETTINGS', align: 'bottom', queue: 'alerts',
@@ -539,7 +539,7 @@ export const onboarding = {
 				},
 				'settingsGlobal': {
 					id: 'global-settings-tab', title: 'GLOBAL SYSTEM SETTINGS', align: 'bottom',
-					content: 'Configure execution and notification settings here.'
+					content: 'Configure execution and notifications settings here.'
 				},
 				'global-settings-tab': {
 					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'top',
@@ -610,11 +610,11 @@ export const onboarding = {
 				},
 				'dashboard': {
 					id: 'dashboard', title: 'DASHBOARD', align: 'right', fixed: true,
-					content: 'The Axonius dashboard gives a system-wide snapshot.'
+					content: 'The Axonius cards gives a system-wide snapshot.'
 				},
 				'dashboardManaged': {
 					id: 'managed_coverage', title: 'MANAGEMENT COVERAGE', align: 'right', emphasize: false,
-					content: 'The coverage chart shows the percentage of devices managed by an adapter.',
+					content: 'The coverage chart shows the percentage of devices managed by an adapters.',
 					actions: [
 						{ title: 'Next', state: 'dashboardManagedQuery' }
 					]
@@ -625,7 +625,7 @@ export const onboarding = {
 				},
 				'dashboardBack': {
 					id: 'dashboard', title: 'DASHBOARD', align: 'right', fixed: true,
-					content: 'Click to return to the dashboard.'
+					content: 'Click to return to the cards.'
 				},
 				'dashboardWizard': {
 					id: 'dashboard_wizard', title: 'CREATE YOUR OWN CHART', align: 'right',
@@ -656,11 +656,11 @@ export const onboarding = {
 				},
 				'wizardName': {
 					id: 'chart_name', title: 'CHART NAME', align: 'right', fixed: true,
-					content: 'Give the chart a meaningful name that you\'ll recognize on the dashboard.'
+					content: 'Give the chart a meaningful name that you\'ll recognize on the cards.'
 				},
 				'wizardSave': {
 					id: 'chart_save', title: 'SAVE THE CHART', align: 'right', fixed: true,
-					content: 'Click to save the chart and add it to the dashboard.'
+					content: 'Click to save the chart and add it to the cards.'
 				},
 				'dashboardChart': {
 					title: 'YOUR CHART', align: 'top', emphasize: false,

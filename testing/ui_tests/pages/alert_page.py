@@ -47,11 +47,11 @@ class AlertPage(EntitiesPage):
 
     @property
     def url(self):
-        return f'{self.base_url}/alert'
+        return f'{self.base_url}/alerts'
 
     @property
     def root_page_css(self):
-        return 'li#alerts.x-nested-nav-item'
+        return 'li#alerts.x-nav-item'
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))

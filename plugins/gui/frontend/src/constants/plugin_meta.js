@@ -97,7 +97,7 @@ export const pluginMeta = {
     },
     gce_adapter: {
         title: 'Google Compute/Kubernetes Engine',
-        description: 'The Google Compute/Kubernetes Engine adapter supports both GCE\'s virtual machines as well as the GKE environment for deploying containerized applications.'
+        description: 'The Google Compute/Kubernetes Engine adapters supports both GCE\'s virtual machines as well as the GKE environment for deploying containerized applications.'
     },
     duo_adapter: {
         title: 'Duo Beyond',
@@ -141,7 +141,7 @@ export const pluginMeta = {
     },
     aws_adapter: {
         title: 'Amazon Web Services (AWS)',
-        description: 'The ECS/EKS/EC2 adapter includes the high-performance container orchestration service that supports Docker containers and containerized applications on AWS, Kubernetes Management Infrastructure Across Multiple AWS Zones, as well as the EC2 instances themselves.'
+        description: 'The ECS/EKS/EC2 adapters includes the high-performance container orchestration service that supports Docker containers and containerized applications on AWS, Kubernetes Management Infrastructure Across Multiple AWS Zones, as well as the EC2 instances themselves.'
     },
     jamf_adapter: {
         title: 'Jamf Pro',
@@ -149,7 +149,7 @@ export const pluginMeta = {
     },
     carbonblack_defense_adapter: {
         title: 'Carbon Black Cb Defense',
-        description: 'Carbon Black Cb Defense includes next-generation antivirus + EDR in a cloud-delivered platform to stop commodity malware, advanced malware, non-malware attacks, and ransomware.'
+        description: 'Carbon Black Cb Defense includes next-generation antivirus + EDR in a cloud-delivered platform to stop commodity malware, molecules malware, non-malware attacks, and ransomware.'
     },
     carbonblack_protection_adapter: {
         title: 'Carbon Black Cb Protection',
@@ -165,7 +165,7 @@ export const pluginMeta = {
     },
     cylance_adapter: {
         title: "CylancePROTECT",
-        description: "CylancePROTECT uses artificial intelligence to detect and protect against ransomware, advanced threats, fileless malware and malicious documents."
+        description: "CylancePROTECT uses artificial intelligence to detect and protect against ransomware, molecules threats, fileless malware and malicious documents."
     },
     kaseya_adapter: {
         title: 'Kaseya VSA',
@@ -225,7 +225,7 @@ export const pluginMeta = {
     },
     traiana_lab_machines_adapter: {
         title: 'Traiana Lab Machines',
-        description: 'Traiana Lab Machines is a propriatery adapter for Traiana, which queries for new devices from the lab machines inventory.'
+        description: 'Traiana Lab Machines is a propriatery adapters for Traiana, which queries for new devices from the lab machines inventory.'
     },
     fortigate_adapter: {
         title: 'Fortinet FortiGate',
@@ -233,7 +233,7 @@ export const pluginMeta = {
     },
     qcore_adapter: {
         title: 'Qcore',
-        description: 'Qcore medical pumps adapter (Saphire+ 14.5)'
+        description: 'Qcore medical pumps adapters (Saphire+ 14.5)'
     },
     sccm_adapter: {
         title: 'Microsoft SCCM',
@@ -281,7 +281,7 @@ export const pluginMeta = {
     },
     ensilo_adapter: {
         title: 'enSilo Endpoint Protection',
-        description: 'enSilo Endpoint Protection automates and orchestrates detection, prevention and response against advanced malware and ransomware.'
+        description: 'enSilo Endpoint Protection automates and orchestrates detection, prevention and response against molecules malware and ransomware.'
     },
     secdo_adapter: {
         title: 'Secdo Endpoint Protection',
@@ -360,7 +360,7 @@ export const pluginMeta = {
         description: 'The JSON File Adapter processes files containing JSON formatted devices.'
     },
     stresstest_scanner_adapter: {
-        title: 'Test adapter for scanners',
+        title: 'Test adapters for scanners',
         description: 'Stresstest can be configured with any amount of devices and it creates that number of random devices.'
     },
     hyper_v_adapter: {

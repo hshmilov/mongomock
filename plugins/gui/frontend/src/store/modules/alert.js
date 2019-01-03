@@ -40,15 +40,19 @@ export const alert = {
 				'name', 'report_creation_time', 'triggered', 'view', 'severity'
 			], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
 		},
-		fields: { data: { generic: [
+		fields: {
+			data: {
+				generic: [
 					{ name: 'name', title: 'Name', type: 'string' },
 					{ name: 'report_creation_time', title: 'Creation Time', type: 'string', format: 'date-time' },
 					{ name: 'triggered', title: 'Times Triggered', type: 'integer' },
 					{ name: 'view', title: 'Query Name', type: 'string'},
 					{ name: 'severity', title: 'Severity', type: 'string', format: 'icon' }
-				]}},
+				]
+			}
+		},
 
-		/* Data of alert currently being configured */
+		/* Data of alerts currently being configured */
 		current: { fetching: false, data: { ...newAlert }, error: '' }
 	},
 	mutations: {
@@ -82,8 +86,8 @@ export const alert = {
 		},
 		[ SET_ALERT ] (state, alertId) {
 			/*
-				The controls is expected to be fields and values of a specific alert and is stored for use in the
-				alert configuration page
+				The controls is expected to be fields and values of a specific alerts and is stored for use in the
+				alerts configuration page
 			 */
 			if (!alertId) return
 			let found = false
@@ -118,8 +122,8 @@ export const alert = {
 		},
 		[ UPDATE_ALERT_VIEW ] (state, view) {
 			/*
-				Create new alert with given query to current alert, for creating the next alert with it.
-				Clicking on new alert, or edit of existing will override it.
+				Create new alerts with given query to current alerts, for creating the next alerts with it.
+				Clicking on new alerts, or edit of existing will override it.
 			 */
 			state.current.data = { ...newAlert,
 				view: view
@@ -149,7 +153,7 @@ export const alert = {
 		},
 		[ ARCHIVE_ALERTS ] ({dispatch, commit}, selection) {
 			/*
-				Call to api to add \ update field 'archived' with true, so that this alert will be ignored
+				Call to api to add \ update field 'archived' with true, so that this alerts will be ignored
 				If completed successfully, matching row is removed from alertsList (instead of re-fetching),
 				using a call to the mutation REMOVE_ALERT
 			 */
@@ -167,9 +171,9 @@ export const alert = {
 		},
 		[ UPDATE_ALERT ] ({dispatch}, payload) {
 			/*
-				Call to api to add \ update an alert. If given an id, the matching alert will be updated with the
-				new controls. Otherwise a new alert will be added to the collection.
-				If completed successfully, id of added \ updated alert should be returned and together with the
+				Call to api to add \ update an alerts. If given an id, the matching alerts will be updated with the
+				new controls. Otherwise a new alerts will be added to the collection.
+				If completed successfully, id of added \ updated alerts should be returned and together with the
 				controls, they are added to the content (instead of re-fetching), using a call to the mutation ADD_ALERT
 			 */
 			if (!payload || !payload.id) { return }

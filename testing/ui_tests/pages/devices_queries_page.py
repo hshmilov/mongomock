@@ -9,8 +9,8 @@ class DevicesQueriesPage(QueriesPage):
 
     @property
     def root_page_css(self):
-        return 'li#devices-queries.x-nested-nav-item'
+        return 'li#devices-queries.x-nav-item'
 
     @property
     def parent_root_page_css(self):
-        return 'li#devices.x-nested-nav-item'
+        return 'li#devices.x-nav-item'

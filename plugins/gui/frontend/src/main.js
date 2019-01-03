@@ -12,7 +12,7 @@ Vue.use(MdCard)
 
 import router from './router/index'
 import store from './store/index'
-import App from './containers/App.vue'
+import App from './components/App.vue'
 
 import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'

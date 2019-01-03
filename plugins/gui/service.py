@@ -16,7 +16,6 @@ from multiprocessing.pool import ThreadPool
 from typing import Iterable, Tuple, Dict
 from uuid import uuid4
 
-import OpenSSL
 import gridfs
 import ldap3
 import pymongo
@@ -33,6 +32,7 @@ from flask import (after_this_request, jsonify, make_response, redirect,
                    request, send_file, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
+import OpenSSL
 from cachetools import cachedmethod, TTLCache
 
 from axonius.adapter_base import AdapterProperty

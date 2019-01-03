@@ -15,7 +15,7 @@ export const getDataFieldsByPlugin = (state) => (module, objectView) => {
                 title, name, fields: selectFields(fields.specific[name], objectView)
             }
         }).sort((first, second) => {
-            // Sort by adapter plugin name (the one that is shown in the gui).
+            // Sort by adapters plugin name (the one that is shown in the gui).
             let firstText = first.title.toLowerCase()
             let secondText = second.title.toLowerCase()
             if (firstText < secondText) return -1

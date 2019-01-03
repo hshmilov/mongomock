@@ -32,7 +32,7 @@ export const notifications = {
 
 		aggregatedList: { fetching: false, data: [], error: '' },
 
-		/* A single fetched notification, according to user selection */
+		/* A single fetched notifications, according to user selection */
 		current: { fetching: false, data: { seen: false }, error: '' },
 
 		unseenCount: { fetching: false, data: 0, error: ''},

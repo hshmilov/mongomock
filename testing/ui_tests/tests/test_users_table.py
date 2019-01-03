@@ -70,6 +70,7 @@ class TestUsersTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
+        self.users_page.wait_for_table_to_load()
 
         self.users_page.customize_view_and_save('test_save_query', 50, self.USER_NAME_COLUMN,
                                                 [self.MAIL_COLUMN, self.DOMAIN_COLUMN],

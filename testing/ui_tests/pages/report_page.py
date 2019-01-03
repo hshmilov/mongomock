@@ -14,11 +14,11 @@ class ReportPage(EntitiesPage):
 
     @property
     def url(self):
-        return f'{self.base_url}/report'
+        return f'{self.base_url}/reports'
 
     @property
     def root_page_css(self):
-        return 'li#reports.x-nested-nav-item'
+        return 'li#reports.x-nav-item'
 
     def fill_email(self, email):
         element = self.driver.find_element_by_css_selector(self.EMAIL_BOX_CSS)

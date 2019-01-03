@@ -1,0 +1,12 @@
+/* eslint-disable */
+require('./adapter')
+require('./alert')
+require('./dashboard')
+require('./devices')
+require('./instances')
+require('./logout')
+require('./menu')
+require('./notifications')
+require('./report')
+require('./settings')
+require('./users')

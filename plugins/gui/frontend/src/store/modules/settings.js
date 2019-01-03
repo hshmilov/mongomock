@@ -52,7 +52,7 @@ export const settings = {
     actions: {
         [SAVE_PLUGIN_CONFIG]({dispatch, commit}, payload) {
             /*
-                Call API to save given config to adapter by the given adapter unique name
+                Call API to save given config to adapters by the given adapters unique name
              */
             if (!payload || !payload.pluginId || !payload.configName) {
                 return
@@ -76,7 +76,7 @@ export const settings = {
         },
         [LOAD_PLUGIN_CONFIG]({dispatch, commit}, payload) {
             /*
-                Call API to save given config to adapter by the given adapter unique name
+                Call API to save given config to adapters by the given adapters unique name
              */
             if (!payload || !payload.pluginId || !payload.configName) return
 

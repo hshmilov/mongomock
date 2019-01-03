@@ -13,8 +13,8 @@ AD_NAME = 'Active Directory'
 
 
 class AdaptersPage(EntitiesPage):
-    ROOT_PAGE_CSS = 'li#adapters.x-nested-nav-item'
-    SEARCH_TEXTBOX_CSS = 'div.search-input > input.input-value'
+    ROOT_PAGE_CSS = 'li#adapters.x-nav-item'
+    SEARCH_TEXTBOX_CSS = 'div.x-search-input > input.input-value'
     TABLE_ROW_CLASS = 'table-row'
     TEST_CONNECTIVITY = 'Test Connectivity'
     DEVICE_CHECKBOX = 'div.x-checkbox-container'
@@ -39,7 +39,7 @@ class AdaptersPage(EntitiesPage):
 
     @property
     def url(self):
-        return f'{self.base_url}/adapter'
+        return f'{self.base_url}/adapters'
 
     @property
     def root_page_css(self):

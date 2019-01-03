@@ -12,7 +12,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class NotificationPage(Page):
-    NOTIFICATION_PEEK_CSS = 'div.x-dropdown.notification-peek'
+    NOTIFICATION_PEEK_CSS = 'div.x-dropdown.x-notification-peek'
     NOTIFICATION_PEEK_TIMESTAMP_CSS = 'div.c-grey-4'
     NOTIFICATION_COUNT_CSS = 'div.badge'
     NOTIFICATION_VIEW_ALL_BUTTON_CLASS = 'x-btn link'
@@ -29,7 +29,7 @@ class NotificationPage(Page):
 
     @property
     def url(self):
-        return f'{self.base_url}/notification'
+        return f'{self.base_url}/notifications'
 
     def switch_to_page(self):
         logger.info(f'Switching to {self.url}')
@@ -37,8 +37,7 @@ class NotificationPage(Page):
         self.driver.get(full_url)
 
     def click_notification_peek(self):
-        self.driver.find_element_by_css_selector(
-            self.NOTIFICATION_PEEK_CSS).click()
+        self.driver.find_element_by_css_selector(self.NOTIFICATION_PEEK_CSS).click()
 
     def click_view_notifications(self):
         assert self.is_peek_open(), 'View notifications must be called with peek open'

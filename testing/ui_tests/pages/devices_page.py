@@ -35,7 +35,7 @@ class DevicesPage(EntitiesPage):
     VALUE_OS_WINDOWS = 'Windows'
     TAG_CHECKBOX_CSS = 'div.modal-container.w-xl > div.modal-body > div > div.x-checkbox-list > div > div'
     TAG_SAVE_BUTTON_CSS = 'div.modal-container.w-xl > div.modal-footer > div > button:nth-child(2)'
-    LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.search-input > input'
+    LABELS_TEXTBOX_CSS = 'div.modal-body > div > div.x-search-input > input'
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
     TAGGING_X_DEVICE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
@@ -47,7 +47,7 @@ class DevicesPage(EntitiesPage):
 
     @property
     def root_page_css(self):
-        return 'li#devices.x-nested-nav-item'
+        return 'li#devices.x-nav-item'
 
     def click_tag_save_button(self):
         self.driver.find_element_by_css_selector(self.TAG_SAVE_BUTTON_CSS).click()
