@@ -18,6 +18,7 @@ class SymantecAdapter(AdapterBase):
         online_status = Field(str, 'Online Status')
         agent_version = Field(str, 'Agent Version')
         cids_defset_version = Field(str, 'Definition Set Version')
+        last_scan_date = Field(datetime.datetime, 'Last Scan Date')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -169,6 +170,11 @@ class SymantecAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem adding user to {device_raw}')
                 device.cids_defset_version = device_raw.get('cidsDefsetVersion')
+                try:
+                    if isinstance(device_raw.get('lastScanTime'), int):
+                        device.last_scan_date = datetime.datetime.fromtimestamp(device_raw.get('lastScanTime') / 1000)
+                except Exception:
+                    logger.exception(f'Problem adding last scan date')
                 device.set_raw(device_raw)
                 yield device
         except Exception:
