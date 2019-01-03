@@ -3,6 +3,7 @@ import logging
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.correlator_base import does_entity_have_field
 
+
 from axonius.entities import EntityType
 from axonius.types.correlation import CorrelationReason
 
@@ -16,6 +17,21 @@ def get_ad_upn(adapter_data):
     if ad_upn:
         return ad_upn.lower().strip()
     return None
+
+
+def get_ad_display_name(adapter_data):
+    ad_display_name = adapter_data['data'].get('ad_display_name')
+    if ad_display_name:
+        return ad_display_name.lower().strip()
+    return None
+
+
+def compare_ad_display_name(adapter_data1, adapter_data2):
+    ad_display_name1 = get_ad_display_name(adapter_data1)
+    ad_display_name2 = get_ad_display_name(adapter_data2)
+    if ad_display_name1 and ad_display_name2:
+        return ad_display_name1 == ad_display_name2
+    return False
 
 
 def compare_ad_upn(adapter_data1, adapter_data2):
@@ -110,6 +126,21 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                                   {'Reason': 'They have the same mail'},
                                                   CorrelationReason.StaticAnalysis)
 
+    def _correlate_ad_display_name(self, entities):
+        """
+        Correlate Azure AD and AD
+        """
+        logger.info('Starting to correlate on AD Display')
+        filtered_adapters_list = filter(get_ad_display_name, entities)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_ad_display_name],
+                                      [compare_ad_display_name],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same AD display name'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         yield from self._correlate_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn(normalize_adapter_users(entities))
+        yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
