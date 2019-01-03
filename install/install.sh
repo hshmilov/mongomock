@@ -22,7 +22,7 @@ if [[ $* == *--run-system* ]]; then
     if [[ ${optional_parameters} != *"exclude"* ]]; then
         eval ./axonius.sh system up --services static_analysis general_info device_control --adapters ${optional_parameters} --restart
     else
-        eval ./axonius.sh system up --exclude careful_execution_correlator nimbul qcore traiana_lab_machines stresstest stresstest_scanner json_file infinite_sleep diagnostics --all ${optional_parameters} --restart
+        eval ./axonius.sh system up --exclude careful_execution_correlator nimbul qcore traiana_lab_machines stresstest stresstest_scanner json_file infinite_sleep --all ${optional_parameters} --restart
     fi
     )
 fi

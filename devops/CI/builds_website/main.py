@@ -14,7 +14,7 @@ from flask_dance.consumer import oauth_authorized
 NORMAL_EC2_TYPE = "t2.large"
 STRONG_EC2_TYPE = "t2.2xlarge"
 
-DEVELOPMENT_MODE = False
+DEVELOPMENT_MODE = os.environ.get('BUILDS_DEBUG') == 'true'
 
 
 # set the project root directory as the static folder, you can set others.
@@ -31,14 +31,14 @@ db = None
 bm = buildsmanager.BuildsManager()
 st = SlackNotifier(os.environ['SLACK_WORKSPACE_APP_BOT_API_TOKEN'], 'builds')
 INSTALL_DEMO_SCRIPT = """# how to use: curl -k https://builds-local.axonius.lan/install[?fork=axonius&branch=develop&exclude=ad,esx,puppet&set_credentials=true] | bash -
+set -e
 rm -rf /home/ubuntu/cortex
 mkdir /home/ubuntu/cortex
 cd /home/ubuntu/cortex
 git init
 # Beware! do not save this token.
 git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}
-history -c
-history -w
+./init_host.sh
 cd install
 chmod 777 *
 # Notice that this raises the system in debug mode (all ports are opened outside and files are mounted from the outside of the system).

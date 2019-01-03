@@ -205,11 +205,12 @@ class InstanceManager:
         print(f'Shutting down {instance_name}..')
         self.__docker.containers.get(instance_name).remove(force=True, v=True)
 
-    def __docker_execute(self, instance_name, job_name, commands, timeout=0, **kwargs):
+    def __docker_execute(self, instance_name, job_name, commands, timeout=MAX_SECONDS_FOR_ONE_JOB, **kwargs):
         assert isinstance(commands, str), 'docker execute command must be a shell command'
         assert '"' not in commands, 'Not supported'
+        commands = f'/bin/bash -c "{commands}" | ts -s'  # ts to print timestamp
         if timeout > 0:
-            commands = f'timeout -t {timeout} -s KILL /bin/bash -c "{commands}"'
+            commands = f'timeout -t {timeout} -s KILL {commands}'
         TC.print(f'{instance_name}: executing {job_name}: {commands}')
         start_time = time.time()
         rc, output = self.__docker.containers.get(instance_name).exec_run(['/bin/bash', '-c', commands], **kwargs)
@@ -475,7 +476,7 @@ class InstanceManager:
 
             try:
                 current_output = self.__docker_execute(instance_to_run_on, command_job_name,
-                                                       command, timeout=MAX_SECONDS_FOR_ONE_JOB)
+                                                       command)
             except Exception as e:
                 current_output = e
 

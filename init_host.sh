@@ -14,13 +14,12 @@ if [[ $UID -ne 0 ]]; then
     echo "this script must run as root!"
     exit 1
 fi;
-INIT_FILE=/home/$SUDO_USER/.axonius_done_init_host
+INIT_FILE=/home/ubuntu/.axonius_done_init_host
 if [ -e "$INIT_FILE" ]; then
     echo "Initialization was done already! exiting"
     exit 0
 fi
 echo "Initializing the host image.."
-echo "username: $SUDO_USER"
 echo "hostname: $(hostname)"
 echo ""
 echo "Updating the sources..."
@@ -34,7 +33,7 @@ add-apt-repository -y ppa:jonathonf/python-3.6
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise apt-get update fails
 apt-get update
 echo "Installing various dependencies..."
-apt-get install -y htop sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
+apt-get install -y htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
 echo "Installing python 3.6..."
 apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip
 curl https://bootstrap.pypa.io/get-pip.py | python3.6
@@ -57,8 +56,8 @@ pip3 install --upgrade setuptools
 echo "Installing docker-ce..."
 apt-get install -y docker-ce=18.03.0~ce-0~ubuntu
 systemctl enable docker
-echo "Adding $SUDO_USER to the docker group, please note that you must logout and login!"
-usermod -aG docker $SUDO_USER
+echo "Adding ubuntu to the docker group, please note that you must logout and login!"
+usermod -aG docker ubuntu
 echo "Installing weave"
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave

@@ -26,7 +26,8 @@ PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
 DEFAULT_SECURITY_GROUP = "sg-8e00dce6"
 
-IMAGE_ID = "ami-0cd429efcede712c7"  # Our own imported ubuntu 16.04 Server.
+IMAGE_ID = "ami-0653e888ec96eab9b"  # Official 'Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-11-14'
+HD_SIZE_FOR_INSTANCE_IN_GIB = 100
 OVA_IMAGE_NAME = "Axonius-operational-export-106"
 
 S3_EXPORT_PREFIX = "vm-"
@@ -381,7 +382,8 @@ class BuildsManager(object):
                 {
                     "DeviceName": "/dev/sda1",
                     "Ebs": {
-                        "DeleteOnTermination": True
+                        "DeleteOnTermination": True,
+                        "VolumeSize": HD_SIZE_FOR_INSTANCE_IN_GIB
                     }
                 }
             ],
