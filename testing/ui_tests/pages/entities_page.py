@@ -20,6 +20,7 @@ class EntitiesPage(Page):
     QUERY_FIELD_DROPDOWN_CSS = '.x-dropdown.x-select.field-select'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.expression-comp'
+    QUERY_DATE_PICKER_CSS = '.expression-value .md-datepicker .md-input'
     QUERY_VALUE_COMPONENT_CSS = '.expression-value'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'
@@ -40,6 +41,7 @@ class EntitiesPage(Page):
     QUERY_COMP_SIZE = 'size'
     QUERY_LOGIC_AND = 'and'
     QUERY_LOGIC_OR = 'or'
+    OUTDATED_TOGGLE_CSS = 'div.md-switch.md-theme-default > div > div'
     TABLE_SELECT_ALL_CHECKBOX_CSS = 'thead .x-checkbox'
     TABLE_COUNT_CSS = '.x-table-header .x-title .count'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
@@ -162,6 +164,10 @@ class EntitiesPage(Page):
                                           text,
                                           parent=parent)
 
+    def fill_query_wizard_date_picker(self, date_value, parent=None):
+        self.fill_text_field_by_css_selector(self.QUERY_DATE_PICKER_CSS,
+                                             parse_date(date_value).date().isoformat(), context=parent)
+
     def get_query_comp_op(self):
         return self.driver.find_element_by_css_selector(self.QUERY_COMP_OP_DROPDOWN_CSS).text
 
@@ -181,6 +187,9 @@ class EntitiesPage(Page):
     def select_query_logic_op(self, text, parent=None):
         self.select_option_without_search(self.QUERY_LOGIC_DROPDOWN_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, text,
                                           parent=parent)
+
+    def click_wizard_outdated_toggle(self):
+        self.driver.find_element_by_css_selector(self.OUTDATED_TOGGLE_CSS).click()
 
     def click_search(self):
         self.click_button('Search', call_space=False)

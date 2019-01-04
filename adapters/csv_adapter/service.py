@@ -9,7 +9,7 @@ from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import make_dict_from_csv, normalize_var_name
+from axonius.utils.parsing import make_dict_from_csv, normalize_var_name, parse_date
 from csv_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -212,7 +212,7 @@ class CsvAdapter(AdapterBase):
                 device.hostname = vals.get('hostname')
                 device.device_model = vals.get('model')
                 device.domain = vals.get('domain')
-                device.last_seen = vals.get('last_seen')
+                device.last_seen = parse_date(vals.get('last_seen'))
                 device.device_manufacturer = vals.get('manufacturer')
                 device.total_physical_memory = vals.get('total_physical_memory_gb')
 
