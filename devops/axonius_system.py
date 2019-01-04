@@ -106,9 +106,10 @@ def system_entry_point(args):
         args.services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics']
         args.adapters = [name for name, variable in axonius_system.get_all_adapters()]
 
-        conf_exclude = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
-        conf_exclude = ExcludeHelper(CUSTOMER_CONF_PATH).process_exclude(conf_exclude)
-        args.exclude = set(conf_exclude).union(args.exclude)
+        if args.mode != 'down':
+            conf_exclude = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
+            conf_exclude = ExcludeHelper(CUSTOMER_CONF_PATH).process_exclude(conf_exclude)
+            args.exclude = set(conf_exclude).union(args.exclude)
 
     for name in args.exclude:
         if name not in args.services and name not in args.adapters:

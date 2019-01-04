@@ -27,6 +27,7 @@ def reset_weave():
     weave_launch_command = ['/usr/local/bin/weave', 'launch',
                             '--dns-domain=axonius.local', '--ipalloc-range', '171.17.0.0/16', '--password',
                             weave_encryption_key]
+    print(f'Creating weave network: {weave_launch_command}')
     subprocess.check_call(weave_launch_command)
 
 

@@ -135,9 +135,9 @@ def setup_instances_user():
                     shell=True)
 
 
-def create_cronjob(script_path, cronjob_timing):
+def create_cronjob(script_path, cronjob_timing, specific_run_env=''):
     print_state(f'Creating {script_path} cronjob')
-    crontab_command = 'crontab -l | {{ cat; echo "{timing} /etc/cron.d/{script_name} > ' \
+    crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}/etc/cron.d/{script_name} > ' \
                       '/var/log/{log_name} 2>&1"; }} | crontab -'
 
     shutil.copyfile(script_path,
@@ -150,15 +150,19 @@ def create_cronjob(script_path, cronjob_timing):
     except subprocess.CalledProcessError as exc:
         cron_jobs = ''
 
+    if specific_run_env != '':
+        specific_run_env += ' '
+
     if os.path.basename(script_path) not in cron_jobs:
         subprocess.check_call(crontab_command.format(timing=cronjob_timing, script_name=os.path.basename(script_path),
-                                                     log_name=f'{os.path.basename(script_path).split(".")[0]}.log'),
+                                                     log_name=f'{os.path.basename(script_path).split(".")[0]}.log',
+                                                     specific_run_env=specific_run_env),
                               shell=True)
 
 
 def setup_instances_cronjobs():
-    create_cronjob(DELETE_INSTANCES_USER_CRON_SCRIPT_PATH, '*/1 * * * *')
-    create_cronjob(RESTART_SYSTEM_ON_BOOT_CRON_SCRIPT_PATH, '@reboot')
+    create_cronjob(DELETE_INSTANCES_USER_CRON_SCRIPT_PATH, '*/1 * * * *', specific_run_env='/usr/local/bin/python3')
+    create_cronjob(RESTART_SYSTEM_ON_BOOT_CRON_SCRIPT_PATH, '@reboot', specific_run_env='/usr/local/bin/python3')
 
 
 def push_old_instances_settings():

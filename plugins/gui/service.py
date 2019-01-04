@@ -398,7 +398,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             metadata_bytes = ''
             if os.path.exists(METADATA_PATH):
                 with open(METADATA_PATH, 'r', encoding='UTF-8') as metadata_file:
-                    metadata_bytes = metadata_file.read()[:-1].replace('\\', '\\\\')
+                    metadata_bytes = metadata_file.read().strip().replace('\\', '\\\\')
                     return json.loads(metadata_bytes)
         except Exception:
             logger.exception(f'Bad __build_metadata file {metadata_bytes}')
@@ -408,7 +408,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         try:
             if os.path.exists(ENCRYPTION_KEY_PATH):
                 with open(ENCRYPTION_KEY_PATH, 'r') as encryption_key_file:
-                    encryption_key_bytes = encryption_key_file.read()[:-1].replace('\\', '\\\\')
+                    encryption_key_bytes = encryption_key_file.read().strip()
                     return str(encryption_key_bytes)
         except Exception:
             logger.exception(f'Bad __encryption_key file {encryption_key_bytes}')
