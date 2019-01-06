@@ -1,6 +1,6 @@
 <template>
     <div :class="severity">
-        <a v-if="hyperlink" :href="hyperlink.href" @click="valueClicked(hyperlink)">{{ displaying }}</a>
+        <a v-if="hyperlink" :href="hyperlink.href" @click="onClickLink(hyperlink)">{{ displaying }}</a>
         <template v-else>
             {{ displaying }}
         </template>

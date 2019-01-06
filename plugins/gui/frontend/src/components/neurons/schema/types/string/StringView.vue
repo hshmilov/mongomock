@@ -3,7 +3,7 @@
     <img :src="require(`Logos/${value}.png`)" height="24"
          v-else-if="schema.format && schema.format === 'logo'" class="logo md-image">
     <svg-icon :name="`symbol/${value}`" :original="true" v-else-if="schema.format && schema.format === 'icon'" height="16" />
-    <div v-else-if="hyperlink"><a :href="hyperlinkHref" @click="valueClicked(hyperlink)">{{ processedData }}</a></div>
+    <div v-else-if="hyperlink"><a :href="hyperlinkHref" @click="onClickLink(hyperlink)">{{ processedData }}</a></div>
     <div :class="{tag: schema.format && schema.format === 'tag'}" :title="completeData" v-else>{{ processedData }}</div>
 </template>
 

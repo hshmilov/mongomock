@@ -28,6 +28,10 @@ class StresstestAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
+        test_hyperlinks_str = Field(str, 'Test External Link String Hyperlink')
+        test_hyperlinks_int = Field(int, 'Test External Link Int Hyperlink')
+        test2_hyperlinks_str = Field(str, 'Test Query Link String Hyperlink')
+        test2_hyperlinks_int = Field(int, 'Test Query Link Int Hyperlink')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -188,6 +192,15 @@ class StresstestAdapter(AdapterBase):
             device.hostname = device_raw['guest'].get('hostName')
             device.vm_tools_status = device_raw['guest'].get('toolsStatus')
             device.last_seen = datetime.now()
+
+            # statistically proven to be the luckiest number, guaranteed to provide prosperity
+            device.test_hyperlinks_str = 'seven'
+            device.test_hyperlinks_int = 7
+
+            # twice as lucky: It's the age of consent in the Glorious Nation of Kazakhstan
+            device.test2_hyperlinks_str = 'fourteen'
+            device.test2_hyperlinks_int = 14
+
             device.set_raw(device_raw)
             yield device
 
