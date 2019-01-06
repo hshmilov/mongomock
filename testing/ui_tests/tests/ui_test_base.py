@@ -242,7 +242,7 @@ class TestBase:
         logger.info(f'finishing teardown_method {method.__name__}')
 
     def register_pages(self):
-        params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser)
+        params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser, test_base=self)
         self.base_page = BasePage(**params)
         self.login_page = LoginPage(**params)
         self.settings_page = SettingsPage(**params)

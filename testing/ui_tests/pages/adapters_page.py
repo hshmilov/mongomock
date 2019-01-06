@@ -1,3 +1,4 @@
+import time
 from collections import namedtuple
 from copy import copy
 
@@ -174,3 +175,15 @@ class AdaptersPage(EntitiesPage):
 
         self.fill_creds(**dict_)
         self.click_save()
+
+    def wait_for_adapter(self, adapter_name, retries=60 * 3, interval=2):
+        for _ in range(retries):
+            self.test_base.alert_page.switch_to_page()
+            self.switch_to_page()
+            try:
+                element = self.find_element_by_text(adapter_name)
+                if element:
+                    return
+            except NoSuchElementException:
+                pass
+            time.sleep(interval)

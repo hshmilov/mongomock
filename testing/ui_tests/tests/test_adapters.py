@@ -63,18 +63,6 @@ class TestAdapters(TestBase):
         adapter_list = self.adapters_page.get_adapter_list()
         assert not len(adapter_list), 'Search should work only on adapter name'
 
-    def wait_for_adapter(self, adapter_name, retires=60 * 3, interval=2):
-        for _ in range(retires):
-            self.alert_page.switch_to_page()
-            self.adapters_page.switch_to_page()
-            try:
-                element = self.adapters_page.find_element_by_text(adapter_name)
-                if element:
-                    return
-            except NoSuchElementException:
-                pass
-            time.sleep(interval)
-
     def wait_for_adapter_down(self, adapter_name, retires=60 * 3, interval=2):
         for _ in range(retires):
             self.alert_page.switch_to_page()
@@ -91,7 +79,7 @@ class TestAdapters(TestBase):
     def test_adapters_page_sanity(self):
         try:
             with GotoassistService().contextmanager(take_ownership=True):
-                self.wait_for_adapter(GOTOASSIST_NAME)
+                self.adapters_page.wait_for_adapter(GOTOASSIST_NAME)
                 self.adapters_page.click_adapter(GOTOASSIST_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
@@ -101,7 +89,7 @@ class TestAdapters(TestBase):
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.switch_to_page()
                 with EsetService().contextmanager(take_ownership=True):
-                    self.wait_for_adapter(ESET_NAME)
+                    self.adapters_page.wait_for_adapter(ESET_NAME)
                     self.adapters_page.click_adapter(ESET_NAME)
                     self.adapters_page.wait_for_spinner_to_end()
                     self.adapters_page.wait_for_table_to_load()
@@ -136,7 +124,7 @@ class TestAdapters(TestBase):
     def test_upload_csv_file(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
-                self.wait_for_adapter(CSV_NAME)
+                self.adapters_page.wait_for_adapter(CSV_NAME)
                 self.adapters_page.click_adapter(CSV_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
@@ -161,7 +149,7 @@ class TestAdapters(TestBase):
     def test_query_wizard_include_outdated_adapter_devices(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
-                self.wait_for_adapter(CSV_NAME)
+                self.adapters_page.wait_for_adapter(CSV_NAME)
                 self.adapters_page.click_adapter(CSV_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
@@ -195,7 +183,7 @@ class TestAdapters(TestBase):
     def test_connectivity(self):
         try:
             with GotoassistService().contextmanager(take_ownership=True):
-                self.wait_for_adapter(GOTOASSIST_NAME)
+                self.adapters_page.wait_for_adapter(GOTOASSIST_NAME)
                 self.adapters_page.click_adapter(GOTOASSIST_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
@@ -208,7 +196,7 @@ class TestAdapters(TestBase):
                 self.adapters_page.click_cancel()
 
             with CiscoService().contextmanager(take_ownership=True):
-                self.wait_for_adapter(CISCO_NAME)
+                self.adapters_page.wait_for_adapter(CISCO_NAME)
                 self.adapters_page.click_adapter(CISCO_NAME)
                 self.adapters_page.wait_for_spinner_to_end()
                 self.adapters_page.wait_for_table_to_load()
@@ -241,7 +229,7 @@ class TestAdapters(TestBase):
     def test_connections(self):
         try:
             with CiscoService().contextmanager(take_ownership=True):
-                self.wait_for_adapter(CISCO_NAME)
+                self.adapters_page.wait_for_adapter(CISCO_NAME)
                 try:
                     self.adapters_page.click_adapter(CISCO_NAME)
                     self.adapters_page.wait_for_spinner_to_end()
@@ -259,7 +247,7 @@ class TestAdapters(TestBase):
 
     def test_query_wizard_adapters_clients(self):
         with CiscoService().contextmanager(take_ownership=True):
-            self.wait_for_adapter(CISCO_NAME)
+            self.adapters_page.wait_for_adapter(CISCO_NAME)
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
             self.base_page.run_discovery()
