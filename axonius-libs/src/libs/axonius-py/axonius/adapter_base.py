@@ -6,6 +6,7 @@ import concurrent.futures
 import json
 import logging
 import sys
+import os
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum, auto
@@ -29,6 +30,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.threading import timeout_iterator
+from axonius.mock.adapter_mock import AdapterMock
 from bson import ObjectId
 from flask import jsonify, request
 
@@ -76,6 +78,9 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         self._thread_pool = LoggedThreadPoolExecutor(max_workers=50)
 
         self.__last_fetch_time = None
+
+        self.__is_in_mock_mode = os.environ.get('AXONIUS_MOCK_MODE') == 'TRUE'
+        self.__adapter_mock = AdapterMock(self)
 
     def _on_config_update(self, config):
         logger.info(f"Loading AdapterBase config: {config}")
@@ -277,6 +282,18 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         return to_json(dict(self._query_data(EntityType.Users)))
 
+    def _route_query_users_by_client(self, *args, **kwargs):
+        """
+        Just understands where to route the request, the real or mock adapter.
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        if self.__is_in_mock_mode:
+            return self.__adapter_mock.mock_query_users_by_client(*args, **kwargs)
+        else:
+            return self._query_users_by_client(*args, **kwargs)
+
     def _query_users_by_client(self, key, data):
         """
 
@@ -301,7 +318,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         cutoff_last_seen, _ = self.__user_time_cutoff()
 
-        for parsed_user in self._parse_users_raw_data(raw_users):
+        for parsed_user in self._route_parse_users_raw_data(raw_users):
             assert isinstance(parsed_user, UserAdapter)
 
             # There is no such thing as scanners for users, so we always check for id here.
@@ -326,7 +343,13 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         self._save_field_names_to_db(EntityType.Users)
 
-    def _parse_users_raw_data(self, user):
+    def _route_parse_users_raw_data(self, *args, **kwargs) -> Iterable[UserAdapter]:
+        if self.__is_in_mock_mode:
+            return self.__adapter_mock.mock_parse_users_raw_data(*args, **kwargs)
+        else:
+            return self._parse_users_raw_data(*args, **kwargs)
+
+    def _parse_users_raw_data(self, user) -> Iterable[UserAdapter]:
         """
         This needs to be implemented by the Adapter itself.
         :return:
@@ -410,6 +433,12 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
             return data_list
 
+    def _route_test_reachability(self, *args, **kwargs):
+        if self.__is_in_mock_mode:
+            return self.__adapter_mock.mock_test_reachability()
+        else:
+            return self._test_reachability(*args, **kwargs)
+
     @abstractmethod
     def _test_reachability(self, client_config):
         """
@@ -436,7 +465,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         if not client_config:
             return return_error("Invalid client")
 
-        return '' if self._test_reachability(client_config) else return_error("Client is not reachable.")
+        return '' if self._route_test_reachability(client_config) else return_error("Client is not reachable.")
 
     @add_rule('clients', methods=['GET', 'POST', 'PUT'])
     def clients(self):
@@ -713,6 +742,12 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         pass
 
+    def _route_connect_client(self, *args, **kwargs):
+        if self.__is_in_mock_mode:
+            return self.__adapter_mock.mock_connect_client()
+        else:
+            return self._connect_client(*args, **kwargs)
+
     @abstractmethod
     def _connect_client(self, client_config):
         """
@@ -740,7 +775,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         def call_connect_as_stoppable(*args, **kwargs):
             try:
-                return self._connect_client(*args, **kwargs)
+                return self._route_connect_client(*args, **kwargs)
             except BaseException as e:
                 # this is called from an external thread so if it raises the exception is lost,
                 # this allows forwarding exceptions back to the caller
@@ -760,6 +795,18 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         except StopThreadException:
             logger.info(f"Stopped connecting for {client_config}")
             raise adapter_exceptions.ClientConnectionException(f"Connecting has been stopped")
+
+    def _route_query_devices_by_client(self, *args, **kwargs):
+        """
+        Just understands where to route the request, the real or mock adapter.
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        if self.__is_in_mock_mode:
+            return self.__adapter_mock.mock_query_devices_by_client(*args, **kwargs)
+        else:
+            return self._query_devices_by_client(*args, **kwargs)
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -850,7 +897,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         device_ids_and_last_seen = {}
         should_check_for_unique_ids = self.plugin_subtype == PluginSubtype.AdapterBase
 
-        for parsed_device in self._parse_raw_data(raw_devices):
+        for parsed_device in self._route_parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
             parsed_device.fetch_time = datetime.now()
 
@@ -920,8 +967,8 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         def _get_raw_and_parsed_data():
             mapping = {
-                EntityType.Devices: (self._query_devices_by_client, self._parse_devices_raw_data_hook),
-                EntityType.Users: (self._query_users_by_client, self._parse_users_raw_data_hook)
+                EntityType.Devices: (self._route_query_devices_by_client, self._parse_devices_raw_data_hook),
+                EntityType.Users: (self._route_query_users_by_client, self._parse_users_raw_data_hook)
             }
             raw, parse = mapping[entity_type]
 
@@ -929,9 +976,9 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 try:
                     return raw(*args, **kwargs)
                 except func_timeout.exceptions.FunctionTimedOut as e:
-                    logger.error(f"Timeout for {client_name} on {self.plugin_unique_name}")
+                    logger.error(f"Timeout for {client_id} on {self.plugin_unique_name}")
 
-                    self.create_notification(f"Timeout after {timeout} seconds for '{client_name}'"
+                    self.create_notification(f"Timeout after {timeout} seconds for '{client_id}'"
                                              f" client on {self.plugin_unique_name}"
                                              f" while fetching {entity_type.value}", repr(e))
                 except StopThreadException:
@@ -1032,6 +1079,12 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         :return: JSON Schema to, check out https://jsonschema.net/#/editor
         """
         pass
+
+    def _route_parse_raw_data(self, *args, **kwargs) -> Iterable[DeviceAdapter]:
+        if self.__is_in_mock_mode:
+            return self.__adapter_mock.mock_parse_raw_data(*args, **kwargs)
+        else:
+            return self._parse_raw_data(*args, **kwargs)
 
     def _parse_raw_data(self, devices_raw_data) -> Iterable[DeviceAdapter]:
         """

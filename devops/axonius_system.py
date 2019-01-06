@@ -25,7 +25,7 @@ def main(command):
        {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
-    parser.add_argument('target', choices=['system', 'adapter', 'service', 'ls'])
+    parser.add_argument('target', choices=['system', 'adapter', 'service', 'standalone', 'ls'])
 
     try:
         args = parser.parse_args(command[0:1])
@@ -46,6 +46,9 @@ def main(command):
             print(f'    {name}')
         print('Adapters:')
         for name, _ in axonius_system.get_all_adapters():
+            print(f'    {name}')
+        print('Standalone services:')
+        for name, _ in axonius_system.get_all_standalone_services():
             print(f'    {name}')
     else:
         service_entry_point(args.target, command[1:])
@@ -84,6 +87,7 @@ def system_entry_point(args):
                         help='Puts the version name in generated metadata.')
     parser.add_argument('--rebuild-libs', action='store_true', default=False, help='Rebuild axonius-libs first')
     parser.add_argument('--yes-hard', default=False, action='store_true')
+    parser.add_argument('--mock', default=False, action='store_true', help='Start axonius on mock mode')
     parser.add_argument('--env', metavar='N', type=str, nargs='*', action=ExtendAction,
                         help='environment vars to start the containers with',
                         default=[])
@@ -105,6 +109,7 @@ def system_entry_point(args):
         assert len(args.services) == 0 and len(args.adapters) == 0
         args.services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics']
         args.adapters = [name for name, variable in axonius_system.get_all_adapters()]
+        # standalone services shouldn't be raised as part of --all.
 
         if args.mode != 'down':
             conf_exclude = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
@@ -128,6 +133,8 @@ def system_entry_point(args):
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image)
         axonius_system.build_libs(args.rebuild_libs)
+    if args.mock:
+        args.env.append('AXONIUS_MOCK_MODE=TRUE')
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
@@ -136,19 +143,21 @@ def system_entry_point(args):
             axonius_system.remove_plugin_containers(args.adapters, args.services)
 
         # Optimization - async build first
-        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
-        axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db)
-        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip,
-                                     env_vars=args.env)
+        axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild)
+        axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db,
+                                      env_vars=args.env)
+        axonius_system.start_plugins(args.adapters, args.services, [], mode, args.restart, hard=args.hard,
+                                     skip=args.skip, env_vars=args.env)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
-        axonius_system.stop_plugins(args.adapters, args.services, should_delete=False)
+        axonius_system.stop_plugins(args.adapters, args.services, [], should_delete=False)
         axonius_system.stop(should_delete=False)
     else:
         assert not args.restart and not args.skip
         print(f'Building system and {args.adapters + args.services}')
-        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild, args.hard)
+        axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild,
+                             args.hard)
 
 
 def service_entry_point(target, args):
@@ -167,6 +176,7 @@ def service_entry_point(target, args):
     parser.add_argument('--exclude', metavar='N', type=str, nargs='*', action=ExtendAction,
                         help='Adapters and Services to exclude',
                         default=[])
+    parser.add_argument('--mock', default=False, action='store_true', help='Start service on mock mode')
     parser.add_argument('--env', metavar='N', type=str, nargs='*', action=ExtendAction,
                         help='environment vars to start the containers with',
                         default=[])
@@ -179,16 +189,23 @@ def service_entry_point(target, args):
 
     axonius_system = get_service()
 
+    services = []
+    adapters = []
+    standalone_services = []
     if target == 'adapter':
         adapters = [name for name, _ in axonius_system.get_all_adapters()] if args.name == 'all' else [args.name]
-        services = []
-    else:
+    elif target == 'service':
         services = [name for name, _ in axonius_system.get_all_plugins()] if args.name == 'all' else [args.name]
-        adapters = []
+    elif target == 'standalone':
+        standalone_services = [name for name, _ in axonius_system.get_all_standalone_services()] if \
+            args.name == 'all' else [args.name]
+    else:
+        raise ValueError(f'Error, target {target} not found')
 
     if args.exclude:
         services = [name for name in services if name not in args.exclude]
         adapters = [name for name in adapters if name not in args.exclude]
+        standalone_services = [name for name in standalone_services if name not in args.exclude]
 
     axonius_system = get_service()
     if args.hard:
@@ -198,18 +215,21 @@ def service_entry_point(target, args):
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image)
         axonius_system.build_libs(args.rebuild_libs)
+    if args.mock:
+        args.env.append('AXONIUS_MOCK_MODE=TRUE')
     if args.mode == 'up':
         print(f'Starting {args.name}')
-        axonius_system.start_plugins(adapters, services, 'prod' if args.prod else '', args.restart, args.rebuild,
-                                     args.hard, env_vars=args.env)
+        axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',
+                                     args.restart, args.rebuild, args.hard, env_vars=args.env)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')
-        axonius_system.stop_plugins(adapters, services, should_delete=False)
+        axonius_system.stop_plugins(adapters, services, standalone_services, should_delete=False)
     else:
         assert not args.restart
         print(f'Building {args.name}')
-        axonius_system.build(False, adapters, services, 'prod' if args.prod else '', args.rebuild, args.hard)
+        axonius_system.build(False, adapters, services, standalone_services,
+                             'prod' if args.prod else '', args.rebuild, args.hard)
 
 
 class AutoFlush(object):

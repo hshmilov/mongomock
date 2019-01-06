@@ -18,7 +18,7 @@ from axonius.consts.plugin_consts import (AXONIUS_NETWORK,
                                           WEAVE_NETWORK, WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
-from services import adapters, plugins
+from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugins.aggregator_service import AggregatorService
 from services.plugins.core_service import CoreService
@@ -130,17 +130,18 @@ class AxoniusService:
             service.take_process_ownership()
 
     def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True,
-                       expose_db=False):
+                       expose_db=False, env_vars=None):
 
         def _start_service(service_to_start):
             if skip and service_to_start.get_is_container_up():
                 return
             if expose_db and service_to_start is self.db:
                 service_to_start.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild,
-                                       hard=hard, show_print=show_print, expose_port=True)
+                                       hard=hard, show_print=show_print, expose_port=True,
+                                       docker_internal_env_vars=env_vars)
                 return
             service_to_start.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard,
-                                   show_print=show_print)
+                                   show_print=show_print, docker_internal_env_vars=env_vars)
 
         self.create_network()
 
@@ -356,9 +357,15 @@ class AxoniusService:
     def get_adapter(cls, name):
         return cls._get_docker_service('adapters', name)
 
-    def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
-                      skip=False, show_print=True, env_vars=None):
-        plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+    @classmethod
+    def get_standalone_service(cls, name):
+        return cls._get_docker_service('standalone_services', name)
+
+    def start_plugins(self, adapter_names, plugin_names, standalone_services_names, mode='', allow_restart=False,
+                      rebuild=False, hard=False, skip=False, show_print=True, env_vars=None):
+        plugins = [self.get_adapter(name) for name in adapter_names] + \
+                  [self.get_plugin(name) for name in plugin_names] + \
+                  [self.get_standalone_service(name) for name in standalone_services_names]
 
         if allow_restart:
             for plugin in plugins:
@@ -387,8 +394,10 @@ class AxoniusService:
                 plugin.stop(should_delete=True)
             raise TimeoutException(repr([plugin.container_name for plugin in plugins]))
 
-    def stop_plugins(self, adapter_names, plugin_names, **kwargs):
-        plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+    def stop_plugins(self, adapter_names, plugin_names, standalone_services_names, **kwargs):
+        plugins = [self.get_adapter(name) for name in adapter_names] + \
+                  [self.get_plugin(name) for name in plugin_names] + \
+                  [self.get_standalone_service(name) for name in standalone_services_names]
 
         async_items = []
         for plugin in plugins:
@@ -435,6 +444,9 @@ class AxoniusService:
     def get_all_adapters(self):
         return self._get_all_docker_services('adapters', adapters)
 
+    def get_all_standalone_services(self):
+        return self._get_all_docker_services('standalone_services', standalone_services)
+
     def _pull_image(self, image_name, repull=False, show_print=True):
         image_exists = image_name in subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
         if image_exists and not repull:
@@ -479,8 +491,11 @@ class AxoniusService:
         assert runner.wait_for_all() == 0
         return image_name
 
-    def build(self, system, adapter_names, plugin_names, mode='', rebuild=False, hard=False, async=True):
-        to_build = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+    def build(self, system, adapter_names, plugin_names, standalone_services_names,
+              mode='', rebuild=False, hard=False, async=True):
+        to_build = [self.get_adapter(name) for name in adapter_names] + \
+                   [self.get_plugin(name) for name in plugin_names] + \
+                   [self.get_standalone_service(name) for name in standalone_services_names]
         if system:
             to_build = self.axonius_services + to_build
         if hard:
