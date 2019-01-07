@@ -89,8 +89,10 @@ export const updateDataFields = (state, payload) => {
 	if (payload.data) {
 		fields.data = { generic: payload.data.generic, specific: {}, schema: payload.data.schema}
 		Object.keys(payload.data.specific).forEach((name) => {
+			let pluginMetadata = pluginMeta[name]
+			if (!pluginMetadata)
+				return
 			fields.data.specific[name] = payload.data.specific[name]
-			let pluginMetadata = pluginMeta[name] || {}
 			fields.data.generic[0].items.enum.push({name, title: pluginMetadata.title || name})
 		})
 		fields.data.generic[0].items.enum.sort((first, second) => (first.title < second.title) ? -1 : 1)
