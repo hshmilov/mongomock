@@ -491,7 +491,7 @@ class BuildsManager(object):
         commands = []
         if len(running_exports) == 0:
             commands.append(
-                "rm -f /home/ubuntu/exports/*.py; rm -rf /home/ubuntu/exports/output-axonius-*")
+                "rm -f /home/ubuntu/exports/axonius_*.py; rm -rf /home/ubuntu/exports/output-axonius-*")
 
         export_id = ObjectId()
         commands.extend([
@@ -500,9 +500,10 @@ class BuildsManager(object):
                 version, fork, branch, OVA_IMAGE_NAME),
             "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME),
+            "return_code=$?",
             "/home/ubuntu/.local/bin/aws s3 cp ./build_{0}.log s3://{1}/".format(
                 version, S3_BUCKET_NAME_FOR_EXPORT_LOGS),
-            "curl -k -v -F \"status=$?\" https://{1}/exports/{0}/status".format(
+            "curl -k -v -F \"status=$return_code\" https://{1}/exports/{0}/status".format(
                 version, BUILDS_HOST)
         ])
 
