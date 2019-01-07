@@ -93,7 +93,8 @@
         data() {
             return {
                 condition: '',
-                error: ''
+                error: '',
+                errorCondition: ''
             }
         },
         watch: {
@@ -108,20 +109,20 @@
         methods: {
             ...mapMutations({changeState: CHANGE_TOUR_STATE}),
             checkErrors() {
-                if (this.error) return
                 if (!this.first && !this.expression.logicOp) {
-                    this.error = 'Logical operator is needed to add expression to the filter'
+                    return 'Logical operator is needed to add expression to the filter'
                 } else if (this.expression.obj && !this.expression.field) {
-                    this.error = 'Select an object to add nested conditions'
+                    return 'Select an object to add nested conditions'
                 }
+                return ''
             },
             compileExpression() {
                 if (!this.expression.i) {
                     this.expression.logicOp = ''
                 }
-                this.checkErrors()
-                if (this.error) {
-                    this.$emit('change', {error: this.error})
+                let error = this.errorCondition || this.checkErrors()
+                if (error) {
+                    this.$emit('change', {error})
                     return
                 }
                 if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
@@ -163,7 +164,7 @@
                 this.compileExpression()
             },
             onErrorCondition(error) {
-                this.error = error
+                this.errorCondition = error
             },
             removeNestedExpression(index) {
                 this.expression.nested.splice(index, 1)
