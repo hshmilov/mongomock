@@ -29,7 +29,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    ips_do_not_contradict_or_mac_intersection,
                                    is_azuread_or_ad_and_have_name,
                                    is_only_host_adapter_not_localhost,
-                                   is_different_plugin, is_from_ad,
+                                   is_different_plugin, is_from_ad_or_jamf,
                                    is_from_juniper_and_asset_name,
                                    is_from_no_mac_adapters_with_empty_mac,
                                    is_illusive_adapter, is_junos_space_device,
@@ -222,12 +222,12 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         AD correlation is a little more loose - we allow correlation based on hostname alone.
         In order to lower the false positive rate we don't use the normalized hostname but rather the full one
         """
-        logger.info('Starting to correlate on Hostname-AD')
+        logger.info('Starting to correlate on Hostname-AD-JAMF')
         filtered_adapters_list = filter(get_hostname, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
                                       [compare_hostname],
-                                      [is_from_ad],
+                                      [is_from_ad_or_jamf],
                                       [not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
