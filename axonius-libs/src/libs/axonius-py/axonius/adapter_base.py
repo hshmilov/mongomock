@@ -282,17 +282,15 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         return to_json(dict(self._query_data(EntityType.Users)))
 
-    def _route_query_users_by_client(self, *args, **kwargs):
+    def _route_query_users_by_client(self):
         """
         Just understands where to route the request, the real or mock adapter.
-        :param args:
-        :param kwargs:
         :return:
         """
         if self.__is_in_mock_mode:
-            return self.__adapter_mock.mock_query_users_by_client(*args, **kwargs)
+            return self.__adapter_mock.mock_query_users_by_client
         else:
-            return self._query_users_by_client(*args, **kwargs)
+            return self._query_users_by_client
 
     def _query_users_by_client(self, key, data):
         """
@@ -318,7 +316,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         cutoff_last_seen, _ = self.__user_time_cutoff()
 
-        for parsed_user in self._route_parse_users_raw_data(raw_users):
+        for parsed_user in self._route_parse_users_raw_data()(raw_users):
             assert isinstance(parsed_user, UserAdapter)
 
             # There is no such thing as scanners for users, so we always check for id here.
@@ -343,11 +341,11 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         self._save_field_names_to_db(EntityType.Users)
 
-    def _route_parse_users_raw_data(self, *args, **kwargs) -> Iterable[UserAdapter]:
+    def _route_parse_users_raw_data(self):
         if self.__is_in_mock_mode:
-            return self.__adapter_mock.mock_parse_users_raw_data(*args, **kwargs)
+            return self.__adapter_mock.mock_parse_users_raw_data
         else:
-            return self._parse_users_raw_data(*args, **kwargs)
+            return self._parse_users_raw_data
 
     def _parse_users_raw_data(self, user) -> Iterable[UserAdapter]:
         """
@@ -796,17 +794,15 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
             logger.info(f"Stopped connecting for {client_config}")
             raise adapter_exceptions.ClientConnectionException(f"Connecting has been stopped")
 
-    def _route_query_devices_by_client(self, *args, **kwargs):
+    def _route_query_devices_by_client(self):
         """
         Just understands where to route the request, the real or mock adapter.
-        :param args:
-        :param kwargs:
         :return:
         """
         if self.__is_in_mock_mode:
-            return self.__adapter_mock.mock_query_devices_by_client(*args, **kwargs)
+            return self.__adapter_mock.mock_query_devices_by_client
         else:
-            return self._query_devices_by_client(*args, **kwargs)
+            return self._query_devices_by_client
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -897,7 +893,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         device_ids_and_last_seen = {}
         should_check_for_unique_ids = self.plugin_subtype == PluginSubtype.AdapterBase
 
-        for parsed_device in self._route_parse_raw_data(raw_devices):
+        for parsed_device in self._route_parse_raw_data()(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
             parsed_device.fetch_time = datetime.now()
 
@@ -967,8 +963,8 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
 
         def _get_raw_and_parsed_data():
             mapping = {
-                EntityType.Devices: (self._route_query_devices_by_client, self._parse_devices_raw_data_hook),
-                EntityType.Users: (self._route_query_users_by_client, self._parse_users_raw_data_hook)
+                EntityType.Devices: (self._route_query_devices_by_client(), self._parse_devices_raw_data_hook),
+                EntityType.Users: (self._route_query_users_by_client(), self._parse_users_raw_data_hook)
             }
             raw, parse = mapping[entity_type]
 
@@ -1080,11 +1076,11 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         """
         pass
 
-    def _route_parse_raw_data(self, *args, **kwargs) -> Iterable[DeviceAdapter]:
+    def _route_parse_raw_data(self):
         if self.__is_in_mock_mode:
-            return self.__adapter_mock.mock_parse_raw_data(*args, **kwargs)
+            return self.__adapter_mock.mock_parse_raw_data
         else:
-            return self._parse_raw_data(*args, **kwargs)
+            return self._parse_raw_data
 
     def _parse_raw_data(self, devices_raw_data) -> Iterable[DeviceAdapter]:
         """

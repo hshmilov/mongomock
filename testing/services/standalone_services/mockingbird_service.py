@@ -2,6 +2,8 @@ import os
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
+CORTEX_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
 
 class MockingbirdService(WeaveService):
     def __init__(self):
@@ -21,18 +23,28 @@ class MockingbirdService(WeaveService):
 
     def get_dockerfile(self, mode=''):
         return fr'''
-        FROM tiangolo/uwsgi-nginx-flask:python3.7
-        # If STATIC_INDEX is 1, serve / with /static/index.html directly (or the static URL configured)
-        ENV STATIC_INDEX 1
-        # ENV STATIC_INDEX 0
+        FROM axonius/axonius-libs
 
         # Install MongoDB
         RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4 
-        RUN echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/4.0 main" | tee "/etc/apt/sources.list.d/mongodb-org-4.0.list"
+        RUN echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
         RUN apt-get update && apt-get install -y mongodb-org
+        
+        # Create a directory for mongodb
+        RUN mkdir -p /data/db
 
-        COPY ./app /app
-        RUN pip install -r /app/requirements.txt
+        WORKDIR /home/axonius/app
+        COPY ./app ./
+        COPY ./config /home/axonius/config
+
+        # Override supervisord conf
+        COPY ./config/supervisord.conf /etc/supervisor/supervisord.conf
+        # uwsgi.ini is already in the correct place (config/uwsgi.ini)
+
+        # Create a pth file to insert adapters to path
+        RUN mkdir -p $(python3 -m site --user-site)
+        RUN echo /home/axonius/adapters > $(python3 -m site --user-site)/axonius.pth
+
         '''[1:]
 
     def get_main_file(self):
@@ -40,8 +52,16 @@ class MockingbirdService(WeaveService):
 
     @property
     def volumes(self):
-        return [f'{os.path.join(self.service_dir, "app")}:/app']
+        adapters = os.path.join(CORTEX_ROOT, 'adapters')
+        libs = os.path.join(CORTEX_ROOT, 'axonius-libs', 'src', 'libs')
+        return [
+            f'{self.container_name}_data:/data/db',
+            f'{os.path.join(self.service_dir, "app")}:/home/axonius/app',
+            f'{os.path.join(self.service_dir, "config")}:/home/axonius/config',
+            f'{libs}:/home/axonius/libs:ro',
+            f'{adapters}:/home/axonius/adapters:ro'
+        ]
 
     @property
     def exposed_ports(self):
-        return [(DOCKER_PORTS[self.name], 80)]
+        return [(DOCKER_PORTS[self.name], 443)]

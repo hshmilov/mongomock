@@ -15,6 +15,7 @@ METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_meta
 SYSTEM_CONF_PATH = Path(CORTEX_PATH) / 'system_conf.json'
 CUSTOMER_CONF_RELATIVE_PATH = Path(AXONIUS_SETTINGS_DIR_NAME) / 'customer_conf.json'
 CUSTOMER_CONF_PATH = Path(CORTEX_PATH) / CUSTOMER_CONF_RELATIVE_PATH
+AXONIUS_MOCK_DEMO_ENV_VAR = 'AXONIUS_MOCK_MODE=TRUE'
 
 
 def main(command):
@@ -134,7 +135,7 @@ def system_entry_point(args):
         axonius_system.pull_base_image(args.pull_base_image)
         axonius_system.build_libs(args.rebuild_libs)
     if args.mock:
-        args.env.append('AXONIUS_MOCK_MODE=TRUE')
+        args.env.append(AXONIUS_MOCK_DEMO_ENV_VAR)
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
@@ -216,7 +217,7 @@ def service_entry_point(target, args):
         axonius_system.pull_base_image(args.pull_base_image)
         axonius_system.build_libs(args.rebuild_libs)
     if args.mock:
-        args.env.append('AXONIUS_MOCK_MODE=TRUE')
+        args.env.append(AXONIUS_MOCK_DEMO_ENV_VAR)
     if args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',

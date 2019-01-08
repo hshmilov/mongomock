@@ -2,10 +2,10 @@ import os
 import traceback
 
 from flask import Flask, send_file, request, jsonify
-
 from mock_manager import MockManager
+
 APP = Flask(__name__)
-MM = MockManager('localhost')
+MM = MockManager()
 
 
 @APP.route('/api/devices')

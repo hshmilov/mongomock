@@ -1,7 +1,7 @@
 DOCKER_PORTS = {
     'smtp':                             25,
     'gui':                              443,
-    'mockingbird':                      180,
+    'mockingbird':                      1443,
     'selenium-hub':                     4444,
     'execution':                        4999,
     'aggregator':                       5000,

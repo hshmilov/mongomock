@@ -2,9 +2,10 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.utils.parsing import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
-MOCK_SERVER = 'http://mockingbird'
+MOCK_SERVER = 'https://mockingbird'
 ENTITIES_PER_PAGE = 1000
 
 
@@ -18,26 +19,34 @@ class AdapterMockClient(RESTConnection):
         return True
 
     def __get_entity_list(self, entity):
-        def get_response(_offset):
-            return self._get(
-                entity,
-                url_params={
-                    'plugin_name': self.__plugin_name,
-                    'client_id': self.__client_id,
-                    'offset': _offset,
-                    'limit': ENTITIES_PER_PAGE
-                }
-            )
-
-        response = get_response(0)
+        response = self._get(
+            entity,
+            url_params={
+                'plugin_name': self.__plugin_name,
+                'client_id': self.__client_id,
+                'offset': 0,
+                'limit': ENTITIES_PER_PAGE
+            }
+        )
         total_count = int(response['total_count'])
         yield from response['data']
         offset = ENTITIES_PER_PAGE
 
+        # Now use asyncio to get all of these requests
+        async_requests = []
         while offset < total_count:
-            response = get_response(offset)
-            yield from response['data']
+            async_requests.append({
+                'name':
+                    f'{entity}?plugin_name={self.__plugin_name}&'
+                    f'client_id={self.__client_id}&offset={offset}&limit={ENTITIES_PER_PAGE}'
+            })
             offset += ENTITIES_PER_PAGE
+
+        for response in self._async_get_only_good_response(async_requests):
+            try:
+                yield from response['data']
+            except Exception:
+                logger.exception(f'Problem getting async response {str(response)}')
 
     def get_device_list(self):
         yield from self.__get_entity_list('devices')
@@ -58,6 +67,37 @@ class AdapterMock:
 
         self.__ab = adapter_base_object
         self.__number_of_clients = 0
+
+    def transform_dates_to_datetime(self, raw):
+        """
+        REST API returns json output, which can not represent objects like datetime, it can only represent primitive
+        types. The only non-primitive type we have is datetime, which will always be returned as a human-readable string
+        from the server, e.g. "Fri, 28 Dec 2018 17:46:50 GMT". We try, very inefficiently, to identify those.
+
+        If we would have a format of the data returned in addition (a think which is possible with some more
+        development) we could do this but currently MyDeviceAdapter of adapters who include a datetime field will not
+        be recognized.
+        :param raw:
+        :return:
+        """
+        if isinstance(raw, dict):
+            for key, value in raw.items():
+                raw[key] = self.transform_dates_to_datetime(value)
+        elif isinstance(raw, list):
+            for i, val in enumerate(raw):
+                raw[i] = self.transform_dates_to_datetime(val)
+        else:
+            try:
+                # Big hack, read the method intro.
+                if isinstance(raw, str) and \
+                        any(raw.lower().startswith(day) for day in ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']):
+                    new_value = parse_date(raw)
+                    if new_value:
+                        return new_value
+            except Exception:
+                pass
+
+        return raw
 
     @staticmethod
     def mock_test_reachability():
@@ -94,14 +134,9 @@ class AdapterMock:
         """
         Uses the mock infrastructure to parse devices data.
         """
-        try:
-            self.__ab._new_device_adapter()
-        except Exception:
-            logger.exception(f'Exception: Mock: MyDeviceAdapter is not configured for {self.__ab.plugin_name}')
-            return
-
         for device_raw in devices_raw_data:
             device = self.__ab._new_device_adapter()
+            device_raw = self.transform_dates_to_datetime(device_raw)
             for key, value in device_raw.items():
                 device._extend_names(key, value)
                 device._dict = device_raw
@@ -120,14 +155,9 @@ class AdapterMock:
         """
         Uses the mock infrastructure to parse devices data.
         """
-        try:
-            self.__ab._new_user_adapter()
-        except Exception:
-            logger.exception(f'Exception: Mock: MyUserAdapter is not configured for {self.__ab.plugin_name}')
-            return
-
         for user_raw in users_raw_data:
             user = self.__ab._new_user_adapter()
+            user_raw = self.transform_dates_to_datetime(user_raw)
             for key, value in user_raw.items():
                 user._extend_names(key, value)
             user._dict = user_raw

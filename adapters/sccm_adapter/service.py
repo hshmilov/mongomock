@@ -221,7 +221,12 @@ class SccmAdapter(AdapterBase):
                 device.current_logged_user = device_raw.get('UserName0') or device_raw.get('User_Name0')
                 device.time_zone = device_raw.get('CurrentTimeZone0')
                 device.boot_time = device_raw.get('LastBootUpTime0')
-                device.last_seen = device_raw.get('Last Seen')
+                last_seen = device_raw.get('Last Seen')
+                try:
+                    if last_seen:
+                        device.last_seen = parse_date(last_seen)
+                except Exception:
+                    logger.exception(f'Can not parse last seen {last_seen}')
                 try:
                     if isinstance(asset_software_dict.get(device_raw.get('ResourceID')), list):
                         for asset_data in asset_software_dict.get(device_raw.get('ResourceID')):
