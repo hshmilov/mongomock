@@ -7,7 +7,7 @@
         <!--Link for downloading files-->
         <a id="file-auto-download-link"></a>
         <!-- Nested navigation linking to routes defined in router/index.js -->
-        <template v-if="userName || isDev">
+        <template v-if="userName">
             <x-side-bar class="print-exclude" @access-violation="notifyAccess" />
             <router-view/>
             <x-top-bar class="print-exclude" @access-violation="notifyAccess" />
@@ -49,10 +49,7 @@
                 userPermissions(state) {
                     return state.auth.currentUser.data.permissions
                 }
-            }),
-            isDev() {
-				return process.env.NODE_ENV === 'development'
-            }
+            })
 		},
         data() {
              return {

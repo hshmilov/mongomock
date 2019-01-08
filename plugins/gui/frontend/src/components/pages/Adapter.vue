@@ -94,7 +94,7 @@
         computed: {
             ...mapState({
                 currentAdapter(state) {
-                    return state.adapter.currentAdapter
+                    return state.adapters.currentAdapter
                 },
                 isReadOnly(state) {
                     let user = state.auth.currentUser.data

@@ -180,7 +180,7 @@ class TestAlertActions(TestBase):
             self.alert_page.switch_to_page()
             self.alert_page.wait_for_table_to_load()
             self.alert_page.click_new_alert()
-            self.alert_page.wait_for_spinner_to_end()
+            self.alert_page.wait_for_table_to_load()
             self.alert_page.fill_alert_name(ALERT_CHANGE_NAME)
             self.alert_page.select_saved_query(ALERT_CHANGE_NAME)
             self.alert_page.check_every_discovery()
@@ -198,7 +198,7 @@ class TestAlertActions(TestBase):
 
             self.alert_page.switch_to_page()
             self.alert_page.edit_alert(ALERT_CHANGE_NAME)
-            self.alert_page.wait_for_spinner_to_end()
+            self.alert_page.wait_for_table_to_load()
             self.alert_page.check_every_discovery()
             self.alert_page.check_new()
             self.alert_page.click_tag_all_entities()
@@ -212,4 +212,5 @@ class TestAlertActions(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.fill_filter(self.devices_page.JSON_ADAPTER_FILTER)
         self.devices_page.enter_search()
+        self.alert_page.wait_for_table_to_load()
         assert self.devices_page.get_first_row_tags() == TAG_NEW_COMMENT

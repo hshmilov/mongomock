@@ -1,18 +1,17 @@
 import { REQUEST_API } from '../actions'
 import { FETCH_DATA_CONTENT } from '../actions'
 
-export const FETCH_ALERTS = 'FETCH_ALERTS'
 export const UPDATE_ALERTS = 'UPDATE_ALERTS'
-export const SET_ALERT = 'SET_ALERT'
 export const ARCHIVE_ALERTS = 'ARCHIVE_ALERTS'
 export const REMOVE_ALERTS = 'REMOVE_ALERTS'
 export const UPDATE_ALERT = 'UPDATE_ALERT'
-export const SAVE_ALERT = 'SAVE_ALERT'
+export const SET_ALERT = 'SET_ALERT'
+export const FETCH_ALERT = 'FETCH_ALERT'
 export const UPDATE_ALERT_VIEW = 'UPDATE_ALERT_VIEW'
 
 
 const newAlert = {
-	id: 'new',
+	uuid: 'new',
 	name: '',
 	triggers: {
          every_discovery: false,
@@ -30,7 +29,7 @@ const newAlert = {
     period: 'all'
 }
 
-export const alert = {
+export const alerts = {
 	state: {
 		/* Alerts DataTable State */
 		content: { data: [], fetching: false, error: ''},
@@ -84,20 +83,16 @@ export const alert = {
 				state.content.error = payload.error
 			}
 		},
-		[ SET_ALERT ] (state, alertId) {
+		[ SET_ALERT ] (state, alertData) {
 			/*
 				The controls is expected to be fields and values of a specific alerts and is stored for use in the
 				alerts configuration page
 			 */
-			if (!alertId) return
-			let found = false
-			state.content.data.forEach((alert) => {
-				if (alert.uuid === alertId) {
-					state.current.data = alert
-					found = true
-				}
-			})
-			if (!found) state.current.data = { ...newAlert }
+			if (alertData) {
+				state.current.data = { ...alertData }
+			} else {
+				state.current.data = { ...newAlert }
+			}
 		},
 		[ REMOVE_ALERTS ] (state, selection) {
 			/*
@@ -112,14 +107,6 @@ export const alert = {
 			})
 			state.count.data = state.content.data.length
 		},
-		[ SAVE_ALERT ] (state, payload) {
-			state.content.data = state.content.data.map((alert) => {
-				if (alert.uuid !== payload.uuid) { return alert }
-				return { ...alert,
-					...payload
-				}
-			})
-		},
 		[ UPDATE_ALERT_VIEW ] (state, view) {
 			/*
 				Create new alerts with given query to current alerts, for creating the next alerts with it.
@@ -131,25 +118,18 @@ export const alert = {
 		}
 	},
 	actions: {
-		[ FETCH_ALERTS ] ({dispatch}, payload) {
-			/*
-				Call to api for getting all alerts, according to skip, limit and filter
-				The mutation UPDATE_ALERTS is called with the returned controls or error, to fill it in the state
-			*/
-			if (!payload.skip) {
-				payload.skip = 0
+		[ FETCH_ALERT ] ({dispatch, commit}, alertId) {
+			if (!alertId || alertId === 'new') {
+				commit(SET_ALERT)
+				return
 			}
-			let param = `?limit=${payload.limit}&skip=${payload.skip}`
-			if (payload.filter && Object.keys(payload.filter).length) {
-				param += `&filter=${JSON.stringify(payload.filter)}`
-			}
+
 			return dispatch(REQUEST_API, {
-				rule: `alert${param}`,
-				type: UPDATE_ALERTS,
-				payload: {
-					restart: payload.skip === 0
-				}
+				rule: `alerts/${alertId}`
+			}).then((response) => {
+				commit(SET_ALERT, response.data)
 			})
+
 		},
 		[ ARCHIVE_ALERTS ] ({dispatch, commit}, selection) {
 			/*
@@ -159,7 +139,7 @@ export const alert = {
 			 */
 			if (!selection || (!selection.include && !selection.ids)) return
 			dispatch(REQUEST_API, {
-				rule: 'alert',
+				rule: 'alerts',
 				method: 'DELETE',
 				data: selection
 			}).then((response) => {
@@ -169,25 +149,28 @@ export const alert = {
 				commit(REMOVE_ALERTS, selection)
 			})
 		},
-		[ UPDATE_ALERT ] ({dispatch}, payload) {
+		[ UPDATE_ALERT ] ({dispatch, commit}, payload) {
 			/*
 				Call to api to add \ update an alerts. If given an id, the matching alerts will be updated with the
 				new controls. Otherwise a new alerts will be added to the collection.
 				If completed successfully, id of added \ updated alerts should be returned and together with the
 				controls, they are added to the content (instead of re-fetching), using a call to the mutation ADD_ALERT
 			 */
-			if (!payload || !payload.id) { return }
-			let rule = 'alert'
+			if (!payload || !payload.uuid) return
+			let rule = 'alerts'
 			let method = 'PUT'
-			if (payload.id !== 'new') {
-				rule += '/' + payload.id
+			if (payload.uuid !== 'new') {
+				rule += '/' + payload.uuid
 				method = 'POST'
 			}
 			return dispatch(REQUEST_API, {
 				rule: rule,
 				method: method,
 				data: payload
-			}).then(() => dispatch(FETCH_DATA_CONTENT, { module: 'alert', skip: 0, limit: 20 }))
+			}).then(() => {
+				dispatch(FETCH_DATA_CONTENT, { module: 'alerts', skip: 0, limit: 20 })
+				commit(FETCH_ALERT, payload.uuid)
+			})
 		}
 	}
 }

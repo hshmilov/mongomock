@@ -1590,7 +1590,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('alert', methods=['GET', 'PUT', 'DELETE'],
+    @gui_add_rule_logged_in('alerts', methods=['GET', 'PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Alerts,
                                                              ReadOnlyJustForGet)})
     def alert(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
@@ -1611,22 +1611,25 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return self.delete_alert(alert_selection)
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in('alert/count', required_permissions={Permission(PermissionType.Alerts,
-                                                                            PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('alerts/count', required_permissions={Permission(PermissionType.Alerts,
+                                                                             PermissionLevel.ReadOnly)})
     def alert_count(self, mongo_filter):
         with self._get_db_connection() as db_connection:
             report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
             return jsonify(db_connection[report_service]['reports'].count_documents(mongo_filter))
 
-    @gui_add_rule_logged_in('alert/<alert_id>', methods=['POST'],
+    @gui_add_rule_logged_in('alerts/<alert_id>', methods=['GET', 'POST'],
                             required_permissions={Permission(PermissionType.Alerts,
-                                                             PermissionLevel.ReadWrite)})
+                                                             ReadOnlyJustForGet)})
     def alerts_update(self, alert_id):
         """
 
         :param alert_id:
         :return:
         """
+        if request.method == 'GET':
+            return jsonify(gui_helpers.beautify_db_entry(self.reports_collection.find_one({'_id': ObjectId(alert_id)})))
+
         alert_to_update = request.get_json(silent=True)
         view_name = alert_to_update['view']
         view_entity = alert_to_update['viewEntity']

@@ -49,8 +49,8 @@
         computed: {
             ...mapState({
                 adaptersData(state) {
-                    if (state.adapter.adapterList.data.length > 0) {
-                        return state.adapter.adapterList.data.filter(adapter => {
+                    if (state.adapters.adapterList.data.length > 0) {
+                        return state.adapters.adapterList.data.filter(adapter => {
                             return adapter.title.toLowerCase().includes(this.searchText.toLowerCase())
                         })
                     }

@@ -392,6 +392,7 @@ class EntitiesPage(Page):
 
     def click_save_query_save_button(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def fill_showing_results(self, date_to_fill):
         self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS, date_to_fill.date().isoformat())

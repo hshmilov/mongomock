@@ -133,7 +133,7 @@ class ReportsService(PluginBase, Triggerable):
             if self.get_method() == 'POST':
                 report_data = self.get_request_data_as_object()
                 report_data['last_triggered'] = self._get_collection('reports').find_one(
-                    {'_id': ObjectId(report_data['id'])}).get('last_triggered', None)
+                    {'_id': ObjectId(report_data['uuid'])}).get('last_triggered', None)
                 delete_response = self._remove_report(report_id)
                 if delete_response[1] == 404:
                     return return_error('A reports with that ID was not found.', 404)

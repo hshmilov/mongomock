@@ -39,7 +39,7 @@
 </script>
 
 <style lang="scss">
-    .menu-item {
+    .x-menu-item {
         color: $theme-black;
         cursor: pointer;
         padding-right: 12px;

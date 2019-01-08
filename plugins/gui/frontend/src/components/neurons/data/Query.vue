@@ -362,7 +362,7 @@
                         overflow: auto;
                     }
 
-                    .menu-item .item-content {
+                    .x-menu-item .item-content {
                         text-overflow: ellipsis;
                         white-space: nowrap;
                         overflow: hidden;

@@ -176,7 +176,7 @@
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {FETCH_DATA_VIEWS} from '../../store/actions'
     import {UPDATE_EMPTY_STATE} from '../../store/modules/onboarding'
-    import {SET_ALERT, UPDATE_ALERT, FETCH_ALERTS} from '../../store/modules/alert'
+    import {FETCH_ALERT, UPDATE_ALERT} from '../../store/modules/alerts'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
     import {entities} from '../../constants/entities'
     import {validateInteger} from '../../constants/utils'
@@ -188,8 +188,8 @@
         },
         computed: {
             ...mapState({
-                alertData: state => state.alert.current.data,
-                alerts: state => state.alert.content.data,
+                alertData: state => state.alerts.current.data,
+                alerts: state => state.alerts.content.data,
                 availableModules(state) {
                     if (!state.auth.currentUser.data) return {}
                     let permissions = state.auth.currentUser.data.permissions
@@ -328,9 +328,6 @@
             }
         },
         watch: {
-            alertData(newAlertData) {
-                this.fillAlert(newAlertData)
-            },
             triggerAbove(newAbove) {
                 if (newAbove) {
                     this.alert.triggers.above = parseInt(this.alert.triggers.above)
@@ -354,65 +351,68 @@
         },
         methods: {
             ...mapMutations({
-                setAlert: SET_ALERT, updateEmptyState: UPDATE_EMPTY_STATE, changeState: CHANGE_TOUR_STATE
+                updateEmptyState: UPDATE_EMPTY_STATE, changeState: CHANGE_TOUR_STATE
             }),
             ...mapActions({
-                fetchViews: FETCH_DATA_VIEWS, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
+                fetchViews: FETCH_DATA_VIEWS, updateAlert: UPDATE_ALERT, fetchAlert: FETCH_ALERT
             }),
             fillAlert(alert) {
-                alert.actions.forEach((action) => {
-                    switch (action.type) {
-                        case 'create_notification':
-                            this.actions.notification = true
-                            break
-                        case 'send_emails':
-                            this.actions.mail = true
-                            this.mailList = action.data.emailList
-                            this.mailListCC = action.data.emailListCC
-                            this.subject = action.data.mailSubject || `Axonius Alert - "${alert.name}" for Query: ${alert.view}`
-                            this.sendDevicesCSVToEmail = action.data.sendDeviceCSV || false
-                            this.sendDevicesChangesCSVToEmail = action.data.sendDevicesChangesCSV || false
-                            break
-                        case 'tag_entities':
-                            this.actions.tag = true
-                            this.tagNew = action.data
-                            break
-                        case 'tag_all_entities':
-                            this.actions.tagAll = true
-                            this.tagAllName = action.data
-                            break
-                        case 'notify_syslog':
-                            this.actions.syslog = true
-                            this.sendAllDevicesToSyslog = action.data
-                            break
-                        case 'create_service_now_incident':
-                            this.actions.servicenowIncident = true
-                            break
-                        case 'create_jira_ticket':
-                            this.actions.jiraTicket = true
-                            break
-                        case 'create_service_now_computer':
-                            this.actions.servicenowComputer = true
-                            break
-                        case 'create_fresh_service_incident':
-                            this.actions.freshserviceIncident = true
-                            this.ticketEmail = action.data
-                            break
-                        case 'carbonblack_isolate':
-                            this.actions.cbIsolate = true
-                            break
-                        case 'carbonblack_unisolate':
-                            this.actions.cbUnisolate = true
-                            break
+                if (alert.actions) {
+                    alert.actions.forEach((action) => {
+                        switch (action.type) {
+                            case 'create_notification':
+                                this.actions.notification = true
+                                break
+                            case 'send_emails':
+                                this.actions.mail = true
+                                this.mailList = action.data.emailList
+                                this.mailListCC = action.data.emailListCC
+                                this.subject = action.data.mailSubject || `Axonius Alert - "${alert.name}" for Query: ${alert.view}`
+                                this.sendDevicesCSVToEmail = action.data.sendDeviceCSV || false
+                                this.sendDevicesChangesCSVToEmail = action.data.sendDevicesChangesCSV || false
+                                break
+                            case 'tag_entities':
+                                this.actions.tag = true
+                                this.tagNew = action.data
+                                break
+                            case 'tag_all_entities':
+                                this.actions.tagAll = true
+                                this.tagAllName = action.data
+                                break
+                            case 'notify_syslog':
+                                this.actions.syslog = true
+                                this.sendAllDevicesToSyslog = action.data
+                                break
+                            case 'create_service_now_incident':
+                                this.actions.servicenowIncident = true
+                                break
+                            case 'create_jira_ticket':
+                                this.actions.jiraTicket = true
+                                break
+                            case 'create_service_now_computer':
+                                this.actions.servicenowComputer = true
+                                break
+                            case 'create_fresh_service_incident':
+                                this.actions.freshserviceIncident = true
+                                this.ticketEmail = action.data
+                                break
+                            case 'carbonblack_isolate':
+                                this.actions.cbIsolate = true
+                                break
+                            case 'carbonblack_unisolate':
+                                this.actions.cbUnisolate = true
+                                break
+                        }
+                    })
+                }
+                if (alert.triggers) {
+                    if (alert.triggers.below) {
+                        alert.triggers.decrease = true
                     }
-                })
-                if (alert.triggers.below) {
-                    alert.triggers.decrease = true
+                    if (alert.triggers.above) {
+                        alert.triggers.increase = true
+                    }
                 }
-                if (alert.triggers.above) {
-                    alert.triggers.increase = true
-                }
-                // Todo: do my fields have to be added to alerts
                 this.alert = {
                     ...alert,
                     triggers: {...alert.triggers},
@@ -541,11 +541,11 @@
                 If no alerts from controls source, try and fetch it.
                 Otherwise, if alerts from controls source has correct id, update local alerts controls with its values
              */
-            if (!this.alerts.length || !this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
-                this.fetching.alert = true
-                this.fetchAlerts({}).then(() => {
-                    this.setAlert(this.$route.params.id)
-                    this.fetching.alert = false
+            if (!this.alertData || !this.alertData.uuid || (this.$route.params.id !== this.alertData.uuid)) {
+                this.fetching.alerts = true
+                this.fetchAlert(this.$route.params.id).then(() => {
+                    this.fetching.alerts = false
+                    this.fillAlert(this.alertData)
                 })
             } else {
                 this.fillAlert(this.alertData)

@@ -1,7 +1,7 @@
 <template>
     <div class="x-queries-table">
         <x-search v-model="searchText" placeholder="Search Query Name..."/>
-        <x-actionable-table title="Queries" :count="queries.length" :loading="loading">
+        <x-table-wrapper title="Queries" :count="queries.length" :loading="loading">
             <template slot="actions">
                 <div v-if="selected.length === 1" class="x-btn link" :class="{disabled: !isAlertsWrite}"
                      @click="createAlert">+ New Alert
@@ -12,23 +12,23 @@
             </template>
             <x-table slot="table" id-field="uuid" :data="filteredQueries" :fields="fields"
                      v-model="readOnly? undefined: selected" :click-row-handler="runQuery"/>
-        </x-actionable-table>
+        </x-table-wrapper>
     </div>
 </template>
 
 <script>
     import xSearch from '../../neurons/inputs/SearchInput.vue'
-    import xActionableTable from '../../axons/tables/TableWrapper.vue'
+    import xTableWrapper from '../../axons/tables/TableWrapper.vue'
     import xTable from '../../axons/tables/Table.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
     import {FETCH_DATA_VIEWS, REMOVE_DATA_VIEW} from '../../../store/actions'
-    import {UPDATE_ALERT_VIEW} from '../../../store/modules/alert'
+    import {UPDATE_ALERT_VIEW} from '../../../store/modules/alerts'
 
     export default {
         name: 'x-queries-table',
-        components: {xSearch, xActionableTable, xTable},
+        components: {xSearch, xTableWrapper, xTable},
         props: {
             module: {required: true}, readOnly: {default: false}
         },

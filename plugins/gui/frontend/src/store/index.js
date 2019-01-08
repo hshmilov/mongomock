@@ -56,7 +56,7 @@ import { devices } from './modules/devices'
 import { users } from './modules/users'
 import { explorer } from './modules/explorer'
 import { adapters } from './modules/adapters'
-import { alert } from './modules/alert'
+import { alerts } from './modules/alerts'
 import { notifications } from './modules/notifications'
 import { auth } from './modules/auth'
 import { constants } from './modules/constants'
@@ -136,13 +136,13 @@ export default new Vuex.Store({
         devices,
 		users,
 		explorer,
-		adapter: adapters,
-		alert,
+		adapters,
+		alerts,
         notifications,
         auth,
         constants,
         dashboard,
-		report: reports,
+		reports,
 		settings,
 		onboarding
     }

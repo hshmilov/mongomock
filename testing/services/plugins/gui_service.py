@@ -341,12 +341,6 @@ class GuiService(PluginService):
         container_settings_dir_path = os.path.join('/home/axonius/', AXONIUS_SETTINGS_DIR_NAME)
         volumes = [f'{settings_path}:{container_settings_dir_path}']
 
-        # GUI supports debug, but to use, you have to build your *local* node modules
-        local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
-        local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
-        if os.path.isdir(local_npm) and os.path.isdir(local_dist):
-            volumes.extend(super().volumes_override)
-            return volumes
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
         volumes.extend([f'{libs}:/home/axonius/libs:ro'])
 
@@ -357,8 +351,7 @@ class GuiService(PluginService):
         return volumes
 
     def get_dockerfile(self, mode=''):
-        dev = '' if mode == 'prod' else 'dev-'
-        return f'''
+        return '''
 FROM axonius/axonius-libs
 
 # Set the working directory to /app
@@ -379,8 +372,7 @@ COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
 RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axonius-libs/src/ && ln -s ../../libs/ .
 
 # Compile npm. we assume we have it from axonius-libs
-RUN cd ./gui/frontend/ && npm run {dev}build
-'''[1:]
+RUN cd ./gui/frontend/ && npm run build'''[1:]
 
     def __del__(self):
         self._session.close()

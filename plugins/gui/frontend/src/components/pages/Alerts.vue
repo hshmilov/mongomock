@@ -1,6 +1,6 @@
 <template>
     <x-page title="alerts" class="x-alerts" :class="{disabled: isReadOnly}">
-        <x-table module="alert" title="Alerts" @click-row="configAlert" id-field="uuid"
+        <x-table module="alerts" title="Alerts" @click-row="configAlert" id-field="uuid"
                  v-model="isReadOnly? undefined: selection" ref="table">
             <template slot="actions" v-if="!isReadOnly">
                 <div v-if="hasSelection" @click="removeAlerts" class="x-btn link">Remove</div>
@@ -16,7 +16,7 @@
     import xTable from '../neurons/data/Table.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
-    import {FETCH_ALERTS, SET_ALERT, ARCHIVE_ALERTS} from '../../store/modules/alert'
+    import {ARCHIVE_ALERTS, FETCH_ALERT} from '../../store/modules/alerts'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
     export default {
@@ -43,8 +43,8 @@
             }
         },
         methods: {
-            ...mapMutations({setAlert: SET_ALERT, changeState: CHANGE_TOUR_STATE}),
-            ...mapActions({fetchAlerts: FETCH_ALERTS, archiveAlerts: ARCHIVE_ALERTS}),
+            ...mapMutations({changeState: CHANGE_TOUR_STATE}),
+            ...mapActions({fetchAlert: FETCH_ALERT, archiveAlerts: ARCHIVE_ALERTS}),
             configAlert(alertId) {
                 /*
                     Fetch the requested alerts configuration and navigate to configuration page with the id, to load it
@@ -52,14 +52,14 @@
                 if (!alertId || this.isReadOnly) {
                     return
                 }
-                this.setAlert(alertId)
+                this.fetchAlert(alertId)
                 this.$router.push({path: `alerts/${alertId}`})
             },
             createAlert() {
                 if (this.isReadOnly) {
                     return
                 }
-                this.setAlert('new')
+                this.fetchAlert()
                 this.$router.push({path: '/alerts/new'})
             },
             removeAlerts() {
