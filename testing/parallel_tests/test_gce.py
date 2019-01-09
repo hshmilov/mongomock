@@ -31,13 +31,9 @@ class TestGceAdapter(AdapterTestBase):
         }
 
     @property
+    def adapter_has_constant_url(self):
+        return True
+
+    @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("No reachability test")
-    def test_check_reachability(self):
-        pass
-
-    @pytest.mark.skip('AX-2800')
-    def test_fetch_devices(self):
-        pass

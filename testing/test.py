@@ -208,7 +208,7 @@ class InstanceManager:
     def __docker_execute(self, instance_name, job_name, commands, timeout=MAX_SECONDS_FOR_ONE_JOB, **kwargs):
         assert isinstance(commands, str), 'docker execute command must be a shell command'
         assert '"' not in commands, 'Not supported'
-        commands = f'/bin/bash -c "{commands}" | ts -s'  # ts to print timestamp
+        commands = f'/bin/bash -c "{commands}"'  # disable temp | ts -s'  # ts to print timestamp
         if timeout > 0:
             commands = f'timeout -t {timeout} -s KILL {commands}'
         TC.print(f'{instance_name}: executing {job_name}: {commands}')

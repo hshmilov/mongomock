@@ -489,7 +489,7 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 try:
                     client_id = self._get_client_id(client_config)
                 except Exception:
-                    logger.info(f'{failure_line} - invalid client id')
+                    logger.exception(f'{failure_line} - invalid client id')
                     return return_error('Failed to get client id')
 
                 add_client_result = self._add_client(client_config)

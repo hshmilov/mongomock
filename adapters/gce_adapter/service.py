@@ -6,6 +6,8 @@ from google.oauth2 import service_account
 from googleapiclient import discovery
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import NodeState, Provider
+
+from axonius.clients.rest.connection import RESTConnection
 from axonius.smart_json_class import SmartJsonClass
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -18,6 +20,7 @@ from axonius.utils.parsing import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+GCE_ENDPOINT_FOR_REACHABILITY_TEST = f'https://www.googleapis.com/discovery/v1/apis/compute/v1/rest'
 
 POWER_STATE_MAP = {
     NodeState.STOPPED: DeviceRunningState.TurnedOff,
@@ -57,7 +60,7 @@ class GceAdapter(AdapterBase):
         return auth_file['client_id'] + '_' + auth_file['project_id']
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        return RESTConnection.test_reachability(GCE_ENDPOINT_FOR_REACHABILITY_TEST)
 
     def _connect_client(self, client_config):
         try:

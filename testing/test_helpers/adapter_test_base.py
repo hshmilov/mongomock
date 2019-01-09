@@ -38,6 +38,12 @@ class AdapterTestBase:
         raise NotImplementedError
 
     @property
+    def adapter_has_constant_url(self):
+        # By default, we assume that the user provides the url for the administration panel.
+        # If that is not the case, like in AWS or GCP, then there is no point in testing 'Fake Client'.
+        return False
+
+    @property
     def some_user_id(self):
         raise NotImplementedError
 
@@ -98,7 +104,8 @@ class AdapterTestBase:
     @flaky(max_runs=2)
     def test_check_reachability(self):
         assert self.adapter_service.is_client_reachable(self.some_client_details)
-        assert not self.adapter_service.is_client_reachable(FAKE_CLIENT_DETAILS)
+        if not self.adapter_has_constant_url:
+            assert not self.adapter_service.is_client_reachable(FAKE_CLIENT_DETAILS)
 
     @flaky(max_runs=2)
     def test_fetch_devices(self):

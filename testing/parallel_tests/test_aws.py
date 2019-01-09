@@ -25,9 +25,9 @@ class TestAwsAdapter(AdapterTestBase):
     def some_device_id(self):
         return client_details[0][1][0]
 
-    @pytest.mark.skip('No reachability test')
-    def test_check_reachability(self):
-        pass
+    @property
+    def adapter_has_constant_url(self):
+        return True
 
     @pytest.mark.skip('AX-2359')
     def test_proxy(self):

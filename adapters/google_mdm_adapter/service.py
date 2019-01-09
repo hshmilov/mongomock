@@ -14,6 +14,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from dateutil.parser import parse as parse_date
+from datetime import datetime
 
 # Required scopes by the json key credentials for mobile devices
 MOBILE_SCOPES = ['https://www.googleapis.com/auth/admin.directory.device.mobile.readonly']
@@ -27,8 +28,11 @@ class GoogleMdmAdapter(AdapterBase):
     """
 
     class MyDeviceAdapter(DeviceAdapter):
-        adbStatus = Field(bool, "Is ADB enabled")
+        adb_status = Field(bool, "Is ADB enabled")
         emails = ListField(str, "Emails for this device")
+        device_password_status = Field(str, 'Device Password Status')
+        first_sync = Field(datetime, 'First Sync')
+        developer_options_status = Field(bool, 'Developer Options Status')
 
     class MyUserAdapter(UserAdapter):
         pass
@@ -46,7 +50,11 @@ class GoogleMdmAdapter(AdapterBase):
     def _connect_client(self, client_config) -> GSuiteAdminConnection:
         try:
             auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
-            return GSuiteAdminConnection(auth_file, client_config['account_to_impersonate'], MOBILE_SCOPES + USER_SCOPES)
+            conn = GSuiteAdminConnection(
+                auth_file, client_config['account_to_impersonate'], MOBILE_SCOPES + USER_SCOPES
+            )
+            next(conn.get_users())    # try to connect
+            return conn
         except Exception as e:
             logger.error('Failed to connect to client {0}'.format(
                 self._get_client_id(client_config)))
@@ -86,13 +94,53 @@ class GoogleMdmAdapter(AdapterBase):
             logger.warning(f"Device {str(raw_device_data)} has no id")
             return
         device.set_raw(raw_device_data)
-        device.figure_os(raw_device_data.get('os'))
-        device.emails = raw_device_data.get('email')
-        device.device_model = raw_device_data.get('model')
-        device.device_model_family = raw_device_data.get('type')
+        os = raw_device_data.get('os')
+        device.figure_os(os)
+        emails = raw_device_data.get('email')
+        primary_email = None
+        if isinstance(emails, list):
+            device.emails = emails
+            primary_email = emails[0]
+        elif isinstance(emails, str):
+            device.emails = emails
+        model = raw_device_data.get('model')
+        device_model = model
+        device.device_model = device_model
+        device_type = raw_device_data.get('type')
+        device.device_model_family = device_type
         mac = raw_device_data.get('wifiMacAddress')
         if mac:
             device.add_nic(mac)
+        name = f'{model} ' if model else ''
+        if os:
+            name += f'{os} '
+        if primary_email:
+            name += f'{primary_email} '
+        device.name = name
+        device.device_password_status = raw_device_data.get('devicePasswordStatus')
+        first_sync = raw_device_data.get('firstSync')
+        try:
+            if first_sync:
+                device.first_sync = parse_date(first_sync)
+        except Exception:
+            logger.exception(f'Can not parse First Sync {first_sync}')
+        last_sync = raw_device_data.get('lastSync')
+        try:
+            if last_sync:
+                device.last_seen = parse_date(last_sync)
+        except Exception:
+            logger.exception(f'Can not parse last sync {last_sync}')
+
+        try:
+            device.adb_status = raw_device_data.get('adbStatus')
+        except Exception:
+            logger.exception(f'Can not set adb status')
+
+        try:
+            device.developer_options_status = raw_device_data.get('developerOptionsStatus')
+        except Exception:
+            logger.exception(f'Can not set developer options status')
+
         device.adapter_properties = [AdapterProperty.Agent.name, AdapterProperty.MDM.name]
         return device
 

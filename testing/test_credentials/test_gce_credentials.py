@@ -1,15 +1,16 @@
+# The following is a read-only account for the axonius-office environment. It allows viewing information of
+# virtual machines and containers.
 service_json_data = {
     "type": "service_account",
-    "project_id": "my-project-1529865313186",
-    "private_key_id": "1ad704dfd5d7cf2cff6a67ae4355c68ded859d95",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDJWUFV1XrT5p+m\nUVdn2qmjfcjhw6wojmk1P4janiFJuodZcb7zHoMO8bQ9+SFa6/aTTq0WOYe6Ua+R\nLQQj61ROK+oHtq5amGeX9Hdn4r+uQb6vkHZt7TmlgZwUied1eQgpB233f/hhwpEn\ntoR76tcTad1Uaq6DOpHmFarWEtbP5WN0BBhEFksKW5lBZCegrBaXP9bQpLdU+t00\n//qX0bDuQ7bSwvomGKlmx4twLTu9bzs/C38OmA2koFNPzjywOP+GYbZFjthaJny4\n4LtjJ+9vh+XWEF3bk0lTFtBC6ZZrpx5SayG9nqY3JcKSw8eTjhC6daTqchUy98tt\nN8x5U11ZAgMBAAECggEAFVMKgkGQJwPSdfoAqq87/uSWG0H+2FM/1Xu/fd7YOe+j\nQM/1CBjbysACxbr+QzvBIzgGiRdp9mvLDzIwMXEtnjNUr4EznUTtmMhzgnk/cYBF\nRqEDR/BjRfHwgrTZwoVhXb4LkZY4Kztg5e60wI5+PZA9WIDNb3jLJa33CEHZxg3u\nQIdNgqXzKCoMrtrpi52oXGhqBPbTHs997r9O+DBpd4KrVM6eku+hWg2Ac0A/SHfp\nmOboLeASvuxQxkuIDgWYq2YuUZAhWncZaEFSTj0I0Uctiuq3vH83vWsZ0f7DZzgA\ntys+vvm/xkCnWsWTgnA5L9ojSLh41D5L9PpLWt7YUQKBgQDxaiyeDWtolbx/My/O\noCWrxlM5wv+wvIgI1xLT+ihvhwTn3//m3j8zbLDH56ELtTFj5ZFIjcXSpAql/ibM\n+6/N8ufxtGIhpuwnRe+StyhL2PNuIom/c/Dl5AJvWtZOAAUsMUUGdWjLjveFJ+cn\nsYOvyvsaoebweaGSMzU+4S526QKBgQDVg2a75jfRI7AkidLLwMwzXpAo6dGPDrWp\nZzwrUF0LgHDLlWY0LHFHZ8nyGkYsXRVmtz9fU6v5SUT+LRiq/0mYhD5wLKulFJKt\ngy43Y/xkKToND1dK0yGjxD+LvOohPy2jSSxE59N/GqsAdQ7SMzO+LWqOPC2ksM/s\n4MMr2l6M8QKBgBEZdiOTy8HSqVFRLNez3Dc4iviSaU35bKFDqp+9HlQX+i76XMPb\nhhp8XmEqdOvBX8g1oH7FG/f5io+LWvA1+5PY2rjyD+lWS2/Usk1wD7ifm053v84B\nxlRiPBHrGzbXJYalzr/QXSXd8IZL90GGf09aT0LpqNPrqZgTbHgRtxrRAoGBAKML\niuIl9a3RcOsWDFDn04fOyItVsl9qPjM00G/LGKJ13Ky6U6e34HFEwqQMiFXMZ1Fe\n0hf7jzH4T6VBzrqV5B+BrSSAGDshsLirmhlWUyAxk1DxzBkpjWC/tj8BblEhK7qr\nYBDmb016kebxfPXrf7HUgLBJKBnBo6YiJShRwy4hAoGANYMpn6zQnVycyMuftv3m\n3nSiC7YAtNcVAccWPEVNXNuZjyz7cO9+zjlqoIhyqVR8nWgiUrfvh6yBuBKplac9\n1XdPxfZGyA3ffNy5Aa0l5EnK9hSAkNwABCrl18h94MppJUtMAbQra9/Eft+U+zu8\n8jQbsvmU7E3SNHj2aJ50keU=\n-----END PRIVATE KEY-----\n",
-    "client_email": "account-for-gce@my-project-1529865313186.iam.gserviceaccount.com",
-    "client_id": "102852287277178607494",
+    "project_id": "axonius-office",
+    "private_key_id": "119592f26cb3ddf0f76b3aeea8283e8372afb656",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC1CG6YKGgTmmTG\nOVQR+YpNTXkgvwYEpdFK4n3dDW9wJQva36EoR78TFV4QZeOCCKKS9Xn+UdErQYwm\nIo91mWO07dysSn9qJ/f1s2xtGtuvh9G9F1nN9yeqnPrKE54Wo84twrccdoUGBpY0\nx3yhiR4XwY1VsLUx+CzlHemV2hQJhelmIw5SDU0zRnvHYvwsxQBcrTmuI8wGBsdc\nU2ppeDyh9j6vO/kEKjrF/NESzIi/WTrTTRN+3aPjYTciedGm9uGIRJp4Vlptydb1\nn7ukRVXAM5QV3i7Vr5Iap/eLTO/a5VmKywe1AOUkf56P2VPQpkLflLGpB9j48OYj\ndU/g91vHAgMBAAECggEAMjGbUG7rpHvLczaT+8Pft91CN3UfewxqwkOYOEEwY7yx\n08brjRqPfQAQq6VEdlpkkTCk2YHf6AltjWlJs4aLIbBN3itttoZMdwB/kKTAwqN6\n4N3nlXbwtZp+4qabz5UtZny1fpvR+EC9RvcEtFkrUdTllhu/sZIpCIHJsTXdFmJm\nRpdtqm/8AR0BgmfMwWr0EZIGsTrrDorVdqWrmuxkLPOf0VzrNMvO7XIDXZJ7nLXh\nrI1fFi22a5W37z6RnMkopVdS8zm4sfDx8DU7iZp5aVUQl6uxmC4bN2G6DpLO8UyZ\ntnPStg/GRW/VVZ438EnxSYEH4Su4hCtSp5T0AbB7eQKBgQDfKXE0enk+LusY96vu\nq13EXH+B2tafd9KjONJi1JxJZ5IXf3GtaU4n1yI3zXluujXzPhV4khM2c0QcWeNc\na36R9Z3Hbd2vrFR/wiRho5ZJkk6Dx0ArL8vlE/22TOaPVBmBe97Zg4Aq6fLqDO1o\neM25jAJgxrixWhUno8HHhNssRQKBgQDPq/uoBwhvwrR43jUn1Wb87wgcyxCz4cql\ns+h2hOWn1hlOA7KBkUPow067XtrazYKKM2MH2T0no9Dr4kOFiqn6+qqm/i1EYVMF\n5Rd38Vr+/splPE/5lzamn38jYuBq3avynTjG1BqnBfTLFrcJqxTpP3oe7HyUgt31\nX9pdtIk2mwKBgBa+K3pUrPyIXY9K1mvZbRHw91Gtksfnt0DJLq/ByTe15W6dn2Ez\n5TIsO6GCQEjnk0352shR4sFe1+cnxgMKNXj8lhrX+IrJvkbS61BEErHmxjep28FK\n+rWa5vVoOusKgBrxG9IBE9PLyeTOcnd+MEEjoq5oMjRo4NUMXFhQEuIdAoGAQYE+\nIAIX5yjDRFzS532ovp+nL23eFt9hzGKzMK86wXYHBVSlOblYclMownFpFxs70dvj\noNYlNBu4Cq+UHMtgUoo+ye3i2W7ZgUKB5JN84HH95XDgyRmpY2Vr9P17TDofwqdV\nAWJmBckbLfQ8SBBuyCP9oUN3CGE/IebaOjR4E4ECgYEA2fk9XsYLxKGGN2s8tO4U\nd6oFYeDHR0R/aSCErmeKDrhOG/PWOOxDhsseEezP9uM1pydoWhpVOERSylGENQQq\n/ON9+Jlwz4Vf38V3QXd64hU/fI9Z9rHeyB3IbnMqXvq+NMA7Gz1kZaDIdBULJjS/\ntjOFakIimWJ88OdOy/Budpk=\n-----END PRIVATE KEY-----\n",
+    "client_email": "axonius-readonly@axonius-office.iam.gserviceaccount.com",
+    "client_id": "108571307707270904481",
     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://accounts.google.com/o/oauth2/token",
+    "token_uri": "https://oauth2.googleapis.com/token",
     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/account-for-gce%40my-project-1529865313186.iam.gserviceaccount.com"
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/axonius-readonly%40axonius-office.iam.gserviceaccount.com"
 }
 
-
-SOME_DEVICE_ID = '2939400517831256847'
+SOME_DEVICE_ID = '8305082175458207405'   # salt-master-1
