@@ -52,7 +52,7 @@ class SeleniumService(WeaveService):
         print(f'Selenium start ended successfully after {time.time() - start_time}.')
         time.sleep(60)  # bug in selenium time causes tests to fail on servers the first time after docker cleanup
 
-    def get_dockerfile(self, mode=''):
+    def get_dockerfile(self):
         return ''
 
     def get_main_file(self):

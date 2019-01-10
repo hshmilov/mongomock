@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "build": "webpack --config webpack.prod.js",
-    "start": "webpack-dev-server --config webpack.dev.js",
+    "dev": "webpack --config webpack.dev.js",
+    "start": "webpack-dev-server --config webpack.server.js",
     "svg": "vsvg -s src/assets/icons -t src/components/icons/"
   },
   "dependencies": {

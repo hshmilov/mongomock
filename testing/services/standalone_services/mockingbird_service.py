@@ -21,7 +21,7 @@ class MockingbirdService(WeaveService):
     def port(self):
         return DOCKER_PORTS[self.name]
 
-    def get_dockerfile(self, mode=''):
+    def get_dockerfile(self):
         return fr'''
         FROM axonius/axonius-libs
 

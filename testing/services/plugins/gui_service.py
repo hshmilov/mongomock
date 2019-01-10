@@ -29,6 +29,9 @@ class GuiService(PluginService):
         super().__init__('gui')
         self._session = requests.Session()
         self.override_exposed_port = True
+        local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
+        local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
+        self.is_dev = os.path.isdir(local_npm) and os.path.isdir(local_dist)
 
     def _migrate_db(self):
         super()._migrate_db()
@@ -341,6 +344,10 @@ class GuiService(PluginService):
         container_settings_dir_path = os.path.join('/home/axonius/', AXONIUS_SETTINGS_DIR_NAME)
         volumes = [f'{settings_path}:{container_settings_dir_path}']
 
+        # GUI supports development, but to use, you have to build your *local* node modules
+        if self.is_dev:
+            volumes.extend(super().volumes_override)
+            return volumes
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
         volumes.extend([f'{libs}:/home/axonius/libs:ro'])
 
@@ -350,8 +357,12 @@ class GuiService(PluginService):
 
         return volumes
 
-    def get_dockerfile(self, mode=''):
-        return '''
+    def get_dockerfile(self):
+        build_command = '' if self.is_dev else '''
+# Compile npm. we assume we have it from axonius-libs
+RUN cd ./gui/frontend/ && npm run build
+'''
+        return ('''
 FROM axonius/axonius-libs
 
 # Set the working directory to /app
@@ -370,9 +381,7 @@ RUN cd ./gui/frontend && npm set progress=false && npm install
 COPY ./ ./gui/
 COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
 RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axonius-libs/src/ && ln -s ../../libs/ .
-
-# Compile npm. we assume we have it from axonius-libs
-RUN cd ./gui/frontend/ && npm run build'''[1:]
+''' + build_command)[1:]
 
     def __del__(self):
         self._session.close()

@@ -88,7 +88,7 @@ class DockerService(AxonService):
         """
         return None
 
-    def get_dockerfile(self, mode=''):
+    def get_dockerfile(self):
         return f'''
 FROM axonius/axonius-libs
 
@@ -268,7 +268,7 @@ else:
         if os.path.isfile(dockerfile_path):
             dockerfile = open(dockerfile_path, 'r').read()
         else:
-            dockerfile = self.get_dockerfile(mode)
+            dockerfile = self.get_dockerfile()
             assert dockerfile is not None
 
         # Append the main.py file creation

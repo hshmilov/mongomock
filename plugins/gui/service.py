@@ -254,6 +254,10 @@ def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, dat
         yield (start, end)
 
 
+if os.environ.get('HOT', None) == 'true':
+    session = None
+
+
 class GuiService(PluginBase, Triggerable, Configurable, API):
     class MyDeviceAdapter(DeviceAdapter):
         pass
@@ -353,6 +357,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._set_first_time_use()
 
         self.__setup_dashboard_caching()
+        if os.environ.get('HOT', None) == 'true':
+            # pylint: disable=W0603
+            global session
+            user_db = self.__users_collection.find_one({'user_name': 'admin'})
+            user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
+            session = {'user': user_db}
 
     def __setup_dashboard_caching(self):
         """

@@ -69,7 +69,7 @@ class MongoService(WeaveService):
                 '--replSet', 'axon-cluster'
                 ]
 
-    def get_dockerfile(self, mode=''):
+    def get_dockerfile(self):
         return f"""
     FROM mongo:4.0
     
