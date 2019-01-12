@@ -1,7 +1,14 @@
 {
   "exclude-list": {
     "add-to-exclude": [
-      "nimbul"
+      "nimbul",
+      "careful_execution_correlator",
+      "traiana_lab_machines",
+      "qcore",
+      "json_file",
+      "stresstest_scanner",
+      "stresstest",
+      "infinite_sleep"
     ],
     "remove-from-exclude": []
   }

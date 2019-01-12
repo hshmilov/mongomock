@@ -49,6 +49,10 @@ class DockerService(AxonService):
         return f'{self.container_name}.axonius.local'
 
     @property
+    def service_name(self):
+        return f'{self.container_name}'.replace('-', '_')
+
+    @property
     def exposed_ports(self):
         """
         :return: list of pairs (exposed_port, inner_port)
@@ -204,7 +208,7 @@ else:
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
-        logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.container_name.replace('-', '_')))
+        logsfile = os.path.join(self.log_dir, '{0}.docker.log'.format(self.service_name))
 
         docker_up = self._get_basic_docker_run_command_with_network()
 

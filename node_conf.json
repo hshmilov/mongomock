@@ -1,0 +1,21 @@
+{
+  "exclude-list": {
+    "add-to-exclude": [
+      "aggregator",
+      "careful_execution_correlator",
+      "core",
+      "device_control",
+      "execution",
+      "general_info",
+      "gui",
+      "pm_status",
+      "reports",
+      "static_analysis",
+      "static_correlator",
+      "static_users_correlator",
+      "system_scheduler",
+      "mongo"
+    ],
+    "remove-from-exclude": []
+  }
+}

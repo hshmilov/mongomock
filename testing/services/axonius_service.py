@@ -130,7 +130,7 @@ class AxoniusService:
             service.take_process_ownership()
 
     def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True,
-                       expose_db=False, env_vars=None):
+                       expose_db=False, env_vars=None, internal_service_white_list=None):
 
         def _start_service(service_to_start):
             if skip and service_to_start.get_is_container_up():
@@ -150,7 +150,11 @@ class AxoniusService:
                 service.remove_container()
 
         # Start in parallel
-        services_to_start = list(self.axonius_services)
+        if internal_service_white_list is not None:
+            services_to_start = list(
+                [service for service in self.axonius_services if service.service_name in internal_service_white_list])
+        else:
+            services_to_start = list(self.axonius_services)
 
         mongo_service = next((x for x in services_to_start if x.container_name == 'mongo'), None)
         if mongo_service:

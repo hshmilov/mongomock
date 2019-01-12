@@ -4,12 +4,20 @@ import time
 import pytest
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
-from services.adapters.infinite_sleep_service import InfiniteSleepService, infinite_sleep_fixture
-from services.adapters.stresstest_scanner_service import StresstestScannerService, StresstestScanner_fixture
-from services.adapters.stresstest_service import StresstestService, Stresstest_fixture
+from axonius.utils.wait import wait_until
+from axonius_system import (CUSTOMER_CONF_PATH, NODE_CONF_PATH,
+                            NODE_MARKER_PATH, SYSTEM_CONF_PATH)
+from devops.axonius_system import main as system_main
+from exclude_helper import ExcludeHelper
+from services.adapters.infinite_sleep_service import (InfiniteSleepService,
+                                                      infinite_sleep_fixture)
+from services.adapters.stresstest_scanner_service import (StresstestScanner_fixture,
+                                                          StresstestScannerService)
+from services.adapters.stresstest_service import (Stresstest_fixture,
+                                                  StresstestService)
 from test_credentials import test_infinite_sleep_credentials
 from test_credentials.test_gui_credentials import DEFAULT_USER
-from axonius.utils.wait import wait_until
+from services.axonius_service import get_service
 
 pytestmark = pytest.mark.sanity
 MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3   # the amount of time we expect a cycle to end, without async plugins in bg
@@ -93,3 +101,59 @@ def test_stop_research(axonius_fixture, infinite_sleep_fixture):
     time.sleep(10)  # otherwise the adapter might not even start fetching
     scheduler.stop_research()
     scheduler.wait_for_scheduler(True)
+
+
+@pytest.mark.parametrize("is_node_mode_test_on", [True, False])
+def test_exclude_config(is_node_mode_test_on):
+    must_internal_services = []
+    system = get_service()
+    system.take_process_ownership()
+    system.stop(should_delete=True)
+
+    # Two exclusion lists exists:
+
+    # The first exclusion list is purely populated from the config.
+    exclude_by_config = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
+    exclude_by_config = ExcludeHelper(CUSTOMER_CONF_PATH).process_exclude(exclude_by_config)
+
+    # The second exclusion list is populated by the logic that a node should only run adapters.
+
+    # This list is first populated from system conf even though this list should be by logic because
+    # to a few adapters being excluded always throughout the system and we want to get those adapters.
+    exclude_by_logic = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
+
+    system_main('system down --all'.split())
+
+    try:
+        if is_node_mode_test_on:
+            # Adding the case of node to the exclusion lists.
+            exclude_by_config = ExcludeHelper(NODE_CONF_PATH).process_exclude(exclude_by_config)
+            exclude_by_logic.extend([service_name for service_name, _ in system.get_all_plugins()])
+            exclude_by_logic.extend([service.service_name for service in system.axonius_services])
+
+            must_internal_services.extend(['core', 'mongo', 'aggregator'])
+
+            system.start_and_wait(internal_service_white_list=must_internal_services)
+            NODE_MARKER_PATH.touch()
+
+        system_main('system up --all'.split())
+        for service in system.axonius_services:
+            if service.service_name in must_internal_services:
+                continue  # These adapters must be up for a basic system to operate.
+
+            if service.service_name in exclude_by_config:
+                assert not service.is_up()
+
+            if service.service_name in exclude_by_logic:
+                assert not service.is_up()
+
+        for _, adapter in system.get_all_adapters():
+            adapter_instance = adapter()
+            if adapter_instance.adapter_name not in exclude_by_config:
+                assert adapter_instance.is_up()
+
+            if adapter_instance.adapter_name not in exclude_by_logic:
+                assert adapter_instance.is_up()
+    finally:
+        if is_node_mode_test_on and NODE_MARKER_PATH.exists():
+            NODE_MARKER_PATH.unlink()

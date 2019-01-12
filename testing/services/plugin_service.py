@@ -219,7 +219,10 @@ class AdapterService(PluginService):
 
     def __init__(self, name: str):
         super().__init__(f'{name}-adapter', f'../adapters/{name.replace("-", "_")}_adapter')
-        self.adapter_name = name
+
+    @property
+    def adapter_name(self):
+        return self.service_name[:-len('_adapter')]
 
     def add_client(self, client_details):
         return self.clients(client_details)

@@ -14,8 +14,11 @@ CORTEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
 SYSTEM_CONF_PATH = Path(CORTEX_PATH) / 'system_conf.json'
 CUSTOMER_CONF_RELATIVE_PATH = Path(AXONIUS_SETTINGS_DIR_NAME) / 'customer_conf.json'
+NODE_CONF_PATH = Path(CORTEX_PATH) / 'node_conf.json'
 CUSTOMER_CONF_PATH = Path(CORTEX_PATH) / CUSTOMER_CONF_RELATIVE_PATH
 AXONIUS_MOCK_DEMO_ENV_VAR = 'AXONIUS_MOCK_MODE=TRUE'
+NODE_MARKER_RELATIVE_PATH = Path(AXONIUS_SETTINGS_DIR_NAME) / 'connected_to_master.marker'
+NODE_MARKER_PATH = Path(CORTEX_PATH) / NODE_MARKER_RELATIVE_PATH
 
 
 def main(command):
@@ -106,6 +109,7 @@ def system_entry_point(args):
             f.write(get_metadata('none').encode())
 
     axonius_system = get_service()
+    internal_services = [service.service_name for service in axonius_system.axonius_services]
     if args.all:
         assert len(args.services) == 0 and len(args.adapters) == 0
         args.services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics']
@@ -113,16 +117,17 @@ def system_entry_point(args):
         # standalone services shouldn't be raised as part of --all.
 
         if args.mode != 'down':
-            conf_exclude = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
-            conf_exclude = ExcludeHelper(CUSTOMER_CONF_PATH).process_exclude(conf_exclude)
-            args.exclude = set(conf_exclude).union(args.exclude)
+            args.exclude = process_exclude_from_config(args.exclude)
 
     for name in args.exclude:
-        if name not in args.services and name not in args.adapters:
-            raise ValueError(f'Excluded name {name} not found in {args.services} and {args.adapters}')
+        if name not in args.services and name not in args.adapters and name not in internal_services:
+            raise ValueError(
+                f'Excluded name {name} not found in services:{args.services} or in adapters: {args.adapters} '
+                f'or in internal_services:{internal_services}')
 
     args.services = [name for name in args.services if name not in args.exclude]
     args.adapters = [name for name in args.adapters if name not in args.exclude]
+    internal_services = [name for name in internal_services if name not in args.exclude]
 
     axonius_system.take_process_ownership()
     if args.hard:
@@ -146,7 +151,7 @@ def system_entry_point(args):
         # Optimization - async build first
         axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild)
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db,
-                                      env_vars=args.env)
+                                      env_vars=args.env, internal_service_white_list=internal_services)
         axonius_system.start_plugins(args.adapters, args.services, [], mode, args.restart, hard=args.hard,
                                      skip=args.skip, env_vars=args.env)
     elif args.mode == 'down':
@@ -159,6 +164,14 @@ def system_entry_point(args):
         print(f'Building system and {args.adapters + args.services}')
         axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild,
                              args.hard)
+
+
+def process_exclude_from_config(exclude):
+    conf_exclude = ExcludeHelper(SYSTEM_CONF_PATH).process_exclude([])
+    conf_exclude = ExcludeHelper(CUSTOMER_CONF_PATH).process_exclude(conf_exclude)
+    if NODE_MARKER_PATH.exists():
+        conf_exclude = ExcludeHelper(NODE_CONF_PATH).process_exclude(conf_exclude)
+    return set(conf_exclude).union(exclude)
 
 
 def service_entry_point(target, args):
@@ -202,6 +215,9 @@ def service_entry_point(target, args):
             args.name == 'all' else [args.name]
     else:
         raise ValueError(f'Error, target {target} not found')
+
+    if args.name == 'all':
+        args.exclude = process_exclude_from_config(args.exclude)
 
     if args.exclude:
         services = [name for name in services if name not in args.exclude]

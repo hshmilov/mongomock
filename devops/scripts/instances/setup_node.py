@@ -9,11 +9,11 @@ from pathlib import Path
 CORTEX_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', '..'))
 AXONIUS_SETTINGS_PATH = Path(CORTEX_PATH) / '.axonius_settings'
 BOOTED_FOR_PRODUCTION_MARKER_PATH = AXONIUS_SETTINGS_PATH / '.booted_for_production'
+NODE_MARKER_PATH = AXONIUS_SETTINGS_PATH / 'connected_to_master.marker'
 INSTANCE_CONNECT_USER_NAME = 'node_maker'
 VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
 PASSWORD_GET_URL = 'https://core.axonius.local/api/node/'
-ADAPTER_RESTART_COMMAND = './axonius.sh adapter all up --restart --exclude nimbul ' \
-                          'diagnostics --env NODE_INIT_NAME={init_name}'
+ADAPTER_RESTART_COMMAND = './axonius.sh system up --all --prod --env NODE_INIT_NAME={init_name}'
 
 
 def shut_down_system():
@@ -72,9 +72,10 @@ def setup_node(connection_string):
 
     shut_down_system()
     connect_to_master(master_ip.strip(), weave_pass.strip())
+    run_tunnler()
+    NODE_MARKER_PATH.touch()
     restart_all_adapters(init_name.strip())
     change_instance_setup_user_pass()
-    run_tunnler()
 
 
 def main():
