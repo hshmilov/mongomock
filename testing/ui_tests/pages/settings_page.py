@@ -16,6 +16,7 @@ class SettingsPage(Page):
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
+    GLOBAL_SSL_LABEL = 'Override default SSL settings'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
                                '                             updating the system and can lead' \
                                ' to slower issue resolution time.                             ' \
@@ -58,6 +59,21 @@ class SettingsPage(Page):
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
     USE_PROXY = 'Proxy Enabled'
+    # sorry - but it's not my fault
+    # https://axonius.atlassian.net/browse/AX-2991
+    # those are the fully fledged css selectors for the elements
+    CERT_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab > div > form ' \
+                            '> div.array > div:nth-child(7) > div > div > div:nth-child(4) > div > div > input[' \
+                            'type="file"] '
+    PRIVATE_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab > div > ' \
+                               'form > div.array > div:nth-child(7) > div > div > div:nth-child(5) > div > div > ' \
+                               'input[type="file"] '
+    CERT_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab >' \
+                                     ' div > form > div.array > div:nth-child(7) > div > div > div:nth-child(4) >' \
+                                     ' div > div > div.file-name '
+    PRIVATE_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab >' \
+                                        ' div > form > div.array > div:nth-child(7) > div > div > div:nth-child(5) >' \
+                                        ' div > div > div.file-name '
 
     @property
     def url(self):
@@ -140,6 +156,23 @@ class SettingsPage(Page):
 
     def find_send_emails_toggle(self):
         return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
+
+    def open_global_ssl_toggle(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.GLOBAL_SSL_LABEL)
+        self.click_toggle_button(toggle, make_yes=make_yes)
+
+    def set_global_ssl_settings(self, hostname: str, cert_data, private_data):
+        self.fill_text_field_by_element_id('hostname', hostname)
+        cert_element = self.driver.find_element_by_css_selector(self.CERT_ELEMENT_SELECTOR)
+        self.upload_file_on_element(cert_element, cert_data)
+
+        private_element = self.driver.find_element_by_css_selector(self.PRIVATE_ELEMENT_SELECTOR)
+        self.upload_file_on_element(private_element, private_data)
+
+    def get_global_ssl_settings(self):
+        cert = self.driver.get_element_by_css_selector(self.CERT_ELEMENT_FILENAME_SELECTOR).text
+        private = self.driver.get_element_by_css_selector(self.PRIVATE_ELEMENT_FILENAME_SELECTOR).text
+        return cert, private
 
     def toggle_advanced_settings(self):
         self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=X_BODY)

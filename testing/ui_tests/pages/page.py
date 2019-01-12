@@ -483,14 +483,20 @@ class Page:
     def safe_refresh(self):
         self.driver.get(self.driver.current_url)
 
-    def __upload_file_by_id(self, input_id, file_path):
-        self.driver.find_element_by_id(input_id).send_keys(file_path)
+    @staticmethod
+    def __upload_file_on_element(element, file_path):
+        element.send_keys(file_path)
 
-    def upload_file_by_id(self, input_id, file_content):
+    @staticmethod
+    def upload_file_on_element(element, file_content):
         with NamedTemporaryFile(delete=False, prefix=TEMP_FILE_PREFIX) as temp_file:
             temp_file.write(bytes(file_content, 'ascii'))
             temp_file.file.flush()
-            return self.__upload_file_by_id(input_id, temp_file.name)
+            return Page.__upload_file_on_element(element, temp_file.name)
+
+    def upload_file_by_id(self, input_id, file_content):
+        element = self.driver.find_element_by_id(input_id)
+        self.upload_file_on_element(element, file_content)
 
     def close_dropdown(self):
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()
