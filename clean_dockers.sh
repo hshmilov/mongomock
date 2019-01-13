@@ -3,6 +3,12 @@
 export CORTEX_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $CORTEX_ROOT/prepare_python_env.sh
 
+echo "Killing dockers"
+RUNNING_DOCKERS=$( docker ps -q )
+if [ "$RUNNING_DOCKERS" != "" ]; then
+    docker kill ${RUNNING_DOCKERS}
+fi
+
 echo "Removing all containers"
 RUNNING_DOCKERS=$( docker ps -a -q )
 if [ "$RUNNING_DOCKERS" != "" ]; then
@@ -36,7 +42,8 @@ if [[ $1 == "images" ]]; then
         AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
         if [ "$AVAILABLE_IMAGES" != "" ]; then
             echo "Axonius images remaining: $AVAILABLE_IMAGES"
-            exit 1
+            # Problematic in Windows
+            # exit 1
         fi
     fi
 fi
