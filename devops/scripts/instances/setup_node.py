@@ -43,6 +43,8 @@ def run_tunnler():
     my_env = os.environ.copy()
     my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
 
+    # Removing old tunnler if exists (If this script is being run to reconnect an existing node).
+    subprocess.call(shlex.split('docker rm -f tunnler'))
     subprocess.check_call(command, env=my_env)
 
 

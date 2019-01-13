@@ -35,9 +35,9 @@ RESTART_SYSTEM_ON_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 
                                                        'restart_system_on_reboot.py')
 INSTANCES_SETUP_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH, 'setup_node.py')
 INSTANCE_SETTINGS_DIR_NAME = '.axonius_settings'
-INSTANCE_IS_MASTER_MARKER_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME, '.logged_in')
-BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(
-    AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME, '.booted_for_production')
+AXONIUS_SETTINGS_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME)
+INSTANCE_IS_MASTER_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.logged_in')
+BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.booted_for_production')
 INSTANCE_CONNECT_USER_NAME = 'node_maker'
 INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
 
@@ -96,6 +96,7 @@ def install(first_time, root_pass):
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
     chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)  # new sources
+    set_special_permissions(root_pass)
 
 
 def validate_old_state(root_pass):
@@ -169,7 +170,7 @@ def push_old_instances_settings():
     print_state('Copying old settings (weave encryption key, master marker and first boot marker')
     if os.path.exists(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME)):
         os.rename(os.path.join(TEMPORAL_PATH, INSTANCE_SETTINGS_DIR_NAME),
-                  os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME))
+                  AXONIUS_SETTINGS_PATH)
 
 
 def setup_instances():
@@ -193,6 +194,12 @@ def set_booted_for_production():
 
 def chown_folder(root_pass, path):
     cmd = f'chown -R ubuntu:ubuntu {path}'
+    run_as_root(cmd.split(), root_pass)
+
+
+def set_special_permissions(root_pass):
+    # Adding write permissions on .axonius_settings so node_maker can touch a new node.marker
+    cmd = f'chmod o+w {AXONIUS_SETTINGS_PATH}'
     run_as_root(cmd.split(), root_pass)
 
 
