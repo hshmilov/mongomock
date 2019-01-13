@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    snipeit_adapter: {
+        title: 'Snipe-IT - BETA',
+        description: 'Snipe-IT is a free, open source IT asset management system written in PHP.'
+    },
     mobi_control_adapter: {
         title: 'Soti Mobi Control - BETA',
         description: 'MobiControl is a software system for managing mobile devices in the enterprise.'

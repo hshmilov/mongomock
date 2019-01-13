@@ -64,7 +64,7 @@ def normalize_mail(adapter_data):
             return None
     # Checking mail format validity
     if not re.match(r'[^@]+@[^@]+\.[^@]+', mail):
-        logger.warning(f'Unrecognized email format found: {mail}')
+        logger.debug(f'Unrecognized email format found: {mail}')
         return None
 
     return mail.strip().lower()

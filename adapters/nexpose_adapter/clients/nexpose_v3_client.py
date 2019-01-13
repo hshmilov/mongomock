@@ -93,8 +93,8 @@ class NexposeV3Client(NexposeClient):
                                                      f"request id {request_id_absolute}. "
                                                      f"original response is {raw_answer}. Yielding with no tags")
                                     except Exception:
-                                        logger.exception(f"Exception while parsing async response for {text_answer}"
-                                                         f". Yielding with no tags")
+                                        logger.debug(f"Exception while parsing async response for {text_answer}"
+                                                     f". Yielding with no tags")
                                 else:
                                     msg = f"Got an async response which is not exception or ClientResponse. " \
                                           f"This should never happen! response is {raw_answer}"
