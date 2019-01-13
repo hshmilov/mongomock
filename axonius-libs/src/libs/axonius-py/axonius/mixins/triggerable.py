@@ -46,6 +46,23 @@ JobState = namedlist('JobState',
                      )
 
 
+def _on_job_continue(job_state: JobState, last_error: str):
+    if not job_state.scheduled:
+        job_state.triggered = False
+        # Why bother removing the reference to 'promise'?
+        # This references is not allowing for the gc to clean everything that is referenced from the promise,
+        # thus it blocks the GC from cleaning the stacktrace (or something like that) and thus some things, among
+        # the iterators described in
+        # https://axonius.atlassian.net/browse/AX-2996
+        # will not be freed until the next call to triggerable and a GC run, and they should be cleaned now,
+        # otherwise the system will lock up.
+        # The reason this is safe is that job_state.promise is only used if job_state.triggered = True,
+        # and clearly, job_state.promise = False after the line executed above.
+        job_state.promise = None
+    job_state.scheduled = False
+    job_state.last_error = last_error
+
+
 class Triggerable(Feature, ABC):
     """
     Defined a plugin that may be 'triggered' to do something
@@ -137,7 +154,7 @@ class Triggerable(Feature, ABC):
         promise = job_state.promise
         if promise:
             Promise.wait(promise)
-            if promise.is_rejected:
+            if promise.is_rejected or isinstance(promise.value, Exception):
                 logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
                 return 'Error has occurred', 500
             return promise.value or ''
@@ -176,22 +193,21 @@ class Triggerable(Feature, ABC):
 
     def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None):
         if priority:
-            return self._triggered(job_name, post_json) or ''
+            res = self._triggered(job_name, post_json) or ''
+            return res
 
         job_state = self.__state[job_name]
 
         # having a lock per job allows more efficient parallelization
         with job_state.lock:
-            self.__perform_trigger(job_name, job_state, post_json)
+            promise = self.__perform_trigger(job_name, job_state, post_json)
 
         if blocking:
-            promise = job_state.promise
-            if promise:
-                Promise.wait(promise)
-                if promise.is_rejected:
-                    logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
-                    return 'Error has occurred', 500
-                return promise.value or ''
+            Promise.wait(promise)
+            if promise.is_rejected or isinstance(promise.value, Exception):
+                logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
+                return 'Error has occurred', 500
+            return promise.value or ''
         return ''
 
     def __perform_trigger(self, job_name, job_state, post_json=None):
@@ -201,7 +217,7 @@ class Triggerable(Feature, ABC):
         """
         if job_state.scheduled:
             logger.info(f'job is already scheduled, {job_state}')
-            return ''
+            return job_state.promise
 
         # If a plugin was triggered and then triggered again.
         # This is good for cases when a single trigger is enough but an event may happen while
@@ -213,20 +229,14 @@ class Triggerable(Feature, ABC):
         # so another trigger will be scheduled.
         def on_success(arg):
             with job_state.lock:
-                if not job_state.scheduled:
-                    job_state.triggered = False
-                job_state.scheduled = False
-                job_state.last_error = 'Ran OK'
+                _on_job_continue(job_state, 'Ran OK')
                 logger.info('Successfully triggered')
                 return arg
 
         def on_failed(err):
             with job_state.lock:
+                _on_job_continue(job_state, str(repr(err)))
                 logger.error(f'Failed triggering up: {err}', exc_info=err)
-                job_state.last_error = str(repr(err))
-                if not job_state.scheduled:
-                    job_state.triggered = False
-                job_state.scheduled = False
                 return err
 
         def to_run(*args, **kwargs):
@@ -249,3 +259,4 @@ class Triggerable(Feature, ABC):
                                                           to_run))
         job_state.promise = job_state.promise.then(did_fulfill=on_success,
                                                    did_reject=on_failed)
+        return job_state.promise

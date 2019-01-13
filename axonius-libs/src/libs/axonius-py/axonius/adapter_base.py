@@ -9,7 +9,6 @@ import sys
 import os
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta, timezone
-from enum import Enum, auto
 from threading import Event, RLock, Thread
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -28,6 +27,7 @@ from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.thread_stopper import StopThreadException
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
+from axonius.utils.mm import delayed_trigger_gc
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.threading import timeout_iterator
 from axonius.mock.adapter_mock import AdapterMock
@@ -257,7 +257,11 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name == 'insert_to_db':
             client_name = post_json and post_json.get('client_name')
-            return self.insert_data_to_db(client_name)
+            try:
+                return self.insert_data_to_db(client_name)
+            except BaseException:
+                delayed_trigger_gc()
+                raise
         elif job_name == 'clean_devices':
             return to_json(self.clean_db())
 
@@ -1035,10 +1039,10 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
         Synchronously returns all available data types (devices/users) from all clients.
         """
         with self._clients_lock:
-            if len(self._clients) == 0:
+            clients = self._clients.copy()
+            if len(clients) == 0:
                 logger.info(f"{self.plugin_unique_name}: Trying to fetch devices but no clients found")
                 return
-            clients = self._clients.copy()
 
         # Running query on each device
         for client_name in clients:
