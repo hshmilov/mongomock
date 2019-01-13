@@ -28,8 +28,7 @@ def run_pytest(pytest_args: List[AnyStr]):
             '-s',
             '-vv',
             '--showlocals',
-            '--durations=0',
-            '--profile'
+            '--durations=0'
         ] + pytest_args
     )
 
