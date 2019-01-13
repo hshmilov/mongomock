@@ -32,6 +32,10 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
 
+        # This triggers a dashboard reload
+        self.settings_page.switch_to_page()
+        self.dashboard_page.switch_to_page()
+
         mdc_card = self.dashboard_page.find_managed_device_coverage_card()
         assert self.dashboard_page.get_title_from_card(mdc_card) == self.dashboard_page.MANAGED_DEVICE_COVERAGE
         mdc_pie = self.dashboard_page.get_pie_chart_from_card(mdc_card)

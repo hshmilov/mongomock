@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from passlib.hash import bcrypt
+from retrying import retry
 from selenium import webdriver
 
 import conftest
@@ -184,26 +185,38 @@ class TestBase:
         except Exception:
             logger.exception('Error while saving JS logs')
 
+    # The reason for retrying here is due to an issue between this logic and the
+    # rebuild logic.
+    # The rebuild logic is aggregating into the devices/users collection and mongo can't handle this concurrency
+    # by itself. I've opened numerous bugs to mongo on this issue but they think I'm dumb.
+    # Anyway, the retry logic solves this race issue for the tests.
+    # This issue was observed here:
+    # https://teamcity.in.axonius.com/viewLog.html?buildId=44926&tab=buildResultsDiv&buildTypeId=Cortex_Nightly
+    @retry(wait_fixed=100, stop_max_delay=60000)
     def _clean_db(self):
         if not self.axonius_system:
             return
-        self.axonius_system.get_devices_db().remove()
-        self.axonius_system.get_users_db().remove()
-        self.axonius_system.get_reports_db().remove()
-        self.axonius_system.get_notifications_db().remove()
-        self.axonius_system.db.get_entity_db_view(EntityType.Users).remove()
-        self.axonius_system.db.get_entity_db_view(EntityType.Devices).remove()
+
+        # Wait until scheduler finishes
+        self.axonius_system.scheduler.wait_for_scheduler(True)
+
+        self.axonius_system.get_devices_db().delete_many({})
+        self.axonius_system.get_users_db().delete_many({})
+        self.axonius_system.get_reports_db().delete_many({})
+        self.axonius_system.get_notifications_db().delete_many({})
+        self.axonius_system.db.get_entity_db_view(EntityType.Users).delete_many({})
+        self.axonius_system.db.get_entity_db_view(EntityType.Devices).delete_many({})
 
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Users))
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices))
 
-        self.axonius_system.get_system_users_db().remove(
+        self.axonius_system.get_system_users_db().delete_many(
             {'user_name': {'$nin': [AXONIUS_USER_NAME, DEFAULT_USER['user_name']]}})
         self.axonius_system.get_system_users_db().update_one(
             {'user_name': DEFAULT_USER['user_name']}, {'$set': {'password': bcrypt.hash(DEFAULT_USER['password'])}})
 
-        self.axonius_system.db.get_gui_entity_fields(EntityType.Users).remove()
-        self.axonius_system.db.get_gui_entity_fields(EntityType.Devices).remove()
+        self.axonius_system.db.get_gui_entity_fields(EntityType.Users).delete_many({})
+        self.axonius_system.db.get_gui_entity_fields(EntityType.Devices).delete_many({})
 
     def change_base_url(self, new_url):
         old_base_url = self.base_url

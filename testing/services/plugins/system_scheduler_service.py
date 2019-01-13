@@ -35,9 +35,13 @@ class SystemSchedulerService(PluginService):
         """
         Waits until scheduler is running or not running or raises
         """
+        if is_scheduler_at_rest:
+            requests.get(self.req_url + "/wait/execute", headers={API_KEY_HEADER: self.api_key}).raise_for_status()
+            return
+
         scheduler_state = self.current_state().json()
         state = SchedulerState(**scheduler_state['state'])
-        assert (state.Phase == Phases.Stable.name) == is_scheduler_at_rest
+        assert state.Phase != Phases.Stable.name
 
     def _migrate_db(self):
         super()._migrate_db()

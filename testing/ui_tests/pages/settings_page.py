@@ -170,8 +170,8 @@ class SettingsPage(Page):
         self.upload_file_on_element(private_element, private_data)
 
     def get_global_ssl_settings(self):
-        cert = self.driver.get_element_by_css_selector(self.CERT_ELEMENT_FILENAME_SELECTOR).text
-        private = self.driver.get_element_by_css_selector(self.PRIVATE_ELEMENT_FILENAME_SELECTOR).text
+        cert = self.driver.find_element_by_css_selector(self.CERT_ELEMENT_FILENAME_SELECTOR).text
+        private = self.driver.find_element_by_css_selector(self.PRIVATE_ELEMENT_FILENAME_SELECTOR).text
         return cert, private
 
     def toggle_advanced_settings(self):

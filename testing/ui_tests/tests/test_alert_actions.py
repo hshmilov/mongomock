@@ -3,11 +3,11 @@ from typing import List
 
 from retrying import retry
 
+from axonius.entities import EntityType
 from axonius.utils.wait import wait_until
-from services.standalone_services.syslog_server import SyslogService
 from services.adapters.json_file_service import JsonFileService
+from services.standalone_services.syslog_server import SyslogService
 from ui_tests.tests.ui_test_base import TestBase
-
 
 ALERT_NAME = 'Special alert name'
 COMMON_ALERT_QUERY = 'Enabled AD Devices'
@@ -173,6 +173,11 @@ class TestAlertActions(TestBase):
         json_service.take_process_ownership()
         try:
             json_service.stop(should_delete=False)
+
+            # This is here to see if this is really the issue: All tests should start with no devices
+            assert self.axonius_system.get_devices_db().count_documents({}) == 0
+            assert self.axonius_system.db.get_entity_db_view(EntityType.Devices).count_documents({}) == 0
+
             self.devices_page.switch_to_page()
             self.devices_page.run_filter_and_save(ALERT_CHANGE_NAME,
                                                   AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
