@@ -206,7 +206,7 @@ class TestCode:
     @staticmethod
     def test_requirements_files():
         bad_lines = []
-        for file_path in glob.iglob(os.path.join(BASE_PATH, '**', 'requirements.txt'), recursive=True):
+        for file_path in glob.iglob(os.path.join(BASE_PATH, '**', 'requirements*.txt'), recursive=True):
             with open(file_path, 'rt') as file:
                 for line in file.readlines():
                     if '==' not in line:
