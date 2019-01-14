@@ -489,7 +489,6 @@ class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
                 if not client_config:
                     logger.info(f'{failure_line} - invalid client')
                     return return_error("Invalid client")
-                logger.info(f'Starting to add client {client_config}')
                 try:
                     client_id = self._get_client_id(client_config)
                 except Exception:

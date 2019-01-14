@@ -6,7 +6,7 @@ client_details = {
 }
 
 # Our office Mac mini (Axonius Printer)
-SOME_DEVICE_ID = '9AE9A131-6801-5659-A1AE-C9B38F1EA4C4'
+SOME_DEVICE_ID = '9AE9A131-6801-5659-A1AE-C9B38F1EA4C4_Avidor Macbook'
 
 FETCHED_DEVICE_EXAMPLE = {
     'os': {

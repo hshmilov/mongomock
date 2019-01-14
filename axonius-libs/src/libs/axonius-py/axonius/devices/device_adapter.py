@@ -382,8 +382,9 @@ class DeviceAdapter(SmartJsonClass):
             else:
                 for ip in ips_iter:
                     try:
-                        obj.ips.append(ip)
-                        obj.ips_raw.append(ip)
+                        if ip and isinstance(ip, str):
+                            obj.ips.append(ip)
+                            obj.ips_raw.append(ip)
                     except (ValueError, TypeError):
                         if logger is None:
                             raise

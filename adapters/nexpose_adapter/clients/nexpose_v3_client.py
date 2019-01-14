@@ -166,7 +166,9 @@ class NexposeV3Client(NexposeClient):
         device.last_seen = last_seen
         device.id = str(device_raw['id']) + (device_raw.get('hostName') or '')
         for address in device_raw.get('addresses', []):
-            device.add_nic(address.get('mac'), [address.get('ip')] if 'ip' in address else [])
+            device.add_nic(address.get('mac'), [address.get('ip')] if ('ip' in address and
+                                                                       isinstance(address.get('ip'), str) and
+                                                                       address.get('ip') != '0.0.0.0') else [])
         device.hostname = device_raw.get('hostName', '')
         risk_score = device_raw.get('riskScore')
         if risk_score is not None:

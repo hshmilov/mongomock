@@ -134,7 +134,8 @@ class BigfixAdapter(AdapterBase):
                         if dns_name.lower().startswith(computer_name.lower()):
                             device.hostname = dns_name
                         else:
-                            device.hostname = computer_name
+                            device.hostname = dns_name
+                            device.name = computer_name
                     else:
                         device.hostname = computer_name or dns_name
                 except Exception:

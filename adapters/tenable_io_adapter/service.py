@@ -6,22 +6,44 @@ from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field, ListField
+from axonius.fields import Field, ListField, JsonArrayFormat
+from axonius.smart_json_class import SmartJsonClass
 from axonius.clients.rest.exception import RESTException
 from tenable_io_adapter.connection import TenableIoConnection
 from axonius.utils.parsing import parse_date
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.clients.rest.connection import RESTConnection
+from axonius.mixins.configurable import Configurable
 
 
-class TenableIoAdapter(ScannerAdapterBase):
+class TenableVulnerability(SmartJsonClass):
+    plugin = Field(str, 'plugin')
+    severity = Field(str, 'severity')
+
+
+class TenableSource(SmartJsonClass):
+    first_seen = Field(datetime.datetime, 'First Seen')
+    last_seen = Field(datetime.datetime, 'Last Seen')
+    source = Field(str, 'Source')
+
+
+class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         has_agent = Field(bool, "Has Agent")
         agent_version = Field(str, 'Agent Version')
         status = Field(str, 'Status')
-        plugin_and_severity = ListField(str, "EXPORT - Plugin and severity")
+        plugin_and_severities = ListField(TenableVulnerability, 'Plugins and Severities',
+                                          json_format=JsonArrayFormat.table)
+        tenable_sources = ListField(TenableSource, 'Tenable Source',
+                                    json_format=JsonArrayFormat.table)
         risk_and_name_list = ListField(str, "CSV - Vulnerability Details")
+
+        def add_tenable_vuln(self, **kwargs):
+            self.plugin_and_severities.append(TenableVulnerability(**kwargs))
+
+        def add_tenable_source(self, **kwargs):
+            self.tenable_sources.append(TenableSource(**kwargs))
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -62,7 +84,7 @@ class TenableIoAdapter(ScannerAdapterBase):
         try:
             client_data.connect()
             logger.info('Getting all assets')
-            devices_list = client_data.get_device_list()
+            devices_list = client_data.get_device_list(use_cache=self.__use_cache)
             logger.info(f'Got {len(devices_list)} assets, starting agents')
             agents_list = client_data.get_agents()
             logger.info(f'Got {len(agents_list)} agents')
@@ -152,16 +174,30 @@ class TenableIoAdapter(ScannerAdapterBase):
             device.hostname = hostnames[0]
         elif len(netbios) > 0 and netbios[0] != "":
             device.hostname = netbios[0]
-        device.plugin_and_severity = []
+        plugin_and_severity = []
         vulns_info = device_raw.get("vulns_info", [])
         for vuln_raw in vulns_info:
             try:
                 severity = vuln_raw.get("severity", "")
                 plugin_name = vuln_raw.get("plugin", {}).get("name", "")
-                if f"{plugin_name}__{severity}" not in device.plugin_and_severity:
-                    device.plugin_and_severity.append(f"{plugin_name}__{severity}")
+                if f"{plugin_name}__{severity}" not in plugin_and_severity:
+                    plugin_and_severity.append(f"{plugin_name}__{severity}")
+                    device.add_tenable_vuln(plugin=plugin_name, severity=severity)
             except Exception:
                 logger.exception(f"Problem getting vuln raw {vuln_raw}")
+
+        tenble_sources = device_raw.get('sources')
+        if not isinstance(tenble_sources, list):
+            tenble_sources = []
+        for tenble_source in tenble_sources:
+            try:
+                last_seen = parse_date(tenble_source.get('last_seen'))
+                first_seen = parse_date(tenble_source.get('first_seen'))
+                source = tenble_source.get('name')
+                device.add_tenable_source(source=source, first_seen=first_seen, last_seen=last_seen)
+            except Exception:
+                logger.exception(f'Problem adding tenable source {tenble_source}')
+
         # This is too much info for our poor raw deivice. It made the collection too big
         device.set_raw({})
         return device
@@ -302,3 +338,29 @@ class TenableIoAdapter(ScannerAdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'use_cache',
+                    'title': 'Use Cache',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'use_cache'
+            ],
+            'pretty_name': 'TenableIO Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'use_cache': True
+        }
+
+    def _on_config_update(self, config):
+        self.__use_cache = config['use_cache']

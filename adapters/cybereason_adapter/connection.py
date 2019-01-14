@@ -2,7 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from cybereason_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
+from cybereason_adapter.consts import DEVICE_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -16,7 +16,7 @@ class CybereasonConnection(RESTConnection):
 
     def _connect(self):
         if self._username and self._password:
-            self._post('login.html', use_json_in_body=False,
+            self._post('login.html', use_json_in_body=False, use_json_in_response=False,
                        body_params={'username': self._username,
                                     'password': self._password})
         else:
@@ -30,15 +30,9 @@ class CybereasonConnection(RESTConnection):
         response = self._post('rest/sensors/query', use_json_in_body=False, body_params=query)
         yield from response['sensors']
         total_count = response['totalResults']
-        offset = DEVICE_PER_PAGE
-        while offset < min(total_count, MAX_NUMBER_OF_DEVICES):
-            try:
-                query = '{"filters":[{"fieldName":"status","operator":"NotEquals","values":["Archived"]}],' \
-                        '"sortingFieldName":"machineName","sortDirection":"ASC","limit":' + \
-                        str(DEVICE_PER_PAGE) + ',"offset":' + str(offset) + ',"batchId":null}'
-                response = self._post('rest/sensors/query', use_json_in_body=False, body_params=query)
-                yield from response['sensors']
-                offset += DEVICE_PER_PAGE
-            except Exception:
-                logger.exception(f'Problem with offset {offset}')
-                break
+        query = '{"filters":[{"fieldName":"status","operator":"NotEquals","values":["Archived"]}],' \
+                '"sortingFieldName":"machineName","sortDirection":"ASC","limit":' + \
+                str(total_count) + ',"offset":' + str(0) + ',"batchId":null}'
+        response = self._post('rest/sensors/query', use_json_in_body=False, body_params=query)
+        # I know we might yield devices again, But due to this problematic API I kept it this way (ofri)
+        yield from response['sensors']

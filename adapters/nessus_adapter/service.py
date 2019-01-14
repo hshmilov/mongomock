@@ -189,8 +189,10 @@ class NessusAdapter(ScannerAdapterBase):
                 except Exception:
                     logger.exception(f"Problem with figure os on {device_raw}")
                 try:
-                    device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
-                                   [device_raw.get('info', {}).get('host-ip', '')])
+                    macs = (device_raw.get('info', {}).get('mac-address') or '').split('\n')
+                    for mac in macs:
+                        device.add_nic(mac,
+                                       [device_raw.get('info', {}).get('host-ip', '')])
                 except Exception:
                     logger.exception(f"Problems with add nic at device {device_raw}")
                 try:
@@ -199,11 +201,12 @@ class NessusAdapter(ScannerAdapterBase):
                     logger.exception(f"Problems with parse date at device {device_raw}")
                 netbios_name = device_raw.get('info', {}).get("netbios-name")
                 try:
-                    if "\\" in netbios_name:
-                        hostname = netbios_name.split("\\")[1]
-                    else:
-                        hostname = netbios_name
-                    device.hostname = hostname
+                    if netbios_name:
+                        if "\\" in netbios_name:
+                            hostname = netbios_name.split("\\")[1]
+                        else:
+                            hostname = netbios_name
+                        device.hostname = hostname
                 except Exception:
                     logger.warning(f"Couldn't parse hostname from netbios name {netbios_name}")
                 vulnerabilities_raw = device_raw.get("vulnerabilities", [])

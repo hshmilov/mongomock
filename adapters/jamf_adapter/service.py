@@ -139,9 +139,9 @@ class JamfAdapter(AdapterBase, Configurable):
                 if not udid:
                     logger.error(f"Error! got a device with no id: {device_raw}")
                     continue
-                device.id = udid
+                device.id = udid + '_' + (general_info.get('name') or '')
 
-                device.name = general_info.get('name', '')
+                device.name = general_info.get('name')
                 hostname = None
                 # Ofri: Sometimes name is also the hostname. I saw that if we have one of these fields it can't be the host name.
                 if not any(elem in device.name for elem in [' ', '.']):

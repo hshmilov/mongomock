@@ -81,6 +81,8 @@ class EpoAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         epo_products = ListField(str, "EPO Products")
         epo_agent_version = Field(str, "EPO Agent Version")
+        node_name = Field(str, 'Node Name')
+        epo_tags = ListField(str, 'EPO Tags')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -200,7 +202,12 @@ class EpoAdapter(AdapterBase):
                     name=device_raw.get("EPOComputerProperties.CPUType")
                 )
                 device.description = device_raw.get("EPOComputerProperties.Description")
-                device.last_used_users = (device_raw.get('EPOComputerProperties.UserName') or '').split(',')
+                if isinstance(device_raw.get('EPOComputerProperties.UserName'), str):
+                    device.last_used_users = (device_raw.get('EPOComputerProperties.UserName') or '').split(',')
+                device.node_name = device_raw.get('EPOLeafNode.NodeName')
+                if isinstance(device_raw.get('EPOLeafNode.Tags'), str):
+                    device.epo_tags = [epo_tag.strip() for epo_tag in (
+                        device_raw.get('EPOLeafNode.Tags') or '').split(',') if epo_tag.strip()]
             except Exception:
                 logger.exception("Couldn't set some epo info")
             device.set_raw(device_raw)

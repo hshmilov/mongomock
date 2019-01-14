@@ -35,7 +35,9 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_illusive_adapter, is_junos_space_device,
                                    is_linux, is_old_device, is_sccm_or_ad,
                                    is_splunk_vpn, normalize_adapter_devices,
-                                   normalize_mac, not_aruba_adapters)
+                                   normalize_mac, not_aruba_adapters,
+                                   cloud_id_do_not_contradict,
+                                   not_contain_generic_jamf_names)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -143,7 +145,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection,
-                                       not_aruba_adapters],
+                                       not_aruba_adapters,
+                                       cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -228,7 +231,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname],
                                       [compare_hostname],
                                       [is_from_ad_or_jamf],
-                                      [not_aruba_adapters],
+                                      [not_aruba_adapters, not_contain_generic_jamf_names],
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 

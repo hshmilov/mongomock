@@ -82,8 +82,9 @@ class TenableIoConnection(RESTConnection):
                 logger.exception(f'Problem in getting specific chunk {chunk_id} from {export_uuid} type {export_type}')
         return export_list
 
-    def _get_assets(self):
-        if self._epoch_last_run_time + consts.SECONDS_IN_DAY * consts.DAYS_UNTIL_FETCH_AGAIN > int(time.time()):
+    def _get_assets(self, use_cache):
+        if use_cache and \
+                self._epoch_last_run_time + consts.SECONDS_IN_DAY * consts.DAYS_UNTIL_FETCH_AGAIN > int(time.time()):
             return
         if self._assets_list_dict is None:
             new_assets = self._get_export_data('assets')
@@ -126,9 +127,10 @@ class TenableIoConnection(RESTConnection):
                                             epoch=int(time.time()) - (consts.SECONDS_IN_DAY * consts.DAYS_VULNS_FETCH))
         return vulns_list
 
-    def get_device_list(self):
+    # pylint: disable=W0221
+    def get_device_list(self, use_cache):
         try:
-            self._get_assets()
+            self._get_assets(use_cache)
         except Exception:
             logger.exception('Couldnt get export trying to do benchmark')
             return self._get_device_list_csv(), 'csv'
@@ -148,7 +150,10 @@ class TenableIoConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem with vuln raw {vuln_raw}')
         self._epoch_last_run_time = int(time.time())
-        return self._assets_list_dict.items(), 'export'
+        assets_list_dict = self._assets_list_dict
+        if not use_cache:
+            self._assets_list_dict = None
+        return assets_list_dict.items(), 'export'
 
     def _get_device_list_csv(self):
         file_id = self._get('workbenches/export', url_params={'format': 'csv',

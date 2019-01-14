@@ -162,7 +162,7 @@ class SccmAdapter(AdapterBase):
                 device.organizational_unit = get_organizational_units_from_dn(device_id)
                 domain = device_raw.get('Full_Domain_Name0')
                 device.hostname = device_raw.get('Netbios_Name0')
-                if domain and device.hostname:
+                if domain and device_raw.get('Netbios_Name0'):
                     device.hostname += '.' + domain
                     device.part_of_domain = True
                     device.domain = domain
@@ -211,7 +211,7 @@ class SccmAdapter(AdapterBase):
                 if total_physical_memory and free_physical_memory:
                     device.physical_memory_percentage = 100 * \
                         (1 - device.free_physical_memory / device.total_physical_memory)
-
+                device.device_serial = device_raw.get('SerialNumber0')
                 device.device_model = device_raw.get('Model0')
                 device.device_manufacturer = device_raw.get('Manufacturer0')
                 processes = device_raw.get('NumberOfProcesses0')

@@ -854,17 +854,6 @@ def normalize_hostname(adapter_data):
         for extension in DEFAULT_DOMAIN_EXTENSIONS:
             final_hostname = remove_trailing(final_hostname, extension)
         split_hostname = final_hostname.split('.')
-        for extension in DEFAULT_MAC_EXTENSIONS:
-            no_trail = remove_trailing(split_hostname[0], extension)
-            if no_trail:
-                split_hostname[0] = no_trail
-        if len(split_hostname[0]) == 15 and (adapter_data.get('os') or {}).get('type') == "OS X":
-            if split_hostname[0].endswith('-MB'):
-                split_hostname[0] = remove_trailing(split_hostname[0], '-MB')
-            elif split_hostname[0].endswith('-M'):
-                split_hostname[0] = remove_trailing(split_hostname[0], '-M')
-            elif split_hostname[0].endswith('-'):
-                split_hostname[0] = remove_trailing(split_hostname[0], '-')
 
         return split_hostname
 
@@ -925,20 +914,6 @@ def macs_do_not_contradict(adapter_device1, adapter_device2):
     return not device1_macs or not device2_macs or is_one_subset_of_the_other(device1_macs, device2_macs)
 
 
-# All these cases are real world scenarios where we had weird hostnames of the same Mac computer.
-# This doesn't mean we want to correlate according to these rules,
-# just not to contradict, we hope to correlate with MAC
-def contain_macbook_names(device1_hostnames, device2_hostnames):
-    return ("MBP" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or \
-           ("MBP" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or \
-           ("AIR" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or \
-           ("AIR" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or \
-           (len(str(device1_hostnames)) > 5 and (str(device1_hostnames)[:5] == str(device2_hostnames)[:5])) or \
-           (str(device1_hostnames).lower() == 'mac' or str(device2_hostnames).lower() == 'mac') or \
-           ((''.join(char for char in str(device2_hostnames) if char.isalnum())) ==
-            (''.join(char for char in str(device1_hostnames) if char.isalnum())))
-
-
 def snow_asset_names_do_not_contradict(adapter_device1, adapter_device2):
     if not is_snow_adapter(adapter_device1) or not is_snow_adapter(adapter_device2):
         return True
@@ -960,12 +935,30 @@ def hostnames_do_not_contradict(adapter_device1, adapter_device2):
         cb_protection = True
     device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
     device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)
-    return not device1_hostnames or not device2_hostnames or \
-        (contain_macbook_names(adapter_device1.get('data', {}).get("hostname", ""),
-                               adapter_device2.get('data', {}).get("hostname", "")) and
-         (adapter_device1.get('data', {}).get("os", {}).get("type") == "OS X") and
-            (adapter_device2.get('data', {}).get("os", {}).get("type") == "OS X")) \
-        or compare_normalized_hostnames(device1_hostnames, device2_hostnames, first_element_only=cb_protection)
+    return not device1_hostnames or not device2_hostnames or compare_normalized_hostnames(device1_hostnames,
+                                                                                          device2_hostnames,
+                                                                                          first_element_only=cb_protection)
+
+
+def not_contain_generic_jamf_names(adapter_device1, adapter_device2):
+    return not contain_jamf_generic_names(adapter_device1) or not contain_jamf_generic_names(adapter_device2)
+
+
+def contain_jamf_generic_names(adapter_device):
+    hostname = get_hostname(adapter_device)
+    if not hostname:
+        return False
+    if 'MacBook Pro (' in hostname:
+        return True
+    return False
+
+
+def cloud_id_do_not_contradict(adapter_device1, adapter_device2):
+    cloud_id_1 = get_cloud_data(adapter_device1)
+    cloud_id_2 = get_cloud_data(adapter_device2)
+    if not cloud_id_1 or not cloud_id_2:
+        return True
+    return cloud_id_1 == cloud_id_2
 
 
 def compare_ips(adapter_device1, adapter_device2):

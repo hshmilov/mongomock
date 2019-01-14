@@ -28,7 +28,7 @@ export const pluginMeta = {
         description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
     },
     cybereason_adapter: {
-        title: 'Cybereason - BETA',
+        title: 'Cybereason',
         description: 'The Cybereason Deep Hunting Platform delivers endpoint detection and response (EDR), next-generation antivirus (NGAV), managed threat hunting, and threat intelligence.'
     },
     oracle_cloud_adapter: {

@@ -191,7 +191,12 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.id = client_id
                 device.device_type = "Client Device"
                 mac_address = client_raw.get('mac') or ""
-                device.hostname = client_raw.get('dhcpHostname')
+                hostname = client_raw.get("mdnsName") or client_raw.get('dhcpHostname')
+                if str(hostname).lower().endswith('.local'):
+                    hostname = str(hostname)[:-len('.local')]
+                device.hostname = hostname
+                if client_raw.get("mdnsName") and client_raw.get('dhcpHostname'):
+                    device.name = client_raw.get('dhcpHostname')
                 try:
                     ip_addresses = list(client_raw.get("ip"))
                     if ip_addresses != [] or mac_address != "":
@@ -199,7 +204,6 @@ class CiscoMerakiAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f"Problem with fetching NIC in CiscoMeraki Client {client_raw}")
                 device.description = client_raw.get("description")
-                device.dns_name = client_raw.get("mdnsName")
                 device.associated_devices = []
                 found_regular_vlan = False
                 found_exclude_vlan = False
