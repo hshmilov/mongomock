@@ -88,6 +88,7 @@ def install(first_time, root_pass):
     load_images()
 
     start_axonius()
+    run_discovery()
     set_logrotate(root_pass)
 
     if not first_time:
@@ -301,15 +302,18 @@ def install_requirements():
     subprocess.check_call(args)
 
 
+def run_discovery():
+    print_state('Starting discovery')
+    from devops.scripts import discover_now
+    # This will skip on a node (since there's no system-scheduler to run a discovery).
+    discover_now.main(should_wait=False)
+
+
 def start_axonius():
     print_state('Starting up axonius system')
     from devops.axonius_system import main as system_main
     system_main('system up --all --prod'.split())
     print_state('System is up')
-
-    print_state('Starting discovery')
-    from devops.scripts import discover_now
-    discover_now.main(should_wait=False)
 
 
 if __name__ == '__main__':

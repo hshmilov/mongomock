@@ -4,6 +4,7 @@ import sys
 import argparse
 import time
 from datetime import datetime
+from devops.scripts.instances.setup_node import NODE_MARKER_PATH
 
 from axonius.consts.scheduler_consts import Phases
 from services.plugins.system_scheduler_service import SystemSchedulerService
@@ -13,6 +14,10 @@ WAIT_TIMEOUT = 60 * 25
 
 
 def main(should_wait=False, seconds=WAIT_TIMEOUT):
+    if NODE_MARKER_PATH.exists():
+        print('This instance is a node - Skipping')
+        return
+
     system_scheduler = SystemSchedulerService()
     system_scheduler.start_research()
 
