@@ -161,7 +161,6 @@
                     }
                     return field === fieldName
                 }).length > 1 || this.fieldTitles.includes(fieldName.toLowerCase())) {
-                    this.$emit('validate', false)
                     this.error = 'Custom Field Name is already in use by another field'
                     return true
                 }
