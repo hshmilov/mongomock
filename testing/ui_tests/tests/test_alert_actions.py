@@ -2,6 +2,7 @@ import datetime
 from typing import List
 
 from retrying import retry
+from flaky import flaky
 
 from axonius.entities import EntityType
 from axonius.utils.wait import wait_until
@@ -168,6 +169,7 @@ class TestAlertActions(TestBase):
                               f' for the following query has been triggered: {COMMON_ALERT_QUERY}'
             _verify_in_syslog_data(syslog_server, syslog_expected)
 
+    @flaky(max_runs=3)
     def test_tag_entities(self):
         json_service = JsonFileService()
         json_service.take_process_ownership()

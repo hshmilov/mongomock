@@ -1,6 +1,7 @@
 import time
 
 import pytest
+from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
 from services.adapters.json_file_service import JsonFileService
@@ -163,6 +164,7 @@ class TestAlertSanity(TestBase):
         with pytest.raises(NoSuchElementException):
             self.devices_queries_page.find_query_row_by_name(ALERT_CHANGE_NAME)
 
+    @flaky(max_runs=3)
     def test_edit_alert(self):
         self.create_alert_change_query()
         self.alert_page.switch_to_page()
