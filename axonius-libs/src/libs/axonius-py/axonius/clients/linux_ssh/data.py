@@ -8,6 +8,13 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 EMPTY_MAC = '00:00:00:00:00:00'
 
+FILE_NOT_FOUND = 'No such file or directory'
+COMMAND_NOT_FOUND = 'not found'
+
+
+def command_failed(raw_data):
+    return any(fail_str in raw_data for fail_str in [FILE_NOT_FOUND, COMMAND_NOT_FOUND])
+
 
 def kilo_to_giga(kilo):
     return round(float(kilo) / 1024 / 1024, 2)
@@ -20,6 +27,7 @@ def usage_percentage(all_, free):
 class AbstractCommand:
     COMMAND = None
     NAME = None
+    STATIC_PATH = '/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin'
 
     def __init__(self, client_id, data):
         self._client_id = client_id
@@ -40,7 +48,9 @@ class AbstractCommand:
 
     @classmethod
     def get_command(cls):
-        return cls.COMMAND
+        """ In some distros such as redhat, non-interactive path is limited so we prepend
+        default path here """
+        return f'PATH={cls.STATIC_PATH}:$PATH {cls.COMMAND}'
 
     @classmethod
     def get_name(cls):
@@ -84,11 +94,13 @@ class ForeignInfoCommand(AbstractCommand):
 
 
 class HostnameCommand(LocalInfoCommand):
-    COMMAND = 'cat /etc/hostname'
+    COMMAND = 'uname -n'
     NAME = 'hostname'
 
     @staticmethod
     def _parse(raw_data):
+        if command_failed(raw_data):
+            return None
         return raw_data
 
     @staticmethod
