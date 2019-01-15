@@ -72,6 +72,9 @@ DOCKER_PORTS = {
     'lansweeper-adapter':               5907,
     'cynet-adapter':                    5910,
     'illusive-adapter':                 5911,
+    'cybereason-adapter':               5940,
+    'snipeit-adapter':                  5941,
+    'saltstack-adapter':                5942,
     'cisco-adapter':                    6001,
     'zabbix-adapter':                   6005,
     'tripwire-enterprise-adapter':      6007,
@@ -110,8 +113,6 @@ DOCKER_PORTS = {
     'clearpass-adapter':                6045,
     'cisco-umbrella-adapter':           6046,
     'linux-ssh-adapter':                6047,
-    'cybereason-adapter':               27019,
-    'snipeit-adapter':                  27020,
     'mongo':                            27017,
     'mongo-slave':                      27018,
 }

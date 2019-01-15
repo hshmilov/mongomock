@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    saltstack_adapter: {
+        title: 'SaltStack',
+        description: 'SaltStack intelligent automation delivers, event-driven security, cloud and configuration management for the complexity and scale of a software-defined world.'
+    },
     snipeit_adapter: {
         title: 'Snipe-IT',
         description: 'Snipe-IT is a free, open source IT asset management system written in PHP.'

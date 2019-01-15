@@ -726,7 +726,7 @@ def get_domain(adapter_device):
 def get_last_used_users(adapter_device):
     last_used_user = adapter_device['data'].get('last_used_users')
     if last_used_user:
-        return [user.lower().strip() for user in last_used_user if user.strip()]
+        return [user.lower().strip() for user in last_used_user if (user and user.strip())]
     return None
 
 
