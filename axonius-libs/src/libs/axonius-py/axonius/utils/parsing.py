@@ -786,6 +786,21 @@ def compare_bios_serial_serial(adapter_device1, adapter_device2):
     return False
 
 
+def get_bios_serial_or_serial_no_s(adapter_device):
+    serial = get_bios_serial_or_serial(adapter_device)
+    if serial:
+        serial = serial.strip('s')
+    return serial
+
+
+def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
+    serial1 = get_bios_serial_or_serial_no_s(adapter_device1)
+    serial2 = get_bios_serial_or_serial_no_s(adapter_device2)
+    if serial1 is not None and serial2 is not None:
+        return serial1 == serial2
+    return False
+
+
 def get_asset_name(adapter_device):
     return adapter_device['data'].get('name')
 
@@ -793,7 +808,21 @@ def get_asset_name(adapter_device):
 def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
     if serial and serial.upper().strip() != 'INVALID' and 'VMWARE' not in serial.upper().strip():
-        return serial
+        return serial.upper()
+    return None
+
+
+def get_serial_no_s(adapter_device):
+    serial = get_serial(adapter_device)
+    if not serial:
+        return None
+    return serial.strip('S')
+
+
+def compare_serial_no_s(adapter_device1, adapter_device2):
+    serial1 = get_serial_no_s(adapter_device1)
+    serial2 = get_serial_no_s(adapter_device2)
+    return serial1 and serial2 and serial1 == serial2
 
 
 def get_asset_or_host(adapter_device):

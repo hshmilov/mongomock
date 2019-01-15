@@ -60,7 +60,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           VOLATILE_CONFIG_PATH, PLUGIN_NAME, NODE_INIT_NAME, X_UI_USER,
                                           X_UI_USER_SOURCE,
                                           PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW,
-                                          NOTIFICATIONS_SETTINGS, NOTIFY_ADAPTERS_FETCH)
+                                          NOTIFICATIONS_SETTINGS, NOTIFY_ADAPTERS_FETCH,
+                                          CORRELATION_SETTINGS, CORRELATE_BY_EMAIL_PREFIX)
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
 from axonius.email_server import EmailServer
@@ -2181,6 +2182,7 @@ class PluginBase(Configurable, Feature):
         self._email_settings = config['email_settings']
         self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
+        self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
         self._jira_servicedesk_settings = config['jira_servicedesk_settings']
         self._execution_enabled = config['execution_settings']['enabled']
         self._should_use_axr = config['execution_settings']['should_use_axr']
@@ -2598,6 +2600,19 @@ class PluginBase(Configurable, Feature):
                     "type": "array",
                     "required": [NOTIFY_ADAPTERS_FETCH]
                 },
+                {
+                    "items": [
+                        {
+                            "name": CORRELATE_BY_EMAIL_PREFIX,
+                            "title": "Correlate Users by Email Prefix",
+                            "type": "bool"
+                        }
+                    ],
+                    "name": CORRELATION_SETTINGS,
+                    "title": "Correlation Settings",
+                    "type": "array",
+                    "required": [CORRELATE_BY_EMAIL_PREFIX]
+                },
             ],
             'pretty_name': 'Global Configuration',
             'type': 'array'
@@ -2673,5 +2688,9 @@ class PluginBase(Configurable, Feature):
             },
             NOTIFICATIONS_SETTINGS: {
                 NOTIFY_ADAPTERS_FETCH: False
+            },
+            CORRELATION_SETTINGS: {
+                CORRELATE_BY_EMAIL_PREFIX: False
             }
+
         }

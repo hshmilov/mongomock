@@ -36,6 +36,8 @@ PROXY_USER = 'proxy_user'
 PROXY_PASSW = 'proxy_password'
 NOTIFICATIONS_SETTINGS = 'notifications_settings'
 NOTIFY_ADAPTERS_FETCH = 'notify_adapters_fetch'
+CORRELATION_SETTINGS = 'correlation_settings'
+CORRELATE_BY_EMAIL_PREFIX = 'correlate_by_email_prefix'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'

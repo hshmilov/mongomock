@@ -25,6 +25,7 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
 from axonius.mixins.configurable import Configurable
+from axonius.clients.shodan.connection import ShodanConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -675,6 +676,23 @@ class AwsAdapter(AdapterBase, Configurable):
                         }
                 except Exception:
                     logger.exception(f'could not parse subnets')
+                try:
+                    if self.__shodan_key:
+                        shodan_connection = ShodanConnection(apikey=self.__shodan_key)
+                        with shodan_connection:
+                            for reservation in reservations:
+                                for device_raw in reservation.get('Instances', []):
+                                    for iface in device_raw.get('NetworkInterfaces', []):
+                                        assoc = iface.get('Association')
+                                        if assoc is not None:
+                                            public_ip = assoc.get('PublicIp')
+                                            if public_ip:
+                                                try:
+                                                    assoc['shodan_info'] = shodan_connection.get_ip_info(public_ip)
+                                                except Exception:
+                                                    logger.exception(f'Problem getting shodan info of {public_ip}')
+                except Exception:
+                    logger.exception(f'Problem with Shodan')
 
                 raw_data['ec2'] = reservations
                 raw_data['vpcs'] = described_vpcs
@@ -1104,7 +1122,6 @@ class AwsAdapter(AdapterBase, Configurable):
         # Checks whether devices_raw_data contains EC2 data
         if devices_raw_data.get('ec2') is not None:
             ec2_devices_raw_data = devices_raw_data.get('ec2')
-
             for reservation in ec2_devices_raw_data:
                 for device_raw in reservation.get('Instances', []):
                     device = self._new_device_adapter()
@@ -1193,6 +1210,16 @@ class AwsAdapter(AdapterBase, Configurable):
                             if public_ip:
                                 device.public_ip = public_ip
                                 ec2_ips.append(public_ip)
+                                shodan_info = assoc.get('shodan_info')
+                                if shodan_info:
+                                    try:
+                                        device.add_shodan_data(port=shodan_info.get('port'),
+                                                               banner=shodan_info.get('banner'),
+                                                               devicetype=shodan_info.get('devicetype'),
+                                                               org=shodan_info.get('org'),
+                                                               os=shodan_info.get('os'))
+                                    except Exception:
+                                        logger.exception(f'Problem parsing shodan info for {public_ip}')
 
                         device.add_nic(iface.get('MacAddress'), ec2_ips)
 
@@ -1625,6 +1652,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_instance_roles = config.get('fetch_instance_roles') or False
         self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
+        self.__shodan_key = config.get('shodan_key')
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -1654,6 +1682,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
+                },
+                {
+                    'name': 'shodan_key',
+                    'title': 'Shodan API key for more IP info',
+                    'type': 'string',
+                    'format': 'password'
                 }
             ],
             "required": [
@@ -1674,7 +1708,8 @@ class AwsAdapter(AdapterBase, Configurable):
             'correlate_eks_ec2': False,
             'fetch_instance_roles': False,
             'fetch_load_balancers': False,
-            'verbose_auth_notifications': False
+            'verbose_auth_notifications': False,
+            'shodan_key': None
         }
 
     @classmethod

@@ -1,6 +1,6 @@
 export const pluginMeta = {
     snipeit_adapter: {
-        title: 'Snipe-IT - BETA',
+        title: 'Snipe-IT',
         description: 'Snipe-IT is a free, open source IT asset management system written in PHP.'
     },
     mobi_control_adapter: {

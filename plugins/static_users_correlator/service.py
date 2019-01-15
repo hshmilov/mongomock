@@ -9,7 +9,7 @@ class StaticUsersCorrelatorService(CorrelatorBase):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
-        self._correlation_engine = StaticUserCorrelatorEngine()
+        self._correlation_engine = StaticUserCorrelatorEngine(email_prefix_correlation=self._email_prefix_correlation)
 
     def _correlate(self, entities: list):
         return self._correlation_engine.correlate(entities)

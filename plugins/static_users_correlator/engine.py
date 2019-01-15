@@ -42,6 +42,18 @@ def compare_ad_upn(adapter_data1, adapter_data2):
     return False
 
 
+def compare_mail_prefix(adapter_user1, adapter_user2):
+    return get_mail_prefix(adapter_user1) and get_mail_prefix(adapter_user2) and\
+        get_mail_prefix(adapter_user1) == get_mail_prefix(adapter_user2)
+
+
+def get_mail_prefix(adapter_user):
+    mail = adapter_user.get(NORMALIZED_MAIL)
+    if mail and len(mail.split('@')) > 1:
+        return mail.split('@')[0]
+    return None
+
+
 def compare_mail(adapter_user1, adapter_user2):
     return adapter_user1.get(NORMALIZED_MAIL) and\
         adapter_user1.get(NORMALIZED_MAIL) == adapter_user2.get(NORMALIZED_MAIL)
@@ -94,6 +106,10 @@ def normalize_adapter_users(users):
 
 
 class StaticUserCorrelatorEngine(CorrelatorEngineBase):
+    def __init__(self, *args,  email_prefix_correlation=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__email_prefix_correlation = email_prefix_correlation
+
     @property
     def _correlation_preconditions(self):
         return [has_email, has_principle_name]
@@ -108,6 +124,24 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                           [],
                                           {'Reason': 'They have the same ad upn'},
                                           CorrelationReason.StaticAnalysis)
+
+    def _correlate_email_prefix(self, entities):
+        logger.info('Starting to correlate on mail prefix')
+        mails_indexed = {}
+        for adapter in entities:
+            email = adapter.get(NORMALIZED_MAIL)
+            if email and len(email.split('@')) > 1:
+                email_prefix = email.split('@')[0]
+                mails_indexed.setdefault(email_prefix, []).append(adapter)
+        for matches in mails_indexed.values():
+            if len(matches) >= 2:
+                yield from self._bucket_correlate(matches,
+                                                  [],
+                                                  [],
+                                                  [],
+                                                  [compare_mail_prefix],
+                                                  {'Reason': 'They have the same mail prefix'},
+                                                  CorrelationReason.StaticAnalysis)
 
     def _correlate_mail(self, entities):
         logger.info('Starting to correlate on mail')
@@ -144,3 +178,5 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn(normalize_adapter_users(entities))
         yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
+        if self.__email_prefix_correlation:
+            yield from self._correlate_email_prefix(normalize_adapter_users(entities))

@@ -37,7 +37,9 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_splunk_vpn, normalize_adapter_devices,
                                    normalize_mac, not_aruba_adapters,
                                    cloud_id_do_not_contradict,
-                                   not_contain_generic_jamf_names)
+                                   not_contain_generic_jamf_names,
+                                   get_serial_no_s, compare_serial_no_s,
+                                   get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -198,6 +200,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same serial'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_serial_no_s(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Serial no s')
+        filtered_adapters_list = filter(get_serial, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_serial_no_s],
+                                      [compare_serial_no_s],
+                                      [],
+                                      [asset_hostnames_do_not_contradict],
+                                      {'Reason': 'They have the same serial even with S at the beginning'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_cloud_instances(self, adapters_to_correlate):
         logger.info('Starting to correlate on Cloud Instances')
         filtered_adapters_list = filter(get_cloud_data, adapters_to_correlate)
@@ -218,6 +231,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [hostnames_do_not_contradict],
                                       {'Reason': 'Bios serial or serials are equal'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_serial_with_bios_serial_no_s(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Bios Serial No S')
+        filtered_adapters_list = filter(get_bios_serial_or_serial, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_bios_serial_or_serial_no_s],
+                                      [compare_bios_serial_serial_no_s],
+                                      [],
+                                      [hostnames_do_not_contradict],
+                                      {'Reason': 'Bios serial or serials are equal with no S'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_with_ad(self, adapters_to_correlate):
@@ -387,6 +411,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial(adapters_to_correlate)
 
         yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
+        yield from self._correlate_serial_with_bios_serial_no_s(adapters_to_correlate)
+        yield from self._correlate_serial_no_s(adapters_to_correlate)
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
 

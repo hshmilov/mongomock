@@ -1,3 +1,4 @@
+api/test_api.py
 adapters/debug_main.py
 adapters/active_directory_adapter/service.py
 adapters/active_directory_adapter/deprecated/psexec/psexec.py

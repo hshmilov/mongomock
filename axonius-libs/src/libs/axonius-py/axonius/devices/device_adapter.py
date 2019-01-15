@@ -257,6 +257,14 @@ class DeviceTagKeyValue(SmartJsonClass):
     tag_value = Field(str, "Tag Value")
 
 
+class ShodanData(SmartJsonClass):
+    port = Field(int, 'Port')
+    banner = Field(str, 'Banner')
+    devicetype = Field(str, 'Device Type')
+    org = Field(str, 'Organization')
+    os = Field(str, 'OS')
+
+
 class DeviceSwapFile(SmartJsonClass):
     """ A Definition for a key-value tag """
     name = Field(str, 'Name')
@@ -327,6 +335,7 @@ class DeviceAdapter(SmartJsonClass):
     tags = ListField(DeviceTagKeyValue, "Tags")
     cloud_provider = Field(str, "Cloud Provider")
     cloud_id = Field(str, "Cloud ID")
+    shodan_data = Field(ShodanData, 'Shodan Data')
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
@@ -526,6 +535,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_key_value_tag(self, key, value):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
+
+    def add_shodan_data(self, **kwargs):
+        self.shodan_data.append(ShodanData(**kwargs))
 
     def add_swap_file(self, name, size_in_gb):
         self.swap_files.append(DeviceSwapFile(name=name, size_in_gb=size_in_gb))

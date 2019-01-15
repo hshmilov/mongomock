@@ -1,3 +1,4 @@
+import time
 import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 import requests
@@ -64,7 +65,7 @@ class CiscoMerakiConnection(object):
         self.session.close()
         self.session = None
 
-    def _get(self, name, params=None):
+    def _get(self, name, params=None, second_time=False):
         """ Serves a GET request to CiscoMeraki API
 
         :param str name: the name of the request
@@ -80,6 +81,9 @@ class CiscoMerakiConnection(object):
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
+            if '429 Client Error' in str(e) and not second_time:
+                time.sleep(1)
+                return self._get(name=name, params=params, second_time=True)
             raise CiscoMerakiRequestException(str(e))
         return response.json()
 
