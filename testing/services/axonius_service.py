@@ -34,6 +34,7 @@ from services.weave_service import is_weave_up
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
+SUBNET_IP_RANGE = '171.17.0.0/16'
 BLACKLIST_LABEL = 'do_not_execute'
 
 
@@ -91,13 +92,13 @@ class AxoniusService:
 
             print(f'Creating weave network')
             weave_launch_command = [WEAVE_PATH, 'launch',
-                                    '--dns-domain="axonius.local"', '--ipalloc-range', '171.17.0.0/16', '--password',
+                                    '--dns-domain="axonius.local"', '--ipalloc-range', SUBNET_IP_RANGE, '--password',
                                     encryption_key.strip()]
 
             subprocess.check_call(weave_launch_command)
         else:
             print(f'Creating regular axonius network')
-            subprocess.check_call(['docker', 'network', 'create', '--subnet=171.17.0.0/16', cls._NETWORK_NAME],
+            subprocess.check_call(['docker', 'network', 'create', f'--subnet={SUBNET_IP_RANGE}', cls._NETWORK_NAME],
                                   stdout=subprocess.PIPE)
 
     @classmethod

@@ -7,6 +7,7 @@ This script installs the system from scratch (using --first-time) or as an upgra
 import argparse
 import datetime
 import getpass
+import json
 import os
 import pwd
 import shutil
@@ -64,6 +65,22 @@ def main():
     print_state(f'Done, took {int(time.time() - start)} seconds')
 
 
+def reset_weave_network():
+    try:
+        report = subprocess.check_output('weave report'.split())
+        report = json.loads(report)
+        from testing.services.axonius_service import SUBNET_IP_RANGE
+        if report['IPAM']['Range'] != SUBNET_IP_RANGE:
+            print('Resetting weave network.')
+            subprocess.check_call('weave reset'.split())
+        else:
+            print('Weave subnet range is configured correctly - Skipping reset.')
+    except subprocess.CalledProcessError:
+        print('Weave operation failed - Skipping reset.')
+    except json.JSONDecodeError:
+        print('Failed to decode weave report - Skipping reset.')
+
+
 def install(first_time, root_pass):
     if not first_time:
         validate_old_state(root_pass)
@@ -87,6 +104,7 @@ def install(first_time, root_pass):
 
     load_images()
 
+    reset_weave_network()
     start_axonius()
     run_discovery()
     set_logrotate(root_pass)
