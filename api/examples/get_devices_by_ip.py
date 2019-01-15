@@ -24,8 +24,8 @@ class ArgumentParser(argument_parser.ArgumentParser):
         self.add_argument('ip', help='ip to filter')
         self.description = \
             '''Example:
-  %(prog)s 192.168.1.1 -x https://axonius.local --username admin -p password1 --no-verify-ssl --function get_devices1
-  %(prog)s 192.168.1.2 -x https://axonius.local --api-key xxxx --api-secret yyyy --all-functions'''
+  %(prog)s 192.168.1.1 -x https://axonius.local --username admin -p password1 --no-verify-ssl
+  %(prog)s 192.168.1.2 -x https://axonius.local --api-key xxxx --api-secret yyyy'''
 
 
 def get_devices_by_ip(client, ip):

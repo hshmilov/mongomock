@@ -24,8 +24,8 @@ class ArgumentParser(argument_parser.ArgumentParser):
         self.add_argument('mac', help='mac to filter')
         self.description = \
             '''Example:
-  %(prog)s 00:11:22:33:44:55 -x https://axonius --username admin -p password1 --no-verify-ssl --function get_devices1
-  %(prog)s 00:11:22:33:44:55 -x https://axonius --api-key xxxx --api-secret yyyy --all-functions'''
+  %(prog)s 00:11:22:33:44:55 -x https://axonius --username admin -p password1 --no-verify-ssl
+  %(prog)s 00:11:22:33:44:55 -x https://axonius --api-key xxxx --api-secret yyyy'''
 
 
 def get_devices_by_mac(client, mac):

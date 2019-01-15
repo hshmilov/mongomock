@@ -24,8 +24,8 @@ class ArgumentParser(argument_parser.ArgumentParser):
         self.add_argument('name', help='name to filter')
         self.description = \
             '''Example:
-  %(prog)s pc-name -x https://axonius.local --username admin -p password1 --no-verify-ssl --function get_devices1
-  %(prog)s pc-name -x https://axonius.local --api-key xxxx --api-secret yyyy --all-functions'''
+  %(prog)s pc-name -x https://axonius.local --username admin -p password1 --no-verify-ssl'
+  %(prog)s pc-name -x https://axonius.local --api-key xxxx --api-secret yyyy'''
 
 
 def get_devices_by_name(client, name):

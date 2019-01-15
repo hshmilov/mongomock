@@ -36,7 +36,6 @@ class ArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args, namespace)
-
         if bool(args.api_key) != bool(args.api_secret):
             self.error('--api-key requires --api-secret')
         if len(list(filter(bool, (args.api_secret, args.password)))) != 1:
@@ -50,5 +49,5 @@ class ArgumentParser(argparse.ArgumentParser):
             args.auth = (args.username, args.password)
         else:
             args.headers = {'api-key': args.api_key,
-                            'api-secret': args.api_serect},
+                            'api-secret': args.api_secret}
         return args
