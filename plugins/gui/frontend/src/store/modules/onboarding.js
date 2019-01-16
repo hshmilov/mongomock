@@ -340,7 +340,7 @@ export const onboarding = {
 					content: 'Click to configure it.'
 				},
 				'manageEngine': {
-					id: 'desktop_central_adapter', title: 'ManageEngine Desktop Central ADAPTER', align: 'bottom',
+					id: 'desktop_central_adapter', title: 'ManageEngine Desktop Central ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
 				'kaseya': {
@@ -401,7 +401,7 @@ export const onboarding = {
 					content: 'Click to configure it.'
 				},
 				'gsuiteMDM': {
-					id: 'mdm_adapter', title: 'G-Suite MDM ADAPTER', align: 'right',
+					id: 'google_mdm_adapter', title: 'G-Suite MDM ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
 				'serviceNowAdapter': {
