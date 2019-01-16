@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 from multiprocessing.pool import ThreadPool
 
+import pymongo
 import requests
 import uritools
 import urllib3
@@ -189,9 +190,8 @@ class CoreService(PluginBase, Configurable):
 
     @add_rule('nodes/last_seen/<node_id>', methods=['GET'], should_authenticate=False)
     def get_node_status(self, node_id):
-        return jsonify({'last_seen':
-                        sorted(filter(lambda plugin: plugin['node_id'] == node_id, self.online_plugins.values()),
-                               key=lambda plugins: plugins['last_seen'])[0]['last_seen']})
+        return jsonify({'last_seen': self._get_collection('configs').find_one(filter={'node_id': node_id}, sort=[
+            ('last_seen', pymongo.DESCENDING)])['last_seen']})
 
     @add_rule('find_plugin_unique_name/nodes/<node_id>/plugins/<plugin_name>', methods=['GET'],
               should_authenticate=False)
@@ -315,6 +315,8 @@ class CoreService(PluginBase, Configurable):
                     plugin = self.online_plugins[unique_name]
                     if api_key == plugin['api_key']:
                         plugin['last_seen'] = datetime.utcnow()
+                        self._get_collection('configs').update_one({PLUGIN_UNIQUE_NAME: unique_name},
+                                                                   {'$set': {'last_seen': plugin['last_seen']}})
                         return 'OK'
                     else:
                         # Probably a new node_connection.
