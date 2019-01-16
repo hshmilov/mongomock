@@ -1,16 +1,15 @@
+from axonius.consts.gui_consts import ChartViews
+from cairosvg import svg2png
+from weasyprint.fonts import FontConfiguration
+from jinja2 import Environment, FileSystemLoader
+from weasyprint import HTML, CSS
+import uuid
+from math import pi, cos, sin, floor
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(f'axonius.{__name__}')
-from datetime import datetime
-from math import pi, cos, sin, floor
-import uuid
 
-from weasyprint import HTML, CSS
-from jinja2 import Environment, FileSystemLoader
-from weasyprint.fonts import FontConfiguration
-from cairosvg import svg2png
-
-from axonius.consts.gui_consts import ChartViews
 
 GREY_COLOUR = '#DEDEDE'
 
@@ -346,7 +345,7 @@ class ReportGenerator(object):
         for item in view_data['data']:
             item_values = []
             for field in current_fields:
-                value = item[list(field.values())[0]]
+                value = item.get(list(field.values())[0], '')
                 if isinstance(value, list):
                     canonized_value = [str(x) for x in value]
                     value = ','.join(canonized_value)
