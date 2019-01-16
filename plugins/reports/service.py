@@ -697,15 +697,15 @@ class ReportsService(PluginBase, Triggerable):
         heads = []
         data = {}
         if entity_type == EntityType.Devices:
-            data = gui_helpers.get_entities(limit, 0, query_filter, {},
-                                            {'adapters': 1, 'specific_data.data.hostname': 1},
-                                            entity_type)
+            data = gui_helpers.get_entities(limit, 0, query_filter, {}, {
+                'adapters': 1, 'specific_data.data.hostname': 1
+            }, entity_type)
             heads = [self.templates['table_head'].render({'content': 'Adapters'}),
                      self.templates['table_head'].render({'content': 'Host Name'})]
         elif entity_type == EntityType.Users:
-            data = gui_helpers.get_entities(limit, 0, query_filter, {},
-                                            {'adapters': 1, 'specific_data.data.username': 1},
-                                            entity_type)
+            data = gui_helpers.get_entities(limit, 0, query_filter, {}, {
+                'adapters': 1, 'specific_data.data.username': 1
+            }, entity_type)
             heads = [self.templates['table_head'].render({'content': 'Adapters'}),
                      self.templates['table_head'].render({'content': 'User Name'})]
         rows = []
@@ -739,9 +739,9 @@ class ReportsService(PluginBase, Triggerable):
                 {'content': '\n'.join(cid_template)}))
             entity_value = ''
             if entity_type == EntityType.Devices:
-                entity_value = entity['specific_data.data.hostname']
+                entity_value = entity.get('specific_data.data.hostname', '')
             elif entity_type == EntityType.Users:
-                entity_value = entity['specific_data.data.username']
+                entity_value = entity.get('specific_data.data.username', '')
             if isinstance(entity_value, list):
                 canonized_value = [str(x) for x in entity_value]
                 entity_value = ','.join(canonized_value)
