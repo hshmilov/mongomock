@@ -148,12 +148,11 @@
                     .map(item => {
                         let schema = this.fields.generic.find(schema => schema.name.match(`\\.${item.name}$`)) || {}
                         item.title = schema.title
-                        schema.title = undefined
                         if (Array.isArray(schema.items)) {
                             schema.items = schema.items.filter(field =>
                                 !field.name.includes('raw') && (!field.items || !Array.isArray(field.items)))
                         }
-                        return {...item, schema}
+                        return {...item, schema: {...schema, title: undefined}}
                     })
             },
             entityGenericAdvancedRegular() {
