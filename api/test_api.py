@@ -3,15 +3,15 @@
 # pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name, too-many-branches
 import logging
 
-from tests.conftest import axonius_fixture
+from examples.api_usage import RESTExample
+from axonius.utils.wait import wait_until
 from services.adapters.ad_service import ad_fixture
 from services.axonius_service import get_service
 from services.plugins.device_control_service import device_control_fixture
 from services.plugins.general_info_service import general_info_fixture
 from test_credentials.test_ad_credentials import ad_client1_details
 from testing.test_credentials.test_gui_credentials import DEFAULT_USER
-from examples.api_usage import RESTExample
-from axonius.utils.wait import wait_until
+from testing.tests.conftest import axonius_fixture
 
 MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3   # the amount of time we expect a cycle to end, without async plugins in bg
 
