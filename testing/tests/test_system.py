@@ -103,6 +103,7 @@ def test_stop_research(axonius_fixture, infinite_sleep_fixture):
     scheduler.wait_for_scheduler(True)
 
 
+@pytest.mark.skip('AX-3058')
 @pytest.mark.parametrize("is_node_mode_test_on", [True, False])
 def test_exclude_config(is_node_mode_test_on):
     must_internal_services = []

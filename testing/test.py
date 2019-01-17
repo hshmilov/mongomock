@@ -208,7 +208,7 @@ class InstanceManager:
     def __docker_execute(self, instance_name, job_name, commands, timeout=MAX_SECONDS_FOR_ONE_JOB, **kwargs):
         assert isinstance(commands, str), 'docker execute command must be a shell command'
         assert '"' not in commands, 'Not supported'
-        commands = f'/bin/bash -c "{commands}"'  # disable temp | ts -s'  # ts to print timestamp
+        commands = f'/bin/bash -c "{commands}" | ts -s'  # ts to print timestamp
         if timeout > 0:
             commands = f'timeout -t {timeout} -s KILL {commands}'
         TC.print(f'{instance_name}: executing {job_name}: {commands}')
@@ -490,26 +490,32 @@ class InstanceManager:
                 os.makedirs(os.path.join(ARTIFACTS_DIR_ABSOLUTE, command_job_name, 'xml'))
 
             # Start putting artifacts in this folder
-            current_logs_tar_file_name = f'{command_job_name}_logs.tar'
-            logs_tar_file_location = os.path.join(ARTIFACTS_DIR_ABSOLUTE, command_job_name, current_logs_tar_file_name)
-            with open(logs_tar_file_location, 'wb') as tar_file_obj:
-                for chunk in self.__docker.containers.get(instance_to_run_on).get_archive(
-                        ARTIFACTS_DIRS_INSIDE_CONTAINER['logs'])[0]:
-                    tar_file_obj.write(chunk)
+            try:
+                current_logs_tar_file_name = f'{command_job_name}_logs.tar'
+                logs_tar_file_location = os.path.join(
+                    ARTIFACTS_DIR_ABSOLUTE, command_job_name, current_logs_tar_file_name)
+                with open(logs_tar_file_location, 'wb') as tar_file_obj:
+                    for chunk in self.__docker.containers.get(instance_to_run_on).get_archive(
+                            ARTIFACTS_DIRS_INSIDE_CONTAINER['logs'])[0]:
+                        tar_file_obj.write(chunk)
 
-            # Now extract the xml files which have the tests result and report them as well
-            with tarfile.open(logs_tar_file_location, mode='r') as tar_file:
-                for xml_path in [xml_file_path for xml_file_path in tar_file.getnames() if
-                                 xml_file_path.endswith('.xml')]:
-                    with tar_file.extractfile(xml_path) as extracted_xml_file:
-                        final_xml_file_name = os.path.split(xml_path)[1]
-                        with open(os.path.join(ARTIFACTS_DIR_ABSOLUTE,
-                                               command_job_name,
-                                               'xml',
-                                               final_xml_file_name
-                                               ), 'wb') \
-                                as final_xml:
-                            final_xml.write(extracted_xml_file.read())
+                # Now extract the xml files which have the tests result and report them as well
+                with tarfile.open(logs_tar_file_location, mode='r') as tar_file:
+                    for xml_path in [xml_file_path for xml_file_path in tar_file.getnames() if
+                                     xml_file_path.endswith('.xml')]:
+                        with tar_file.extractfile(xml_path) as extracted_xml_file:
+                            final_xml_file_name = os.path.split(xml_path)[1]
+                            with open(os.path.join(ARTIFACTS_DIR_ABSOLUTE,
+                                                   command_job_name,
+                                                   'xml',
+                                                   final_xml_file_name
+                                                   ), 'wb') \
+                                    as final_xml:
+                                final_xml.write(extracted_xml_file.read())
+            except Exception:
+                TC.print(f'{instance_to_run_on}: job {command_job_name} exception while getting logs. '
+                         f'Current output is:\n{current_output}. Exception is: {str(e)}')
+                raise
 
             # Try getting screenshots. If we are in parallel tests this might fail
             try:
@@ -577,9 +583,9 @@ class InstanceManager:
                         name=f'pic_{pic_id}'
                     )
 
-        print(f'Finished with all tests, below are all tests with the time they took, ordered by the time of run')
+        print(f'Finished, below are all tests with the time they took, ordered by the time of run')
         for i, message in enumerate(tests_statistics):
-            print(f'{i}. {message}')
+            print(f'{i}. {message}', flush=True)
 
         # If there was at least one exception we should exit.
         if len(tests_with_exceptions) > 0:

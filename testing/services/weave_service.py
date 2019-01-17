@@ -19,6 +19,7 @@ def is_weave_up():
     Executes "Weave status" (if we're running on a linux machine) and checks that weave is up.
     :return: bool that signifies if weave is up.
     """
+    # This takes a second but is called multiple times when we raise the system, so we have to cache it.
     if 'linux' in sys.platform.lower():
         cmd = [WEAVE_PATH, 'status']
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

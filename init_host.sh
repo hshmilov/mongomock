@@ -23,6 +23,12 @@ echo "Initializing the host image.."
 echo "hostname: $(hostname)"
 echo ""
 echo "Updating the sources..."
+# Sometimes, the operating system tries to update itself, so we might fail here
+# with "Could not get lock /var/lib/dpkg/lock-frontend"
+while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
+    echo -en "Waiting for other software managers to finish...\n"
+    sleep 0.5
+done
 apt-get install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
@@ -33,7 +39,7 @@ add-apt-repository -y ppa:jonathonf/python-3.6
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise apt-get update fails
 apt-get update
 echo "Installing various dependencies..."
-apt-get install -y htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
+apt-get install -y stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
 echo "Installing python 3.6..."
 apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip
 curl https://bootstrap.pypa.io/get-pip.py | python3.6
