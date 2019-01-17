@@ -320,7 +320,7 @@ class Page:
                 toaster = self.find_toaster(text)
                 if not toaster:
                     return True
-            except NoSuchElementException:
+            except (NoSuchElementException, StaleElementReferenceException):
                 return True
             time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for toaster {text} to disappear')
