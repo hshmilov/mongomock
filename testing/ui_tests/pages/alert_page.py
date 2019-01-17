@@ -1,3 +1,5 @@
+import time
+
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.pages.entities_page import EntitiesPage
@@ -165,6 +167,9 @@ class AlertPage(EntitiesPage):
         self.click_ok_button()
 
     def create_basic_alert(self, alert_name, alert_query):
+        self.switch_to_page()
+        # for some reason, this switch_to_page doesn't work from here sometimes
+        time.sleep(1)
         self.switch_to_page()
         self.click_new_alert()
         self.wait_for_spinner_to_end()
