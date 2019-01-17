@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    foreman_adapter: {
+        title: 'Foreman - BETA',
+        description: 'Foreman is a free open source project that gives you the power to easily automate repetitive tasks, quickly deploy applications, and proactively manage your servers lifecyle, on-premises or in the cloud.'
+    },
     saltstack_adapter: {
         title: 'SaltStack',
         description: 'SaltStack intelligent automation delivers, event-driven security, cloud and configuration management for the complexity and scale of a software-defined world.'

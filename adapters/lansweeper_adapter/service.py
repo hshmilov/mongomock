@@ -5,8 +5,9 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField, JsonArrayFormat
 from axonius.utils.files import get_local_config_file
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import (get_exception_string, is_domain_valid,
                                    parse_date)
 from axonius.clients.rest.connection import RESTConnection
@@ -16,10 +17,25 @@ from lansweeper_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class RegistryInfomation(SmartJsonClass):
+    reg_key = Field(str, 'Registry Key')
+    value_name = Field(str, 'Value Name')
+    value_data = Field(str, 'Value Data')
+    last_changed = Field(datetime.datetime, 'Last Changed')
+
+
 class LansweeperAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
+        last_active_scan = Field(datetime.datetime, 'Last Active Scan')
+        lsat_ls_agent = Field(datetime.datetime, 'Last Ls Agent')
+        uptime = Field(int, 'Uptime')
+        registry_information = ListField(RegistryInfomation, 'Registry Information',
+                                         json_format=JsonArrayFormat.table)
+
+        def add_registry_information(self, **kwargs):
+            self.registry_information.append(RegistryInfomation(**kwargs))
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -92,9 +108,21 @@ class LansweeperAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting query hotfix')
 
+            asset_reg_dict = dict()
+            try:
+                for asset_reg_data in client_data.query(consts.QUERY_REGISTRY):
+                    asset_id = asset_reg_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_reg_dict:
+                        asset_reg_dict[asset_id] = []
+                    asset_reg_dict[asset_id].append(asset_reg_data)
+            except Exception:
+                logger.exception(f'Problem getting query software')
+
             for device_raw in client_data.query(consts.LANSWEEPER_QUERY_DEVICES):
                 yield device_raw, asset_software_dict, soft_id_to_soft_data_dict,\
-                    asset_hotfix_dict, hotfix_id_to_hotfix_data_dict
+                    asset_hotfix_dict, hotfix_id_to_hotfix_data_dict, asset_reg_dict
 
     def _clients_schema(self):
         return {
@@ -144,7 +172,7 @@ class LansweeperAdapter(AdapterBase):
                 asset_software_dict,\
                 soft_id_to_soft_data_dict,\
                 asset_hotfix_dict,\
-                hotfix_id_to_hotfix_data_dict in devices_raw_data:
+                hotfix_id_to_hotfix_data_dict, asset_reg_dict in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('AssetUnique')
@@ -204,6 +232,7 @@ class LansweeperAdapter(AdapterBase):
                     logger.exception(f'Problem adding NIC to {device_raw}')
                 try:
                     if device_raw.get('Uptime'):
+                        device.uptime = int(device_raw.get('Uptime'))
                         device.boot_time = datetime.datetime.now() - \
                             datetime.timedelta(seconds=int(device_raw.get('Uptime')))
                 except Exception:
@@ -222,6 +251,35 @@ class LansweeperAdapter(AdapterBase):
                     else:
                         device.last_used_users = [username]
                 device.description = device_raw.get('Description')
+                try:
+                    device.last_active_scan = parse_date(device_raw.get('LastActiveScan'))
+                except Exception:
+                    logger.exception(f'Problem getting last active scan for {device_raw}')
+                try:
+                    device.lsat_ls_agent = parse_date(device_raw.get('LastLsAgent'))
+                except Exception:
+                    logger.exception(f'Problem getting last ls agent for {device_raw}')
+                try:
+                    asset_reg_list = asset_reg_dict.get(device_raw.get('AssetID'))
+                    if isinstance(asset_reg_list, list):
+                        for asset_reg_data in asset_reg_list:
+                            try:
+                                reg_key = asset_reg_data.get('Regkey')
+                                value_name = asset_reg_data.get('Valuename')
+                                value_data = asset_reg_data.get('Value')
+                                last_changed = None
+                                try:
+                                    last_changed = parse_date(asset_reg_data.get('Lastchanged'))
+                                except Exception:
+                                    logger.exception(f'Problem getting last_changed for {asset_reg_data}')
+                                device.add_registry_information(reg_key=reg_key,
+                                                                value_name=value_name,
+                                                                value_data=value_data,
+                                                                last_changed=last_changed)
+                            except Exception:
+                                logger.exception(f'Problem getting asset reg data {asset_reg_data}')
+                except Exception:
+                    logger.exception(f'Problem getting reg informaation for {device_raw}')
                 raw_dict = dict()
                 for key in device_raw:
                     raw_dict[key] = str(device_raw[key])

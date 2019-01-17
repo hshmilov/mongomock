@@ -117,7 +117,7 @@ SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__)
 DEVICE_ADVANCED_FILEDS = ['installed_software', 'software_cves',
                           'security_patches', 'available_security_patches', 'network_interfaces',
                           'users', 'connected_hardware', 'local_admins', 'hard_drives', 'connected_devices',
-                          'plugin_and_severity', 'tenable_sources']
+                          'plugin_and_severities', 'tenable_sources', 'registry_information']
 
 USER_ADVANCED_FILEDS = ['associated_devices']
 

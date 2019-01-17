@@ -75,6 +75,7 @@ DOCKER_PORTS = {
     'cybereason-adapter':               5940,
     'snipeit-adapter':                  5941,
     'saltstack-adapter':                5942,
+    'foreman-adapter':                  5943,
     'cisco-adapter':                    6001,
     'zabbix-adapter':                   6005,
     'tripwire-enterprise-adapter':      6007,
