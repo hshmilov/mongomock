@@ -21,6 +21,8 @@ class TestAlertSanity(TestBase):
     def create_alert_change_query(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
+        # sometimes it appears like we are directed to the dashboard at this stage
+        self.devices_page.switch_to_page()
         self.devices_page.run_filter_and_save(ALERT_CHANGE_NAME, ALERT_CHANGE_FILTER)
 
     def test_remove_alert(self):
