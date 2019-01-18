@@ -987,6 +987,20 @@ class PluginBase(Configurable, Feature):
         """
         return jsonify(gc.collect(int(generation)))
 
+    @add_rule('debug/gc_stats', methods=['GET'])
+    def gc_stats(self):
+        """
+        Get GC stats
+        """
+        threshold = gc.get_threshold()
+        count = gc.get_count()
+        stats = gc.get_stats()
+        return jsonify({
+            'threshold': threshold,
+            'count': count,
+            'stats': stats
+        })
+
     @add_rule('action_update/<action_id>', methods=['POST'])
     def action_callback(self, action_id):
         """ A function for receiving updates from the executor (Adapter or EC).
