@@ -16,7 +16,6 @@ STRONG_EC2_TYPE = "t2.2xlarge"
 
 DEVELOPMENT_MODE = os.environ.get('BUILDS_DEBUG') == 'true'
 
-
 # set the project root directory as the static folder, you can set others.
 app = Flask(__name__, static_url_path='/static')
 app.secret_key = "supersekrit"
@@ -113,13 +112,21 @@ def images():
     return jsonify({"result": json_result, "current": bm.getImages()})
 
 
-@app.route('/exports', methods=['GET', 'POST'])
-@authorize
-def exports():
+@app.route('/exports', methods=['GET'])
+def exports_get():
     """Return info about our exported vms."""
     if request.method == "GET":
-        json_result = bm.getExports()
-    elif request.method == "POST":
+        limit = int(request.args.get('limit', '0'))
+        json_result = bm.getExports(limit=limit)
+
+    return jsonify({"result": json_result, "current": {}})
+
+
+@app.route('/exports', methods=['POST'])
+@authorize
+def exports_post():
+    """Submits a new export"""
+    if request.method == "POST":
         json_result = (bm.export_ova(
             version=request.form["version"],
             owner=(session['builds_user_full_name'], session['builds_user_id']),

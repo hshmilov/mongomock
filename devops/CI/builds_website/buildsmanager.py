@@ -3,6 +3,7 @@
 This project assumes the aws settings & credentials are already configured in the machine, either by using aws cli
 (aws configure) or by putting it in "~/.aws.config"
 """
+
 import re
 import subprocess
 import boto3
@@ -12,7 +13,7 @@ import paramiko
 import awsutils
 import redis
 import random
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from bson.objectid import ObjectId
 
 BUILDS_INSTANCE_VM_TYPE = "Builds-VM"
@@ -211,14 +212,18 @@ class BuildsManager(object):
 
         return len(deleted) > 0
 
-    def getExports(self, status=None):
+    def getExports(self, status=None, limit=None):
         """Return all vm exports we have on our s3 bucket."""
         if status is None:
-            exports = self.db.exports.find({'status': {"$nin": ["InProgress", "deleted"]}}, {"_id": 0})
+            exports = self.db.exports.find({'status': {"$nin": ["InProgress", "deleted"]}}, {"_id": 0}) \
+                .sort('_id', DESCENDING). \
+                limit(limit)
         else:
-            exports = self.db.exports.find({'status': {"$in": status}}, {"_id": 0})
+            exports = self.db.exports.find({'status': {"$in": status}}, {"_id": 0}) \
+                .sort('_id', DESCENDING) \
+                .limit(limit)
 
-        return list(exports)[::-1]
+        return list(exports)
 
     def getExportManifest(self, key):
         """ Returns the stored manifest of a specific key. """
