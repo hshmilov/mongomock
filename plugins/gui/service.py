@@ -15,7 +15,7 @@ from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 from typing import Iterable, Tuple, Dict
 from uuid import uuid4
-
+from pathlib import Path
 import gridfs
 import ldap3
 import pymongo
@@ -105,7 +105,7 @@ from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
-# pylint: disable=line-too-long,superfluous-parens,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,dangerous-default-value,unidiomatic-typecheck,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme
+# pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,dangerous-default-value,unidiomatic-typecheck,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme
 
 # TODO: the following ones are real errors, we should fix them first
 # pylint: disable=invalid-sequence-index,method-hidden
@@ -364,6 +364,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             user_db = self.__users_collection.find_one({'user_name': 'admin'})
             user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
             session = {'user': user_db}
+        self.config = {'medical': os.environ.get('MEDICAL', None) == 'true'}
+
+        Path('gui/frontend/src/constants/config.json').write_text(json.dumps(self.config))
 
     def __setup_dashboard_caching(self):
         """

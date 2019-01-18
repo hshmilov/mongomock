@@ -7,10 +7,11 @@
             </div>
             <div class="body">
                 <h3 class="title">Login</h3>
-                <x-form :schema="schema" v-model="credentials" @input="initError" @validate="onValidate"
-                        @submit="onLogin" :error="auth.currentUser.error"/>
-                <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
-                <div v-if="oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled" class="t-center mt-12">Or</div>
+                <x-form :schema="schema" v-if="!medicalConfig" v-model="credentials" @input="initError"
+                        @validate="onValidate" @submit="onLogin" :error="auth.currentUser.error"/>
+                <button v-if="!medicalConfig" class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
+                <div v-if="(oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled) && !medicalConfig"
+                     class="t-center mt-12">Or</div>
                 <div class="login-options">
                     <a @click="onOktaLogin" v-if="oktaConfig.enabled" id="okta_login_link" class="x-btn link"
                        :class="{'grid-span2': singleLoginMethod}">Login with Okta</a>
@@ -44,6 +45,7 @@
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS, GOOGLE_LOGIN} from '../../../store/modules/auth'
     import * as OktaAuth from '@okta/okta-auth-js'
+    import * as config from '../../../constants/config.json'
 
     export default {
         name: 'x-login',
@@ -80,6 +82,9 @@
             },
             singleLoginMethod() {
                 return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled) === 1
+            },
+            medicalConfig() {
+                return config.medical
             }
 
         },

@@ -315,7 +315,13 @@ axonius-libs/__build_metadata
 nvd_current_state.json
 account_data.tmp
 
-# Vim 
+# gui
+plugins/gui/frontend/.idea/
+plugins/gui/frontend/node_modules/
+plugins/gui/frontend/package-lock.json
+
+
+# Vim
 *.swp
 *.swo
 
