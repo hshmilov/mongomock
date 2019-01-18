@@ -28,6 +28,9 @@ class ChefAdapter(AdapterBase):
         instance_id = Field(str, "AWS instance ID")
         public_ip = Field(str, 'Discovered public ip', converter=format_ip, json_format=JsonStringFormat.ip)
         chef_tags = ListField(str, 'Chef tags')
+        swap_total = Field(float, "Total Swap GB")
+        swap_cached = Field(float, "Cached Swap GB")
+        swap_free = Field(float, "Free Swap GB")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -185,6 +188,11 @@ class ChefAdapter(AdapterBase):
                     memory = device_raw_automatic.get('memory') or {}
                     device.total_physical_memory = float((memory.get('total') or '0kb')[:-2]) / 1024.0 / 1024.0
                     device.free_physical_memory = float((memory.get('free') or '0kb')[:-2]) / 1024.0 / 1024.0
+                    if memory.get('swap'):
+                        swap = memory.get('swap')
+                        device.swap_total = float((swap.get('total') or '0kb')[:-2]) / 1024.0 / 1024.0
+                        device.swap_cached = float((swap.get('cached') or '0kb')[:-2]) / 1024.0 / 1024.0
+                        device.swap_free = float((swap.get('free') or '0kb')[:-2]) / 1024.0 / 1024.0
                     if device.total_physical_memory:
                         used_ram = device.total_physical_memory - device.free_physical_memory
                         used_ram = used_ram / device.total_physical_memory
@@ -228,7 +236,8 @@ class ChefAdapter(AdapterBase):
                 if version:
                     device.set_dynamic_field('axonius_version', version)
 
-                device.set_raw(device_raw)
+                # seem like chef's raw is a bit too much for mongo, and the db fails to insert
+                # device.set_raw(device_raw)
 
                 yield device
             except Exception:
