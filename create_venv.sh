@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")"
 
 echo "Creating venv"
-python3 -m virtualenv --python=python3 venv
+python3 -m virtualenv --python=python3.6 venv
 
 python3 ./devops/create_pth.py
 

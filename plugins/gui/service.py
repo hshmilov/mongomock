@@ -634,9 +634,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         def _advanced_generic_data(category):
             category_schema = next(filter(lambda field: category == field['name'].split('.')[-1], generic_fields), {})
             if not category_schema:
+                logger.warning(f'category_schema is empty {generic_fields}')
                 return None
             category_data = gui_helpers.parse_entity_fields(entity, [category_schema['name']])
             if category_schema['name'] not in category_data:
+                logger.warning(
+                    f'category schema name is not in category data, {category_schema["name"]} : {category_data}')
                 return None
             # Flatten items of this advanced field list, for presentation in table
             return [gui_helpers.parse_entity_fields(val_item, [field['name'] for field in category_schema['items']])

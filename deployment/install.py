@@ -282,7 +282,7 @@ def load_new_source():
 
 def create_venv():
     print_state('Creating python venv')
-    args = f'python3 -m virtualenv --python=python3 --clear {VENV_PATH} --never-download'.split(' ')
+    args = f'python3 -m virtualenv --python=python3.6 --clear {VENV_PATH} --never-download'.split(' ')
     subprocess.check_call(args)
 
     # running this script as executable because can't easily import in at this stage

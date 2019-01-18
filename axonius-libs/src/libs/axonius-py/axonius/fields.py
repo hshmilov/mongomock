@@ -4,6 +4,185 @@
 from enum import Enum, auto
 import datetime
 
+# pylint: disable=too-many-branches,protected-access,too-many-instance-attributes
+
+
+def compare_enum_by_name(value1, value2):
+    if isinstance(value1, Enum):
+        value1 = value1.name
+
+    if isinstance(value2, Enum):
+        value2 = value2.name
+
+    if all([isinstance(value, (str, bytes)) for value in [value1, value2]]):
+        return value1.lower() == value2.lower()
+    return False
+
+
+def compare_enum_by_value(value1, value2):
+    if isinstance(value1, Enum):
+        value1 = value1.value
+
+    if isinstance(value2, Enum):
+        value2 = value2.value
+
+    return value1 == value2
+
+
+def compare_enum(value1, value2):
+    """ case insensitive compare 2 values, each value can be either string int or enum,
+        if value is enum use the enum name to compare.
+        if failed try to compare by value
+        if nothing work fallback to regular compare"""
+
+    if compare_enum_by_name(value1, value2):
+        return True
+
+    if compare_enum_by_value(value1, value2):
+        return True
+
+    return value1 == value2
+
+
+def prepare_value(value, field_type, field_instance, name):
+    enum = field_instance.enum
+
+    # We must import SmartJsonClass in the middle of the function because of bi-directional dependencies
+    from axonius.smart_json_class import SmartJsonClass
+
+    if value is None:
+        raise TypeError(f'{name} expected to be {field_type}, got {value} of {type(value)} instead')
+
+    # If we expect an str, but we get a list with one str value, just take this value.
+    if isinstance(value, list) and len(value) == 1 and field_type == str and isinstance(value[0], str):
+        value = value[0]
+
+    if enum:
+        values = [item for item in enum if compare_enum(item, value)]
+        if not values:
+            raise ValueError(f'Unexpected enum value {value}, '
+                             f'expected one of {enum} values')
+        value = values[0]
+
+        # Enum in value or enum=Enum implies type is str
+        if isinstance(value, Enum):
+            value = value.name
+            field_type = str
+
+        if issubclass(field_type, Enum):
+            field_type = str
+
+    # We want to avoid stupid int/str/float mistakes. so lets try converting these values first.
+    # This means, that if we expect an str but get something else, it will be auto-converted.
+    if not isinstance(value, field_type) and field_type in [str, int, float]:
+        try:
+            value = field_type(value)
+        except Exception:
+            pass
+
+    # If still its not...
+    if not isinstance(value, field_type):
+        # accpet dict for SmartJsonClass
+        if not (issubclass(field_type, SmartJsonClass) and isinstance(value, dict)):
+            raise TypeError(f'{name} expected to be {field_type}, got {value} of {type(value)} instead')
+
+    if field_instance.min and value < field_instance.min:
+        raise ValueError(f'Got {value} less then defined minimum {field_instance.min}')
+    if field_instance.max and value > field_instance.max:
+        raise ValueError(f'Got {value} more then defined maximum {field_instance.max}')
+
+    if field_instance.converter:
+        value = field_instance.converter(value)
+
+    return value
+
+
+class FieldGetter:
+    def __init__(self, field_instance, field_type, name):
+        self.__name__ = name
+        self.field_type = field_type
+        self.field_instance = field_instance
+        self.name = name
+
+    def __call__(self, smart_json):
+        """
+        Getter for fields on the SmartJsonClass
+        :param smart_json: SmartJsonClass instance
+        :return the value of the current property
+        """
+        return smart_json._dict[self.name]
+
+# define a new specific type-checking list class
+
+
+class _List(list):
+    def __init__(self, field_type, field_instance, name, *args, **kwargs):
+        self.field_type = field_type
+        self.field_instance = field_instance
+        self.name = name
+        super().__init__(*args, **kwargs)
+
+    def append(self, obj):
+        super(_List, self).append(prepare_value(obj, self.field_type, self.field_instance, self.name))
+
+
+class ListGetter(FieldGetter):
+    def __call__(self, smart_json):
+        if self.name not in smart_json._dict:
+            # creates a new instance of type-checking list for this type
+            smart_json._dict[self.name] = _List(self.field_type, self.field_instance, self.name)
+            smart_json.all_fields_found.add(self.name)
+        return super().__call__(smart_json)
+
+
+class FieldSetter:
+    def __init__(self, field_instance, field_type, name):
+        self.__name__ = name
+        self.field_type = field_type
+        self.field_instance = field_instance
+        self.name = name
+
+    def _prepare_value(self, value):
+        if value is None:
+            return None
+
+        # There are some special cases, where we consider the value as none.
+        # If we expect str and we get '', or if we expect str and we get 0 (int).
+        if self.field_type == str and isinstance(value, (str, int)) and value in ('', 0):
+            return None
+
+        return prepare_value(value, self.field_type, self.field_instance, self.name)
+
+    def __call__(self, smart_json, value):
+        """
+        Setter for fields on the SmartJsonClass
+        :param self: SmartJsonClass instance
+        :param value: The new value for the current property
+        """
+        value = self._prepare_value(value)
+
+        if value is None:
+            if self.name in smart_json._dict:
+                smart_json._dict.pop(self.name)
+            return
+
+        smart_json._dict[self.name] = value
+        smart_json._extend_names(self.name, value)  # add our name to the SmartJsonClass instance
+
+
+class ListSetter(FieldSetter):
+    def _prepare_value(self, value):
+        if value is None:
+            return None
+
+        if not isinstance(value, list):
+            raise TypeError(
+                f'{self.name} expected to be list of {self.field_type}, got {value} instead')
+
+        value = [prepare_value(item, self.field_type, self.field_instance, self.name)
+                 for item in value]
+        return _List(self.field_type, self.field_instance, self.name, value)
+
 
 class NamedProperty(property):
     def __init__(self, name, fget=None, fset=None, fdel=None):
@@ -43,7 +222,7 @@ class JsonArrayFormat(JsonFormat):
     calendar = auto()
 
 
-class Field(object):
+class Field:
     """ A single field class, holds information regarding python type checking and json-serialization """
 
     def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonFormat = None,
@@ -135,13 +314,13 @@ class Field(object):
     def json_name(self):
         if issubclass(self.type, bool):
             return 'bool'
-        elif issubclass(self.type, int):
+        if issubclass(self.type, int):
             return 'integer'
-        elif issubclass(self.type, float):
+        if issubclass(self.type, float):
             return 'number'
-        elif issubclass(self.type, str):
+        if issubclass(self.type, str):
             return 'string'
-        elif issubclass(self.type, dict):
+        if issubclass(self.type, dict):
             return 'object'
         return 'string'
 
@@ -163,87 +342,10 @@ class Field(object):
     def get_field(self, name: str):
         """ returns a new python property instance with both getter and setter for the current field that will get
             installed on a SmartJsonClass derived class. """
-        from axonius.smart_json_class import SmartJsonClass
         self._set_name(name)
-        field_type = self._type
-        field_instance = self
-        is_smart_field = issubclass(field_type, SmartJsonClass)
 
-        def getter(self: SmartJsonClass):
-            """
-            Setter for fields on the SmartJsonClass
-            :param self: SmartJsonClass instance
-            :return the value of the current property
-            """
-            return self._dict[name]
-
-        def setter(self: SmartJsonClass, value):
-            """
-            Setter for fields on the SmartJsonClass
-            :param self: SmartJsonClass instance
-            :param value: The new value for the current property
-            """
-            # Type-check for value before setting inside the dict of SmartJsonClass
-            if is_smart_field and isinstance(value, dict):  # accept also free-dict instead of SmartJsonClass
-                pass
-
-            # There are some special cases, where we consider the value as none.
-            # If we expect str and we get '', or if we expect str and we get 0 (int).
-            if (field_type == str and isinstance(value, str) and value == '') \
-                    or (field_type == str and isinstance(value, int) and value == 0):
-                value = None
-
-            if value is not None:
-                # If we expect an str, but we get a list with one str value, just take this value.
-                if isinstance(value, list) and len(value) == 1 and field_type == str and isinstance(value[0], str):
-                    value = value[0]
-
-                # We want to avoid stupid int/str/float mistakes. so lets try converting these values first.
-                # This means, that if we expect an str but get something else, it will be auto-converted.
-                if not isinstance(value, field_type) and (field_type == str or field_type == int or field_type == float):
-                    try:
-                        value = field_type(value)
-                    except Exception:
-                        pass
-
-                # If still its not...
-                if not isinstance(value, field_type):
-                    raise TypeError(f'{name} expected to be {field_type}, got {value} of {type(value)} instead')
-
-                if field_instance._enum:
-                    for item in field_instance._enum:
-                        if isinstance(value, str) and isinstance(item, str) and value.lower() == item.lower():
-                            value = item
-                            break
-                        elif value == item:
-                            value = item
-                            break
-                    else:
-                        raise ValueError(f'Unexpected enum value {value}, '
-                                         f'expected one of {field_instance.enum} values')
-                if field_instance._min and value < field_instance._min:
-                    raise ValueError(f'Got {value} less then defined minimum {field_instance.min}')
-                if field_instance._max and value > field_instance._max:
-                    raise ValueError(f'Got {value} more then defined maximum {field_instance.max}')
-            else:
-                if name in self._dict:
-                    self._dict.pop(name)
-                return
-
-            if field_instance.converter:
-                value = field_instance.converter(value)
-
-            # Again, after converter.
-            if value is None or (isinstance(value, str) and value == ''):
-                if name in self._dict:
-                    self._dict.pop(name)
-                return
-
-            self._dict[name] = value
-            self._extend_names(name, value)  # add our name to the SmartJsonClass instance
-
-        getter.__name__ = name
-        setter.__name__ = name
+        getter = FieldGetter(self, self._type, name)
+        setter = FieldSetter(self, self._type, name)
         field = NamedProperty(name, getter, setter)
         return field
 
@@ -256,64 +358,8 @@ class ListField(Field):
     def get_field(self, name: str):
         """ returns a new python property instance with both getter and setter for the current field list that will get
             installed on a SmartJsonClass derived class. """
-        from axonius.smart_json_class import SmartJsonClass
         self._set_name(name)
-        field_type = self._type
-        field_instance = self
-        is_smart_field = issubclass(field_type, SmartJsonClass)
-
-        # define a new specific type-checking list class
-        class _List(list):
-            def append(self, obj):
-                if is_smart_field and isinstance(obj, dict):  # accept also free-dict instead of SmartJsonClass
-                    pass
-                elif not isinstance(obj, field_type):
-                    raise TypeError(f'{name} expected to be {field_type}, got {obj} of {type(obj)} instead')
-                if field_instance.converter:
-                    obj = field_instance.converter(obj)
-                super(_List, self).append(obj)
-
-        def getter(self: SmartJsonClass):
-            """
-            Setter for fields on the SmartJsonClass
-            :param self: SmartJsonClass instance
-            :return the value of the current property
-            """
-            if name not in self._dict:
-                self._dict[name] = _List()  # creates a new instance of type-checking list for this type
-            SmartJsonClass.all_fields_found.add(name)
-            return self._dict[name]
-
-        def setter(self: SmartJsonClass, value):
-            """
-            Setter for fields on the SmartJsonClass
-            :param self: SmartJsonClass instance
-            :param value: The new value for the current property
-            """
-            # Type-check for value before setting inside the dict of SmartJsonClass
-            if value is not None:
-                if not isinstance(value, list):
-                    raise TypeError(f'{name} expected to be list of {field_type}, got {value} of {type(value)} instead')
-
-                for item in value:
-                    if is_smart_field and isinstance(item, dict):  # accept also free-dict instead of SmartJsonClass
-                        pass
-                    elif not isinstance(item, field_type):
-                        raise TypeError(f'{name} expected to be {field_type}, got {item} of {type(item)} instead')
-            else:
-                if name in self._dict:
-                    self._dict.pop(name)
-                return
-
-            if field_instance.converter:
-                new_list = []
-                for item in value:
-                    new_list.append(field_instance.converter(item))
-                value = new_list
-            self._dict[name] = _List(value)  # set new (type-checked-list) value inside the dict of SmartJsonClass
-            self._extend_names(name, value)  # add our name to the SmartJsonClass instance
-
-        getter.__name__ = name
-        setter.__name__ = name
+        getter = ListGetter(self, self._type, name)
+        setter = ListSetter(self, self._type, name)
         field = NamedProperty(name, getter, setter)
         return field

@@ -240,7 +240,6 @@ axonius-libs/src/libs/axonius-py/axonius/config_reader.py
 axonius-libs/src/libs/axonius-py/axonius/correlator_engine_base.py
 axonius-libs/src/libs/axonius-py/axonius/entities.py
 axonius-libs/src/libs/axonius-py/axonius/execution_correlator_engine_base.py
-axonius-libs/src/libs/axonius-py/axonius/fields.py
 axonius-libs/src/libs/axonius-py/axonius/plugin_base.py
 axonius-libs/src/libs/axonius-py/axonius/plugin_exceptions.py
 axonius-libs/src/libs/axonius-py/axonius/scanner_adapter_base.py

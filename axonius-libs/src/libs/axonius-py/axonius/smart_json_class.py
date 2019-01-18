@@ -244,12 +244,7 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                         (field_init_type == 'dynamic' and not field.dynamic):
                     continue
             item = {'name': field.name}
-            if field.title:
-                item['title'] = field.title
-            if field.description:
-                item['description'] = field.description
-            if field.format is not None:
-                item['format'] = field.format.name.replace('_', '-')
+
             if issubclass(field.type, SmartJsonClass):
                 field_type = list(field.type._get_fields_info(field_init_type))
                 if isinstance(field, ListField):
@@ -260,21 +255,46 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                 field_type = field.json_name
                 if isinstance(field, ListField):
                     item['items'] = {'type': field_type}
-                    if field.format is not None:
-                        item['items']['format'] = field.format.name.replace('_', '-')
                     field_type = 'array'
-                if field.min is not None:
-                    item['minimum'] = field.min
-                if field.max is not None:
-                    item['maximum'] = field.max
-                if field.pattern is not None:
-                    item['pattern'] = field.pattern
-                if field.enum is not None:
-                    enum_values = field.enum
-                    if isinstance(enum_values, type) and issubclass(enum_values, Enum):
-                        enum_values = [value.name for value in enum_values]
-                    item['enum'] = enum_values
-                if field.dynamic is True:
-                    item['dynamic'] = True
+
             item['type'] = field_type
+
+            if isinstance(field, ListField):
+                item_dict = item['items']
+            else:
+                item_dict = item
+
+            if field.title:
+                item['title'] = field.title
+
+            if field.description:
+                item['description'] = field.description
+
+            if field.format is not None:
+                item_dict['format'] = field.format.name.replace('_', '-')
+                item['format'] = field.format.name.replace('_', '-')
+
+            if field.min is not None:
+                item_dict['minimum'] = field.min
+                item['minimum'] = field.min
+
+            if field.max is not None:
+                item_dict['maximum'] = field.max
+                item['maximum'] = field.max
+
+            if field.pattern is not None:
+                item_dict['pattern'] = field.pattern
+                item['pattern'] = field.pattern
+
+            if field.enum is not None:
+                enum_values = field.enum
+                if isinstance(enum_values, type) and issubclass(enum_values, Enum):
+                    enum_values = [value.name for value in enum_values]
+                item_dict['enum'] = enum_values
+                item['enum'] = enum_values
+
+            if field.dynamic is True:
+                item['dynamic'] = True
+                item_dict['dynamic'] = True
+
             yield item
