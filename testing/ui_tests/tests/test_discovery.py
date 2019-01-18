@@ -113,6 +113,11 @@ class TestDiscovery(TestBase):
         assert not any(JSON_ADAPTER_PLUGIN_NAME in x['Adapters'] for x in all_devices)
 
     def test_stop_discovery_sanity(self):
+        self.adapters_page.switch_to_page()
+        self.adapters_page.wait_for_spinner_to_end()
+        time.sleep(1)
+        # For some reason it does not switch to adapters page every time in this stage
+        self.adapters_page.switch_to_page()
         # Add AD clients.
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.add_server(ad_client2_details)
