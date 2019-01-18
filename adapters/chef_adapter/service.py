@@ -28,9 +28,6 @@ class ChefAdapter(AdapterBase):
         instance_id = Field(str, "AWS instance ID")
         public_ip = Field(str, 'Discovered public ip', converter=format_ip, json_format=JsonStringFormat.ip)
         chef_tags = ListField(str, 'Chef tags')
-        swap_total = Field(float, "Total Swap GB")
-        swap_cached = Field(float, "Cached Swap GB")
-        swap_free = Field(float, "Free Swap GB")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
