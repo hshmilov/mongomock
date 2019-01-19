@@ -121,10 +121,20 @@ class Page:
         self.driver.get(full_url)
 
     def switch_to_page(self):
+        self.switch_to_page_allowing_failure()
+        if self.url != self.driver.current_url:
+            logger.info(f'Failed at first attempt to switch to {self.root_page_css}, '
+                        f'current url: {self.driver.current_url}')
+            time.sleep(1)
+            self.wait_for_element_present_by_css(self.root_page_css).click()
+            if self.url != self.driver.current_url:
+                logger.error(f'Could not switch to {self.root_page_css}, current url: {self.driver.current_url}')
+                return
+        logger.info(f'Finished switching to {self.root_page_css} successfully')
+
+    def switch_to_page_allowing_failure(self):
         logger.info(f'Switching to {self.root_page_css}')
-        self.wait_for_element_present_by_css(self.root_page_css)
-        self.driver.find_element_by_css_selector(self.root_page_css).click()
-        logger.info(f'Finished switching to {self.root_page_css}')
+        self.wait_for_element_present_by_css(self.root_page_css).click()
 
     def scroll_to_top(self):
         self.driver.execute_script('window.scrollTo(0, 0)')

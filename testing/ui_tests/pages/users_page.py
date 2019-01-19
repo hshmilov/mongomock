@@ -15,7 +15,7 @@ class UsersPage(EntitiesPage):
         return 'li#users.x-nav-item'
 
     def assert_screen_is_restricted(self):
-        self.switch_to_page()
+        self.switch_to_page_allowing_failure()
         self.find_element_by_text('You do not have permission to access the Users screen')
         self.click_ok_button()
 

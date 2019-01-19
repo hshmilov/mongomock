@@ -14,7 +14,7 @@ class InstancesPage(EntitiesPage):
         return self.ROOT_PAGE_CSS
 
     def assert_screen_is_restricted(self):
-        self.switch_to_page()
+        self.switch_to_page_allowing_failure()
         self.find_element_by_text('You do not have permission to access the Instances screen')
         self.click_ok_button()
 

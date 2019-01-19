@@ -162,7 +162,7 @@ class AlertPage(EntitiesPage):
         return self.driver.find_element_by_css_selector(self.SELECT_SAVED_QUERY_TEXT_CSS).get_attribute('title')
 
     def assert_screen_is_restricted(self):
-        self.switch_to_page()
+        self.switch_to_page_allowing_failure()
         self.find_element_by_text('You do not have permission to access the Alerts screen')
         self.click_ok_button()
 

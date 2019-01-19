@@ -98,7 +98,7 @@ class DevicesPage(EntitiesPage):
         return self.driver.find_elements_by_css_selector(self.TABLE_FIRST_ROW_TAG_CSS)[0].text
 
     def assert_screen_is_restricted(self):
-        self.switch_to_page()
+        self.switch_to_page_allowing_failure()
         self.find_element_by_text('You do not have permission to access the Devices screen')
         self.click_ok_button()
 
