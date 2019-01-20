@@ -38,3 +38,7 @@ class TestDropboxAdapter(AdapterTestBase):
     @pytest.mark.skip('AX-2461')
     def test_removing_adapter_creds_with_users(self):
         pass
+
+    @pytest.mark.skip('AX-2461')
+    def test_fetch_devices(self):
+        pass
