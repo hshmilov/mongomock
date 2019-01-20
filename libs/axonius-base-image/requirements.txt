@@ -77,3 +77,4 @@ dataclasses==0.6
 dataclasses-json==0.2.0
 pymemfd==0.1
 names==0.3.0
+proxmoxer==1.0.3
