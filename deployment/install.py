@@ -81,6 +81,16 @@ def reset_weave_network():
         print('Failed to decode weave report - Skipping reset.')
 
 
+def remove_old_network():
+    # Will remove old bridged docker network if it exists to make sure we avoid an IP collision.
+    subprocess.call('docker network rm axonius'.split())
+
+
+def reset_network():
+    remove_old_network()
+    reset_weave_network()
+
+
 def install(first_time, root_pass):
     if not first_time:
         validate_old_state(root_pass)
@@ -97,14 +107,13 @@ def install(first_time, root_pass):
     print('Venv activated!')
     # from this line on - we can use venv!
 
-    setup_host()
-
     if not first_time:
         stop_old(keep_diag=True, keep_tunnel=True)
 
+    setup_host()
+
     load_images()
 
-    reset_weave_network()
     start_axonius()
     run_discovery()
     set_logrotate(root_pass)
@@ -205,6 +214,7 @@ def setup_instances():
 
 def setup_host():
     setup_instances()
+    reset_network()
 
 
 def set_booted_for_production():
