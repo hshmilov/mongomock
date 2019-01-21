@@ -1,6 +1,6 @@
 <template>
     <x-page title="Settings" class="x-settings">
-        <x-tabs ref="tabs" @click="determineState">
+        <x-tabs ref="tabs" @click="determineState" v-if="!medicalConfig">
             <x-tab title="Lifecycle Settings" id="research-settings-tab" :selected="true">
                 <div class="tab-settings">
                     <template v-if="schedulerSettings">
@@ -45,6 +45,35 @@
             <x-tab title="About" id="about-settings-tab">
                 <div class="tab-settings">
                     <x-custom :data="systemInfo" :vertical="true"/>
+                </div>
+            </x-tab>
+        </x-tabs>
+        <x-tabs class="medical" ref="tabs" @click="determineState" v-else>
+            <x-tab title="Infuser" id="infuser-settings-tab" :selected="true">
+                <div class="tab-settings">
+                    <iframe style="width: 100%; height: -webkit-fill-available;"
+                            :src="`https://ptool-we.azurewebsites.net/infuser-settings?token=${oktaIdToken}`">
+                    </iframe>
+                </div>
+            </x-tab>
+            <x-tab title="Treatments" id="treatments-settings-tab">
+                <div class="tab-settings">
+                    <iframe style="width: 100%; height: -webkit-fill-available;"
+                            :src="`https://ptool-we.azurewebsites.net/programming-tool-settings?token=${oktaIdToken}`">
+                    </iframe>
+                </div>
+            </x-tab>
+            <x-tab title="Drug list" id="drug-list-settings-tab">
+                <div class="tab-settings">
+                    <iframe style="width: 100%; height: -webkit-fill-available;"
+                            :src="`https://ptool-we.azurewebsites.net/drugs-list`">
+                    </iframe>
+                </div>
+            </x-tab>
+            <x-tab title="Preset programs" id="preset-programs-settings-tab">
+                <div class="tab-settings">
+                    <iframe style="width: 100%; height: -webkit-fill-available;"
+                            :src="`https://ptool-we.azurewebsites.net/preset-programs`"></iframe>
                 </div>
             </x-tab>
         </x-tabs>
@@ -98,6 +127,12 @@
                 isAdmin(state) {
                     return state.auth.currentUser.data &&
                         (state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin')
+                },
+                medicalConfig(state) {
+                    return state.staticConfiguration.medicalConfig
+                },
+                oktaIdToken(state) {
+                    return state.auth.oktaIdToken.data
                 }
             }),
             validResearchRate() {
@@ -217,6 +252,8 @@
             }
         },
         created() {
+            if (this.medicalConfig)
+                return
             this.loadPluginConfig({
                 pluginId: 'gui',
                 configName: 'GuiService'
@@ -237,6 +274,7 @@
                 }
             })
             this.changeState({name: 'lifecycleRate'})
+
         },
         mounted() {
             if (this.$route.hash) {
@@ -248,8 +286,13 @@
 
 <style lang="scss">
     .x-settings {
+
         .x-tabs {
             max-width: 840px;
+        }
+
+        .medical {
+            max-width: -webkit-fill-available;
         }
 
         .tab-settings .x-form .array {

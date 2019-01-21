@@ -27,7 +27,7 @@
 	import xTourState from './networks/onboard/TourState.vue'
     import xAccessModal from './neurons/popover/AccessModal.vue'
 
-    import {GET_USER} from '../store/modules/auth'
+    import {GET_USER, GET_OIDC_ID_TOKEN} from '../store/modules/auth'
     import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG} from '../store/actions'
     import {FETCH_CONSTANTS} from '../store/modules/constants'
     import {UPDATE_WINDOW_WIDTH} from '../store/mutations'
@@ -48,6 +48,12 @@
                 },
                 userPermissions(state) {
                     return state.auth.currentUser.data.permissions
+                },
+                medicalConfig(state) {
+                    return state.staticConfiguration.medicalConfig
+                },
+                oktaId(state) {
+                    return state.auth.oktaIdToken.data
                 }
             })
 		},
@@ -67,7 +73,7 @@
             ...mapMutations({ updateWindowWidth: UPDATE_WINDOW_WIDTH }),
             ...mapActions({
                 getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS,
-                fetchDataFields: FETCH_DATA_FIELDS
+                fetchDataFields: FETCH_DATA_FIELDS, getOidcId: GET_OIDC_ID_TOKEN
             }),
             fetchGlobalData() {
 				this.fetchConfig()
@@ -76,6 +82,9 @@
                     if (this.entityRestricted(entity.title)) return
                     this.fetchDataFields({module: entity.name})
                 })
+                if(this.medicalConfig){
+                    this.getOidcId()
+                }
             },
             notifyAccess(name) {
                 this.blockedComponent = name

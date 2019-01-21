@@ -7,10 +7,10 @@
             </div>
             <div class="body">
                 <h3 class="title">Login</h3>
-                <x-form :schema="schema" v-if="!medicalConfig" v-model="credentials" @input="initError"
+                <x-form :schema="schema" v-if="!staticConfiguration.medicalConfig" v-model="credentials" @input="initError"
                         @validate="onValidate" @submit="onLogin" :error="auth.currentUser.error"/>
-                <button v-if="!medicalConfig" class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
-                <div v-if="(oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled) && !medicalConfig"
+                <button v-if="!staticConfiguration.medicalConfig" class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
+                <div v-if="(oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled) && !staticConfiguration.medicalConfig"
                      class="t-center mt-12">Or</div>
                 <div class="login-options">
                     <a @click="onOktaLogin" v-if="oktaConfig.enabled" id="okta_login_link" class="x-btn link"
@@ -43,9 +43,8 @@
     import xModal from '../../axons/popover/Modal.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
-    import {LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS, GOOGLE_LOGIN} from '../../../store/modules/auth'
+    import {LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS} from '../../../store/modules/auth'
     import * as OktaAuth from '@okta/okta-auth-js'
-    import * as config from '../../../constants/config.json'
 
     export default {
         name: 'x-login',
@@ -58,7 +57,7 @@
             }
         },
         computed: {
-            ...mapState(['auth']),
+            ...mapState(['auth', 'staticConfiguration']),
             schema() {
                 return {
                     type: 'array', items: [
@@ -82,11 +81,7 @@
             },
             singleLoginMethod() {
                 return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled) === 1
-            },
-            medicalConfig() {
-                return config.medical
             }
-
         },
         data() {
             return {

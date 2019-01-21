@@ -1,6 +1,8 @@
 import { REQUEST_API } from '../actions'
 
 export const GET_USER = 'GET_USER'
+export const GET_OIDC_ID_TOKEN ='GET_OIDC_ID_TOKEN'
+export const SET_OIDC_ID_TOKEN = 'SET_OIDC_ID_TOKEN'
 export const LOGIN = 'LOGIN'
 export const LDAP_LOGIN = 'LDAP_LOGIN'
 export const SET_USER = 'SET_USER'
@@ -31,7 +33,8 @@ export const auth = {
 		currentUser: { fetching: false, data: { }, error: '' },
 		allUsers: { fetching: false, data: [], error: '' },
         allRoles: { fetching: false, data: [], error: '' },
-		defaultRole: { fetching: false, data: '', error: '' }
+		defaultRole: { fetching: false, data: '', error: '' },
+		oktaIdToken: { fetching: false, data: '', error: '' }
 	},
 	mutations: {
 		[ SET_USER ] (state, payload) {
@@ -39,6 +42,13 @@ export const auth = {
 			state.currentUser.error = payload.error
 			if (payload.data) {
 				state.currentUser.data = { ...payload.data }
+			}
+		},
+		[ SET_OIDC_ID_TOKEN ] (state, payload) {
+			state.currentUser.fetching = payload.fetching
+			state.currentUser.error = payload.error
+			if (payload.data) {
+				state.oktaIdToken.data = payload.data
 			}
 		},
 		[ INIT_USER ] (state, payload) {
@@ -78,6 +88,12 @@ export const auth = {
 			return dispatch(REQUEST_API, {
 				rule: 'login',
 				type: SET_USER
+			})
+		} ,
+		[ GET_OIDC_ID_TOKEN ] ({dispatch}) {
+			return dispatch(REQUEST_API, {
+				rule: 'get_oidc_id_token',
+				type: SET_OIDC_ID_TOKEN
 			})
 		} ,
 		[ GET_LOGIN_OPTIONS ] ({dispatch}) {

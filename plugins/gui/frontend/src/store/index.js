@@ -66,6 +66,7 @@ import { dashboard } from './modules/dashboard'
 import { reports } from './modules/reports'
 import { settings } from './modules/settings'
 import { onboarding } from './modules/onboarding'
+import * as medicalConfig from '../constants/config.json'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -77,7 +78,8 @@ export default new Vuex.Store({
             collapseSidebar: true,
             windowWidth: 0
         },
-		configuration: { fetching: false, data: null, error: '' }
+		configuration: { fetching: false, data: null, error: '' },
+        staticConfiguration: { medicalConfig: medicalConfig.medical }
     },
 	getters: {
         [ GET_DATA_FIELDS_BY_PLUGIN ]: getDataFieldsByPlugin,

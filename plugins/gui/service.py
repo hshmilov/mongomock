@@ -2054,6 +2054,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }
         })
 
+    @gui_add_rule_logged_in('get_oidc_id_token')
+    def get_oidc_id_token(self):
+        return session.get('id_token')
+
     @gui_helpers.add_rule_unauth('login', methods=['GET', 'POST'])
     def login(self):
         """

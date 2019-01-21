@@ -15,7 +15,10 @@
                 </router-link>
             </div>
         </div>
-        <x-nav>
+        <x-nav v-if="medicalConfig">
+            <x-nav-item v-bind="navigationLinkProps('Infuser Manager')" icon="pairing" :exact="true" id="infuser"/>
+        </x-nav>
+        <x-nav v-else>
             <x-nav-item v-bind="navigationLinkProps('Dashboard')" icon="dashboard" :exact="true" id="dashboard"/>
             <x-nav-item v-bind="navigationLinkProps('Devices')" icon="devices" id="devices"/>
             <x-nav-item v-bind="navigationLinkProps('Users')" icon="users" id="users"/>
@@ -49,7 +52,10 @@
             },
             collapseSidebar(state) {
                 return state.interaction.collapseSidebar || state.interaction.windowWidth <= 1200
-            }
+            },
+            medicalConfig(state) {
+                return state.staticConfiguration.medicalConfig
+            },
         }),
         methods: {
             ...mapActions({logout: LOGOUT}),

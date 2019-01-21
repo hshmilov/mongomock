@@ -18,6 +18,8 @@ import Settings from '../components/pages/Settings.vue'
 import User from '../components/pages/User.vue'
 import Users from '../components/pages/Users.vue'
 import UsersQuery from '../components/pages/UsersQuery.vue'
+import InfuserManager from '../components/pages/InfuserManager.vue'
+import * as medicalConfig from '../constants/config.json'
 
 Vue.use(Router)
 export default new Router({
@@ -26,8 +28,8 @@ export default new Router({
     routes: [
         {
             path: '/',
-            name: 'Dashboard',
-			component: Dashboard
+            name: medicalConfig.medical ? 'Infuser Manager' : 'Dashboard',
+			component: medicalConfig.medical ? InfuserManager : Dashboard
         },
 		{
 			path: '/cards/explorer',
