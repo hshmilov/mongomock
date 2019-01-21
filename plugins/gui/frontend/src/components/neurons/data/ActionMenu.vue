@@ -74,7 +74,7 @@
 			        return this.entities.ids.length
                 }
                 return this.dataCount - this.entities.ids.length
-            }
+            },
         },
         data() {
 		    return {
@@ -82,16 +82,18 @@
             }
         },
         methods: {
-            ...mapActions({ disableData: DISABLE_DATA, deleteData: DELETE_DATA, saveCustomData: SAVE_CUSTOM_DATA }),
+            ...mapActions(
+                {
+                    disableData: DISABLE_DATA,
+                    deleteData: DELETE_DATA,
+                    saveCustomData: SAVE_CUSTOM_DATA
+            }),
             activate(item) {
             	if (!item || !item.activate) return
                 item.activate()
                 this.$el.click()
                 this.$refs.dropdown.close()
             },
-			disableEntities() {
-				return this.disableData({ module: this.module, data: this.entities })
-			},
             deleteEntities() {
                 return this.deleteData({
                     module: this.module, data: this.entities

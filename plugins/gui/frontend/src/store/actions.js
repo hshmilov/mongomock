@@ -337,6 +337,30 @@ export const deleteData = ({state, dispatch}, payload) => {
 	})
 }
 
+export const LINK_DATA = 'LINK_DATA'
+export const linkData = ({state, dispatch}, payload) => {
+    let moduleState = getModule(state, payload)
+	if (!moduleState || !payload.data) return
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/manual_link?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+		method: 'POST',
+		data: payload.data
+	})
+}
+
+export const UNLINK_DATA = 'UNLINK_DATA'
+export const unlinkData = ({state, dispatch}, payload) => {
+    let moduleState = getModule(state, payload)
+	if (!moduleState || !payload.data) return
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/manual_unlink?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+		method: 'POST',
+		data: payload.data
+	})
+}
+
 export const FETCH_DATA_BY_ID = 'FETCH_DATA_BY_ID'
 export const fetchDataByID = ({state, dispatch}, payload) => {
 	if (!getModule(state, payload)) return

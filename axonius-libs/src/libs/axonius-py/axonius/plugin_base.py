@@ -69,7 +69,7 @@ from axonius.entities import EntityType
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
-from axonius.types.correlation import CorrelationResult, CorrelateException
+from axonius.types.correlation import CorrelationResult, CorrelateException, MAX_LINK_AMOUNT
 from axonius.types.ssl_state import COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS, SSLState, \
     MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS, MANDATORY_SSL_CONFIG_SCHEMA
 from axonius.users.user_adapter import UserAdapter
@@ -1672,41 +1672,50 @@ class PluginBase(Configurable, Feature):
         return self.__perform_tag(entity, identity_by_adapter, name, data, tag_type, action_if_exists, additional_data)
 
     @mongo_retry()
-    def link_adapters(self, entity: EntityType, correlation: CorrelationResult, rebuild: bool = True):
+    def link_adapters(self, entity: EntityType, correlation: CorrelationResult, rebuild: bool = True,
+                      entities_candidates_hint: List[str] = None) -> str:
         """
         Performs a correlation between the entities given by 'correlation'
         :param entity: The entity type to use
         :param correlation: The information of the correlation - see definition of CorrelationResult
         :param rebuild: Whether or not to rebuild the entities
+        :param entities_candidates_hint: Optional: If passed, the code will ignore the associated_adapters
+                                         passed and instead will use the internal_axon_ids given here
+        :return: Internal axon ID of the entity built
         """
         _entities_db = self._entity_db_map[entity]
         with _entities_db.start_session() as session:
             try:
                 with session.start_transaction():
-                    entities_candidates = list(session.find({"$or": [
-                        {
-                            'adapters': {
-                                '$elemMatch': {
-                                    PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
-                                    'data.id': associated_id
+                    if entities_candidates_hint:
+                        entities_candidates = list(session.find({
+                            'internal_axon_id': {
+                                '$in': entities_candidates_hint
+                            }
+                        }))
+                    else:
+                        entities_candidates = list(session.find({"$or": [
+                            {
+                                'adapters': {
+                                    '$elemMatch': {
+                                        PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
+                                        'data.id': associated_id
+                                    }
                                 }
                             }
-                        }
-                        for associated_plugin_unique_name, associated_id in correlation.associated_adapters
-                    ]}))
+                            for associated_plugin_unique_name, associated_id in correlation.associated_adapters
+                        ]}))
 
-                    if len(entities_candidates) == 0:
+                    if len(entities_candidates) < 2:
                         raise CorrelateException(f"No entities given or all entities given don't exist. "
                                                  f"Associated adapters: {correlation.associated_adapters}")
-                    # in this case, we need to link (i.e. "merge") all entities_candidates
-                    # if there's only one, then the link is either associated only to
-                    # one entity (which is as irrelevant as it gets)
-                    # or all the entities are already linked. In any case, if a real merge isn't done
-                    # it means someone made a mistake.
-                    if len(entities_candidates) != 2:
-                        logger.warning(f"{len(entities_candidates)} != 2, entities_candidates: ")
-                        raise CorrelateException(f'Link with wrong number of devices '
-                                                 f'{len(correlation.associated_adapters)}')
+
+                    if len(entities_candidates) > MAX_LINK_AMOUNT:
+                        logger.critical('Data loss prevented: '
+                                        f'Someone tried to link more than {MAX_LINK_AMOUNT} entities at once, '
+                                        'which looks like a corrupt plugin, here are the first ten entities')
+                        logger.info(entities_candidates[:MAX_LINK_AMOUNT])
+                        raise CorrelateException('Way too many entities we\'re given')
 
                     collected_adapter_entities = [axonius_entity['adapters'] for axonius_entity in entities_candidates]
                     all_unique_adapter_entities_data = [v for d in collected_adapter_entities for v in d]
@@ -1735,7 +1744,8 @@ class PluginBase(Configurable, Feature):
                             tags_for_new_device[tag_key]['data'] = [item for tag in duplicated_tags for item in
                                                                     tag['data']]
 
-                    internal_axon_id = uuid.uuid4().hex
+                    remaining_entity = max(entities_candidates, key=lambda x: len(x['adapters']))
+                    internal_axon_id = remaining_entity['internal_axon_id']
 
                     # now, let us delete all other AxoniusDevices
                     session.delete_many({'$or':
@@ -1745,43 +1755,47 @@ class PluginBase(Configurable, Feature):
                                          ]
                                          })
                     session.insert_one({
+                        '_id': remaining_entity['_id'],
                         "internal_axon_id": internal_axon_id,
                         "accurate_for_datetime": datetime.now(),
                         "adapters": all_unique_adapter_entities_data,
                         ADAPTERS_LIST_LENGTH: len(set([x[PLUGIN_NAME] for x in all_unique_adapter_entities_data])),
                         "tags": list(tags_for_new_device.values())  # Turn it to a list
                     })
-            except CorrelateException as e:
+            except CorrelateException:
                 logger.exception("Unlink logic exception")
                 raise
 
         if rebuild:
-            self._request_db_rebuild(sync=False,
-                                     internal_axon_ids=[x['internal_axon_id'] for x in entities_candidates])
+            self._request_db_rebuild(sync=True,
+                                     internal_axon_ids=[x['internal_axon_id'] for x in entities_candidates] +
+                                     [internal_axon_id])
+        return internal_axon_id
 
     @mongo_retry()
-    def unlink_adapter(self, entity: EntityType, plugin_unique_name: str, adapter_id: str):
+    def unlink_adapter(self, entity: EntityType, plugin_unique_name: str, adapter_id: str) -> Iterable[str]:
         """
         Unlinks a specific adapter from its axonius device
         :param entity: The entity type to use
         :param plugin_unique_name: The plugin unique name of the given adapter
-        :param adapter_id: The ID of the given adapt
+        :param adapter_id: The ID of the given adapter
+        :return: all internal_axon_ids altered
         """
         _entities_db = self._entity_db_map[entity]
         with _entities_db.start_session() as session:
             with session.start_transaction():
-                self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session)
+                return self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session)
 
     @staticmethod
     def __perform_unlink_with_session(adapter_id: str, plugin_unique_name: str,
-                                      session, entity_to_split=None):
+                                      session, entity_to_split=None) -> List[str]:
         """
         Perform an unlink given a session on a particular adapter entity
         :param adapter_id: the id of the adapter to unlink
         :param plugin_unique_name: the plugin unique name of the adapter
         :param session: the session to use, this also implies the DB to use
         :param entity_to_split: if not none, uses this as the entity (optimization)
-        :return:
+        :return: list of two strings that represent the internal_axon_ids altered
         """
         entity_to_split = entity_to_split or session.find_one({
             'adapters': {
@@ -1896,6 +1910,7 @@ class PluginBase(Configurable, Feature):
 
         recalculate_adapter_oldness(new_axonius_entity['adapters'])
         session.insert_one(new_axonius_entity)
+        return [internal_axon_id, entity_to_split['internal_axon_id']]
 
     def __archive_axonius_device(self, plugin_unique_name, device_id, db_to_use, session=None):
         """

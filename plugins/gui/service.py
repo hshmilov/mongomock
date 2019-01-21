@@ -80,6 +80,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.types.correlation import CorrelationResult, CorrelationReason, MAX_LINK_AMOUNT
 from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
                                      SSLState)
@@ -952,6 +953,69 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         })
         return {x[PLUGIN_NAME]: x['code'] for x in documents}
 
+    def __link_many_entities(self, entity_type: EntityType, mongo_filter):
+        """
+        Link many given entities
+        :param entity_type: the entity type
+        :param mongo_filter: The mongo filter to use
+        :return: The internal_axon_id of the new entity
+        """
+        post_data = request.get_json()
+        internal_axon_ids = self.__get_selected_internal_axon_ids(post_data, entity_type, mongo_filter)
+        if len(internal_axon_ids) > MAX_LINK_AMOUNT:
+            return return_error(f'Maximal amount of entities to link at once is {MAX_LINK_AMOUNT}')
+        if len(internal_axon_ids) < 2:
+            return return_error('Please choose at least two entities to link')
+        correlation = CorrelationResult(associated_adapters=[], data={
+            'reason': 'User correlated those',
+            'original_entities': internal_axon_ids,
+            'user_id': session['user']['_id']
+        }, reason=CorrelationReason.UserManualLink)
+        return self.link_adapters(entity_type, correlation, entities_candidates_hint=list(internal_axon_ids))
+
+    def __unlink_axonius_entities(self, entity_type: EntityType, mongo_filter):
+        """
+        "Shatters" an axonius entity: Creates many axonius entities from each of the adapters entities.
+        :param entity_type: the entity type
+        :param mongo_filter: Which entities to run on
+        """
+        entities_selection = self.get_request_data_as_object()
+        if not entities_selection:
+            return return_error('No entity selection provided')
+        db = self._entity_db_map[entity_type]
+        projection = {
+            'adapters.data.id': 1,
+            f'adapters.{PLUGIN_UNIQUE_NAME}': 1
+        }
+        if entities_selection['include']:
+            entities = db.find({
+                'internal_axon_id': {
+                    '$in': entities_selection['ids']
+                }
+            }, projection=projection)
+        else:
+            entities = db.find({
+                '$and': [
+                    {'internal_axon_id': {
+                        '$nin': entities_selection['ids']
+                    }}, mongo_filter
+                ]
+            }, projection=projection)
+
+        def get_all_internal_axon_ids_altered():
+            for entity in entities:
+                adapters = entity['adapters']
+                if len(adapters) < 2:
+                    continue
+                for adapter in adapters[:-1]:
+                    # Unlink all adapters except the last
+                    yield from self.unlink_adapter(entity_type, adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id'])
+
+        internal_axon_ids_altered = list(get_all_internal_axon_ids_altered())
+        self._request_db_rebuild(sync=True, internal_axon_ids=internal_axon_ids_altered)
+
+        return ''
+
     ##########
     # DEVICE #
     ##########
@@ -1059,10 +1123,23 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self._entity_custom_data(EntityType.Devices, mongo_filter)
         return '', 200
 
-    @gui_add_rule_logged_in('devices/hyperlinks', required_permissions={Permission(PermissionType.Users,
+    @gui_add_rule_logged_in('devices/hyperlinks', required_permissions={Permission(PermissionType.Devices,
                                                                                    PermissionLevel.ReadOnly)})
     def device_hyperlinks(self):
         return jsonify(self.__get_entity_hyperlinks(EntityType.Devices))
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('devices/manual_link', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
+    def devices_link(self, mongo_filter):
+        return self.__link_many_entities(EntityType.Devices, mongo_filter)
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('devices/manual_unlink', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadWrite)})
+    def devices_unlink(self, mongo_filter):
+        return self.__unlink_axonius_entities(EntityType.Devices, mongo_filter)
 
     #########
     # USER #
@@ -1170,6 +1247,19 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                                                  PermissionLevel.ReadOnly)})
     def user_hyperlinks(self):
         return jsonify(self.__get_entity_hyperlinks(EntityType.Users))
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('users/manual_link', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
+    def users_link(self, mongo_filter):
+        return self.__link_many_entities(EntityType.Users, mongo_filter)
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('users/manual_unlink', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             PermissionLevel.ReadWrite)})
+    def users_unlink(self, mongo_filter):
+        return self.__unlink_axonius_entities(EntityType.Users, mongo_filter)
 
     ###########
     # ADAPTER #

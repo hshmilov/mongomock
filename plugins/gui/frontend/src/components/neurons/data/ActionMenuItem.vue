@@ -1,5 +1,6 @@
 <template>
-    <x-feedback-modal v-model="isActive" :handle-save="handleSave" :message="message" :approve-text="actionText">
+    <x-feedback-modal v-model="isActive" :handle-save="handleSave" :message="message" :approve-text="actionText"
+                      :disabled="disabled">
         <slot></slot>
     </x-feedback-modal>
 </template>
@@ -10,7 +11,19 @@
     export default {
         name: 'x-action-menu-item',
         components: {xFeedbackModal},
-        props: {title: {required: true}, handleSave: {required: true}, message: {default: ''}, actionText: {}},
+        props: {
+            title: {
+                required: true
+            },
+            handleSave: {
+                required: true
+            },
+            message: {
+                default: ''
+            },
+            actionText: {},
+            disabled: false
+        },
         data() {
             return {
                 isActive: false
