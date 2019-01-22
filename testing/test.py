@@ -163,10 +163,6 @@ class InstanceManager:
         # Remember! If you change these, you need to start your instance from scratch to allow the cached container
         # which always starts to reload!
         environment = dict()
-        # Notice that we limit mongo to half of the memory instead 75%. we do this because tests do not run all adapters
-        # and fetch everything at once, and we also do not have hundreds of thousands of devices, so this is unneeded.
-        # but mongodb tends to catch everything it can so it reduces the effectiveness of other services.
-        environment['MONGO_RAM_LIMIT_IN_GB'] = int(self.instance_memory * 0.5)
         environment['PUBLIC_HTTPS_PORT'] = https_port
 
         # Copy environment variables by teamcity.

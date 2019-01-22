@@ -5,7 +5,6 @@ import psutil
 import pymongo
 
 from axonius.plugin_base import EntityType
-from services.docker_service import DockerService
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_NAME
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
@@ -28,17 +27,8 @@ class MongoService(WeaveService):
 
     @property
     def max_allowed_memory(self):
-        # If we are inside a container (tests), then "--memory" does not affect what the system reports,
-        # its just a kernel limitation that makes "malloc" fail at some stage. so we try to understand first if we
-        # have the memory constraints form the parent container.
-        # also this allows us to set a custom size using an environment variable.
-        mongo_ram_limit = os.environ.get('MONGO_RAM_LIMIT_IN_GB')
-        if mongo_ram_limit:
-            total_memory = int(mongo_ram_limit) * 1024   # turn to mb
-        else:
-            total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
-            total_memory = int(total_memory * 0.75)  # We want mongodb to always catch 75% of ram.
-        print(f'Mongodb memory constraint: {int(total_memory / 1024)}gb')
+        total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
+        total_memory = int(total_memory * 0.50)  # We want mongodb to always catch 50% of ram.
         return total_memory
 
     @property
@@ -64,9 +54,11 @@ class MongoService(WeaveService):
 
     @property
     def _additional_parameters(self):
+        cache_size = int(0.5 * (self.max_allowed_memory - 1024) / 1024)
         return ['mongod',
                 '--keyFile', '/docker-entrypoint-initdb.d/mongodb.key',
-                '--replSet', 'axon-cluster'
+                '--replSet', 'axon-cluster',
+                f'--wiredTigerCacheSizeGB={cache_size}'
                 ]
 
     def get_dockerfile(self):

@@ -148,10 +148,11 @@ else:
 
     def _get_allowed_memory(self):
         allowed_memory = []
-        if self.max_allowed_memory:
-            allowed_memory = [f'--memory={self.max_allowed_memory}m',
+        max_allowed_memory = self.max_allowed_memory
+        if max_allowed_memory:
+            allowed_memory = [f'--memory={max_allowed_memory}m',
                               '--oom-kill-disable']  # don't kill my container
-
+            print(f'Memory constraint: {max_allowed_memory}MB')
         return allowed_memory
 
     def _get_exposed_ports(self, mode, expose_port):
