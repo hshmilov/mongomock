@@ -982,10 +982,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         entities_selection = self.get_request_data_as_object()
         if not entities_selection:
             return return_error('No entity selection provided')
-        db = self._entity_db_map[entity_type]
+        db = self._entity_views_db_map[entity_type]
         projection = {
-            'adapters.data.id': 1,
-            f'adapters.{PLUGIN_UNIQUE_NAME}': 1
+            'specific_data.data.id': 1,
+            f'specific_data.{PLUGIN_UNIQUE_NAME}': 1
         }
         if entities_selection['include']:
             entities = db.find({
@@ -1004,7 +1004,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         def get_all_internal_axon_ids_altered():
             for entity in entities:
-                adapters = entity['adapters']
+                adapters = entity['specific_data']
                 if len(adapters) < 2:
                     continue
                 for adapter in adapters[:-1]:

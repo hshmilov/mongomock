@@ -1613,7 +1613,7 @@ class PluginBase(Configurable, Feature):
                 })
 
                 if result.matched_count != 1:
-                    msg = f"tried to update label {tag}. expected matched_count == 1 but got {result.matched_count}"
+                    msg = f"tried to update label {name}. expected matched_count == 1 but got {result.matched_count}"
                     logger.error(msg)
                     raise TagDeviceError(msg)
 
@@ -1839,7 +1839,7 @@ class PluginBase(Configurable, Feature):
                     # associated adapters, because most of the them stay in the old device,
                     # and so the new G.associated_adapters are the associated_adapters
                     # that are also part of the new axonius entity
-                    newtag['associated_adapters'] = [tag_plugin_unique_name, tag_adapter_id]
+                    newtag['associated_adapters'] = [[tag_plugin_unique_name, tag_adapter_id]]
                     new_axonius_entity['tags'].append(newtag)
         # remove the adapters one by one from the DB, and also keep track in memory
         adapter_entities_left = list(entity_to_split['adapters'])

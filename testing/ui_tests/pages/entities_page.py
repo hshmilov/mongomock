@@ -60,6 +60,8 @@ class EntitiesPage(Page):
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
+    TABLE_ACTIONS_LINK_CSS = 'div.content.w-sm > div > div:nth-child(6) > div.item-content'
+    TABLE_ACTIONS_UNLINK_CSS = 'div.content.w-sm > div > div:nth-child(7) > div.item-content'
     TABLE_ACTION_ITEM_XPATH = '//div[@class=\'x-actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
@@ -523,6 +525,17 @@ class EntitiesPage(Page):
     def open_delete_dialog(self):
         self.click_button(self.ACTIONS_BUTTON, partial_class=True)
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_DELETE_CSS).click()
+
+    def open_link_dialog(self):
+        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_LINK_CSS).click()
+
+    def confirm_link(self):
+        self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
+
+    def open_unlink_dialog(self):
+        self.click_button(self.ACTIONS_BUTTON, partial_class=True)
+        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_UNLINK_CSS).click()
 
     def read_delete_dialog(self):
         return self.wait_for_element_present_by_css('.x-actions .modal-body .warn-delete').text
