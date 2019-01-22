@@ -1230,7 +1230,7 @@
             }
         });
         flush_url("/exports", function(data) {
-            current_exports = data["current"];
+            current_exports = data["result"];
             rewrite_exports_table();
             update_export_details(0);
         });

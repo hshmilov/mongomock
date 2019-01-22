@@ -61,7 +61,7 @@ class BuildsManager(object):
 
     def __init__(self):
         """Initialize the object."""
-        self.db = MongoClient(BUILDS_HOST).builds  # This just connects to localhost
+        self.db = MongoClient(BUILDS_HOST, connect=False).builds  # This just connects to localhost
         self.ec2 = boto3.resource("ec2")  # This assumes we have the credentials already set-up.
 
         self.ec2_client = boto3.client("ec2")
@@ -212,7 +212,7 @@ class BuildsManager(object):
 
         return len(deleted) > 0
 
-    def getExports(self, status=None, limit=None):
+    def getExports(self, status=None, limit=0):
         """Return all vm exports we have on our s3 bucket."""
         if status is None:
             exports = self.db.exports.find({'status': {"$nin": ["InProgress", "deleted"]}}, {"_id": 0}) \
