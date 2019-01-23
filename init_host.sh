@@ -22,13 +22,32 @@ fi
 echo "Initializing the host image.."
 echo "hostname: $(hostname)"
 echo ""
-echo "Updating the sources..."
+
+echo "Disabling apt-daily systemd task"
+systemctl stop apt-daily.timer
+systemctl disable apt-daily.timer
+systemctl mask apt-daily.service
+systemctl daemon-reload
+
+# cannot use /etc/apt/apt.conf.d/10periodic as suggested in
+# /usr/lib/apt/apt.systemd.daily, as Ubuntu distributes the
+# unattended upgrades stuff with priority 20 and 50 ...
+# so override everything with a 99xxx file
+cat > /etc/apt/apt.conf.d/99elasticluster <<__EOF
+APT::Periodic::Enable "0";
+// undo what is in 20auto-upgrade
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+__EOF
+
 # Sometimes, the operating system tries to update itself, so we might fail here
 # with "Could not get lock /var/lib/dpkg/lock-frontend"
 while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
     echo -en "Waiting for other software managers to finish...\n"
     sleep 0.5
 done
+
+echo "Updating the sources..."
 apt-get install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
