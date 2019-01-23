@@ -11,11 +11,6 @@ import {
 	UPDATE_DATA_HYPERLINKS
 } from './mutations'
 
-let host = ''
-if (process.env.NODE_ENV === 'development') {
-	host = 'https://127.0.0.1'
-}
-
 /*
     A generic wrapper for requests to server.
     Before request, performs given mutation to initialize error and indicate fetching in process,
@@ -38,7 +33,7 @@ export const requestApi = ({commit}, payload) => {
 	}
 	if (!payload.method) payload.method = 'GET'
 
-	let request_config = {method: payload.method, url: `${host}/api/${payload.rule}`}
+	let request_config = {method: payload.method, url: `/api/${payload.rule}`}
 	if (payload.data) request_config['data'] = payload.data
 	if (payload.binary) request_config['responseType'] = 'arraybuffer'
 	return new Promise((resolve, reject) => axios(request_config)
