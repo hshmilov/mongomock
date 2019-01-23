@@ -24,6 +24,12 @@ import {
         type: Mutation type to call
     }
  */
+
+let host = ''
+if (process.env.NODE_ENV === 'development') {
+	host = 'https://127.0.0.1'
+}
+
 export const REQUEST_API = 'REQUEST_API'
 export const requestApi = ({commit}, payload) => {
 	if (!payload.rule) return
@@ -33,7 +39,7 @@ export const requestApi = ({commit}, payload) => {
 	}
 	if (!payload.method) payload.method = 'GET'
 
-	let request_config = {method: payload.method, url: `/api/${payload.rule}`}
+	let request_config = {method: payload.method, url: `${host}/api/${payload.rule}`}
 	if (payload.data) request_config['data'] = payload.data
 	if (payload.binary) request_config['responseType'] = 'arraybuffer'
 	return new Promise((resolve, reject) => axios(request_config)
