@@ -4,9 +4,9 @@ import pytest
 from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts.metric_consts import SystemMetric
 from services.adapters.json_file_service import JsonFileService
 from ui_tests.tests.ui_test_base import TestBase
-
 
 ALERT_NAME = 'Special alert name'
 COMMON_ALERT_QUERY = 'Enabled AD Devices'
@@ -118,6 +118,7 @@ class TestAlertSanity(TestBase):
 
             self.base_page.run_discovery()
             self.notification_page.verify_amount_of_notifications(0)
+            self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ALERT_RAW, ALERT_CHANGE_NAME)
         finally:
             json_service.start_and_wait()
 
@@ -209,6 +210,7 @@ class TestAlertSanity(TestBase):
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
+        self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ALERT_RAW, COMMON_ALERT_QUERY)
 
     def test_below_threshold(self):
         self.alert_page.create_outputting_notification_below('below 1',
@@ -224,3 +226,4 @@ class TestAlertSanity(TestBase):
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
+        self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ALERT_RAW, COMMON_ALERT_QUERY)

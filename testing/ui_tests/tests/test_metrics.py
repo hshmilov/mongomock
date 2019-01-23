@@ -1,6 +1,7 @@
 import re
 
 from axonius.utils.wait import wait_until
+from axonius.consts.metric_consts import SystemMetric
 from services.adapters.stresstest_service import StresstestService
 from services.adapters.stresstest_scanner_service import StresstestScannerService
 from test_helpers.log_tester import LogTester
@@ -34,11 +35,11 @@ class TestMetrics(TestBase):
 
             tester = LogTester(GUI_LOG_PATH)
             # do not modify anything relate to metrics!
-            wait_until(lambda: tester.is_metric_in_log('system.gui.users', 2))
-            wait_until(lambda: tester.is_metric_in_log('system.devices.seen', r'\d+'))  # TBD
-            wait_until(lambda: tester.is_metric_in_log('system.devices.unique', devices_unique))
-            wait_until(lambda: tester.is_metric_in_log('system.users.seen', r'\d+'))  # TBD
-            wait_until(lambda: tester.is_metric_in_log('system.users.unique', users_unique))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.GUI_USERS, 2))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.DEVICES_SEEN, r'\d+'))  # TBD
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.DEVICES_UNIQUE, devices_unique))
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.USERS_SEEN, r'\d+'))  # TBD
+            wait_until(lambda: tester.is_metric_in_log(SystemMetric.USERS_UNIQUE, users_unique))
 
             wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities', 10))
             wait_until(lambda: tester.is_metric_in_log('adapter.devices.stresstest_adapter.entities.meta', 10))

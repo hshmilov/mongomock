@@ -68,6 +68,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           SYSTEM_SETTINGS)
+from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
@@ -3942,12 +3943,20 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             adapter_devices = self._adapter_data(EntityType.Devices)
             adapter_users = self._adapter_data(EntityType.Users)
 
-            log_metric(logger, 'system.gui.users', self.__users_collection.count_documents({}))
-            log_metric(logger, 'system.devices.seen', adapter_devices['seen'])
-            log_metric(logger, 'system.devices.unique', adapter_devices['unique'])
+            log_metric(logger, SystemMetric.GUI_USERS, self.__users_collection.count_documents({}))
+            log_metric(logger, SystemMetric.DEVICES_SEEN, adapter_devices['seen'])
+            log_metric(logger, SystemMetric.DEVICES_UNIQUE, adapter_devices['unique'])
 
-            log_metric(logger, 'system.users.seen', adapter_users['seen'])
-            log_metric(logger, 'system.users.unique', adapter_users['unique'])
+            log_metric(logger, SystemMetric.USERS_SEEN, adapter_users['seen'])
+            log_metric(logger, SystemMetric.USERS_UNIQUE, adapter_users['unique'])
+
+            alerts = self.get_alerts(limit=0,
+                                     mongo_filter={},
+                                     mongo_projection=None,
+                                     mongo_sort={},
+                                     skip=0)
+            for alert in alerts:
+                log_metric(logger, SystemMetric.ALERT_RAW, str(alert))
 
             def dump_per_adapter(mapping, subtype):
                 counters = mapping['counters']
