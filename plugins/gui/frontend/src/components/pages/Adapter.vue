@@ -261,6 +261,8 @@
                             this.message = 'Connection established. Data collection initiated...'
                         }
                     })
+                }).catch((error)=>{
+                    this.message = error.response.data.message
                 })
                 this.toggleServerModal()
             },

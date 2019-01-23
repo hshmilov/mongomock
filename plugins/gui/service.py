@@ -1479,6 +1479,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                     data.get('nodeId', None), delete_entities)
 
         client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
+        if not client_from_db:
+            return return_error('Server is already gone, please try again after refreshing the page')
+
         self.request_remote_plugin('clients/' + client_id, adapter_unique_name, method='delete')
 
         if request.method == 'PUT':
