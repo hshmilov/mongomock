@@ -18,19 +18,19 @@ import Settings from '../components/pages/Settings.vue'
 import User from '../components/pages/User.vue'
 import Users from '../components/pages/Users.vue'
 import UsersQuery from '../components/pages/UsersQuery.vue'
-import InfuserManager from '../components/pages/InfuserManager.vue'
 import * as medicalConfig from '../constants/config.json'
+import ExternalViewComponent from "../components/pages/medical/ExternalViewComponent.vue";
 
 Vue.use(Router)
 export default new Router({
     // This mode prevents '#' appearing in browser url
     mode: 'history',
-    routes: [
-        {
-            path: '/',
-            name: medicalConfig.medical ? 'Infuser Manager' : 'Dashboard',
-			component: medicalConfig.medical ? InfuserManager : Dashboard
-        },
+    routes: !medicalConfig.medical ? [
+		{
+			path: '/',
+			name: 'Dashboard',
+			component: Dashboard,
+		},
 		{
 			path: '/cards/explorer',
 			name: 'Insights Explorer',
@@ -111,5 +111,37 @@ export default new Router({
             name: 'Instances',
             component: Instances
         }
-    ]
+    ] :
+	[
+		{
+			path: '/',
+			name: 'Infuser Manager',
+			component: ExternalViewComponent,
+			props:	{ medicalUrl: 'pump-programming/pairing', title: 'Infuser Manager' }
+		},
+		{
+			path: '/infuser_settings/drug_list',
+			name: 'Drug List',
+			component: ExternalViewComponent,
+			props: { medicalUrl: 'drugs-list', name: 'Drug List' }
+		},
+		{
+			path: '/infuser_settings/infuser',
+			name: 'Infuser',
+			component: ExternalViewComponent,
+			props: { medicalUrl: 'infuser-settings', name: 'Infuser' }
+		},
+		{
+			path: '/infuser_settings/preset_programs',
+			name: 'Preset Programs',
+			component: ExternalViewComponent,
+			props: { medicalUrl: 'preset-programs', name: 'Preset Programs' }
+		},
+		{
+			path: '/infuser_settings/treatments',
+			name: 'Treatments',
+			component: ExternalViewComponent,
+			props: { medicalUrl: 'programming-tool-settings', name: 'Treatments' }
+		},
+	]
 })

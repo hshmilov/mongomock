@@ -52,8 +52,8 @@
                 medicalConfig(state) {
                     return state.staticConfiguration.medicalConfig
                 },
-                oktaId(state) {
-                    return state.auth.oktaIdToken.data
+                oidcIdToken(state) {
+                    return state.auth.oidcIdToken.data
                 }
             })
 		},

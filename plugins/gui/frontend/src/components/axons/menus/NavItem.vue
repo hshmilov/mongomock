@@ -4,6 +4,7 @@
                  :active-class="activeClass" :exact-active-class="exactActiveClass">
         <button class="item-link" :title="disabled? undefined : name">
             <svg-icon v-if="icon" :name="`navigation/${icon}`" width="24" :original="true" />
+            <div v-else class="empty-icon"></div>
             <span>{{ name }}</span>
         </button>
         <slot/>
@@ -67,6 +68,10 @@
                 .svg-fill {  fill: $grey-4  }
                 .svg-stroke {  stroke: $grey-4  }
                 stroke-width: 24px;
+            }
+            .empty-icon {
+                width: 35px;
+                display: inline-block;
             }
         }
         &.disabled {

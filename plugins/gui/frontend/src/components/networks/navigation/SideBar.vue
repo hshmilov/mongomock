@@ -16,7 +16,13 @@
             </div>
         </div>
         <x-nav v-if="medicalConfig">
-            <x-nav-item v-bind="navigationLinkProps('Infuser Manager')" icon="pairing" :exact="true" id="infuser"/>
+            <x-nav-item v-bind="navigationLinkProps('Infuser Manager')" icon="pairing" :exact="true" id="pairing"/>
+            <x-nested-nav name="Settings" icon="settings" childRoot="/infuser_settings">
+                <x-nav-item v-bind="navigationLinkProps('Infuser')" id="infuser"/>
+                <x-nav-item v-bind="navigationLinkProps('Treatments')" id="treatments"/>
+                <x-nav-item v-bind="navigationLinkProps('Drug List')" id="drug-list"/>
+                <x-nav-item v-bind="navigationLinkProps('Preset Programs')" id="preset-programs"/>
+            </x-nested-nav>
         </x-nav>
         <x-nav v-else>
             <x-nav-item v-bind="navigationLinkProps('Dashboard')" icon="dashboard" :exact="true" id="dashboard"/>
@@ -33,13 +39,14 @@
 <script>
     import xNav from '../../axons/menus/Nav.vue'
     import xNavItem from '../../axons/menus/NavItem.vue'
+    import xNestedNav from '../../axons/menus/NestedNav.vue'
 
     import {LOGOUT} from '../../../store/modules/auth'
     import {mapState, mapActions} from 'vuex'
 
     export default {
         name: 'x-side-bar',
-        components: {xNav, xNavItem},
+        components: {xNav, xNavItem, xNestedNav},
         computed: mapState({
             userDetails(state) {
                 return {
@@ -198,6 +205,34 @@
             }
         }
     }
-
-
+    .x-side-bar.collapse .x-nav {
+        overflow: visible;
+        .x-nested-nav {
+            overflow: hidden;
+            .item-link span {
+                transition: all ease-in 0.2s;
+                opacity: 0;
+                line-height: 20px;
+            }
+            .x-nav.collapse {
+                display: none;
+            }
+            &:hover {
+                overflow: hidden;
+                position: relative;
+                .x-nav.collapse {
+                    left: 58px;
+                    margin-left: 0;
+                    top: 0;
+                    position: absolute;
+                    background-color: $grey-5;
+                    padding-left: 0;
+                    display: block;
+                    .item-link span {
+                        opacity: 1;
+                    }
+                }
+            }
+        }
+    }
 </style>

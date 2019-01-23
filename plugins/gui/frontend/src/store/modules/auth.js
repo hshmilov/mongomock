@@ -34,7 +34,7 @@ export const auth = {
 		allUsers: { fetching: false, data: [], error: '' },
         allRoles: { fetching: false, data: [], error: '' },
 		defaultRole: { fetching: false, data: '', error: '' },
-		oktaIdToken: { fetching: false, data: '', error: '' }
+		oidcIdToken: { fetching: false, data: '', error: '' }
 	},
 	mutations: {
 		[ SET_USER ] (state, payload) {
@@ -48,7 +48,7 @@ export const auth = {
 			state.currentUser.fetching = payload.fetching
 			state.currentUser.error = payload.error
 			if (payload.data) {
-				state.oktaIdToken.data = payload.data
+				state.oidcIdToken.data = payload.data
 			}
 		},
 		[ INIT_USER ] (state, payload) {

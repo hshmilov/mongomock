@@ -87,7 +87,6 @@
                 isSettingsRestricted(state) {
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
-                    if (state.staticConfiguration.medicalConfig) return false
                     return user.permissions.Settings === 'Restricted'
                 },
                 isDashboardWrite(state) {
