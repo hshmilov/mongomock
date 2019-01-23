@@ -16,7 +16,9 @@
       "shutdown_command": "echo {{user `password`}} | sudo -S shutdown -P now",
       "headless": true,
       "vmx_data_post": {
-        "ethernet0.connectiontype": "bridged"
+        "ethernet0.connectiontype": "bridged",
+        "memsize": "32768",
+        "numvcpus": "8"
       }
     }
   ],
