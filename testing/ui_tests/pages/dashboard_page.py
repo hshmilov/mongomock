@@ -215,7 +215,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_histogram_line_from_histogram(histogram, number):
-        return histogram.find_element_by_css_selector(f'div:nth-child({number}) > div.item-bar > div.quantity')
+        return histogram.find_element_by_css_selector(f'div:nth-child({number}) > div.item-bar div.quantity')
 
     @staticmethod
     def get_cycle_from_card(card):

@@ -3,11 +3,12 @@
         <div v-for="item, index in limitedData" class="histogram-item" @click="$emit('click-one', index)">
             <div class="item-bar">
                 <img v-if="condensed" :src="require(`Logos/${item.name}.png`)" width="30">
-                <div :style="{width: calculateBarHeight(item.value) + 'px'}">
-                    <div class="bar growing-x" :title="item.name"></div>
-                    <div v-if="condensed" class="quantity">{{ item.title || item.value }}</div>
+                <div class="bar-container">
+                    <div :style="{width: calculateBarHeight(item.value) + 'px'}">
+                        <div class="bar growing-x" :title="item.name"></div>
+                    </div>
+                    <div class="quantity">{{ item.title || item.value }}</div>
                 </div>
-                <div v-if="!condensed" class="quantity">{{ item.title || item.value }}</div>
             </div>
             <div v-if="!condensed" class="item-title" :title="item.name">{{item.name}}</div>
         </div>
@@ -63,6 +64,11 @@
             width: 100%;
             cursor: pointer;
 
+            .bar-container {
+                display: flex;
+                width: 100%;
+            }
+
             .item-bar {
                 display: flex;
                 align-items: center;
@@ -116,6 +122,11 @@
         }
 
         &.condensed {
+            .bar-container {
+                width: calc(100% - 36px);
+                flex-direction: column;
+            }
+
             .item-bar {
                 width: 100%;
                 cursor: pointer;
