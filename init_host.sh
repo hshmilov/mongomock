@@ -37,6 +37,8 @@ cat > /etc/apt/apt.conf.d/99elasticluster <<__EOF
 APT::Periodic::Enable "0";
 // undo what is in 20auto-upgrade
 APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Download-Upgradeable-Packages "0";
+APT::Periodic::AutocleanInterval "0";
 APT::Periodic::Unattended-Upgrade "0";
 __EOF
 
@@ -44,8 +46,12 @@ __EOF
 # with "Could not get lock /var/lib/dpkg/lock-frontend"
 while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
     echo -en "Waiting for other software managers to finish...\n"
+    ps aux | grep -i apt
     sleep 0.5
 done
+
+echo "Removing update-manager"
+apt-get remove update-manager
 
 echo "Updating the sources..."
 apt-get install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
