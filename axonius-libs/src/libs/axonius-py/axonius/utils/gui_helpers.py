@@ -15,7 +15,7 @@ from retry.api import retry_call
 
 from axonius.adapter_base import AdapterProperty
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME)
+                                          PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, GUI_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
@@ -627,7 +627,9 @@ def entity_fields(entity_type: EntityType):
             if not plugin_fields_record:
                 continue
             plugin_fields_existing = plugin_fields.find_one({'name': 'exist'}, projection={'fields': 1})
-            if plugin_fields_existing:
+            if plugin_fields_existing and plugin[PLUGIN_NAME] != GUI_NAME:
+                # We don't filter out GUI fields
+                # https://axonius.atlassian.net/browse/AX-3113
                 _filter_out_nonexisting_fields(plugin_fields_record['schema'], plugin_fields_existing['fields'])
 
             fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
