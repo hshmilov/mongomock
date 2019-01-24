@@ -9,7 +9,7 @@
                 <a @click="onLogout" title="Logout">
                     <svg-icon name="navigation/logout" height="16" :original="true"/>
                 </a>
-                <router-link :to="{name: 'My Account'}" active-class="active" @click.native="$emit('click')"
+                <router-link v-if="!medicalConfig" :to="{name: 'My Account'}" active-class="active" @click.native="$emit('click')"
                              title="My Account">
                     <svg-icon name="navigation/settings" height="16" :original="true"/>
                 </router-link>
@@ -58,7 +58,7 @@
                 return state.auth.currentUser.data.permissions
             },
             collapseSidebar(state) {
-                return state.interaction.collapseSidebar || state.interaction.windowWidth <= 1200
+                return state.interaction.collapseSidebar
             },
             medicalConfig(state) {
                 return state.staticConfiguration.medicalConfig

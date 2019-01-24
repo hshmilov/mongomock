@@ -16,7 +16,7 @@
         props: ['name', 'icon', 'childRoot'],
         computed: mapState({
             collapseSidebar(state) {
-                return state.interaction.collapseSidebar || state.interaction.windowWidth <= 1200
+                return state.interaction.collapseSidebar
             }
         }),
         methods: {

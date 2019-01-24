@@ -9,7 +9,7 @@
             <svg-icon name="logo/logo" height="30" :original="true"/>
             <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
         </div>
-        <ul class="bar-nav">
+        <ul class="bar-nav" v-if="!medicalConfig">
             <li class="nav-item" v-if="isDashboardWrite">
                 <button v-if="researchStatusLocal === 'starting'" class="item-link research-link disabled">
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20"/>
@@ -73,7 +73,7 @@
         computed: {
             ...mapState({
                 collapseSidebar(state) {
-                    return state.interaction.collapseSidebar || state.interaction.windowWidth <= 1200
+                    return state.interaction.collapseSidebar
                 },
                 emptyStates(state) {
                     return state.onboarding.emptyStates
@@ -96,7 +96,10 @@
                 },
                 userPermissions(state) {
                     return state.auth.currentUser.data.permissions
-                }
+                },
+                medicalConfig(state) {
+                    return state.staticConfiguration.medicalConfig
+                },
             }),
             mailSettingsTip: {
                 get() {
