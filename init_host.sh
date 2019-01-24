@@ -24,8 +24,17 @@ echo "hostname: $(hostname)"
 echo ""
 
 echo "Disabling apt-daily systemd task"
+systemctl stop apt-daily.service
+systemctl kill --kill-who=all apt-daily.service
+
+while ! (systemctl list-units --all apt-daily.service | fgrep -q dead) ; do
+    echo -en "Waiting for apt-daily.service to finish...\n"
+    sleep 0.5
+done
+
 systemctl stop apt-daily.timer
 systemctl disable apt-daily.timer
+systemctl disable apt-daily.service
 systemctl mask apt-daily.service
 systemctl daemon-reload
 
