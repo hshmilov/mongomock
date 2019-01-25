@@ -23,59 +23,22 @@ echo "Initializing the host image.."
 echo "hostname: $(hostname)"
 echo ""
 
-echo "Disabling apt-daily systemd task"
-systemctl stop apt-daily.service
-systemctl kill --kill-who=all apt-daily.service
-
-while ! (systemctl list-units --all apt-daily.service | fgrep -q dead) ; do
-    echo -en "Waiting for apt-daily.service to finish...\n"
-    sleep 0.5
-done
-
-systemctl stop apt-daily.timer
-systemctl disable apt-daily.timer
-systemctl disable apt-daily.service
-systemctl mask apt-daily.service
-systemctl daemon-reload
-
-# cannot use /etc/apt/apt.conf.d/10periodic as suggested in
-# /usr/lib/apt/apt.systemd.daily, as Ubuntu distributes the
-# unattended upgrades stuff with priority 20 and 50 ...
-# so override everything with a 99xxx file
-cat > /etc/apt/apt.conf.d/99elasticluster <<__EOF
-APT::Periodic::Enable "0";
-// undo what is in 20auto-upgrade
-APT::Periodic::Update-Package-Lists "0";
-APT::Periodic::Download-Upgradeable-Packages "0";
-APT::Periodic::AutocleanInterval "0";
-APT::Periodic::Unattended-Upgrade "0";
-__EOF
-
-# Sometimes, the operating system tries to update itself, so we might fail here
-# with "Could not get lock /var/lib/dpkg/lock-frontend"
-while fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
-    echo -en "Waiting for other software managers to finish...\n"
-    ps aux | grep -i apt
-    sleep 0.5
-done
-
-echo "Removing update-manager"
-apt-get remove update-manager
-
 echo "Updating the sources..."
-apt-get install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
+chmod a+x wait-apt-get.sh
+
+./wait-apt-get.sh install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
 add-apt-repository -y ppa:jonathonf/python-3.6
-sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise apt-get update fails
-apt-get update
+sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise ./wait-apt-get.sh update fails
+./wait-apt-get.sh update
 echo "Installing various dependencies..."
-apt-get install -y stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
+./wait-apt-get.sh install -y stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
 echo "Installing python 3.6..."
-apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip
+./wait-apt-get.sh install -y python3.6 python3.6-dev python3.6-venv ipython python-pip
 curl https://bootstrap.pypa.io/get-pip.py | python3.6
 # The following is a horrible hack we are doing to make python3.6 the default on ubuntu 16.04.
 # By default, ubuntu 16.04 does not support python3.6 being the default python because many of its apps are written
@@ -94,7 +57,7 @@ pip3 install virtualenv
 pip2 install --upgrade setuptools
 pip3 install --upgrade setuptools
 echo "Installing docker-ce..."
-apt-get install -y docker-ce=18.03.0~ce-0~ubuntu
+./wait-apt-get.sh install -y docker-ce=18.03.0~ce-0~ubuntu
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
