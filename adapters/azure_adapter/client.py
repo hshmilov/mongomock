@@ -1,4 +1,7 @@
 import logging
+
+from axonius.clients.rest.connection import RESTConnection
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 from azure.common.credentials import ServicePrincipalCredentials
@@ -10,12 +13,13 @@ from msrestazure import azure_cloud as azure
 class AzureClient(object):
     DEFAULT_CLOUD = 'Azure Public Cloud'
 
-    def __init__(self, subscription_id, client_id, client_secret, tenant_id, cloud_name=None):
+    def __init__(self, subscription_id, client_id, client_secret, tenant_id, cloud_name=None, https_proxy=None):
         if cloud_name is None:
             cloud_name = self.DEFAULT_CLOUD
         cloud = self.get_clouds()[cloud_name]
+        proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
         credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
-                                                  cloud_environment=cloud)
+                                                  cloud_environment=cloud, proxies=proxies)
         self.compute = ComputeManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
         self.network = NetworkManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
 

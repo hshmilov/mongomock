@@ -48,7 +48,8 @@ class AzureAdapter(AdapterBase):
                                      client_id=client_config[AZURE_CLIENT_ID],
                                      client_secret=client_config[AZURE_CLIENT_SECRET],
                                      tenant_id=client_config[AZURE_TENANT_ID],
-                                     cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT))
+                                     cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
+                                     https_proxy=client_config.get('https_proxy'))
             connection.test_connection()
             return connection
         except Exception as e:
@@ -88,6 +89,11 @@ class AzureAdapter(AdapterBase):
                     "enum": list(AzureClient.get_clouds().keys()),
                     "default": AzureClient.DEFAULT_CLOUD
                 },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
             ],
             "required": [
                 AZURE_SUBSCRIPTION_ID,
