@@ -38,6 +38,9 @@ class AggregatorService(PluginService):
         if self.db_schema_version < 6:
             self._update_schema_version_6()
 
+        if self.db_schema_version != 6:
+            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+
     def __create_capped_collections(self):
         """
         Set up historical dbs as capped collections, if they aren't already
@@ -326,9 +329,10 @@ class AggregatorService(PluginService):
                 },
                     upsert=True
                 )
-                for adapter in self.db.client['core']['configs'].find({
+                adapters = list(self.db.client['core']['configs'].find({
                     'supported_features': 'Adapter'
-                }):
+                }))
+                for adapter_i, adapter in enumerate(adapters):
                     plugin_unique_name = adapter['plugin_unique_name']
                     fields_db = self.db.client[plugin_unique_name][entity_type.value + '_fields']
                     fields_db.update_one({
@@ -340,6 +344,7 @@ class AggregatorService(PluginService):
                     },
                         upsert=True
                     )
+                    print(f'{entity_type}: Adapters upgrade: finished {adapter_i} out of {len(adapters)}')
 
             self.db_schema_version = 6
         except Exception as e:

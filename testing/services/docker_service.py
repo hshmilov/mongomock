@@ -202,9 +202,14 @@ else:
               docker_internal_env_vars=None,
               run_env=None):
         last_start_args = locals()  # This has to be the first line in the function, to get all the
-        self._migrate_db()
         assert mode in ('prod', '')
         assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
+
+        print(f'{COLOR.get("light_green", "<")}'
+              f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.'
+              f'{COLOR.get("reset", ">")}')
+
+        self._migrate_db()
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -247,9 +252,6 @@ else:
 
         cmd = ' '.join(docker_up)
         print(f'{cmd}')
-        print(f'{COLOR.get("light_green", "<")}'
-              f'Running container {self.container_name} in -{"production" if mode == "prod" else "debug"}- mode.'
-              f'{COLOR.get("reset", ">")}')
 
         docker_run_process = subprocess.Popen(docker_up, cwd=self.service_dir, env=run_env, stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE)

@@ -584,6 +584,7 @@ class CoreService(PluginBase, Configurable):
         self._proxy_settings = config[PROXY_SETTINGS]
 
         try:
+            # This string is used by chef!
             with open('/tmp/proxy_data.txt', 'w') as f:
                 f.write(self.to_proxy_string(self._proxy_settings))
         except Exception:

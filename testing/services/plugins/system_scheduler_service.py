@@ -48,6 +48,9 @@ class SystemSchedulerService(PluginService):
         if self.db_schema_version < 1:
             self._update_schema_version_1()
 
+        if self.db_schema_version != 1:
+            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
         try:
