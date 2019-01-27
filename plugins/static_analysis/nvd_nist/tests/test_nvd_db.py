@@ -5,6 +5,8 @@ from .. import nvd_update
 from .. import nvd_search
 import time
 
+import pytest
+
 
 NVD_YEAR_TO_TEST_FROM = 2018
 db = nvd_search.NVDSearcher()
@@ -18,11 +20,13 @@ def get_cve_with_id(cve_raw_list, cve_id):
     return None
 
 
+@pytest.mark.skip('until this test is robust AX-3147')
 def test_update():
     assert len(nvd_update.update(earliest_year=NVD_YEAR_TO_TEST_FROM, hard=True)) > 1
     db._load_artifacts()
 
 
+@pytest.mark.skip('until this test is robust AX-3147')
 def test_nvd_search():
     start_time = time.time()
     raw = db.search_vuln("Adobe Incorporated Systems", "Adobe Acrobat Reader DC", "15.006.30060")
@@ -47,6 +51,7 @@ def test_nvd_returns_empty_results_when_there_is_no_cve():
     assert len(raw) == 0
 
 
+@pytest.mark.skip('until this test is robust AX-3147')
 def test_nvd_works_with_empty_vendor_name():
     start_time = time.time()
     raw = db.search_vuln("", "Acrobat Reader DC", "15.006.30060")
