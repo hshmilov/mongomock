@@ -27,7 +27,3 @@ class TestHyperVAdapter(AdapterTestBase):
     @pytest.mark.skip("No reachability test")
     def test_check_reachability(self):
         pass
-
-    @pytest.mark.skip("Skipping due to setting up vhd")
-    def test_fetch_devices(self):
-        pass
