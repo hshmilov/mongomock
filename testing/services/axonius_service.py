@@ -1,3 +1,4 @@
+import pytest
 import glob
 import importlib
 import inspect
@@ -256,6 +257,16 @@ class AxoniusService:
         }
         return self.get_devices_with_condition(cond)
 
+    def get_devices_by_adapter_name(self, adapter_name):
+        cond = {
+            'adapters': {
+                "$elemMatch": {
+                    PLUGIN_UNIQUE_NAME: adapter_name
+                }
+            }
+        }
+        return self.get_devices_with_condition(cond)
+
     def get_device_view_by_id(self, adapter_name, device_id):
         cond = {
             'specific_data': {
@@ -303,7 +314,10 @@ class AxoniusService:
 
     def assert_device_in_db(self, plugin_unique_name, some_device_id):
         devices = self.get_device_by_id(plugin_unique_name, some_device_id)
-        assert len(devices) == 1
+        if len(devices) != 1:
+            device_ids = [device.get('adapters', [{}])[0].get('data', {}).get('id')
+                          for device in self.get_devices_by_adapter_name(plugin_unique_name)]
+            pytest.fail("{0} exists more then once or not in {1}".format(some_device_id, device_ids))
         devices = self.get_device_view_by_id(plugin_unique_name, some_device_id)
         assert len(devices) == 1
 

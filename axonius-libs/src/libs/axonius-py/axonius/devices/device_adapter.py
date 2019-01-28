@@ -91,13 +91,14 @@ class DeviceAdapterOS(SmartJsonClass):
                                     'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik'])
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
-    build = Field(str, 'Build')  # aka patch level
     sp = Field(str, 'Service Pack')
     install_date = Field(datetime.datetime, "Install Date")
     kernel_version = Field(str, 'Kernel Version')
+    codename = Field(str, 'Code name')  # for example 'xenial'
 
     major = Field(int, 'Major')
     minor = Field(int, 'Minor')
+    build = Field(str, 'Build')  # aka patch level
 
 
 class DeviceAdapterVlan(SmartJsonClass):
@@ -160,7 +161,9 @@ class DeviceAdapterCPU(SmartJsonClass):
     """ A definition for cpu's """
 
     name = Field(str, "Description")
+    manufacturer = Field(str, "Manufacturer")
     bitness = Field(int, "Bitness", enum=[32, 64])
+    family = Field(str, "Family")
     cores = Field(int, "Cores")
     cores_thread = Field(int, 'Threads in core')
     load_percentage = Field(int, "Load Percentage")
@@ -175,6 +178,9 @@ class DeviceAdapterBattery(SmartJsonClass):
     status = Field(str, "Status", enum=["Not Charging", "Connected to AC", "Fully Charged", "Low", "Critical",
                                         "Charging", "Charging and High", "Charging and Low",
                                         "Charging and Critical", "Undefined", "Partially Charged"])
+    manufacturer = Field(str, "Manufacturer")
+    model = Field(str, "Model")
+    capacity = Field(str, "Capacity (mWh)")
 
 
 class DeviceAdapterUser(SmartJsonClass):
@@ -233,11 +239,12 @@ class DeviceAdapterLocalAdmin(SmartJsonClass):
 class DeviceAdapterInstalledSoftware(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
-    vendor = Field(str, "Software Vendor")
     name = Field(str, "Software Name")
     version = Field(str, "Software Version")
-    architecture = Field(str, "Software Architecture")
+    architecture = Field(str, "Software Architecture", enum=[
+                         "x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all"])
     description = Field(str, "Software Description")
+    vendor = Field(str, "Software Vendor")
 
 
 class DeviceAdapterSoftwareCVE(SmartJsonClass):
@@ -302,10 +309,7 @@ class DeviceAdapter(SmartJsonClass):
     users = ListField(DeviceAdapterUser, "Users", json_format=JsonArrayFormat.table)
     local_admins = ListField(DeviceAdapterLocalAdmin, "Local Admins", json_format=JsonArrayFormat.table)
     pretty_id = Field(str, 'Axonius Name')
-    device_manufacturer = Field(str, "Device Manufacturer")
-    device_model = Field(str, "Device Model")
-    device_model_family = Field(str, "Device Model Family")
-    device_serial = Field(str, "Device Manufacturer Serial")
+
     related_ips = Field(DeviceAdapterRelatedIps, "Related Ips")
     pc_type = Field(str, "PC Type", enum=["Unspecified", "Desktop", "Laptop or Tablet", "Workstation",
                                           "Enterprise Server", "SOHO Server", "Appliance PC", "Performance Server",
@@ -316,8 +320,21 @@ class DeviceAdapter(SmartJsonClass):
     cpus = ListField(DeviceAdapterCPU, "CPUs")
     boot_time = Field(datetime.datetime, 'Boot Time')
     time_zone = Field(str, 'Time Zone')
+
+    # hardware related
+    device_manufacturer = Field(str, "Device Manufacturer")
+    device_model = Field(str, "Device Model")
+    device_model_family = Field(str, "Device Model Family")
+    device_serial = Field(str, "Device Manufacturer Serial")
+
     bios_version = Field(str, "Bios Version")
     bios_serial = Field(str, "Bios Serial")
+
+    motherboard_manufacturer = Field(str, "Motherboard Manufacturer")
+    motherboard_serial = Field(str, "Motherboard serial")
+    motherboard_model = Field(str, "Motherboard Model")
+    motherboard_version = Field(str, "Motherboard Version")
+
     total_physical_memory = Field(float, "Total RAM (GB)")
     free_physical_memory = Field(float, "Free RAM (GB)")
     physical_memory_percentage = Field(float, "RAM Usage (%)")
@@ -531,6 +548,22 @@ class DeviceAdapter(SmartJsonClass):
         self.connected_hardware.append(DeviceAdapterConnectedHardware(**kwargs))
 
     def add_installed_software(self, **kwargs):
+        arch_translate_dict = {
+            'amd64': 'x64',
+            'x86_64': 'x64',
+            '64-bit': 'x64',
+            '64 bit': 'x64',
+            'Win64': 'x64',
+            'i386': 'x86',
+            '32-bit': 'x86',
+            'noarch': 'all',
+            'none': 'all',
+            '(none)': 'all',
+        }
+
+        if 'architecture' in kwargs and kwargs['architecture'] in arch_translate_dict.keys():
+            kwargs['architecture'] = arch_translate_dict[kwargs['architecture']]
+
         self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))
 
     def add_vulnerable_software(self, **kwargs):

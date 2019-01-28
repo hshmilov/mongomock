@@ -4,7 +4,7 @@ import socket
 import paramiko
 
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.linux_ssh.data import ALL_COMMANDS
+from axonius.clients.linux_ssh.data import CommandExecutor
 from axonius.utils.memfiles import temp_memfd
 from linux_ssh_adapter.consts import NETWORK_TIMEOUT
 
@@ -14,8 +14,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class LinuxSshConnection:
     """ client for Linux ssh adapter """
 
-    def __init__(self, hostname, port, username, password=None, key=None):
-        if not any((password, key)):
+    def __init__(self, hostname, port, username, password=None, key=None, is_sudoer=False):
+        if password is None and key is None:
             raise ClientConnectionException('password/key is required')
 
         self._port = port
@@ -23,6 +23,8 @@ class LinuxSshConnection:
         self._username = username
         self._password = password
         self._key = key
+
+        self._is_sudoer = is_sudoer
 
         self._client = None
 
@@ -51,26 +53,26 @@ class LinuxSshConnection:
             self._client.close()
             self._client = None
 
-    def _execute_command(self, client_id, command_cls):
+    def _execute_ssh_cmdline(self, cmdline):
         """
             This function get command class and should
             initiate it using the client id and the command response
             (stdout + stderr combined), stripped and decoded as string
         """
 
-        logger.debug('Executing {command_cls.get_name()}')
         chan = self._client.get_transport().open_session(timeout=NETWORK_TIMEOUT)
         chan.set_combine_stderr(True)
         chan.settimeout(NETWORK_TIMEOUT)
         stdout = chan.makefile()
-        chan.exec_command(command_cls.get_command())
-        command_output = stdout.read()
-        command_output = command_output.strip().decode('utf-8')
-        return command_cls(client_id, command_output)
+        chan.exec_command(cmdline)
+        output = stdout.read()
+        output = output.strip().decode('utf-8')
+        return output
 
-    def get_device_list(self, client_id):
-        for command in ALL_COMMANDS:
-            yield self._execute_command(client_id, command)
+    def get_commands(self):
+        # Pass password if only if sudoer
+        password = self._password if self._is_sudoer else None
+        yield from CommandExecutor(self._execute_ssh_cmdline, password).get_commands()
 
     @staticmethod
     def test_reachability(hostname, port):

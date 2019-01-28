@@ -1,7 +1,5 @@
-from linux_ssh_adapter.consts import HOSTNAME, PORT, DEFAULT_PORT
+from linux_ssh_adapter.consts import (DEFAULT_PORT, HOSTNAME, PORT)
 
 
 def get_client_id(client_config):
-    if PORT not in client_config:
-        client_config[PORT] = DEFAULT_PORT
-    return client_config[HOSTNAME] + ':' + str(client_config[PORT])
+    return client_config[HOSTNAME] + ':' + str(client_config.get(PORT, DEFAULT_PORT))

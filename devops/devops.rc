@@ -1,0 +1,9 @@
+DEVOPS=$(realpath $(dirname ${BASH_SOURCE[0]}))
+ORIG_PATH=$PATH
+
+if [ `echo $PATH | grep  devops` ] ; then
+    echo "Already set"
+else
+    PATH=$DEVOPS:$DEVOPS/scripts:$DEVOPS/scripts/automate_dev/:$DEVOPS/scripts/log_utils/:$PATH
+    echo "Done"
+fi

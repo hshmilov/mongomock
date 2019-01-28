@@ -1,42 +1,62 @@
 import logging
 import re
+
+# pylint: disable=no-name-in-module
+from distutils import version
+# pylint: enable=no-name-in-module
+from typing import Callable, List
 # pylint: disable=deprecated-module
 import string
 # pylint: enable=deprecated-module
+from axonius.devices.device_adapter import AdapterProperty
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 EMPTY_MAC = '00:00:00:00:00:00'
-
-FILE_NOT_FOUND = 'No such file or directory'
-COMMAND_NOT_FOUND = 'not found'
-
-
-def command_failed(raw_data):
-    return any(fail_str in raw_data for fail_str in [FILE_NOT_FOUND, COMMAND_NOT_FOUND])
 
 
 def kilo_to_giga(kilo):
     return round(float(kilo) / 1024 / 1024, 2)
 
 
+def megahertz_to_giga(mega):
+    return round(float(mega) / 1000, 2)
+
+
 def usage_percentage(all_, free):
     return float(round(((float(all_) - float(free)) / float(all_)) * 100, 2))
 
 
-class AbstractCommand:
-    COMMAND = None
-    NAME = None
-    STATIC_PATH = '/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin'
+def add_version(device, release):
+    # XXX: add regex to capture the version string from release
+    try:
+        major, minor, build = version.StrictVersion(release).version
+        device.os.major = major
+        device.os.minor = minor
+        if build != 0:
+            device.os.build = str(build)
+    except ValueError:
+        device.os.build = release
 
-    def __init__(self, client_id, data):
-        self._client_id = client_id
+
+class AbstractCommand:
+    COMMAND = ''
+    STATIC_PATH = '/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin'
+    END_MAGIC = 'OKOK'
+    START_MAGIC = 'STARTSTART'
+    REQUIRE_ROOT_PRIVILEGES = False
+
+    def __init__(self, data):
         self._raw_data = data
         self._parsed_data = {}
 
     def parse(self):
         try:
+            self.assert_command_worked(self._raw_data)
+            self._raw_data = self.strip_magic(self._raw_data)
             self._parsed_data = self._parse(self._raw_data)
+            if not self._parsed_data:
+                return False
             return True
         except Exception:
             logger.exception(f'{self.get_name()} failed to parse')
@@ -47,17 +67,47 @@ class AbstractCommand:
         raise NotImplementedError()
 
     @classmethod
-    def get_command(cls):
-        """ In some distros such as redhat, non-interactive path is limited so we prepend
-        default path here """
-        return f'PATH={cls.STATIC_PATH}:$PATH {cls.COMMAND}'
+    def _get_command(cls):
+        """ we delete HISTFILE to make sure that we don't write passwords to history.
+            In some distros such as redhat, non-interactive path is limited so we prepend
+            default path. Add magic logic"""
+        command = f'echo -n {cls.START_MAGIC} && {cls.COMMAND} && echo -n {cls.END_MAGIC}'
+        command = f'HISTFILE=/dev/null PATH={cls.STATIC_PATH}:$PATH {command}'
+        return command
 
     @classmethod
     def get_name(cls):
-        return cls.NAME
+        return cls.__name__
+
+    @classmethod
+    def assert_command_worked(cls, raw_data):
+        if cls.START_MAGIC not in raw_data or cls.END_MAGIC not in raw_data:
+            raise ValueError(f'Invalid command output {raw_data}')
+
+    @classmethod
+    def strip_magic(cls, raw_data):
+        start = cls.START_MAGIC
+        end = cls.END_MAGIC
+        return raw_data[raw_data.index(start) + len(start):raw_data.index(end)]
+
+    @classmethod
+    def from_shell_execute(cls,
+                           shell_execute: Callable[[str], str],
+                           password: str = None):
+        """ factory to create the class given shell_execute function """
+        shell_cmdline = cls._get_command()
+
+        # If we have password and the command require root privilege add sudo
+        # if not, just try to execute it - maybe it will work
+        if cls.REQUIRE_ROOT_PRIVILEGES and password is not None:
+            shell_cmdline = f'echo \'{password}\' | sudo -S sh -c \'{shell_cmdline}\''
+
+        command = cls(shell_execute(shell_cmdline))
+        return command
 
 
 class LocalInfoCommand(AbstractCommand):
+
     @staticmethod
     def calculate_id(client_id, device):
         device_dict = device.to_dict()
@@ -66,14 +116,14 @@ class LocalInfoCommand(AbstractCommand):
         macs = [iface.get('mac') for iface in device_dict.get('network_interfaces', [])]
         return 'linux_ssh_' + '_'.join(sorted(filter(None, [client_id, hostname] + macs)))
 
-    def to_axonius(self, device):
+    def to_axonius(self, client_id, device):
         curr_raw_data = device.get_raw()
-        curr_raw_data[self.NAME] = {'raw_data': self._raw_data,
-                                    'parsed_data': self._parsed_data}
+        curr_raw_data[self.get_name()] = {'raw_data': self._raw_data,
+                                          'parsed_data': self._parsed_data}
 
         device.set_raw(curr_raw_data)
 
-        device.id = self.calculate_id(self._client_id, device)
+        device.id = self.calculate_id(client_id, device)
 
         if self._parsed_data:
             try:
@@ -95,13 +145,10 @@ class ForeignInfoCommand(AbstractCommand):
 
 class HostnameCommand(LocalInfoCommand):
     COMMAND = 'uname -n'
-    NAME = 'hostname'
 
     @staticmethod
     def _parse(raw_data):
-        if command_failed(raw_data):
-            return None
-        return raw_data
+        return raw_data.strip()
 
     @staticmethod
     def _to_axonius(device, parsed_data):
@@ -110,7 +157,6 @@ class HostnameCommand(LocalInfoCommand):
 
 class IfaceCommand(LocalInfoCommand):
     COMMAND = '/sbin/ip a'
-    NAME = 'iface'
 
     @staticmethod
     def interface_list_iter(raw_data):
@@ -159,28 +205,31 @@ class IfaceCommand(LocalInfoCommand):
     @staticmethod
     def _to_axonius(device, parsed_data):
         for interface in parsed_data:
-            ips = [ip.split('/')[0] for ip in interface['ipv4']] + \
-                  [ip.split('/')[0] for ip in interface['ipv6']]
-            device.add_nic(name=interface['name'],
-                           mac=interface['mac'],
-                           ips=ips,
-                           subnets=interface['ipv4'] + interface['ipv6'],
-                           mtu=interface['mtu'],
-                           operational_status=interface['operational_status'])
+            try:
+                ips = [ip.split('/')[0] for ip in interface['ipv4']] + \
+                      [ip.split('/')[0] for ip in interface['ipv6']]
+                device.add_nic(name=interface['name'],
+                               mac=interface['mac'],
+                               ips=ips,
+                               subnets=interface['ipv4'] + interface['ipv6'],
+                               mtu=interface['mtu'],
+                               operational_status=interface['operational_status'])
+            except Exception as e:
+                logger.exception('Failed to add interface')
 
 
 class HDCommand(LocalInfoCommand):
-    COMMAND = 'df --output=source,fstype,size,avail,target'
-    NAME = 'harddisk'
+    COMMAND = 'df -T'
 
     @staticmethod
     def _parse(raw_data):
-        fields_names = ('source', 'fstype', 'size', 'avail', 'target')
+        fields_names = ('source', 'fstype', 'size', 'use', 'avail', 'percent', 'target')
+
         result = []
 
         # skip headers go from 2nd line
         for line in raw_data.splitlines()[1:]:
-            fields = re.findall(r'\s*(\S+)[\s]+(\S+)[\s]+(\d+)[\s]+(\d+)\s+(\S+)\s*',
+            fields = re.findall(r'\s*(\S+)[\s]+(\S+)[\s]+(\d+)[\s]+(\d+)\s+(\d+)\s+(\d+%)\s+(\S+)\s*',
                                 line)
             if not fields:
                 continue
@@ -195,18 +244,20 @@ class HDCommand(LocalInfoCommand):
     @staticmethod
     def _to_axonius(device, parsed_data):
         for fs_data in parsed_data:
-            device.add_hd(
-                path=fs_data.get('target'),
-                total_size=fs_data.get('size'),
-                free_size=fs_data.get('avail'),
-                file_system=fs_data.get('fstype'),
-                device=fs_data.get('source'),
-            )
+            try:
+                device.add_hd(
+                    path=fs_data.get('target'),
+                    total_size=fs_data.get('size'),
+                    free_size=fs_data.get('avail'),
+                    file_system=fs_data.get('fstype'),
+                    device=fs_data.get('source'),
+                )
+            except Exception as e:
+                logger.exception('Failed to add interface')
 
 
 class VersionCommand(LocalInfoCommand):
     COMMAND = 'uname -a'
-    NAME = 'version'
 
     @staticmethod
     def _parse(raw_data):
@@ -222,16 +273,15 @@ class VersionCommand(LocalInfoCommand):
         device.os.kernel_version = parsed_data['kernel_version']
 
 
-class DistroCommand(LocalInfoCommand):
+class DebianDistroCommand(LocalInfoCommand):
     COMMAND = 'lsb_release -a'
-    NAME = 'distro'
 
     @staticmethod
     def _parse(raw_data):
         result = {}
         codename = re.findall(r'Codename:\s*(\w+)', raw_data)
         distro = re.findall(r'Distributor ID:\s*(\w+)', raw_data)
-        release = re.findall(r'Release:\s*(\w+)', raw_data)
+        release = re.findall(r'Release:\s*(\S+)', raw_data)
         result['distro'] = distro[0] if distro else None
         result['release'] = release[0] if release else None
         result['codename'] = codename[0] if codename else None
@@ -242,13 +292,57 @@ class DistroCommand(LocalInfoCommand):
         if parsed_data.get('distro'):
             device.os.distribution = parsed_data.get('distro')
 
-        if any(parsed_data.values()):
-            device.os.build = ' '.join(parsed_data.values())
+        if parsed_data.get('release'):
+            add_version(device, parsed_data.get('release'))
+
+        if parsed_data.get('codename'):
+            device.os.codename = parsed_data.get('codename')
+
+
+class RedHatDistroCommand(LocalInfoCommand):
+    COMMAND = 'cat /etc/redhat-release'
+
+    @staticmethod
+    def _parse(raw_data):
+        result = {}
+        data = raw_data.split(' release ')
+
+        if len(data) != 2:
+            return result
+
+        distro, data = data
+        result['distro'] = distro.strip()
+
+        data = data.strip().split(' ')
+        if len(data) != 2:
+            return result
+
+        release, codename = data
+
+        codename = codename.strip()
+
+        if codename[0] == '(' and codename[-1] == ')':
+            codename = codename[1:-1]
+
+        result['release'] = release.strip()
+        result['codename'] = codename.strip()
+
+        return result
+
+    @staticmethod
+    def _to_axonius(device, parsed_data):
+        if parsed_data.get('distro'):
+            device.os.distribution = parsed_data.get('distro')
+
+        if parsed_data.get('release'):
+            add_version(device, parsed_data.get('release'))
+
+        if parsed_data.get('codename'):
+            device.os.codename = parsed_data.get('codename')
 
 
 class MemCommand(LocalInfoCommand):
     COMMAND = 'cat /proc/meminfo'
-    NAME = 'mem'
 
     @staticmethod
     def _parse(raw_data):
@@ -279,7 +373,6 @@ class MemCommand(LocalInfoCommand):
 class DPKGCommand(LocalInfoCommand):
     """ this command is supported only for debian based system """
     COMMAND = 'dpkg -l | cat'
-    NAME = 'dpkg'
 
     @staticmethod
     def _parse(raw_data):
@@ -291,12 +384,32 @@ class DPKGCommand(LocalInfoCommand):
     @staticmethod
     def _to_axonius(device, parsed_data):
         for software in parsed_data:
-            device.add_installed_software(**software)
+            try:
+                device.add_installed_software(**software)
+            except Exception as e:
+                logger.error('failed to add installed software')
+
+
+class RPMCommand(LocalInfoCommand):
+    COMMAND = 'rpm -qa  --qf \'%{NAME}|%{VERSION}|%{ARCH}|%{SUMMARY}|%{VENDOR}\\n\''
+
+    @staticmethod
+    def _parse(raw_data):
+        fields = ('name', 'version', 'architecture', 'description', 'vendor')
+        packages_data = re.findall(r'(.*)\|(.*)\|(.*)\|(.*)\|(.*)', raw_data)
+        return [dict(zip(fields, package_data)) for package_data in packages_data]
+
+    @staticmethod
+    def _to_axonius(device, parsed_data):
+        for software in parsed_data:
+            try:
+                device.add_installed_software(**software)
+            except Exception as e:
+                logger.error('Failed to add installed software')
 
 
 class UsersCommand(LocalInfoCommand):
     COMMAND = 'cat /etc/passwd'
-    NAME = 'users'
 
     @staticmethod
     def _parse(raw_data):
@@ -309,19 +422,243 @@ class UsersCommand(LocalInfoCommand):
     @staticmethod
     def _to_axonius(device, parsed_data):
         for user in parsed_data:
-            device.add_users(user_sid=user['userid'],
-                             username=user['name'],
-                             is_admin=user['userid'] == '0',
-                             interpreter=user['interpreter'])
+            try:
+                device.add_users(user_sid=user['userid'],
+                                 username=user['name'],
+                                 is_admin=user['userid'] == '0',
+                                 interpreter=user['interpreter'])
+            except Exception as e:
+                logger.error('Failed to add user')
 
 
-ALL_COMMANDS = [
-    HostnameCommand,
-    IfaceCommand,
-    HDCommand,
-    VersionCommand,
-    DistroCommand,
-    MemCommand,
-    DPKGCommand,
-    UsersCommand,
-]
+class HardwareCommand(LocalInfoCommand):
+    COMMAND = 'dmidecode'
+    REQUIRE_ROOT_PRIVILEGES = True
+
+    @staticmethod
+    def add_info_to_json(json, name, handle):
+        result = re.findall(r'{0}:\s+(.*)\n'.format(name), handle)
+        if not result:
+            return
+
+        result = result[0]
+        if any(string.lower() == result.lower() for string in ('Not Present',
+                                                               'Not Provided',
+                                                               'Not Specified',
+                                                               'None',
+                                                               'Other',
+                                                               'Unspecified',
+                                                               'To Be Filled By O.E.M.')):
+            return
+
+        name = name.lower().replace(' ', '_')
+        json[name] = result
+
+    @staticmethod
+    def _parse(raw_data):
+        result = []
+        handlers = re.findall(r'Handle .*?\n\n', raw_data, re.DOTALL)
+        for raw_handle in handlers:
+            parsed_handle = {}
+            category = raw_handle.splitlines()
+
+            if len(category) < 1:
+                continue
+
+            category = category[1]
+            category = category.lower().replace(' ', '_')
+
+            parsed_handle['category'] = category
+
+            HardwareCommand.add_info_to_json(parsed_handle, 'Version', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Revision', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Vendor', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Serial Number', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Name', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'UUID', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Manufacturer', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Release Date', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Family', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Type', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Core Count', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Thread Count', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Current Speed', raw_handle)
+            HardwareCommand.add_info_to_json(parsed_handle, 'Capacity', raw_handle)
+            result.append(parsed_handle)
+        return result
+
+    @staticmethod
+    def detect_properties(device, parsed_data):
+        """ try to detect if the device is cloud/VM/etc by signing on the hardware
+            based on my own exprience,
+            https://unix.stackexchange.com/questions/89714/easy-way-to-determine-virtualization-technology"""
+        cloud_signitures = ('Google Compute Engine',
+                            'GoogleCloud',
+                            'amazon')
+
+        vm_signitures = ('VMware',
+                         'VirtualBox',
+                         'Virtual Machine')
+
+        for signiture in cloud_signitures:
+            if signiture in str(parsed_data):
+                device.adapter_properties = [AdapterProperty.Manager,
+                                             AdapterProperty.Assets,
+                                             AdapterProperty.Cloud_Provider]
+                return
+
+        for signiture in vm_signitures:
+            if signiture in str(parsed_data):
+                device.adapter_properties = [AdapterProperty.Manager,
+                                             AdapterProperty.Assets,
+                                             AdapterProperty.Virtualization]
+                return
+
+    @staticmethod
+    def _to_axonius(device, parsed_data):
+        parsed_bios = False
+        parsed_system_information = False
+        parsed_base_board_information = False
+
+        HardwareCommand.detect_properties(device, parsed_data)
+
+        for handle in parsed_data:
+            try:
+                if handle['category'] == 'bios_information' and not parsed_bios:
+
+                    try:
+                        ver = handle.get('version')
+                        version.StrictVersion(ver)
+                        device.bios_version = ver
+                    except ValueError:
+                        try:
+                            rev = handle.get('revision')
+                            version.StrictVersion(ver)
+                            if ver and rev and rev in ver:
+                                device.bios_version = ver
+                            else:
+                                device.bios_version = rev
+                        except ValueError:
+                            device.bios_version = handle.get('version')
+
+                    device.bios_serial = handle.get('serial')
+                    parsed_bios = True
+
+                if handle['category'] == 'system_information' and not parsed_system_information:
+                    device.device_serial = handle.get('serial_number')
+                    device.device_model = handle.get('name')
+                    device.device_model_family = handle.get('family')
+                    device.device_manufacturer = handle.get('manufacturer')
+                    parsed_system_information = True
+
+                if handle['category'] == 'base_board_information' and not parsed_base_board_information \
+                        and handle.get('type', '').lower() == 'motherboard':
+                    device.motherboard_serial = handle.get('serial')
+                    device.motherboard_model = handle.get('name')
+                    device.motherboard_version = handle.get('version')
+                    device.motherboard_manufacturer = handle.get('manufacturer')
+                    parsed_base_board_information = True
+
+                if handle['category'] == 'processor_information':
+                    ghz = None
+                    try:
+                        ghz = megahertz_to_giga(float(handle.get('current_speed').split(' ')[0]))
+                    except Exception as e:
+                        logger.exception(r'Failed to parse ghz')
+
+                    device.add_cpu(name=handle.get('version'),
+                                   manufacturer=handle.get('manufacturer'),
+                                   family=handle.get('family'),
+                                   cores=handle.get('core_count'),
+                                   cores_thread=handle.get('thread_count'),
+                                   ghz=ghz)
+
+                if handle['category'] == 'portable_battery':
+                    device.add_battery(model=handle.get('name'),
+                                       capacity=handle.get('capacity'),
+                                       manufacturer=handle.get('manufacturer'))
+            except Exception as e:
+                logger.exception('Failed to handle {handle}')
+
+
+class ConcateCommands:
+    """ class helper to specify that commands should run one after anoter,
+        This is usefull for the day that we want to parallel the functionality """
+
+    def __init__(self,
+                 commands: List,
+                 should_stop_on_first_error=False,
+                 should_stop_on_first_success=False):
+        self.commands = commands
+        self.should_stop_on_first_error = should_stop_on_first_error
+        self.should_stop_on_first_success = should_stop_on_first_success
+
+
+class CommandExecutor:
+    """ gets execute functions callback and client id, and handles all the command execution """
+
+    ALL_COMMANDS = [
+        HostnameCommand,
+        IfaceCommand,
+        HDCommand,
+
+        # Distro command assume that version command already finished
+        ConcateCommands([
+            VersionCommand,
+            ConcateCommands([
+                DebianDistroCommand,
+                RedHatDistroCommand
+            ], should_stop_on_first_success=True),
+        ]),
+        MemCommand,
+
+        # DPKG is debian only if failed try RPM
+        ConcateCommands([
+            DPKGCommand,
+            RPMCommand,
+        ], should_stop_on_first_success=True),
+        UsersCommand,
+        HardwareCommand,
+    ]
+
+    def __init__(self, shell_execute: Callable[[str], str], password: str = None):
+        self._shell_execute = shell_execute
+        self._password = password
+
+    def handle_concated_commands(self, concated):
+        parsed = False
+
+        for command_cls in concated.commands:
+            if isinstance(command_cls, ConcateCommands):
+                parsed = yield from self.handle_concated_commands(command_cls)
+            else:
+                parsed = yield from self.yield_command(command_cls)
+
+            if parsed and concated.should_stop_on_first_success:
+                break
+
+            if not parsed and concated.should_stop_on_first_error:
+                break
+
+        return parsed
+
+    def yield_command(self, command_cls):
+        result = False
+        try:
+            command = command_cls.from_shell_execute(self._shell_execute, self._password)
+            if command.parse():
+                result = True
+            yield command
+        except Exception as e:
+            logger.exception(f'Failed to execute command {command_cls}')
+        return result
+
+    def get_commands(self):
+        for command_cls in self.ALL_COMMANDS:
+            try:
+                if isinstance(command_cls, ConcateCommands):
+                    yield from self.handle_concated_commands(command_cls)
+                else:
+                    yield from self.yield_command(command_cls)
+            except Exception as e:
+                logger.exception(f'get_devices {command_cls} failed')

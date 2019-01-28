@@ -1,15 +1,14 @@
-from axonius.clients.linux_ssh.mock import (DistroMock, HDMock, HostnameMock,
-                                            IfaceMock, VersionMock, MemMock,
-                                            DPKGMock, UsersMock)
+# pylint: disable=wildcard-import
+from axonius.clients.linux_ssh.mock import *
 from axonius.devices.device_adapter import DeviceAdapter
 
 
 def test_hostname():
     device = DeviceAdapter(set(), set())
 
-    command = HostnameMock('test_hostname')
+    command = HostnameMock()
     assert command.parse()
-    assert command.to_axonius(device)
+    assert command.to_axonius('test_hostname', device)
 
     assert device.id == 'linux_ssh_test_hostname'
     assert device.hostname == HostnameMock.RAW_DATA
@@ -29,9 +28,9 @@ def test_interfaces():
     num_of_ipaddresses = 19
 
     device = DeviceAdapter(set(), set())
-    command = IfaceMock('test_iface')
+    command = IfaceMock()
     assert command.parse()
-    assert command.to_axonius(device)
+    assert command.to_axonius('test_iface', device)
 
     assert list(map(lambda x: x['index'], command._parsed_data)) == indexes
 
@@ -46,31 +45,49 @@ def test_interfaces():
 
 def test_hd():
     device = DeviceAdapter(set(), set())
-    command = HDMock('test_hd')
+    command = HDMock()
     assert command.parse()
-    assert command.to_axonius(device)
+    assert command.to_axonius('test_hd', device)
     assert len(device.to_dict()['hard_drives']) == 9
+    assert device.to_dict()['hard_drives'][0] == {'path': '/dev', 'total_size': 7.68,
+                                                  'free_size': 7.68, 'file_system': 'devtmpfs', 'device': 'udev'}
 
 
-def test_version_distro():
+def test_debian_version_distro():
     device = DeviceAdapter(set(), set())
-    command = VersionMock('test_version')
-    command2 = DistroMock('test_distro')
+    command = VersionMock()
+    command2 = DebianDistroMock()
     assert command.parse()
     assert command2.parse()
-    assert command.to_axonius(device)
-    assert command2.to_axonius(device)
+    assert command.to_axonius('test_version', device)
+    assert command2.to_axonius('test_distro', device)
     assert device.to_dict()['os']['kernel_version']
-    assert device.to_dict()['os']['bitness']
-    assert device.to_dict()['os']['distribution']
-    assert device.to_dict()['os']['build']
+    assert device.to_dict()['os']['bitness'] == 64
+    assert device.to_dict()['os']['distribution'] == 'Debian'
+    assert device.to_dict()['os']['build'] == 'testing'
+    assert device.to_dict()['os']['codename'] == 'buster'
+
+
+def test_redhat_version_distro():
+    device = DeviceAdapter(set(), set())
+    command = VersionMock()
+    command2 = RedHatDistroMock()
+    assert command.parse()
+    assert command2.parse()
+    assert command.to_axonius('test_version', device)
+    assert command2.to_axonius('test_distro', device)
+    assert device.to_dict()['os']['kernel_version']
+    assert device.to_dict()['os']['bitness'] == 64
+    assert device.to_dict()['os']['distribution'] == 'Red Hat Enterprise Linux Server'
+    assert device.to_dict()['os']['codename'] == 'Santiago'
+    assert device.to_dict()['os']['major'] == 6
 
 
 def test_mem():
     device = DeviceAdapter(set(), set())
-    command = MemMock('test_mem')
+    command = MemMock()
     assert command.parse()
-    assert command.to_axonius(device)
+    assert command.to_axonius('test_mem', device)
     assert device.to_dict()['total_physical_memory'] == 15.39
     assert device.to_dict()['free_physical_memory'] == 7.19
     assert device.to_dict()['physical_memory_percentage'] == 53.27
@@ -78,18 +95,27 @@ def test_mem():
 
 def test_dpkg():
     device = DeviceAdapter(set(), set())
-    command = DPKGMock('test_dpkg')
+    command = DPKGMock()
     assert command.parse()
-    assert command.to_axonius(device)
+    assert command.to_axonius('test_dpkg', device)
     assert 'installed_software' in device.all_fields_found
     assert len(device.to_dict()['installed_software']) == 11
 
 
+def test_rpm():
+    device = DeviceAdapter(set(), set())
+    command = RPMMock()
+    assert command.parse()
+    assert command.to_axonius('test_dpkg', device)
+    assert 'installed_software' in device.all_fields_found
+    assert len(device.to_dict()['installed_software']) == 23
+
+
 def test_users():
     device = DeviceAdapter(set(), set())
-    command = UsersMock('test_users')
+    command = UsersMock()
     assert command.parse()
-    assert command.to_axonius(device)
+    assert command.to_axonius('test_users', device)
     assert len(device.to_dict()['users']) == 44
     assert len(list(filter(lambda user: user['is_admin'], device.to_dict()['users']))) == 1
 
@@ -97,10 +123,59 @@ def test_users():
 def test_raw_data():
     device = DeviceAdapter(set(), set())
 
-    command = HostnameMock('test_hostname')
+    command = HostnameMock()
     assert command.parse()
-    command2 = IfaceMock('test_hostname')
+    command2 = IfaceMock()
     assert command2.parse()
-    assert command.to_axonius(device)
-    assert command2.to_axonius(device)
-    assert [command.NAME, command2.NAME] == list(device.to_dict()['raw'].keys())
+    assert command.to_axonius('test_hostname', device)
+    assert command2.to_axonius('test_hostname', device)
+    assert [command.get_name(), command2.get_name()] == list(device.to_dict()['raw'].keys())
+
+
+def test_concat():
+    device = DeviceAdapter(set(), set())
+    executor = ConcatCommandFailMockExecutor()
+    for command in executor.get_commands():
+        command.to_axonius('test', device)
+    assert len(device.to_dict()['raw'].keys()) == 3
+    assert device.to_dict()['os']['codename'] == 'Santiago'
+
+    device = DeviceAdapter(set(), set())
+    executor = ConcatCommandSuccessMockExecutor()
+    for command in executor.get_commands():
+        command.to_axonius('test', device)
+    assert len(device.to_dict()['raw'].keys()) == 2
+
+
+def test_hardware():
+    device = DeviceAdapter(set(), set())
+    command = HardwareMock()
+    assert command.parse()
+    assert command.to_axonius('test', device)
+    dict_ = device.to_dict()
+    del dict_['raw']
+    assert dict_ == {'id': 'linux_ssh_test',
+                     'device_serial': '9T1MZM2',
+                     'device_model': 'XPS 13 9370',
+                     'device_model_family': 'XPS',
+                     'device_manufacturer': 'Dell Inc.',
+                     'motherboard_model': '0F6P3V',
+                     'motherboard_version': 'A00',
+                     'motherboard_manufacturer': 'Dell Inc.',
+                     'cpus': [{'name': 'Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz', 'family': 'Core i7',
+                               'cores': 4, 'cores_thread': 8, 'ghz': 3.7, 'manufacturer': 'Intel(R) Corporation'}],
+                     'bios_version': '1.6.3',
+                     'batteries': [{'model': 'DELL G8VCF6C', 'capacity': '51990 mWh', 'manufacturer': 'SMP'}]}
+
+
+def test_executor():
+    device = DeviceAdapter(set(), set())
+    executor = MockCommandExecutor()
+    for command in executor.get_commands():
+        command.to_axonius('test', device)
+    assert device.id == 'linux_ssh_02:42:AC:A5:C0:D1_02:42:ED:5B:69:21_0E:CC:77:' + \
+        '6D:25:A4_10:65:30:08:54:A4_1A:1C:C8:02:BA:BA_32:' + \
+        '93:C3:39:00:5C_36:94:FC:6A:76:DD_46:24:AF:EF:A1:BE_52:54:00:' + \
+        'F7:EB:F0_52:54:00:F7:EB:F0_66:BA:53:5C:F2:EC_9C:B6:D0:89:A2:21_BA:' + \
+        'A5:93:72:74:01_BE:36:99:D3:1B:C5_DE:CB:76:46:F1:DA_EE:E6:60:FD:C5:45_ip-10-0-2-26_test'
+    assert device.to_dict()['os']['build'] == 'testing'

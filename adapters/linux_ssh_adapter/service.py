@@ -1,12 +1,14 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from linux_ssh_adapter.connection import LinuxSshConnection
 from linux_ssh_adapter.client_id import get_client_id
-from linux_ssh_adapter.consts import HOSTNAME, USERNAME, PORT, PRIVATE_KEY, PASSWORD, DEFAULT_PORT
+from linux_ssh_adapter.connection import LinuxSshConnection
+from linux_ssh_adapter.consts import (DEFAULT_PORT, HOSTNAME, IS_SUDOER,
+                                      PASSWORD, PORT, PRIVATE_KEY, USERNAME)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -27,16 +29,24 @@ class LinuxSshAdapter(AdapterBase):
         return LinuxSshConnection.test_reachability(client_config[HOSTNAME], client_config.get(PORT, DEFAULT_PORT))
 
     def _connect_client(self, client_config):
+        if PORT not in client_config:
+            client_config[PORT] = DEFAULT_PORT
+        if PASSWORD not in client_config:
+            client_config[PASSWORD] = ''
+        if IS_SUDOER not in client_config:
+            client_config[IS_SUDOER] = True
+
         try:
             key = client_config.get(PRIVATE_KEY)
             if key:
                 key = self._grab_file_contents(key)
 
             with LinuxSshConnection(hostname=client_config[HOSTNAME],
-                                    port=client_config.get(PORT, DEFAULT_PORT),
+                                    port=client_config[PORT],
                                     username=client_config[USERNAME],
-                                    password=client_config.get(PASSWORD),
-                                    key=key) as connection:
+                                    password=client_config[PASSWORD],
+                                    key=key,
+                                    is_sudoer=client_config[IS_SUDOER]) as connection:
                 return connection
         except Exception as e:
             message = 'Error connecting to client with host_name {0}, reason: {1}'.format(
@@ -55,7 +65,7 @@ class LinuxSshAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list(client_name)
+            yield from ((client_name, x) for x in client_data.get_commands())
 
     @staticmethod
     def _clients_schema():
@@ -80,7 +90,8 @@ class LinuxSshAdapter(AdapterBase):
                     'name': PASSWORD,
                     'title': 'Password',
                     'type': 'string',
-                    'format': 'password'
+                    'format': 'password',
+                    'default': ''
                 },
                 {
                     'name': PRIVATE_KEY,
@@ -95,19 +106,31 @@ class LinuxSshAdapter(AdapterBase):
                     'default': DEFAULT_PORT,
                     'description': 'Protocol Port'
                 },
+                {
+                    'name': IS_SUDOER,
+                    'title': 'Sudoer',
+                    'description': 'Use sudo to execute privileged commands. ' +
+                                   'If left unchecked, privileged commands may fail.',
+                    'type': 'bool',
+                    'default': True
+                },
             ],
             'required': [
                 HOSTNAME,
-                USERNAME
+                USERNAME,
+                IS_SUDOER,
             ],
             'type': 'array'
         }
 
     def _parse_raw_data(self, devices_raw_data):
         device = self._new_device_adapter()
-        for command in devices_raw_data:
-            command.parse()
-            command.to_axonius(device)
+
+        # we are running on the endpoint, so the last seen is right now
+        device.last_seen = datetime.datetime.now()
+
+        for client_name, command in devices_raw_data:
+            command.to_axonius(client_name, device)
         yield device
 
     @classmethod
