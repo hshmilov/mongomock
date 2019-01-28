@@ -571,7 +571,7 @@ class PluginBase(Configurable, Feature):
         # or maybe after the insertion of X entities)
 
         with entity_fields['fields_db_lock']:
-            logger.info(f"Persisting {entity_type.name} fields to DB")
+            logger.debug(f"Persisting {entity_type.name} fields to DB")
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
             # Upsert new fields
