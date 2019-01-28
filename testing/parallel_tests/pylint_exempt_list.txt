@@ -304,7 +304,6 @@ plugins/general_info/subplugins/wmi_utils.py
 plugins/static_analysis/nvd_nist/nvd_search.py
 plugins/static_analysis/nvd_nist/nvd_update.py
 plugins/static_analysis/nvd_nist/tests/test_nvd_db.py
-plugins/gui/api.py
 plugins/gui/consts.py
 plugins/gui/okta_login.py
 plugins/gui/report_generator.py

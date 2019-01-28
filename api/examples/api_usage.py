@@ -124,7 +124,10 @@ class RESTExample:
                               cls.get_users_labels,
                               cls.get_devices_labels,
                               cls.add_and_delete_devices_labels,
-                              cls.add_and_delete_users_labels)
+                              cls.add_and_delete_users_labels,
+                              cls.get_adapters,
+                              cls.check_connectivity,
+                              cls.add_and_delete_client)
 
         examples_functions = {function.__name__ for function in examples_functions}
         all_examples_functions = set(filter(lambda x: 'get_examples' not in x and not x.startswith('__'),
@@ -430,6 +433,62 @@ class RESTExample:
         assert status_code == 200, 'Failed to fetch user by id'
 
         assert 'Example Label' not in user['labels'], 'Failed to delete label'
+
+    def get_adapters(self):
+        status_code, adapters = self._client.get_adapters()
+        assert status_code == 200, 'Failed to get adapter and client list'
+
+        nodes = adapters['active_directory_adapter']
+        master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
+
+        node_id = master_node['node_id']
+
+        assert master_node['clients'], 'No clients in master node'
+
+    def check_connectivity(self):
+        status_code, adapters = self._client.get_adapters()
+        assert status_code == 200, 'Failed to get adapter and client list'
+
+        assert 'active_directory_adapter' in adapters
+
+        nodes = adapters['active_directory_adapter']
+        master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
+
+        node_id = master_node['node_id']
+
+        first_client = master_node['clients'][0]['client_config']
+
+        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client, node_id)
+        assert status_code == 200, resp
+
+        first_client['dc_name'] = 'fail'
+        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client, node_id)
+        assert status_code == 500, resp
+
+    def add_and_delete_client(self):
+        status_code, adapters = self._client.get_adapters()
+        adapter_name = 'active_directory_adapter'
+
+        nodes = adapters[adapter_name]
+        master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
+        node_id = master_node['node_id']
+
+        client_config = {
+            'dc_name': 'example',
+            'fetch_disabled_devices': False,
+            'fetch_disabled_users': False,
+            'password': 'example_password',
+            'user': 'example_user',
+        }
+
+        status_code, resp = self._client.add_client(adapter_name, client_config, node_id)
+        assert status_code == 200, resp
+        id_ = resp['id']
+
+        self._logger.info(f'deleting client id : {id_}')
+
+        status_code, resp = self._client.delete_client(adapter_name, id_, node_id)
+        assert status_code == 200, resp
 
 
 def main():

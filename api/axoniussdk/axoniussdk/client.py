@@ -249,3 +249,27 @@ class RESTClient:
         """ Upload a file to the system, that later can be use for deployment """
         return self.do_request('post', '/actions/upload_file', data={'field_name': 'binary'},
                                files={'userfile': ('example_filename', binary)})
+
+    def get_adapters(self):
+        return self.do_request('get', '/adapters')
+
+    def check_connectivity(self, adapter_name: str, client_config: dict, node_id: str):
+        data = {}
+
+        data.update(client_config)
+
+        data.update({'instanceName': node_id,
+                     'oldInstanceName': node_id})
+
+        return self.do_request('post', f'/adapters/{adapter_name}/clients', json=data)
+
+    def add_client(self, adapter_name: str, client_config: dict, node_id: str):
+        data = {}
+
+        data.update(client_config)
+        data.update({'instanceName': node_id})
+        return self.do_request('put', f'/adapters/{adapter_name}/clients', json=data)
+
+    def delete_client(self, adapter_name: str, client_id: str, node_id: str):
+        data = {'instanceName': node_id}
+        return self.do_request('delete', f'/adapters/{adapter_name}/clients/{client_id}', json=data)

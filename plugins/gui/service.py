@@ -1283,6 +1283,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_add_rule_logged_in('adapters', required_permissions={Permission(PermissionType.Adapters,
                                                                          PermissionLevel.ReadOnly)})
     def adapters(self):
+        return self._adapters()
+
+    def _adapters(self):
         """
         Get all adapters from the core
         :return:
@@ -1442,6 +1445,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadWrite)})
     def adapters_clients(self, adapter_name):
+        return self._adapters_clients(adapter_name)
+
+    def _adapters_clients(self, adapter_name):
         """
         Gets or creates clients in the adapter
         :param adapter_unique_name: the adapter to refer to
@@ -1462,6 +1468,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             methods=['PUT', 'DELETE'], required_permissions={Permission(PermissionType.Adapters,
                                                                                         PermissionLevel.ReadWrite)})
     def adapters_clients_update(self, adapter_name, client_id=None):
+        return self._adapters_clients_update(adapter_name, client_id)
+
+    def _adapters_clients_update(self, adapter_name, client_id=None):
         """
         Create or delete credential sets (clients) in the adapter
         :param adapter_unique_name: the adapter to refer to
@@ -1471,7 +1480,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         data = self.get_request_data_as_object()
         node_id = data.pop('instanceName', self.node_id)
         old_node_id = data.pop('oldInstanceName', None)
-
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{old_node_id or node_id}/plugins/{adapter_name}').json().get('plugin_unique_name')
         if request.method == 'DELETE':
@@ -4114,6 +4122,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                             required_permissions={Permission(PermissionType.Instances,
                                                              ReadOnlyJustForGet)})
     def instances(self):
+        return self._instances()
+
+    def _instances(self):
         if request.method == 'GET':
             with self._get_db_connection() as db_connection:
                 nodes = []

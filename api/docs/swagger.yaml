@@ -1,600 +1,726 @@
----
-swagger: "2.0"
+swagger: '2.0'
 info:
-  description: "This API Gives Access to Axonius Data"
-  version: "1.0.0"
-  title: "Axonius API"
-  termsOfService: "http://swagger.io/terms/"
+  description: This API Gives Access to Axonius Data
+  version: 1.0.0
+  title: Axonius API
+  termsOfService: 'http://swagger.io/terms/'
   contact:
-    email: "support@axonius.com"
-basePath: "/api/V1"
+    email: support@axonius.com
+basePath: /api/V1
 tags:
-- name: "Devices"
-  description: "Device Entities Found By Axonious"
-- name: "Users"
-  description: "User Entities Found By Axonious"
-- name: "Alerts"
-  description: "Alerts configured on Axonious"
-- name: "Actions"
-  description: "Actions to execute on Axonius entities."
+  - name: Devices
+    description: Device Entities Found By Axonious
+  - name: Users
+    description: User Entities Found By Axonious
+  - name: Alerts
+    description: Alerts configured on Axonious
+  - name: Actions
+    description: Actions to execute on Axonius entities.
 schemes:
-- "https"
+  - https
 paths:
+  /adapters:
+    get:
+      tags:
+        - Adapters
+      summary: Query adapters
+      description: ''
+      operationId: getAdapters
+      produces:
+        - application/json
+      responses:
+        '200': 
+          description: >-
+            Returns json containing the active adapters.
+      security:
+        - axonius_api_auth: []
+  /adapters/{adapter_name}/clients:
+    post:
+      tags:
+        - Adapters
+      summary: Check Connectivity
+      description: ''
+      operationId: checkConnectivity
+      produces:
+        - application/json
+      parameters:
+        - name: adapter_name
+          in: path
+          description: >-
+            The adapter name to query
+          required: true
+          type: string
+        - name: instanceName
+          in: query
+          description: >-
+            The node id to query
+          required: true
+          type: string
+        - name: oldInstanceName
+          in: query
+          description: >-
+            The node id to query
+          required: true
+          type: string
+      responses:
+        '200':
+          description: ->
+            The client is reachable
+        '500':
+          description: ->
+            client unreachable
+      security:
+        - axonius_api_auth: []
+    put:
+      tags:
+        - Adapters
+      summary: Add adapter client
+      description: ''
+      operationId: AddAdapterClient
+      produces:
+        - application/json
+      parameters:
+        - name: adapter_name
+          in: path
+          description: >-
+            The adapter name to query
+          required: true
+          type: string
+        - in: body
+          name: body
+          description: 'client config'
+          required: true
+          schema:
+            $ref: '#/definitions/Clients'
+      responses:
+        '200':
+          description: client added
+      security:
+        - axonius_api_auth: []
+  /adapters/{adapter_name}/clients/{client_id}:
+    delete:
+      tags:
+        - Adapters
+      summary: delete adapter client
+      description: ''
+      operationId: DeleteAdapterClient
+      produces:
+        - application/json
+      parameters:
+        - name: adapter_name
+          in: path
+          description: >-
+            The adapter name to delete
+          required: true
+          type: string
+        - name: client_id
+          in: path
+          description: >-
+            client_id to delete
+          required: true
+          type: string
+      responses:
+        '200':
+          description: client deleted
+      security:
+        - axonius_api_auth: []
   /devices:
     get:
       tags:
-      - "Devices"
-      summary: "Query devices"
-      description: ""
-      operationId: "getDevices"
+        - Devices
+      summary: Query devices
+      description: ''
+      operationId: getDevices
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "skip"
-        in: "query"
-        description: "How many devices to skip (0 means none and bring devices from\
-          \ the start)."
-        required: true
-        type: "integer"
-      - name: "limit"
-        in: "query"
-        description: "How many devices to return (pagination)."
-        required: true
-        type: "integer"
-      - name: "fields"
-        in: "query"
-        description: "The fields to return back for each device."
-        required: false
-        type: "string"
-        items:
-          type: "string"
-      - name: "filter"
-        in: "query"
-        description: "The filter to get devices by."
-        required: false
-        type: "string"
+        - name: skip
+          in: query
+          description: >-
+            How many devices to skip (0 means none and bring devices from the
+            start).
+          required: true
+          type: integer
+        - name: limit
+          in: query
+          description: How many devices to return (pagination).
+          required: true
+          type: integer
+        - name: fields
+          in: query
+          description: The fields to return back for each device.
+          required: false
+          type: string
+          items:
+            type: string
+        - name: filter
+          in: query
+          description: The filter to get devices by.
+          required: false
+          type: string
       responses:
-        200:
-          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
-          assets - The list of assets that were queried with the specified fields (if any)."
+        '200':
+          description: >-
+            Returns an object containing two keys:page - Metadata about the
+            amount of assets that were filtered, skipped, limited, and returned
+            in the request. assets - The list of assets that were queried with
+            the specified fields (if any).
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
   /devices/count:
     get:
       tags:
-      - "Devices"
-      summary: "Count Devices adhering to Query"
-      description: "Returns a number"
-      operationId: "getDevicesCount"
+        - Devices
+      summary: Count Devices adhering to Query
+      description: Returns a number
+      operationId: getDevicesCount
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "filter"
-        in: "query"
-        description: "The filter to get Devices by."
-        type: "string"
+        - name: filter
+          in: query
+          description: The filter to get Devices by.
+          type: string
       responses:
-        200:
-          description: "Returns the number of Devices that adhere to the given filter"
+        '200':
+          description: Returns the number of Devices that adhere to the given filter
       security:
-      - axonius_api_auth: []
-  /devices/{device_id}:
+        - axonius_api_auth: []
+  '/devices/{device_id}':
     get:
       tags:
-      - "Devices"
-      summary: "Get device by ID"
-      description: "Returns a single device"
-      operationId: "getDeviceById"
+        - Devices
+      summary: Get device by ID
+      description: Returns a single device
+      operationId: getDeviceById
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "device_id"
-        in: "path"
-        description: "ID of device to return"
-        required: true
-        type: "string"
+        - name: device_id
+          in: path
+          description: ID of device to return
+          required: true
+          type: string
       responses:
-        200:
-          description: "Successful operation"
-        401:
-          description: "Unauthorized"
-        404:
-          description: "Entity ID wasn't found"
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+        '404':
+          description: Entity ID wasn't found
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
   /devices/labels:
     get:
       tags:
-      - "Devices"
-      summary: "Get all distinct labels from all devices"
-      description: ""
-      operationId: "getDevicesLabels"
+        - Devices
+      summary: Get all distinct labels from all devices
+      description: ''
+      operationId: getDevicesLabels
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "List of distinct labels"
+        '200':
+          description: List of distinct labels
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     post:
       tags:
-      - "Devices"
-      summary: "Add labels to devices"
-      description: ""
-      operationId: "addDevicesLabels"
+        - Devices
+      summary: Add labels to devices
+      description: ''
+      operationId: addDevicesLabels
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "List of devices and labels, all labels will be added to all devices"
-        required: true
-        schema:
-          $ref: "#/definitions/Labels"
+        - in: body
+          name: body
+          description: 'List of devices and labels, all labels will be added to all devices'
+          required: true
+          schema:
+            $ref: '#/definitions/Labels'
       responses:
-        400:
-          description: "Invalid input supplied"
+        '400':
+          description: Invalid input supplied
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     delete:
       tags:
-      - "Devices"
-      summary: "Removes labels from devices"
-      description: ""
-      operationId: "removeDevicesLabels"
+        - Devices
+      summary: Removes labels from devices
+      description: ''
+      operationId: removeDevicesLabels
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "List of devices and labels, all labels will be removed from all devices"
-        required: true
-        schema:
-          $ref: "#/definitions/Labels"
+        - in: body
+          name: body
+          description: >-
+            List of devices and labels, all labels will be removed from all
+            devices
+          required: true
+          schema:
+            $ref: '#/definitions/Labels'
       responses:
-        400:
-          description: "Invalid input supplied"
+        '400':
+          description: Invalid input supplied
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
   /users:
     get:
       tags:
-      - "Users"
-      summary: "Query users"
-      description: ""
-      operationId: "getUsers"
+        - Users
+      summary: Query users
+      description: ''
+      operationId: getUsers
       consumes:
-      - "application/json"
+        - application/json
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "skip"
-        in: "query"
-        description: "How many devices to skip (0 means none and bring devices from\
-          \ the start)."
-        required: true
-        type: "integer"
-      - name: "limit"
-        in: "query"
-        description: "How many users to return (pagination)."
-        required: true
-        type: "integer"
-      - name: "fields"
-        in: "query"
-        description: "The fields to return back for each user."
-        required: false
-        type: "array"
-        items:
-          type: "string"
-      - name: "filter"
-        in: "query"
-        description: "The filter to get devices by."
-        required: false
-        type: "string"
+        - name: skip
+          in: query
+          description: >-
+            How many devices to skip (0 means none and bring devices from the
+            start).
+          required: true
+          type: integer
+        - name: limit
+          in: query
+          description: How many users to return (pagination).
+          required: true
+          type: integer
+        - name: fields
+          in: query
+          description: The fields to return back for each user.
+          required: false
+          type: array
+          items:
+            type: string
+        - name: filter
+          in: query
+          description: The filter to get devices by.
+          required: false
+          type: string
       responses:
-        200:
-          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
-          assets - The list of assets that were queried with the specified fields (if any)."
+        '200':
+          description: >-
+            Returns an object containing two keys:page - Metadata about the
+            amount of assets that were filtered, skipped, limited, and returned
+            in the request. assets - The list of assets that were queried with
+            the specified fields (if any).
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
   /users/count:
     get:
       tags:
-      - "Users"
-      summary: "Count Users adhering to Query"
-      description: "Returns a number"
-      operationId: "getUsersCount"
+        - Users
+      summary: Count Users adhering to Query
+      description: Returns a number
+      operationId: getUsersCount
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "filter"
-        in: "query"
-        description: "The filter to get Users by."
-        required: true
-        type: "string"
+        - name: filter
+          in: query
+          description: The filter to get Users by.
+          required: true
+          type: string
       responses:
-        200:
-          description: "Returns the number of Users that adhere to the given filter"
+        '200':
+          description: Returns the number of Users that adhere to the given filter
       security:
-      - axonius_api_auth: []
-  /users/{user_id}:
+        - axonius_api_auth: []
+  '/users/{user_id}':
     get:
       tags:
-      - "Users"
-      summary: "Get user by ID"
-      description: "Returns a single user"
-      operationId: "getUserById"
+        - Users
+      summary: Get user by ID
+      description: Returns a single user
+      operationId: getUserById
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "user_id"
-        in: "path"
-        description: "ID of user to return"
-        required: true
-        type: "string"
+        - name: user_id
+          in: path
+          description: ID of user to return
+          required: true
+          type: string
       responses:
-        200:
-          description: "Successful operation"
-        401:
-          description: "Unauthorized"
-        404:
-          description: "Entity ID wasn't found"
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+        '404':
+          description: Entity ID wasn't found
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
   /users/labels:
     get:
       tags:
-      - "Users"
-      summary: "Get all distinct labels from all users"
-      description: ""
-      operationId: "getUsersLabels"
+        - Users
+      summary: Get all distinct labels from all users
+      description: ''
+      operationId: getUsersLabels
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "List of distinct labels"
+        '200':
+          description: List of distinct labels
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     post:
       tags:
-      - "Users"
-      summary: "Add labels to users"
-      description: ""
-      operationId: "addUsersLabels"
+        - Users
+      summary: Add labels to users
+      description: ''
+      operationId: addUsersLabels
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "List of users and labels, all labels will be added to all users"
-        required: true
-        schema:
-          $ref: "#/definitions/Labels"
+        - in: body
+          name: body
+          description: 'List of users and labels, all labels will be added to all users'
+          required: true
+          schema:
+            $ref: '#/definitions/Labels'
       responses:
-        400:
-          description: "Invalid input supplied"
+        '400':
+          description: Invalid input supplied
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     delete:
       tags:
-      - "Users"
-      summary: "Removes labels from users"
-      description: ""
-      operationId: "removeUsersLabels"
+        - Users
+      summary: Removes labels from users
+      description: ''
+      operationId: removeUsersLabels
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "List of users and labels, all labels will be removed from all users"
-        required: true
-        schema:
-          $ref: "#/definitions/Labels"
+        - in: body
+          name: body
+          description: 'List of users and labels, all labels will be removed from all users'
+          required: true
+          schema:
+            $ref: '#/definitions/Labels'
       responses:
-        400:
-          description: "Invalid input supplied"
+        '400':
+          description: Invalid input supplied
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
   /alerts:
     get:
       tags:
-      - "Alerts"
-      summary: "Get configured alerts"
-      description: ""
-      operationId: "getAlerts"
+        - Alerts
+      summary: Get configured alerts
+      description: ''
+      operationId: getAlerts
       consumes:
-      - "application/json"
+        - application/json
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "skip"
-        in: "query"
-        description: "How many devices to skip (0 means none and bring devices from\
-          \ the start)."
-        required: false
-        default: 0
-        type: "integer"
-      - name: "limit"
-        in: "query"
-        description: "How many devices to return (pagination)."
-        required: false
-        default: 2000
-        type: "integer"
-      - name: "fields"
-        in: "query"
-        description: "The fields to return back for each device."
-        required: false
-        type: "array"
-        items:
-          type: "string"
-      - name: "filter"
-        in: "query"
-        description: "The filter to get devices by."
-        required: true
-        type: "string"
-      - name: "sort"
-        in: "query"
-        description: "The field to sort the devices by."
-        required: false
-        type: "string"
+        - name: skip
+          in: query
+          description: >-
+            How many devices to skip (0 means none and bring devices from the
+            start).
+          required: false
+          default: 0
+          type: integer
+        - name: limit
+          in: query
+          description: How many devices to return (pagination).
+          required: false
+          default: 2000
+          type: integer
+        - name: fields
+          in: query
+          description: The fields to return back for each device.
+          required: false
+          type: array
+          items:
+            type: string
+        - name: filter
+          in: query
+          description: The filter to get devices by.
+          required: true
+          type: string
+        - name: sort
+          in: query
+          description: The field to sort the devices by.
+          required: false
+          type: string
       responses:
-        200:
-          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
-          assets - The list of assets that were queried with the specified fields (if any)."
-        405:
-          description: "Invalid input"
+        '200':
+          description: >-
+            Returns an object containing two keys:page - Metadata about the
+            amount of assets that were filtered, skipped, limited, and returned
+            in the request. assets - The list of assets that were queried with
+            the specified fields (if any).
+        '405':
+          description: Invalid input
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     put:
       tags:
-      - "Alerts"
-      summary: "Create a new alert"
-      operationId: "createAlert"
+        - Alerts
+      summary: Create a new alert
+      operationId: createAlert
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "New alert object"
-        required: true
-        schema:
-          $ref: "#/definitions/Alert"
+        - in: body
+          name: body
+          description: New alert object
+          required: true
+          schema:
+            $ref: '#/definitions/Alert'
       responses:
-        201:
-          description: "Created a new alert"
-        400:
-          description: "Invalid user supplied"
-        404:
-          description: "User not found"
-  /alerts/{alert_id}:
+        '201':
+          description: Created a new alert
+        '400':
+          description: Invalid user supplied
+        '404':
+          description: User not found
+  '/alerts/{alert_id}':
     delete:
       tags:
-      - "Alerts"
-      summary: "Updated user"
-      description: "This can only be done by the logged in user."
-      operationId: "deleteAlert"
+        - Alerts
+      summary: Updated user
+      description: This can only be done by the logged in user.
+      operationId: deleteAlert
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "alert_id"
-        in: "path"
-        description: "ID of alert to delete"
-        required: true
-        type: "integer"
-        format: "int64"
+        - name: alert_id
+          in: path
+          description: ID of alert to delete
+          required: true
+          type: integer
+          format: int64
       responses:
-        400:
-          description: "Invalid user supplied"
-        404:
-          description: "User not found"
+        '400':
+          description: Invalid user supplied
+        '404':
+          description: User not found
   /devices/views:
     get:
       tags:
-      - "Devices"
-      summary: "Gets all saved queries"
-      description: ""
-      operationId: "getDevicesViews"
+        - Devices
+      summary: Gets all saved queries
+      description: ''
+      operationId: getDevicesViews
       consumes:
-      - "application/json"
+        - application/json
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "skip"
-        in: "query"
-        description: "How many devices to skip (0 means none and bring devices from\
-          \ the start)."
-        required: true
-        type: "integer"
-      - name: "limit"
-        in: "query"
-        description: "How many users to return (pagination)."
-        required: true
-        type: "integer"
-      - name: "filter"
-        in: "query"
-        description: "The filter to get devices by."
-        required: true
-        type: "string"
+        - name: skip
+          in: query
+          description: >-
+            How many devices to skip (0 means none and bring devices from the
+            start).
+          required: true
+          type: integer
+        - name: limit
+          in: query
+          description: How many users to return (pagination).
+          required: true
+          type: integer
+        - name: filter
+          in: query
+          description: The filter to get devices by.
+          required: true
+          type: string
       responses:
-        200:
-          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
-          assets - The list of assets that were queried with the specified fields (if any)."
-        405:
-          description: "Invalid input"
+        '200':
+          description: >-
+            Returns an object containing two keys:page - Metadata about the
+            amount of assets that were filtered, skipped, limited, and returned
+            in the request. assets - The list of assets that were queried with
+            the specified fields (if any).
+        '405':
+          description: Invalid input
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     post:
       tags:
-      - "Devices"
-      summary: "Saves a new query"
-      description: "This can only be done by the logged in user."
-      operationId: "createDevicesView"
+        - Devices
+      summary: Saves a new query
+      description: This can only be done by the logged in user.
+      operationId: createDevicesView
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "view"
-        description: "name that need to be updated"
-        required: true
-        schema:
-          $ref: "#/definitions/View"
+        - in: body
+          name: view
+          description: name that need to be updated
+          required: true
+          schema:
+            $ref: '#/definitions/View'
       responses:
-        200:
-          description: "Returns the view id"
-        400:
-          description: "Invalid user supplied"
-        404:
-          description: "User not found"
+        '200':
+          description: Returns the view id
+        '400':
+          description: Invalid user supplied
+        '404':
+          description: User not found
     delete:
       tags:
-      - "Devices"
-      summary: "Deletes a saved query"
-      description: "This can only be done by the logged in user."
-      operationId: "deleteDevicesView"
+        - Devices
+      summary: Deletes a saved query
+      description: This can only be done by the logged in user.
+      operationId: deleteDevicesView
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "List of ids to delete"
-        required: true
-        schema:
-          $ref: "#/definitions/Id_List"
+        - in: body
+          name: body
+          description: List of ids to delete
+          required: true
+          schema:
+            $ref: '#/definitions/Id_List'
       responses:
-        400:
-          description: "Invalid user supplied"
-        404:
-          description: "User not found"
+        '400':
+          description: Invalid user supplied
+        '404':
+          description: User not found
   /users/views:
     get:
       tags:
-      - "Users"
-      summary: "Add a new view filter to the system"
-      description: ""
-      operationId: "getUsersViews"
+        - Users
+      summary: Add a new view filter to the system
+      description: ''
+      operationId: getUsersViews
       consumes:
-      - "application/json"
+        - application/json
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "skip"
-        in: "query"
-        description: "How many devices to skip (0 means none and bring devices from\
-          \ the start)."
-        required: true
-        type: "integer"
-      - name: "limit"
-        in: "query"
-        description: "How many users to return (pagination)."
-        required: true
-        type: "integer"
-      - name: "filter"
-        in: "query"
-        description: "The filter to get views by."
-        required: false
-        type: "string"
+        - name: skip
+          in: query
+          description: >-
+            How many devices to skip (0 means none and bring devices from the
+            start).
+          required: true
+          type: integer
+        - name: limit
+          in: query
+          description: How many users to return (pagination).
+          required: true
+          type: integer
+        - name: filter
+          in: query
+          description: The filter to get views by.
+          required: false
+          type: string
       responses:
-        200:
-          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
-          assets - The list of assets that were queried with the specified fields (if any)."
-        405:
-          description: "Invalid input"
+        '200':
+          description: >-
+            Returns an object containing two keys:page - Metadata about the
+            amount of assets that were filtered, skipped, limited, and returned
+            in the request. assets - The list of assets that were queried with
+            the specified fields (if any).
+        '405':
+          description: Invalid input
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     post:
       tags:
-      - "Users"
-      summary: "Create a new user view filter"
-      description: "This can only be done by the logged in user."
-      operationId: "createUserView"
+        - Users
+      summary: Create a new user view filter
+      description: This can only be done by the logged in user.
+      operationId: createUserView
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "Updated user object"
-        required: true
-        schema:
-          $ref: "#/definitions/View"
+        - in: body
+          name: body
+          description: Updated user object
+          required: true
+          schema:
+            $ref: '#/definitions/View'
       responses:
-        400:
-          description: "Invalid user supplied"
-        404:
-          description: "User not found"
+        '400':
+          description: Invalid user supplied
+        '404':
+          description: User not found
       security:
-      - axonius_api_auth: []
+        - axonius_api_auth: []
     delete:
       tags:
-      - "Users"
-      summary: "Updated user"
-      description: "This can only be done by the logged in user."
-      operationId: "deleteUserView"
+        - Users
+      summary: Updated user
+      description: This can only be done by the logged in user.
+      operationId: deleteUserView
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "List of ids to delete"
-        required: true
-        schema:
-          $ref: "#/definitions/Id_List"
+        - in: body
+          name: body
+          description: List of ids to delete
+          required: true
+          schema:
+            $ref: '#/definitions/Id_List'
       responses:
-        400:
-          description: "Invalid user supplied"
-        404:
-          description: "User not found"
+        '400':
+          description: Invalid user supplied
+        '404':
+          description: User not found
   /actions:
     get:
       tags:
-      - "Actions"
-      summary: "Get a list of available actions"
-      description: ""
-      operationId: "getAvailableActions"
+        - Actions
+      summary: Get a list of available actions
+      description: ''
+      operationId: getAvailableActions
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "List of available actions"
+        '200':
+          description: List of available actions
       security:
-      - axonius_api_auth: []
-  /actions/{action_type}:
+        - axonius_api_auth: []
+  '/actions/{action_type}':
     post:
       tags:
-      - "Actions"
-      summary: "Execute action."
-      description: "Execute an action on a list of entities"
-      operationId: "runAction"
+        - Actions
+      summary: Execute action.
+      description: Execute an action on a list of entities
+      operationId: runAction
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "Action data object"
-        required: true
-        schema:
-          $ref: "#/definitions/Action"
-      - name: "action_type"
-        in: "path"
-        description: "action to execute"
-        required: true
-        type: "string"
+        - in: body
+          name: body
+          description: Action data object
+          required: true
+          schema:
+            $ref: '#/definitions/Action'
+        - name: action_type
+          in: path
+          description: action to execute
+          required: true
+          type: string
       responses:
-        200:
-          description: "The action executed successfully on all the devices."
+        '200':
+          description: The action executed successfully on all the devices.
 securityDefinitions:
   axonius_api_auth:
-    type: "basic"
+    type: basic
 definitions:
   Alert:
-    type: "object"
+    type: object
     properties:
       id:
-        type: "string"
-        default: "new"
+        type: string
+        default: new
       name:
-        type: "string"
+        type: string
       triggers:
-        type: "object"
+        type: object
         example:
           every_discovery: true
           new_entities: false
@@ -603,32 +729,32 @@ definitions:
           below: 0
         properties: {}
       actions:
-        type: "array"
+        type: array
         example:
-        - type: "create_notification"
+          - type: create_notification
         items:
-          type: "object"
+          type: object
           properties: {}
       view:
-        type: "string"
-        description: "Name of View"
+        type: string
+        description: Name of View
       viewEntity:
-        type: "string"
+        type: string
         enum:
-        - "devices"
-        - "users"
+          - devices
+          - users
       severity:
-        type: "string"
+        type: string
         enum:
-        - "info"
-        - "warning"
-        - "error"
+          - info
+          - warning
+          - error
     example:
-      severity: "info"
-      view: "view"
-      viewEntity: "devices"
-      name: "name"
-      id: "new"
+      severity: info
+      view: view
+      viewEntity: devices
+      name: name
+      id: new
       triggers:
         every_discovery: true
         new_entities: false
@@ -636,87 +762,94 @@ definitions:
         above: 0
         below: 0
       actions:
-      - type: "create_notification"
+        - type: create_notification
   View:
-    type: "object"
+    type: object
     properties:
       name:
-        type: "string"
+        type: string
       view:
-        $ref: "#/definitions/View_view"
+        $ref: '#/definitions/View_view'
       query_type:
-        type: "string"
-        default: "saved"
+        type: string
+        default: saved
     example:
-      name: "test"
+      name: test
       view:
         page: 0
         pageSize: 20
         fields:
-        - "adapters"
-        - "specific_data.data.hostname"
-        - "specific_data.data.name"
-        - "specific_data.data.os.type"
-        - "specific_data.data.network_interfaces.ips"
-        - "specific_data.data.network_interfaces.mac"
-        - "labels"
+          - adapters
+          - specific_data.data.hostname
+          - specific_data.data.name
+          - specific_data.data.os.type
+          - specific_data.data.network_interfaces.ips
+          - specific_data.data.network_interfaces.mac
+          - labels
         coloumnSizes: []
         query:
-          filter: "adapters == \"eset_adapter\""
+          filter: adapters == "eset_adapter"
           expressions:
-          - logicOp: ""
-            not: false
-            leftBracket: false
-            field: "adapters"
-            compOp: "equals"
-            value: "eset_adapter"
-            rightBracket: false
-            i: 0
+            - logicOp: ''
+              not: false
+              leftBracket: false
+              field: adapters
+              compOp: equals
+              value: eset_adapter
+              rightBracket: false
+              i: 0
         sort:
-          field: ""
+          field: ''
           desc: true
-      query_type: "saved"
+      query_type: saved
   Action:
-     properties:
+    properties:
       internal_axon_ids:
-       type: "array"
-       items:
-          type: "string"
+        type: array
+        items:
+          type: string
       action_name:
-        type: "string"
+        type: string
       commmand:
-        type: "string"
+        type: string
   View_view:
     properties:
       page:
-        type: "integer"
+        type: integer
       pageSize:
-        type: "integer"
+        type: integer
       fields:
-        type: "array"
+        type: array
         items:
-          type: "string"
+          type: string
       query:
-        type: "object"
+        type: object
         properties: {}
   Labels:
     properties:
       entities:
         properties:
           ids:
-            type: "array"
+            type: array
             items:
-              type: "string"
-              example: "internal_axon_id"
+              type: string
+              example: internal_axon_id
         items:
-          type: "string"
+          type: string
       labels:
-        type: "array"
+        type: array
         items:
-          type: "string"
-          example: "Example Label"
+          type: string
+          example: Example Label
+  Clients:
+    properties:
+      instanceName:
+        type: string
+      user:
+        type: string
+
   Id_List:
-    type: "array"
+    type: array
     items:
-      type: "string"
-      example: "internal_axon_id"
+      type: string
+      example: internal_axon_id
