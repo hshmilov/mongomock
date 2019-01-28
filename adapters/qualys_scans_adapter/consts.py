@@ -7,7 +7,7 @@ QUALYS_SCANS_ITERATOR_FORMAT = '''
  </preferences>
 </ServiceRequest>
 '''
-DEVICES_PER_PAGE = 1000
+DEVICES_PER_PAGE = 50
 HTTP_RETRIES_ERROR = 409
 
 QUALYS_SCANS_DOMAIN = 'Qualys_Scans_Domain'

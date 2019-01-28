@@ -72,6 +72,13 @@ class LansweeperAdapter(AdapterBase):
     # pylint: disable=R0912
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
+            bios_data_dict = dict()
+            try:
+                for bios_data in client_data.query(consts.BIOS_QUERY):
+                    bios_data_dict[bios_data.get('AssetID')] = bios_data
+            except Exception:
+                logger.exception(f'Problem getting bios data')
+
             soft_id_to_soft_data_dict = dict()
             try:
                 for soft_data in client_data.query(consts.QUERY_SOFTWARE_2):
@@ -122,7 +129,7 @@ class LansweeperAdapter(AdapterBase):
 
             for device_raw in client_data.query(consts.LANSWEEPER_QUERY_DEVICES):
                 yield device_raw, asset_software_dict, soft_id_to_soft_data_dict,\
-                    asset_hotfix_dict, hotfix_id_to_hotfix_data_dict, asset_reg_dict
+                    asset_hotfix_dict, hotfix_id_to_hotfix_data_dict, asset_reg_dict, bios_data_dict
 
     def _clients_schema(self):
         return {
@@ -172,7 +179,7 @@ class LansweeperAdapter(AdapterBase):
                 asset_software_dict,\
                 soft_id_to_soft_data_dict,\
                 asset_hotfix_dict,\
-                hotfix_id_to_hotfix_data_dict, asset_reg_dict in devices_raw_data:
+                hotfix_id_to_hotfix_data_dict, asset_reg_dict, bios_data_dict in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('AssetUnique')
@@ -180,6 +187,13 @@ class LansweeperAdapter(AdapterBase):
                     logger.error(f'Found a device with no id: {device_raw}, skipping')
                     continue
                 device.id = device_id + '_' + (device_raw.get('FQDN') or '')
+                try:
+                    bios_data = bios_data_dict.get(device_raw.get('AssetID'))
+                    if bios_data:
+                        device.bios_serial = bios_data.get('SerialNumber')
+                        device.bios_version = bios_data.get('Version')
+                except Exception:
+                    logger.exception(f'Problem parsing bios data for {device_raw}')
                 try:
                     asset_software_list = asset_software_dict.get(device_raw.get('AssetID'))
                     if isinstance(asset_software_list, list):

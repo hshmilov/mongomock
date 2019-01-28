@@ -16,6 +16,16 @@ from jamf_adapter.exceptions import JamfException
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class JamfLocation(SmartJsonClass):
+    building = Field(str, 'Building')
+    department = Field(str, 'Department')
+    email_address = Field(str, 'Email Address')
+    phone_number = Field(str, 'Phone Number')
+    real_name = Field(str, 'Real Name')
+    room = Field(str, 'Room')
+    username = Field(str, 'Username')
+
+
 class JamfSite(SmartJsonClass):
     """ A definition for a Jamf site field"""
     id = Field(int, "Site Id")
@@ -34,6 +44,7 @@ class JamfAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         public_ip = Field(str, 'Public IP', converter=format_ip, json_format=JsonStringFormat.ip)
+        jamf_location = Field(JamfLocation, 'Jamf Location')
         policies = ListField(JamfPolicy, "Jamf Policies")
         is_managed = Field(bool, 'Is Managed')
         profiles = ListField(JamfProfile, "Jamf Profiles")
@@ -142,6 +153,23 @@ class JamfAdapter(AdapterBase, Configurable):
                 device.id = udid + '_' + (general_info.get('name') or '')
 
                 device.name = general_info.get('name')
+                try:
+                    jamf_location_raw = device_raw.get('location')
+                    if isinstance(jamf_location_raw, dict):
+                        device.jamf_location = JamfLocation(
+                            building=jamf_location_raw.get('building') if jamf_location_raw.get('building') else None,
+                            department=jamf_location_raw.get(
+                                'department') if jamf_location_raw.get('department') else None,
+                            email_address=jamf_location_raw.get(
+                                'email_address') if jamf_location_raw.get('email_address') else None,
+                            phone_number=jamf_location_raw.get(
+                                'phone_number') if jamf_location_raw.get('phone_number') else None,
+                            real_name=jamf_location_raw.get(
+                                'real_name') if jamf_location_raw.get('real_name') else None,
+                            room=jamf_location_raw.get('room') if jamf_location_raw.get('room') else None,
+                            username=jamf_location_raw.get('username') if jamf_location_raw.get('username') else None)
+                except Exception:
+                    logger.exception(f'Problem getting Jamf Location for {device_raw}')
                 hostname = None
                 # Ofri: Sometimes name is also the hostname. I saw that if we have one of these fields it can't be the host name.
                 if not any(elem in device.name for elem in [' ', '.']):

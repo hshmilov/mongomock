@@ -39,15 +39,15 @@ class AbsoluteConnection(RESTConnection):
             minute = '0' + minute
         seconds = str(now.second)
         if len(seconds) == 1:
-            seconds = '0' + hours
+            seconds = '0' + seconds
         date_str = (year + month + day).encode('utf-8')
         x_abs_date = year + month + day + 'T' + hours + minute + seconds + 'Z'
         k_date = hmac.new(k_secret, msg=date_str, digestmod=hashlib.sha256).digest()
         k_signing = hmac.new(k_date, msg='abs1_request'.encode('utf-8'), digestmod=hashlib.sha256).digest()
         canonical_request = 'GET' + '\n' + '/v2/reporting/devices' + '\n' + \
                             f'%24skip={skip}&%24top={DEVICE_PER_PAGE}' + '\n' \
-                            + f'host:{host}' + '\n' + 'content-type:application/json' + \
-                            f'x-abs-date:{x_abs_date}' + \
+                            + f'host:{host}' + '\n' + 'content-type:application/json' + '\n' +\
+                            f'x-abs-date:{x_abs_date}' + '\n' + \
                             'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
         hast_temp = hashlib.sha256()
         hast_temp.update(canonical_request.encode('utf-8'))
@@ -55,26 +55,26 @@ class AbsoluteConnection(RESTConnection):
         credentials_scope = year + month + day + f'/{self._data_center}/abs1'
         string_to_sign = 'ABS1-HMAC-SHA-256' + '\n' + f'{x_abs_date}' + '\n' + f'{credentials_scope}'\
                          + '\n' + f'{hashed_canonical_request}'
-        signature = hmac.new(k_signing, string_to_sign.encode('utf-8')).hexdigest()
+        signature = hmac.new(k_signing, string_to_sign.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
         self._session_headers['Host'] = host
-        self._session_headers['X-abs-date'] = x_abs_date
-        self._session_headers['Content-type'] = 'application/json'
+        self._session_headers['X-Abs-Date'] = x_abs_date
+        self._session_headers['Content-Type'] = 'application/json'
         self._session_headers['Authorization'] = f'ABS1-HMAC-SHA-256 Credential={self._token_id}/' \
-                                                 f'{credentials_scope}, SignedHeaders = host;content-type;' \
-                                                 f'x-abs-date, Signature = {signature}'
+                                                 f'{credentials_scope}, SignedHeaders=host;content-type;' \
+                                                 f'x-abs-date, Signature={signature}'
 
     def _connect(self):
         self._create_authorization_header(0)
-        self._get('reporting/devices', url_params={'$top': DEVICE_PER_PAGE, '$skip': 0})
+        self._get('v2/reporting/devices', url_params={'$skip': 0, '$top': DEVICE_PER_PAGE})
 
     def get_device_list(self):
         skip = 0
         while skip < MAX_NUMBER_OF_DEVICES:
             try:
                 self._create_authorization_header(skip)
-                devices = self._get('v2/reporting/devices', url_params={'$top': DEVICE_PER_PAGE, '$skip': skip})
+                devices = self._get('v2/reporting/devices', url_params={'$skip': skip, '$top': DEVICE_PER_PAGE})
                 if devices:
-                    yield devices
+                    yield from devices
                 else:
                     break
                 skip += DEVICE_PER_PAGE

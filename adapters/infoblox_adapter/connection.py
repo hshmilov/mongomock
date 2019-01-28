@@ -12,7 +12,7 @@ class InfobloxConnection(RESTConnection):
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
-            url_base_prefix='/wapi/v2.3/',
+            url_base_prefix='/wapi/v2.2/',
             headers={
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'

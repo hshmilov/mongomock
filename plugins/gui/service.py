@@ -2087,6 +2087,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 k.name: v.name for k, v in user['permissions'].items()
             }
             log_metric(logger, 'LOGIN_MARKER', 0)
+            user_name = user.get('user_name')
+            source = user.get('source')
+            if user_name != AXONIUS_USER_NAME:
+                self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
             return jsonify(beautify_user_entry(user)), 200
 
         log_in_data = self.get_request_data_as_object()

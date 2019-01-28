@@ -667,6 +667,10 @@ def is_from_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter'
 
 
+def is_from_jamf(adapter_device):
+    return adapter_device.get('plugin_name') == 'jamf_adapter'
+
+
 def is_from_ad_or_jamf(adapter_device):
     return adapter_device.get('plugin_name') in ['active_directory_adapter', 'jamf_adapter']
 
@@ -958,6 +962,14 @@ def asset_hostnames_do_not_contradict(adapter_device1, adapter_device2):
         snow_asset_names_do_not_contradict(adapter_device1, adapter_device2)
 
 
+def serials_do_not_contradict(adapter_device1, adapter_device2):
+    serial1 = get_serial(adapter_device1)
+    serial2 = get_serial(adapter_device2)
+    if not serial1 or not serial2:
+        return True
+    return serial1 == serial2
+
+
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     cb_protection = False
     if adapter_device1.get('plugin_name') == 'carbonblack_protection_adapter' or adapter_device2.get('plugin_name') == 'carbonblack_protection_adapter':
@@ -992,6 +1004,11 @@ def cloud_id_do_not_contradict(adapter_device1, adapter_device2):
 
 def compare_ips(adapter_device1, adapter_device2):
     return is_one_subset_of_the_other(adapter_device1.get(NORMALIZED_IPS), adapter_device2.get(NORMALIZED_IPS))
+
+
+def compare_macs_or_one_is_jamf(adapter_device1, adapter_device2):
+    return compare_macs(adapter_device1, adapter_device2) or \
+        is_from_jamf(adapter_device1) or is_from_ad_or_jamf(adapter_device2)
 
 
 def compare_macs(adapter_device1, adapter_device2):

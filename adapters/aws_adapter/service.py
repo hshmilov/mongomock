@@ -17,7 +17,7 @@ from axonius.adapter_exceptions import (AdapterException,
                                         ClientConnectionException,
                                         CredentialErrorException)
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceRunningState
+from axonius.devices.device_adapter import DeviceRunningState, ShodanVuln
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.utils.parsing import format_ip
@@ -689,8 +689,9 @@ class AwsAdapter(AdapterBase, Configurable):
                                             if public_ip:
                                                 try:
                                                     assoc['shodan_info'] = shodan_connection.get_ip_info(public_ip)
-                                                except Exception:
-                                                    logger.exception(f'Problem getting shodan info of {public_ip}')
+                                                except Exception as e:
+                                                    if '404' not in str(e):
+                                                        logger.exception(f'Problem getting shodan info of {public_ip}')
                 except Exception:
                     logger.exception(f'Problem with Shodan')
 
@@ -1213,11 +1214,37 @@ class AwsAdapter(AdapterBase, Configurable):
                                 shodan_info = assoc.get('shodan_info')
                                 if shodan_info:
                                     try:
-                                        device.add_shodan_data(port=shodan_info.get('port'),
-                                                               banner=shodan_info.get('banner'),
-                                                               devicetype=shodan_info.get('devicetype'),
+                                        # shodan info crashed raw_data in the DB for a reason I don't know
+                                        assoc.pop('shodan_info', None)
+                                        shodan_info_data = shodan_info.get('data')
+                                        vulns_dict_list = []
+                                        if isinstance(shodan_info_data, dict):
+                                            vulns_dict_list = [shodan_info_data.get('vulns')] if \
+                                                isinstance(shodan_info_data.get('vulns'), dict) else None
+                                        if isinstance(shodan_info_data, list):
+                                            vulns_dict_list = [shodan_info_data_item.get('vulns')
+                                                               for shodan_info_data_item in shodan_info_data
+                                                               if isinstance(shodan_info_data_item.get('vulns'), dict)]
+                                        vulns = []
+                                        for vulns_dict in vulns_dict_list:
+                                            for vuln_name, vuln_data in vulns_dict.items():
+                                                try:
+                                                    vulns.append(ShodanVuln(summary=vuln_data.get('summary'),
+                                                                            vuln_name=vuln_name,
+                                                                            cvss=float(vuln_data.get('cvss'))
+                                                                            if vuln_data.get('cvss') is not None
+                                                                            else None))
+                                                except Exception:
+                                                    logger.exception(f'Problem adding vuln name {vuln_name}')
+                                        device.set_shodan_data(city=shodan_info.get('city'),
+                                                               region_code=shodan_info.get('region_code'),
+                                                               country_name=shodan_info.get('country_name'),
                                                                org=shodan_info.get('org'),
-                                                               os=shodan_info.get('os'))
+                                                               os=shodan_info.get('os'),
+                                                               isp=shodan_info.get('isp'),
+                                                               ports=shodan_info.get('ports')
+                                                               if isinstance(shodan_info.get('ports'), list) else None,
+                                                               vulns=vulns)
                                     except Exception:
                                         logger.exception(f'Problem parsing shodan info for {public_ip}')
 

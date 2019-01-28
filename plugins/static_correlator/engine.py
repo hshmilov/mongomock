@@ -16,7 +16,6 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_device_normalized_hostname,
                                    compare_domain, compare_hostname,
                                    compare_id, compare_last_used_users,
-                                   compare_macs,
                                    get_ad_name_or_azure_display_name,
                                    get_asset_name, get_asset_or_host,
                                    get_bios_serial_or_serial, get_cloud_data,
@@ -35,6 +34,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_illusive_adapter, is_junos_space_device,
                                    is_linux, is_old_device, is_sccm_or_ad,
                                    is_splunk_vpn, normalize_adapter_devices,
+                                   serials_do_not_contradict, compare_macs_or_one_is_jamf,
                                    normalize_mac, not_aruba_adapters,
                                    cloud_id_do_not_contradict,
                                    not_contain_generic_jamf_names,
@@ -134,7 +134,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                   [],
                                                   [],
                                                   [],
-                                                  [compare_macs],
+                                                  [compare_macs_or_one_is_jamf],
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
 
@@ -161,7 +161,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [],
                                       [compare_last_used_users,
-                                       not_aruba_adapters],
+                                       not_aruba_adapters,
+                                       serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname and LastUsedUser'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -173,7 +174,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [],
                                       [compare_domain,
-                                       not_aruba_adapters],
+                                       not_aruba_adapters,
+                                       serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -255,7 +257,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname],
                                       [compare_hostname],
                                       [is_from_ad_or_jamf],
-                                      [not_aruba_adapters, not_contain_generic_jamf_names],
+                                      [not_aruba_adapters,
+                                       serials_do_not_contradict,
+                                       not_contain_generic_jamf_names],
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 

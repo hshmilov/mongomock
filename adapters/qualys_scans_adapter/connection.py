@@ -23,7 +23,7 @@ class QualysScansConnection(RESTConnection):
         :param obj logger: Logger object of the system
         :param str domain: domain address for Illusive
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, session_timeout=(5, 2000), **kwargs)
         self._permanent_headers = {'X-Requested-With': 'Axonius Qualys Scans Adapter',
                                    'Accept': 'application/json'}
 
@@ -52,9 +52,16 @@ class QualysScansConnection(RESTConnection):
                                               do_basic_auth=True,
                                               use_json_in_body=False,
                                               body_params=current_iterator_data)['ServiceResponse']
-            yield from current_clients_page['data']
+            if pages_count == 1:
+                total_count = current_clients_page['count']
+                logger.info(f'Total Count is {total_count}')
+            if current_clients_page.get('data'):
+                yield from current_clients_page['data']
+            else:
+                logger.error(f'Error while fetching devics from qualys. response is {current_clients_page}')
+                break
             last_id = current_clients_page.get('lastId')
-            has_more_records = current_clients_page['hasMoreRecords']
+            has_more_records = current_clients_page.get('hasMoreRecords')
             if last_id is None and has_more_records == 'true':
                 break
 
@@ -130,6 +137,3 @@ class QualysScansConnection(RESTConnection):
                 yield device_raw, consts.AGENT_DEVICE
         except Exception:
             logger.exception(f'Problem getting agents moving to scans')
-        # No try except needed here
-        for device_raw in self._get_device_scans_list():
-            yield device_raw, consts.SCAN_DEVICE

@@ -116,11 +116,15 @@ class SplunkAdapter(AdapterBase, Configurable):
         macs_set = set()
         dhcp_ids_sets = set()
         vpn_ids_sets = set()
+        landdesk_ids_sets = set()
         nexpose_asset_id_set = set()
 
         for device_raw, device_type in devices_raw_data:
             try:
                 device = self._new_device_adapter()
+                raw_splunk_insertion_time = device_raw.get('raw_splunk_insertion_time')
+                if raw_splunk_insertion_time:
+                    device.last_seen = parse_date(raw_splunk_insertion_time)
                 if 'DHCP' in device_type:
                     device.adapter_properties = [AdapterProperty.Network.name]
                     mac = device_raw.get('mac')
@@ -220,10 +224,46 @@ class SplunkAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f"Couldn't add nic to device {device_raw}")
                     device.splunk_source = "Nexpose"
-
-                raw_splunk_insertion_time = device_raw.get('raw_splunk_insertion_time')
-                if raw_splunk_insertion_time:
-                    device.last_seen = parse_date(raw_splunk_insertion_time)
+                elif 'Landesk' in device_type:
+                    device.splunk_source = 'Landesk'
+                    device.adapter_properties = [AdapterProperty.Agent.name]
+                    hostname = device_raw.get('hostname')
+                    if not hostname:
+                        logger.warning(f'Bad landesk device with no hostname {device_raw}')
+                        continue
+                    id_to_set = hostname + '_' + (device_raw.get('mac') or '')
+                    if id_to_set in landdesk_ids_sets:
+                        continue
+                    landdesk_ids_sets.add(id_to_set)
+                    device.id = id_to_set
+                    device.hostname = hostname
+                    device.domain = device_raw.get('domain')
+                    ips = None
+                    if device_raw.get('ip'):
+                        ip = device_raw.get('ip')
+                        ip = '.'.join([str(int(x)) for x in ip.split('.')])
+                        ips = [ip]
+                    mac = device_raw.get('mac') if device_raw.get('mac') else None
+                    if ips or mac:
+                        try:
+                            device.add_nic(mac, ips)
+                        except Exception:
+                            logger.exception(f'Problem add nic to {device_raw}')
+                    try:
+                        device.last_seen = parse_date(device_raw.get('last_seen'))
+                    except Exception:
+                        logger.exception(f'Problem getting last seen for {device_raw}')
+                    try:
+                        if device_raw.get('os'):
+                            device.figure_os(device_raw.get('os'))
+                    except Exception:
+                        logger.exception(f'Problem adding os to {device_raw}')
+                    try:
+                        if device_raw.get('user'):
+                            device.last_used_users = [device_raw.get('user')]
+                    except Exception:
+                        logger.exception(f'Problem adding last used user to {device_raw}')
+                    device.device_serial = device_raw.get('serial')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

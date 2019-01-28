@@ -41,9 +41,10 @@ def parse_network(device_raw, device):
     parsed_ipv4 = None
     try:
         # epo is a motherfucker? Seems like he flips the msb of the binary repr of ip addr...
-        ipv4 = (raw_ipv4 & 0xffffffff) ^ 0x80000000
-        parsed_ipv4 = str(ipaddress.IPv4Address(ipv4))
-        ip_list.add(parsed_ipv4)
+        if raw_ipv4 is not None:
+            ipv4 = (raw_ipv4 & 0xffffffff) ^ 0x80000000
+            parsed_ipv4 = str(ipaddress.IPv4Address(ipv4))
+            ip_list.add(parsed_ipv4)
     except Exception:
         logger.info(f"Error reading IPv4 {raw_ipv4}")
 

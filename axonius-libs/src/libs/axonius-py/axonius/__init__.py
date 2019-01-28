@@ -8,8 +8,12 @@ original_request = requests.Session.request
 
 # for now - no verification
 # AX-1591: Use our own CA here and create specific certificates for each plugin
-def __request(*args, verify=False, **kwargs):
-    return original_request(*args, verify=verify, **kwargs)
+def __request(*args, **kwargs):
+    # Some plugins pass 'verify' in args and not kwargs. In the current requests version, its the 14th param, so we
+    # have to check this in the following code, to force verify to be False only if it is not set already.
+    if 'verify' not in kwargs and len(args) < 14:
+        kwargs['verify'] = False
+    return original_request(*args, **kwargs)
 
 
 # Monkey-patching

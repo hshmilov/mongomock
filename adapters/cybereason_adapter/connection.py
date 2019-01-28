@@ -28,7 +28,6 @@ class CybereasonConnection(RESTConnection):
                 '"sortingFieldName":"machineName","sortDirection":"ASC","limit":' + \
                 str(DEVICE_PER_PAGE) + ',"offset":' + str(0) + ',"batchId":null}'
         response = self._post('rest/sensors/query', use_json_in_body=False, body_params=query)
-        yield from response['sensors']
         total_count = response['totalResults']
         query = '{"filters":[{"fieldName":"status","operator":"NotEquals","values":["Archived"]}],' \
                 '"sortingFieldName":"machineName","sortDirection":"ASC","limit":' + \

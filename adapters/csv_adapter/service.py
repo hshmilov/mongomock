@@ -1,3 +1,4 @@
+import datetime
 import logging
 import requests
 
@@ -10,7 +11,7 @@ from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import make_dict_from_csv, normalize_var_name, parse_date
-from csv_adapter import consts
+from axonius.consts.csv_consts import get_csv_field_names
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -106,39 +107,12 @@ class CsvAdapter(AdapterBase):
             'type': 'array'
         }
 
-    @staticmethod
-    def get_csv_field_names(fieldnames):
-        """
-        iterates over a list of identifiers we defined and tries to see if there are some generic columns in the csv.
-        :param fieldnames: list of str with field names
-        :return: a dict in which the key is what we search for and the value is the list of column names in the csv
-        """
-
-        # transform all fields according to our rules
-        fieldnames = {f.lower().replace('_', '').replace('-', '').replace(' ', ''): f for f in fieldnames}
-
-        def search_for_fieldname(list_of_fields_to_search):
-            found_fields = []
-            for field in list_of_fields_to_search:
-                if fieldnames.get(field):
-                    found_fields.append(fieldnames.get(field))
-
-            return found_fields
-
-        final_dict = dict()
-        for key, value in consts.IDENTIFIERS.items():
-            column_names = search_for_fieldname(value)
-            if column_names:
-                final_dict[key] = column_names
-
-        return final_dict
-
     def _parse_users_raw_data(self, user):
         if user is None:
             return
 
         csv_data, should_parse_all_columns = user
-        fields = self.get_csv_field_names(csv_data.fieldnames)
+        fields = get_csv_field_names(csv_data.fieldnames)
 
         if not any(id_field in fields for id_field in ['id', 'username', 'mail', 'name']):
             logger.error(f'Bad user fields names {str(csv_data.fieldnames)}')
@@ -186,9 +160,9 @@ class CsvAdapter(AdapterBase):
         if devices_raw_data is None:
             return
         csv_data, should_parse_all_columns = devices_raw_data
-        fields = self.get_csv_field_names(csv_data.fieldnames)
+        fields = get_csv_field_names(csv_data.fieldnames)
 
-        if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address']):
+        if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address', 'hostname']):
             logger.error(f'Bad devices fields names {str(csv_data.fieldnames)}')
             raise GetDevicesError(f'Strong identifier is missing for devices')
 
@@ -201,7 +175,7 @@ class CsvAdapter(AdapterBase):
                 macs = [mac.strip() for mac in macs if mac.strip()]
                 mac_as_id = macs[0] if macs else None
 
-                device_id = str(vals.get('id', '')) or vals.get('serial') or mac_as_id
+                device_id = str(vals.get('id', '')) or vals.get('serial') or mac_as_id or vals.get('hostname')
                 if not device_id:
                     logger.error(f'can not get device id for {device_raw}, continuing')
                     continue
@@ -212,7 +186,15 @@ class CsvAdapter(AdapterBase):
                 device.hostname = vals.get('hostname')
                 device.device_model = vals.get('model')
                 device.domain = vals.get('domain')
-                device.last_seen = parse_date(vals.get('last_seen'))
+                try:
+                    last_seen = parse_date(vals.get('last_seen'))
+                    if last_seen:
+                        device.last_seen = last_seen
+                    else:
+                        device.last_seen = datetime.datetime.fromtimestamp(vals.get('last_seen'))
+                except Exception:
+                    logger.exception(f'Problem adding last seen')
+
                 device.device_manufacturer = vals.get('manufacturer')
                 device.total_physical_memory = vals.get('total_physical_memory_gb')
 

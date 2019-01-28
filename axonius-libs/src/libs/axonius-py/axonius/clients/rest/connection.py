@@ -328,9 +328,9 @@ class RESTConnection(ABC):
                 aio_req['ssl'] = False
 
             # Take care of proxy. aiohttp doesn't allow us to try both proxies, we need to prefer one of them.
-            if self._proxies.get('https') is not None:
+            if self._proxies.get('https'):
                 aio_req['proxy'] = self._proxies['https']
-            elif self._proxies.get('http') is not None:
+            elif self._proxies.get('http'):
                 aio_req['proxy'] = self._proxies['http']
 
             aio_requests.append(aio_req)

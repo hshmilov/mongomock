@@ -825,7 +825,8 @@ class ReportsService(PluginBase, Triggerable):
         entities = []
         for entity in current_result:
             for adapter_data in entity['specific_data']:
-                entities.append((adapter_data[PLUGIN_UNIQUE_NAME], adapter_data['data']['id']))
+                if 'static_analysis' not in adapter_data[PLUGIN_UNIQUE_NAME]:
+                    entities.append((adapter_data[PLUGIN_UNIQUE_NAME], adapter_data['data']['id']))
         self.add_many_labels_to_entity(EntityType(report_data['view_entity']), entities, [action_data])
 
     def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices,
@@ -845,7 +846,8 @@ class ReportsService(PluginBase, Triggerable):
             db_entity = entities_collection.find_one({'_id': ObjectId(entity['_id'])})
             if db_entity is not None:
                 for adapter_data in db_entity['specific_data']:
-                    entities.append((adapter_data[PLUGIN_UNIQUE_NAME], adapter_data['data']['id']))
+                    if 'static_analysis' not in adapter_data[PLUGIN_UNIQUE_NAME]:
+                        entities.append((adapter_data[PLUGIN_UNIQUE_NAME], adapter_data['data']['id']))
             else:
                 logger.warning(f'Couldn\'t find entity to tag. {entity}')
 

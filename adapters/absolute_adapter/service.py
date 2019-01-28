@@ -163,10 +163,10 @@ class AbsoluteAdapter(AdapterBase):
                     volumes_raw = []
                 for volume_raw in volumes_raw:
                     try:
-                        device.add_hd(name=volume_raw.get('name'),
+                        device.add_hd(device=volume_raw.get('name'),
                                       file_system=volume_raw.get('fileSystem'),
-                                      total_size=float(device_raw.get('sizeBytes') or 0) / (1024**3),
-                                      free_size=float(device_raw.get('freeSpaceBytes') or 0) / (1024 ** 3))
+                                      total_size=float(volume_raw.get('sizeBytes') or 0) / (1024**3),
+                                      free_size=float(volume_raw.get('freeSpaceBytes') or 0) / (1024 ** 3))
                     except Exception:
                         logger.exception(f'Problem adding disk {volume_raw}')
                 try:
@@ -180,7 +180,7 @@ class AbsoluteAdapter(AdapterBase):
                     logger.exception(f'Problem adding cpu to {device_raw}')
                 device.device_src = device_raw.get('src')
                 device.policy_group_name = device_raw.get('policyGroupName')
-                device.origin = device_raw.get('origin')
+                device.device_origin = device_raw.get('origin')
                 device.is_stolen = device_raw.get('isStolen')
                 device.is_stes_active = device_raw.get('isCTESActive')
                 device.public_ip = device_raw.get('publicIp')
@@ -192,10 +192,10 @@ class AbsoluteAdapter(AdapterBase):
                         ipv4 = nic_raw.get('ipV4Address')
                         ipv6 = nic_raw.get('ipV6Address')
                         ips = []
-                        if ipv4:
-                            ips.append(ipv4)
-                        if ipv6:
-                            ips.append(ipv6)
+                        if ipv4 and ipv4.strip():
+                            ips.append(ipv4.strip())
+                        if ipv6 and ipv6.strip():
+                            ips.append(ipv6.strip())
                         if not ips:
                             ips = None
                         mac = device_raw.get('macAddress')

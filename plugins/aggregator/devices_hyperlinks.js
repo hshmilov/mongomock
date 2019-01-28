@@ -14,5 +14,11 @@
             'module': 'users',
             'filter': filter_line
         }
+    },
+    'shodan_data.vulns.vuln_name': function (value) {
+        return {
+            'type': 'link',
+            'href': 'https://www.google.com/search?q=' + value
+        }
     }
 }

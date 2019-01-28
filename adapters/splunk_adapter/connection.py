@@ -222,7 +222,46 @@ class SplunkConnection(object):
             raw_object['users'].append(user_raw)
         return raw_object
 
+    @staticmethod
+    def parse_landesk(raw_line):
+        raw_object = dict()
+
+        if 'DISPLAYNAME' in raw_line:
+            raw_object['hostname'] = raw_line[raw_line.find('DISPLAYNAME') + len("DISPLAYNAME") + 2:].split('"')[0]
+        if 'host_name' in raw_line:
+            raw_object['hostname'] = raw_line[raw_line.find('host_name') + len("host_name") + 2:].split('"')[0]
+        if 'IPADDRESS' in raw_line:
+            raw_object['ip'] = raw_line[raw_line.find('IPADDRESS') + len("IPADDRESS") + 2:].split('"')[0]
+        if 'ip=' in raw_line:
+            raw_object['ip'] = raw_line[raw_line.find('ip=') + len("ip=") + 1:].split('"')[0]
+        if 'MACADDRESS' in raw_line:
+            raw_object['mac'] = raw_line[raw_line.find('MACADDRESS') + len("MACADDRESS") + 2:].split('"')[0]
+        if 'mac=' in raw_line:
+            raw_object['mac'] = raw_line[raw_line.find('mac=') + len("mac=") + 1:].split('"')[0]
+        if 'OSTYPE' in raw_line:
+            raw_object['os'] = raw_line[raw_line.find('OSTYPE') + len("OSTYPE") + 2:].split('"')[0]
+        if 'os_type' in raw_line:
+            raw_object['os'] = raw_line[raw_line.find('os_type') + len("os_type") + 2:].split('"')[0]
+        if 'SERIALNUM' in raw_line:
+            raw_object['serial'] = raw_line[raw_line.find('SERIALNUM') + len("SERIALNUM") + 2:].split('"')[0]
+        if 'LDCHECKINDATE' in raw_line:
+            raw_object['last_seen'] = raw_line[raw_line.find('LDCHECKINDATE') + len("LDCHECKINDATE") + 2:].split('"')[0]
+        if 'update_time' in raw_line:
+            raw_object['last_seen'] = raw_line[raw_line.find('update_time') + len("update_time") + 2:].split('"')[0]
+        if 'LOGINNAME' in raw_line:
+            raw_object['user'] = raw_line[raw_line.find('LOGINNAME') + len("LOGINNAME") + 2:].split('"')[0]
+        if 'user_name' in raw_line:
+            raw_object['user'] = raw_line[raw_line.find('user_name') + len("user_name") + 2:].split('"')[0]
+        if 'domain=' in raw_line:
+            raw_object['domain'] = raw_line[raw_line.find('domain=') + len("domain=") + 1:].split('"')[0]
+        return raw_object
+
     def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict):
+        yield from self.fetch('search index=lnv_landesk',
+                              SplunkConnection.parse_landesk,
+                              earliest,
+                              maximum_records_per_search,
+                              'Landesk')
         fetch_hours = fetch_plugins_dict.get('win_logs_fetch_hours') or 3
         yield from self.fetch('search "SourceName=Microsoft Windows security auditing" AND '
                               '"Audit Success"AND NOT "Acount_Name=SYSTEM" AND '

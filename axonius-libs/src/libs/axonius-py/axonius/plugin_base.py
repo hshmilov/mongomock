@@ -656,7 +656,8 @@ class PluginBase(Configurable, Feature):
         :param int retries: Number of retries before exiting the plugin.
         """
         try:
-            response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name), timeout=5)
+            response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name),
+                                                  timeout=10)
             if response.status_code in [404, 499, 502, 409]:  # Fault values
                 logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
                 # TODO: Think about a better way for exiting this process
@@ -1978,8 +1979,11 @@ class PluginBase(Configurable, Feature):
         def perform_many_tags():
             for label in labels:
                 for specific_identity in identity_by_adapter:
-                    yield from self.add_label_to_entity(entity, [specific_identity], label, are_enabled,
-                                                        rebuild=False)
+                    try:
+                        yield from self.add_label_to_entity(entity, [specific_identity], label, are_enabled,
+                                                            rebuild=False)
+                    except Exception:
+                        logger.exception(f'Problem adding label: {label} with identity: {specific_identity}')
 
         result = list(perform_many_tags())
         if result and rebuild:

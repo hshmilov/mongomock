@@ -19,7 +19,7 @@ class AirwatchAdapter(AdapterBase):
         imei = Field(str, 'IMEI')
         phone_number = Field(str, 'Phone Number')
         udid = Field(str, 'UdId')
-        friendly_name = Field(str, 'Device Friendly Name')
+        email = Field(str, 'Email')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -126,13 +126,14 @@ class AirwatchAdapter(AdapterBase):
                 device.last_seen = parse_date(str(device_raw.get('LastSeen', '')))
                 device.figure_os((device_raw.get('Platform') or '') + ' ' + (device_raw.get('OperatingSystem') or ''))
                 device.phone_number = device_raw.get('PhoneNumber')
+                device.email = device_raw.get('UserEmailAddress')
                 try:
                     network_raw = device_raw.get('Network', {})
                     wifi_info = network_raw.get('WifiInfo', {})
                     mac_address = wifi_info.get('WifiMacAddress', device_raw.get('MacAddress'))
                     if mac_address in ('', '0.0.0.0'):
                         mac_address = None
-                    ipaddresses_raw = network_raw.get('IPAddress')
+                    ipaddresses_raw = network_raw.get('IPAddress') or []
                     ipaddresses = []
                     falsed_ips = ['0.0.0.0', '127.0.0.1', '', None]
                     for ipaddress_raw in ipaddresses_raw:
@@ -145,7 +146,7 @@ class AirwatchAdapter(AdapterBase):
                 device.device_serial = device_raw.get('SerialNumber')
                 device.udid = device_raw.get('Udid')
 
-                device.friendly_name = device_raw.get('DeviceFriendlyName')
+                device.name = device_raw.get('DeviceFriendlyName')
                 device.last_used_users = (device_raw.get('UserName') or '').split(',')
                 try:
                     for app_raw in device_raw.get('DeviceApps', []):

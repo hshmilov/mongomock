@@ -8,7 +8,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.parsing import normalize_var_name, parse_date
 from bigfix_adapter import consts
 from bigfix_adapter.connection import BigfixConnection
 
@@ -180,6 +180,21 @@ class BigfixAdapter(AdapterBase):
                     logger.exception(f'Failure parsing last seen date: {last_report_time}')
                 device.bigfix_device_type = device_raw.get('Device Type')
                 device.bigfix_computer_type = device_raw.get('Computer Type')
+                device.device_serial = device_raw.get('Serial')
+                try:
+                    for key_name in device_raw:
+                        try:
+                            normalized_key_name = 'bigfix_' + normalize_var_name(key_name)
+                            if not device.does_field_exist(normalized_key_name):
+                                cn_capitalized = ' '.join([word.capitalize() for word in key_name.split(' ')])
+                                device.declare_new_field(normalized_key_name, Field(str, f'Bigfix {cn_capitalized}'))
+
+                            device[normalized_key_name] = str(device_raw.get(key_name))\
+                                if device_raw.get(key_name) is not None else None
+                        except Exception:
+                            logger.exception(f'Problem adding key {key_name}')
+                except Exception:
+                    logger.exception(f'Problem adding fields to {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

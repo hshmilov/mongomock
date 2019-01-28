@@ -1,4 +1,28 @@
 export const pluginMeta = {
+    mssql_adapter: {
+        title: 'MSSQL Adapter',
+        description: 'The MSSQL adapter allows you to import devices information from arbitrary SQL servers.'
+    },
+    quest_kace_adapter: {
+        title: 'Quest KACE - BETA',
+        description: 'Quest KACE Endpoint Systems Management Appliances provision, manage, secure, and service network-connected devices.'
+    },
+    shodan_adapter: {
+        title: 'Shodan - BETA',
+        description: 'Shodan is the world\'s first search engine for Internet-connected devices.'
+    },
+    samange_adapter: {
+        title: 'Samanage',
+        description: 'The Samanage application is a unified, cloud-based IT service desk and asset management platform.'
+    },
+    paloalto_panorama_adapter: {
+        title: 'Palo Alto Networks Panorama',
+        description: 'The Panorama™ management server provides centralized monitoring and management of multiple Palo Alto Networks next-generation firewalls and of WildFire appliances and appliance clusters.'
+    },
+    proxmox_adapter: {
+        title: 'Proxmox VE',
+        description: 'Proxmox Virtual Environment is an open source server virtualization management solution based on QEMU/KVM and LXC.'
+    },
     foreman_adapter: {
         title: 'Foreman - BETA',
         description: 'Foreman is a free open source project that gives you the power to easily automate repetitive tasks, quickly deploy applications, and proactively manage your servers lifecyle, on-premises or in the cloud.'
@@ -16,7 +40,7 @@ export const pluginMeta = {
         description: 'MobiControl is a software system for managing mobile devices in the enterprise.'
     },
     absolute_adapter: {
-        title: 'Absolute - BETA',
+        title: 'Absolute',
         description: 'Absolute® Software specializes in software and services for the management and security of computers and smartphones.'
     },
     landesk_adapter: {
@@ -322,10 +346,6 @@ export const pluginMeta = {
     illusive_adapter: {
         title: 'Illusive Networks',
         description: 'Illusive Networks produces technology that deceives cyber attackers by planting false information about given network\'s resources.'
-    },
-    kace_adapter: {
-        title: 'Quest KACE - BETA',
-        description: 'Quest KACE Endpoint Systems Management Appliances provision, manage, secure, and service network-connected devices.'
     },
     chef_adapter: {
         title: 'Chef',

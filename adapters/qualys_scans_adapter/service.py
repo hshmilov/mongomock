@@ -1,5 +1,4 @@
 import logging
-from itertools import groupby
 import datetime
 
 from axonius.adapter_base import AdapterProperty
@@ -37,12 +36,11 @@ class QualysAgentPort(SmartJsonClass):
 
 class QualysScansAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        qualys_scan_id = Field(str, 'Scan ID given by Qualys')
-        severity_results = ListField(QualysVulnerability, 'Vulnerability')
-        qualys_agent_vulns = ListField(QualysAgentVuln, 'Agent Vulnerability')
-        qualys_agnet_ports = ListField(QualysAgentPort, 'Agent Open Ports')
+        qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
+        qualys_agnet_ports = ListField(QualysAgentPort, 'Open Ports')
         agent_version = Field(str, 'Qualys agent version')
         agent_status = Field(str, 'Agent Status')
+        qualys_tags = ListField(str, 'Qualys Tags')
 
         def add_qualys_vuln(self, **kwargs):
             self.qualys_agent_vulns.append(QualysAgentVuln(**kwargs))
@@ -171,33 +169,67 @@ class QualysScansAdapter(ScannerAdapterBase):
             logger.exception(f'Problem with device {device_raw}')
             return None
 
-    # pylint: disable=R0912
+    # pylint: disable=R0912,R0915
     def _create_agent_device(self, device_raw):
         try:
             device_raw = device_raw.get('HostAsset')
-            device_id = (device_raw.get('agentInfo') or {}).get('agentId')
+            device_id = device_raw.get('id')
             if not device_id:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device = self._new_device_adapter()
-            device.id = device_id
-            device.hostname = device_raw.get('name')
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
+            device.hostname = device_raw.get('dnsHostName') or device_raw.get('name')
+            if device_raw.get('dnsHostName') and device_raw.get('name'):
+                device.name = device_raw.get('name')
             try:
                 device.figure_os(device_raw.get('os'))
             except Exception:
                 logger.exception(f'Problem getting OS from {device_raw}')
-            ifaces = (device_raw.get('networkInterface') or {}).get('list')
             try:
-                for mac, ip_ifaces in groupby(ifaces, lambda i: i['HostAssetInterface']['macAddress']):
-                    device.add_nic(mac, [ip_iface['HostAssetInterface']['address']
-                                         for ip_iface in ip_ifaces])
+                device.last_seen = parse_date(device_raw.get('lastVulnScan'))
             except Exception:
-                logger.exception('Problem with adding nic to Qualys agent')
-            device.last_seen = parse_date(str(device_raw.get('agentInfo', {}).get('lastCheckedIn')))
+                logger.exception(f'Problem getting last seen for {device_raw}')
             device.agent_version = (device_raw.get('agentInfo') or {}).get('agentVersion')
             device.physical_location = (device_raw.get('agentInfo') or {}).get('location')
             device.boot_time = parse_date(str(device_raw.get('lastSystemBoot')))
             device.agent_status = (device_raw.get('agentInfo') or {}).get('status')
+            try:
+                for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:
+                    try:
+                        mac = (asset_interface.get('HostAssetInterface') or {}).get('macAddress')
+                        if not mac:
+                            mac = None
+                        ip = (asset_interface.get('HostAssetInterface') or {}).get('address')
+                        if not ip:
+                            ips = None
+                        else:
+                            ips = [ip]
+                        if mac or ips:
+                            device.add_nic(mac=mac, ips=ips)
+                    except Exception:
+                        logger.exception(f'Problem with interface {asset_interface}')
+            except Exception:
+                logger.exception(f'Problem with adding nics to Qualys agent {device_raw}')
+
+            try:
+                for tag_raw in (device_raw.get('tags') or {}).get('list') or []:
+                    try:
+                        device.qualys_tags.append(tag_raw.get('TagSimple') or {}).get('name')
+                    except Exception:
+                        logger.exception(f'Problem with tag {tag_raw}')
+            except Exception:
+                logger.exception(f'Problem with adding tags to Qualys agent {device_raw}')
+
+            try:
+                for user_raw in (device_raw.get('account') or {}).get('list') or []:
+                    try:
+                        device.last_used_users.append(user_raw.get('HostAssetAccount') or {}).get('username')
+                    except Exception:
+                        logger.exception(f'Problem with user {user_raw}')
+            except Exception:
+                logger.exception(f'Problem with adding users to Qualys agent {device_raw}')
+
             try:
                 for software_raw in (device_raw.get('software') or {}).get('list') or []:
                     try:
@@ -236,7 +268,7 @@ class QualysScansAdapter(ScannerAdapterBase):
             except Exception:
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
 
-            device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name, AdapterProperty.Agent.name]
+            device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name]
             device.set_raw(device_raw)
             return device
         except Exception:

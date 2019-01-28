@@ -96,12 +96,22 @@ class SccmAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting query patch')
 
+            asset_bios_dict = dict()
+            try:
+                for asset_bios_data in client_data.query(consts.BIOS_QUERY):
+                    asset_id = asset_bios_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    asset_bios_dict[asset_id] = asset_bios_data
+            except Exception:
+                logger.exception(f'Problem getting query bios')
+
             if not self._last_seen_timedelta:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
-                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict
+                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
-                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict
+                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict
         finally:
             client_data.logout()
 
@@ -146,7 +156,7 @@ class SccmAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, asset_software_dict, asset_patch_dict, asset_program_dict in devices_raw_data:
+        for device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
                 if not device_id:
@@ -202,7 +212,7 @@ class SccmAdapter(AdapterBase):
                         device.add_nic(None, ips_empty_mac)
                 except Exception:
                     logger.exception(f'Problem getting IP for {device_raw}')
-
+                device.device_manufacturer = device_raw.get('Manufacturer0')
                 free_physical_memory = device_raw.get('FreePhysicalMemory0')
                 device.free_physical_memory = float(free_physical_memory) if free_physical_memory else None
                 total_physical_memory = device_raw.get('TotalPhysicalMemory0')
@@ -211,9 +221,14 @@ class SccmAdapter(AdapterBase):
                 if total_physical_memory and free_physical_memory:
                     device.physical_memory_percentage = 100 * \
                         (1 - device.free_physical_memory / device.total_physical_memory)
-                device.device_serial = device_raw.get('SerialNumber0')
+                try:
+                    if isinstance(asset_bios_dict.get(device_raw.get('ResourceID')), dict):
+                        bios_data = asset_bios_dict.get(device_raw.get('ResourceID'))
+                        device.bios_serial = bios_data.get('SerialNumber0')
+                        device.device_manufacturer = bios_data.get('Manufacturer0')
+                except Exception:
+                    logger.exception(f'Problem getting bios data dor {device_raw}')
                 device.device_model = device_raw.get('Model0')
-                device.device_manufacturer = device_raw.get('Manufacturer0')
                 processes = device_raw.get('NumberOfProcesses0')
                 device.number_of_processes = int(processes) if processes else None
                 processors = device_raw.get('NumberOfProcessors0')

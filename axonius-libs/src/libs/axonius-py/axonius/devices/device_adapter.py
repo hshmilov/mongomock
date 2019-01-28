@@ -264,12 +264,21 @@ class DeviceTagKeyValue(SmartJsonClass):
     tag_value = Field(str, "Tag Value")
 
 
+class ShodanVuln(SmartJsonClass):
+    vuln_name = Field(str, 'Vulnerability Name')
+    cvss = Field(float, 'CVSS')
+    summary = Field(str, 'Summary')
+
+
 class ShodanData(SmartJsonClass):
-    port = Field(int, 'Port')
-    banner = Field(str, 'Banner')
-    devicetype = Field(str, 'Device Type')
+    city = Field(str, 'City')
+    region_code = Field(str, 'Region Code')
+    country_name = Field(str, 'Country Name')
     org = Field(str, 'Organization')
     os = Field(str, 'OS')
+    isp = Field(str, 'ISP')
+    ports = ListField(int, 'Ports')
+    vulns = ListField(ShodanVuln, 'Vulnerabilities')
 
 
 class DeviceSwapFile(SmartJsonClass):
@@ -572,8 +581,8 @@ class DeviceAdapter(SmartJsonClass):
     def add_key_value_tag(self, key, value):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
 
-    def add_shodan_data(self, **kwargs):
-        self.shodan_data.append(ShodanData(**kwargs))
+    def set_shodan_data(self, **kwargs):
+        self.shodan_data = ShodanData(**kwargs)
 
     def add_swap_file(self, name, size_in_gb):
         self.swap_files.append(DeviceSwapFile(name=name, size_in_gb=size_in_gb))
