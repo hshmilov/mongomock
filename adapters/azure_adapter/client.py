@@ -22,6 +22,11 @@ class AzureClient(object):
                                                   cloud_environment=cloud, proxies=proxies)
         self.compute = ComputeManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
         self.network = NetworkManagementClient(credentials, subscription_id, base_url=cloud.endpoints.resource_manager)
+        if proxies:
+            self.network.config.proxies.use_env_settings = False
+            self.network.config.proxies.proxies = proxies
+            self.compute.config.proxies.use_env_settings = False
+            self.compute.config.proxies.proxies = proxies
 
     @classmethod
     def get_clouds(cls):
