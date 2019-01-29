@@ -15,6 +15,13 @@
             'filter': filter_line
         }
     },
+    'connected_devices.remote_name': function (value) {
+        return {
+            'type': 'query',
+            'module': 'devices',
+            'filter': 'adapters == regex("' + value + '", "i") or specific_data.data.hostname == regex("' + value + '", "i") or specific_data.data.name == regex("' + value + '", "i") or specific_data.data.network_interfaces.ips == regex("' + value + '", "i") or specific_data.data.network_interfaces.mac == regex("' + value + '", "i")',
+        }
+    },
     'shodan_data.vulns.vuln_name': function (value) {
         return {
             'type': 'link',

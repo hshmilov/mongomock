@@ -5,7 +5,7 @@
                 <th v-if="value" class="w-14">
                     <x-checkbox :data="allSelected" :indeterminate="partSelected" @change="onSelectAll"/>
                 </th>
-                <th v-for="field in fields" nowrap :class="{sortable: clickColHandler}"
+                <th v-for="field in dataField" nowrap :class="{sortable: clickColHandler}"
                     @click="clickCol(field.name)" @keyup.enter.stop="clickCol(field.name)">
 
                     <img v-if="field.logo" class="logo md-image" :src="require(`Logos/${field.logo}.png`)" height="20">
@@ -20,7 +20,7 @@
                     <x-checkbox v-model="selected" :value="item[idField]" @change="onSelect"
                                 :read-only="readOnly.includes(item[idField])" />
                 </td>
-                <td v-for="field in fields" nowrap>
+                <td v-for="field in dataField" nowrap>
                     <component :is="field.type" :schema="field" :value="processDataValue(item, field)" />
                 </td>
             </tr>
@@ -60,7 +60,10 @@
             },
             partSelected() {
 		        return this.selected.length && this.selected.length < this.data.length
-            }
+            },
+            dataField() {
+                return this.fields.map(field => {return {...field, path: (field.path ? field.path : []).concat([field.name])}})
+            },
 		},
         data() {
 			return {

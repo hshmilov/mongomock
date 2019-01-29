@@ -60,8 +60,8 @@ class AbsoluteConnection(RESTConnection):
         self._session_headers['X-Abs-Date'] = x_abs_date
         self._session_headers['Content-Type'] = 'application/json'
         self._session_headers['Authorization'] = f'ABS1-HMAC-SHA-256 Credential={self._token_id}/' \
-                                                 f'{credentials_scope}, SignedHeaders=host;content-type;' \
-                                                 f'x-abs-date, Signature={signature}'
+            f'{credentials_scope}, SignedHeaders=host;content-type;' \
+            f'x-abs-date, Signature={signature}'
 
     def _connect(self):
         self._create_authorization_header(0)

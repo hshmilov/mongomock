@@ -150,7 +150,7 @@
                         item.title = schema.title
                         if (Array.isArray(schema.items)) {
                             schema.items = schema.items.filter(field =>
-                                !field.name.includes('raw') && (!field.items || !Array.isArray(field.items)))
+                                !field.name.includes('raw') && (!field.items || !Array.isArray(field.items))).map(field => { return { ...field, path: [this.module, 'aggregator', ...schema.name.split('.').slice(1)] } })
                         }
                         return {...item, schema: {...schema, title: undefined}}
                     })
