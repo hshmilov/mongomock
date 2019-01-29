@@ -1117,7 +1117,8 @@ class PluginBase(Configurable, Feature):
         :return: MongoClient
         """
         return MongoClient(self.db_host, replicaset='axon-cluster', retryWrites=True,
-                           username=self.db_user, password=self.db_password)
+                           username=self.db_user, password=self.db_password,
+                           localthresholdms=1000)
 
     def _get_collection(self, collection_name, db_name=None):
         """
