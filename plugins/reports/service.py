@@ -61,7 +61,7 @@ def query_result_diff_by_id(result_by_id1: dict, result_by_id2: dict) -> list:
     return diff
 
 
-def query_result_diff(current_result: list, last_result: list)-> dict:
+def query_result_diff(current_result: list, last_result: list) -> dict:
     """ get the current query result and last query result and create and returns
         a dict "diff_dict" that store the added entities and the removed entities """
 
