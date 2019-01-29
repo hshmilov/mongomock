@@ -20,7 +20,7 @@ def fetch_jwk_for(okta_config, id_token=None):
     if id_token is None:
         raise NameError('id_token is required')
 
-    jwks_uri = f"{okta_config['url']}/oauth2/v1/keys"
+    jwks_uri = f"{okta_config['url']}/oauth2/default/v1/keys"
 
     unverified_header = jws.get_unverified_header(id_token)
     if 'kid' in unverified_header:
@@ -74,7 +74,7 @@ def try_connecting_using_okta(okta_config) -> bool:
         'client_id': okta_config['client_id'],
     }
 
-    url = f"{okta_config['url']}/oauth2/v1/token"
+    url = f"{okta_config['url']}/oauth2/default/v1/token"
 
     headers = {
         'Accept': 'application/json',
@@ -99,7 +99,7 @@ def try_connecting_using_okta(okta_config) -> bool:
             # Used for leeway on the "exp" claim
             'leeway': leeway
         },
-        'issuer': okta_config["url"],
+        'issuer': f'{okta_config["url"]}/oauth2/default',
         'audience': okta_config['client_id']
     }
     if 'access_token' in return_value:
