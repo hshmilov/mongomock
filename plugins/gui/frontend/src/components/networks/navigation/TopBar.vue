@@ -169,14 +169,18 @@
             }
         },
         created() {
+            let firstTime = true
             const updateLifecycle = () => {
                 this.fetchLifecycle().then(() => {
                     if (this._isDestroyed) return
                     if (this.researchStatusLocal !== 'done' && this.researchStatus === 'done') {
                         entities.forEach(entity => {
                             if (this.entityRestricted(entity.title)) return
-                            this.fetchDataFields({module: entity.name})
+                            if (!firstTime) {
+                                this.fetchDataFields({module: entity.name})
+                            }
                         })
+                        firstTime = false
                     }
                     this.researchStatusLocal = this.researchStatus
                     this.timer = setTimeout(updateLifecycle, 3000)
