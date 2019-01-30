@@ -488,6 +488,8 @@ class BuildsManager(object):
         ssh.connect(AXONIUS_EXPORTS_SERVER, username='ubuntu', password='Password2')
         transport = ssh.get_transport()
         channel = transport.open_session()
+        channel.set_environment_variable(name="AWS_POLL_DELAY_SECONDS", value='10')
+        channel.set_environment_variable(name="AWS_MAX_ATTEMPTS", value='400')
 
         # Check if there are any currently running exports
         running_exports = self.getExports(status=["InProgress"])
