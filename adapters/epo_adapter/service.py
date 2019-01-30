@@ -131,7 +131,7 @@ class EpoAdapter(AdapterBase):
 
             name = device_raw.get('EPOComputerProperties.ComputerName')
             hostname = device_raw.get('EPOComputerProperties.IPHostName')
-            if hostname is None or hostname == '':
+            if hostname is None or hostname == '' or hostname == 'host.docker.internal':
                 hostname = device_raw.get('EPOComputerProperties.ComputerName')
             if str(hostname).lower().endswith('.local') and \
                     ('dc=local' not in ((device_raw.get('EPOComputerLdapProperties.LdapOrgUnit') or '').lower())):
