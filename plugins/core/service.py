@@ -122,6 +122,10 @@ class CoreService(PluginBase, Configurable):
             # we want slightly more time for transactions
             set_mongo_parameter(connection, 'maxTransactionLockRequestTimeoutMillis', 20)
 
+            # Deleting by name "Master", would delete the first "Master" appearance including if the real master name
+            # was changed and a node was named "Master". The reason for this is because of a node_id and master
+            # registration on export and deletion of volume on first boot.
+            self._delete_node_name(MASTER_NODE_NAME)
             self._set_node_name(self.node_id, MASTER_NODE_NAME)
 
     def clean_offline_plugins(self):
@@ -233,6 +237,9 @@ class CoreService(PluginBase, Configurable):
     def _set_node_metadata(self, node_id, key, value):
         self._get_collection('nodes_metadata').find_one_and_update({NODE_ID: node_id}, {
             '$set': {key: value}}, upsert=True, return_document=ReturnDocument.AFTER)
+
+    def _delete_node_name(self, node_name):
+        self._get_collection('nodes_metadata').find_one_and_delete({NODE_NAME: node_name})
 
     def _set_node_name(self, node_id, node_name):
         self._set_node_metadata(node_id, NODE_NAME, node_name)
