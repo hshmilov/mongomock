@@ -131,7 +131,7 @@ class ListGetter(FieldGetter):
         if self.name not in smart_json._dict:
             # creates a new instance of type-checking list for this type
             smart_json._dict[self.name] = _List(self.field_type, self.field_instance, self.name)
-            smart_json.all_fields_found.add(self.name)
+        smart_json.all_fields_found.add(self.name)
         return super().__call__(smart_json)
 
 

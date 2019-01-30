@@ -140,7 +140,6 @@ class EsxAdapter(AdapterBase):
 
         device.cloud_provider = 'VMWare'
         added_macs = []
-        device.network_interfaces = []
         for iface in details.get('networking', []):
             ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]
             if ips:
@@ -156,9 +155,6 @@ class EsxAdapter(AdapterBase):
 
         for hwdevice in details.get('hardware_networking', {}):
             device.add_nic(**hwdevice)
-
-        if len(device.network_interfaces) == 0:
-            device.network_interfaces = None
 
         device.esx_host = details.get('esx_host_name', None)
         device.hostname = guest.get('hostName', '')

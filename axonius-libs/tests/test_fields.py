@@ -93,3 +93,16 @@ def test_none_list():
 
     device.test3 = 0
     value = device.test3
+
+
+def test_exists_with_empty_first():
+    device = MyDeviceAdapter4(set(), set())
+    device.network_interfaces = []
+    device.add_nic(ips=['1.1.1.1'])
+    assert 'network_interfaces' in device.all_fields_found
+
+
+def test_exists():
+    device = MyDeviceAdapter4(set(), set())
+    device.add_nic(ips=['1.1.1.1'])
+    assert 'network_interfaces' in device.all_fields_found
