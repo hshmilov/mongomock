@@ -30,8 +30,8 @@ LEFT JOIN v_GS_OPERATING_SYSTEM on SYS.ResourceID = v_GS_OPERATING_SYSTEM.Resour
 LIMIT_SCCM_QUERY = """
 WHERE DATEDIFF(dd,v_CH_ClientSummary.LastActiveTime,GETDATE())<{0}/24.0;
 """
-QUERY_SOFTWARE = 'Select * from v_GS_INSTALLED_SOFTWARE'
-QUERY_PATCH = 'Select * from v_GS_QUICK_FIX_ENGINEERING'
-QUERY_PROGRAM = 'Select * from v_GS_ADD_REMOVE_PROGRAMS'
-QUERY_PROGRAM_2 = 'Select * from v_GS_ADD_REMOVE_PROGRAMS_64'
-BIOS_QUERY = 'Select * from v_GS_PC_BIOS'
+QUERY_SOFTWARE = 'Select ResourceID, ProductName0, ProductVersion0 from v_GS_INSTALLED_SOFTWARE'
+QUERY_PATCH = 'Select ResourceID, Description0, FixComments0, InstallDate0, HotFixID0 from v_GS_QUICK_FIX_ENGINEERING'
+QUERY_PROGRAM = 'Select ResourceID, DisplayName0, Version0 from v_GS_ADD_REMOVE_PROGRAMS'
+QUERY_PROGRAM_2 = 'Select ResourceID, DisplayName0, Version0 from v_GS_ADD_REMOVE_PROGRAMS_64'
+BIOS_QUERY = 'Select ResourceID, SerialNumber0, Manufacturer0 from v_GS_PC_BIOS'

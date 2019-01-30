@@ -1,3 +1,4 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -13,8 +14,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CrowdStrikeConnection(RESTConnection):
-    ''' rest client for CrowdStrike '''
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -27,6 +26,7 @@ class CrowdStrikeConnection(RESTConnection):
             raise RESTException('No user name or API key')
 
     def get_device_list(self):
+        # pylint: disable=R0912
         ids_list = []
         offset = 0
         response = self._get('devices/queries/devices/v1',
@@ -64,9 +64,26 @@ class CrowdStrikeConnection(RESTConnection):
                                        'do_basic_auth': True})
             except Exception:
                 logger.exception(f'Got problem with id {device_id}')
-
-        for response in self._async_get_only_good_response(async_requests):
+        if len(async_requests) < 480:
+            for response in self._async_get_only_good_response(async_requests):
+                try:
+                    yield response['resources'][0]
+                except Exception:
+                    logger.exception(f'Problem getting async response {str(response)}')
+        async_requests_first = async_requests[:480]
+        async_requests = async_requests[480:]
+        for response in self._async_get_only_good_response(async_requests_first, chunks=1):
             try:
                 yield response['resources'][0]
             except Exception:
                 logger.exception(f'Problem getting async response {str(response)}')
+        time.sleep(5)
+        while async_requests:
+            async_requests_first = async_requests[:500]
+            for response in self._async_get_only_good_response(async_requests_first, chunks=1):
+                try:
+                    yield response['resources'][0]
+                except Exception:
+                    logger.exception(f'Problem getting async response {str(response)}')
+            time.sleep(5)
+            async_requests = async_requests[500:]

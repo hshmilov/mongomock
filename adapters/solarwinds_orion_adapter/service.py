@@ -122,15 +122,19 @@ class SolarwindsOrionAdapter(AdapterBase):
                     device.id = str(id_check)
                     device.name = raw_device_data.get('NodeName')
                     device.description = raw_device_data.get('Description')
+                    available_memory_gb = None
+                    used_memory_gb = None
                     try:
-                        available_memory_bytes = float(raw_device_data.get('MemoryAvailable'))
-                        available_memory_gb = available_memory_bytes / (1024 ** 3)
-                        device.free_physical_memory = available_memory_gb
+                        if raw_device_data.get('MemoryAvailable'):
+                            available_memory_bytes = float(raw_device_data.get('MemoryAvailable'))
+                            available_memory_gb = available_memory_bytes / (1024 ** 3)
+                            device.free_physical_memory = available_memory_gb
                     except Exception:
                         logger.exception(f'No value for the float for {raw_device_data}')
                     try:
-                        used_memory_bytes = float(raw_device_data.get('MemoryUsed'))
-                        used_memory_gb = used_memory_bytes / (1024 ** 3)
+                        if raw_device_data.get('MemoryUsed'):
+                            used_memory_bytes = float(raw_device_data.get('MemoryUsed'))
+                            used_memory_gb = used_memory_bytes / (1024 ** 3)
                     except Exception:
                         logger.exception(f'No value for the float for {raw_device_data}')
 
@@ -143,7 +147,8 @@ class SolarwindsOrionAdapter(AdapterBase):
                     device.physical_memory_percentage = raw_device_data.get('PercentMemoryUsed')
                     device.figure_os(raw_device_data.get('NodeDescription'))
                     try:
-                        device.add_cpu(cores=int(raw_device_data.get('CPUCount')))
+                        if raw_device_data.get('CPUCount'):
+                            device.add_cpu(cores=int(raw_device_data.get('CPUCount')))
                     except Exception:
                         logger.exception(f'Either no value or illegal cast to integer for {raw_device_data}')
                     device.uri = raw_device_data.get('Uri')

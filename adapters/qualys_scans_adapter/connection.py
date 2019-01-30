@@ -48,10 +48,24 @@ class QualysScansConnection(RESTConnection):
             logger.info(f'Got {pages_count * consts.DEVICES_PER_PAGE} devices so far')
             pages_count += 1
             current_iterator_data = consts.QUALYS_SCANS_ITERATOR_FORMAT.format(last_id, consts.DEVICES_PER_PAGE)
-            current_clients_page = self._post('qps/rest/2.0/search/am/hostasset/',
-                                              do_basic_auth=True,
-                                              use_json_in_body=False,
-                                              body_params=current_iterator_data)['ServiceResponse']
+            try:
+                current_clients_page = self._post('qps/rest/2.0/search/am/hostasset/',
+                                                  do_basic_auth=True,
+                                                  use_json_in_body=False,
+                                                  body_params=current_iterator_data)['ServiceResponse']
+            except Exception:
+                try:
+                    logger.exception(f'First POST failure at {last_id}')
+                    current_clients_page = self._post('qps/rest/2.0/search/am/hostasset/',
+                                                      do_basic_auth=True,
+                                                      use_json_in_body=False,
+                                                      body_params=current_iterator_data)['ServiceResponse']
+                except Exception:
+                    logger.exception(f'Second POST failure at {last_id}')
+                    current_clients_page = self._post('qps/rest/2.0/search/am/hostasset/',
+                                                      do_basic_auth=True,
+                                                      use_json_in_body=False,
+                                                      body_params=current_iterator_data)['ServiceResponse']
             if pages_count == 1:
                 total_count = current_clients_page['count']
                 logger.info(f'Total Count is {total_count}')
