@@ -3,6 +3,7 @@
 import logging
 import socket
 import struct
+import time
 from collections import defaultdict
 from urllib.parse import urljoin
 
@@ -13,6 +14,9 @@ from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from axonius.utils import json
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+MAX_RATE_LIMIT_TRIES = 10
+RATE_LIMIT_SLEEP = 0.25
 
 
 def cidr_to_netmask(cidr):
@@ -38,6 +42,10 @@ class CiscoPrimeClient:
 
         self._sess = None
 
+    @staticmethod
+    def _is_rate_limited(resp) -> bool:
+        return resp.status_code == 503 and 'rate limit' in resp.text.lower()
+
     def get(self, path, *args, **kwargs):
         """
         Wrapper for invoking session get
@@ -45,7 +53,19 @@ class CiscoPrimeClient:
         """
         url = urljoin(self._url, path)
         logger.debug(f'getting {url}')
-        resp = self._sess.get(url, *args, **kwargs, verify=False, auth=(self._username, self._password))
+
+        # Non-admin users are rate limited, by default it means that we can execute up to 5 GET requests per second.
+        # In order to overcome this problem we are executing the request in loop until we are getting response that
+        # is different from 503
+        for i in range(MAX_RATE_LIMIT_TRIES):
+            resp = self._sess.get(url, *args, **kwargs, verify=False, auth=(self._username, self._password))
+
+            if not self._is_rate_limited(resp):
+                break
+
+            logger.debug('Got rate limited response')
+            time.sleep(RATE_LIMIT_SLEEP)
+
         if resp.status_code != 200:
             logger.exception(f'Got unexpected status code: {resp.status_code} content: {resp.content} url: {resp.url}')
             raise CiscoPrimeException(f'Got unexpected status code {resp.status_code}')
@@ -270,7 +290,6 @@ class CiscoPrimeClient:
         creds = dict(map(lambda cred: (cred['propertyName'], cred['stringValue']),
                          creds['mgmtResponse']['credentialDTO']['credentialList']['credentialList']))
         return creds
-
 
 
 # Simple tests
