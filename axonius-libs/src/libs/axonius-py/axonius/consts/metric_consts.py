@@ -5,3 +5,7 @@ class SystemMetric:
     USERS_SEEN = 'system.users.seen'
     USERS_UNIQUE = 'system.users.unique'
     ALERT_RAW = 'system.alert.raw'
+
+
+class ApiMetric:
+    REQUEST_PATH = 'api.request.path'

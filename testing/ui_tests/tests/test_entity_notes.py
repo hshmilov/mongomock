@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 import time
 
+from axonius.consts.metric_consts import ApiMetric
+from axonius.entities import EntityType
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_consts import NOTE_COLUMN
 from ui_tests.tests.ui_test_base import TestBase
-from axonius.entities import EntityType
 
 
 class TestEntityNotes(TestBase):
@@ -22,6 +23,9 @@ class TestEntityNotes(TestBase):
             self.settings_page.select_permissions(entity_type.name, self.settings_page.READ_WRITE_PERMISSION)
         self.settings_page.click_save_manage_users_settings()
         self.settings_page.wait_for_user_permissions_saved_toaster()
+        self.axonius_system.gui.log_tester.is_metric_in_log(metric_name=ApiMetric.REQUEST_PATH,
+                                                            value='/api/devices/_id_/notes')
+        self.axonius_system.gui.log_tester.is_str_in_log('"method": "PUT"')
 
     def _execute_notes_basic_operations(self, entities_page):
         entities_page.load_notes()

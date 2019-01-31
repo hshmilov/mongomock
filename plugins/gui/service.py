@@ -1,3 +1,4 @@
+import binascii
 import configparser
 import io
 import json
@@ -29,7 +30,7 @@ from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
 from elasticsearch import Elasticsearch
 from flask import (after_this_request, jsonify, make_response, redirect,
-                   request, send_file, session)
+                   request, send_file, session, has_request_context)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
 import OpenSSL
@@ -68,7 +69,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           SYSTEM_SETTINGS)
-from axonius.consts.metric_consts import SystemMetric
+from axonius.consts.metric_consts import (SystemMetric, ApiMetric)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
@@ -124,6 +125,16 @@ DEVICE_ADVANCED_FILEDS = ['installed_software', 'software_cves',
 USER_ADVANCED_FILEDS = ['associated_devices']
 
 
+def filter_ids(s):
+    if not s:
+        return s
+    try:
+        binascii.unhexlify(s)
+        return '_id_'
+    except Exception:
+        return s
+
+
 def session_connection(func, required_permissions: Iterable[Permission]):
     """
     Decorator stating that the view requires the user to be connected
@@ -137,6 +148,15 @@ def session_connection(func, required_permissions: Iterable[Permission]):
         permissions = user.get('permissions')
         if not check_permissions(permissions, required_permissions, request.method) and not user.get('admin'):
             return return_error('You are lacking some permissions for this request', 401)
+
+        if has_request_context():
+            path = request.path
+            splitted = path.split('/')
+            noids = [filter_ids(s) for s in splitted]
+            cleanpath = '/'.join(noids)
+            method = request.method
+            if method != 'GET':
+                log_metric(logger, ApiMetric.REQUEST_PATH, cleanpath, method=request.method)
 
         return func(self, *args, **kwargs)
 
