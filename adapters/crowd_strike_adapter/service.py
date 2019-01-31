@@ -28,7 +28,7 @@ class CrowdStrikeAdapter(AdapterBase):
 
     @staticmethod
     def _get_client_id(client_config):
-        return client_config['domain']
+        return client_config['domain'] + '_' + client_config['username']
 
     @staticmethod
     def _test_reachability(client_config):

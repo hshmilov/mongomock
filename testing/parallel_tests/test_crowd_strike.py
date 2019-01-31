@@ -14,7 +14,7 @@ class TestCrowdStrikeAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['domain']
+        return client_details['domain'] + '_' + client_details['username']
 
     @property
     def some_client_details(self):
