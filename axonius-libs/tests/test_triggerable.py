@@ -86,7 +86,8 @@ class SimpleWaitableTriggerableImplementedMock(WaitableTriggerableImplementedMoc
        stop_max_delay=2000)
 def verify_state(triggerable, state, job_name):
     res = triggerable._get_state(job_name)
-    assert res == state, f"Not equal {res} and {state}"
+    assert state['state'] == res['state']
+    assert state['last_error'] in res['last_error']
     return True
 
 
@@ -109,7 +110,7 @@ def test_trigger_activated():
     x._trigger(job_name)
     assert x._get_state(job_name) == {
         "state": "Scheduled",
-        "last_error": "Ran OK"
+        "last_error": "ds"
     }
     retry_assert_equal(x.counter, 1)
 
@@ -121,14 +122,14 @@ def test_double_trigger():
     x._trigger(job_name)
     assert x._get_state(job_name) == {
         "state": "Scheduled",
-        "last_error": "Ran OK"
+        "last_error": "ds"
     }
     retry_assert_equal(x.counter, 1)
     x._trigger(job_name)
 
     assert verify_state(x, {
         "state": "Scheduled",
-        "last_error": "Ran OK"
+        "last_error": "ds"
     }, job_name)
     retry_assert_equal(x.counter, 2)
 
@@ -162,7 +163,7 @@ def test_double_trigger_with_failure():
 
     assert x._get_state(job_name) == {
         "state": "Scheduled",
-        "last_error": "Ran OK"
+        "last_error": "ds"
     }
     retry_assert_equal(x.counter, 1)
     try:
@@ -175,6 +176,6 @@ def test_double_trigger_with_failure():
 
     assert verify_state(x, {
         "state": "Scheduled",
-        "last_error": "Exception('Fail 2',)"
+        "last_error": "Fail 2"
     }, job_name)
     retry_assert_equal(x.counter, 2)

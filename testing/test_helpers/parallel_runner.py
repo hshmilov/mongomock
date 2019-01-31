@@ -87,7 +87,7 @@ class ParallelRunner(object):
                     sys.stderr.write(f"{proc} timed out")
                 for future_task in self.waiting_list:
                     sys.stderr.write(f"{future_task[0]} did not start running because of the timeout")
-                for failed_task_name, failed_task_rc in failed_tasks:
+                for failed_task_name, failed_task_rc in failed_tasks.items():
                     sys.stderr.write(f'{failed_task_name} failed with return code {failed_task_rc}')
                 sys.stderr.flush()
                 raise Exception("Not all tasks finished successfully")

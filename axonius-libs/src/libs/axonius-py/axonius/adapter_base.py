@@ -46,7 +46,7 @@ def is_plugin_adapter(plugin_type: str) -> bool:
     return plugin_type == adapter_consts.ADAPTER_PLUGIN_TYPE
 
 
-class AdapterBase(PluginBase, Configurable, Triggerable, Feature, ABC):
+class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     """
     Base abstract class for all adapters
     Terminology:

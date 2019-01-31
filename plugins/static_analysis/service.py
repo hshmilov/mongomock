@@ -45,7 +45,7 @@ def _get_id_and_associated_adapter(adapter_device) -> Tuple[str, object]:
     return _id, associated_adapters
 
 
-class StaticAnalysisService(PluginBase, Triggerable):
+class StaticAnalysisService(Triggerable, PluginBase):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 

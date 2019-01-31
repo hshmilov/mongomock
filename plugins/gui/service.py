@@ -261,7 +261,7 @@ if os.environ.get('HOT', None) == 'true':
     session = None
 
 
-class GuiService(PluginBase, Triggerable, Configurable, API):
+class GuiService(Triggerable, PluginBase, Configurable, API):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
@@ -1647,11 +1647,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         del action_data['entities']
 
         try:
-            response = self.request_remote_plugin('run_action', self.device_control_plugin, 'post', json=action_data)
-            if response.status_code != 200:
-                message = f'Running action {action_type} failed because {str(json.loads(response.content)["message"])}'
-                logger.error(message)
-                return return_error(message, 400)
+            # TODO: Implement checking parameters here
+            if 'action_name' not in action_data or ('command' not in action_data and 'binary' not in action_data):
+                return return_error('Some data is missing')
+
+            self.request_remote_plugin('trigger/execute?priority=True&blocking=False',
+                                       self.device_control_plugin,
+                                       'post',
+                                       json=action_data)
             return '', 200
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)

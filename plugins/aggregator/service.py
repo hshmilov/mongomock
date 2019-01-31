@@ -141,7 +141,7 @@ aggregation_stages_for_entity_view = [
 ]
 
 
-class AggregatorService(PluginBase, Triggerable):
+class AggregatorService(Triggerable, PluginBase):
     # This is the amount of delay we should wait before performing a full db rebuild again and again,
     # to introduce some latency over entity_db so other processes can take place
     MIN_DELAY_BETWEEN_FULL_DB_REBUILD = 10

@@ -87,4 +87,4 @@ class SMTPService(WeaveService):
 
     @property
     def image(self):
-        return 'golang:1.11.2'
+        return 'smtp_server'

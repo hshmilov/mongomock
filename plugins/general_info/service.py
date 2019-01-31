@@ -42,7 +42,7 @@ MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 60 * 10
 MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 60 * 10
 
 
-class GeneralInfoService(PluginBase, Triggerable):
+class GeneralInfoService(Triggerable, PluginBase):
 
     class MyDeviceAdapter(DeviceAdapter):
 

@@ -38,7 +38,7 @@ DCOM_ERROR_PROBABLY_RPC_ACCESS_DENIED = "0x800706ba"
 DCOM_ERROR_INTERNET_PROBLEMS = "0x80072EE2"
 
 
-class PmStatusService(PluginBase, Triggerable):
+class PmStatusService(Triggerable, PluginBase):
     class MyDeviceAdapter(DeviceAdapter):
         pm_last_execution_success = Field(datetime, "Last PM Success")
 

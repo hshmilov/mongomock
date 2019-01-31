@@ -1,8 +1,15 @@
 import functools
 import time
 import logging
+import traceback
+from datetime import timedelta
+from typing import Iterable, Tuple
 
-from axonius.plugin_base import PluginBase, return_error, add_rule
+from promise import Promise
+
+from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
+from axonius.mixins.triggerable import Triggerable
+from axonius.plugin_base import PluginBase, add_rule
 from axonius.utils.files import get_local_config_file, get_random_uploaded_path_name
 from axonius.utils.parsing import get_exception_string
 from axonius.entities import AxoniusDevice
@@ -13,21 +20,53 @@ MAX_TRIES_FOR_EXECUTION_REQUEST = 3
 SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS = 120
 
 
-class DeviceControlService(PluginBase):
+class DeviceControlService(Triggerable, PluginBase):
     def __init__(self, *args, **kargs):
-        super().__init__(get_local_config_file(__file__), *args, **kargs)
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=DEVICE_CONTROL_PLUGIN_NAME, *args, **kargs)
 
-    @add_rule('run_action', methods=['POST'])
-    def run_action(self):
-        """
-        Calls run_action_internal.
-        :return:
-        """
+    def _triggered(self, job_name: str, post_json: dict, *args):
         if not self._execution_enabled:
-            return return_error("Execution is disabled", 400)
-        return self.run_action_internal()
+            raise RuntimeError('Execution is disabled')
+        if job_name != 'execute':
+            raise RuntimeError('Job name is wrong')
 
-    def run_action_internal(self):
+        promises = list(self.run_action_internal(post_json))
+        promises_results = {}
+        for p, internal_axon_id in promises:
+            Promise.wait(p, timedelta(minutes=30).total_seconds())
+            data = p.value
+
+            if p.is_fulfilled:
+                output = data['output']['product'][0]
+                success = output['status'] == 'ok'
+                promises_results[internal_axon_id] = {
+                    'success': success,
+                    'value': data
+                }
+            else:
+                logger.info(f'{data} is type {type(data)} {traceback.format_tb(data.__traceback__)}')
+                data = data.args[0]  # extract inner data from exception
+                product = data['output'].get('product')
+                if product and isinstance(product, BaseException):
+                    data['output']['product'] = ''.join(traceback.format_tb(product.__traceback__))
+                try:
+                    logger.info(f'{data} is type {type(data)} {traceback.format_tb(data.__traceback__)}')
+                    data = data.args[0]  # extract inner data from exception
+                    product = data['output'].get('product')
+                    if product and isinstance(product, BaseException):
+                        data['output']['product'] = ''.join(traceback.format_tb(product.__traceback__))
+                except Exception:
+                    logger.info(f'Failed figuring out the error reason')
+
+                promises_results[internal_axon_id] = {
+                    'success': False,
+                    'value': str(data)
+                }
+
+        return promises_results
+
+    def run_action_internal(self, request_content) -> Iterable[Tuple[Promise, str]]:
         """
         Gets a list of devices and an action to do. Executes the action (currently shell command / binary)
         fails temporarily, reruns it.
@@ -45,9 +84,9 @@ class DeviceControlService(PluginBase):
             binary - the actual binary to deploy and execute (will be removed after run)
             params - parameters to give the binary.
 
-        :return:
+        :return: Iterator for tuples(Promise, internal_axon_id) - where the promise is for the execution on the
+                    internal_axon_id given
         """
-        request_content = self.get_request_data_as_object()
         try:
             internal_axon_ids = request_content['internal_axon_ids']    # a list of internal axon id's
             action_type = request_content['action_type']
@@ -61,12 +100,12 @@ class DeviceControlService(PluginBase):
                 # Optional parameters
                 action_params['params'] = request_content.get('params', '')
             else:
-                raise ValueError(f"expected action type to be shell/deploy but got {action_type}")
+                raise ValueError(f'expected action type to be shell/deploy but got {action_type}')
 
-            assert type(internal_axon_ids) == list
+            assert isinstance(internal_axon_ids, list)
         except Exception:
-            logger.exception("run_action: Incorrect parameters!")
-            raise ValueError("run_action: Incorrect Parameters!")
+            logger.exception('run_action: Incorrect parameters!')
+            raise ValueError('run_action: Incorrect Parameters!')
 
         # Our steps:
         # 1. Get a list of these devices.
@@ -83,26 +122,24 @@ class DeviceControlService(PluginBase):
             # we are only using it from the gui (which shows the devices from the view that is okay until we
             # fix that bug).
             device = list(self.devices.get(internal_axon_id=internal_axon_id))
-            assert len(device) == 1, f"Internal axon id {internal_axon_id} was not found"
+            assert len(device) == 1, f'Internal axon id {internal_axon_id} was not found'
             devices.append(device[0])
 
         # Run the command.
-        logger.info(f"Got {len(devices)} devices to run action {action_name} on. Sending commands..")
+        logger.info(f'Got {len(devices)} devices to run action {action_name} on. Sending commands..')
         for device in devices:
             # We might already have such action_name so clean the latest tags.
-            device.add_label(f"Action '{action_name}' Error", False)
-            device.add_label(f"Action '{action_name}' In Progress", False)
-            device.add_label(f"Action '{action_name}' Success", False)
-            device.add_label(f"Action '{action_name}' Failure", False)
+            device.add_label(f'Action \'{action_name}\' Error', False)
+            device.add_label(f'Action \'{action_name}\' In Progress', False)
+            device.add_label(f'Action \'{action_name}\' Success', False)
+            device.add_label(f'Action \'{action_name}\' Failure', False)
 
-            self.__request_action_from_device(device, action_name, action_type, action_params, 1)
-            device.add_label(f"Action '{action_name}' In Progress")
-
-        # This is not a synchronous functionality, so we are done.
-        return "ok"
+            yield self.__request_action_from_device(device, action_name, action_type, action_params, 1), \
+                device.internal_axon_id
+            device.add_label(f'Action \'{action_name}\' In Progress')
 
     def __request_action_from_device(self, device: AxoniusDevice, action_name, action_type,
-                                     action_params, attempt_number, sleep_time=0):
+                                     action_params, attempt_number, sleep_time=0) -> Promise:
         """
         Requests action from a device.
         :param device: an AxoniusDevice object.
@@ -116,32 +153,32 @@ class DeviceControlService(PluginBase):
 
         time.sleep(sleep_time)
 
-        if action_type == "shell":
+        if action_type == 'shell':
             p = device.request_action(
-                "execute_shell",
-                {"shell_commands":
-                 {os: [action_params['command']] for os in ["Windows", "Linux", "Mac", "iOS", "Android"]}}
+                'execute_shell',
+                {'shell_commands':
+                 {os: [action_params['command']] for os in ['Windows', 'Linux', 'Mac', 'iOS', 'Android']}}
             )
-        elif action_type == "deploy":
+        elif action_type == 'deploy':
             # we need to store the binary file.
             binary_arr = self._grab_file_contents(action_params['binary'])
-            assert type(binary_arr) == bytes
-            random_filepath = get_random_uploaded_path_name("device_control_deploy_binary")
-            with open(random_filepath, "wb") as binary_file:
+            assert isinstance(binary_arr, bytes)
+            random_filepath = get_random_uploaded_path_name('device_control_deploy_binary')
+            with open(random_filepath, 'wb') as binary_file:
                 binary_file.write(binary_arr)
 
             # We do not delete the file, assuming its small enough to just remain there and to be
             # there for further inspection if we need it.
 
             p = device.request_action(
-                "execute_binary",
+                'execute_binary',
                 {
-                    "binary_file_path": random_filepath,
-                    "binary_params": action_params['params']
+                    'binary_file_path': random_filepath,
+                    'binary_params': action_params['params']
                 }
             )
         else:
-            raise ValueError(f"expected action type to be shell/deploy but got {action_type}")
+            raise ValueError(f'expected action type to be shell/deploy but got {action_type}')
 
         p.then(did_fulfill=functools.partial(self.run_action_success, device, action_name,
                                              action_type, action_params, attempt_number),
@@ -162,38 +199,43 @@ class DeviceControlService(PluginBase):
         :param data: the result of the execution.
         :return:
         """
-        logger.info("got into run shell success.")
+        logger.info('got into run shell success.')
         try:
-            output = data["output"]["product"][0]
-            if output["status"] != "ok":
+            output = data['output']['product'][0]
+            if output['status'] != 'ok':
                 # Its actually a failure!
                 return self.run_action_failure(device, action_name, action_type, action_params, attempt_number,
-                                               Exception(f"data status is not ok: {output}"))
+                                               Exception(f'data status is not ok: {output}'))
         except Exception:
-            logger.exception("Error in run shell success beginning")
+            logger.exception('Error in run shell success beginning')
             raise
 
         # Its a success
         try:
-            logger.info(f"Success running action {action_name} "
-                        f"on device {device.internal_axon_id} "
-                        f"on attempt {attempt_number}")
+            logger.info(f'Success running action {action_name} '
+                        f'on device {device.internal_axon_id} '
+                        f'on attempt {attempt_number}')
 
-            data_label = f"Acton type: {action_type}. "
-            if action_type == "shell":
-                data_label += f"Command: {action_params['command']}"
-            elif action_type == "deploy":
-                data_label += f"Binary file params: {action_params['params']}"
+            data_label = f'Acton type: {action_type}. '
+            if action_type == 'shell':
+                command = action_params['command']
+                data_label += f'Command: {command}'
+            elif action_type == 'deploy':
+                params = action_params['params']
+                data_label += f'Binary file params: {params}'
 
-            data_label += f"\nResult:\n{output['data']}"
-            device.add_data(f"Action '{action_name}'", data_label)
-            device.add_label(f"Action '{action_name}' Success")
-            device.add_label(f"Action '{action_name}' In Progress", False)
+            data = output['data']
+            data_label += f'\nResult:\n{data}'
+            device.add_data(f'Action \'{action_name}\'', data_label)
+            device.add_label(f'Action \'{action_name}\' Success')
+            device.add_label(f'Action \'{action_name}\' In Progress', False)
 
         except Exception:
-            logger.exception(f"Exception in run_action_success")
-            device.add_label(f"Action '{action_name}' Error")
-            device.add_data(f"Action '{action_name}' Last Error", get_exception_string())
+            logger.exception(f'Exception in run_action_success')
+            device.add_label(f'Action \'{action_name}\' Error')
+            device.add_data(f'Action \'{action_name}\' Last Error', get_exception_string())
+
+        return data
 
     def run_action_failure(self, device: AxoniusDevice, action_name, action_type,
                            action_params, attempt_number, exc):
@@ -207,17 +249,17 @@ class DeviceControlService(PluginBase):
         :param exc: a string representing the error.
         :return:
         """
-        logger.info(f"Got failure (attempt no {attempt_number}/{MAX_TRIES_FOR_EXECUTION_REQUEST}) for "
-                    f"device {device.internal_axon_id}. retrying in {SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS}. "
-                    f"exc is {str(exc)}")
+        logger.info(f'Got failure (attempt no {attempt_number}/{MAX_TRIES_FOR_EXECUTION_REQUEST}) for '
+                    f'device {device.internal_axon_id}. retrying in {SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS}. '
+                    f'exc is {str(exc)}')
         try:
             # Do not retry if the device is blacklisted
-            if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST or "[BLACKLIST]" in str(exc):
-                logger.error(f"Failed ({attempt_number}) with action {action_name}: "
-                             f"attempts: {attempt_number}, exc: {exc}")
-                device.add_data(f"Action '{action_name}' Last Error", str(exc))
-                device.add_label(f"Action '{action_name}' Failure")
-                device.add_label(f"Action '{action_name}' In Progress", False)
+            if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST or '[BLACKLIST]' in str(exc):
+                logger.error(f'Failed ({attempt_number}) with action {action_name}: '
+                             f'attempts: {attempt_number}, exc: {exc}')
+                device.add_data(f'Action \'{action_name}\' Last Error', str(exc))
+                device.add_label(f'Action \'{action_name}\' Failure')
+                device.add_label(f'Action \'{action_name}\' In Progress', False)
             else:
                 # sleep and rerun
                 self.execution_promises.submit(self.__request_action_from_device,
@@ -229,9 +271,9 @@ class DeviceControlService(PluginBase):
                                                SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS)
 
         except Exception:
-            logger.exception("Exception in run_action_failure")
-            device.add_label(f"Action '{action_name}' Error")
-            device.add_data(f"Action '{action_name}' Last Error", get_exception_string())
+            logger.exception('Exception in run_action_failure')
+            device.add_label(f'Action \'{action_name}\' Error')
+            device.add_data(f'Action \'{action_name}\' Last Error', get_exception_string())
 
     @add_rule('test_run_action', methods=['POST'], should_authenticate=False)
     def test_run_action(self):
@@ -239,4 +281,5 @@ class DeviceControlService(PluginBase):
         Just a wrapper to allow run_shell from tests
         :return:
         """
-        return self.run_action_internal()
+        list(self.run_action_internal(self.get_request_data_as_object()))
+        return ''

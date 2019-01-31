@@ -31,7 +31,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 ALWAYS_ASYNC_PLUGINS = ['static_analysis', 'general_info', 'pm_status']
 
 
-class SystemSchedulerService(PluginBase, Triggerable, Configurable):
+class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)

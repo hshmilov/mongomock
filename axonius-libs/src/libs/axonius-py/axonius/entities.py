@@ -2,6 +2,9 @@
 Axonius entities class wrappers. Implement methods to be used on devices/users from the db.
 """
 import logging
+
+from promise import Promise
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 import functools
@@ -261,7 +264,7 @@ class AxoniusEntity(object):
 
             return data[0]['data'].get(name)
 
-    def request_action(self, name, data):
+    def request_action(self, name, data) -> Promise:
         """
         Requests an action from the execution service.
         :param name: the name of the action, e.g. "execute_shell".

@@ -261,7 +261,6 @@ axonius-libs/src/libs/axonius-py/axonius/logging/logstash_http_log_handler.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/activatable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/configurable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/devicedisabelable.py
-axonius-libs/src/libs/axonius-py/axonius/mixins/triggerable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/userdisabelable.py
 axonius-libs/src/libs/axonius-py/axonius/profiling/memory.py
 axonius-libs/src/libs/axonius-py/axonius/utils/debug.py
@@ -291,7 +290,6 @@ plugins/careful_execution_correlator/engine.py
 plugins/careful_execution_correlator/tests/test_careful_execution_correlator.py
 plugins/core/exceptions.py
 plugins/core/service.py
-plugins/device_control/service.py
 plugins/execution_correlator/tests/test_execution_correlator.py
 plugins/general_info/service.py
 plugins/general_info/subplugins/basic_computer_info.py

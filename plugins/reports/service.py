@@ -75,7 +75,7 @@ def query_result_diff(current_result: list, last_result: list) -> dict:
     return diff_dict
 
 
-class ReportsService(PluginBase, Triggerable):
+class ReportsService(Triggerable, PluginBase):
     def __init__(self, *args, **kwargs):
         """ This service is responsible for alerting users in several ways and cases when a
                         report query result changes. """

@@ -100,10 +100,7 @@ def figure_actual_os(adapters):
     raise OSTypeInconsistency(oses)  # some adapters disagree
 
 
-class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
     @classmethod
     def specific_supported_features(cls) -> list:
         return ['Correlator']
