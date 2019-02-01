@@ -45,14 +45,15 @@ class SystemSchedulerService(PluginService):
 
     def _migrate_db(self):
         super()._migrate_db()
-        if self.db_schema_version < 1:
-            self._update_schema_version_1()
+        # Do not change this to 1.
+        if self.db_schema_version < 2:
+            self._update_schema_version_2()
 
-        if self.db_schema_version != 1:
+        if self.db_schema_version != 2:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
-    def _update_schema_version_1(self):
-        print('upgrade to schema 1')
+    def _update_schema_version_2(self):
+        print('upgrade to schema 2')
         try:
             config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
             current_config = config_collection.find_one({
@@ -86,7 +87,7 @@ class SystemSchedulerService(PluginService):
             )
 
         except Exception as e:
-            print(f'Exception while upgrading scheduler db to version 1. Details: {e}')
+            print(f'Exception while upgrading scheduler db to version 2. Details: {e}')
         finally:
-            print('Upgraded system scheduler to version 1')
+            print('Upgraded system scheduler to version 2')
             self.db_schema_version = 2

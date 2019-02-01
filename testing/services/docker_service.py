@@ -73,8 +73,7 @@ class DockerService(AxonService):
             f'{self.container_name}_data:/home/axonius',
             f'{self.log_dir}:/home/axonius/logs',
             f'{self.uploaded_files_dir}:/home/axonius/uploaded_files',
-            f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro',
-            f'{self.cortex_root_dir}/axonius-libs/src/config/uwsgi.ini:/home/axonius/config/uwsgi.ini',
+            f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro'
         ]
 
     @property
@@ -92,6 +91,10 @@ class DockerService(AxonService):
         """
         return None
 
+    @property
+    def get_max_uwsgi_threads(self) -> int:
+        return 100
+
     def get_dockerfile(self):
         return f'''
 FROM axonius/axonius-libs
@@ -104,6 +107,28 @@ COPY ./ ./{self.package_name}/
 
 # Link to libcrypto for RSA keys (originally was a problem for chef adapter)
 RUN ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so
+'''[1:]
+
+    def get_uwsgi_file(self):
+        return f'''
+[uwsgi]
+chdir = /home/axonius/app
+module = main:wsgi_app
+
+master = true
+threads = {self.get_max_uwsgi_threads}
+
+socket = /tmp/openresty-uwsgi.sock
+chmod-socket = 666
+vacuum = true
+
+die-on-term = true
+reload-on-exception = true
+
+ignore-sigpipe = true
+ignore-write-errors = true
+disable-write-exception = true
+buffer-size = 32768
 '''[1:]
 
     def get_main_file(self):
@@ -283,6 +308,12 @@ else:
         assert '"' not in main_file_data
         if len(main_file_data) > 0:
             dockerfile += f'\nRUN echo "{main_file_data}" > ./main.py'
+
+        # Append the main.py file creation
+        uwsgi_file = self.get_uwsgi_file().replace('\n', '\\n')
+        assert '"' not in uwsgi_file
+        if len(uwsgi_file) > 0:
+            dockerfile += f'\nRUN echo "{uwsgi_file}" > /etc/uwsgi.ini'
 
         # dump Dockerfile.autogen to local folder
         autogen_path = dockerfile_path + '.autogen'

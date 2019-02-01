@@ -10,6 +10,10 @@ class CoreService(PluginService):
     def __init__(self):
         super().__init__('core')
 
+    @property
+    def get_max_uwsgi_threads(self) -> int:
+        return 400  # core serves as a proxy
+
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 1:

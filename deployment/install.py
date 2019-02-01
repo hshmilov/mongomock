@@ -114,17 +114,21 @@ def install(first_time, root_pass):
 
     load_images()
 
-    start_axonius()
-    run_discovery()
     set_logrotate(root_pass)
 
     if not first_time:
         chown_folder(root_pass, TEMPORAL_PATH)
         set_booted_for_production()
-        shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
     chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)  # new sources
     set_special_permissions(root_pass)
+
+    # This parts tends to have problems. Minimize the code after it as much as possible.
+    start_axonius()
+    run_discovery()
+
+    if not first_time:
+        shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
 
 def validate_old_state(root_pass):
