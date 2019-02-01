@@ -69,20 +69,13 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         Get plugin state.
         """
-        return jsonify({
-            'state': self.state._asdict(),
-            'stopping': self.__stopping_initiated
-        })
-
-    @add_rule('next_run_time', should_authenticate=False)
-    def get_next_run_time(self):
-        """	
-        Calculates next run time by adding research rate seconds to the time last run time	
-        :return: The time next research is supposed to start running	
-        """
         next_run_time = self._research_phase_scheduler.get_job(
             scheduler_consts.RESEARCH_THREAD_ID).next_run_time
-        return str(int(time.mktime(next_run_time.timetuple())))
+        return jsonify({
+            'state': self.state._asdict(),
+            'stopping': self.__stopping_initiated,
+            'next_run_time': time.mktime(next_run_time.timetuple())
+        })
 
     def _on_config_update(self, config):
         logger.info(f'Loading SystemScheduler config: {config}')

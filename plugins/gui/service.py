@@ -3447,13 +3447,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 # Set 0 or 1, depending if reached current status yet
                 sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})
 
-        run_time_response = self.request_remote_plugin('next_run_time', SYSTEM_SCHEDULER_PLUGIN_NAME)
-        if run_time_response.status_code != 200:
-            return return_error(f'Error fetching run time of system scheduler. Reason: {run_time_response.text}')
-
         return jsonify({
             'sub_phases': sub_phases,
-            'next_run_time': run_time_response.text,
+            'next_run_time': state_response['next_run_time'],
             'status': nice_state.name
         })
 

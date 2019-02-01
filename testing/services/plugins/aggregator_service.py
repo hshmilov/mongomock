@@ -37,8 +37,10 @@ class AggregatorService(PluginService):
             self._update_schema_version_5()
         if self.db_schema_version < 6:
             self._update_schema_version_6()
+        if self.db_schema_version < 7:
+            self._update_schema_version_7()
 
-        if self.db_schema_version != 6:
+        if self.db_schema_version != 7:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -113,7 +115,7 @@ class AggregatorService(PluginService):
             devices_db = self.db.client[self.plugin_name]['devices_db']
 
             for device in devices_db.find({
-                    'tags.plugin_unique_name': 'gui'
+                'tags.plugin_unique_name': 'gui'
             }):
                 relevant_tags = [
                     x
@@ -349,6 +351,26 @@ class AggregatorService(PluginService):
             self.db_schema_version = 6
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 6. Details: {e}')
+            traceback.print_exc()
+
+    def _update_schema_version_7(self):
+        try:
+            all_adapters = list(self.db.client['core']['configs'].find())
+            for entity_type in EntityType:
+                global_fields_for_entity = self.db.client['aggregator'][entity_type.value + '_fields']
+                for adapter in all_adapters:
+                    all_field_data = list(self.db.client[adapter[PLUGIN_UNIQUE_NAME]][entity_type.value + '_fields'].
+                                          find({}))
+                    for field_data in all_field_data:
+                        field_data[PLUGIN_UNIQUE_NAME] = adapter[PLUGIN_UNIQUE_NAME]
+                        field_data.pop('_id', None)
+
+                    if all_field_data:
+                        global_fields_for_entity.insert_many(all_field_data)
+
+            self.db_schema_version = 7
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 7. Details: {e}')
             traceback.print_exc()
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)

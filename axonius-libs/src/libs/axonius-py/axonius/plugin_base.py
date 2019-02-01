@@ -385,6 +385,9 @@ class PluginBase(Configurable, Feature):
         self._open_actions = dict()
         self._open_actions_lock = threading.Lock()
 
+        # Used in get_available_plugins_from_core - see docs there
+        self.__get_all_plugins_from_core_lock = threading.Lock()
+
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
         AXONIUS_REST.url_map.strict_slashes = False  # makes routing to "page" and "page/" the same.
@@ -558,7 +561,6 @@ class PluginBase(Configurable, Feature):
     def _save_field_names_to_db(self, entity_type: EntityType):
         """ Saves fields_set and raw_fields_set to the Plugin's DB """
         entity_fields = self._entity_adapter_fields[entity_type]
-        collection_name = f"{entity_type.value}_fields"
         my_entity = self._my_adapters_map[entity_type]
 
         if not my_entity:
@@ -575,8 +577,17 @@ class PluginBase(Configurable, Feature):
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
             # Upsert new fields
-            fields_collection = self._get_db_connection()[self.plugin_unique_name][collection_name]
-            fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
+            fields_collection = self._all_fields_db_map[entity_type]
+            fields_collection.update({
+                'name': 'raw',
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+            }, {
+                '$addToSet': {
+                    'raw': {
+                        '$each': raw_fields
+                    }
+                }
+            }, upsert=True)
 
             # Dynamic fields that were somewhen in the schema must always stay there (unless explicitly removed)
             # because otherwise we would always miss them (image an adapter parsing csv1 and then removing it. csv1's
@@ -586,6 +597,8 @@ class PluginBase(Configurable, Feature):
             current_dynamic_schema_names = [field['name'] for field in current_dynamic_schema['items']]
 
             # Search for an old dynamic schema and add whatever we don't already have
+
+            # TODO: Figure out if this could be optimized away
             dynamic_fields_collection_in_db = fields_collection.find_one({'name': 'dynamic'})
             if dynamic_fields_collection_in_db:
                 for old_dynamic_field in dynamic_fields_collection_in_db.get('schema', {}).get('items', []):
@@ -593,31 +606,46 @@ class PluginBase(Configurable, Feature):
                         current_dynamic_schema['items'].append(old_dynamic_field)
 
             # Save the new dynamic schema
-            fields_collection.update({'name': 'dynamic'},
-                                     {'name': 'dynamic', 'schema': current_dynamic_schema},
-                                     upsert=True)
+            fields_collection.update({
+                'name': 'dynamic',
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+            }, {
+                'name': 'dynamic',
+                'schema': current_dynamic_schema
+            }, upsert=True)
 
             # extend the overall schema
             current_schema = my_entity.get_fields_info('static')
             current_schema['items'].extend(current_dynamic_schema['items'])
-            fields_collection.update({'name': 'parsed'},
-                                     {'name': 'parsed', 'schema': current_schema},
-                                     upsert=True)
+            fields_collection.update({
+                'name': 'parsed',
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+            }, {
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+                'name': 'parsed',
+                'schema': current_schema
+            }, upsert=True)
 
-            def insert_fields(col):
-                # insert all the fields that at least one entity has a value for them
-                col.update_one({
-                    'name': 'exist'
-                }, {
-                    '$addToSet': {
-                        'fields': {
-                            '$each': list(my_entity.all_fields_found)
-                        }
+            fields_collection.update_one({
+                'name': 'exist',
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+            }, {
+                '$addToSet': {
+                    'fields': {
+                        '$each': list(my_entity.all_fields_found)
                     }
-                }, upsert=True)
+                }
+            }, upsert=True)
 
-            insert_fields(fields_collection)
-            insert_fields(self._all_fields_db_map[entity_type])
+            self._all_fields_db_map[entity_type].update_one({
+                'name': 'exist'
+            }, {
+                '$addToSet': {
+                    'fields': {
+                        '$each': list(my_entity.all_fields_found)
+                    }
+                }
+            }, upsert=True)
 
     def _new_device_adapter(self) -> DeviceAdapter:
         """ Returns a new empty device associated with this adapter. """
@@ -824,10 +852,18 @@ class PluginBase(Configurable, Feature):
         """
         return requests.get(self.core_address + '/register').json()
 
-    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
     def get_available_plugins_from_core(self):
         """
         Gets all running plugins from core by querying core/register
+        """
+        with self.__get_all_plugins_from_core_lock:
+            # There's no point in issuing many requests for this,
+            return self.__get_available_plugins_from_core_locked()
+
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
+    def __get_available_plugins_from_core_locked(self):
+        """
+        See get_available_plugins_from_core
         """
         return self.get_available_plugins_from_core_uncached()
 
@@ -1100,8 +1136,8 @@ class PluginBase(Configurable, Feature):
             open_actions_lock_copy = self._open_actions.copy()
             for action_id, (action_promise, time_started) in open_actions_lock_copy.items():
                 if time_started + timedelta(seconds=TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS) < datetime.now():
-                    err_msg = f"Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS } reached for " \
-                              f"action_id {action_id}, rejecting the promise."
+                    err_msg = f"Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS} reached for " \
+                        f"action_id {action_id}, rejecting the promise."
                     logger.error(err_msg)
 
                     # We must reject or resolve the promise with a thread, so that we wouldn't catch the lock
@@ -1551,7 +1587,7 @@ class PluginBase(Configurable, Feature):
 
                     if len(final_data) != 1:
                         msg = f"Got {name}/{tag_type} with " \
-                              f"action_if_exists=update, but final_data is not of length 1: {final_data}"
+                            f"action_if_exists=update, but final_data is not of length 1: {final_data}"
                         logger.error(msg)
                         raise TagDeviceError(msg)
 
@@ -1592,7 +1628,7 @@ class PluginBase(Configurable, Feature):
 
                 if result.matched_count != 1:
                     msg = f"tried to update tag {tag_data}. " \
-                          f"expected matched_count == 1 but got {result.matched_count}"
+                        f"expected matched_count == 1 but got {result.matched_count}"
                     logger.error(msg)
                     raise TagDeviceError(msg)
             elif virtual_plugin_name == "gui" and tag_type == 'label' and tag_type is False:
@@ -1771,7 +1807,7 @@ class PluginBase(Configurable, Feature):
         if rebuild:
             self._request_db_rebuild(sync=True,
                                      internal_axon_ids=[x['internal_axon_id'] for x in entities_candidates] +
-                                     [internal_axon_id])
+                                                       [internal_axon_id])
         return internal_axon_id
 
     @mongo_retry()

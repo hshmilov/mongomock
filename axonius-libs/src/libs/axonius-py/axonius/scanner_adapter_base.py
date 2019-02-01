@@ -16,7 +16,7 @@ from typing import Tuple, List, Iterable
 from axonius.mixins.feature import Feature
 
 from axonius.adapter_base import AdapterBase
-from axonius.consts.adapter_consts import IGNORE_DEVICE, ADAPTER_PLUGIN_TYPE
+from axonius.consts.adapter_consts import IGNORE_DEVICE
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.utils.parsing import pair_comparator, is_different_plugin, parameter_function, normalize_adapter_device, \

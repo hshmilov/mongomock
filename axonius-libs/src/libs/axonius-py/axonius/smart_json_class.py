@@ -2,6 +2,7 @@ import logging
 
 from collections import OrderedDict
 from enum import Enum
+
 from axonius.fields import Field, ListField
 from axonius.utils.parsing import normalize_var_name
 

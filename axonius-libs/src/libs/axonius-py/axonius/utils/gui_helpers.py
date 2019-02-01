@@ -6,18 +6,16 @@ from datetime import datetime
 from enum import Enum
 from typing import NamedTuple, Iterable, List
 
+import cachetools
 import dateutil
 import pymongo
-import requests
 from flask import request
 from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
-from axonius.adapter_base import AdapterProperty
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, GUI_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import parse_filter
@@ -565,6 +563,18 @@ def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str
     field_schema['items'] = list(valid_items())
 
 
+@cachetools.cached(cachetools.LRUCache(maxsize=5))
+def _get_generic_fields(entity_type: EntityType):
+    """
+    Helper for entity_fields
+    """
+    if entity_type == EntityType.Devices:
+        return DeviceAdapter.get_fields_info()
+    elif entity_type == EntityType.Users:
+        return UserAdapter.get_fields_info()
+    raise AssertionError
+
+
 def entity_fields(entity_type: EntityType):
     """
     Get generic fields schema as well as adapter-specific parsed fields schema.
@@ -572,29 +582,40 @@ def entity_fields(entity_type: EntityType):
 
     :return:
     """
+    generic_fields = dict(_get_generic_fields(entity_type))
+    fields_collection = PluginBase.Instance._all_fields_db_map[entity_type]
 
-    def _get_generic_fields():
-        if entity_type == EntityType.Devices:
-            return DeviceAdapter.get_fields_info()
-        elif entity_type == EntityType.Users:
-            return UserAdapter.get_fields_info()
-        raise AssertionError
+    all_data_from_fields = list(fields_collection.find({}))
 
-    generic_fields = _get_generic_fields()
-    existing_fields = PluginBase.Instance._all_fields_db_map[entity_type].find_one({'name': 'exist'},
-                                                                                   projection={'fields': 1})
+    global_existing_fields = [x
+                              for x
+                              in all_data_from_fields
+                              if x['name'] == 'exist' and PLUGIN_UNIQUE_NAME not in x]
+    if global_existing_fields:
+        global_existing_fields = global_existing_fields[0]
 
-    if existing_fields:
-        _filter_out_nonexisting_fields(generic_fields, existing_fields['fields'])
+    def get_per_adapter_fields(field_name: str):
+        return {
+            x[PLUGIN_UNIQUE_NAME]: x
+            for x
+            in all_data_from_fields
+            if x['name'] == field_name and PLUGIN_UNIQUE_NAME in x
+        }
+
+    per_adapter_exist_field = get_per_adapter_fields('exist')
+    per_adapter_parsed_field = get_per_adapter_fields('parsed')
+
+    if global_existing_fields:
+        _filter_out_nonexisting_fields(generic_fields, global_existing_fields['fields'])
 
     adapters_json = {
         'name': 'adapters',
         'title': 'Adapters',
         'type': 'array',
         'items': {
-                'type': 'string',
-                'format': 'logo',
-                'enum': []
+            'type': 'string',
+            'format': 'logo',
+            'enum': []
         },
         'sort': True,
         'unique': True
@@ -605,8 +626,8 @@ def entity_fields(entity_type: EntityType):
         'title': 'Tags',
         'type': 'array',
         'items': {
-                'type': 'string',
-                'format': 'tag'
+            'type': 'string',
+            'format': 'tag'
         }
     }
 
@@ -617,29 +638,35 @@ def entity_fields(entity_type: EntityType):
     }
 
     plugins_available = PluginBase.Instance.get_available_plugins_from_core()
-    exclude_specific_schema = [item['name'] for item in generic_fields.get('items', [])]
-    with PluginBase.Instance._get_db_connection() as db_connection:
-        for plugin in db_connection[CORE_UNIQUE_NAME]['configs'].find().sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]):
-            if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
-                continue
-            plugin_fields = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
-            plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
-            if not plugin_fields_record:
-                continue
-            plugin_fields_existing = plugin_fields.find_one({'name': 'exist'}, projection={'fields': 1})
-            if plugin_fields_existing and plugin[PLUGIN_NAME] != GUI_NAME:
-                # We don't filter out GUI fields
-                # https://axonius.atlassian.net/browse/AX-3113
-                _filter_out_nonexisting_fields(plugin_fields_record['schema'], plugin_fields_existing['fields'])
+    exclude_specific_schema = set(item['name'] for item in generic_fields.get('items', []))
 
-            fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
-                'type': plugin_fields_record['schema']['type'],
-                'required': plugin_fields_record['schema'].get('required', []),
-                'items': filter(lambda x: x['name'] not in exclude_specific_schema,
-                                plugin_fields_record['schema'].get('items', []))
-            }
-            fields['specific'][plugin[PLUGIN_NAME]] = flatten_fields(
-                plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
+    for plugin in plugins_available.values():
+        plugin_unique_name = plugin[PLUGIN_UNIQUE_NAME]
+        plugin_name = plugin[PLUGIN_NAME]
+
+        if plugin_unique_name not in plugins_available:
+            continue
+
+        plugin_fields_record = per_adapter_parsed_field.get(plugin_unique_name)
+        if not plugin_fields_record:
+            continue
+
+        plugin_fields_existing = per_adapter_exist_field.get(plugin_unique_name)
+        if plugin_fields_existing and plugin_name != GUI_NAME:
+            # We don't filter out GUI fields
+            # https://axonius.atlassian.net/browse/AX-3113
+            _filter_out_nonexisting_fields(plugin_fields_record['schema'], set(plugin_fields_existing['fields']))
+
+        fields['schema']['specific'][plugin_name] = {
+            'type': plugin_fields_record['schema']['type'],
+            'required': plugin_fields_record['schema'].get('required', []),
+            'items': [x
+                      for x
+                      in plugin_fields_record['schema'].get('items', [])
+                      if x['name'] not in exclude_specific_schema]
+        }
+        fields['specific'][plugin_name] = flatten_fields(
+            plugin_fields_record['schema'], f'adapters_data.{plugin_name}', ['scanner'])
 
     return fields
 
