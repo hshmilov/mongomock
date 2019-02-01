@@ -57,11 +57,8 @@ class AirwatchAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Airwatch Server
         """
-        try:
-            client_data.connect()
+        with client_data:
             yield from client_data.get_device_list()
-        finally:
-            client_data.close()
 
     def _clients_schema(self):
         """
@@ -128,10 +125,10 @@ class AirwatchAdapter(AdapterBase):
                 device.phone_number = device_raw.get('PhoneNumber')
                 device.email = device_raw.get('UserEmailAddress')
                 try:
-                    network_raw = device_raw.get('Network', {})
-                    wifi_info = network_raw.get('WifiInfo', {})
+                    network_raw = device_raw.get('Network') or {}
+                    wifi_info = network_raw.get('WifiInfo') or {}
                     mac_address = wifi_info.get('WifiMacAddress', device_raw.get('MacAddress'))
-                    if mac_address in ('', '0.0.0.0'):
+                    if not mac_address or mac_address == '0.0.0.0':
                         mac_address = None
                     ipaddresses_raw = network_raw.get('IPAddress') or []
                     ipaddresses = []

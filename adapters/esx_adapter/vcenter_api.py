@@ -175,9 +175,16 @@ class vCenterApi(object):
         """
         values_to_take = ['totalCpu', 'totalMemory', 'numCpuCores', 'numCpuThreads', 'effectiveCpu', 'effectiveMemory',
                           'numHosts', 'numEffectiveHosts', 'overallStatus']
-        details = {k: getattr(host.summary, k, None) for k in values_to_take}
-
-        parsed_hosts = [self._parse_vm_host(x) for x in host.host]
+        try:
+            details = {k: getattr(host.summary, k, None) for k in values_to_take}
+        except Exception:
+            logger.exception(f'Problem getting details')
+            details = None
+        try:
+            parsed_hosts = [self._parse_vm_host(x) for x in host.host]
+        except Exception:
+            logger.exception(f'Problem getting hosts')
+            parsed_hosts = []
 
         if len(parsed_hosts) > 1:
             if host._wsdlName != 'ClusterComputeResource':

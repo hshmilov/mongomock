@@ -21,11 +21,16 @@ class AirwatchConnection(RESTConnection):
 
     def get_device_list(self):
         devices_raw_list = []
-        devices_search_raw = self._get(
-            'mdm/devices/search', url_params={'pagesize': consts.PAGE_SIZE, 'page': 0}, do_basic_auth=True)
+        try:
+            devices_search_raw = self._get(
+                'mdm/devices/search', url_params={'pagesize': consts.PAGE_SIZE, 'page': 0}, do_basic_auth=True)
+            pages_count = 1
+        except Exception:
+            devices_search_raw = self._get(
+                'mdm/devices/search', url_params={'pagesize': consts.PAGE_SIZE, 'page': 1}, do_basic_auth=True)
+            pages_count = 2
         devices_raw_list += devices_search_raw.get('Devices', [])
         total_count = min(devices_search_raw.get('Total', 1), consts.MAX_DEVICES_NUMBER)
-        pages_count = 1
         while total_count > pages_count * consts.PAGE_SIZE:
             try:
                 devices_search_raw = self._get(

@@ -191,7 +191,7 @@ class CsvAdapter(AdapterBase):
                     if last_seen:
                         device.last_seen = last_seen
                     else:
-                        device.last_seen = datetime.datetime.fromtimestamp(vals.get('last_seen'))
+                        device.last_seen = datetime.datetime.fromtimestamp(int(vals.get('last_seen')))
                 except Exception:
                     logger.exception(f'Problem adding last seen')
 

@@ -47,10 +47,13 @@ class PaloaltoPanoramaAdapter(AdapterBase):
 
     @staticmethod
     def _connect_client(client_config):
+        if not client_config.get('apikey') and (not client_config.get('username') or not client_config.get('password')):
+            raise ClientConnectionException('Missing username and password / API key')
         try:
             with PaloaltoPanoramaConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                                            username=client_config['username'], password=client_config['password'],
-                                            ) as connection:
+                                            username=client_config.get('username'),
+                                            password=client_config.get('password'),
+                                            apikey=client_config.get('apikey')) as connection:
                 return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -97,6 +100,12 @@ class PaloaltoPanoramaAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'apikey',
+                    'title': 'API Key',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -104,19 +113,14 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'username',
-                'password',
                 'verify_ssl'
             ],
             'type': 'array'
         }
 
-    def _create_firewall_device(self, device_raw):
+    def _create_firewall_device(self, device_raw_dict):
         try:
             device = self._new_device_adapter()
-            device_raw_dict = dict()
-            for xml_property in device_raw:
-                device_raw_dict[xml_property.tag] = xml_property.text
             serial = device_raw_dict.get('serial')
             if not serial:
                 logger.warning(f'Bad device with no Serial {device_raw_dict}')
@@ -152,7 +156,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             device.set_raw(device_raw_dict)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching Firewall Device for {device_raw}')
+            logger.exception(f'Problem with fetching Firewall Device for {device_raw_dict}')
             return None
 
     def _create_arp_device(self, device_raw):

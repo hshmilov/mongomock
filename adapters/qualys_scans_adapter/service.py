@@ -215,7 +215,7 @@ class QualysScansAdapter(ScannerAdapterBase):
             try:
                 for tag_raw in (device_raw.get('tags') or {}).get('list') or []:
                     try:
-                        device.qualys_tags.append(tag_raw.get('TagSimple') or {}).get('name')
+                        device.qualys_tags.append((tag_raw.get('TagSimple') or {}).get('name'))
                     except Exception:
                         logger.exception(f'Problem with tag {tag_raw}')
             except Exception:
@@ -224,7 +224,7 @@ class QualysScansAdapter(ScannerAdapterBase):
             try:
                 for user_raw in (device_raw.get('account') or {}).get('list') or []:
                     try:
-                        device.last_used_users.append(user_raw.get('HostAssetAccount') or {}).get('username')
+                        device.last_used_users.append((user_raw.get('HostAssetAccount') or {}).get('username'))
                     except Exception:
                         logger.exception(f'Problem with user {user_raw}')
             except Exception:
