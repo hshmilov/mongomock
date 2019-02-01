@@ -13,10 +13,10 @@ import struct
 import itertools
 from collections import defaultdict
 from axonius.utils.parsing import get_exception_string, convert_ldap_searchpath_to_domain_name, \
-    ad_integer8_to_timedelta, parse_date
+    ad_integer8_to_timedelta, parse_date, get_member_of_list_from_memberof
 from axonius.utils.files import create_temp_file
 import ssl
-from typing import TextIO
+from typing import TextIO, List, Tuple
 import ldap3
 from axonius.types.ssl_state import SSLState
 
@@ -804,20 +804,20 @@ class LdapConnection(object):
 
         return self._ldap_modify(distinguished_name, {"userAccountControl": new_user_account_control})
 
-    def get_user(self, username: str) -> dict:
+    def get_user(self, username: str) -> Tuple[dict, List[str]]:
         """
-        Get a user from AD
+        Get a user from AD and all nested groups it is part of
         :param username: Name of user
-        :return: User's attributes
+        :return: User's attributes and list of groups it is part of
         """
         search_filter = f'(&(objectCategory=person)(|(objectClass=user)(objectClass=inetOrgPerson))(cn={username}))'
         result = list(self._ldap_search(search_filter, attributes=['*']))
         try:
             if result:
-                return result[0]
+                groups = list(self.get_nested_groups_for_object({'memberOf': result[0].get('memberOf') or []}))
+                return result[0], get_member_of_list_from_memberof(groups) or []
         except Exception:
             logger.exception(f"Can't fetch user of user {username}")
-            pass
         return None
 
     def __get_nested_groups_for_group(self, group_dn: str, nesting_level=0) -> set:

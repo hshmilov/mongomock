@@ -12,7 +12,7 @@ import re
 import string
 import sys
 from types import FunctionType
-from typing import Callable, NewType
+from typing import Callable, NewType, List
 
 import dateutil.parser
 import pql
@@ -356,7 +356,7 @@ def get_first_object_from_dn(dn):
     return None
 
 
-def get_member_of_list_from_memberof(member_of):
+def get_member_of_list_from_memberof(member_of) -> List[str]:
     try:
         if member_of is not None:
             # member_of is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
