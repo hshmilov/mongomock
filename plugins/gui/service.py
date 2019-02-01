@@ -3333,15 +3333,20 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         if len(views) != 2 or not views[0].get('name'):
             logger.error(f'Unexpected number of views for performing intersection {len(views)}')
             return None
-        entity = EntityType(views[0]['entity'])
+        first_entity_type = EntityType(views[0]['entity'])
+        second_entity_type = EntityType(views[1]['entity'])
+
+        # first query handling
         base_query = {}
         if views[0].get('name'):
-            base_query = parse_filter(self._find_filter_by_name(entity, views[0]['name'])['query']['filter'])
+            base_query = parse_filter(self._find_filter_by_name(first_entity_type, views[0]['name'])['query']['filter'])
         yield {
             'title': views[0]['name'],
-            'points': self._fetch_timeline_points(entity, base_query, date_ranges)
+            'points': self._fetch_timeline_points(first_entity_type, base_query, date_ranges)
         }
-        intersecting_view = self._find_filter_by_name(entity, views[1]['name'])
+
+        # second query handling
+        intersecting_view = self._find_filter_by_name(second_entity_type, views[1]['name'])
         intersecting_query = parse_filter(intersecting_view['query']['filter'])
         if base_query:
             intersecting_query = {
@@ -3351,7 +3356,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             }
         yield {
             'title': f'{views[0]["name"]} and {views[1]["name"]}',
-            'points': self._fetch_timeline_points(entity, intersecting_query, date_ranges)
+            'points': self._fetch_timeline_points(second_entity_type, intersecting_query, date_ranges)
         }
 
     def _fetch_timeline_points(self, entity_type: EntityType, match_query, date_ranges):
