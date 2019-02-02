@@ -626,26 +626,28 @@ class PluginBase(Configurable, Feature):
                 'schema': current_schema
             }, upsert=True)
 
-            fields_collection.update_one({
-                'name': 'exist',
-                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
-            }, {
-                '$addToSet': {
-                    'fields': {
-                        '$each': list(my_entity.all_fields_found)
+            exist_fields = list(my_entity.all_fields_found)
+            if exist_fields:
+                fields_collection.update_one({
+                    'name': 'exist',
+                    PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                }, {
+                    '$addToSet': {
+                        'fields': {
+                            '$each': exist_fields
+                        }
                     }
-                }
-            }, upsert=True)
+                }, upsert=True)
 
-            self._all_fields_db_map[entity_type].update_one({
-                'name': 'exist'
-            }, {
-                '$addToSet': {
-                    'fields': {
-                        '$each': list(my_entity.all_fields_found)
+                self._all_fields_db_map[entity_type].update_one({
+                    'name': 'exist'
+                }, {
+                    '$addToSet': {
+                        'fields': {
+                            '$each': exist_fields
+                        }
                     }
-                }
-            }, upsert=True)
+                }, upsert=True)
 
     def _new_device_adapter(self) -> DeviceAdapter:
         """ Returns a new empty device associated with this adapter. """
