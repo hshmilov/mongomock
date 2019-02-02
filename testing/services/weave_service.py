@@ -154,7 +154,7 @@ class WeaveService(DockerService):
             print('Container was not started correctly trying again.')
             self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print,
                        expose_port=expose_port, extra_flags=extra_flags,
-                       docker_internal_env_vars=docker_internal_env_vars, run_env=my_env)
+                       docker_internal_env_vars=docker_internal_env_vars, run_env=run_env)
 
     @retry(stop_max_attempt_number=5, retry_on_exception=retry_if_timeout, wait_fixed=30)
     def wait_for_service(self, timeout=250):
