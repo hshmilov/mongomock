@@ -17,16 +17,16 @@ def test_basic_no_dups_query():
                          '$elemMatch': {
                              '$and': [
                                  {
-                                     'data._old': {
-                                         '$ne': True
-                                     }
-                                 },
-                                 {
                                      '$or': [
                                          {
                                              'data.id': 'c-0'
                                          }
                                      ]
+                                 },
+                                 {
+                                     'data._old': {
+                                         '$ne': True
+                                     }
                                  }
                              ]
                          }
@@ -42,11 +42,6 @@ def test_regex_no_dups():
                          '$elemMatch': {
                              '$and': [
                                  {
-                                     'data._old': {
-                                         '$ne': True
-                                     }
-                                 },
-                                 {
                                      '$or': [
                                          {
                                              'data.description': {
@@ -55,7 +50,12 @@ def test_regex_no_dups():
                                              }
                                          }
                                      ]
-                                 }
+                                 },
+                                 {
+                                     'data._old': {
+                                         '$ne': True
+                                     }
+                                 },
                              ]
                          }
                      }
@@ -72,17 +72,17 @@ def test_and_no_dups():
                                  '$elemMatch': {
                                      '$and': [
                                          {
-                                             'data._old': {
-                                                 '$ne': True
-                                             }
-                                         },
-                                         {
                                              '$or': [
                                                  {
                                                      'data.id': 'c-0'
                                                  }
                                              ]
-                                         }
+                                         },
+                                         {
+                                             'data._old': {
+                                                 '$ne': True
+                                             }
+                                         },
                                      ]
                                  }
                              }
@@ -92,16 +92,16 @@ def test_and_no_dups():
                                  '$elemMatch': {
                                      '$and': [
                                          {
-                                             'data._old': {
-                                                 '$ne': True
-                                             }
-                                         },
-                                         {
                                              '$or': [
                                                  {
                                                      'data.id': 'b'
                                                  }
                                              ]
+                                         },
+                                         {
+                                             'data._old': {
+                                                 '$ne': True
+                                             }
                                          }
                                      ]
                                  }
@@ -118,40 +118,46 @@ def test_and_no_dups_adpater_data():
         {
             '$and': [
                 {
-                    'adapters_data': {
+                    'specific_data': {
                         '$elemMatch': {
                             '$and': [
                                 {
-                                    'stresstest_adapter._old': {
-                                        '$ne': True
-                                    }
+                                    'plugin_name': 'stresstest_adapter'
                                 },
                                 {
                                     '$or': [
                                         {
-                                            'stresstest_adapter.id': 'a'
+                                            'data.id': 'a'
                                         }
                                     ]
+                                },
+                                {
+                                    'data._old': {
+                                        '$ne': True
+                                    }
                                 }
                             ]
                         }
                     }
                 },
                 {
-                    'adapters_data': {
+                    'specific_data': {
                         '$elemMatch': {
                             '$and': [
                                 {
-                                    'stresstest_adapter._old': {
-                                        '$ne': True
-                                    }
+                                    'plugin_name': 'stresstest_adapter'
                                 },
                                 {
                                     '$or': [
                                         {
-                                            'stresstest_adapter.id': 'b'
+                                            'data.id': 'b'
                                         }
                                     ]
+                                },
+                                {
+                                    'data._old': {
+                                        '$ne': True
+                                    }
                                 }
                             ]
                         }

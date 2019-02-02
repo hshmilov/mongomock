@@ -236,6 +236,7 @@ class AggregatorService(Triggerable, PluginBase):
 
             # this is commonly sorted by
             db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
+
             # this is used all the time by the GUI
             db.create_index([(f'labels', pymongo.ASCENDING)], background=True)
 

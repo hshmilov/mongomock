@@ -20,6 +20,7 @@ import json
 import pytz
 
 import axonius
+from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -974,7 +975,8 @@ def serials_do_not_contradict(adapter_device1, adapter_device2):
 
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     cb_protection = False
-    if adapter_device1.get('plugin_name') == 'carbonblack_protection_adapter' or adapter_device2.get('plugin_name') == 'carbonblack_protection_adapter':
+    if adapter_device1.get('plugin_name') == 'carbonblack_protection_adapter' or adapter_device2.get(
+            'plugin_name') == 'carbonblack_protection_adapter':
         cb_protection = True
     device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
     device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)
@@ -1134,32 +1136,65 @@ def and_function(*functions) -> FunctionType:
     return tmp
 
 
-def convert_many_queries_to_elemmatch_with_addition_conditional(datas, prefix, field_name):
+def convert_many_queries_to_elemmatch_with_addition_conditional(datas, prefix, include_outdated: bool):
     """
-    Helper for fix_adapter_data and fix_specific_data
+    Helper for fix_specific_data
     """
+    _and = [
+        {
+            '$or': [
+                {
+                    k[len(prefix):]: v
+                }
+                for k, v
+                in datas]
+        }
+    ]
+    if not include_outdated:
+        _and.append({
+            'data._old': {
+                '$ne': True
+            }
+        })
     return {
         '$elemMatch': {
-            '$and': [
-                {
-                    field_name: {
-                        '$ne': True
-                    }
-                },
-                {
-                    '$or': [
-                        {
-                            k[len(prefix):]: v
-                        }
-                        for k, v
-                        in datas]
-                }
-            ]
+            '$and': _and
         }
     }
 
 
-def fix_adapter_data(find):
+def convert_many_queries_to_elemmatch_for_adapters(datas, adapter_name, include_outdated: bool):
+    """
+    Helper for fix_adapter_data
+    """
+    _and = [
+        {
+            PLUGIN_NAME: adapter_name
+        },
+        {
+            '$or': [
+                {
+                    k: v
+                }
+                for k, v
+                in datas
+            ]
+        }
+    ]
+    if not include_outdated:
+        _and.append({
+            'data._old': {
+                '$ne': True
+            }
+        })
+    return {
+        '$elemMatch': {
+            '$and': _and
+        }
+    }
+
+
+def fix_adapter_data(find, include_outdated: bool):
     """
     Helper for post_process_add_old_filtering
     """
@@ -1167,15 +1202,15 @@ def fix_adapter_data(find):
     datas = [(k, v) for k, v in find.items() if k.startswith(prefix)]
     if datas:
         for k, v in datas:
-            # k will look like "adapters_data.maradapter.something"
-            adapter_name = k.split('.')[1]
+            # k will look like "adapters_data.markadapter.something"
+            _, adapter_name, *field_path = k.split('.')
+            field_path = 'data.' + '.'.join(field_path)
+
             elem_match = {
                 # remove the dot at the end
-                prefix[:-1]: convert_many_queries_to_elemmatch_with_addition_conditional([(k, v)],
-                                                                                         prefix,
-                                                                                         f'{adapter_name}._old')
+                'specific_data': convert_many_queries_to_elemmatch_for_adapters([(field_path, v)], adapter_name,
+                                                                                include_outdated)
             }
-
             find.update(elem_match)
 
         for k, _ in datas:
@@ -1183,10 +1218,10 @@ def fix_adapter_data(find):
 
     for k, v in find.items():
         if not k.startswith(prefix):
-            add_duplicates_filtering(v)
+            post_process_filter(v, include_outdated)
 
 
-def fix_specific_data(find):
+def fix_specific_data(find, include_outdated: bool):
     """
     Helper for post_process_add_old_filtering
     """
@@ -1195,7 +1230,8 @@ def fix_specific_data(find):
     if datas:
         elem_match = {
             # remove the dot at the end
-            prefix[:-1]: convert_many_queries_to_elemmatch_with_addition_conditional(datas, prefix, 'data._old')
+            prefix[:-1]: convert_many_queries_to_elemmatch_with_addition_conditional(datas, prefix,
+                                                                                     include_outdated)
         }
 
         find.update(elem_match)
@@ -1205,20 +1241,24 @@ def fix_specific_data(find):
 
     for k, v in find.items():
         if not k.startswith(prefix):
-            add_duplicates_filtering(v)
+            post_process_filter(v, include_outdated)
 
 
-def add_duplicates_filtering(find):
+def post_process_filter(find: dict, include_outdated: bool):
     """
-    Fixes in place the mongo filter to not include 'old' entities
+    Post processing for the mongo filter:
+
+    1. Fixes in place the mongo filter to not include 'old' entities - if include_outdated
+    2. Fixes to translate all adapters_data to use specific_data instead
+
     """
     if isinstance(find, dict):
-        fix_specific_data(find)
-        fix_adapter_data(find)
+        fix_specific_data(find, include_outdated)
+        fix_adapter_data(find, include_outdated)
 
     elif isinstance(find, list):
         for x in find:
-            add_duplicates_filtering(x)
+            post_process_filter(x, include_outdated)
 
 
 INCLUDE_OUTDATED = 'INCLUDE OUTDATED: '
@@ -1274,8 +1314,8 @@ def parse_filter(filter_str, history_date=None):
         filter_str = filter_str.replace(match, json.dumps(pql.find(match[1:-1])))
 
     res = translate_filter_not(pql.find(filter_str))
-    if not include_outdated:
-        add_duplicates_filtering(res)
+
+    post_process_filter(res, include_outdated)
     return res
 
 
