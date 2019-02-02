@@ -20,6 +20,7 @@ class AirwatchAdapter(AdapterBase):
         phone_number = Field(str, 'Phone Number')
         udid = Field(str, 'UdId')
         email = Field(str, 'Email')
+        friendly_name = Field(str, 'Friendly Name')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -111,6 +112,7 @@ class AirwatchAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -143,7 +145,26 @@ class AirwatchAdapter(AdapterBase):
                 device.device_serial = device_raw.get('SerialNumber')
                 device.udid = device_raw.get('Udid')
 
-                device.name = device_raw.get('DeviceFriendlyName')
+                name = device_raw.get('DeviceFriendlyName')
+                username = device_raw.get('UserName')
+                if username and name and name.startswith(username + ' '):
+                    name = name[len(username) + 1:]
+                    if ' Desktop Windows ' in name:
+                        name = name[:name.index(' Desktop Windows ')]
+                    if ' MacBook Pro ' in name:
+                        name = name[:name.index(' MacBook Pro ')]
+                    if ' iPhone iOS ' in name:
+                        name = name[:name.index(' iPhone iOS ')]
+                        if ' Android ' in name:
+                            name = name[:name.index(' Android ')]
+                    name = name.replace(' ', '-')
+                    name = name.replace('\'', '')
+                    name = name.replace('’', '')
+                    name = name.replace('(', '')
+                    name = name.replace(')', '')
+                device.name = name
+                device.friendly_name = device_raw.get('DeviceFriendlyName')
+
                 device.last_used_users = (device_raw.get('UserName') or '').split(',')
                 try:
                     for app_raw in device_raw.get('DeviceApps', []):

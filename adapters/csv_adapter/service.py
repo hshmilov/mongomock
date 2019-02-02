@@ -162,7 +162,7 @@ class CsvAdapter(AdapterBase):
         csv_data, should_parse_all_columns = devices_raw_data
         fields = get_csv_field_names(csv_data.fieldnames)
 
-        if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address', 'hostname']):
+        if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address', 'hostname', 'name']):
             logger.error(f'Bad devices fields names {str(csv_data.fieldnames)}')
             raise GetDevicesError(f'Strong identifier is missing for devices')
 
@@ -223,6 +223,9 @@ class CsvAdapter(AdapterBase):
 
                 ips = (vals.get('ip') or '').split(',')
                 ips = [ip.strip() for ip in ips if ip.strip()]
+
+                if vals.get('username'):
+                    device.last_used_users = [vals.get('username')]
 
                 try:
                     if macs or ips:

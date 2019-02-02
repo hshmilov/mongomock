@@ -9,7 +9,7 @@ IDENTIFIERS = {
     'subnetmask': ['ipsubnetmask'],
     'model': ['model', 'modelid'],
     'serial': ['serial', 'serialnumber', 'sn'],
-    'os': ['os', 'osversion', 'operatingsystem', 'osmode'],
+    'os': ['os', 'osname', 'osversion', 'operatingsystem', 'osmode'],
     'kernel': ['kernel', 'kernelversion'],
     'manufacturer': ['manufacturer', 'devicemanufacturer'],
     'total_physical_memory_gb': ['memorygb', 'totalmemorygb'],

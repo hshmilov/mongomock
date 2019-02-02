@@ -49,7 +49,7 @@ def connect_to_server(server_address: str, user_name: str, user_password: str, u
         ldap_server = ldap3.Server(server_address, connect_timeout=10)
     ldap_connection = ldap3.Connection(
         ldap_server, user=user_name, password=user_password,
-        raise_exceptions=True, receive_timeout=60)
+        raise_exceptions=True, receive_timeout=120)
     ldap_connection.bind()
     return ldap_connection
 

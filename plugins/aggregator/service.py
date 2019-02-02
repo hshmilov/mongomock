@@ -196,7 +196,6 @@ class AggregatorService(Triggerable, PluginBase):
 
         # Setting up db
         self.__insert_indexes()
-
         # perform an initial rebuild for consistency
         for entity_type in EntityType:
             self._rebuild_entity_view(entity_type)
@@ -224,6 +223,16 @@ class AggregatorService(Triggerable, PluginBase):
             db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)], background=True)
             # this is commonly filtered by
             db.create_index([(f'adapters', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.os.type', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.os.distribution', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.last_seen', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.hostname', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.name', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.last_used_users', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'specific_data.data.username', pymongo.ASCENDING)], background=True)
+
             # this is commonly sorted by
             db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
             # this is used all the time by the GUI
