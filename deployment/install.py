@@ -120,12 +120,14 @@ def install(first_time, root_pass):
         chown_folder(root_pass, TEMPORAL_PATH)
         set_booted_for_production()
 
-    chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)  # new sources
     set_special_permissions(root_pass)
 
     # This parts tends to have problems. Minimize the code after it as much as possible.
     start_axonius()
     run_discovery()
+
+    # Chown after the run, to make log file which are created afterwards be also part of it
+    chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
 
     if not first_time:
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
