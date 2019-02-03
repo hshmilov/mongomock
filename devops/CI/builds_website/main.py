@@ -54,7 +54,7 @@ if [ "{run_cycle}" == "True" ]; then
 fi
 exit"""
 
-INSTALL_SYSTEM_LINE = "curl -k 'https://builds-local.axonius.lan/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}&run_cycle={run_cycle}' | bash -"
+INSTALL_SYSTEM_LINE = "curl -k 'https://builds-local.axonius.lan/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}&run_cycle={run_cycle}&system_up_params={system_up_params}' | bash -"
 INSTALL_DEMO_CONFIG = "#!/bin/bash\nset -x\nHOME_DIRECTORY=/home/ubuntu/builds_log/\nmkdir -p $HOME_DIRECTORY\nLOG_FILE=$HOME_DIRECTORY\"install.log\"\nexec 1>$LOG_FILE 2>&1\n\n{install_system_line}\n\necho Reporting current state to builds server\n\n\nBUILDS_SERVER_URL=\"https://builds-local.axonius.lan\"\nINSTANCE_ID=$(cat /var/lib/cloud/data/instance-id)\nURL=$(printf \"%s/instances/%s/manifest\" \"$BUILDS_SERVER_URL\" \"$INSTANCE_ID\")\n\ndocker images --digests\ndocker images --digests > $DOCKER_IMAGES_FILE\n\ncurl -k -v -F \"key=docker_images\" -F \"value=@$DOCKER_IMAGES_FILE\" $URL\n\n# we have to copy the install log file and send the copied one, or else problems will happen\n# since this file is open.\ncp $LOG_FILE $LOG_FILE.send\ncurl -k -v -F \"key=install_log\" -F \"value=@$LOG_FILE.send\" $URL\n\necho downloading final manifest from server\ncurl -k $URL > $HOME_DIRECTORY\"manifest.json\"\n\necho final tweeks\nchown -R ubuntu:ubuntu $HOME_DIRECTORY"
 
 
@@ -226,7 +226,8 @@ def instances():
                                                                set_credentials=request.form.get("set_credentials",
                                                                                                 'false'),
                                                                include=include, exclude=exclude,
-                                                               run_cycle=instance_type == "Demo-VM"))
+                                                               run_cycle=instance_type == "Demo-VM",
+                                                               system_up_params='' if instance_type != "Demo-VM" else '--prod'))
 
         ec2_type = request.form["ec2_type"]
         if ec2_type == "normal":
@@ -406,12 +407,16 @@ def get_install_demo_script():
     exclude = request.args.get("exclude")
     include = request.args.get("include")
     run_cycle = request.args.get("run_cycle", '') == 'True'
+    opt_params = "'"
+    opt_params += request.args.get("system_up_params", '') if include == '' else ''
+
     if exclude != '':
-        opt_params = "'--exclude {0}'".format(' '.join(exclude.split(',')))
+        opt_params += " --exclude {0}'".format(' '.join(exclude.split(',')))
     elif include != '':
-        opt_params = "'{0}'".format(' '.join(include.split(',')))
+        opt_params += "{0} ".format(' '.join(include.split(',')))
+        opt_params += request.args.get("system_up_params", '') + "'"
     elif include == '' and exclude == '':
-        opt_params = "'--exclude'"
+        opt_params += " --exclude'"
 
     if branch is None:
         branch = "develop"
