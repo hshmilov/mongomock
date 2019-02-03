@@ -120,6 +120,7 @@ DOCKER_PORTS = {
     'cisco-umbrella-adapter':           6046,
     'linux-ssh-adapter':                6047,
     'proxmox-adapter':                  6048,
+    'diag':                             6666,  # reserved
     'mongo':                            27017,
     'mongo-slave':                      27018,
 }
