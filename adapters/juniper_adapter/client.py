@@ -5,8 +5,6 @@ import logging
 from collections import defaultdict
 from jnpr.space import rest, async
 
-import axonius.adapter_exceptions
-
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -23,11 +21,8 @@ class JuniperClient:
     def test_connection(self):
         try:
             self.space_rest_client.login()
-
-        except Exception as err:
-            logger.exception('Failed connecting to Juniper.')
-            raise axonius.adapter_exceptions.ClientConnectionException(
-                'Failed connecting to Juniper.')
+            devices = self.space_rest_client.device_management.devices.get(
+                filter_={'connectionStatus': 'up'})
         finally:
             self.space_rest_client.logout()
 

@@ -110,11 +110,11 @@ class JuniperAdapter(AdapterBase):
             return JuniperClient(url=f'https://{client_config[consts.JUNIPER_HOST]}',
                                  username=client_config[consts.USER],
                                  password=client_config[consts.PASSWORD])
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f'Failed to connect to Juniper provider using this host {client_config[consts.JUNIPER_HOST]}')
             raise ClientConnectionException(
-                f'Failed to connect to Juniper provider using this host {client_config[consts.JUNIPER_HOST]}')
+                f'Failed to connect to Juniper using this host {client_config[consts.JUNIPER_HOST]}: {e}'[:500])
 
     @classmethod
     def adapter_properties(cls):

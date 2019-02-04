@@ -32,7 +32,7 @@
                            :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
                         <x-table v-if="tableView && item.schema.format && item.schema.format === 'table'"
-                                 :data="item.data" :fields="item.schema.items"/>
+                                 :data="item.data" :fields="existFields(item)"/>
                         <x-list :data="item.data" :schema="item.schema" v-else/>
                     </x-tab>
                 </x-tabs>
@@ -218,7 +218,7 @@
             },
             customFields() {
                 return (this.fields.specific.gui || this.fields.generic)
-            }
+            },
         },
         watch: {
             entity(newEntity, oldEntity) {
@@ -330,7 +330,13 @@
             },
             removeToast() {
                 this.toastMessage = ''
-            }
+            },
+            existFields(item) {
+                // Filter out fields that doesn't have any data
+                let fields = item.schema.items
+                let data = item.data
+                return fields.filter(field => data.find(currentData => currentData[field.name]))
+            },
         },
         created() {
             this.fetchDataHyperlinks({ module: this.module})
