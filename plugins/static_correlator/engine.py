@@ -24,15 +24,14 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_normalized_hostname_str,
                                    get_normalized_ip, get_serial,
                                    hostnames_do_not_contradict,
-                                   ips_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection,
                                    is_azuread_or_ad_and_have_name,
                                    is_only_host_adapter_not_localhost,
                                    is_different_plugin, is_from_ad_or_jamf,
                                    is_from_juniper_and_asset_name,
                                    is_from_no_mac_adapters_with_empty_mac,
-                                   is_illusive_adapter, is_junos_space_device,
-                                   is_linux, is_old_device, is_sccm_or_ad,
+                                   is_junos_space_device,
+                                   is_old_device, is_sccm_or_ad,
                                    is_splunk_vpn, normalize_adapter_devices,
                                    serials_do_not_contradict, compare_macs_or_one_is_jamf,
                                    normalize_mac, not_aruba_adapters,
@@ -339,22 +338,6 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_ip_linux_illusive(self, adapters_to_correlate):
-        """
-        Correlating IP do not contradict with Illusive Linux
-        :param adapters_to_correlate:
-        :return:
-        """
-        logger.info('Starting to correlate on Illusive Linux IPS')
-        filtered_adapters_list = filter(is_linux, filter(get_normalized_ip, adapters_to_correlate))
-        return self._bucket_correlate(list(filtered_adapters_list),
-                                      [],
-                                      [],
-                                      [is_illusive_adapter],
-                                      [ips_do_not_contradict],
-                                      {'Reason': 'They have the same IP one is Illusive and They are Linux'},
-                                      CorrelationReason.StaticAnalysis)
-
     def _correlate_splunk_vpn_hostname(self, adapters_to_correlate):
         logger.info('Starting to correlate on Splunk VPN')
         filtered_adapters_list = filter(is_splunk_vpn, adapters_to_correlate)
@@ -407,8 +390,6 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_asset_host(adapters_to_correlate)
 
         yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate)
-
-        yield from self._correlate_ip_linux_illusive(adapters_to_correlate)
 
         yield from self._correlate_splunk_vpn_hostname(adapters_to_correlate)
 

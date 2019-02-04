@@ -706,15 +706,6 @@ def test_rule_correlate_hostname_deep_security():
                                                                       'and one is DeepSecurity', 1)
 
 
-def test_rule_correlate_ip_linux_illusive():
-    device1 = get_raw_device(plugin_name='illusive_adapter', device_id='SomeDeviceId',
-                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}], os={'type': 'linux'})
-    device2 = get_raw_device(plugin_name='esx_adapter', device_id='SomeDeviceId', hostname='ofir',
-                             network_interfaces=[{IPS_FIELD: ['1.1.1.1']}], os={'type': 'linux'})
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same IP one is Illusive '
-                                                                      'and They are Linux', 1)
-
-
 def test_rule_correlate_splunk_vpn_hostname():
     device1 = get_raw_device(plugin_name='splunk_adapter', device_id='SomeDeviceId', hostname='ofir',
                              more_params=[('splunk_source', 'VPN')])

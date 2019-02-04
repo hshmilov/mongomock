@@ -1,11 +1,10 @@
 import logging
 
-from axonius.adapter_base import AdapterProperty
+from axonius.adapter_base import AdapterProperty, AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
@@ -14,7 +13,7 @@ from claroty_adapter.connection import ClarotyConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ClarotyAdapter(ScannerAdapterBase):
+class ClarotyAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         asset_type = Field(str, 'Asset Type')

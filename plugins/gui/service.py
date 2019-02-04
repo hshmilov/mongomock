@@ -2276,13 +2276,14 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 logger.exception('Unexpected exception')
                 return return_error('Failed logging into AD')
 
-            user, groups = conn.get_user(user_name)
-            if not user:
+            result = conn.get_user(user_name)
+            if not result:
                 return return_error('Failed login')
-
+            user, groups = result
             needed_group = ldap_login['group_cn']
+            groups_prefix = [group.split('.')[0] for group in groups]
             if needed_group:
-                if needed_group not in groups:
+                if needed_group.split('.')[0] not in groups_prefix:
                     return return_error(f'The provided user is not in the group {needed_group}')
             image = None
             try:

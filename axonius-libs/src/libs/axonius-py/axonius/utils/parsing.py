@@ -644,7 +644,7 @@ def is_only_host_adapter_not_localhost(adapter_device):
     return (adapter_device.get('plugin_name') in ['deep_security_adapter',
                                                   'cisco_umbrella_adapter',
                                                   'carbonblack_defense_adapter',
-                                                  'carbonblack_defense_protection',
+                                                  'carbonblack_protection_adapter',
                                                   'csv_adapter']) and \
         (not adapter_device.get('data').get('hostname') or
             'localhost' not in adapter_device.get('data').get('hostname').strip().lower())

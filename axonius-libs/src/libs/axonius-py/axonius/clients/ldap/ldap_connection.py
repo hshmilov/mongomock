@@ -810,12 +810,21 @@ class LdapConnection(object):
         :param username: Name of user
         :return: User's attributes and list of groups it is part of
         """
-        search_filter = f'(&(objectCategory=person)(|(objectClass=user)(objectClass=inetOrgPerson))(cn={username}))'
+        search_filter = f'(&(objectCategory=person)' \
+                        f'(|(objectClass=user)(objectClass=inetOrgPerson))(cn={username}))'
+        search_filter_2 = f'(&(objectCategory=person)' \
+                          f'(|(objectClass=user)(objectClass=inetOrgPerson))(sAMAccountName={username}))'
         result = list(self._ldap_search(search_filter, attributes=['*']))
+        result_2 = list(self._ldap_search(search_filter_2, attributes=['*']))
+
         try:
             if result:
                 groups = list(self.get_nested_groups_for_object({'memberOf': result[0].get('memberOf') or []}))
                 return result[0], get_member_of_list_from_memberof(groups) or []
+            if result_2:
+                groups = list(self.get_nested_groups_for_object({'memberOf': result_2[0].get('memberOf') or []}))
+                return result_2[0], get_member_of_list_from_memberof(groups) or []
+            logger.error(f'Got no response for user {username}')
         except Exception:
             logger.exception(f"Can't fetch user of user {username}")
         return None

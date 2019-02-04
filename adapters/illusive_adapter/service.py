@@ -1,7 +1,8 @@
 import ipaddress
 import logging
 
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -14,7 +15,7 @@ from illusive_adapter.connection import IllusiveConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class IllusiveAdapter(AdapterBase):
+class IllusiveAdapter(ScannerAdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         policy_name = Field(str, 'Policy Name')
