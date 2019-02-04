@@ -17,6 +17,7 @@ from pymongo import ReturnDocument
 from requests.exceptions import ConnectionError, ReadTimeout, Timeout
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.plugin_consts import (NODE_ID, NODE_INIT_NAME, NODE_NAME,
                                           NODE_USER_PASSWORD,
                                           PLUGIN_UNIQUE_NAME, PROXY_ADDR,
@@ -615,7 +616,14 @@ class CoreService(PluginBase, Configurable):
         """
         if not proxy_data['enabled'] or not proxy_data[PROXY_ADDR] or proxy_data[PROXY_ADDR] == '':
             return ''
-        ip_port = f'{proxy_data[PROXY_ADDR]}:{proxy_data[PROXY_PORT]}'
+
+        addr = proxy_data[PROXY_ADDR]
+
+        addr = addr.strip().lower()
+        addr = addr.replace('https://', '')
+        addr = addr.replace('http://', '')
+
+        ip_port = f'{addr}:{proxy_data[PROXY_PORT]}'
         proxy_string = ip_port
         if proxy_data[PROXY_USER]:
             proxy_string = f'{proxy_data[PROXY_USER]}:{proxy_data[PROXY_PASSW]}@{ip_port}'
