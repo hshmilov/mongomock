@@ -34,6 +34,7 @@
                 <li id='menu_link_1' role="presentation"><a id="vm_instances_link" href="#vm_instances" onclick="return changeMenu(this);">Instances</a></li>
                 <li id='menu_link_2' role="presentation"><a id="vm_demos_link" href="#vm_demos" onclick="return changeMenu(this);">Demos</a></li>
                 <li id='menu_link_3' role="presentation"><a id="vm_exports_link" href="#vm_exports" onclick="return changeMenu(this);">Exports</a></li>
+                <li id='menu_link_4' role="presentation"><a id="auto_tests_link" href="#auto_tests" onclick="return changeMenu(this);">Tests</a></li>
                   <!--<li id='menu_link_4' role="presentation"><a id="vm_configurations_link" href="#vm_configurations" onclick="return changeMenu(this);">Configurations</a></li>-->
                 <!--<li id='menu_link_5' role="presentation"><a id="vm_images_link" href="#vm_images" onclick="return changeMenu(this);">Images</a></li>-->
 
@@ -125,6 +126,43 @@
                     </div>
                     <table class="table table-hover" id="exports_in_progress_table">
                     </table>
+                </div>
+            </div>
+        </div>
+        <div class="container hidden_container" id="auto_tests">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="page-header">
+                        <h3>Tests</h3>
+                    </div>
+                    <table class="table table-hover" id="auto_tests_table">
+                    </table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="page-header">
+                        <h3> Test details </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">Automation Test Instance Info</h4>
+                        </div>
+                        <div class="panel-body">
+                            <table class="table">
+                                <tbody id="tbody_auto_instance_info">
+                                <tr>
+                                    <td>Loading..</td>
+                                    <td></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

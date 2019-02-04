@@ -1,5 +1,4 @@
     var current_instances = [];
-    var current_demo_details_i = 0;
     var show_terminated_instances = false;
     var current_demos = [];
     var current_demo_details_i = 0;
@@ -8,6 +7,9 @@
     var current_export_details_i = 0;
     var current_exports_in_progress = [];
     var show_completed_exports = false;
+
+    var current_auto_tests_in_progress = [];
+    var current_auto_test_details_i = 0;
 
     var current_images = [];
     var current_image_details_i = 0;
@@ -166,6 +168,11 @@
         rewrite_demos_table();
         update_demo_details(i);
     }
+    function update_auto_tests_view(i) {
+        // rewrite_instances_table();
+        rewrite_auto_tests_table()
+        update_auto_test_details(i)
+    }
     function rewrite_instances_table() {
         let dataSet = [];
         for (i in current_instances) {
@@ -311,7 +318,7 @@
             ["EC2 ID", inst['ec2']['id']],
             ["State", inst['ec2']['state']],
             ["Instance & System Status", instance_and_system_status],
-            ["Image", inst['ec2']['image_description']],
+            ["Image Description", inst['ec2']['image_description']],
             ["Instance Type", inst['ec2']['instance_type']],
             ["Key Name", inst['ec2']['key_name']],
             ["Private IP Address", inst['ec2']['private_ip_address']],
@@ -367,6 +374,30 @@
             hljs.highlightBlock(block);
         });
         */
+
+    }
+    function update_auto_test_details(i) {
+        current_auto_test_details_i = i;
+        var inst = current_auto_tests_in_progress[i];
+
+        // if the first one is "ok", show the second one. otherwise show the first one.
+        var instance_and_system_status = inst['ec2']['instance_status'];
+        if (instance_and_system_status == "ok") instance_and_system_status = inst['ec2']['system_status'];
+
+        var vm_info_data = [
+            ["EC2 ID", inst['ec2']['id']],
+            ["State", inst['ec2']['state']],
+            ["Instance & System Status", instance_and_system_status],
+            ["Image Name", inst['ec2']['image_name']],
+            ["Image Description", inst['ec2']['image_description']],
+            ["Instance Type", inst['ec2']['instance_type']],
+            ["Key Name", inst['ec2']['key_name']],
+            ["Private IP Address", inst['ec2']['private_ip_address']],
+            ["Security Groups", inst['ec2']['security_groups'].join(',')],
+            ["Subnet", inst['ec2']['subnet']]
+        ];
+
+        update_panel("tbody_auto_instance_info", vm_info_data);
 
     }
     function start_instance(always_function, instance_id) {
@@ -868,6 +899,51 @@
         }
         update_datatable("exports_in_progress_table", dataSet)
     }
+    function rewrite_auto_tests_table() {
+        var dataSet = [];
+        for (i in current_auto_tests_in_progress) {
+            if (current_auto_tests_in_progress[i]['ec2']['state'] != 'terminated' || show_terminated_instances == true) {
+                data = [];
+                db = current_auto_tests_in_progress[i]["db"];
+                ec2 = current_auto_tests_in_progress[i]["ec2"];
+
+                ip = ec2["private_ip_address"];
+                ip_link = "";
+                if (ip != null) {
+                    // Yep i know its a bad thing....
+                    if (Date.parse(db["date"]) < Date.parse("2018-04-22")) {
+                        ip_link = "<a href='http://" + ip + "' target='_blank'>http://" + ip + "</a>";
+                    }
+                    else {
+                        ip_link = "<a href='https://" + ip + "' target='_blank'>https://" + ip + "</a>";
+                    }
+                }
+
+                var instance_and_system_status = ec2['instance_status'];
+                if (instance_and_system_status == "ok") instance_and_system_status = ec2['system_status'];
+
+                // Capitalize owner name
+                db["owner"] = capitalize_str(db["owner"])
+
+                // Push all of the data
+                data.push(parseInt(i) + 1);
+                data.push(db["ami_id"]);
+                data.push(db["owner"]);
+                data.push(ip_link);
+                if (instance_and_system_status === "ok" || instance_and_system_status === undefined) {
+                    data.push(ec2["state"]);
+                }
+                else {
+                    data.push(ec2["state"] + " (" + instance_and_system_status + ")");
+                }
+                data.push(db["date"]);
+
+                dataSet.push(data);
+            }
+        }
+
+        update_datatable("auto_tests_table", dataSet, update_auto_test_details)
+    }
     function get_export_url(key_name, el) {
 
         $.ajax({url: "/exports/" + key_name + "/url", type: "GET"})
@@ -1160,6 +1236,16 @@
                 { title: "Last Modified" }
             ]
         });
+        $("#auto_tests_table").DataTable({
+            columns: [
+                { title: "#" },
+                { title: "AMI" },
+                { title: "Test Group" },
+                { title: "Private Address" },
+                { title: "Status" },
+                { title: "Last Modified" }
+            ]
+        });
 
         $("#exports_in_progress_table").DataTable({
             columns: [
@@ -1203,6 +1289,7 @@
         update_datatable("demos_table", [["1", "Loading...", "", "", "", "", ""]]);
         update_datatable("exports_table", [["1", "Loading...", "", "", "", "", "", "", ""]]);
         update_datatable("exports_in_progress_table", [["1", "Loading...", "", "", "", "", "", "", "", ""]]);
+        update_datatable("auto_tests_table", [["1", "Loading...", "", "", "", ""]]);
         // update_datatable("images_table", [["1", "Loading...", "", "", "", ""]]);
         // update_datatable("configurations_table", [["1", "Loading...", "", "", ""]]);
 
@@ -1238,9 +1325,20 @@
             current_exports_in_progress = data["current"];
             rewrite_exports_in_progress_table();
         });
+        flush_url("/instances?instance_type=Auto-Test-VM", function(data) {
+            current_auto_tests_in_progress = data["current"];
+            rewrite_auto_tests_table();
+
+            for (i in current_auto_tests_in_progress) {
+                if (current_auto_tests_in_progress[i]['ec2']['state'] != 'terminated') {
+                    update_auto_test_details(i);
+                    break;
+                }
+            }
+        });
         /*
         flush_url("/images", function(data) {
-            current_images = data["current"];
+            current_images = data   ["current"];
             rewrite_images_table();
             update_image_details(0);
         });

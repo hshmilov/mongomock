@@ -141,14 +141,14 @@ def exports_post():
 @app.route('/exports/<key>/url', methods=['GET'])
 @authorize
 def export_url(key):
-    """Returns a link for a exported ova. Expects to get the key name in the post request."""
+    """Returns a link for an exported ova. Expects to get the key name in the post request."""
     json_result = (bm.getExportUrl(key))
     return jsonify({"result": json_result, "current": {}})
 
 
 @app.route('/exports/<export_identifier>/status', methods=['POST', 'GET'])
 def set_export_status(export_identifier):
-    """Returns a link for a exported ova. Expects to get the key name in the post request."""
+    """Returns a link for an exported ova. Expects to get the key name in the post request."""
 
     if request.method == "GET":
         json_result = bm.get_export_running_log(export_identifier)

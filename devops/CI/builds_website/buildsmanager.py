@@ -18,6 +18,7 @@ from bson.objectid import ObjectId
 
 BUILDS_INSTANCE_VM_TYPE = "Builds-VM"
 BUILDS_DEMO_VM_TYPE = "Demo-VM"
+BUILDS_AUTO_TEST_VM_TYPE = "Auto-Test-VM"
 
 AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
@@ -274,9 +275,13 @@ class BuildsManager(object):
             ec2_i = {}
             ec2_i["id"] = i.id
             try:
+                ec2_i["image_name"] = i.image.name
                 ec2_i["image_description"] = i.image.description
             except AttributeError:
+                if "image_name" not in ec2_i:
+                    ec2_i["image_name"] = "Unknown"
                 ec2_i["image_description"] = "Unknown"
+
             ec2_i["instance_type"] = i.instance_type
             ec2_i["key_name"] = i.key_name
             ec2_i["private_ip_address"] = i.private_ip_address
