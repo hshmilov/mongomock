@@ -139,7 +139,7 @@ class AdapterMock:
             device_raw = self.transform_dates_to_datetime(device_raw)
             for key, value in device_raw.items():
                 device._extend_names(key, value)
-                device._dict = device_raw
+            device._dict = device_raw
             yield device
 
     @staticmethod

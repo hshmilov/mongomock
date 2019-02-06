@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 from typing import List
 from uuid import uuid4
 
-from env_utils import create_my_device_adapter, ip2int, int2ip
-from mock_manager import MockManager
+from mockingbird.commons.mock_utils import create_my_device_adapter, ip2int, int2ip
+from mockingbird.mock_manager import MockManager
 
 from axonius.devices.device_adapter import DeviceAdapter, AdapterProperty
 
@@ -34,18 +34,18 @@ def set_agents_last_seen(agents):
     for device in agents[:num_of_agent_devices_with_sort_range_last_seen]:
         device.last_seen = datetime.now() - \
             timedelta(
-            days=random.randint(0, AGENTS_SHORT_LAST_SEEN_RANGE_IN_DAYS),
-            seconds=random.randint(0, 59),
-            minutes=random.randint(0, 59),
-            hours=random.randint(0, 18)
+                days=random.randint(0, AGENTS_SHORT_LAST_SEEN_RANGE_IN_DAYS),
+                seconds=random.randint(0, 59),
+                minutes=random.randint(0, 59),
+                hours=random.randint(0, 18)
         )
     for device in agents[num_of_agent_devices_with_sort_range_last_seen:]:
         device.last_seen = datetime.now() - \
             timedelta(
-            days=random.randint(0, AGENTS_LONG_LAST_SEEN_RANGE_IN_DAYS),
-            seconds=random.randint(0, 59),
-            minutes=random.randint(0, 59),
-            hours=random.randint(0, 18)
+                days=random.randint(0, AGENTS_LONG_LAST_SEEN_RANGE_IN_DAYS),
+                seconds=random.randint(0, 59),
+                minutes=random.randint(0, 59),
+                hours=random.randint(0, 18)
         )
 
 

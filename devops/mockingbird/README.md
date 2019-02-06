@@ -23,6 +23,8 @@ or
 ./axonius.sh adapter ad up --restart --mock
 ```
 
+To run the use case, use `docker exec mockingbird ./ctl.py run {name}`
+
 ## How to debug
 * view logs with `docker logs -f mockingbird`
-* reload the python app with `docker exec mockingbird /bin/bash /app/reload_uwsgi.sh`
+* reload the python app with `docker exec mockingbird ./ctl.py run {name}`

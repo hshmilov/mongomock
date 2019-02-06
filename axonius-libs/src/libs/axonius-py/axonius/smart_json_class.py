@@ -80,9 +80,13 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
         """ Creates a new SmartJsonClass and assigns the kwargs as field-values to this instance. """
         self._dict = {}  # will hold the actual values for this instance
         self._names = set()
+        self.__set_raise_if_not_exist = None
+
         for field_names, value in kwargs.items():
             assert field_names in self.fields_info
             setattr(self, field_names, value)
+
+        self.set_raise_if_not_exist(True)
 
     def __setattr__(self, name, value):
         """ Disable setting attributes not defined as Fields """
@@ -90,11 +94,29 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
             raise AttributeError(f'Unknown attribute \'{name}\' for class {self.__class__.__name__}')
         super().__setattr__(name, value)
 
+    def __getattribute__(self, item):
+        try:
+            return super().__getattribute__(item)
+        except KeyError:
+            # If this smartjsonclass is set to not raising then we should return None on nonexisten objects
+            if self.__set_raise_if_not_exist is False and \
+                    not item.startswith('_') and isinstance(getattr(self.__class__, item, None), property):
+                return None
+            raise
+
     def __setitem__(self, name, value):
         self.__setattr__(name, value)
 
     def __getitem__(self, name):
         return super().__getattribute__(name)
+
+    def set_raise_if_not_exist(self, should_raise: bool):
+        """
+        If true, if device.field is not set, will raise an exception. otherwise will return None
+        :param bool should_raise: true or false.
+        :return:
+        """
+        self.__set_raise_if_not_exist = should_raise
 
     def _extend_names(self, name: str, value):
         """ Extends the target_field_list (or the default field list, as implemented in _define_new_name) to contain any

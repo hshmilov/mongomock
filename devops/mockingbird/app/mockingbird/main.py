@@ -2,7 +2,7 @@ import os
 import traceback
 
 from flask import Flask, send_file, request, jsonify
-from mock_manager import MockManager
+from mockingbird.mock_manager import MockManager
 
 APP = Flask(__name__)
 MM = MockManager()
@@ -14,8 +14,9 @@ def devices():
     client_id = request.args.get('client_id')
     offset = request.args.get('offset')
     limit = request.args.get('limit')
+    remove_raw = request.args.get('remove_raw') == 'true'
 
-    return jsonify(MM.get_devices(plugin_name, client_id, offset, limit))
+    return jsonify(MM.get_devices(plugin_name, client_id, offset, limit, remove_raw))
 
 
 @APP.route('/api/users')
@@ -24,8 +25,9 @@ def users():
     client_id = request.args.get('client_id')
     offset = request.args.get('offset')
     limit = request.args.get('limit')
+    remove_raw = request.args.get('remove_raw') == 'true'
 
-    return jsonify(MM.get_users(plugin_name, client_id, offset, limit))
+    return jsonify(MM.get_users(plugin_name, client_id, offset, limit, remove_raw))
 
 
 @APP.route('/')

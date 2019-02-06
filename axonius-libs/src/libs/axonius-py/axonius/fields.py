@@ -82,7 +82,7 @@ def prepare_value(value, field_type, field_instance, name):
 
     # If still its not...
     if not isinstance(value, field_type):
-        # accpet dict for SmartJsonClass
+        # accept dict for SmartJsonClass
         if not (issubclass(field_type, SmartJsonClass) and isinstance(value, dict)):
             raise TypeError(f'{name} expected to be {field_type}, got {value} of {type(value)} instead')
 

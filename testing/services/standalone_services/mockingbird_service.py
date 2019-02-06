@@ -1,4 +1,7 @@
 import os
+
+import psutil
+
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
@@ -49,6 +52,14 @@ class MockingbirdService(WeaveService):
 
     def get_main_file(self):
         return ''
+
+    @property
+    def max_allowed_cpu(self):
+        """
+        This takes a lot of the cpu, we limit it to 25% of the machine.
+        :return:
+        """
+        return float(round(psutil.cpu_count() / 4, 2))
 
     @property
     def volumes(self):

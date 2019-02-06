@@ -92,6 +92,14 @@ class DockerService(AxonService):
         return None
 
     @property
+    def max_allowed_cpu(self) -> int:
+        """
+        Max allowed cpu usage. e.g. if you have 2 cpu's, return 1.5 to use only 1.5 of them.
+        :return:
+        """
+        return None
+
+    @property
     def get_max_uwsgi_threads(self) -> int:
         return 100
 
@@ -180,6 +188,17 @@ else:
             print(f'Memory constraint: {max_allowed_memory}MB')
         return allowed_memory
 
+    def _get_allowed_cpu(self):
+        allowed_cpu = []
+        max_allowed_cpu = self.max_allowed_cpu
+        if max_allowed_cpu:
+            assert isinstance(max_allowed_cpu, float), \
+                f'max allowed cpu is {max_allowed_cpu}, expected float'
+            allowed_cpu = [f'--cpus={max_allowed_cpu}']
+            print(f'CPU constraints: {max_allowed_cpu} CPU\'s')
+
+        return allowed_cpu
+
     def _get_exposed_ports(self, mode, expose_port):
         publish_ports = []
         publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
@@ -244,6 +263,8 @@ else:
         docker_up = self._get_basic_docker_run_command_with_network()
 
         docker_up.extend(self._get_allowed_memory())
+
+        docker_up.extend(self._get_allowed_cpu())
 
         docker_up.extend(self._get_exposed_ports(mode, expose_port))
 
