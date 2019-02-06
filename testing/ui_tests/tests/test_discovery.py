@@ -1,5 +1,7 @@
-#pylint: disable=R0915
+# pylint: disable=R0915
 import time
+
+from flaky import flaky
 
 from ui_tests.tests.test_adapters import JSON_ADAPTER_SEARCH, JSON_ADAPTER_NAME, JSON_ADAPTER_PLUGIN_NAME
 from ui_tests.tests.ui_test_base import TestBase
@@ -18,6 +20,7 @@ class TestDiscovery(TestBase):
         self.base_page.run_discovery(wait=False)
         self.base_page.stop_discovery()
 
+    @flaky(max_runs=2)
     def test_realtime(self):
         """
         Test that the adapter is not an RT adapter by waiting for device to appear without cycle, and
