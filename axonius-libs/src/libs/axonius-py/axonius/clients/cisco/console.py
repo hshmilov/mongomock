@@ -1,5 +1,6 @@
 import logging
 import re
+import signal
 
 from netmiko import ConnectHandler
 
@@ -11,8 +12,12 @@ from axonius.utils.parsing import format_mac
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-DEFAULT_VALIDATE_TIMEOUT = 6
+DEFAULT_VALIDATE_TIMEOUT = 8
 DEFAULT_TIMEOUT = 60
+
+
+def raise_timeout(sig, frame):
+    raise TimeoutError()
 
 
 class CiscoConsoleClient(AbstractCiscoClient):
@@ -32,9 +37,30 @@ class CiscoConsoleClient(AbstractCiscoClient):
         raise NotImplementedError()
 
     def validate_connection(self):
-        sess = ConnectHandler(device_type=self.get_device_type(), ip=self.host, username=self.username,
-                              password=self.password, port=self.port, timeout=DEFAULT_VALIDATE_TIMEOUT)
-        sess.disconnect()
+        # Netmiko ConnectHandler is handling the timeout field badly
+        # (for example it doesn't pass the timeout to timeout_auth param in paramiko)
+        # lets say for example that we have a  very slow connection -
+        # the validate_connection function should work but it is going to take much more then 6
+        # seconds which is our timeout.
+        # This is why we use alarm based solution.
+
+        signal.signal(signal.SIGALRM, raise_timeout)
+        signal.alarm(DEFAULT_VALIDATE_TIMEOUT)
+
+        try:
+            sess = ConnectHandler(device_type=self.get_device_type(),
+                                  ip=self.host,
+                                  username=self.username,
+                                  password=self.password,
+                                  port=self.port,
+                                  session_timeout=DEFAULT_VALIDATE_TIMEOUT,
+                                  blocking_timeout=DEFAULT_VALIDATE_TIMEOUT,
+                                  timeout=DEFAULT_VALIDATE_TIMEOUT)
+        finally:
+            signal.alarm(0)
+
+        if sess:
+            sess.disconnect()
 
     def __enter__(self):
         super().__enter__()

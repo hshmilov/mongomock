@@ -57,7 +57,7 @@ class AbstractCiscoClient:
                     host = self._ip
                 if hasattr(self, 'host'):
                     host = self.host
-                logger.info(f'unable to connect {host}: error: {str(e)}')
+                logger.info(f'{self} - unable to connect {host}: error: {str(e)}')
             return False
         return True
 

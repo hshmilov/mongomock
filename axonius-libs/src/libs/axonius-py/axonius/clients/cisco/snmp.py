@@ -39,7 +39,8 @@ class SingletonEngine(metaclass=Singleton):
 
     def close_instance(self):
         dispatcher = self.engine.transportDispatcher
-        dispatcher.closeDispatcher()
+        if dispatcher:
+            dispatcher.closeDispatcher()
         self.engine = None
 
 
@@ -115,9 +116,15 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
     def validate_connection(self):
         data = list(self._next_cmd(SYSTEM_DESCRIPTION_OID + '.1'))[0]
+        if not data:
+            raise ClientConnectionException(f'Unable to communicate with {self._ip} data: {data}')
+
         errors = [x[0] for x in data]
-        if any(errors):
-            raise ClientConnectionException(f'Unable to communicate with {self._ip} errors: {errors}')
+        results = [x[3] for x in data]
+
+        if any(errors) or not results:
+            raise ClientConnectionException(f'Unable to communicate with {self._ip}' +
+                                            f' errors: {errors}, results: {results}')
 
     def _next_cmd(self, oid):
         return run_event_loop([self._async_next_cmd(oid)])
@@ -130,7 +137,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         return data
 
     async def _query_dhcp_leases(self):
-        logger.warning('dhcp isn\'t implemented yet - skipping')
+        logger.debug('dhcp isn\'t implemented yet - skipping')
         return None
 
     async def _query_arp_table(self):
@@ -342,10 +349,6 @@ class IPTable(snmp_parser.SnmpTable):
 
 
 if __name__ == '__main__':
-    import pprint
-
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-    CLIENT = CiscoSnmpClient(host='xxx', community='public', port=161)
-    with CLIENT:
-        LIST_ = list(CLIENT.query_all())
-    pprint.pprint(LIST_)
+    CLIENT = CiscoSnmpClient(host='XXX', community='public', port=161)
+    CLIENT.validate_connection()

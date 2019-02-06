@@ -18,7 +18,7 @@ def extract_ip_from_mib(mib):
 
 def parse_unhandled(oid, value):
     # this function is a callback so it must have the same api as the above functions
-    logger.warning(f'Unhandled oid: {oid} value: {value}')
+    logger.debug(f'Unhandled oid: {oid} value: {value}')
 
 
 def parse_admin(oid, value):
