@@ -120,7 +120,7 @@ class API:
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
             'page': get_page_metadata(skip, limit,
-                                      int(gui_helpers.get_entities_count(mongo_filter, devices_collection))),
+                                      gui_helpers.get_entities_count(mongo_filter, devices_collection)),
             'assets': list(
                 gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort,
                                          mongo_projection,
@@ -134,7 +134,7 @@ class API:
     @api_add_rule(f'devices/count', required_permissions={Permission(PermissionType.Devices,
                                                                      PermissionLevel.ReadOnly)})
     def api_devices_count(self, mongo_filter):
-        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices])
+        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices]))
 
     @api_add_rule(f'devices/<device_id>', required_permissions={Permission(PermissionType.Devices,
                                                                            PermissionLevel.ReadOnly)})
@@ -162,7 +162,7 @@ class API:
         users_collection = self._entity_views_db_map[EntityType.Users]
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
-            'page': get_page_metadata(skip, limit, int(gui_helpers.get_entities_count(mongo_filter, users_collection))),
+            'page': get_page_metadata(skip, limit, gui_helpers.get_entities_count(mongo_filter, users_collection)),
             'assets': list(
                 gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort,
                                          mongo_projection,
@@ -176,7 +176,7 @@ class API:
     @api_add_rule(f'users/count', required_permissions={Permission(PermissionType.Users,
                                                                    PermissionLevel.ReadOnly)})
     def api_users_count(self, mongo_filter):
-        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users])
+        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users]))
 
     @api_add_rule(f'users/<user_id>', required_permissions={Permission(PermissionType.Users,
                                                                        PermissionLevel.ReadOnly)})

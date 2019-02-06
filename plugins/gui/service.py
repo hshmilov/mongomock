@@ -713,7 +713,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         return return_error(err, 500) if err else ('', 200)
 
-    def _find_entities_by_uuid_for_adapter_with_feature(self, entities_selection, feature, entity_type: EntityType, mongo_filter):
+    def _find_entities_by_uuid_for_adapter_with_feature(self, entities_selection, feature, entity_type: EntityType,
+                                                        mongo_filter):
         """
         Find all entity from adapters that have a given feature, from a given set of entities
         :return: plugin_unique_names of entity with given features, dict of plugin_unique_name -> id of adapter entity
@@ -1088,8 +1089,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('devices/count', required_permissions={Permission(PermissionType.Devices,
                                                                               PermissionLevel.ReadOnly)})
     def get_devices_count(self, mongo_filter, history: datetime):
-        return gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
-                                              history_date=history)
+        quick = request.args.get('quick', 'False') == 'True'
+        return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
+                                                  history_date=history, quick=quick))
 
     @gui_add_rule_logged_in('devices/fields', required_permissions={Permission(PermissionType.Devices,
                                                                                PermissionLevel.ReadOnly)})
@@ -1213,8 +1215,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('users/count', required_permissions={Permission(PermissionType.Users,
                                                                             PermissionLevel.ReadOnly)})
     def get_users_count(self, mongo_filter, history: datetime):
-        return gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Users),
-                                              history_date=history)
+        quick = request.args.get('quick', 'False') == 'True'
+        return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Users),
+                                                  history_date=history, quick=quick))
 
     @gui_add_rule_logged_in('users/fields', required_permissions={Permission(PermissionType.Users,
                                                                              PermissionLevel.ReadOnly)})
@@ -1500,8 +1503,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         data = self.get_request_data_as_object()
         node_id = data.pop('instanceName', self.node_id)
         old_node_id = data.pop('oldInstanceName', None)
-        adapter_unique_name = self.request_remote_plugin(
-            f'find_plugin_unique_name/nodes/{old_node_id or node_id}/plugins/{adapter_name}').json().get('plugin_unique_name')
+        adapter_unique_name = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{old_node_id or node_id}/'
+                                                         f'plugins/{adapter_name}').json().get('plugin_unique_name')
         if request.method == 'DELETE':
             delete_entities = request.args.get('deleteEntities', False)
             self.delete_client_data(adapter_unique_name, client_id,
@@ -1515,9 +1518,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         if request.method == 'PUT':
             if old_node_id != node_id:
-                adapter_unique_name = self.request_remote_plugin(
-                    f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}').json().get(
-                        'plugin_unique_name')
+                adapter_unique_name = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{node_id}/plugins'
+                                                                 f'/{adapter_name}').json().get('plugin_unique_name')
 
             return self._query_client_for_devices(adapter_unique_name, data,
                                                   data_from_db_for_unchanged=client_from_db)
@@ -2495,9 +2497,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         post_data = self.get_request_data_as_object()
         post_data['password'] = bcrypt.hash(post_data['password'])
         # Make sure user is unique by combo of name and source (no two users can have same name and same source)
-        if self.__users_collection.find_one(filter_archived({
-                'user_name': post_data['user_name'],
-                'source': 'internal'})):
+        if self.__users_collection.find_one(filter_archived(
+                {
+                    'user_name': post_data['user_name'],
+                    'source': 'internal'
+                })):
             return return_error('User already exists', 400)
         self.__create_user_if_doesnt_exist(post_data['user_name'], post_data['first_name'], post_data['last_name'],
                                            picname=None, source='internal', password=post_data['password'],
@@ -4159,7 +4163,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 for current_node in db_connection['core']['configs'].distinct('node_id'):
                     node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
                     if node_data is not None:
-                        nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}), 'tags': node_data.get('tags', {}),
+                        nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}),
+                                      'tags': node_data.get('tags', {}),
                                       'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
                                           'last_seen'], NODE_USER_PASSWORD: node_data.get(NODE_USER_PASSWORD, '')})
                     else:
@@ -4167,7 +4172,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                                       'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
                                           'last_seen'], NODE_USER_PASSWORD: ''})
                 system_config = db_connection['gui']['system_collection'].find_one({'type': 'server'}) or {}
-                return jsonify({'instances': nodes, 'connection_data': {'key': self.encryption_key, 'host': system_config.get('server_name', '<axonius-hostname>')}})
+                return jsonify({'instances': nodes, 'connection_data': {'key': self.encryption_key,
+                                                                        'host': system_config.get('server_name',
+                                                                                                  '<axonius-hostname>')}})
         elif request.method == 'POST':
             data = self.get_request_data_as_object()
             self.request_remote_plugin(f'node/{data["node_id"]}', method='POST', json={'node_name': data['node_name']})
@@ -4187,7 +4194,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                                  x['plugin_type'] == adapter_consts.ADAPTER_PLUGIN_TYPE and x[NODE_ID] == current_node]
 
                 for adapter in node_adapters:
-                    for current_client in self._get_collection('clients', adapter[PLUGIN_UNIQUE_NAME]).find({}, projection={'_id': 1}):
+                    for current_client in self._get_collection('clients', adapter[PLUGIN_UNIQUE_NAME]).find({},
+                                                                                                            projection={
+                                                                                                                '_id': 1}):
                         self.delete_client_data(adapter[PLUGIN_NAME], current_client['_id'],
                                                 current_node, delete_entities)
                         self.request_remote_plugin(

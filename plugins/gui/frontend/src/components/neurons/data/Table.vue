@@ -1,6 +1,6 @@
 <template>
     <div class="x-data-table" :class="{ multiline }">
-        <x-table-wrapper :title="tableTitle" :count="count.data" :loading="loading" :error="content.error">
+        <x-table-wrapper :title="tableTitle" :count="count.data_to_show" :loading="loading" :error="content.error">
             <div slot="state" v-if="selectionCount" class="selection">
                 <div>[ {{ selectionCount }} selected.</div>
                 <button v-if="enableSelectAll && !allSelected" @click="selectAllData" class="x-btn link">Select all</button>

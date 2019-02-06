@@ -444,11 +444,20 @@ def get_historized_filter(entities_filter, history_date: datetime):
     return entities_filter
 
 
-def get_entities_count(entities_filter, entity_collection, history_date: datetime = None):
+def get_entities_count(entities_filter, entity_collection, history_date: datetime = None, quick: bool = False):
     """
-    Count total number of devices answering given mongo_filter
+    Count total number of devices answering given mongo_filter.
+    If "quick" is True, then will only count until 1000.
     """
-    return str(entity_collection.count_documents(get_historized_filter(entities_filter, history_date)))
+    processed_filter = get_historized_filter(entities_filter, history_date)
+    if not processed_filter:
+        # If there's no filter, we can estimate documents, which is faster
+        return entity_collection.estimated_document_count()
+
+    if quick:
+        return entity_collection.count_documents(processed_filter, limit=1000)
+
+    return entity_collection.count_documents(processed_filter)
 
 
 def find_entity_field(entity_data, field_path):

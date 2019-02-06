@@ -3,7 +3,7 @@ import Promise from 'promise'
 
 import { INIT_USER } from './modules/auth'
 import {
-	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT,
+	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
     UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
@@ -93,9 +93,19 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 	if (view.historical) {
 		params.push(`history=${encodeURIComponent(view.historical)}`)
 	}
+
+	module.count.data = undefined
+
 	dispatch(REQUEST_API, {
 		rule: `${payload.module}/count?${params.join('&')}`,
 		type: UPDATE_DATA_COUNT,
+		payload
+	})
+
+	params.push('quick=True')
+	dispatch(REQUEST_API, {
+		rule: `${payload.module}/count?${params.join('&')}`,
+		type: UPDATE_DATA_COUNT_QUICK,
 		payload
 	})
 }

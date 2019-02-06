@@ -11,6 +11,34 @@ export const updateWindowWidth = (state) => {
 	state.interaction.windowWidth = document.documentElement.clientWidth
 }
 
+function clearUrlFromQuick(url) {
+	return url.replace('&quick=True', '').replace('&quick=False', '').
+	replace('quick=True', '').replace('quick=False', '')
+}
+export const UPDATE_DATA_COUNT_QUICK = 'UPDATE_DATA_COUNT_QUICK'
+export const updateDataCountQuick = (state, payload) => {
+	let module = getModule(state, payload)
+	if (!module) return
+	const count = module.count
+	if (!payload.fetching && count.rule !== clearUrlFromQuick(payload.rule)) {
+		return
+	}
+
+	count.fetching = payload.fetching
+	count.error = payload.error
+	count.rule = clearUrlFromQuick(payload.rule)
+
+	if (payload.data !== undefined) {
+		if (count.data == undefined) {
+			count.data = payload.data
+			count.data_to_show = payload.data
+		}
+		if (payload.data == '1000') {
+			count.data_to_show = '> 1000, loading...'
+		}
+	}
+}
+
 export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
 export const updateDataCount = (state, payload) => {
 	let module = getModule(state, payload)
@@ -19,11 +47,14 @@ export const updateDataCount = (state, payload) => {
 	if (!payload.fetching && count.rule !== payload.rule) {
 		return
 	}
+
 	count.fetching = payload.fetching
 	count.error = payload.error
 	count.rule = payload.rule
+
 	if (payload.data !== undefined) {
 		count.data = payload.data
+		count.data_to_show = payload.data
 	}
 }
 
