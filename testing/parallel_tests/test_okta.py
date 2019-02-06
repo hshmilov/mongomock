@@ -1,5 +1,3 @@
-import pytest
-
 from services.adapters.okta_service import OktaService, okta_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_okta_credentials import *
@@ -25,7 +23,6 @@ class TestOktaAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         return  # we can't test that - we don't return devices
 
-    @pytest.mark.skip('Skipping to replace redirect url (AX-2861)')
     def test_fetch_users(self):
         self.adapter_service.add_client(self.some_client_details)
         # send trigger to agg to refresh devices

@@ -2,8 +2,6 @@ import shlex
 import subprocess
 import sys
 
-import pytest
-
 from axonius.consts.plugin_consts import WEAVE_PATH
 from test_credentials.test_okta_credentials import (OKTA_CLIENT_LOGIN_DETAILS,
                                                     OKTA_LOGIN_DETAILS)
@@ -13,7 +11,6 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestOktaLogin(TestBase):
-    @pytest.mark.skip('Skipping to replace redirect url (AX-2861)')
     def test_okta_login(self):
         if 'linux' in sys.platform.lower() and is_weave_up():
             cmd = f'{WEAVE_PATH} dns-add gui -h okta.axonius.local'

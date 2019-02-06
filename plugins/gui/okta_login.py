@@ -19,8 +19,10 @@ def fetch_jwk_for(okta_config, id_token=None):
     """
     if id_token is None:
         raise NameError('id_token is required')
-
-    jwks_uri = f"{okta_config['url']}/oauth2/v1/keys"
+    if okta_config.get('authorization_server', False):
+        jwks_uri = f"{okta_config['url']}/oauth2/{okta_config['authorization_server']}/v1/keys"
+    else:
+        jwks_uri = f"{okta_config['url']}/oauth2/v1/keys"
 
     unverified_header = jws.get_unverified_header(id_token)
     if 'kid' in unverified_header:
@@ -74,7 +76,10 @@ def try_connecting_using_okta(okta_config) -> bool:
         'client_id': okta_config['client_id'],
     }
 
-    url = f"{okta_config['url']}/oauth2/v1/token"
+    if okta_config.get('authorization_server', False):
+        url = f"{okta_config['url']}/oauth2/{okta_config['authorization_server']}/v1/token"
+    else:
+        url = f"{okta_config['url']}/oauth2/v1/token"
 
     headers = {
         'Accept': 'application/json',
@@ -92,6 +97,10 @@ def try_connecting_using_okta(okta_config) -> bool:
     id_token = return_value['id_token']
     five_minutes_in_seconds = 300
     leeway = five_minutes_in_seconds
+    if okta_config.get('authorization_server', False):
+        issuer = f"{okta_config['url']}/oauth2/{okta_config['authorization_server']}"
+    else:
+        issuer = okta_config["url"]
     jwt_kwargs = {
         'algorithms': 'RS256',
         'options': {
@@ -99,7 +108,7 @@ def try_connecting_using_okta(okta_config) -> bool:
             # Used for leeway on the "exp" claim
             'leeway': leeway
         },
-        'issuer': okta_config["url"],
+        'issuer': issuer,
         'audience': okta_config['client_id']
     }
     if 'access_token' in return_value:

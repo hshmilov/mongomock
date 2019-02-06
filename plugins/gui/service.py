@@ -2076,6 +2076,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             'okta': {
                 'enabled': self.__okta['enabled'],
                 'client_id': self.__okta['client_id'],
+                'authorization_server': self.__okta.get('authorization_server', ''),
                 'url': self.__okta['url'],
                 'gui2_url': self.__okta['gui2_url']
             },
@@ -4344,6 +4345,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                             'type': 'string'
                         },
                         {
+                            'name': 'authorization_server',
+                            'title': 'Okta authorization server name',
+                            'type': 'string'
+                        },
+                        {
                             'name': 'client_secret',
                             'title': 'Okta application client secret',
                             'type': 'string',
@@ -4448,6 +4454,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 'enabled': False,
                 'client_id': '',
                 'client_secret': '',
+                'authorization_server': '',
                 'url': 'https://yourname.okta.com',
                 'gui2_url': 'https://127.0.0.1'
             },

@@ -137,9 +137,13 @@
                     this.oktaConfig.gui2_url.substr(0, this.oktaConfig.gui2_url.length - 1)
                     :
                     this.oktaConfig.gui2_url
+                let authorization_server = this.oktaConfig.authorization_server ?
+                    `${this.oktaConfig.url}/oauth2/${this.oktaConfig.authorization_server}`
+                    :
+                    this.oktaConfig.url
                 let x = new OktaAuth({
                     url: this.oktaConfig.url,
-                    issuer: this.oktaConfig.url,
+                    issuer: authorization_server,
                     clientId: this.oktaConfig.client_id,
                     redirectUri: `${gui2URL}/api/okta-redirect`,
                     scope: 'openid'
