@@ -20,6 +20,8 @@ class MockNetworkDeviceProperties(MockNetworkEntityProperties):
     SccmDevice = auto()
     SplunkDevice = auto()
     TaniumDevice = auto()
+    CarbonBlackResponseDevice = auto()
+    CiscoMerakiDevice = auto()
 
 
 class MockNetworkDevice(DeviceAdapter, MockNetworkEntity):

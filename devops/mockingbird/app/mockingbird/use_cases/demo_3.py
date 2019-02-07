@@ -1,6 +1,7 @@
 import random
 
 import uuid
+from datetime import datetime, timedelta
 
 from aws_adapter.service import AWSIPRule
 from mockingbird.commons import mock_utils
@@ -8,60 +9,19 @@ from mockingbird.commons.mock_network import MockNetwork
 from mockingbird.commons.mock_network_device import MockNetworkDevice, MockNetworkDeviceProperties
 from mockingbird.commons.mock_network_user import MockNetworkUserProperties, MockNetworkUser
 from mockingbird.mock_adapters.aws import AwsAdapterParser
-from mockingbird.mock_adapters.azure import AzureAdapterParser
-from mockingbird.mock_adapters.gce import GceAdapterParser
-from mockingbird.mock_adapters.illusive import IllusiveAdapterParser
+from mockingbird.mock_adapters.carbon_black_response import CarbonBlackResponseAdapterParser
 from mockingbird.mock_adapters.splunk import SplunkAdapterParser
 from mockingbird.mock_manager import MockManager
 from mockingbird.mock_adapters.ad import AdAdapterParser
 from mockingbird.mock_adapters.chef import ChefAdapterParser
 
 
-DOMAIN = 'consto.com'
+DOMAIN = 'rsac.com'
 EMPLOYEE_ID_START = 880000
 COMPANY_SITE_LOCATIONS = ['Columbus', 'Richmond', 'New York', 'Boston']
-WINDOWS_DEVICES_IN_NETWORK = 22300  # Number of devices in network
-LINUX_DEVICES_IN_NETWORK = 11212
+WINDOWS_DEVICES_IN_NETWORK = 11849  # Number of devices in network
+LINUX_DEVICES_IN_NETWORK = 7412
 USERS_IN_NETWORK = round(WINDOWS_DEVICES_IN_NETWORK * 1.1)
-
-# stat types:
-# groups - means that two different numbers are unique groups inside a whole. e,g, 0.5 AWS 0.5 ESX. No device is in
-#          both aws and esx.
-#
-# standalone - each number is a pure percentage. e.g. 0.8 AD 0.8 Qualys - 80% of devices will be AD and 80% (possibly
-#              same 80% but possibly not) will be qualys.
-DEVICE_EXISTENCE_STATS = {
-    'items-type': 'standalone',
-    'items': [
-        {
-            'stats': {
-                'value': MockNetworkDeviceProperties.ADDevice,
-                'items-type': 'groups',
-                'items': [
-                    {
-                        'stats': {
-                            'value': MockNetworkDeviceProperties.EsxDevice
-                        },
-                        'percentage': 0.5,
-                    },
-                    {
-                        'stats': {
-                            'value': MockNetworkDeviceProperties.AWSDevice
-                        },
-                        'percentage': 0.5
-                    }
-                ]
-            },
-            'percentage': 0.8,
-        },
-        {
-            'stats': {
-                'value': MockNetworkDeviceProperties.QualysScansDevice
-            },
-            'percentage': 0.8,
-        }
-    ]
-}
 
 USER_EXISTENCE_STATS = {
     'items-type': 'standalone',
@@ -80,7 +40,7 @@ LAST_SEEN_STATS = {
         {
             'percentage': 0.9,
             'function': mock_utils.last_seen_generator,
-            'args': (7, 1)
+            'args': (7, 0)
         },
         {
             'percentage': 0.1,
@@ -90,21 +50,21 @@ LAST_SEEN_STATS = {
     ],
     MockNetworkDeviceProperties.EpoDevice: [
         {
-            'percentage': 0.92,
+            'percentage': 0.98,
             'function': mock_utils.last_seen_generator,
-            'args': (7, 1)
+            'args': (6, 0)
         },
         {
-            'percentage': 0.08,
+            'percentage': 0.02,
             'function': mock_utils.last_seen_generator,
-            'args': (365, 300)
+            'args': (365, 7)
         }
     ],
-    MockNetworkDeviceProperties.TaniumDevice: [
+    MockNetworkDeviceProperties.CarbonBlackResponseDevice: [
         {
             'percentage': 0.94,
             'function': mock_utils.last_seen_generator,
-            'args': (7, 1)
+            'args': (7, 0)
         },
         {
             'percentage': 0.06,
@@ -116,7 +76,7 @@ LAST_SEEN_STATS = {
         {
             'percentage': 0.92,
             'function': mock_utils.last_seen_generator,
-            'args': (7, 1)
+            'args': (7, 0)
         },
         {
             'percentage': 0.08,
@@ -128,7 +88,7 @@ LAST_SEEN_STATS = {
         {
             'percentage': 0.9,
             'function': mock_utils.last_seen_generator,
-            'args': (7, 1)
+            'args': (7, 0)
         },
         {
             'percentage': 0.1,
@@ -140,52 +100,69 @@ LAST_SEEN_STATS = {
         {
             'percentage': 0.5,
             'function': mock_utils.last_seen_generator,
-            'args': (7, 1)
+            'args': (7, 0)
         },
         {
             'percentage': 0.3,
             'function': mock_utils.last_seen_generator,
-            'args': (30, 1)
+            'args': (30, 0)
         },
         {
             'percentage': 0.2,
             'function': mock_utils.last_seen_generator,
-            'args': (365, 1)
+            'args': (365, 0)
+        },
+    ],
+    MockNetworkDeviceProperties.CiscoMerakiDevice: [
+        {
+            'percentage': 0.9,
+            'function': mock_utils.last_seen_generator,
+            'args': (7, 0)
+        },
+        {
+            'percentage': 0.08,
+            'function': mock_utils.last_seen_generator,
+            'args': (14, 7)
+        },
+        {
+            'percentage': 0.02,
+            'function': mock_utils.last_seen_generator,
+            'args': (365, 14)
         },
     ],
     MockNetworkDeviceProperties.AWSDevice: [
         {
             'percentage': 1,
             'function': mock_utils.last_seen_generator,
-            'args': (2, 1)
+            'args': (2, 0)
         },
     ],
     MockNetworkDeviceProperties.GCEDevice: [
         {
             'percentage': 1,
             'function': mock_utils.last_seen_generator,
-            'args': (2, 1)
+            'args': (2, 0)
         },
     ],
     MockNetworkDeviceProperties.AzureDevice: [
         {
             'percentage': 1,
             'function': mock_utils.last_seen_generator,
-            'args': (2, 1)
+            'args': (2, 0)
         },
     ],
     MockNetworkDeviceProperties.EsxDevice: [
         {
             'percentage': 1,
             'function': mock_utils.last_seen_generator,
-            'args': (2, 1)
+            'args': (2, 0)
         },
     ],
     MockNetworkDeviceProperties.HyperVDevice: [
         {
             'percentage': 1,
             'function': mock_utils.last_seen_generator,
-            'args': (2, 1)
+            'args': (2, 0)
         },
     ],
 }
@@ -205,7 +182,7 @@ USERS_LAST_SEEN_STATS = {
         {
             'percentage': 0.1,
             'function': mock_utils.last_seen_generator,
-            'args': (365, 1)
+            'args': (365, 0)
         }
     ]
 }
@@ -287,13 +264,19 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
         device.add_property(MockNetworkDeviceProperties.ADDevice)
         if random.randint(1, 100) <= 85:
             device.add_property(MockNetworkDeviceProperties.SccmDevice)
-        if random.randint(1, 100) <= 90:
-            device.add_property(MockNetworkDeviceProperties.TaniumDevice)
+    if random.randint(1, 100) <= 90:
+        device.add_property(MockNetworkDeviceProperties.CarbonBlackResponseDevice)
+        device.add_specific(
+            MockNetworkDeviceProperties.CarbonBlackResponseDevice,
+            CarbonBlackResponseAdapterParser.new_device_adapter()
+        )
     if random.randint(1, 10) <= 2:
         device.add_property(MockNetworkDeviceProperties.EsxDevice)
     if random.randint(1, 100) <= 85:
         device.add_property(MockNetworkDeviceProperties.QualysScansDevice)
-    if random.randint(1, 100) <= 92:
+    if random.randint(1, 100) <= 97:
+        device.add_property(MockNetworkDeviceProperties.CiscoMerakiDevice)
+    if random.randint(1, 100) <= 98:
         device.add_property(MockNetworkDeviceProperties.EpoDevice)
 
     if random.randint(1, 10) <= 4:
@@ -339,12 +322,9 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
     host_platform = random.choices(
         [
             MockNetworkDeviceProperties.AWSDevice,
-            MockNetworkDeviceProperties.AzureDevice,
-            MockNetworkDeviceProperties.GCEDevice,
-            MockNetworkDeviceProperties.HyperVDevice,
             MockNetworkDeviceProperties.EsxDevice
         ],
-        weights=[0.3, 0.1, 0.1, 0.1, 0.4]
+        weights=[0.7, 0.3]
     )[0]
     device.add_property(host_platform)
 
@@ -356,18 +336,21 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
         # Qualys doesn't scan azure and gce
         device.add_property(MockNetworkDeviceProperties.QualysScansDevice)
 
+    if random.randint(1, 100) <= 94:
+        device.add_property(MockNetworkDeviceProperties.CiscoMerakiDevice)
+
     if random.randint(1, 100) <= 90:
-        device.add_property(MockNetworkDeviceProperties.TaniumDevice)
-    if random.randint(1, 100) <= 92:
+        device.add_property(MockNetworkDeviceProperties.CarbonBlackResponseDevice)
+        device.add_specific(
+            MockNetworkDeviceProperties.CarbonBlackResponseDevice,
+            CarbonBlackResponseAdapterParser.new_device_adapter()
+        )
+    if random.randint(1, 100) <= 97:
         device.add_property(MockNetworkDeviceProperties.EpoDevice)
 
     # IP's
     ips = [network.generate_ip()]
-    if random.randint(1, 10) <= 4 and host_platform in [
-            MockNetworkDeviceProperties.AWSDevice,
-            MockNetworkDeviceProperties.AzureDevice,
-            MockNetworkDeviceProperties.GCEDevice,
-    ]:
+    if random.randint(1, 10) <= 4 and host_platform == MockNetworkDeviceProperties.AWSDevice:
         # only cloud instances get public ip. should be 40% * (0.5 for all cloud ) == 20% of devices
         public_ip = network.generate_public_ip()
         ips.append(public_ip)
@@ -378,17 +361,6 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
     # specific
     chef_specific = ChefAdapterParser.new_device_adapter()
     chef_specific.public_ip = public_ip
-
-    azure_specific = AzureAdapterParser.new_device_adapter()
-    azure_specific.location = random.choice(['eastus', 'eastus-2'])
-    azure_specific.public_ip = [public_ip] if public_ip else None
-    azure_specific.instance_type = {
-        4: 'Standard_B2s',  # 4gb 2cores. we have 1
-        8: 'Standard_B2ms',  # 8gb 4 cores. we have 2
-        16: 'Standard_B4ms',
-
-        32: 'Standard_B8ms'
-    }.get(device.total_physical_memory)
 
     aws_specific = AwsAdapterParser.new_device_adapter()
     aws_specific.aws_region = random.choice(['us-east-1', 'us-east-2'])
@@ -419,23 +391,22 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
             outbound=[AWSIPRule(ip_protocol='Any', ip_ranges=['10.0.0.0/0'])]
         )
 
-    gce_specific = GceAdapterParser.new_device_adapter()
-    gce_specific.project_id = f'gce-internal.{DOMAIN}'
-    if public_ip:
-        gce_specific.public_ips = [public_ip]
-
     device.add_specific(MockNetworkDeviceProperties.ChefDevice, chef_specific)
-    device.add_specific(MockNetworkDeviceProperties.AzureDevice, azure_specific)
     device.add_specific(MockNetworkDeviceProperties.AWSDevice, aws_specific)
-    device.add_specific(MockNetworkDeviceProperties.GCEDevice, gce_specific)
 
 
-def generate_illusive_devices(i: int, network: MockNetwork, device: MockNetworkDevice):
-    illusive_specific = IllusiveAdapterParser.new_device_adapter()
-    illusive_specific.policy_name = 'Default Policy'
+def set_epo_isolated(device: MockNetworkDevice):
+    # Prepare the isolating adapterdata part
+    cbr_device = device.get_specific(MockNetworkDeviceProperties.CarbonBlackResponseDevice)
+    if not cbr_device:
+        cbr_device = CarbonBlackResponseAdapterParser.new_device_adapter()
+        device.add_specific(MockNetworkDeviceProperties.CarbonBlackResponseDevice, cbr_device)
 
-    device.add_specific(MockNetworkDeviceProperties.IllusiveDevice, illusive_specific)
-    device.add_property(MockNetworkDeviceProperties.IllusiveDevice)
+    # If we don't have EPO, or we have it but it was not seen in the past week, set isolating
+    epo_specific = device.get_specific(MockNetworkDeviceProperties.EpoDevice)
+    if not device.does_have_property(MockNetworkDeviceProperties.EpoDevice) or \
+            (epo_specific and epo_specific.last_seen < (datetime.now() - timedelta(days=7))):
+        cbr_device.is_isolating = True
 
 
 def main():
@@ -458,5 +429,8 @@ def main():
 
     print(f'[+] Setting last seen')
     network.set_devices_attributes(ids, LAST_SEEN_STATS)
+
+    print(f'[+] Setting some epo isolated')
+    network.update_devices(ids, set_epo_isolated)
 
     manager.create_demo_from_network(network)

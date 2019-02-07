@@ -34,7 +34,6 @@ class AdAdapterParser(AdapterParser):
         device.device_disabled = network_device.device_disabled
 
         # General info things
-        device.last_used_users = network_device.last_used_users
         device.installed_software = network_device.installed_software
         device.users = network_device.users
         device.security_patches = network_device.security_patches
