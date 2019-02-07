@@ -43,17 +43,11 @@ class CylanceConnection(RESTConnection):
         """ Connects to the service """
         self._create_token_for_scopre('device:list')
 
-    def get_device_list(self):
-        """ Returns a list of all agents
-
-        :param dict kwargs: api query *string* parameters (ses Cylance's API documentation for more info)
-        :return: the response
-        :rtype: dict
-        """
+    def _get_ids_bulks(self):
         page_num = 1
         devices_response_raw = self._get(
             'devices/v2', url_params={'page_size': consts.DEVICE_PER_PAGE, 'page': str(page_num)})
-        devices_ids = [basic_device.get('id') for basic_device in devices_response_raw.get('page_items', [])]
+        yield [basic_device.get('id') for basic_device in devices_response_raw.get('page_items', [])]
         total_pages = devices_response_raw.get('total_pages', 0)  # Waiting to know to right fields
         first_try_to_refresh = True
         while page_num < total_pages:
@@ -61,9 +55,9 @@ class CylanceConnection(RESTConnection):
                 page_num += 1
                 if page_num % 100 == 0:
                     self._create_token_for_scopre('device:list')
-                devices_ids.extend([basic_device.get('id') for basic_device in
-                                    self._get('devices/v2', url_params={'page_size': consts.DEVICE_PER_PAGE,
-                                                                        'page': str(page_num)}).get('page_items', [])])
+                yield [basic_device.get('id') for basic_device in
+                       self._get('devices/v2', url_params={'page_size': consts.DEVICE_PER_PAGE,
+                                                           'page': str(page_num)}).get('page_items', [])]
             except Exception as e:
                 if first_try_to_refresh and '401' in str(e):
                     self._create_token_for_scopre('device:list')
@@ -71,22 +65,24 @@ class CylanceConnection(RESTConnection):
                     page_num -= 1
                 logger.exception(f'Problem fetching page number {str(page_num)}')
 
+    def get_device_list(self):
+        """ Returns a list of all agents
+
+        :param dict kwargs: api query *string* parameters (ses Cylance's API documentation for more info)
+        :return: the response
+        :rtype: dict
+        """
         # Now use asyncio to get all of these requests
-        while devices_ids:
-            self._create_token_for_scopre('device:read')
+        for bulk_number, bulk_ids in enumerate(self._get_ids_bulks()):
+            # We must refresh the token sometimes so we won't get to token timeout
+            if bulk_number % 50 == 0:
+                self._create_token_for_scopre('device:read')
             async_requests = []
-            if len(devices_ids) > consts.NUMBER_OF_DEVICES_UNTIL_TOKEN_REFRESH:
-                devices_ids_slot = devices_ids[:consts.NUMBER_OF_DEVICES_UNTIL_TOKEN_REFRESH]
-                devices_ids = devices_ids[consts.NUMBER_OF_DEVICES_UNTIL_TOKEN_REFRESH:]
-            else:
-                devices_ids_slot = devices_ids
-                devices_ids = []
-            for device_id in devices_ids_slot:
+            for device_id in bulk_ids:
                 try:
                     if not device_id:
                         logger.warning(f'Bad device')
                         continue
-
                     async_requests.append({'name': f'devices/v2/{device_id}'})
                 except Exception:
                     logger.exception(f'Got problem with id {device_id}')

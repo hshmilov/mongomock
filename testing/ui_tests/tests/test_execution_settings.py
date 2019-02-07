@@ -35,8 +35,7 @@ class TestExecutionSettings(TestBase):
 
             # Add AD server
             self.adapters_page.add_server(ad_client1_details)
-            self.base_page.wait_for_stop_research()
-            self.base_page.wait_for_run_research()
+            self.base_page.run_discovery()
 
             time.sleep(60 * 5)
             check_execution(False)
@@ -64,5 +63,3 @@ class TestExecutionSettings(TestBase):
         self.adapters_page.clean_adapter_servers(AD_NAME, delete_associated_entities=True)
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.add_server(ad_client1_details)
-        self.base_page.wait_for_stop_research()
-        self.base_page.wait_for_run_research()

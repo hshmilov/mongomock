@@ -8,7 +8,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import DEFAULT_MAC_EXTENSIONS, parse_date
+from axonius.utils.parsing import DEFAULT_MAC_EXTENSIONS, parse_date, is_hostname_valid
 from cylance_adapter.connection import CylanceConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -112,6 +112,8 @@ class CylanceAdapter(AdapterBase):
                 device.id = device_id + (device_raw.get('host_name') or '')
                 device.figure_os((device_raw.get('operatingSystem') or '') + ' ' + (device_raw.get('os_version') or ''))
                 hostname = device_raw.get('host_name') or ''
+                if not is_hostname_valid(hostname):
+                    hostname = ''
                 try:
                     # Special condition to OS X
                     device_os = device.os
@@ -154,7 +156,8 @@ class CylanceAdapter(AdapterBase):
                 is_safe_raw = device_raw.get('is_safe')
                 if is_safe_raw is not None and is_safe_raw != '':
                     device.is_safe = str(is_safe_raw)
-                device.last_used_users = str(device_raw.get('last_logged_in_user', '')).split(',')
+                if isinstance(device_raw.get('last_logged_in_user'), str) and device_raw.get('last_logged_in_user'):
+                    device.last_used_users = device_raw.get('last_logged_in_user').split(',')
                 device.device_state = str(device_raw.get('state'))
                 device.set_raw(device_raw)
                 yield device

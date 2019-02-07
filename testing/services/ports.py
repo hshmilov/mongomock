@@ -81,6 +81,7 @@ DOCKER_PORTS = {
     'shodan-adapter':                   5944,
     'paloalto-panorama-adapter':        5950,
     'samange-adapter':                  5960,
+    'sysaid-adapter':                   5990,
     'cisco-adapter':                    6001,
     'zabbix-adapter':                   6005,
     'tripwire-enterprise-adapter':      6007,
@@ -121,6 +122,7 @@ DOCKER_PORTS = {
     'linux-ssh-adapter':                6047,
     'proxmox-adapter':                  6048,
     'diag':                             6666,  # reserved
+    'checkpoint-r80-adapter':           27019,
     'mongo':                            27017,
     'mongo-slave':                      27018,
 }

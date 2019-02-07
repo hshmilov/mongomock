@@ -8,7 +8,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-from axonius.utils.parsing import parse_date
+from axonius.utils.parsing import parse_date, is_domain_valid
 from foreman_adapter.connection import ForemanConnection
 from foreman_adapter.client_id import get_client_id
 
@@ -106,6 +106,7 @@ class ForemanAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -152,7 +153,9 @@ class ForemanAdapter(AdapterBase):
                     device.figure_os(device_raw.get('operatingsystem_name'))
                 except Exception:
                     logger.exception(f'Problem getting os for {device_raw}')
-                device.domain_name = device_raw.get('domain_name')
+                domain_name = device_raw.get('domain_name')
+                if is_domain_valid(domain_name):
+                    device.domain = domain_name
                 device.provision_method = device_raw.get('provision_method')
                 device.environment_name = device_raw.get('environment_name')
                 device.set_raw(device_raw)

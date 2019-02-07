@@ -132,8 +132,7 @@ class TestAdapters(TestBase):
                 self.adapters_page.upload_file_by_id(CSV_FILE_NAME, csv_client_details[CSV_FILE_NAME].file_contents)
                 self.adapters_page.fill_creds(user_id=CSV_FILE_NAME)
                 self.adapters_page.click_save()
-                self.base_page.wait_for_stop_research()
-                self.base_page.wait_for_run_research()
+                self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.fill_filter(CSV_ADAPTER_QUERY)
                 self.devices_page.enter_search()
@@ -157,8 +156,7 @@ class TestAdapters(TestBase):
                 self.adapters_page.upload_file_by_id(CSV_FILE_NAME, csv_client_details[CSV_FILE_NAME].file_contents)
                 self.adapters_page.fill_creds(user_id=CSV_FILE_NAME)
                 self.adapters_page.click_save()
-                self.base_page.wait_for_stop_research()
-                self.base_page.wait_for_run_research()
+                self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.click_query_wizard()
                 self.devices_page.select_query_adapter(CSV_NAME)
@@ -297,8 +295,6 @@ class TestAdapters(TestBase):
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
             self.adapters_page.add_server(ad_client1_details)
-            self.base_page.wait_for_stop_research()
-            self.base_page.wait_for_run_research()
 
     @staticmethod
     def _are_ad_entities_present(page, field):
@@ -348,21 +344,13 @@ class TestAdapters(TestBase):
 
     def test_delete_adapter_without_associated_entities(self):
         self.adapters_page.add_server(ad_client1_details)
-        self.base_page.wait_for_stop_research()
-        self.base_page.wait_for_run_research()
         self._check_delete_adapter(False)
 
     def test_delete_adapter_with_associated_entities(self):
-        self.base_page.wait_for_stop_research()
-        self.base_page.wait_for_run_research()
         self._check_delete_adapter(True)
-        self.base_page.wait_for_stop_research()
-        self.base_page.wait_for_run_research()
 
     def test_add_server(self):
         self.adapters_page.add_server(ad_client1_details)
         ad_log_tester = AdService().log_tester
         pattern = f'{LOCAL_DEFAULT_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
         ad_log_tester.is_pattern_in_log(re.escape(pattern))
-        self.base_page.wait_for_stop_research()
-        self.base_page.wait_for_run_research()

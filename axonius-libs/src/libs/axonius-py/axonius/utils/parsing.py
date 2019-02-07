@@ -206,7 +206,7 @@ def figure_out_os(s):
     os_type = None
     distribution = None
     linux_names = ["linux", 'ubuntu', 'canonical', 'red hat',
-                   'debian', 'fedora', 'centos', 'oracle', 'opensuse']
+                   'debian', 'fedora', 'centos', 'oracle', 'opensuse', 'rhel server']
 
     ios_devices = ["iphone", "ipad", "apple"]
     ios_names = ios_devices + ["ios"]
@@ -237,7 +237,7 @@ def figure_out_os(s):
             distribution = version[0]
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
-        linux_distributions = [ubuntu_full, "Ubuntu", "Red Hat", "Debian", "Fedora"]
+        linux_distributions = [ubuntu_full, "Ubuntu", "Red Hat", "Debian", "Fedora", 'RHEL']
         for dist in linux_distributions:
             if isinstance(dist, str):
                 if dist.lower() in s:
@@ -491,6 +491,11 @@ def parse_unix_timestamp(unix_timestamp):
         return None
 
 
+def is_hostname_valid(hostname):
+    return hostname and hostname not in ['host.docker.internal', 'windows10.microdone.cn',
+                                         'Screencast-Production-Encoder-to-Prepare-AMI']
+
+
 def parse_date(datetime_to_parse):
     """
     Parses date and returns it as UTC
@@ -645,7 +650,8 @@ def is_only_host_adapter_not_localhost(adapter_device):
                                                   'cisco_umbrella_adapter',
                                                   'carbonblack_defense_adapter',
                                                   'carbonblack_protection_adapter',
-                                                  'csv_adapter']) and \
+                                                  'csv_adapter',
+                                                  'sysaid_adapter']) and \
         (not adapter_device.get('data').get('hostname') or
             'localhost' not in adapter_device.get('data').get('hostname').strip().lower())
 

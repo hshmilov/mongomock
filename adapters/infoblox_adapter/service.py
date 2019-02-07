@@ -106,6 +106,11 @@ class InfobloxAdapter(AdapterBase):
             try:
                 device = self._new_device_adapter()
                 hostname = device_raw.get('client_hostname')
+                if hostname:
+                    # I did not change hostname to not change ID in many already deployed customers
+                    hostname_strip = hostname.strip('"')
+                else:
+                    hostname_strip = None
                 mac_address = device_raw.get('hardware')
 
                 if not hostname and not mac_address:
@@ -118,7 +123,7 @@ class InfobloxAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'can not set network view: {device_raw}')
 
-                device.hostname = hostname
+                device.hostname = hostname_strip
                 if mac_address and hostname:
                     device_id = f'mac_{mac_address}_host_{hostname}'
                 elif mac_address:

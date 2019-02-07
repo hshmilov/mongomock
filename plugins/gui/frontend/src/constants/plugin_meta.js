@@ -1,4 +1,12 @@
 export const pluginMeta = {
+    checkpoint_r80_adapter: {
+        title: 'CheckPoint R80 - BETA',
+        description: 'Check Point Infinity architecture delivers consolidated Gen V cyber security across networks, cloud, and mobile environments.'
+    },
+    sysaid_adapter: {
+        title: 'Sysaid - BETA',
+        description: 'SysAid is an IT service management solution that offers all the ITIL essentials.'
+    },
     mssql_adapter: {
         title: 'MSSQL Adapter',
         description: 'The MSSQL adapter allows you to import devices information from arbitrary SQL servers.'
@@ -8,7 +16,7 @@ export const pluginMeta = {
         description: 'Quest KACE Endpoint Systems Management Appliances provision, manage, secure, and service network-connected devices.'
     },
     shodan_adapter: {
-        title: 'Shodan - BETA',
+        title: 'Shodan',
         description: 'Shodan is the world\'s first search engine for Internet-connected devices.'
     },
     samange_adapter: {
@@ -24,7 +32,7 @@ export const pluginMeta = {
         description: 'Proxmox Virtual Environment is an open source server virtualization management solution based on QEMU/KVM and LXC.'
     },
     foreman_adapter: {
-        title: 'Foreman - BETA',
+        title: 'Foreman',
         description: 'Foreman is a free open source project that gives you the power to easily automate repetitive tasks, quickly deploy applications, and proactively manage your servers lifecyle, on-premises or in the cloud.'
     },
     saltstack_adapter: {

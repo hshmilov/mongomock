@@ -167,7 +167,15 @@ class SolarwindsOrionAdapter(AdapterBase):
                                     device.add_nic(mac=address, ips=ip_address)
                             except Exception:
                                 logger.exception(f'Faulty mac address in the server for {raw_device_data}')
-
+                    sw_list = raw_device_data.get('sw_list')
+                    if sw_list and isinstance(sw_list, list):
+                        for sw_data in sw_list:
+                            try:
+                                device.add_installed_software(name=sw_data[0],
+                                                              version=sw_data[1],
+                                                              publisher=sw_data[2])
+                            except Exception:
+                                logger.exception(f'Problem adding sw data to {raw_device_data}')
                     device.software_hardware_makeup = raw_device_data.get('NodeDescription')
                     device.location = raw_device_data.get('Location')
                 device.set_raw(raw_device_data)

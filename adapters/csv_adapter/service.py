@@ -18,11 +18,12 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 # pylint: disable=R1702,R0201,R0912,R0915,R0914
 class CsvAdapter(AdapterBase):
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        file_name = Field(str, 'CSV File Name')
 
     class MyUserAdapter(UserAdapter):
-        pass
+        file_name = Field(str, 'CSV File Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -57,7 +58,7 @@ class CsvAdapter(AdapterBase):
                 logger.exception(f'Couldn\'t get csv info from URL')
         if 'csv' in data and csv_data is None:
             csv_data = self._grab_file_contents(data['csv']).decode('utf-8')
-        return make_dict_from_csv(csv_data), True
+        return make_dict_from_csv(csv_data), True, data.get('user_id')
 
     def _query_devices_by_client(self, client_name, client_data):
         is_users_csv = client_data.get('is_users_csv', False)
@@ -74,7 +75,7 @@ class CsvAdapter(AdapterBase):
 
         if 'csv' in client_data and csv_data is None:
             csv_data = self._grab_file_contents(client_data['csv']).decode('utf-8')
-        return make_dict_from_csv(csv_data), True
+        return make_dict_from_csv(csv_data), True, client_data.get('user_id')
 
     def _clients_schema(self):
         return {
@@ -111,7 +112,7 @@ class CsvAdapter(AdapterBase):
         if user is None:
             return
 
-        csv_data, should_parse_all_columns = user
+        csv_data, should_parse_all_columns, file_name = user
         fields = get_csv_field_names(csv_data.fieldnames)
 
         if not any(id_field in fields for id_field in ['id', 'username', 'mail', 'name']):
@@ -121,6 +122,7 @@ class CsvAdapter(AdapterBase):
         for user_raw in csv_data:
             try:
                 user_obj = self._new_user_adapter()
+                user_obj.file_name = file_name
                 vals = {field_name: user_raw.get(fields[field_name][0]) for field_name in fields}
 
                 user_id = str(vals.get('id', '') or vals.get('username') or vals.get('mail') or vals.get('name'))
@@ -159,7 +161,7 @@ class CsvAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         if devices_raw_data is None:
             return
-        csv_data, should_parse_all_columns = devices_raw_data
+        csv_data, should_parse_all_columns, file_name = devices_raw_data
         fields = get_csv_field_names(csv_data.fieldnames)
 
         if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address', 'hostname', 'name']):
@@ -169,6 +171,7 @@ class CsvAdapter(AdapterBase):
         for device_raw in csv_data:
             try:
                 device = self._new_device_adapter()
+                device.file_name = file_name
                 vals = {field_name: device_raw.get(fields[field_name][0]) for field_name in fields}
 
                 macs = (vals.get('mac_address') or '').split(',')

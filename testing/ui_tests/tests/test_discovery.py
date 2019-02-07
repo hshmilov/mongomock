@@ -126,6 +126,7 @@ class TestDiscovery(TestBase):
         self.adapters_page.add_server(ad_client2_details)
 
         # Wait for discovery to start.
+        self.base_page.run_discovery(wait=False)
         self.base_page.wait_for_stop_research()
         time.sleep(10)
 

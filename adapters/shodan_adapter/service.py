@@ -32,7 +32,8 @@ class ShodanAdapter(ScannerAdapterBase):
     @staticmethod
     def _connect_client(client_config):
         try:
-            with ShodanConnection(apikey=client_config['apikey']) as connection:
+            with ShodanConnection(apikey=client_config['apikey'],
+                                  https_proxy=client_config.get('https_proxy')) as connection:
                 connection.get_cidr_info(client_config['cidr'])
                 return connection, client_config['cidr']
         except RESTException as e:
@@ -51,16 +52,18 @@ class ShodanAdapter(ScannerAdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        connection, cidr = client_data
-        with connection:
-            matches = connection.get_cidr_info(cidr)
+        connection, cidr_list = client_data
         ip_dict = dict()
-        for match_data in matches:
-            ip = match_data.get('ip_str')
-            if ip:
-                if ip not in ip_dict:
-                    ip_dict[ip] = []
-                ip_dict[ip].append(match_data)
+        with connection:
+            for cidr in cidr_list.split(','):
+                cidr = cidr.strip()
+                matches = connection.get_cidr_info(cidr)
+                for match_data in matches:
+                    ip = match_data.get('ip_str')
+                    if ip:
+                        if ip not in ip_dict:
+                            ip_dict[ip] = []
+                        ip_dict[ip].append(match_data)
         return ip_dict
 
     @staticmethod
@@ -82,6 +85,11 @@ class ShodanAdapter(ScannerAdapterBase):
                     'title': 'API Key',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

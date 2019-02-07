@@ -14,6 +14,7 @@ CORE_UNIQUE_NAME = 'core'
 AGGREGATOR_PLUGIN_NAME = 'aggregator'
 GUI_NAME = 'gui'
 STATIC_CORRELATOR_PLUGIN_NAME = 'static_correlator'
+STATIC_USERS_CORRELATOR_PLUGIN_NAME = 'static_users_correlator'
 SYSTEM_SCHEDULER_PLUGIN_NAME = 'system_scheduler'
 DEVICE_CONTROL_PLUGIN_NAME = 'device_control'
 

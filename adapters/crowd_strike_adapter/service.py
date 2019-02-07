@@ -7,7 +7,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.parsing import parse_date, is_domain_valid
 from crowd_strike_adapter.connection import CrowdStrikeConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -130,20 +130,19 @@ class CrowdStrikeAdapter(AdapterBase):
                         logger.exception(f'Problem getting nic for {device_raw}')
                 try:
                     hostname = device_raw.get('hostname')
-                    if device_raw.get('platform_name') == 'Windows':
-                        domain = device_raw.get('machine_domain')
-                        if domain:
-                            device.domain = domain
-                            device.hostname = hostname + '.' + domain
-                        else:
-                            device.hostname = hostname
-                    else:
-                        if hostname.endswith('.local'):
-                            device.hostname = hostname[:-len('.local')]
+                    domain = device_raw.get('machine_domain')
+                    if not is_domain_valid(domain):
+                        domain = None
+                    device.domain = domain
+                    device.hostname = hostname
                 except Exception:
                     logger.exception(f'Problem getting hostname for {device_raw}')
-                device.figure_os((device_raw.get('platform_name') or '') +
-                                 (device_raw.get('os_version') or ''))
+                try:
+                    device.figure_os((device_raw.get('platform_name') or '') +
+                                     (device_raw.get('os_version') or ''))
+                    device.os.distribution = device_raw.get('os_version')
+                except Exception:
+                    logger.exception(f'Problem getting OS for {device_raw}')
                 try:
                     device.last_seen = parse_date(device_raw.get('last_seen'))
                 except Exception:

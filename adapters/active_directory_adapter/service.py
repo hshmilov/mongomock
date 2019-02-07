@@ -201,6 +201,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self.__sync_resolving = config['sync_resolving']
         self.__resolving_enabled = config['resolving_enabled']
         self.__report_generation_interval = config['report_generation_interval']
+        self.__fetch_users_image = config.get('fetch_users_image', True)
 
         # Change interval of report generation thread
         try:
@@ -1451,12 +1452,18 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "name": "report_generation_interval",
                     "title": "Report Generation Interval (Minutes)",
                     "type": "number",
+                },
+                {
+                    'name': 'fetch_users_image',
+                    'title': 'Fetch Users Image',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'resolving_enabled',
                 "sync_resolving",
-                "report_generation_interval"
+                "report_generation_interval",
+                'fetch_users_image'
             ],
             "pretty_name": "Active Directory Configuration",
             "type": "array"
@@ -1467,7 +1474,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         return {
             'resolving_enabled': True,
             "sync_resolving": False,
-            "report_generation_interval": 30
+            "report_generation_interval": 30,
+            'fetch_users_image': True
         }
 
     @classmethod

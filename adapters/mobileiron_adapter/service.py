@@ -45,8 +45,6 @@ class MobileironAdapter(AdapterBase, Configurable):
     def _connect_client(client_config):
         try:
             connection = MobileironConnection(domain=client_config['domain'],
-                                              headers={'Content-Type': 'application/json',
-                                                       'Accept': 'application/json'},
                                               url_base_prefix=client_config.get('url_base_path') + '/rest/api/v2/',
                                               verify_ssl=client_config['verify_ssl'],
                                               username=client_config['username'],
@@ -118,47 +116,64 @@ class MobileironAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
+    # pylint: disable=R1702,R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device.id = device_raw.get('common.id')
-                if device.id is None:
+                device_id = device_raw.get('common.id')
+                if not device_id:
+                    logger.warning(f'Bad device with not id')
                     continue
+                # I hope this is fine, I don't want to change it since we have devices in customers
+                device.id = device_id
                 device.uuid = device_raw.get('common.uuid')
                 device.hostname = device_raw.get('ios.DeviceName',  '')
-                device.figure_os(device_raw.get('common.platform', ''))
-                device.os.type = device_raw.get('common.platform', '')
-                device.os.distribution = device_raw.get('common.os_version', '')
+                device.figure_os(device_raw.get('common.platform'))
+                device.os.distribution = device_raw.get('common.os_version')
                 try:
-                    if device_raw.get('common.ethernet_mac')or device_raw.get('common.ip_address'):
-                        device.add_nic(device_raw.get('common.wifi_mac_address'), device_raw.get(
-                            'common.ip_address', '').split(','))
+                    ips = device_raw.get('common.ip_address')
+                    if not ips or 'null' in device_raw.get('common.ip_address'):
+                        ips = None
+                    else:
+                        ips = ips.split(',')
+                    mac = device_raw.get('common.ethernet_mac')
+                    if not mac or 'null' in mac:
+                        mac = None
+                    if mac or ips:
+                        device.add_nic(mac, ips)
                 except Exception:
-                    logger.exception('Problem adding nic to a device')
-                device.agent_version = device_raw.get('common.client_version', '')
+                    logger.exception(f'Problem adding nic to a device {device_raw}')
+                device.agent_version = device_raw.get('common.client_version')
                 device.device_model = device_raw.get('common.model')
                 try:
                     device.security_patch_level = parse_date(device_raw.get('android.security_patch'))
                 except Exception:
                     logger.exception(f'Problem getting security patch levle for {device_raw}')
                 device.user_id = device_raw.get('user.user_id')
-                device.last_seen = parse_date(device_raw.get('common.miclient_last_connected_at', ''))
+                try:
+                    device.last_seen = parse_date(device_raw.get('common.miclient_last_connected_at'))
+                except Exception:
+                    logger.exception(f'Problem adding last seen to {device_raw}')
                 device.imei = device_raw.get('common.imei')
                 device.storage_capacity = str(device_raw.get('common.storage_capacity'))
                 device.user_email = device_raw.get('user.email_address')
                 device.current_phone_number = device_raw.get('common.current_phone_number')
                 device.imsi = device_raw.get('common.imsi')
                 try:
-                    for app in device_raw.get('appInventory', []):
-                        device.add_installed_software(name=app['name'], version=app['version'])
+                    if device_raw.get('appInventory') and isinstance(device_raw.get('appInventory'), list):
+                        for app in device_raw.get('appInventory'):
+                            try:
+                                device.add_installed_software(name=app['name'], version=app['version'])
+                            except Exception:
+                                logger.exception(f'Problem with app {app}')
                 except Exception:
-                    logger.exception('Problem adding apps to a decvice')
+                    logger.exception(f'Problem adding apps to a decvice {device_raw}')
 
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception('Problem with fetching MobileIron Device')
+                logger.exception(f'Problem with fetching MobileIron Device {device_raw}')
 
     @classmethod
     def adapter_properties(cls):

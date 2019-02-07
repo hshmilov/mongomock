@@ -245,6 +245,8 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
                          "x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all"])
     description = Field(str, "Software Description")
     vendor = Field(str, "Software Vendor")
+    # This is not the same as Vendor in many cases. This is why I added it. OS
+    publisher = Field(str, 'Software Publisher')
 
 
 class DeviceAdapterSoftwareCVE(SmartJsonClass):

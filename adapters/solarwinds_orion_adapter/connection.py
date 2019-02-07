@@ -34,18 +34,37 @@ class SolarwindsConnection(object):
         information about each node in the network.
         :return: raw list of all of the devices.
         """
-        mac_address_q = self.client.query('SELECT NodeID, MAC FROM Orion.NodeMACAddresses')
         logger.info('Fetched mac address data')
-
         node_id_to_mac = {}
-        for node in mac_address_q.get('results') or []:
-            node_id = node.get('NodeID')
-            current_mac = node.get('MAC')
+        try:
+            mac_address_q = self.client.query('SELECT NodeID, MAC FROM Orion.NodeMACAddresses')
+            for node in mac_address_q.get('results') or []:
+                node_id = node.get('NodeID')
+                current_mac = node.get('MAC')
 
-            if node_id and current_mac:
-                if node_id not in node_id_to_mac:
-                    node_id_to_mac[node_id] = []
-                node_id_to_mac[node_id].append(current_mac)
+                if node_id and current_mac:
+                    if node_id not in node_id_to_mac:
+                        node_id_to_mac[node_id] = []
+                    node_id_to_mac[node_id].append(current_mac)
+        except Exception:
+            logger.exception(f'Problem getting MACs')
+
+        node_id_to_sw = {}
+        try:
+            sw_address_q = self.client.query(
+                'SELECT NodeID, Name, Version, Publisher FROM Orion.AssetInventory.Software')
+            for node in sw_address_q.get('results') or []:
+                node_id = node.get('NodeID')
+                current_name = node.get('Name')
+                current_version = node.get('Version')
+                current_publisher = node.get('Publisher')
+
+                if node_id and current_name:
+                    if node_id not in node_id_to_sw:
+                        node_id_to_sw[node_id] = []
+                    node_id_to_sw[node_id].append([current_name, current_version, current_publisher])
+        except Exception:
+            logger.exception(f'Problem getting SW')
 
         logger.info('Added mac address data to corresponding node')
 
@@ -60,6 +79,8 @@ class SolarwindsConnection(object):
 
                 if node_id in node_id_to_mac:
                     node['MacAddresses'] = node_id_to_mac[node_id]
+                if node_id in node_id_to_sw:
+                    node['sw_list'] = node_id_to_sw[node_id]
                 yield node
             except Exception:
                 logger.exception(f'Problem parsing specific node {node}')

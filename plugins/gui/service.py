@@ -59,6 +59,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        ChartRangeUnits, ChartViews,
                                        ResearchStatus)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
+                                          STATIC_CORRELATOR_PLUGIN_NAME,
+                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
@@ -1420,9 +1422,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def _fetch_after_clients_thread(self, adapter_unique_name, client_id, client_to_add):
         # if there's no aggregator, that's fine
         try:
-            logger.info(f'Stopping research phase after adding client {client_id}')
-            response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
-            response.raise_for_status()
             logger.info(f'Requesting {adapter_unique_name} to fetch data from newly added client {client_id}')
             response = self.request_remote_plugin(f'trigger/insert_to_db',
                                                   adapter_unique_name, method='POST',
@@ -1430,12 +1429,16 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                                                       'client_name': client_id
                                                   })
             logger.info(f'{adapter_unique_name} finished fetching data for {client_id}')
-            if not (response.status_code == 400 and response.json()['message'] == 'Gracefully stopped'):
-                response.raise_for_status()
-                response = self.request_remote_plugin('trigger/execute?blocking=False',
-                                                      SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                                      'POST')
-                response.raise_for_status()
+            blocking = True
+            self.request_remote_plugin(f'trigger/execute?blocking={blocking}',
+                                       STATIC_CORRELATOR_PLUGIN_NAME,
+                                       method='POST')
+            self.request_remote_plugin(f'trigger/execute?blocking={blocking}',
+                                       STATIC_USERS_CORRELATOR_PLUGIN_NAME,
+                                       method='POST')
+            self.request_remote_plugin(f'trigger/rebuild_entity_view?blocking={blocking}',
+                                       AGGREGATOR_PLUGIN_NAME,
+                                       method='POST')
         except Exception:
             # if there's no aggregator, there's nothing we can do
             logger.exception(f'Error fetching devices from {adapter_unique_name} for client {client_to_add}')
