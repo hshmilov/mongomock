@@ -96,11 +96,10 @@ class TestGlobalSettings(TestBase):
         self.settings_page.click_global_settings()
         self.settings_page.wait_for_spinner_to_end()
 
-        proxy_ip = '1.2.3.4'
         self.settings_page.set_proxy_settings_enabled()
         self.settings_page.fill_proxy_address('1.2.3.4')
         self.settings_page.save_and_wait_for_toaster()
 
         (content, _, _) = self.axonius_system.core.get_file_contents_from_container('/tmp/proxy_data.txt')
         content = content.decode().strip()
-        assert content == f'{proxy_ip}:8080'
+        assert content == '{"creds": "1.2.3.4:8080", "verify": true}'

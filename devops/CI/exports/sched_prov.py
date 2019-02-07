@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import os
 import random
 import shlex
@@ -35,12 +36,20 @@ def run_command(cmd, **kwargs):
 
 def read_proxy_data():
     try:
-        proxy_line = run_command('docker exec core cat /tmp/proxy_data.txt', stdout=subprocess.PIPE,
+        proxy_data = run_command('docker exec core cat /tmp/proxy_data.txt', stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE).stdout.decode().strip()
-        print(f'Got proxy line={proxy_line}')
+        try:
+            as_dict = json.loads(proxy_data)
+            proxy_creds = as_dict['creds']
+        except Exception as e:
+            # backward compatibility, when the file was a single proxy_line
+            proxy_creds = proxy_data
+            as_dict = {'creds': proxy_data, 'verify': True}
+
+        print(f'Got proxy line={proxy_creds}')
         # invoking this one only to validate that the proxy string format is a valid proxy string
-        ProxyManager(f'http://{proxy_line}')
-        return proxy_line
+        ProxyManager(f'http://{proxy_creds}')
+        return as_dict
     except Exception as e:
         print(f'Failed to process proxy line {e}')
         return None
@@ -55,21 +64,26 @@ def provision():
 
     shutil.rmtree('/etc/chef')
     Path('/etc/chef').mkdir(mode=0o750)
+    client_rb = Path('/etc/chef/client.rb')
 
-    client_rb_template = f'chef_server_url  "https://manage.chef.io/organizations/axonius"\n' + \
-                         f'node_name  "{node_name}"\n' + \
-                         f'validation_key "/home/ubuntu/axonius-validator-2.pem"\n' + \
-                         f'validation_client_name "axonius-validator-2"\n' + \
-                         f'automatic_attribute_blacklist [["filesystem", "by_mountpoint"], ["filesystem", "by_pair"]]\n'
+    client_rb_template = [f'chef_server_url  "https://manage.chef.io/organizations/axonius"',
+                          f'node_name  "{node_name}"',
+                          f'validation_key "/home/ubuntu/axonius-validator-2.pem"',
+                          f'validation_client_name "axonius-validator-2"',
+                          f'automatic_attribute_blacklist [["filesystem", "by_mountpoint"], ["filesystem", "by_pair"]]']
 
-    proxy_line = read_proxy_data()
+    proxy_data = read_proxy_data()
+    proxy_line = proxy_data['creds']
     if proxy_line:
         http_proxy = f'http://{proxy_line}'
         https_proxy = f'https://{proxy_line}'
-        client_rb_template += f'http_proxy "{http_proxy}"\n' + \
-                              f'https_proxy "{https_proxy}"\n'
+        client_rb_template.append(f'http_proxy "{http_proxy}"')
+        client_rb_template.append(f'https_proxy "{https_proxy}"')
 
-    Path('/etc/chef/client.rb').write_text(client_rb_template)
+        if proxy_data['verify'] is False:
+            client_rb_template.append(f'ssl_verify_mode :verify_none')
+
+    client_rb.write_text('\n'.join(client_rb_template))
 
     first_boot = '''
     {

@@ -55,15 +55,24 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
                                           CORRELATE_BY_EMAIL_PREFIX,
-                                          CORRELATION_SETTINGS, GUI_NAME,
-                                          MAX_WORKERS, NODE_ID, NODE_INIT_NAME,
+                                          CORRELATION_SETTINGS,
+                                          GUI_NAME,
+                                          MAX_WORKERS,
+                                          NODE_ID, NODE_INIT_NAME,
                                           NOTIFICATIONS_SETTINGS,
-                                          NOTIFY_ADAPTERS_FETCH, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME, PROXY_ADDR,
-                                          PROXY_PASSW, PROXY_PORT,
-                                          PROXY_SETTINGS, PROXY_USER,
-                                          VOLATILE_CONFIG_PATH, X_UI_USER,
-                                          X_UI_USER_SOURCE)
+                                          NOTIFY_ADAPTERS_FETCH,
+                                          PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME,
+                                          PROXY_ADDR,
+                                          PROXY_PASSW,
+                                          PROXY_PORT,
+                                          PROXY_SETTINGS,
+                                          PROXY_USER,
+                                          VOLATILE_CONFIG_PATH,
+                                          X_UI_USER,
+                                          X_UI_USER_SOURCE,
+                                          PROXY_VERIFY,
+                                          PROXY_FOR_ADAPTERS)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -116,9 +125,9 @@ else:
 def after_request(response):
     """This function is used to allow other domains to send post messages to this app.
 
-    These headers are used to provide the cross origin resource sharing (cors) policy of this domain. 
+    These headers are used to provide the cross origin resource sharing (cors) policy of this domain.
     Modern browsers do not permit sending requests (especially post, put, etc) to different domains
-    without the explicit permission of the webserver on this domain. 
+    without the explicit permission of the webserver on this domain.
     This is why we have to add headers that say that we allow these methods from all domains.
 
     :param str docker_base_url: The response of the client (Will change is headers)
@@ -1209,11 +1218,11 @@ class PluginBase(Configurable, Feature):
 
     @add_rule('schema/<schema_type>', methods=['GET'])
     def schema(self, schema_type):
-        """ /schema - Get the schema the plugin expects from configs. 
+        """ /schema - Get the schema the plugin expects from configs.
                       Will try to get the wanted schema according to <schema_type>
 
         Accepts:
-            GET - Get schema. name of the schema is given in the url. 
+            GET - Get schema. name of the schema is given in the url.
                   For example: "https://<address>/schema/general_schema
 
         :return: list(str)
@@ -2672,6 +2681,16 @@ class PluginBase(Configurable, Feature):
                             'name': PROXY_PASSW,
                             'title': 'Proxy password',
                             'type': 'string'
+                        },
+                        {
+                            'name': PROXY_VERIFY,
+                            'title': 'Verify ssl',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': PROXY_FOR_ADAPTERS,
+                            'title': 'Should adapters use this proxy?',
+                            'type': 'bool'
                         }
                     ]
                 },
@@ -2785,7 +2804,10 @@ class PluginBase(Configurable, Feature):
                 PROXY_ADDR: '',
                 PROXY_PORT: 8080,
                 PROXY_USER: '',
-                PROXY_PASSW: ''
+                PROXY_PASSW: '',
+                PROXY_VERIFY: True,
+                PROXY_FOR_ADAPTERS: True
+
             },
             NOTIFICATIONS_SETTINGS: {
                 NOTIFY_ADAPTERS_FETCH: False

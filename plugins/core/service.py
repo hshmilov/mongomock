@@ -1,4 +1,5 @@
 import configparser
+import json
 import logging
 import threading
 import uuid
@@ -23,7 +24,7 @@ from axonius.consts.plugin_consts import (NODE_ID, NODE_INIT_NAME, NODE_NAME,
                                           PLUGIN_UNIQUE_NAME, PROXY_ADDR,
                                           PROXY_PASSW, PROXY_PORT,
                                           PROXY_SETTINGS, PROXY_USER,
-                                          X_UI_USER, X_UI_USER_SOURCE)
+                                          X_UI_USER, X_UI_USER_SOURCE, PROXY_VERIFY)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -594,15 +595,23 @@ class CoreService(PluginBase, Configurable):
         try:
             # This string is used by chef!
             with open('/tmp/proxy_data.txt', 'w') as f:
-                f.write(self.to_proxy_string(self._proxy_settings))
-        except Exception:
-            logger.error(f'Failed to set proxy settings from gui {self._proxy_settings}')
+                proxy_string = self.to_proxy_string(self._proxy_settings)
+                verify = self._proxy_settings[PROXY_VERIFY]
+
+                proxy_json = {
+                    'creds': proxy_string,
+                    'verify': verify
+                }
+
+                f.write(json.dumps(proxy_json))
+        except Exception as e:
+            logger.error(f'Failed to set proxy settings from gui {e} {self._proxy_settings}')
 
         def update_plugin(plugin_name):
             try:
                 self._request_plugin('update_config', plugin_name, method='post')
-            except Exception:
-                logger.exception(f"Failed to update config on {plugin_name}")
+            except Exception as e:
+                logger.exception(f"Failed to update config on {e} {plugin_name}")
 
         online_plugins = self.online_plugins.keys()
         if online_plugins:
