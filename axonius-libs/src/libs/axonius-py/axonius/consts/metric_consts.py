@@ -9,3 +9,4 @@ class SystemMetric:
 
 class ApiMetric:
     REQUEST_PATH = 'api.request.path'
+    PUBLIC_REQUEST_PATH = 'public.request.path'

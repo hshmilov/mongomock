@@ -1,6 +1,9 @@
 from urllib import parse
+import re
 
 import requests
+
+from axonius.consts.metric_consts import ApiMetric
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -20,6 +23,8 @@ class TestAxoniusAPI(TestBase):
         self.account_page.wait_for_spinner_to_end()
         account_data = self.account_page.get_api_key_and_secret()
         assert get_device_views_from_api(account_data).status_code == 200
+        assert self.axonius_system.gui.log_tester.is_metric_in_log(metric_name=ApiMetric.PUBLIC_REQUEST_PATH,
+                                                                   value=re.escape('/api/V1/devices/views'))
 
     def test_api_auth_key_revoke(self):
         self.account_page.switch_to_page()

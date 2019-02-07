@@ -2,19 +2,23 @@ import logging
 import math
 from typing import Iterable
 
-from flask import jsonify, request
+from flask import jsonify, request, has_request_context
 from passlib.hash import bcrypt
 
+from axonius.consts.metric_consts import ApiMetric
+from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils import gui_helpers
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
                                        check_permissions,
                                        deserialize_db_permissions)
+from axonius.utils.metric import filter_ids
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 API_VERSION = '1'
+
 
 # pylint: disable=protected-access,no-self-use
 
@@ -70,6 +74,14 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
         api_auth = request.headers.get('api-key'), request.headers.get('api-secret')
         auth = request.authorization
         if check_auth_api_key(*api_auth) or (auth and check_auth_user(auth.username, auth.password)):
+
+            if has_request_context():
+                path = request.path
+                splitted = path.split('/')
+                noids = [filter_ids(s) for s in splitted]
+                cleanpath = '/'.join(noids)
+                log_metric(logger, ApiMetric.PUBLIC_REQUEST_PATH, cleanpath, method=request.method)
+
             return func(self, *args, **kwargs)
 
         return return_error('Unauthorized', 401)

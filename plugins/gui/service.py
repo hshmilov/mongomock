@@ -1,4 +1,3 @@
-import binascii
 import configparser
 import io
 import json
@@ -99,6 +98,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        deserialize_db_permissions,
                                        get_entity_labels,
                                        get_historized_filter)
+from axonius.utils.metric import filter_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.parsing import bytes_image_to_base64, parse_filter
@@ -125,16 +125,6 @@ DEVICE_ADVANCED_FILEDS = ['installed_software', 'software_cves',
                           'plugin_and_severities', 'tenable_sources', 'registry_information']
 
 USER_ADVANCED_FILEDS = ['associated_devices']
-
-
-def filter_ids(s):
-    if not s:
-        return s
-    try:
-        binascii.unhexlify(s)
-        return '_id_'
-    except Exception:
-        return s
 
 
 def session_connection(func, required_permissions: Iterable[Permission]):
