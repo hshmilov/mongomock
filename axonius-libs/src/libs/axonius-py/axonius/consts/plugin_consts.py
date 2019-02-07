@@ -38,6 +38,8 @@ NOTIFICATIONS_SETTINGS = 'notifications_settings'
 NOTIFY_ADAPTERS_FETCH = 'notify_adapters_fetch'
 CORRELATION_SETTINGS = 'correlation_settings'
 CORRELATE_BY_EMAIL_PREFIX = 'correlate_by_email_prefix'
+AGGREGATION_SETTINGS = 'aggregation_settings'
+MAX_WORKERS = 'max_workers'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'

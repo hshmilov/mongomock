@@ -17,7 +17,6 @@ import sys
 import threading
 import traceback
 import uuid
-import gridfs
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
@@ -26,59 +25,68 @@ from typing import Iterable, List
 
 import cachetools
 import func_timeout
+import gridfs
 import pymongo
 import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
-# bson is requirement of mongo and its not recommended to install it manually
-from tlssyslog import TLSSysLogHandler
-
-from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.devices import deep_merge_only_dict
 from bson import ObjectId, json_util
-from flask import Flask, jsonify, request, has_request_context, session
+from flask import Flask, has_request_context, jsonify, request, session
 from funcy import chunks
 from namedlist import namedtuple
 from promise import Promise
 from pymongo import MongoClient
 from retrying import retry
+# bson is requirement of mongo and its not recommended to install it manually
+from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
-from axonius import plugin_exceptions, adapter_exceptions
+from axonius import adapter_exceptions, plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
+                                          AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
-                                          CORE_UNIQUE_NAME, GUI_NAME,
-                                          PLUGIN_UNIQUE_NAME,
-                                          NODE_ID,
-                                          VOLATILE_CONFIG_PATH, PLUGIN_NAME, NODE_INIT_NAME, X_UI_USER,
-                                          X_UI_USER_SOURCE,
-                                          PROXY_SETTINGS, PROXY_ADDR, PROXY_PORT, PROXY_USER, PROXY_PASSW,
-                                          NOTIFICATIONS_SETTINGS, NOTIFY_ADAPTERS_FETCH,
-                                          CORRELATION_SETTINGS, CORRELATE_BY_EMAIL_PREFIX)
-from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
+                                          CORE_UNIQUE_NAME,
+                                          CORRELATE_BY_EMAIL_PREFIX,
+                                          CORRELATION_SETTINGS, GUI_NAME,
+                                          MAX_WORKERS, NODE_ID, NODE_INIT_NAME,
+                                          NOTIFICATIONS_SETTINGS,
+                                          NOTIFY_ADAPTERS_FETCH, PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME, PROXY_ADDR,
+                                          PROXY_PASSW, PROXY_PORT,
+                                          PROXY_SETTINGS, PROXY_USER,
+                                          VOLATILE_CONFIG_PATH, X_UI_USER,
+                                          X_UI_USER_SOURCE)
+from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.devices import deep_merge_only_dict
+from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
-from axonius.types.correlation import CorrelationResult, CorrelateException, MAX_LINK_AMOUNT
-from axonius.types.ssl_state import COMMON_SSL_CONFIG_SCHEMA, COMMON_SSL_CONFIG_SCHEMA_DEFAULTS, SSLState, \
-    MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS, MANDATORY_SSL_CONFIG_SCHEMA
+from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelateException,
+                                       CorrelationResult)
+from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
+                                     COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
+                                     MANDATORY_SSL_CONFIG_SCHEMA,
+                                     MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS,
+                                     SSLState)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
-from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper, run_and_forget
+from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
+                                     run_in_executor_helper)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -2262,6 +2270,14 @@ class PluginBase(Configurable, Feature):
         self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
         self._reg_check_exists = config['execution_settings'].get('reg_check_exists')
 
+        self._aggregation_max_workers = None
+        try:
+            max_workers = int(config[AGGREGATION_SETTINGS].get(MAX_WORKERS))
+            if max_workers > 0:
+                self._aggregation_max_workers = max_workers
+        except Exception:
+            pass
+
         current_syslog = getattr(self, '_syslog_settings', None)
         if current_syslog != config['syslog_settings']:
             logger.info('new syslog settings arrived')
@@ -2685,6 +2701,19 @@ class PluginBase(Configurable, Feature):
                     "type": "array",
                     "required": [CORRELATE_BY_EMAIL_PREFIX]
                 },
+                {
+                    "items": [
+                        {
+                            "name": MAX_WORKERS,
+                            "title": "Maximum Adapters to Execute Asynchronously",
+                            "type": "integer",
+                        }
+                    ],
+                    "name": AGGREGATION_SETTINGS,
+                    "title": "Aggregation Settings",
+                    "type": "array",
+                    "required": []
+                },
             ],
             'pretty_name': 'Global Configuration',
             'type': 'array'
@@ -2763,6 +2792,9 @@ class PluginBase(Configurable, Feature):
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False
-            }
+            },
+            AGGREGATION_SETTINGS: {
+                MAX_WORKERS: 20,
+            },
 
         }
