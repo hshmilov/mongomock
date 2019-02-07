@@ -12,7 +12,7 @@ class CoreService(PluginService):
 
     @property
     def get_max_uwsgi_threads(self) -> int:
-        return 300  # core serves as a proxy
+        return 2000  # core serves as a proxy
 
     def _migrate_db(self):
         super()._migrate_db()

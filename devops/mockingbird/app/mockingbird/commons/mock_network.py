@@ -179,6 +179,9 @@ class MockNetwork:
         items_type = stats.get('items-type')
         items = stats.get('items')
 
+        # shuffle entities for best results
+        random.shuffle(list_of_entities_ids)
+
         # Update everything we have with the required value
         if value:
             print(f'{value}: {len(list_of_entities_ids)} entities will be updated')
@@ -219,6 +222,8 @@ class MockNetwork:
                 self.__entities[entity_type][entity_id] for entity_id in list_of_entities_ids
                 if self.__entities[entity_type][entity_id].does_have_property(entity_property)
             ]
+            # Shuffle it
+            random.shuffle(entities_with_property)
             entities_index = 0
             for entity_stats_group in entity_stats_list:
                 percentage = entity_stats_group['percentage']

@@ -7,6 +7,7 @@ from axonius.utils.parsing import parse_date
 logger = logging.getLogger(f'axonius.{__name__}')
 MOCK_SERVER = 'https://mockingbird'
 ENTITIES_PER_PAGE = 1000
+PARALLEL_CHUNKS = 2  # currently a big number doesn't work well with the mock server
 
 
 class AdapterMockClient(RESTConnection):
@@ -42,7 +43,7 @@ class AdapterMockClient(RESTConnection):
             })
             offset += ENTITIES_PER_PAGE
 
-        for response in self._async_get_only_good_response(async_requests):
+        for response in self._async_get_only_good_response(async_requests, chunks=PARALLEL_CHUNKS):
             try:
                 yield from response['data']
             except Exception:

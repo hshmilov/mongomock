@@ -25,9 +25,6 @@ class AwsAdapterParser(AdapterParser):
         device.os = network_device.os
         device.cloud_id = device.id
         device.cloud_provider = 'AWS'
-
-        ips = mock_utils.get_all_ips(network_device)
-        if ips:
-            device.add_nic(None, ips)
+        device.network_interfaces = network_device.network_interfaces
 
         yield device
