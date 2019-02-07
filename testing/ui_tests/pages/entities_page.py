@@ -5,6 +5,7 @@ from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.parsing import parse_date, parse_date_with_timezone
+from axonius.utils.wait import wait_until
 from ui_tests.pages.page import Page
 
 
@@ -235,6 +236,7 @@ class EntitiesPage(Page):
         return self.find_query_search_input().get_attribute('value')
 
     def count_entities(self):
+        wait_until(lambda: 'loading' not in self.driver.find_element_by_css_selector(self.TABLE_COUNT_CSS).text)
         match_count = re.search(r'\((\d+)\)', self.driver.find_element_by_css_selector(self.TABLE_COUNT_CSS).text)
         assert match_count and len(match_count.groups()) == 1
         return int(match_count.group(1))

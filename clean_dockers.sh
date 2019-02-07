@@ -35,11 +35,11 @@ fi
 
 if [[ $1 == "images" ]]; then
     echo "Removing all images"
-    AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
+    AVAILABLE_IMAGES=$( docker images -q )
     if [ "$AVAILABLE_IMAGES" != "" ]; then
         docker rmi -f ${AVAILABLE_IMAGES}
         docker rmi -f ${AVAILABLE_IMAGES}   # docker graph dependency issue
-        AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
+        AVAILABLE_IMAGES=$( docker images -q )
         if [ "$AVAILABLE_IMAGES" != "" ]; then
             echo "Axonius images remaining: $AVAILABLE_IMAGES"
             # Problematic in Windows

@@ -30,12 +30,12 @@ export const updateDataCountQuick = (state, payload) => {
 
 	if (payload.data !== undefined) {
 		if (count.data == undefined) {
-			count.data = payload.data
-			count.data_to_show = payload.data
-		}
-		if (payload.data == '1000') {
-			count.data_to_show = '> 1000, loading...'
-		}
+            count.data = payload.data
+            count.data_to_show = payload.data
+            if (payload.data == '1000') {
+                count.data_to_show = '> 1000, loading...'
+            }
+        }
 	}
 }
 
