@@ -38,60 +38,60 @@ USER_EXISTENCE_STATS = {
 LAST_SEEN_STATS = {
     MockNetworkDeviceProperties.ADDevice: [
         {
-            'percentage': 0.9,
+            'percentage': 0.999,
             'function': mock_utils.last_seen_generator,
             'args': (7, 0)
         },
         {
-            'percentage': 0.1,
+            'percentage': 0.001,
             'function': mock_utils.last_seen_generator,
             'args': (365, 300)
         }
     ],
     MockNetworkDeviceProperties.EpoDevice: [
         {
-            'percentage': 0.98,
+            'percentage': 0.998,
             'function': mock_utils.last_seen_generator,
             'args': (6, 0)
         },
         {
-            'percentage': 0.02,
+            'percentage': 0.002,
             'function': mock_utils.last_seen_generator,
             'args': (365, 7)
         }
     ],
     MockNetworkDeviceProperties.CarbonBlackResponseDevice: [
         {
-            'percentage': 0.94,
+            'percentage': 0.99,
             'function': mock_utils.last_seen_generator,
             'args': (7, 0)
         },
         {
-            'percentage': 0.06,
+            'percentage': 0.01,
             'function': mock_utils.last_seen_generator,
             'args': (365, 300)
         }
     ],
     MockNetworkDeviceProperties.ChefDevice: [
         {
-            'percentage': 0.92,
+            'percentage': 0.992,
             'function': mock_utils.last_seen_generator,
             'args': (7, 0)
         },
         {
-            'percentage': 0.08,
+            'percentage': 0.008,
             'function': mock_utils.last_seen_generator,
             'args': (365, 300)
         }
     ],
     MockNetworkDeviceProperties.SccmDevice: [
         {
-            'percentage': 0.9,
+            'percentage': 0.99,
             'function': mock_utils.last_seen_generator,
             'args': (7, 0)
         },
         {
-            'percentage': 0.1,
+            'percentage': 0.01,
             'function': mock_utils.last_seen_generator,
             'args': (365, 300)
         }
@@ -103,29 +103,29 @@ LAST_SEEN_STATS = {
             'args': (7, 0)
         },
         {
-            'percentage': 0.3,
+            'percentage': 0.49,
             'function': mock_utils.last_seen_generator,
             'args': (30, 0)
         },
         {
-            'percentage': 0.2,
+            'percentage': 0.01,
             'function': mock_utils.last_seen_generator,
-            'args': (365, 0)
+            'args': (365, 30)
         },
     ],
     MockNetworkDeviceProperties.CiscoMerakiDevice: [
         {
-            'percentage': 0.9,
+            'percentage': 0.99,
             'function': mock_utils.last_seen_generator,
             'args': (7, 0)
         },
         {
-            'percentage': 0.08,
+            'percentage': 0.008,
             'function': mock_utils.last_seen_generator,
             'args': (14, 7)
         },
         {
-            'percentage': 0.02,
+            'percentage': 0.002,
             'function': mock_utils.last_seen_generator,
             'args': (365, 14)
         },
