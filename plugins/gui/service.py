@@ -1634,7 +1634,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
                     # while we can quickly mark all adapters to be pending_delete
                     # we still want to run a background task to delete them
-                    run_and_forget(lambda: async_delete_entities(entity_type, entities_to_pass_to_be_deleted))
+                    tmp_entity_type = entity_type
+                    run_and_forget(lambda: async_delete_entities(tmp_entity_type, entities_to_pass_to_be_deleted))
 
                     entities_to_rebuild += to_rebuild
 

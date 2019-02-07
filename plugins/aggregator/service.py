@@ -314,6 +314,14 @@ class AggregatorService(Triggerable, PluginBase):
             },
             *aggregation_stages_for_entity_view,
         ]))
+
+        to_db.delete_many(
+            filter={
+                "internal_axon_id": {
+                    "$in": internal_axon_ids
+                }
+            })
+
         for device in processed_devices:
             to_db.replace_one(
                 filter={
@@ -322,14 +330,6 @@ class AggregatorService(Triggerable, PluginBase):
                 replacement=device,
                 upsert=True
             )
-        retrieved_devices = [x['internal_axon_id'] for x in processed_devices]
-        to_be_deleted = [x for x in internal_axon_ids if x not in retrieved_devices]
-        to_db.delete_many(
-            filter={
-                "internal_axon_id": {
-                    "$in": to_be_deleted
-                }
-            })
 
         logger.debug("Performance: Done partial rebuild")
 

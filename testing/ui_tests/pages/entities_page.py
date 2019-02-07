@@ -71,6 +71,8 @@ class EntitiesPage(Page):
     ALL_ENTITIES_CSS = 'tbody>tr'
 
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
+    SPECIFIC_JSON_ADAPTER_FILTER = 'adapters_data.json_file_adapter.username == "ofri" or ' \
+                                   'adapters_data.json_file_adapter.hostname == "CB First"'
     AD_ADAPTER_FILTER = 'adapters == "active_directory_adapter"'
     AD_WMI_ADAPTER_FILTER = f'{AD_ADAPTER_FILTER} and adapters_data.general_info.id == exists(true)'
 

@@ -97,12 +97,12 @@ class TestEntityNotes(TestBase):
         entities_page.remove_note()
 
     def _test_notes_historical(self, entities_page, entity_type: EntityType):
-        entities_page.load_notes(entities_page.JSON_ADAPTER_FILTER)
+        entities_page.load_notes(entities_page.SPECIFIC_JSON_ADAPTER_FILTER)
         entities_page.create_note(self.NOTE_1_TEXT)
         self._update_and_create_history(entity_type)
 
         # Edit the original note in the current table
-        entities_page.load_notes(entities_page.JSON_ADAPTER_FILTER)
+        entities_page.load_notes(entities_page.SPECIFIC_JSON_ADAPTER_FILTER)
         entities_page.edit_note(self.NOTE_2_TEXT)
         entities_page.switch_to_page()
 

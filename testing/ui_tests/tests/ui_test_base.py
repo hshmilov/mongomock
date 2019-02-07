@@ -294,8 +294,7 @@ class TestBase:
         for day in range(1, days_to_fill):
             # Randomly select a chunk of entities to be added as history for `day` back
             entity_limit = entity_count
-            entity_skip = 0
-            entities = list(history_db.find().skip(entity_skip).limit(entity_limit))
+            entities = list(history_db.find(limit=entity_limit))
             current_date = datetime.now() - timedelta(day)
             for entity in entities:
                 del entity['_id']
@@ -303,6 +302,7 @@ class TestBase:
                 entity['accurate_for_datetime'] = current_date
                 if update_field:
                     entity['specific_data'][0]['data'][update_field] += f' {day}'
+
             insert_many_result = history_db.insert_many(entities)
             # Save the count for testing the expected amount for the day is presented
             day_to_entity_count.append(len(insert_many_result.inserted_ids))

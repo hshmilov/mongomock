@@ -16,12 +16,11 @@ import subprocess
 import sys
 import threading
 import traceback
-import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Tuple
 
 import cachetools
 import func_timeout
@@ -90,6 +89,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
+from axonius.utils.hash import get_preferred_internal_axon_id_from_dict
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import get_exception_string
@@ -898,6 +898,8 @@ class PluginBase(Configurable, Feature):
             if axon_ids and len(axon_ids) > 50000:
                 axon_ids = None
                 # if you're trying to process that much you're better of with a regular rebuild
+            elif axon_ids:
+                axon_ids = list(set(axon_ids))
 
             url = f'trigger/rebuild_entity_view?blocking={sync}&priority={bool(axon_ids)}'
             return self.request_remote_plugin(url,
@@ -1322,7 +1324,7 @@ class PluginBase(Configurable, Feature):
                     else:
                         # this is regular first-seen device, make its own value
                         db_to_use.insert_one({
-                            "internal_axon_id": uuid.uuid4().hex,
+                            "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert),
                             "accurate_for_datetime": datetime.now(),
                             "adapters": [parsed_to_insert],
                             "tags": [],
@@ -1340,7 +1342,7 @@ class PluginBase(Configurable, Feature):
             def insert_quickpath_to_db(devices):
                 all_parsed = (self._create_axonius_entity(client_name, data, entity_type) for data in devices)
                 db_to_use.insert_many(({
-                    "internal_axon_id": uuid.uuid4().hex,
+                    "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert),
                     "accurate_for_datetime": datetime.now(),
                     "adapters": [parsed_to_insert],
                     "tags": [],
@@ -1437,7 +1439,7 @@ class PluginBase(Configurable, Feature):
         self._request_db_rebuild(sync=False)
         return inserted_data_count
 
-    def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
+    def _create_axonius_entity(self, client_name, data, entity_type: EntityType) -> dict:
         """
         Virtual.
         Creates an axonius entity ("Parsed data")
@@ -1845,14 +1847,14 @@ class PluginBase(Configurable, Feature):
 
     @staticmethod
     def __perform_unlink_with_session(adapter_id: str, plugin_unique_name: str,
-                                      session, entity_to_split=None) -> List[str]:
+                                      session, entity_to_split=None) -> Tuple[str, str]:
         """
         Perform an unlink given a session on a particular adapter entity
         :param adapter_id: the id of the adapter to unlink
         :param plugin_unique_name: the plugin unique name of the adapter
         :param session: the session to use, this also implies the DB to use
         :param entity_to_split: if not none, uses this as the entity (optimization)
-        :return: list of two strings that represent the internal_axon_ids altered
+        :return: Tuple of two strings that represent the internal_axon_ids altered
         """
         entity_to_split = entity_to_split or session.find_one({
             'adapters': {
@@ -1866,23 +1868,36 @@ class PluginBase(Configurable, Feature):
             raise CorrelateException(f"Could not find given entity {plugin_unique_name}:{adapter_id}")
         if len(entity_to_split['adapters']) == 1:
             raise CorrelateException("Only one adapter entity in axonius entity, can't split that")
-        internal_axon_id = uuid.uuid4().hex
         adapter_to_extract = [x for x in entity_to_split['adapters'] if
                               x[PLUGIN_UNIQUE_NAME] == plugin_unique_name and
                               x['data']['id'] == adapter_id]
         if len(adapter_to_extract) != 1:
             raise CorrelateException(f'Weird entity: {entity_to_split}')
+        adapter_to_extract = adapter_to_extract[0]
+
+        internal_axon_id = get_preferred_internal_axon_id_from_dict(adapter_to_extract)
         new_axonius_entity = {
             "internal_axon_id": internal_axon_id,
             "accurate_for_datetime": datetime.now(),
-            "adapters": adapter_to_extract,
+            "adapters": [adapter_to_extract],
             "tags": []
         }
+
+        update_internal_axon_id = False
+
+        if internal_axon_id == entity_to_split['internal_axon_id']:
+            selected_adapter_entity = [x
+                                       for x
+                                       in entity_to_split['adapters']
+                                       if x[PLUGIN_UNIQUE_NAME] != adapter_to_extract[PLUGIN_UNIQUE_NAME] or
+                                       x['data']['id'] != adapter_to_extract['data']['id']
+                                       ][0]
+            update_internal_axon_id = get_preferred_internal_axon_id_from_dict(selected_adapter_entity)
 
         # figure out which adapters should stay on the current entity (axonius_entity_to_split - remaining adapters)
         # and those that should move to the new axonius entity
         remaining_adapters = set(x[PLUGIN_UNIQUE_NAME] for x in entity_to_split['adapters']) - \
-            {adapter_to_extract[0][PLUGIN_UNIQUE_NAME]}
+            {adapter_to_extract[PLUGIN_UNIQUE_NAME]}
         # figure out for each tag G (in the current entity, i.e. axonius_entity_to_split)
         # whether any of G.associated_adapters is in the `associated_adapters`, i.e.
         # whether G should be a part of the new axonius entity.
@@ -1905,14 +1920,22 @@ class PluginBase(Configurable, Feature):
             adapter_entities_left.remove(adapter_to_remove_from_old)
 
         recalculate_adapter_oldness(adapter_entities_left)
+
+        update_dict = {
+            '$set': {
+                'adapters': adapter_entities_left
+            }
+        }
+
+        if update_internal_axon_id:
+            update_dict['$set']['internal_axon_id'] = update_internal_axon_id
+
         session.update_one({
             'internal_axon_id': entity_to_split['internal_axon_id']
-        },
-            {
-                '$set': {
-                    'adapters': adapter_entities_left
-                }
-        })
+        }, update_dict)
+
+        if update_internal_axon_id:
+            entity_to_split['internal_axon_id'] = update_internal_axon_id
 
         # generate a list of (unique_plugin_name, id) from the adapter entities left
         adapter_entities_left_by_id = [
@@ -1967,7 +1990,8 @@ class PluginBase(Configurable, Feature):
 
         recalculate_adapter_oldness(new_axonius_entity['adapters'])
         session.insert_one(new_axonius_entity)
-        return [internal_axon_id, entity_to_split['internal_axon_id']]
+
+        return internal_axon_id, entity_to_split['internal_axon_id']
 
     def __archive_axonius_device(self, plugin_unique_name, device_id, db_to_use, session=None):
         """
