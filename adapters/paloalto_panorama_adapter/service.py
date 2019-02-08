@@ -187,7 +187,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             device.vpn_public_ip = device_raw_dict.get('public-ip')
             device.vpn_tunnel_type = device_raw_dict.get('tunnel-type')
             try:
-                ips = [device_raw_dict.get('virtual-ip')] if device_raw.get('virtual-ip') else None
+                ips = [device_raw_dict.get('virtual-ip')] if device_raw_dict.get('virtual-ip') else None
                 if ips:
                     device.add_nic(None, ips)
             except Exception:
@@ -197,13 +197,13 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem adding lifetime to {device_raw_dict}')
             try:
-                device.last_seen = parse_date(device_raw.get('login-time'))
+                device.last_seen = parse_date(device_raw_dict.get('login-time'))
             except Exception:
-                logger.exception(f'Problem adding adding login time to {device_raw}')
+                logger.exception(f'Problem adding adding login time to {device_raw_dict}')
             device.set_raw(device_raw_dict)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching vpn Device for {device_raw}')
+            logger.exception(f'Problem with fetching vpn Device for {device_raw_dict}')
             return None
 
     def _create_arp_device(self, device_raw):

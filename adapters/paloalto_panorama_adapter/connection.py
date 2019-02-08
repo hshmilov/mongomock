@@ -76,16 +76,18 @@ class PaloaltoPanoramaConnection(RESTConnection):
                     yield arp_xml_entry, ARP_TYPE
             except Exception:
                 logger.exception(f'Problem with target {target}')
-        try:
-            xml_response = ET.fromstring(self._get('', use_json_in_response=False,
-                                                   url_params={'key': self._apikey,
-                                                               'type': 'op',
-                                                               'cmd': GET_VPN_XML}))
-            if 'response' not in xml_response.tag or xml_response.attrib['status'] != 'success' or 'result' \
-                    not in xml_response[0].tag:
-                error_msg = xml_response.attrib['status']
-                raise RESTException(f'Got bad request response {error_msg}')
-            for xml_vpn_entry in xml_response[0]:
-                yield xml_vpn_entry, VPN_TYPE
-        except Exception:
-            logger.exception(f'problem getting vpn info')
+        for target in serial_targets:
+            try:
+                xml_response = ET.fromstring(self._get('', use_json_in_response=False,
+                                                       url_params={'key': self._apikey,
+                                                                   'type': 'op',
+                                                                   'target': target,
+                                                                   'cmd': GET_VPN_XML}))
+                if 'response' not in xml_response.tag or xml_response.attrib['status'] != 'success' or 'result' \
+                        not in xml_response[0].tag:
+                    error_msg = xml_response.attrib['status']
+                    raise RESTException(f'Got bad request response {error_msg}')
+                for xml_vpn_entry in xml_response[0]:
+                    yield xml_vpn_entry, VPN_TYPE
+            except Exception:
+                logger.exception(f'problem getting vpn info')
