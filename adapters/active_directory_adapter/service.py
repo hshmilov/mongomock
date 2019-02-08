@@ -117,7 +117,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self._resolving_thread_lock = threading.RLock()
 
         self.__devices_data_db = self._get_collection(DEVICES_DATA)
-
+        self.__fetch_users_image = True
         executors = {'default': ThreadPoolExecutor(3)}
         self._background_scheduler = LoggedBackgroundScheduler(executors=executors)
 
@@ -524,7 +524,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                             # We can not afford an image that is more than 1mb.
                             for attr in ['thumbnailPhoto', 'exchangePhoto', 'jpegPhoto', 'photo', 'thumbnailLogo']:
                                 user_raw.pop(attr, None)
-                        else:
+                        elif self.__fetch_users_image:
                             user.image = bytes_image_to_base64(thumbnail_photo)
                 except Exception:
                     logger.exception(f"Exception while setting thumbnailPhoto for user {user.id}.")

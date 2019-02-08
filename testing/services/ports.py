@@ -79,6 +79,8 @@ DOCKER_PORTS = {
     'saltstack-adapter':                5942,
     'foreman-adapter':                  5943,
     'shodan-adapter':                   5944,
+    'checkpoint-r80-adapter':           5948,
+    'riverbed-adapter':                 5949,
     'paloalto-panorama-adapter':        5950,
     'samange-adapter':                  5960,
     'sysaid-adapter':                   5990,
@@ -122,7 +124,6 @@ DOCKER_PORTS = {
     'linux-ssh-adapter':                6047,
     'proxmox-adapter':                  6048,
     'diag':                             6666,  # reserved
-    'checkpoint-r80-adapter':           27019,
     'mongo':                            27017,
     'mongo-slave':                      27018,
 }

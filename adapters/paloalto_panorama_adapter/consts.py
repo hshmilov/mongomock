@@ -1,4 +1,6 @@
 GET_ALL_DEVICES_XML = '<show><devices><all></all></devices></show>'
 GET_ARP_XML = '<show><arp><entry name=\'all\'/></arp></show>'
+GET_VPN_XML = '<show><global-protect-gateway><current-user/></global-protect-gateway></show>'
 FIREWALL_DEVICE_TYPE = 'firewall_device'
 ARP_TYPE = 'arp_device'
+VPN_TYPE = 'vpn_device'

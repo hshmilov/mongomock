@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    riverbed_adapter: {
+        title: 'Riverbed - BETA',
+        description: 'The SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges.'
+    },
     checkpoint_r80_adapter: {
         title: 'CheckPoint R80 - BETA',
         description: 'Check Point Infinity architecture delivers consolidated Gen V cyber security across networks, cloud, and mobile environments.'

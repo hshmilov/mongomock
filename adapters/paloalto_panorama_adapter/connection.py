@@ -3,7 +3,8 @@ import xml.etree.cElementTree as ET
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from paloalto_panorama_adapter.consts import GET_ALL_DEVICES_XML, FIREWALL_DEVICE_TYPE, ARP_TYPE, GET_ARP_XML
+from paloalto_panorama_adapter.consts import GET_ALL_DEVICES_XML, FIREWALL_DEVICE_TYPE, ARP_TYPE,\
+    GET_ARP_XML, VPN_TYPE, GET_VPN_XML
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -35,6 +36,7 @@ class PaloaltoPanoramaConnection(RESTConnection):
                                             'type': 'op',
                                             'cmd': GET_ALL_DEVICES_XML}))
 
+    # pylint: disable=R0912
     def get_device_list(self):
         xml_response = ET.fromstring(self._get('', use_json_in_response=False,
                                                url_params={'key': self._apikey,
@@ -74,3 +76,16 @@ class PaloaltoPanoramaConnection(RESTConnection):
                     yield arp_xml_entry, ARP_TYPE
             except Exception:
                 logger.exception(f'Problem with target {target}')
+        try:
+            xml_response = ET.fromstring(self._get('', use_json_in_response=False,
+                                                   url_params={'key': self._apikey,
+                                                               'type': 'op',
+                                                               'cmd': GET_VPN_XML}))
+            if 'response' not in xml_response.tag or xml_response.attrib['status'] != 'success' or 'result' \
+                    not in xml_response[0].tag:
+                error_msg = xml_response.attrib['status']
+                raise RESTException(f'Got bad request response {error_msg}')
+            for xml_vpn_entry in xml_response[0]:
+                yield xml_vpn_entry, VPN_TYPE
+        except Exception:
+            logger.exception(f'problem getting vpn info')

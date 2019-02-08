@@ -5,18 +5,20 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-from checkpoint_r80_adapter.connection import CheckpointR80Connection
-from checkpoint_r80_adapter.client_id import get_client_id
+from axonius.utils.files import get_local_config_file
+from riverbed_adapter.connection import RiverbedConnection
+from riverbed_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CheckpointR80Adapter(AdapterBase):
+class RiverbedAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        cp_type = Field(str, 'CheckPoint Device Type')
-        cp_domain = Field(str, 'CheckPoint Domain')
+        uuid = Field(str, 'UUID')
+        health = Field(str, 'Health')
+        address = Field(str, 'Address')
+        device_version = Field(str, 'Device version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -32,11 +34,10 @@ class CheckpointR80Adapter(AdapterBase):
     @staticmethod
     def _connect_client(client_config):
         try:
-            with CheckpointR80Connection(domain=client_config['domain'],
-                                         verify_ssl=client_config['verify_ssl'],
-                                         username=client_config['username'],
-                                         password=client_config['password'],
-                                         cp_domain=client_config.get('cp_domain')) as connection:
+            with RiverbedConnection(domain=client_config['domain'],
+                                    verify_ssl=client_config['verify_ssl'],
+                                    username=client_config['username'],
+                                    password=client_config['password']) as connection:
                 return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -60,7 +61,7 @@ class CheckpointR80Adapter(AdapterBase):
     @staticmethod
     def _clients_schema():
         """
-        The schema CheckpointR80Adapter expects from configs
+        The schema RiverbedAdapter expects from configs
 
         :return: JSON scheme
         """
@@ -68,7 +69,7 @@ class CheckpointR80Adapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'CheckpointR80 Host URL',
+                    'title': 'Riverbed Domain',
                     'type': 'string'
                 },
                 {
@@ -81,11 +82,6 @@ class CheckpointR80Adapter(AdapterBase):
                     'title': 'Password',
                     'type': 'string',
                     'format': 'password'
-                },
-                {
-                    'name': 'cp_domain',
-                    'title': 'CheckPoint Domain',
-                    'type': 'string'
                 },
                 {
                     'name': 'verify_ssl',
@@ -106,36 +102,30 @@ class CheckpointR80Adapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device_id = device_raw.get('uid')
+                device_id = device_raw.get('id')
                 if not device_id:
-                    logger.warning(f'Bad device with not ID {device_raw}')
+                    logger.warning(f'Bad device with no id {device_raw}')
                     continue
-                device.id = device_id + '_' + (device_raw.get('name') or '')
-                device.name = device_raw.get('name')
-                device.cp_type = device_raw.get('type')
+                device.id = device_id + '_' + (device_raw.get('uuid') or '') + '_' + (device_raw.get('serial') or '')
+                device.uuid = device_raw.get('uuid')
+                device.device_serial = device_raw.get('serial')
+                device.device_model = device_raw.get('model')
+                device.device_version = device_raw.get('version')
+                device.hostname = device_raw.get('hostname')
+                device.address = device_raw.get('address')
+                device.health = device_raw.get('health')
                 try:
-                    ips = [device_raw.get('ipv4-address')] if device_raw.get('ipv4-address') else None
-                    ips6 = [device_raw.get('ipv6-address')] if device_raw.get('ipv6-address') else None
-
-                    if ips and ips6:
-                        ips.extend(ips6)
-                    elif ips or ips6:
-                        ips = ips or ips6
-                    if ips:
-                        device.add_nic(None, ips)
+                    if isinstance(device_raw.get('interfaces'), list):
+                        ips = [nic.get('ip_addr') for nic in device_raw.get('interfaces') if nic.get('ip_addr')]
+                        if ips:
+                            device.add_nic(None, ips)
                 except Exception:
                     logger.exception(f'Problem adding nic to {device_raw}')
-                try:
-                    domain = device_raw.get('domain')
-                    if domain and isinstance(domain, dict):
-                        device.cp_domain = domain.get('name')
-                except Exception:
-                    logger.exception(f'Problem getting domain to {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception(f'Problem with fetching CheckpointR80 Device for {device_raw}')
+                logger.exception(f'Problem with fetching Riverbed Device for {device_raw}')
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Network]
+        return [AdapterProperty.Assets]

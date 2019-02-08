@@ -6,10 +6,11 @@ from axonius.fields import Field
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.parsing import parse_date
 from axonius.utils.files import get_local_config_file
 from paloalto_panorama_adapter.connection import PaloaltoPanoramaConnection
 from paloalto_panorama_adapter.client_id import get_client_id
-from paloalto_panorama_adapter.consts import FIREWALL_DEVICE_TYPE, ARP_TYPE
+from paloalto_panorama_adapter.consts import FIREWALL_DEVICE_TYPE, ARP_TYPE, VPN_TYPE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -33,6 +34,12 @@ class PaloaltoPanoramaAdapter(AdapterBase):
         arp_port = Field(str, 'Port')
         arp_status = Field(str, 'Status')
         arp_ttl = Field(str, 'TTL')
+        vpn_is_local = Field(str, 'VPN Is Local')
+        vpn_domain = Field(str, 'VPN Domain')
+        vpn_type = Field(str, 'VPN Type')
+        vpn_public_ip = Field(str, 'VPN Public IP')
+        vpn_tunnel_type = Field(str, 'VPN Tunnel Type')
+        vpn_lifetime = Field(str, 'VPN Lifetime')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -159,6 +166,46 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             logger.exception(f'Problem with fetching Firewall Device for {device_raw_dict}')
             return None
 
+    def _create_vpn_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_raw_dict = dict()
+            for xml_property in device_raw:
+                device_raw_dict[xml_property.tag] = xml_property.text
+            computer = device_raw_dict.get('computer')
+            username = device_raw_dict.get('username')
+            if not computer and not username:
+                logger.warning(f'Bad device with no name or user {device_raw_dict}')
+                return None
+            device.id = (computer or '') + '_' + (username or '')
+            device.hostname = computer
+            if username:
+                device.last_used_users = [username]
+            device.vpn_is_local = device_raw_dict.get('islocal')
+            device.vpn_domain = device_raw_dict.get('domain')
+            device.vpn_type = device_raw_dict.get('vpn-type')
+            device.vpn_public_ip = device_raw_dict.get('public-ip')
+            device.vpn_tunnel_type = device_raw_dict.get('tunnel-type')
+            try:
+                ips = [device_raw_dict.get('virtual-ip')] if device_raw.get('virtual-ip') else None
+                if ips:
+                    device.add_nic(None, ips)
+            except Exception:
+                logger.exception(f'Problem adding nic to {device_raw_dict}')
+            try:
+                device.vpn_lifetime = int(device_raw_dict.get('lifetime')) if device_raw_dict.get('lifetime') else None
+            except Exception:
+                logger.exception(f'Problem adding lifetime to {device_raw_dict}')
+            try:
+                device.last_seen = parse_date(device_raw.get('login-time'))
+            except Exception:
+                logger.exception(f'Problem adding adding login time to {device_raw}')
+            device.set_raw(device_raw_dict)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching vpn Device for {device_raw}')
+            return None
+
     def _create_arp_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -194,6 +241,8 @@ class PaloaltoPanoramaAdapter(AdapterBase):
                 device = self._create_firewall_device(device_raw)
             if device_type == ARP_TYPE:
                 device = self._create_arp_device(device_raw)
+            if device_type == VPN_TYPE:
+                device = self._create_vpn_device(device_raw)
             if device:
                 yield device
 
