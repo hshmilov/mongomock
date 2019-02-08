@@ -458,9 +458,14 @@ class AggregatorService(Triggerable, PluginBase):
                 self._save_entity_views_to_historical_db(entity_type, now)
             return
         elif job_name == 'rebuild_entity_view':
+            internal_axon_ids = post_json.get('internal_axon_ids') if post_json else None
             for entity_type in EntityType:
-                self._rebuild_entity_view(entity_type,
-                                          internal_axon_ids=post_json.get('internal_axon_ids') if post_json else None)
+                self._rebuild_entity_view(entity_type, internal_axon_ids=internal_axon_ids)
+            if not internal_axon_ids:
+                # if not a partial rebuild - clear slow dashboards as well
+                self._request_gui_dashboard_cache_clear(True)
+            else:
+                self._request_gui_dashboard_cache_clear(False)
             return
         else:
             adapters = [adapter for adapter in adapters.values()

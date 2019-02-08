@@ -14,7 +14,7 @@ from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, GUI_NAME)
+                                          PLUGIN_UNIQUE_NAME, GUI_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
@@ -572,7 +572,7 @@ def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str
     field_schema['items'] = list(valid_items())
 
 
-@cachetools.cached(cachetools.LRUCache(maxsize=5))
+@cachetools.cached(cachetools.LRUCache(maxsize=len(EntityType)))
 def _get_generic_fields(entity_type: EntityType):
     """
     Helper for entity_fields

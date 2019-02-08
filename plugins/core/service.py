@@ -18,7 +18,6 @@ from pymongo import ReturnDocument
 from requests.exceptions import ConnectionError, ReadTimeout, Timeout
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.plugin_consts import (NODE_ID, NODE_INIT_NAME, NODE_NAME,
                                           NODE_USER_PASSWORD,
                                           PLUGIN_UNIQUE_NAME, PROXY_ADDR,

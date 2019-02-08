@@ -2,13 +2,13 @@ import configparser
 import io
 import json
 import logging
-import operator
 import os
 import re
 import secrets
 import shutil
 import tarfile
 import threading
+import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
@@ -23,7 +23,6 @@ import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
@@ -33,7 +32,6 @@ from flask import (after_this_request, jsonify, make_response, redirect,
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
 import OpenSSL
-from cachetools import cachedmethod, TTLCache
 
 from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -102,9 +100,12 @@ from axonius.utils.metric import filter_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.parsing import bytes_image_to_base64, parse_filter
+from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
+from gui.gui_logic.adapter_data import adapter_data
+from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -371,7 +372,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
         self._set_first_time_use()
 
-        self.__setup_dashboard_caching()
+        self._trigger('clear_dashboard_cache', blocking=False)
+
         if os.environ.get('HOT', None) == 'true':
             # pylint: disable=W0603
             global session
@@ -381,28 +383,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         self.config = {'medical': os.environ.get('MEDICAL', None) == 'true'}
 
         Path('gui/frontend/src/constants/config.json').write_text(json.dumps(self.config))
-
-    def __setup_dashboard_caching(self):
-        """
-        Dashboard creating is heavy, so it is cached, so this guards from recalculating it
-        """
-        self.__dashboard_creation_locks = defaultdict(threading.RLock)
-        self._dashboard_lock = threading.RLock()
-        self._fast_dashboard_lock = threading.RLock()
-
-        # this is for non-heavy dashboards, i.e not history
-        self._fast_dashboard_cache = TTLCache(maxsize=1000,  # this is a reasonable size
-                                              ttl=120)
-
-        # this is for heavy dashboards, i.e history
-        self._dashboard_cache = TTLCache(maxsize=1000,
-                                         ttl=3600 * 24)  # ttl is a just-in-case
-        self._trigger('clear_dashboard_cache', blocking=False)
-        self._job_scheduler.add_job(func=self._get_dashboard,
-                                    trigger=IntervalTrigger(seconds=60),
-                                    name='hot_cache_dashboard',
-                                    id='hot_cache_dashboard',
-                                    max_instances=1)
 
     def _mark_demo_views(self):
         """
@@ -568,7 +548,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             for adapter in adapters_from_db:
                 if adapter[PLUGIN_UNIQUE_NAME] in plugins_available and db_connection[adapter[PLUGIN_UNIQUE_NAME]][
-                        'clients'].count_documents({}):
+                        'clients'].count_documents({}, limit=1):
                     self.__is_system_first_use = False
 
     def _add_default_roles(self):
@@ -748,7 +728,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
         if method == 'GET':
             mongo_filter = filter_archived(mongo_filter)
-            fielded_plugins = self._entity_views_db_map[entity_type].distinct(f'specific_data.{PLUGIN_NAME}')
+            fielded_plugins = get_fielded_plugins(entity_type)
 
             def _validate_adapters_used(view):
                 if not view.get('predefined'):
@@ -829,7 +809,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         }})
         self._request_db_rebuild(
             sync=True, internal_axon_ids=entities_selection['ids'] if entities_selection['include'] else None)
-        self._trigger('clear_dashboard_cache')
+        self._trigger('clear_dashboard_cache', blocking=False)
 
         return '', 200
 
@@ -951,7 +931,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         self._save_field_names_to_db(entity_type)
         self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in entities])
-        self._trigger('clear_dashboard_cache')
+        self._trigger('clear_dashboard_cache', blocking=False)
 
     def __get_entity_hyperlinks(self, entity_type: EntityType) -> Dict[str, str]:
         """
@@ -1630,7 +1610,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                             pool.map_async(delete_adapters, entities_to_delete).get()
 
                         self._request_db_rebuild(sync=True)
-                        self._trigger('clear_dashboard_cache')
+                        self._trigger('clear_dashboard_cache', blocking=False)
 
                     # while we can quickly mark all adapters to be pending_delete
                     # we still want to run a background task to delete them
@@ -1642,7 +1622,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 if entities_to_rebuild:
                     self._request_db_rebuild(sync=True,
                                              internal_axon_ids=[x['internal_axon_id'] for x in entities_to_rebuild])
-                    self._trigger('clear_dashboard_cache')
+                    self._trigger('clear_dashboard_cache', blocking=False)
 
             return client_from_db
 
@@ -2870,16 +2850,18 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :param clear_slow: Also clear the slow cache
         """
         if clear_slow:
-            with self._dashboard_lock:
-                self._dashboard_cache.clear()
-        with self._fast_dashboard_lock:
-            self._fast_dashboard_cache.clear()
-        run_and_forget(self._get_dashboard)
+            self.__generate_dashboard.update_cache()
+        self.__generate_dashboard_fast.update_cache()
+        adapter_data.update_cache()
+        get_fielded_plugins.update_cache()
+        self._get_dashboard_coverage.update_cache()
 
     def __generate_dashboard_uncached(self, dashboard):
         """
         See _get_dashboard
         """
+        dashboard = dict(dashboard)
+
         dashboard_metric = ChartMetrics[dashboard['metric']]
         handler_by_metric = {
             ChartMetrics.compare: self._fetch_chart_compare,
@@ -2898,16 +2880,14 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
         return gui_helpers.beautify_db_entry(dashboard)
 
-    @cachedmethod(operator.attrgetter('_dashboard_cache'), lambda self, dashboard: dashboard['_id'],
-                  operator.attrgetter('_dashboard_lock'))
+    @rev_cached(ttl=3600 * 4, key_func=lambda self, dashboard: dashboard['_id'])
     def __generate_dashboard(self, dashboard):
         """
         See _get_dashboard
         """
         return self.__generate_dashboard_uncached(dashboard)
 
-    @cachedmethod(operator.attrgetter('_fast_dashboard_cache'), lambda self, dashboard: dashboard['_id'],
-                  operator.attrgetter('_fast_dashboard_lock'))
+    @rev_cached(ttl=120, key_func=lambda self, dashboard: dashboard['_id'])
     def __generate_dashboard_fast(self, dashboard):
         """
         See _get_dashboard
@@ -2926,7 +2906,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         logger.info('Getting dashboard')
         for dashboard in self._get_collection('dashboard').find(filter=filter_archived(), skip=skip, limit=limit):
-            dashboard_name = dashboard.get('name')
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
@@ -2934,13 +2913,12 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             else:
                 # Let's fetch and execute them query filters, depending on the chart's type
                 try:
-                    with self.__dashboard_creation_locks[dashboard_name]:
-                        dashboard_metric = ChartMetrics[dashboard['metric']]
-                        if dashboard_metric == ChartMetrics.timeline:
-                            # slow dashboard cache
-                            yield self.__generate_dashboard(dashboard)
-                        else:
-                            yield self.__generate_dashboard_fast(dashboard)
+                    dashboard_metric = ChartMetrics[dashboard['metric']]
+                    if dashboard_metric == ChartMetrics.timeline:
+                        # slow dashboard cache
+                        yield self.__generate_dashboard(dashboard)
+                    else:
+                        yield self.__generate_dashboard_fast(dashboard)
                 except Exception:
                     # Since there is no data, not adding this chart to the list
                     logger.exception(f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]})')
@@ -3403,22 +3381,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
         return ''
 
-    @gui_add_rule_logged_in('dashboard/lifecycle', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
-    def get_system_lifecycle(self):
-        """
-        Fetches and build data needed for presenting current status of the system's lifecycle in a graph
-
-        :return: Data containing:
-         - All research phases names, for showing the whole picture
-         - Current research sub-phase, which is empty if system is not stable
-         - Portion of work remaining for the current sub-phase
-         - The time next cycle is scheduled to run
-        """
+    @rev_cached(ttl=10, key_func=lambda self: 1)
+    def __lifecycle(self):
         state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
-            return return_error(f'Error fetching status of system scheduler. Reason: {state_response.text}')
+            raise RuntimeError(f'Error fetching status of system scheduler. Reason: {state_response.text}')
 
         state_response = state_response.json()
         state = SchedulerState(**state_response['state'])
@@ -3447,55 +3414,33 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 # Set 0 or 1, depending if reached current status yet
                 sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})
 
-        return jsonify({
+        return {
             'sub_phases': sub_phases,
             'next_run_time': state_response['next_run_time'],
             'status': nice_state.name
-        })
-
-    def _adapter_data(self, entity_type: EntityType):
-        """
-        For each adapter currently registered in system, count how many devices it fetched.
-
-        :return: Map between each adapter and the number of devices it has, unless no devices
-        """
-        logger.info(f'Getting adapter data for entity {entity_type.name}')
-
-        entity_collection = self._entity_views_db_map[entity_type]
-        adapter_entities = {
-            'seen': 0, 'seen_gross': 0, 'unique': entity_collection.count_documents({}), 'counters': []
         }
 
-        # First value is net adapters count, second is gross adapters count (refers to AX-2430)
-        # If an Axonius entity has 2 adapter entities from the same plugin it will be counted for each time it is there
-        entities_per_adapters = defaultdict(lambda: {'value': 0, 'meta': 0})
-        for res in entity_collection.aggregate([
-                {
-                    '$group': {
-                        '_id': '$adapters',
-                        'count': {
-                            '$sum': 1
-                        }
-                    }
-                }]):
-            for plugin_name in set(res['_id']):
-                entities_per_adapters[plugin_name]['value'] += res['count']
-                adapter_entities['seen'] += res['count']
+    @gui_add_rule_logged_in('dashboard/lifecycle', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadOnly)})
+    def get_system_lifecycle(self):
+        """
+        Fetches and build data needed for presenting current status of the system's lifecycle in a graph
 
-            for plugin_name in res['_id']:
-                entities_per_adapters[plugin_name]['meta'] += res['count']
-                adapter_entities['seen_gross'] += res['count']
-        for name, value in entities_per_adapters.items():
-            adapter_entities['counters'].append({'name': name, **value})
-
-        return adapter_entities
+        :return: Data containing:
+         - All research phases names, for showing the whole picture
+         - Current research sub-phase, which is empty if system is not stable
+         - Portion of work remaining for the current sub-phase
+         - The time next cycle is scheduled to run
+        """
+        return jsonify(self.__lifecycle())
 
     @gui_add_rule_logged_in('dashboard/adapter_data/<entity_name>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def get_adapter_data(self, entity_name):
         try:
-            return jsonify(self._adapter_data(EntityType(entity_name)))
+            return jsonify(adapter_data(EntityType(entity_name)))
         except KeyError:
             error = f'No such entity {entity_name}'
         except Exception:
@@ -3503,6 +3448,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             logger.exception(error)
         return return_error(error, 400)
 
+    @rev_cached(ttl=120, key_func=lambda self: 1)
     def _get_dashboard_coverage(self):
         """
         Measures the coverage portion, according to sets of properties that devices' adapters may have.
@@ -3515,9 +3461,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :return:
         """
         logger.info('Getting dashboard coverage')
-        devices_total = self.devices_db_view.count_documents({})
+        devices_total = self.devices_db_view.estimated_document_count()
         if not devices_total:
             return []
+
         coverage_list = [
             {'name': 'managed_coverage', 'title': 'Managed Device',
              'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
@@ -3535,6 +3482,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                     {'$in': item['properties']}
             })
             item['portion'] = devices_property / devices_total
+
         return coverage_list
 
     @gui_add_rule_logged_in('dashboard/coverage', methods=['GET'],
@@ -3567,6 +3515,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             logger.error('Error in running research phase')
             return return_error('Error in running research phase', response.status_code)
 
+        self.__lifecycle.clean_cache()
         return ''
 
     @gui_add_rule_logged_in('stop_research_phase', methods=['POST'],
@@ -3584,6 +3533,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 f'Could not stop research phase. returned code: {response.status_code}, reason: {str(response.content)}')
             return return_error(f'Could not stop research phase {str(response.content)}', response.status_code)
 
+        self.__lifecycle.clean_cache()
         return ''
 
     ####################
@@ -3597,37 +3547,38 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         :return:
         """
-        adapter_data = []
-        for adapter in adapters:
-            if not adapter.get('name'):
-                continue
-
-            views = []
-            for query in adapter.get('views', []):
-                if not query.get('name') or not query.get('entity'):
+        def get_adapters_data():
+            for adapter in adapters:
+                if not adapter.get('name'):
                     continue
-                entity = EntityType(query['entity'])
-                view_filter = self._find_filter_by_name(entity, query['name'])
-                if view_filter:
-                    query_filter = view_filter['query']['filter']
-                    view_parsed = parse_filter(query_filter)
-                    views.append({
-                        **query,
-                        'count': self._entity_views_db_map[entity].count_documents(view_parsed)
-                    })
-            adapter_clients_report = {}
-            adapter_unique_name = ''
-            try:
-                # Exception thrown if adapter is down or report missing, and section will appear with views only
-                adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
-                adapter_reports_db = self._get_db_connection()[adapter_unique_name]
-                found_report = adapter_reports_db['report'].find_one({'name': 'report'}) or {}
-                adapter_clients_report = found_report.get('data', {})
-            except Exception:
-                logger.exception(f'Error contacting the report db for adapter {adapter_unique_name} {adapter}')
 
-            adapter_data.append({'name': adapter['title'], 'queries': views, 'views': adapter_clients_report})
-        return adapter_data
+                views = []
+                for query in adapter.get('views', []):
+                    if not query.get('name') or not query.get('entity'):
+                        continue
+                    entity = EntityType(query['entity'])
+                    view_filter = self._find_filter_by_name(entity, query['name'])
+                    if view_filter:
+                        query_filter = view_filter['query']['filter']
+                        view_parsed = parse_filter(query_filter)
+                        views.append({
+                            **query,
+                            'count': self._entity_views_db_map[entity].count_documents(view_parsed)
+                        })
+                adapter_clients_report = {}
+                adapter_unique_name = ''
+                try:
+                    # Exception thrown if adapter is down or report missing, and section will appear with views only
+                    adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
+                    adapter_reports_db = self._get_db_connection()[adapter_unique_name]
+                    found_report = adapter_reports_db['report'].find_one({'name': 'report'}) or {}
+                    adapter_clients_report = found_report.get('data', {})
+                except Exception:
+                    logger.exception(f'Error contacting the report db for adapter {adapter_unique_name} {adapter}')
+
+                yield {'name': adapter['title'], 'queries': views, 'views': adapter_clients_report}
+
+        return list(get_adapters_data())
 
     def _get_saved_views_data(self):
         """
@@ -3691,10 +3642,13 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name == 'clear_dashboard_cache':
             self.__clear_dashboard_cache(clear_slow=post_json is not None and post_json.get('clear_slow') is True)
+
+            # Don't clean too often!
+            time.sleep(5)
             return ''
         elif job_name == 'execute':
             # GUI is a post correlation plugin, thus this is called near the end of the cycle
-            self._trigger('clear_dashboard_cache')
+            self._trigger('clear_dashboard_cache', blocking=False)
             self.dump_metrics()
             return self.generate_new_report_offline()
         raise RuntimeError(f'GUI was called with a wrong job name {job_name}')
@@ -3795,8 +3749,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         logger.info('Starting to generate report')
         report_data = {
-            'adapter_devices': self._adapter_data(EntityType.Devices),
-            'adapter_users': self._adapter_data(EntityType.Users),
+            'adapter_devices': adapter_data(EntityType.Devices),
+            'adapter_users': adapter_data(EntityType.Users),
             'covered_devices': self._get_dashboard_coverage(),
             'custom_charts': list(self._get_dashboard()),
             'views_data': self._get_saved_views_data()
@@ -3974,8 +3928,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     def dump_metrics(self):
         try:
-            adapter_devices = self._adapter_data(EntityType.Devices)
-            adapter_users = self._adapter_data(EntityType.Users)
+            adapter_devices = adapter_data(EntityType.Devices)
+            adapter_users = adapter_data(EntityType.Users)
 
             log_metric(logger, SystemMetric.GUI_USERS, self.__users_collection.count_documents({}))
             log_metric(logger, SystemMetric.DEVICES_SEEN, adapter_devices['seen'])

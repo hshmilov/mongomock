@@ -218,7 +218,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                         old_adapter_entities))
 
         deleted_entities_count = sum(x.result() for x in concurrent.futures.wait(futures).done)
-        self._request_db_rebuild(sync=False)
+        if deleted_entities_count:
+            self._request_db_rebuild(sync=False)
+
         return deleted_entities_count
 
     def __unlink_and_delete_entity(self, entity_type,
@@ -251,7 +253,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if self._notify_on_adapters is True and (devices_cleaned or users_cleaned):
             self.create_notification(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
         logger.info(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
-        self._request_db_rebuild(sync=False)
+        if devices_cleaned or users_cleaned:
+            self._request_db_rebuild(sync=False)
         return {EntityType.Devices.value: devices_cleaned, EntityType.Users.value: users_cleaned}
 
     def _triggered(self, job_name: str, post_json: dict, *args):

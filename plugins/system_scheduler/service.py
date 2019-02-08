@@ -256,7 +256,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             self._run_plugins(PluginSubtype.Correlator)
 
             self._request_db_rebuild(sync=True)
-            self._request_gui_dashboard_cache_clear()
 
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins(PluginSubtype.PostCorrelation)
@@ -267,7 +266,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 self._run_historical_phase()
 
             self._request_db_rebuild(sync=True)
-            self._request_gui_dashboard_cache_clear(clear_slow=True)
 
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             if self._notify_on_adapters is True:

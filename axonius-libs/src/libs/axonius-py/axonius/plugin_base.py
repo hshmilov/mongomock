@@ -300,7 +300,7 @@ class PluginBase(Configurable, Feature):
             "fields_set": set(),
             "raw_fields_set": set(),
             "fields_db_lock": threading.RLock()
-        } for entity_type in [EntityType.Devices, EntityType.Users]}
+        } for entity_type in EntityType}
         print(f"{datetime.now()} {self.plugin_name} is starting")
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
@@ -502,7 +502,15 @@ class PluginBase(Configurable, Feature):
         self._update_config_inner()
         self.__save_hyperlinks_to_db()
 
+        # Used by revving_cache
+        self.cached_operation_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutor(10)})
+        self.cached_operation_scheduler.start()
+
         run_and_forget(self.__call_delayed_initialization)
+
+        from axonius.utils.revving_cache import ALL_CACHES
+        for cache in ALL_CACHES:
+            cache.delayed_initialization()
 
         # Finished, Writing some log
         logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
@@ -1436,7 +1444,9 @@ class PluginBase(Configurable, Feature):
         if should_log_info is True:
             logger.info(f"Finished inserting {entity_type} of client {client_name}")
 
-        self._request_db_rebuild(sync=False)
+        if inserted_data_count:
+            self._request_db_rebuild(sync=False)
+
         return inserted_data_count
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType) -> dict:
