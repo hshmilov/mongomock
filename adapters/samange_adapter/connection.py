@@ -39,6 +39,19 @@ class SamangeConnection(RESTConnection):
                                                  'per_page': DEVICE_PER_PAGE})
                 if not response:
                     break
+                try:
+                    software_hrefs = [{'name': device_raw.get('softwares_href'),
+                                       'force_full_url': True} for device_raw in response]
+                    software_hrefs_hidden = [{'name': device_raw.get('hidden_softwares_href'),
+                                              'force_full_url': True} for device_raw in response]
+                    for device_raw, software_response in zip(response, self._async_get(software_hrefs)):
+                        if self._is_async_response_good(software_response):
+                            device_raw['software'] = software_response
+                    for device_raw, software_hidden_response in zip(response, self._async_get(software_hrefs_hidden)):
+                        if self._is_async_response_good(software_hidden_response):
+                            device_raw['hidden_software'] = software_hidden_response
+                except Exception:
+                    logger.exception(f'Problem getting software for page {page}')
                 yield from response
                 page += 1
             except Exception:

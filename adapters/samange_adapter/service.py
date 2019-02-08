@@ -92,7 +92,7 @@ class SamangeAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=R0912,R1702
+    # pylint: disable=R0912,R1702,R0915
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -136,9 +136,40 @@ class SamangeAdapter(AdapterBase):
                     logger.exception(f'Problem adding OS to {device_raw}')
                 if device_raw.get('username'):
                     device.last_used_users = [device_raw.get('username')]
-                device.owner = device_raw.get('owner')
+                try:
+                    device.owner = (device_raw.get('owner') or {}).get('name')
+                except Exception:
+                    logger.exception(f'Probelm getting owner at {device_raw}')
                 device.updated_at = parse_date(device_raw.get('updated_at'))
-                device.department = device_raw.get('department')
+                try:
+                    device.department = (device_raw.get('department') or {}).get('name')
+                except Exception:
+                    logger.exception(f'Problem getting department at {device_raw}')
+                try:
+                    for software_raw in device_raw.get('software') or []:
+                        try:
+                            vendor = None
+                            vendor_raw = software_raw.get('vendor')
+                            if isinstance(vendor_raw, dict):
+                                vendor = vendor_raw.get('name')
+                            device.add_installed_software(name=software_raw.get('name'),
+                                                          version=software_raw.get('version'),
+                                                          vendor=vendor)
+                        except Exception:
+                            logger.exception(f'Problem adding sw to {device_raw}')
+                    for software_raw in device_raw.get('hidden_software') or []:
+                        try:
+                            vendor = None
+                            vendor_raw = software_raw.get('vendor')
+                            if isinstance(vendor_raw, dict):
+                                vendor = vendor_raw.get('name')
+                            device.add_installed_software(name=software_raw.get('name'),
+                                                          version=software_raw.get('version'),
+                                                          vendor=vendor)
+                        except Exception:
+                            logger.exception(f'Problem adding hidden software to {device_raw}')
+                except Exception:
+                    logger.exception(f'Problem getting software for {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

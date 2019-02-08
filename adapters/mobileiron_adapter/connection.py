@@ -56,7 +56,12 @@ class MobileironConnection(RESTConnection):
                                                                       self._async_get(device_apps_requests_async)):
                         if self._is_async_response_good(device_apps_response):
                             try:
-                                device_raw_async['appInventory'] = device_apps_response['results'][0]['appInventory']
+                                if isinstance(device_apps_response['results'], list) \
+                                        and len(device_apps_response['results']) > 0:
+                                    device_raw_async['appInventory'] = \
+                                        device_apps_response['results'][0]['appInventory']
+                                else:
+                                    device_raw_async['appInventory'] = []
                             except Exception:
                                 logger.exception(
                                     f'Exceptionw while parsing device apps from response {device_apps_response}, '
