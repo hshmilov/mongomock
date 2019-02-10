@@ -234,6 +234,7 @@ def chown_folder(root_pass, path):
 
 def set_special_permissions(root_pass):
     # Adding write permissions on .axonius_settings so node_maker can touch a new node.marker
+    os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
     cmd = f'chmod o+w {AXONIUS_SETTINGS_PATH}'
     run_as_root(cmd.split(), root_pass)
 
