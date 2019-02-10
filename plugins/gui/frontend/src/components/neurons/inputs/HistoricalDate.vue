@@ -22,8 +22,8 @@
                         historicalDate = state.constants.firstHistoricalDate[this.module]
                     } else {
                         historicalDate = Object.values(state.constants.firstHistoricalDate).reduce((a, b) => {
-                            return (a < b) ? a : b
-                        }, null)
+                            return (new Date(a) < new Date(b)) ? a : b
+                        }, new Date())
                     }
                     historicalDate = new Date(historicalDate)
                     historicalDate.setDate(historicalDate.getDate() - 1)
