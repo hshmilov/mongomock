@@ -1,7 +1,7 @@
 <template>
-    <x-card :title="title" class="x-discovery-card" :class="{double: dataCounters && dataCounters.length > 4}">
+    <x-card :title="title" class="x-discovery-card" :class="{double: dataCounters && dataCounters.length > 4 && dataCounters.length < 13, triple: dataCounters && dataCounters.length > 12}">
         <div class="data-discovery">
-            <x-histogram :data="dataCounters" @click-one="runAdaptersFilter" :read-only="!filter" :condensed="true" :limit="12"/>
+            <x-histogram :data="dataCounters" @click-one="runAdaptersFilter" :read-only="!filter" :condensed="true" :limit="20"/>
             <div class="discovery-summary">
                 <div class="summary-row">
                     <div class="title">Total {{ module }} seen</div>
@@ -73,6 +73,10 @@
     .x-discovery-card {
         &.double {
             grid-row: 1 / span 2;
+        }
+
+        &.triple {
+            grid-row: 1 / span 3;
         }
 
         .x-title {
