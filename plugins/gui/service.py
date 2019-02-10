@@ -68,7 +68,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           SYSTEM_SETTINGS)
-from axonius.consts.metric_consts import (SystemMetric, ApiMetric)
+from axonius.consts.metric_consts import (SystemMetric, ApiMetric, Query)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
@@ -851,7 +851,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         if request.args.get('is_refresh') != '1':
             filter_obj = request.args.get('filter')
-            log_metric(logger, 'query.gui', filter_obj)
+            log_metric(logger, Query.QUERY_GUI, filter_obj)
+            history = request.args.get('history')
+            if history:
+                log_metric(logger, Query.QUERY_HISTORY, str(history))
 
         if view_filter and not skip:
             # getting the original filter text on purpose - we want to pass it

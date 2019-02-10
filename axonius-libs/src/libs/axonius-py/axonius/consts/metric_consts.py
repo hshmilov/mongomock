@@ -10,3 +10,8 @@ class SystemMetric:
 class ApiMetric:
     REQUEST_PATH = 'api.request.path'
     PUBLIC_REQUEST_PATH = 'public.request.path'
+
+
+class Query:
+    QUERY_GUI = 'query.gui'
+    QUERY_HISTORY = 'query.history'

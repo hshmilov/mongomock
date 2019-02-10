@@ -1,7 +1,7 @@
 import re
 
 from axonius.utils.wait import wait_until
-from axonius.consts.metric_consts import SystemMetric
+from axonius.consts.metric_consts import SystemMetric, Query
 from services.adapters.stresstest_service import StresstestService
 from services.adapters.stresstest_scanner_service import StresstestScannerService
 from test_helpers.log_tester import LogTester
@@ -59,4 +59,4 @@ class TestMetrics(TestBase):
             self.devices_page.fill_filter(query_text)
             self.devices_page.enter_search()
 
-            wait_until(lambda: tester.is_metric_in_log('query.gui', query_text))
+            wait_until(lambda: tester.is_metric_in_log(Query.QUERY_GUI, query_text))

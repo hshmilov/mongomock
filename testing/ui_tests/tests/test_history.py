@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 import time
 
-from ui_tests.tests.ui_test_base import TestBase
+from axonius.consts.metric_consts import Query
+from axonius.utils.wait import wait_until
 from axonius.plugin_base import EntityType
+from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestHistory(TestBase):
@@ -11,6 +13,7 @@ class TestHistory(TestBase):
         self.base_page.run_discovery()
         day_to_user_count = self._create_history(EntityType.Users, self.users_page.FIELD_USERNAME_NAME)
         self.users_page.switch_to_page()
+        tester = self.axonius_system.gui.log_tester
         for day in range(1, 30):
             self.users_page.fill_showing_results(datetime.now() - timedelta(day))
             # Sleep through the time it takes the date picker to react to the filled date
@@ -21,12 +24,14 @@ class TestHistory(TestBase):
                 assert user_name.split(' ')[-1] == day
             self.users_page.close_showing_results()
             self.users_page.clear_showing_results()
+            wait_until(lambda: tester.is_metric_in_log(Query.QUERY_HISTORY, '.*'))
 
     def test_devices_history_sanity(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         day_to_device_count = self._create_history(EntityType.Devices, self.devices_page.FIELD_HOSTNAME_NAME)
         self.devices_page.switch_to_page()
+        tester = self.axonius_system.gui.log_tester
         for day in range(1, 30):
             self.devices_page.fill_showing_results(datetime.now() - timedelta(day))
             # Sleep through the time it takes the date picker to react to the filled date
@@ -37,3 +42,4 @@ class TestHistory(TestBase):
                 assert host_name.split(' ')[-1] == day
             self.devices_page.close_showing_results()
             self.devices_page.clear_showing_results()
+            wait_until(lambda: tester.is_metric_in_log(Query.QUERY_HISTORY, '.*'))
