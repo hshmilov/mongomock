@@ -260,8 +260,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name == 'insert_to_db':
             client_name = post_json and post_json.get('client_name')
+            check_fetch_time = False
+            if post_json and post_json.get('check_fetch_time'):
+                check_fetch_time = post_json.get('check_fetch_time')
             try:
-                return self.insert_data_to_db(client_name)
+                return self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
             except BaseException:
                 delayed_trigger_gc()
                 raise
@@ -364,7 +367,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     # End of users
 
-    def insert_data_to_db(self, client_name: str = None):
+    def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False):
         """
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
@@ -372,7 +375,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         current_time = datetime.utcnow()
         # Checking that it's either the first time since a new client was added.
         # Or that the __next_fetch_timedelta has passed since last fetch.
-        if self.__last_fetch_time is not None and self.__next_fetch_timedelta is not None \
+        if check_fetch_time and self.__last_fetch_time is not None and self.__next_fetch_timedelta is not None \
                 and current_time - self.__last_fetch_time < self.__next_fetch_timedelta:
             logger.info(f"{self.plugin_unique_name}: The minimum time between fetches hasn't been reached yet.")
             if self.__user_last_fetched_timedelta is not None and \
@@ -388,7 +391,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                          "warning")
             return to_json({"devices_count": 0, "users_count": 0})
 
-        self.__last_fetch_time = current_time
+        if check_fetch_time:
+            self.__last_fetch_time = current_time
 
         if client_name:
             devices_count = self._save_data_from_plugin(

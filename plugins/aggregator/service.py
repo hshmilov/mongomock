@@ -281,12 +281,15 @@ class AggregatorService(Triggerable, PluginBase):
             raise ClientsUnavailable()
         if clients and self._notify_on_adapters is True:
             self.create_notification(f"Starting to fetch device for {adapter}")
+        check_fetch_time = True
         for client_name in clients:
             try:
                 data = self.request_remote_plugin(f'trigger/insert_to_db', adapter, method='POST',
                                                   json={
-                                                      'client_name': client_name
+                                                      'client_name': client_name,
+                                                      'check_fetch_time': check_fetch_time
                                                   })
+                check_fetch_time = False
             except Exception as e:
                 # request failed
                 logger.exception(f"{repr(e)}")
