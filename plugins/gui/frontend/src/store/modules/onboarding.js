@@ -236,7 +236,6 @@ export const onboarding = {
 						{ title: 'Symantec', state: 'symantec' },
 						{ title: 'FireEye HX', state: 'fireeyeHX' },
 						{ title: 'CrowdStrike Falcon', state: 'crowdStrike' },
-						{ title: 'FireEye HX', state: 'fireeyeHX' },
 						{ title: 'Sophos', state: 'sophos' },
 						{ title: 'Cylance', state: 'cylance' },
 						{ title: 'SKIP', state: 'agentIT' }
