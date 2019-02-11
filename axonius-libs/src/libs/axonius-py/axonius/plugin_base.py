@@ -294,6 +294,7 @@ class PluginBase(Configurable, Feature):
         self.plugin_unique_name = None
         self.api_key = None
         self.node_id = None
+        self.__mongo_client = None
 
         # MyDeviceAdapter things.
         self._entity_adapter_fields = {entity_type: {
@@ -937,14 +938,14 @@ class PluginBase(Configurable, Feature):
         run_and_forget(_inner)
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
-        with self._get_db_connection() as db:
-            return db[CORE_UNIQUE_NAME]['notifications'].insert_one(dict(who=self.plugin_unique_name,
-                                                                         plugin_name=self.plugin_name,
-                                                                         severity=severity_type,
-                                                                         type=notification_type,
-                                                                         title=title,
-                                                                         content=content,
-                                                                         seen=False)).inserted_id
+        db = self._get_db_connection()
+        return db[CORE_UNIQUE_NAME]['notifications'].insert_one(dict(who=self.plugin_unique_name,
+                                                                     plugin_name=self.plugin_name,
+                                                                     severity=severity_type,
+                                                                     type=notification_type,
+                                                                     title=title,
+                                                                     content=content,
+                                                                     seen=False)).inserted_id
 
     @cachetools.cached(cachetools.TTLCache(maxsize=10, ttl=20))
     def get_plugin_by_name(self, plugin_name, node_id=None, verify_single=True, verify_exists=True):
@@ -1181,9 +1182,11 @@ class PluginBase(Configurable, Feature):
 
         :return: MongoClient
         """
-        return MongoClient(self.db_host, replicaset='axon-cluster', retryWrites=True,
-                           username=self.db_user, password=self.db_password,
-                           localthresholdms=1000)
+        if not self.__mongo_client:
+            self.__mongo_client = MongoClient(self.db_host, replicaset='axon-cluster', retryWrites=True,
+                                              username=self.db_user, password=self.db_password,
+                                              localthresholdms=1000)
+        return self.__mongo_client
 
     def _get_collection(self, collection_name, db_name=None):
         """

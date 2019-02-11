@@ -538,18 +538,18 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         plugins_available = self.get_available_plugins_from_core()
         self.__is_system_first_use = True
-        with self._get_db_connection() as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({
-                'plugin_type': {
-                    '$in': [
-                        'Adapter', 'ScannerAdapter'
-                    ]
-                }
-            }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
-            for adapter in adapters_from_db:
-                if adapter[PLUGIN_UNIQUE_NAME] in plugins_available and db_connection[adapter[PLUGIN_UNIQUE_NAME]][
-                        'clients'].count_documents({}, limit=1):
-                    self.__is_system_first_use = False
+        db_connection = self._get_db_connection()
+        adapters_from_db = db_connection['core']['configs'].find({
+            'plugin_type': {
+                '$in': [
+                    'Adapter', 'ScannerAdapter'
+                ]
+            }
+        }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+        for adapter in adapters_from_db:
+            if adapter[PLUGIN_UNIQUE_NAME] in plugins_available and db_connection[adapter[PLUGIN_UNIQUE_NAME]][
+                    'clients'].count_documents({}, limit=1):
+                self.__is_system_first_use = False
 
     def _add_default_roles(self):
         if self.__roles_collection.find_one({'name': PREDEFINED_ROLE_ADMIN}) is None:
@@ -628,7 +628,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         def _advanced_generic_data(category):
             category_schema = next(filter(lambda field: category == field['name'].split('.')[-1], generic_fields), {})
             if not category_schema:
-                logger.warning(f'category_schema is empty {generic_fields}')
+                logger.debug(f'category_schema is empty {generic_fields}')
                 return None
             category_data = gui_helpers.parse_entity_fields(entity, [category_schema['name']])
             if category_schema['name'] not in category_data:
@@ -691,33 +691,33 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         Find all entity from adapters that have a given feature, from a given set of entities
         :return: plugin_unique_names of entity with given features, dict of plugin_unique_name -> id of adapter entity
         """
-        with self._get_db_connection() as db_connection:
-            query_op = '$in' if entities_selection['include'] else '$nin'
-            entities = list(self._entity_db_map.get(entity_type).find({
-                '$and': [
-                    {'internal_axon_id': {
-                        query_op: entities_selection['ids']
-                    }}, mongo_filter
-                ]}))
-            entities_ids_by_adapters = {}
-            for axonius_device in entities:
-                for adapter_entity in axonius_device['adapters']:
-                    entities_ids_by_adapters.setdefault(adapter_entity[PLUGIN_UNIQUE_NAME], []).append(
-                        adapter_entity['data']['id'])
+        db_connection = self._get_db_connection()
+        query_op = '$in' if entities_selection['include'] else '$nin'
+        entities = list(self._entity_db_map.get(entity_type).find({
+            '$and': [
+                {'internal_axon_id': {
+                    query_op: entities_selection['ids']
+                }}, mongo_filter
+            ]}))
+        entities_ids_by_adapters = {}
+        for axonius_device in entities:
+            for adapter_entity in axonius_device['adapters']:
+                entities_ids_by_adapters.setdefault(adapter_entity[PLUGIN_UNIQUE_NAME], []).append(
+                    adapter_entity['data']['id'])
 
-                    # all adapters that are disabelable and that theres atleast one
-                    entitydisabelables_adapters = [x[PLUGIN_UNIQUE_NAME]
-                                                   for x in
-                                                   db_connection['core']['configs'].find(
-                                                       filter={
-                                                           'supported_features': feature,
-                                                           PLUGIN_UNIQUE_NAME: {
-                                                               '$in': list(entities_ids_by_adapters.keys())
-                                                           }
-                                                       },
-                                                       projection={
-                                                           PLUGIN_UNIQUE_NAME: 1
-                                                       })]
+                # all adapters that are disabelable and that theres atleast one
+                entitydisabelables_adapters = [x[PLUGIN_UNIQUE_NAME]
+                                               for x in
+                                               db_connection['core']['configs'].find(
+                                                   filter={
+                                                       'supported_features': feature,
+                                                       PLUGIN_UNIQUE_NAME: {
+                                                           '$in': list(entities_ids_by_adapters.keys())
+                                                       }
+                                                   },
+                                                   projection={
+                                                       PLUGIN_UNIQUE_NAME: 1
+                                                   })]
         return entitydisabelables_adapters, entities_ids_by_adapters
 
     def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter):
@@ -1289,58 +1289,58 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :return:
         """
         plugins_available = self.get_available_plugins_from_core()
-        with self._get_db_connection() as db_connection:
-            adapters_from_db = db_connection[CORE_UNIQUE_NAME]['configs'].find(
-                {
-                    'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
-                }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
-            adapters_to_return = []
-            for adapter in adapters_from_db:
-                adapter_name = adapter[PLUGIN_UNIQUE_NAME]
-                if adapter_name not in plugins_available:
-                    # Plugin not registered - unwanted in UI
-                    continue
+        db_connection = self._get_db_connection()
+        adapters_from_db = db_connection[CORE_UNIQUE_NAME]['configs'].find(
+            {
+                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+            }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+        adapters_to_return = []
+        for adapter in adapters_from_db:
+            adapter_name = adapter[PLUGIN_UNIQUE_NAME]
+            if adapter_name not in plugins_available:
+                # Plugin not registered - unwanted in UI
+                continue
 
-                clients_collection = db_connection[adapter_name]['clients']
-                schema = self._get_plugin_schemas(db_connection, adapter_name).get('clients')
-                nodes_metadata_collection = db_connection['core']['nodes_metadata']
-                if not schema:
-                    # there might be a race - in the split second that the adapter is up
-                    # but it still hasn't written it's schema
-                    continue
+            clients_collection = db_connection[adapter_name]['clients']
+            schema = self._get_plugin_schemas(db_connection, adapter_name).get('clients')
+            nodes_metadata_collection = db_connection['core']['nodes_metadata']
+            if not schema:
+                # there might be a race - in the split second that the adapter is up
+                # but it still hasn't written it's schema
+                continue
 
-                clients = [gui_helpers.beautify_db_entry(client) for client in clients_collection.find()
-                           .sort([('_id', pymongo.DESCENDING)])]
-                for client in clients:
-                    client['client_config'] = clear_passwords_fields(client['client_config'], schema)
-                    client[NODE_ID] = adapter[NODE_ID]
-                status = ''
-                if len(clients):
-                    clients_connected = clients_collection.count_documents({'status': 'success'})
-                    status = 'success' if len(clients) == clients_connected else 'warning'
+            clients = [gui_helpers.beautify_db_entry(client) for client in clients_collection.find()
+                       .sort([('_id', pymongo.DESCENDING)])]
+            for client in clients:
+                client['client_config'] = clear_passwords_fields(client['client_config'], schema)
+                client[NODE_ID] = adapter[NODE_ID]
+            status = ''
+            if len(clients):
+                clients_connected = clients_collection.count_documents({'status': 'success'})
+                status = 'success' if len(clients) == clients_connected else 'warning'
 
-                node_name = nodes_metadata_collection.find_one(
-                    {NODE_ID: adapter[NODE_ID]})
+            node_name = nodes_metadata_collection.find_one(
+                {NODE_ID: adapter[NODE_ID]})
 
-                node_name = '' if node_name is None else node_name.get(NODE_NAME)
+            node_name = '' if node_name is None else node_name.get(NODE_NAME)
 
-                adapters_to_return.append({'plugin_name': adapter['plugin_name'],
-                                           'unique_plugin_name': adapter_name,
-                                           'status': status,
-                                           'supported_features': adapter['supported_features'],
-                                           'schema': schema,
-                                           'clients': clients,
-                                           NODE_ID: adapter[NODE_ID],
-                                           NODE_NAME: node_name,
-                                           'config': self.__extract_configs_and_schemas(db_connection,
-                                                                                        adapter_name)
-                                           })
-            adapters = defaultdict(list)
-            for adapter in adapters_to_return:
-                plugin_name = adapter.pop('plugin_name')
-                adapters[plugin_name].append(adapter)
+            adapters_to_return.append({'plugin_name': adapter['plugin_name'],
+                                       'unique_plugin_name': adapter_name,
+                                       'status': status,
+                                       'supported_features': adapter['supported_features'],
+                                       'schema': schema,
+                                       'clients': clients,
+                                       NODE_ID: adapter[NODE_ID],
+                                       NODE_NAME: node_name,
+                                       'config': self.__extract_configs_and_schemas(db_connection,
+                                                                                    adapter_name)
+                                       })
+        adapters = defaultdict(list)
+        for adapter in adapters_to_return:
+            plugin_name = adapter.pop('plugin_name')
+            adapters[plugin_name].append(adapter)
 
-            return jsonify(adapters)
+        return jsonify(adapters)
 
     @gui_add_rule_logged_in('adapter_features')
     def adapter_features(self):
@@ -1352,22 +1352,22 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :return: Dict between unique plugin name of the adapter and their list of features
         """
         plugins_available = self.get_available_plugins_from_core()
-        with self._get_db_connection() as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({
-                'plugin_type': {
-                    '$in': [
-                        'Adapter', 'ScannerAdapter'
-                    ]
-                }
-            }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
-            adapters_by_unique_name = {}
-            for adapter in adapters_from_db:
-                adapter_name = adapter[PLUGIN_UNIQUE_NAME]
-                if adapter_name not in plugins_available:
-                    # Plugin not registered - unwanted in UI
-                    continue
-                adapters_by_unique_name[adapter_name] = adapter['supported_features']
-            return jsonify(adapters_by_unique_name)
+        db_connection = self._get_db_connection()
+        adapters_from_db = db_connection['core']['configs'].find({
+            'plugin_type': {
+                '$in': [
+                    'Adapter', 'ScannerAdapter'
+                ]
+            }
+        }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+        adapters_by_unique_name = {}
+        for adapter in adapters_from_db:
+            adapter_name = adapter[PLUGIN_UNIQUE_NAME]
+            if adapter_name not in plugins_available:
+                # Plugin not registered - unwanted in UI
+                continue
+            adapters_by_unique_name[adapter_name] = adapter['supported_features']
+        return jsonify(adapters_by_unique_name)
 
     def _test_client_connectivity(self, adapter_unique_name, data_from_db_for_unchanged=None):
         client_to_test = request.get_json(silent=True)
@@ -1435,9 +1435,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         if not file or file.filename == '':
             return return_error('File must exist', 401)
         filename = file.filename
-        with self._get_db_connection() as db_connection:
-            fs = gridfs.GridFS(db_connection[plugin_unique_name])
-            written_file = fs.put(file, filename=filename)
+        db_connection = self._get_db_connection()
+        fs = gridfs.GridFS(db_connection[plugin_unique_name])
+        written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
     @gui_add_rule_logged_in('adapters/<adapter_name>/clients', methods=['PUT', 'POST'],
@@ -1735,9 +1735,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('alerts/count', required_permissions={Permission(PermissionType.Alerts,
                                                                              PermissionLevel.ReadOnly)})
     def alert_count(self, mongo_filter):
-        with self._get_db_connection() as db_connection:
-            report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
-            return jsonify(db_connection[report_service]['reports'].count_documents(mongo_filter))
+        db_connection = self._get_db_connection()
+        report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
+        return jsonify(db_connection[report_service]['reports'].count_documents(mongo_filter))
 
     @gui_add_rule_logged_in('alerts/<alert_id>', methods=['GET', 'POST'],
                             required_permissions={Permission(PermissionType.Alerts,
@@ -1777,39 +1777,39 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :return: List of plugins with
         """
         plugins_available = self.get_available_plugins_from_core()
-        with self._get_db_connection() as db_connection:
-            plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
-                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
-            plugins_to_return = []
-            for plugin in plugins_from_db:
-                # TODO check supported features
-                if plugin['plugin_type'] != 'Plugin' or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME,
-                                                                                  'gui',
-                                                                                  'watch_service',
-                                                                                  'execution',
-                                                                                  'system_scheduler']:
-                    continue
+        db_connection = self._get_db_connection()
+        plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
+            [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+        plugins_to_return = []
+        for plugin in plugins_from_db:
+            # TODO check supported features
+            if plugin['plugin_type'] != 'Plugin' or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME,
+                                                                              'gui',
+                                                                              'watch_service',
+                                                                              'execution',
+                                                                              'system_scheduler']:
+                continue
 
-                processed_plugin = {'plugin_name': plugin['plugin_name'],
-                                    'unique_plugin_name': plugin[PLUGIN_UNIQUE_NAME],
-                                    'status': 'error',
-                                    'state': 'Disabled'
-                                    }
-                if plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
-                    processed_plugin['status'] = 'warning'
-                    response = self.request_remote_plugin(
-                        'trigger_state/execute', plugin[PLUGIN_UNIQUE_NAME])
-                    if response.status_code != 200:
-                        logger.error('Error getting state of plugin {0}'.format(
-                            plugin[PLUGIN_UNIQUE_NAME]))
-                        processed_plugin['status'] = 'error'
-                    else:
-                        processed_plugin['state'] = response.json()
-                        if processed_plugin['state']['state'] != 'Disabled':
-                            processed_plugin['status'] = 'success'
-                plugins_to_return.append(processed_plugin)
+            processed_plugin = {'plugin_name': plugin['plugin_name'],
+                                'unique_plugin_name': plugin[PLUGIN_UNIQUE_NAME],
+                                'status': 'error',
+                                'state': 'Disabled'
+                                }
+            if plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
+                processed_plugin['status'] = 'warning'
+                response = self.request_remote_plugin(
+                    'trigger_state/execute', plugin[PLUGIN_UNIQUE_NAME])
+                if response.status_code != 200:
+                    logger.error('Error getting state of plugin {0}'.format(
+                        plugin[PLUGIN_UNIQUE_NAME]))
+                    processed_plugin['status'] = 'error'
+                else:
+                    processed_plugin['state'] = response.json()
+                    if processed_plugin['state']['state'] != 'Disabled':
+                        processed_plugin['status'] = 'success'
+            plugins_to_return.append(processed_plugin)
 
-            return jsonify(plugins_to_return)
+        return jsonify(plugins_to_return)
 
     @staticmethod
     def __extract_configs_and_schemas(db_connection, plugin_unique_name):
@@ -1880,11 +1880,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             self._update_plugin_config(plugin_name, config_name, config_to_set)
             return ''
         if request.method == 'GET':
-            with self._get_db_connection() as db_connection:
-                config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
-                schema_collection = db_connection[plugin_name]['config_schemas']
-                return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
-                                'schema': schema_collection.find_one({'config_name': config_name})['schema']})
+            db_connection = self._get_db_connection()
+            config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
+            schema_collection = db_connection[plugin_name]['config_schemas']
+            return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
+                            'schema': schema_collection.find_one({'config_name': config_name})['schema']})
 
     @gui_add_rule_logged_in('configuration', methods=['GET'])
     def system_config(self):
@@ -1911,17 +1911,17 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :param config_name: To update
         :param config_to_set:
         """
-        with self._get_db_connection() as db_connection:
-            if self.request_remote_plugin('register', params={'unique_name': plugin_name}).status_code != 200:
-                unique_plugins_names = self.request_remote_plugin(
-                    f'find_plugin_unique_name/nodes/None/plugins/{plugin_name}').json()
-            else:
-                unique_plugins_names = [plugin_name]
-            for current_unique_plugin in unique_plugins_names:
-                config_collection = db_connection[current_unique_plugin][CONFIGURABLE_CONFIGS_COLLECTION]
-                config_collection.replace_one(filter={'config_name': config_name}, replacement={
-                    'config_name': config_name, 'config': config_to_set})
-                self.request_remote_plugin('update_config', current_unique_plugin, method='POST')
+        db_connection = self._get_db_connection()
+        if self.request_remote_plugin('register', params={'unique_name': plugin_name}).status_code != 200:
+            unique_plugins_names = self.request_remote_plugin(
+                f'find_plugin_unique_name/nodes/None/plugins/{plugin_name}').json()
+        else:
+            unique_plugins_names = [plugin_name]
+        for current_unique_plugin in unique_plugins_names:
+            config_collection = db_connection[current_unique_plugin][CONFIGURABLE_CONFIGS_COLLECTION]
+            config_collection.replace_one(filter={'config_name': config_name}, replacement={
+                'config_name': config_name, 'config': config_to_set})
+            self.request_remote_plugin('update_config', current_unique_plugin, method='POST')
 
     @gui_add_rule_logged_in('plugins/<plugin_unique_name>/<command>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Adapters,
@@ -1982,43 +1982,43 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :param skip: start index for pagination
         :return:
         """
-        with self._get_db_connection() as db:
-            notification_collection = db['core']['notifications']
+        db = self._get_db_connection()
+        notification_collection = db['core']['notifications']
 
-            # GET
-            if request.method == 'GET':
-                should_aggregate = request.args.get('aggregate', False)
-                if should_aggregate:
-                    pipeline = [{'$group': {'_id': '$title', 'count': {'$sum': 1}, 'date': {'$last': '$_id'},
-                                            'severity': {'$last': '$severity'}, 'seen': {'$last': '$seen'}}},
-                                {'$addFields': {'title': '$_id'}}]
-                    notifications = []
-                    for n in notification_collection.aggregate(pipeline):
-                        n['_id'] = n['date']
-                        notifications.append(gui_helpers.beautify_db_entry(n))
-                else:
-                    sort = []
-                    for field, direction in mongo_sort.items():
-                        sort.append(('_id' if field == 'date_fetched' else field, direction))
-                    if not sort:
-                        sort.append(('_id', pymongo.DESCENDING))
-                    notifications = [gui_helpers.beautify_db_entry(n) for n in notification_collection.find(
-                        mongo_filter, projection={'_id': 1, 'who': 1, 'plugin_name': 1, 'type': 1, 'title': 1,
-                                                  'seen': 1, 'severity': 1}).sort(sort).skip(skip).limit(limit)]
+        # GET
+        if request.method == 'GET':
+            should_aggregate = request.args.get('aggregate', False)
+            if should_aggregate:
+                pipeline = [{'$group': {'_id': '$title', 'count': {'$sum': 1}, 'date': {'$last': '$_id'},
+                                        'severity': {'$last': '$severity'}, 'seen': {'$last': '$seen'}}},
+                            {'$addFields': {'title': '$_id'}}]
+                notifications = []
+                for n in notification_collection.aggregate(pipeline):
+                    n['_id'] = n['date']
+                    notifications.append(gui_helpers.beautify_db_entry(n))
+            else:
+                sort = []
+                for field, direction in mongo_sort.items():
+                    sort.append(('_id' if field == 'date_fetched' else field, direction))
+                if not sort:
+                    sort.append(('_id', pymongo.DESCENDING))
+                notifications = [gui_helpers.beautify_db_entry(n) for n in notification_collection.find(
+                    mongo_filter, projection={'_id': 1, 'who': 1, 'plugin_name': 1, 'type': 1, 'title': 1,
+                                              'seen': 1, 'severity': 1}).sort(sort).skip(skip).limit(limit)]
 
-                return jsonify(notifications)
-            # POST
-            elif request.method == 'POST':
-                # if no ID is sent all notifications will be changed to seen.
-                notifications_to_see = request.get_json(silent=True)
-                if notifications_to_see is None or len(notifications_to_see['notification_ids']) == 0:
-                    update_result = notification_collection.update_many(
-                        {'seen': False}, {'$set': {'seen': notifications_to_see.get('seen', True)}})
-                else:
-                    update_result = notification_collection.update_many(
-                        {'_id': {'$in': [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
-                         }, {'$set': {'seen': True}})
-                return str(update_result.modified_count), 200
+            return jsonify(notifications)
+        # POST
+        elif request.method == 'POST':
+            # if no ID is sent all notifications will be changed to seen.
+            notifications_to_see = request.get_json(silent=True)
+            if notifications_to_see is None or len(notifications_to_see['notification_ids']) == 0:
+                update_result = notification_collection.update_many(
+                    {'seen': False}, {'$set': {'seen': notifications_to_see.get('seen', True)}})
+            else:
+                update_result = notification_collection.update_many(
+                    {'_id': {'$in': [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
+                     }, {'$set': {'seen': True}})
+            return str(update_result.modified_count), 200
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('notifications/count', methods=['GET'],
@@ -2031,9 +2031,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :param mongo_filter: Generated by the filtered() decorator, according to uri param "filter"
         :return: Number of notifications matching given filter
         """
-        with self._get_db_connection() as db:
-            notification_collection = db['core']['notifications']
-            return str(notification_collection.count_documents(mongo_filter))
+        db = self._get_db_connection()
+        notification_collection = db['core']['notifications']
+        return str(notification_collection.count_documents(mongo_filter))
 
     @gui_add_rule_logged_in('notifications/<notification_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
@@ -2044,10 +2044,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :param notification_id: Notification ID
         :return:
         """
-        with self._get_db_connection() as db:
-            notification_collection = db['core']['notifications']
-            return jsonify(
-                gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
+        db = self._get_db_connection()
+        notification_collection = db['core']['notifications']
+        return jsonify(
+            gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
     @gui_helpers.add_rule_unauth('get_login_options')
     def get_login_options(self):
@@ -3694,10 +3694,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         self._delete_last_report()
 
         report_name = 'most_recent_report'
-        with self._get_db_connection() as db_connection:
-            fs = gridfs.GridFS(db_connection[GUI_NAME])
-            written_file_id = fs.put(report, filename=report_name)
-            logger.info('Report successfully placed in the db')
+        db_connection = self._get_db_connection()
+        fs = gridfs.GridFS(db_connection[GUI_NAME])
+        written_file_id = fs.put(report, filename=report_name)
+        logger.info('Report successfully placed in the db')
         return str(written_file_id)
 
     def _delete_last_report(self):
@@ -3712,9 +3712,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 uuid = most_recent_report.get('uuid')
                 if uuid != None:
                     logger.info(f'DELETE: {uuid}')
-                    with self._get_db_connection() as db_connection:
-                        fs = gridfs.GridFS(db_connection[GUI_NAME])
-                        fs.delete(ObjectId(uuid))
+                    db_connection = self._get_db_connection()
+                    fs = gridfs.GridFS(db_connection[GUI_NAME])
+                    fs.delete(ObjectId(uuid))
 
     @gui_add_rule_logged_in('export_report', required_permissions={Permission(PermissionType.Dashboard,
                                                                               PermissionLevel.ReadOnly)})
@@ -3740,10 +3740,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         uuid = report['uuid']
         report_path = f'/tmp/axonius-report_{datetime.now()}.pdf'
-        with self._get_db_connection() as db_connection:
-            with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_content:
-                open(report_path, 'wb').write(report_content.read())
-                return report_path
+        db_connection = self._get_db_connection()
+        with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_content:
+            open(report_path, 'wb').write(report_content.read())
+            return report_path
 
     def generate_report(self):
         """
@@ -4109,23 +4109,23 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     def _instances(self):
         if request.method == 'GET':
-            with self._get_db_connection() as db_connection:
-                nodes = []
-                for current_node in db_connection['core']['configs'].distinct('node_id'):
-                    node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
-                    if node_data is not None:
-                        nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}),
-                                      'tags': node_data.get('tags', {}),
-                                      'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
-                                          'last_seen'], NODE_USER_PASSWORD: node_data.get(NODE_USER_PASSWORD, '')})
-                    else:
-                        nodes.append({'node_id': current_node, 'node_name': current_node, 'tags': {},
-                                      'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
-                                          'last_seen'], NODE_USER_PASSWORD: ''})
-                system_config = db_connection['gui']['system_collection'].find_one({'type': 'server'}) or {}
-                return jsonify({'instances': nodes, 'connection_data': {'key': self.encryption_key,
-                                                                        'host': system_config.get('server_name',
-                                                                                                  '<axonius-hostname>')}})
+            db_connection = self._get_db_connection()
+            nodes = []
+            for current_node in db_connection['core']['configs'].distinct('node_id'):
+                node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
+                if node_data is not None:
+                    nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}),
+                                  'tags': node_data.get('tags', {}),
+                                  'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
+                                      'last_seen'], NODE_USER_PASSWORD: node_data.get(NODE_USER_PASSWORD, '')})
+                else:
+                    nodes.append({'node_id': current_node, 'node_name': current_node, 'tags': {},
+                                  'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
+                                      'last_seen'], NODE_USER_PASSWORD: ''})
+            system_config = db_connection['gui']['system_collection'].find_one({'type': 'server'}) or {}
+            return jsonify({'instances': nodes, 'connection_data': {'key': self.encryption_key,
+                                                                    'host': system_config.get('server_name',
+                                                                                              '<axonius-hostname>')}})
         elif request.method == 'POST':
             data = self.get_request_data_as_object()
             self.request_remote_plugin(f'node/{data["node_id"]}', method='POST', json={'node_name': data['node_name']})

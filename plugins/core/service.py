@@ -108,26 +108,26 @@ class CoreService(PluginBase, Configurable):
         # pool for global config updates
         self.__config_updater_pool = ThreadPool(30)
 
-        with self._get_db_connection() as connection:
-            # this makes sure we're consistent on the version we assume and run on
-            connection['admin'].command({
-                'setFeatureCompatibilityVersion': '4.0'
-            })
+        connection = self._get_db_connection()
+        # this makes sure we're consistent on the version we assume and run on
+        connection['admin'].command({
+            'setFeatureCompatibilityVersion': '4.0'
+        })
 
-            # this command sets mongo's query space to be larger default
-            # which allows for faster queries using the RAM alone
-            # set to max size mongo allows
-            set_mongo_parameter(connection, 'internalQueryExecMaxBlockingSortBytes',
-                                2 * 1024 * 1024 * 1024 - 1)
+        # this command sets mongo's query space to be larger default
+        # which allows for faster queries using the RAM alone
+        # set to max size mongo allows
+        set_mongo_parameter(connection, 'internalQueryExecMaxBlockingSortBytes',
+                            2 * 1024 * 1024 * 1024 - 1)
 
-            # we want slightly more time for transactions
-            set_mongo_parameter(connection, 'maxTransactionLockRequestTimeoutMillis', 20)
+        # we want slightly more time for transactions
+        set_mongo_parameter(connection, 'maxTransactionLockRequestTimeoutMillis', 20)
 
-            # Deleting by name "Master", would delete the first "Master" appearance including if the real master name
-            # was changed and a node was named "Master". The reason for this is because of a node_id and master
-            # registration on export and deletion of volume on first boot.
-            self._delete_node_name(MASTER_NODE_NAME)
-            self._set_node_name(self.node_id, MASTER_NODE_NAME)
+        # Deleting by name "Master", would delete the first "Master" appearance including if the real master name
+        # was changed and a node was named "Master". The reason for this is because of a node_id and master
+        # registration on export and deletion of volume on first boot.
+        self._delete_node_name(MASTER_NODE_NAME)
+        self._set_node_name(self.node_id, MASTER_NODE_NAME)
 
     def clean_offline_plugins(self):
         """Thread for cleaning offline plugin.

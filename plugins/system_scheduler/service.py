@@ -273,23 +273,22 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             self.send_external_info_log(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
 
     def __get__all_adapters(self):
-        with self._get_db_connection() as db_connection:
-            return list(db_connection[CORE_UNIQUE_NAME]['configs'].find({
-                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
-            }
-            ))
+        db_connection = self._get_db_connection()
+        return list(db_connection[CORE_UNIQUE_NAME]['configs'].find({
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+        }))
 
     def __get_all_realtime_adapters(self):
-        with self._get_db_connection() as db_connection:
-            for adapter in self.__get__all_adapters():
-                config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-                    'config_name': AdapterBase.__name__
-                })
+        db_connection = self._get_db_connection()
+        for adapter in self.__get__all_adapters():
+            config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
+                'config_name': AdapterBase.__name__
+            })
+            if config:
+                config = config.get('config')
                 if config:
-                    config = config.get('config')
-                    if config:
-                        if config.get('realtime_adapter'):
-                            yield adapter
+                    if config.get('realtime_adapter'):
+                        yield adapter
 
     def __run_realtime_adapters(self):
         """

@@ -1136,15 +1136,15 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         This logic is ran when the adapter starts
         :return:
         """
-        with self._get_db_connection() as db_connection:
-            collection = db_connection[self.plugin_unique_name]['adapter_schema']
-            collection.replace_one(filter={'adapter_name': self.plugin_unique_name,
-                                           'adapter_version': self.version},
-                                   replacement={
-                                       'adapter_name': self.plugin_unique_name,
-                                       'adapter_version': self.version,
-                                       'schema': schema},
-                                   upsert=True)
+        db_connection = self._get_db_connection()
+        collection = db_connection[self.plugin_unique_name]['adapter_schema']
+        collection.replace_one(filter={'adapter_name': self.plugin_unique_name,
+                                       'adapter_version': self.version},
+                               replacement={
+                                   'adapter_name': self.plugin_unique_name,
+                                   'adapter_version': self.version,
+                                   'schema': schema},
+                               upsert=True)
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
         """
