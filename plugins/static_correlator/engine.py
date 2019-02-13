@@ -1,7 +1,7 @@
 import logging
 from itertools import combinations
 
-from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
+from axonius.blacklists import ALL_BLACKLIST
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.correlator_base import (has_ad_or_azure_name, has_cloud_id,
                                      has_hostname, has_last_used_users,
@@ -34,8 +34,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_old_device, is_sccm_or_ad,
                                    is_splunk_vpn, normalize_adapter_devices,
                                    serials_do_not_contradict, compare_macs_or_one_is_jamf,
-                                   normalize_mac, not_aruba_adapters,
-                                   cloud_id_do_not_contradict,
+                                   not_aruba_adapters, cloud_id_do_not_contradict,
                                    not_contain_generic_jamf_names,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s)
@@ -114,7 +113,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # find contradicting hostnames with the same mac to eliminate macs.
         # Also using predefined blacklist of known macs.
         mac_blacklist = set()
-        mac_blacklist = mac_blacklist.union(map(normalize_mac, JUNIPER_NON_UNIQUE_MACS))
+        mac_blacklist = mac_blacklist.union(ALL_BLACKLIST)
         for mac, matches in mac_indexed.items():
             for x, y in combinations(matches, 2):
                 if (not hostnames_do_not_contradict(x, y)) and (not is_different_plugin(x, y)
@@ -431,4 +430,5 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             if first_adapter_device[PLUGIN_NAME] != 'active_directory' or \
                     second_adapter_device[PLUGIN_NAME] != 'active_directory':
                 return False
+
         return True

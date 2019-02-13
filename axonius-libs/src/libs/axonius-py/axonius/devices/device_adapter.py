@@ -3,6 +3,7 @@ import logging
 import typing
 from enum import Enum, auto
 
+from axonius.blacklists import ALL_BLACKLIST
 from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict, unescape_dict
@@ -461,7 +462,7 @@ class DeviceAdapter(SmartJsonClass):
         nic = DeviceAdapterNetworkInterface()
         if mac is not None:
             mac = str(mac)
-            if normalize_mac(mac) != '000000000000':
+            if normalize_mac(mac) != '000000000000' and normalize_mac(mac) not in ALL_BLACKLIST:
                 try:
                     nic.mac = mac
                     nic.manufacturer = get_manufacturer_from_mac(mac)
