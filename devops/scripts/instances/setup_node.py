@@ -14,6 +14,7 @@ INSTANCE_CONNECT_USER_NAME = 'node_maker'
 VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
 PASSWORD_GET_URL = 'https://core.axonius.local/api/node/'
 ADAPTER_RESTART_COMMAND = './axonius.sh system up --all --prod --env NODE_INIT_NAME={init_name}'
+ENCRYPTION_KEY_PATH = AXONIUS_SETTINGS_PATH / '.__key'
 
 
 def shut_down_system():
@@ -69,10 +70,15 @@ def change_instance_setup_user_pass():
                           shell=True)
 
 
+def update_weave_encryption_key(weave_encryption_key):
+    ENCRYPTION_KEY_PATH.write_text(weave_encryption_key)
+
+
 def setup_node(connection_string):
     master_ip, weave_pass, init_name = connection_string
 
     shut_down_system()
+    update_weave_encryption_key(weave_pass.strip())
     connect_to_master(master_ip.strip(), weave_pass.strip())
     run_tunnler()
     NODE_MARKER_PATH.touch()

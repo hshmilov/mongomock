@@ -65,7 +65,7 @@ def main():
     print_state(f'Done, took {int(time.time() - start)} seconds')
 
 
-def reset_weave_network():
+def reset_weave_network_on_bad_ip_allocation():
     try:
         report = subprocess.check_output('weave report'.split())
         report = json.loads(report)
@@ -88,7 +88,7 @@ def remove_old_network():
 
 def reset_network():
     remove_old_network()
-    reset_weave_network()
+    reset_weave_network_on_bad_ip_allocation()
 
 
 def install(first_time, root_pass):
@@ -240,10 +240,19 @@ def set_special_permissions(root_pass):
     run_as_root(cmd.split(), root_pass)
 
 
+def stop_weave_network():
+    try:
+        print('Stopping weave network (nodes will reconnect on relaunch).')
+        subprocess.check_call('weave stop'.split())
+    except subprocess.CalledProcessError:
+        print('Failed to stop weave network.')
+
+
 def stop_old(keep_diag=True, keep_tunnel=True):
     print_state('Stopping old containers, and removing old <containers + images> [except diagnostics]')
     from destroy import destroy
     destroy(keep_diag=keep_diag, keep_tunnel=keep_tunnel)
+    stop_weave_network()
 
 
 def load_images():
