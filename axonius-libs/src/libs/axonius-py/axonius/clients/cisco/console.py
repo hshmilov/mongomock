@@ -1,18 +1,21 @@
 import logging
 import re
-import signal
+from datetime import timedelta
 
+import func_timeout
 from netmiko import ConnectHandler
 
+from axonius import adapter_exceptions
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco.abstract import (AbstractCiscoClient, ArpCiscoData,
                                             CdpCiscoData, DhcpCiscoData)
+from axonius.thread_stopper import StopThreadException
 from axonius.utils.parsing import format_mac
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-DEFAULT_VALIDATE_TIMEOUT = 8
+DEFAULT_VALIDATE_TIMEOUT = 10
 DEFAULT_TIMEOUT = 60
 
 
@@ -36,31 +39,51 @@ class CiscoConsoleClient(AbstractCiscoClient):
     def get_device_type(self):
         raise NotImplementedError()
 
+    def _validate_connection(self):
+        sess = ConnectHandler(device_type=self.get_device_type(),
+                              ip=self.host,
+                              username=self.username,
+                              password=self.password,
+                              port=self.port,
+                              session_timeout=DEFAULT_VALIDATE_TIMEOUT,
+                              blocking_timeout=DEFAULT_VALIDATE_TIMEOUT,
+                              timeout=DEFAULT_VALIDATE_TIMEOUT)
+        if sess:
+            sess.disconnect()
+
     def validate_connection(self):
+        """
+        This calls _connect_client in safe, timeout based way.
+        Parameters and return type are the same as _connect_client
+        """
         # Netmiko ConnectHandler is handling the timeout field badly
         # (for example it doesn't pass the timeout to timeout_auth param in paramiko)
         # lets say for example that we have a  very slow connection -
-        # the validate_connection function should work but it is going to take much more then 6
+        # the validate_connection function should work but it is going to take much more then 10
         # seconds which is our timeout.
-        # This is why we use alarm based solution.
 
-        signal.signal(signal.SIGALRM, raise_timeout)
-        signal.alarm(DEFAULT_VALIDATE_TIMEOUT)
+        timeout = DEFAULT_VALIDATE_TIMEOUT
+        timeout = timedelta(seconds=timeout).total_seconds()
+
+        def call_connect_as_stoppable():
+            try:
+                return self._validate_connection()
+            except BaseException as e:
+                # this is called from an external thread so if it raises the exception is lost,
+                # this allows forwarding exceptions back to the caller
+                return e
 
         try:
-            sess = ConnectHandler(device_type=self.get_device_type(),
-                                  ip=self.host,
-                                  username=self.username,
-                                  password=self.password,
-                                  port=self.port,
-                                  session_timeout=DEFAULT_VALIDATE_TIMEOUT,
-                                  blocking_timeout=DEFAULT_VALIDATE_TIMEOUT,
-                                  timeout=DEFAULT_VALIDATE_TIMEOUT)
-        finally:
-            signal.alarm(0)
-
-        if sess:
-            sess.disconnect()
+            res = func_timeout.func_timeout(
+                timeout=timeout,
+                func=call_connect_as_stoppable)
+            if isinstance(res, BaseException):
+                raise res
+            return res
+        except func_timeout.exceptions.FunctionTimedOut:
+            raise adapter_exceptions.ClientConnectionException(f'Connecting {self.host} has timed out')
+        except StopThreadException:
+            raise adapter_exceptions.ClientConnectionException(f'Connecting has been stopped')
 
     def __enter__(self):
         super().__enter__()

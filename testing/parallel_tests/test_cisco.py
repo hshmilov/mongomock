@@ -21,7 +21,6 @@ class TestCiscoAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip('AX-2169')
     def test_fetch_devices(self):
         super().test_fetch_devices()
 
