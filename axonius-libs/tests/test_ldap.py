@@ -240,3 +240,9 @@ def test_get_report_statistics(ldap_connection: LdapConnection):
     assert fs['Domain Trusts'][0]['direction'] == 'Two-Way'
     assert 'Domain Integrated DNS Zones' in fs
     assert 'Domain GPOs' in fs
+
+
+def test_reconnect_after_disconnection(ldap_connection: LdapConnection):
+    ldap_connection.disconnect()
+    # Notice! An exception message (logger.exception) is expected to be printed to the screen here.
+    test_devices(ldap_connection)

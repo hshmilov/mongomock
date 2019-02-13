@@ -118,6 +118,7 @@ def install(first_time, root_pass):
 
     if not first_time:
         chown_folder(root_pass, TEMPORAL_PATH)
+        os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
         set_booted_for_production()
 
     set_special_permissions(root_pass)

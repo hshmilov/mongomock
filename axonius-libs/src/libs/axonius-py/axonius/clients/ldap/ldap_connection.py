@@ -3,6 +3,8 @@
 import time
 import logging
 
+from retrying import retry
+
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
 from axonius.profiling.memory import asizeof
@@ -272,6 +274,13 @@ class LdapConnection(object):
 
         try:
             entry_generator = ldap_paged_search()
+            try:
+                first_result = next(entry_generator)   # test the connection
+                if first_result['type'] == 'searchResEntry':
+                    yield first_result['attributes']
+            except StopIteration:
+                # If that is empty, its fine too. The next generation iteration will simply yield nothing.
+                pass
         except ldap3.core.exceptions.LDAPException:
             # No need to do that a couple of times. There is a logic in the adapters themselves
             # that tries more times if that fails.
@@ -582,6 +591,7 @@ class LdapConnection(object):
 
             yield dict(printer)
 
+    @retry(wait_fixed=10000, stop_max_attempt_number=3)
     def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
 
@@ -602,6 +612,7 @@ class LdapConnection(object):
 
         one_device = None
         devices_count = 0
+        logger.info(f'LDAP - Starting to get device list')
         for one_device in devices_generator:
             device_dict = dict(one_device)
             if 'userCertificate' in device_dict:
@@ -619,6 +630,7 @@ class LdapConnection(object):
         if one_device is None:
             return []
 
+    @retry(wait_fixed=10000, stop_max_attempt_number=3)
     def get_users_list(self):
         """
         returns a list of objects representing the users in this DC.
@@ -636,6 +648,7 @@ class LdapConnection(object):
         else:
             search_filter = '(&(objectCategory=person)(|(objectClass=user)(objectClass=inetOrgPerson))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
 
+        logger.info(f'LDAP - Starting to get users list')
         users_generator = self._ldap_search(search_filter)
         users_count = 0
         get_users_start = time.time()
@@ -662,6 +675,7 @@ class LdapConnection(object):
         # cycle.
         self.__ldap_groups = {}
 
+    @retry(wait_fixed=10000, stop_max_attempt_number=3)
     def get_dns_records(self, name=None):
         """
         Returns dns records for this zone.
@@ -670,6 +684,7 @@ class LdapConnection(object):
         :return: yields (name, ip_addr) where name is string and ip_addr is ipv4/ipv6 object from the ipaddress module.
         """
 
+        logger.info(f'LDAP - Starting to get dns records')
         if name is None:
             search_query = f"(&(objectClass=dnsNode)" \
                            f"(|(dnsRecord={IPV4_ENTRY_PREFIX}*)(dnsRecord={IPV6_ENTRY_PREFIX}*)))"

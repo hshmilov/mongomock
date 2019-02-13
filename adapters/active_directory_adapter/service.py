@@ -418,6 +418,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         :return:
         """
 
+        parsed_users_ids = []
         for user_raw in raw_data:
             try:
                 user = self._new_user_adapter()
@@ -445,6 +446,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 user.description = user_raw.get('description')
                 user.domain = domain_name
                 user.id = f"{username}@{domain_name}"  # Should be the unique identifier of that user.
+                if user.id in parsed_users_ids:
+                    continue
+                parsed_users_ids.append(user.id)
 
                 user.user_sid = user_raw.get('objectSid')
                 user.mail = user_raw.get("mail")
@@ -804,6 +808,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         if devices_raw_data is None:
             devices_raw_data = []
 
+        parsed_devices_ids = []
         for device_raw in devices_raw_data:
             try:
                 last_logon = device_raw.get('lastLogon')
@@ -827,6 +832,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 device.last_seen = last_seen
                 device.dns_resolve_status = DNSResolveStatus.Pending
                 device.id = device_raw['distinguishedName']
+                if device.id in parsed_devices_ids:
+                    continue
+                parsed_devices_ids.append(device.id)
                 device.domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
                 if device.domain:
                     # If we do not have dNSHostName than we would like to create it using name and domain.
