@@ -78,7 +78,6 @@ echo "Installing docker-ce..."
 _wait_for_apt install -y docker-ce=18.03.0~ce-0~ubuntu
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
-groupadd docker
 usermod -aG docker ubuntu
 gpasswd -a ubuntu docker
 newgrp docker
@@ -103,8 +102,8 @@ else
     usermod -s /home/netconfig/login netconfig
     echo netconfig:netconfig | /usr/sbin/chpasswd
     cd "$(dirname "$0")"
-    cp /home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard/login.c /home/netconfig/login.c
-    cp /home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard/login.py /home/netconfig/login.py
+    cp devops/scripts/host_installation/ip_wizard/login.c /home/netconfig/login.c
+    cp devops/scripts/host_installation/ip_wizard/login.py /home/netconfig/login.py
     cd /home/netconfig
     gcc login.c -o login && chown root:root /home/netconfig/login && chmod 4555 /home/netconfig/login
     chown root:root /home/netconfig/login.py

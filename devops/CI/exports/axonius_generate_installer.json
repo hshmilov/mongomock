@@ -87,6 +87,7 @@
     {
       "type": "shell",
       "script": "init_host.sh",
+      "remote_folder": "/home/ubuntu/cortex",
       "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
