@@ -335,7 +335,7 @@ class Triggerable(Feature, ABC):
         :return:
         """
         if job_state.scheduled:
-            logger.info(f'job is already scheduled, {job_state}')
+            logger.debug(f'job is already scheduled, {job_state}')
             return job_state.promise
 
         # If a plugin was triggered and then triggered again.
