@@ -285,7 +285,7 @@ class LdapConnection(object):
             # No need to do that a couple of times. There is a logic in the adapters themselves
             # that tries more times if that fails.
             logger.exception("ldap paged search exception, retrying to connect.")
-            self._connect_to_server()
+            self.reconnect()
             entry_generator = ldap_paged_search()
 
         for entry in entry_generator:
@@ -631,7 +631,7 @@ class LdapConnection(object):
             return []
 
     @retry(wait_fixed=10000, stop_max_attempt_number=3)
-    def get_users_list(self):
+    def get_users_list(self, should_get_nested_groups_for_user=True):
         """
         returns a list of objects representing the users in this DC.
         an object looks like {"sid": "S-1-5...", "caption": "username@domain.name"}
@@ -653,9 +653,19 @@ class LdapConnection(object):
         users_count = 0
         get_users_start = time.time()
         for user in users_generator:
+            try:
+                if should_get_nested_groups_for_user:
+                    member_of_full_for_user = \
+                        list(self.get_nested_groups_for_object({'memberOf': user.get('memberOf') or []}))
+                else:
+                    member_of_full_for_user = None
+            except Exception:
+                logger.exception(f'Problem getting nested groups for object, passing and reconnecting')
+                member_of_full_for_user = None
+
             user['axonius_extended'] = {
                 "maxPwdAge": self.domain_properties['maxPwdAge'],
-                'member_of_full': list(self.get_nested_groups_for_object({'memberOf': user.get('memberOf') or []}))
+                'member_of_full': member_of_full_for_user
             }
 
             users_count = users_count + 1
@@ -880,7 +890,7 @@ class LdapConnection(object):
 
             group_object = self.__ldap_groups.get(group_dn)
             if not group_object:
-                logger.error(f'Error! group {group_dn} is not found in our dict, this should never happen!')
+                logger.debug(f'Error! group {group_dn} is not found in our dict, this should never happen!')
                 return set()
 
             member_of_full = group_object.get('member_of_full')

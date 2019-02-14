@@ -118,6 +118,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         self.__devices_data_db = self._get_collection(DEVICES_DATA)
         self.__fetch_users_image = True
+        self.__should_get_nested_groups_for_user = True
         executors = {'default': ThreadPoolExecutor(3)}
         self._background_scheduler = LoggedBackgroundScheduler(executors=executors)
 
@@ -202,6 +203,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self.__resolving_enabled = config['resolving_enabled']
         self.__report_generation_interval = config['report_generation_interval']
         self.__fetch_users_image = config.get('fetch_users_image', True)
+        self.__should_get_nested_groups_for_user = config.get('should_get_nested_groups_for_user', True)
 
         # Change interval of report generation thread
         try:
@@ -357,7 +359,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         :return:
         """
 
-        return client_data.get_users_list()
+        return client_data.get_users_list(should_get_nested_groups_for_user=self.__should_get_nested_groups_for_user)
 
     def _parse_generic_ad_raw_data(self, ad_entity: ADEntity, raw_data: dict):
         """
@@ -1465,13 +1467,19 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     'name': 'fetch_users_image',
                     'title': 'Fetch Users Image',
                     'type': 'bool'
+                },
+                {
+                    'name': 'should_get_nested_groups_for_user',
+                    'title': 'Get nested group membership for each user',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'resolving_enabled',
                 "sync_resolving",
                 "report_generation_interval",
-                'fetch_users_image'
+                'fetch_users_image',
+                'should_get_nested_groups_for_user'
             ],
             "pretty_name": "Active Directory Configuration",
             "type": "array"
@@ -1483,7 +1491,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             'resolving_enabled': True,
             "sync_resolving": False,
             "report_generation_interval": 30,
-            'fetch_users_image': True
+            'fetch_users_image': True,
+            'should_get_nested_groups_for_user': True
         }
 
     @classmethod
