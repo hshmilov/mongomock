@@ -233,6 +233,12 @@ class ChefAdapter(AdapterBase):
                 if version:
                     device.set_dynamic_field('axonius_version', version)
 
+                axonius_maintenance = device_raw_automatic.get('axonius_maintenance', {})
+                if axonius_maintenance:
+                    device.set_dynamic_field('provision', axonius_maintenance.get('provision', ''))
+                    device.set_dynamic_field('analytics', axonius_maintenance.get('analytics', ''))
+                    device.set_dynamic_field('troubleshooting', axonius_maintenance.get('troubleshooting', ''))
+
                 # seem like chef's raw is a bit too much for mongo, and the db fails to insert
                 # device.set_raw(device_raw)
 
