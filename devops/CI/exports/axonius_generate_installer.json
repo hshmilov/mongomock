@@ -9,19 +9,97 @@
   },
   "builders": [
     {
-      "name": "axonius-{{user `build_name` }}-installer-generator",
-      "type": "vmware-vmx",
-      "source_path": "/home/ubuntu/{{user `image` }}/{{user `image` }}.vmx",
+      "vm_name": "axonius",
+      "format": "ova",
+      "type": "vmware-iso",
+      "boot_wait": "20s",
+      "disk_size": 200000,
+      "headless": true,
+      "iso_url": "/home/ubuntu/ubuntu-16.04.5-server-amd64.iso",
+      "iso_checksum": "ee32c555567dd5407c58a1cfc7e668ab37a99d99",
+      "iso_checksum_type": "sha1",
       "ssh_username": "ubuntu",
-      "ssh_password": "{{user `password` }}",
-      "shutdown_command": "echo {{user `password`}} | sudo -S shutdown -P now",
-      "skip_compaction": true,
-      "headless": true
+      "ssh_password": "{{user `password`}}",
+      "ssh_timeout": "4h",
+      "output_directory": "output-axonius-{{user `build_name` }}-build",
+      "guest_os_type": "ubuntu-64",
+      "http_directory": "http",
+      "memory": "32768",
+      "cpus": 8,
+      "shutdown_command": "echo {{user `password`}} | sudo -S -E shutdown -P now",
+      "boot_command": [
+        "<enter><f6><esc>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs>",
+        "auto ",
+        "preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
+        "debian-installer=en_CA ",
+        "locale=en_CA ",
+        "hostname=axonius ",
+        "fb=false ",
+        "debconf/frontend=noninteractive ",
+        "keyboard-configuration/modelcode=SKIP ",
+        "keyboard-configuration/layout=USA ",
+        "keyboard-configuration/variant=USA ",
+        "vga=788 ",
+        "initrd=/install/initrd.gz ",
+        "quiet --- ",
+        "<enter>"
+      ],
+      "vmx_data_post": {
+        "ethernet0.connectiontype": "bridged"
+      }
     }
   ],
   "provisioners": [
     {
       "type": "shell",
+      "inline": [
+        "export HISTFILE=/dev/null"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "mkdir -p /home/ubuntu/cortex/devops/scripts/host_installation"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "ip_wizard",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard"
+    },
+    {
+      "type": "shell",
+      "script": "init_host.sh",
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "expect_disconnect": true,
+      "inline": [
+        "reboot"
+      ],
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "pause_before": "10s",
       "script": "./axonius_deploy.sh",
       "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `branch`}} {{user `fork`}} {{user `password`}} {{user `build_name`}}"
     },
@@ -34,10 +112,10 @@
   ],
   "post-processors": [
     {
-        "type": "shell-local",
-        "inline": [
-          "rm -rf ./output-axonius-{{user `build_name` }}-installer-generator"
-        ]
+      "type": "shell-local",
+      "inline": [
+        "rm -rf ./output-axonius-{{user `build_name` }}-installer-generator"
+      ]
     }
   ]
 }

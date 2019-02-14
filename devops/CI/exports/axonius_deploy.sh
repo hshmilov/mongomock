@@ -4,6 +4,7 @@ branch=$1
 fork=$2
 sudo_pass=$3
 build_name=$4
+rm -rf cortex
 git clone https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/$fork/cortex -b $branch
 cd cortex
 ./create_venv.sh
