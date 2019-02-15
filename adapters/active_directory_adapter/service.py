@@ -21,7 +21,10 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import (IpResolveError, LdapException,
                                              NoClientError)
 from axonius.clients.ldap.ldap_connection import (LDAP_ACCOUNTDISABLE, LDAP_ACCOUNT_LOCKOUT,
-                                                  LdapConnection)
+                                                  LdapConnection,
+                                                  DEFAULT_LDAP_RECIEVE_TIMEOUT,
+                                                  DEFAULT_LDAP_CONNECTION_TIMEOUT,
+                                                  DEFAULT_LDAP_PAGE_SIZE)
 from axonius.consts.adapter_consts import (DEVICES_DATA, DNS_RESOLVE_STATUS,
                                            IPS_FIELDNAME,
                                            NETWORK_INTERFACES_FIELDNAME)
@@ -119,6 +122,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self.__devices_data_db = self._get_collection(DEVICES_DATA)
         self.__fetch_users_image = True
         self.__should_get_nested_groups_for_user = True
+        self.__ldap_page_size = DEFAULT_LDAP_PAGE_SIZE
+        self.__ldap_connection_timeout = DEFAULT_LDAP_CONNECTION_TIMEOUT
+        self.__ldap_recieve_timeout = DEFAULT_LDAP_RECIEVE_TIMEOUT
         executors = {'default': ThreadPoolExecutor(3)}
         self._background_scheduler = LoggedBackgroundScheduler(executors=executors)
 
@@ -204,6 +210,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self.__report_generation_interval = config['report_generation_interval']
         self.__fetch_users_image = config.get('fetch_users_image', True)
         self.__should_get_nested_groups_for_user = config.get('should_get_nested_groups_for_user', True)
+        self.__ldap_page_size = config.get('ldap_page_size', DEFAULT_LDAP_PAGE_SIZE)
+        self.__ldap_connection_timeout = config.get('ldap_connection_timeout', DEFAULT_LDAP_CONNECTION_TIMEOUT)
+        self.__ldap_recieve_timeout = config.get('ldap_recieve_timeout', DEFAULT_LDAP_RECIEVE_TIMEOUT)
 
         # Change interval of report generation thread
         try:
@@ -224,10 +233,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _use_wmi_smb_path(self):
         return os.path.abspath(os.path.join(os.path.dirname(__file__), self.config['paths']['wmi_smb_path']))
 
-    @property
-    def _ldap_page_size(self):
-        return int(self.config['others']['ldap_page_size'])
-
     def _get_client_id(self, dc_details):
         return dc_details['dc_name']
 
@@ -247,7 +252,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                               dc_details['user'],
                               dc_details['password'],
                               dc_details.get('dns_server_address'),
-                              self._ldap_page_size,
+                              self.__ldap_page_size,
                               SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
                               self._grab_file_contents(dc_details.get('ca_file')),
                               self._grab_file_contents(dc_details.get('cert_file')),
@@ -347,6 +352,16 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         :return: iter(dict) with all the attributes returned from the DC per client
         """
+        # We set it once here, no need to do it again in the users fetch.
+        if self.__ldap_page_size is not None:
+            client_data.set_ldap_page_size(self.__ldap_page_size)
+
+        if self.__ldap_connection_timeout is not None:
+            client_data.set_ldap_connection_timeout(self.__ldap_connection_timeout)
+
+        if self.__ldap_recieve_timeout is not None:
+            client_data.set_ldap_recieve_timeout(self.__ldap_recieve_timeout)
+
         client_data.reconnect()
         return client_data.get_extended_devices_list()
 
@@ -359,6 +374,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         :return:
         """
 
+        client_data.reconnect()
         return client_data.get_users_list(should_get_nested_groups_for_user=self.__should_get_nested_groups_for_user)
 
     def _parse_generic_ad_raw_data(self, ad_entity: ADEntity, raw_data: dict):
@@ -1472,6 +1488,21 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     'name': 'should_get_nested_groups_for_user',
                     'title': 'Get nested group membership for each user',
                     'type': 'bool'
+                },
+                {
+                    'name': 'ldap_page_size',
+                    'title': 'LDAP pagination (entries per page)',
+                    'type': 'number'
+                },
+                {
+                    'name': 'ldap_connection_timeout',
+                    'title': 'LDAP socket connection timeout (seconds)',
+                    'type': 'number'
+                },
+                {
+                    'name': 'ldap_receive_timeout',
+                    'title': 'LDAP socket receive timeout (seconds)',
+                    'type': 'number'
                 }
             ],
             "required": [
@@ -1479,7 +1510,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 "sync_resolving",
                 "report_generation_interval",
                 'fetch_users_image',
-                'should_get_nested_groups_for_user'
+                'should_get_nested_groups_for_user',
+                'ldap_page_size',
+                'ldap_connection_timeout',
+                'ldap_receive_timeout'
             ],
             "pretty_name": "Active Directory Configuration",
             "type": "array"
@@ -1492,7 +1526,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             "sync_resolving": False,
             "report_generation_interval": 30,
             'fetch_users_image': True,
-            'should_get_nested_groups_for_user': True
+            'should_get_nested_groups_for_user': True,
+            'ldap_page_size': DEFAULT_LDAP_PAGE_SIZE,
+            'ldap_connection_timeout': DEFAULT_LDAP_CONNECTION_TIMEOUT,
+            'ldap_receive_timeout': DEFAULT_LDAP_RECIEVE_TIMEOUT,
         }
 
     @classmethod

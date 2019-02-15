@@ -54,6 +54,7 @@ def test_devices(ldap_connection: LdapConnection):
     devices_dict = {}
     has_disabled_device = True
     for device in devices:
+        assert device['distinguishedName'] not in devices_dict, 'Got the same record twice'
         devices_dict[device['distinguishedName']] = device
         if device['userAccountControl'] & ACCOUNTDISABLE > 0:
             has_disabled_device = True

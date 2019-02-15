@@ -8,6 +8,7 @@ from retrying import retry
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
 from axonius.profiling.memory import asizeof
+from axonius.utils.retrying import retry_generator
 
 logger = logging.getLogger(f'axonius.{__name__}')
 import ipaddress
@@ -23,9 +24,24 @@ import ldap3
 from axonius.types.ssl_state import SSLState
 
 
-def connect_to_server(server_address: str, user_name: str, user_password: str, use_ssl: SSLState = SSLState.Unencrypted,
-                      private_key_file: TextIO = None, cert_file: TextIO = None,
-                      ca_file: TextIO = None) -> ldap3.Connection:
+# Connection consts
+DEFAULT_LDAP_PAGE_SIZE = 900
+DEFAULT_LDAP_CONNECTION_TIMEOUT = 10
+DEFAULT_LDAP_RECIEVE_TIMEOUT = 120
+DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS = 10 * 1000  # 10 seconds
+
+
+def connect_to_server(
+        server_address: str,
+        user_name: str,
+        user_password: str,
+        use_ssl: SSLState,
+        private_key_file: TextIO,
+        cert_file: TextIO,
+        ca_file: TextIO,
+        ldap_connection_timeout: int,
+        ldap_recieve_timeout: int
+) -> ldap3.Connection:
     """
     This function will connect to an LDAP server.
 
@@ -36,6 +52,8 @@ def connect_to_server(server_address: str, user_name: str, user_password: str, u
     :param private_key_file: if using verified SSL, the SSL files are needed
     :param cert_file:
     :param ca_file:
+    :param ldap_connection_timeout: socket connection timeout in seconds
+    :param ldap_recieve_timeout: socket recieve timeout in seconds
     :return: The successfully binded connection
     :raises: ldap3.core.exceptions.LDAPException
     """
@@ -46,12 +64,12 @@ def connect_to_server(server_address: str, user_name: str, user_password: str, u
             local_certificate_file=cert_file.name if cert_file else None,
             ca_certs_file=ca_file.name if ca_file else None,
             validate=validation)
-        ldap_server = ldap3.Server(server_address, connect_timeout=10, use_ssl=True, tls=tls)
+        ldap_server = ldap3.Server(server_address, connect_timeout=ldap_connection_timeout, use_ssl=True, tls=tls)
     else:
-        ldap_server = ldap3.Server(server_address, connect_timeout=10)
+        ldap_server = ldap3.Server(server_address, connect_timeout=ldap_connection_timeout)
     ldap_connection = ldap3.Connection(
         ldap_server, user=user_name, password=user_password,
-        raise_exceptions=True, receive_timeout=120)
+        raise_exceptions=True, receive_timeout=ldap_recieve_timeout)
     ldap_connection.bind()
     return ldap_connection
 
@@ -127,11 +145,19 @@ class LdapConnection(object):
     Data from the wanted ActiveDirectory.
     """
 
-    def __init__(self, server_addr,
-                 user_name, user_password, dns_server=None,
-                 ldap_page_size=100,
-                 use_ssl: SSLState = SSLState.Unencrypted, ca_file_data: bytes=None, cert_file: bytes=None,
-                 private_key: bytes=None, should_fetch_disabled_devices=False, should_fetch_disabled_users=False):
+    def __init__(
+            self, server_addr,
+            user_name, user_password, dns_server=None,
+            ldap_page_size=DEFAULT_LDAP_PAGE_SIZE,
+            use_ssl: SSLState = SSLState.Unencrypted,
+            ca_file_data: bytes=None,
+            cert_file: bytes=None,
+            private_key: bytes=None,
+            should_fetch_disabled_devices=False,
+            should_fetch_disabled_users=False,
+            ldap_connection_timeout=DEFAULT_LDAP_CONNECTION_TIMEOUT,
+            ldap_recieve_timeout=DEFAULT_LDAP_RECIEVE_TIMEOUT
+    ):
         """Class initialization.
 
         :param int ldap_page_size: Amount of devices to fetch on each request
@@ -146,7 +172,9 @@ class LdapConnection(object):
         self.user_password = user_password
         self.dns_server = dns_server
         self.ldap_connection = None
-        self.ldap_page_size = ldap_page_size
+        self.__ldap_page_size = ldap_page_size
+        self.__ldap_connection_timeout = ldap_connection_timeout
+        self.__ldap_recieve_timeout = ldap_recieve_timeout
         self.__use_ssl = use_ssl
         self.should_fetch_disabled_devices = should_fetch_disabled_devices
         self.should_fetch_disabled_users = should_fetch_disabled_users
@@ -178,11 +206,20 @@ class LdapConnection(object):
             logger.info(f"{self.server_addr}: Created new LdapConnection for name '{name}'")
             self.extra_sessions[name] = LdapConnection(
                 self.server_addr, self.user_name, self.user_password,
-                self.dns_server, self.ldap_page_size, self.__use_ssl, self.ca_file_data_param, self.cert_file_param,
+                self.dns_server, self.__ldap_page_size, self.__use_ssl, self.ca_file_data_param, self.cert_file_param,
                 self.private_key_param, self.should_fetch_disabled_devices,
                 self.should_fetch_disabled_users)
 
         return self.extra_sessions[name]
+
+    def set_ldap_page_size(self, ldap_page_size: int):
+        self.__ldap_page_size = ldap_page_size
+
+    def set_ldap_connection_timeout(self, ldap_connection_timeout: int):
+        self.__ldap_connection_timeout = ldap_connection_timeout
+
+    def set_ldap_recieve_timeout(self, ldap_recieve_timeout: int):
+        self.__ldap_recieve_timeout = ldap_recieve_timeout
 
     def reconnect(self):
         """
@@ -211,9 +248,11 @@ class LdapConnection(object):
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
-            self.ldap_connection = connect_to_server(self.server_addr, self.user_name, self.user_password,
-                                                     self.__use_ssl, self.__private_key_file, self.__cert_file,
-                                                     self.__ca_file)
+            self.ldap_connection = connect_to_server(
+                self.server_addr, self.user_name, self.user_password,
+                self.__use_ssl, self.__private_key_file, self.__cert_file,
+                self.__ca_file, self.__ldap_connection_timeout, self.__ldap_recieve_timeout
+            )
 
             # Get domain configurations. The following have to be, they are critical values
             # like 'distinguishedName'.
@@ -269,7 +308,7 @@ class LdapConnection(object):
                 search_filter=search_filter,
                 search_scope=search_scope,
                 attributes=attributes,
-                paged_size=self.ldap_page_size,
+                paged_size=self.__ldap_page_size,
                 generator=True)
 
         try:
@@ -281,6 +320,9 @@ class LdapConnection(object):
             except StopIteration:
                 # If that is empty, its fine too. The next generation iteration will simply yield nothing.
                 pass
+        except ldap3.core.exceptions.LDAPNoSuchObjectResult:
+            # This shouldn't trigger a reconnect
+            raise
         except ldap3.core.exceptions.LDAPException:
             # No need to do that a couple of times. There is a logic in the adapters themselves
             # that tries more times if that fails.
@@ -591,7 +633,7 @@ class LdapConnection(object):
 
             yield dict(printer)
 
-    @retry(wait_fixed=10000, stop_max_attempt_number=3)
+    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS)
     def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
 
@@ -630,7 +672,7 @@ class LdapConnection(object):
         if one_device is None:
             return []
 
-    @retry(wait_fixed=10000, stop_max_attempt_number=3)
+    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS)
     def get_users_list(self, should_get_nested_groups_for_user=True):
         """
         returns a list of objects representing the users in this DC.
@@ -685,7 +727,7 @@ class LdapConnection(object):
         # cycle.
         self.__ldap_groups = {}
 
-    @retry(wait_fixed=10000, stop_max_attempt_number=3)
+    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS)
     def get_dns_records(self, name=None):
         """
         Returns dns records for this zone.
