@@ -64,11 +64,10 @@ curl https://bootstrap.pypa.io/get-pip.py | python3.6
 # system unstable but on the other hand /usr/local/bin is still in our path and we can use it.
 # so eventually /usr/bin/python3 will point to python3.5 and /usr/local/bin/python3 will point to python3.6.
 echo "Setting python3.6 as the default python and upgrading pip..."
+ln -sf /usr/bin/python2 /usr/local/bin/python
 ln -sf /usr/bin/python3.6 /usr/local/bin/python3
-ln -sf /usr/bin/python3.6 /usr/local/bin/python
 python2 -m pip install --upgrade pip
 python3 -m pip install --upgrade pip
-ln -sf /usr/local/bin/pip3 /usr/local/bin/pip
 echo "Installing virtualenv and setuptools..."
 pip2 install virtualenv
 pip3 install virtualenv
