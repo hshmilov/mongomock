@@ -52,9 +52,9 @@ class TestUserPermissions(TestBase):
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.assert_new_server_button_is_disabled()
 
-        self.alert_page.switch_to_page()
+        self.enforcements_page.switch_to_page()
         with pytest.raises(NoSuchElementException):
-            self.alert_page.find_new_alert_button()
+            self.enforcements_page.find_new_enforcement_button()
 
         self.report_page.switch_to_page()
         with pytest.raises(InvalidElementStateException):

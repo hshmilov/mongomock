@@ -4,13 +4,14 @@
             <x-search-input placeholder="Search by Host Name, User Name, MAC or IP..." v-model="searchValue"
                             @keydown.enter.native="onClick" :disabled="entitiesRestricted"
                             @click.native="notifyAccess"/>
-            <button @click="onClick" class="x-btn right" :class="{ disabled: entitiesRestricted }">Search</button>
+            <x-button right :disabled="entitiesRestricted" @click="onClick" @access="notifyAccess">Search</x-button>
         </div>
         <x-access-modal v-model="blockedComponent"/>
     </div>
 </template>
 
 <script>
+    import xButton from '../../axons/inputs/Button.vue'
     import xSearchInput from './SearchInput.vue'
     import xAccessModal from '../popover/AccessModal.vue'
 
@@ -21,7 +22,7 @@
 
     export default {
         name: 'x-search-insights',
-        components: {xSearchInput, xAccessModal},
+        components: {xButton, xSearchInput, xAccessModal},
         computed: {
             ...mapState({
                 explorer(state) {
@@ -59,10 +60,6 @@
                 this.blockedComponent = 'Devices and Users Search'
             },
             onClick() {
-                if (this.entitiesRestricted) {
-                    this.notifyAccess()
-                    return
-                }
                 let expressions = this.searchValue.split(',')
                 entities.forEach(entity => {
                     let patternParts = []
@@ -97,7 +94,7 @@
             }
         }
 
-        .x-btn {
+        .x-button {
             border-radius: 0 16px 16px 0;
             background-color: $theme-orange;
 

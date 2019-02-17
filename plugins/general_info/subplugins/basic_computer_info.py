@@ -1,5 +1,6 @@
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.parsing import parse_date, parse_bool_from_raw
+from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import parse_bool_from_raw
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, \
     smb_shell_commands, is_wmi_answer_ok, reg_view_output_to_dict, \

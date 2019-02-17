@@ -29,6 +29,7 @@ let host = ''
 if (process.env.NODE_ENV === 'development') {
 	host = 'https://127.0.0.1'
 }
+export const currentHost = host
 
 export const REQUEST_API = 'REQUEST_API'
 export const requestApi = ({commit}, payload) => {

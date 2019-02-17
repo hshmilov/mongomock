@@ -1,7 +1,7 @@
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState

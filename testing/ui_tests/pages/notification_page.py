@@ -15,7 +15,7 @@ class NotificationPage(Page):
     NOTIFICATION_PEEK_CSS = 'div.x-dropdown.x-notification-peek'
     NOTIFICATION_PEEK_TIMESTAMP_CSS = 'div.c-grey-4'
     NOTIFICATION_COUNT_CSS = 'div.badge'
-    NOTIFICATION_VIEW_ALL_BUTTON_CLASS = 'x-btn link'
+    NOTIFICATION_VIEW_ALL_BUTTON_CLASS = 'x-button link'
     NOTIFICATION_VIEW_ALL_TEXT = 'View All'
 
     # The first one is the title for the whole peek,
@@ -42,7 +42,6 @@ class NotificationPage(Page):
     def click_view_notifications(self):
         assert self.is_peek_open(), 'View notifications must be called with peek open'
         self.click_button(text=self.NOTIFICATION_VIEW_ALL_TEXT,
-                          button_type='div',
                           button_class=self.NOTIFICATION_VIEW_ALL_BUTTON_CLASS,
                           call_space=False)
         # wait for notification_page to load

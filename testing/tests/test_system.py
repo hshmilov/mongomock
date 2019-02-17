@@ -83,7 +83,6 @@ def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixtur
     scheduler.wait_for_scheduler(True)
     wait_until(lambda: scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10),
                total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
-    axonius_fixture.aggregator.rebuild_views()
 
     gui.login_user(DEFAULT_USER)
     devices = gui.get_devices(params={

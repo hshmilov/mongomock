@@ -3,7 +3,7 @@
         <ul class="header">
             <li v-for="tab in tabs" v-if="tab.id !== undefined" @click="selectTab(tab.id)" :id="tab.id"
                 class="header-tab" :class="{active: tab.isActive, disabled: tab.outdated}">
-                <x-logo-name v-if="tab.logo" :name="tab.title"/>
+                <x-title v-if="tab.logo" :logo="tab.logo" >{{ tab.title }}</x-title>
                 <div v-else>{{ tab.title }}</div>
             </li>
         </ul>
@@ -14,11 +14,13 @@
 </template>
 
 <script>
-    import xLogoName from '../visuals/LogoName.vue'
+    import xTitle from '../layout/Title.vue'
 
     export default {
         name: 'x-tabs',
-        components: {xLogoName},
+        components: {
+            xTitle
+        },
         props: {vertical: {default: false}},
         data() {
             return {

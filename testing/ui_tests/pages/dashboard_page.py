@@ -30,7 +30,7 @@ class DashboardPage(Page):
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
     SUMMARY_CARD_TEXT_CSS = '{id} > div.x-summary > div.summary'
-    CARD_CLOSE_BTN_CSS = '{id} > div.x-header > div.x-remove'
+    CARD_CLOSE_BTN_CSS = '{id} > div.header > button.remove'
 
     @property
     def root_page_css(self):
@@ -198,7 +198,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_title_from_card(card):
-        return card.find_element_by_css_selector('div.x-header > div.x-title').text.title()
+        return card.find_element_by_css_selector('div.header > div.title').text.title()
 
     @staticmethod
     def get_card_id_from_title(card_title):
@@ -231,7 +231,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def assert_plus_button_in_card(card):
-        assert card.find_element_by_css_selector('div.x-btn.link').text == '+'
+        assert card.find_element_by_css_selector('.x-button.link').text == '+'
 
     @staticmethod
     def find_adapter_in_card(card, adapter):

@@ -6,10 +6,10 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum, auto
 from threading import RLock
-from namedlist import FACTORY, namedlist
 
 import pymongo
 from flask import jsonify, request
+from namedlist import FACTORY, namedlist
 from promise import Promise
 
 from axonius.mixins.feature import Feature
@@ -209,7 +209,7 @@ class Triggerable(Feature, ABC):
         If a certain job is running, this waits for it to finish, and returns the last return value
         :param job_name: The job to wait for
         """
-        logger.info(f'Waiting for {job_name} from {self.get_caller_plugin_name()}')
+        logger.debug(f'Waiting for {job_name} from {self.get_caller_plugin_name()}')
         job_state = self.__state[job_name]
 
         promise = job_state.promise
@@ -349,7 +349,7 @@ class Triggerable(Feature, ABC):
         def on_success(arg):
             with job_state.lock:
                 self.__on_job_continue(job_state, arg)
-                logger.info('Successfully triggered')
+                logger.debug('Successfully triggered')
                 return arg
 
         def on_failed(err):

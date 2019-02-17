@@ -24,6 +24,10 @@ class TestReport(TestBase):
 
         with smtp_service.contextmanager():
             self.settings_page.switch_to_page()
+            # to stop "No report generated. Press "Discover Now" to generate."
+            self.base_page.run_discovery()
+
+            self.settings_page.switch_to_page()
             self.settings_page.click_global_settings()
             toggle = self.settings_page.find_send_emails_toggle()
             self.settings_page.click_toggle_button(toggle, make_yes=True)
@@ -52,6 +56,10 @@ class TestReport(TestBase):
         smtp_service.take_process_ownership()
 
         with smtp_service.contextmanager():
+            self.settings_page.switch_to_page()
+            # to stop "No report generated. Press "Discover Now" to generate."
+            self.base_page.run_discovery()
+
             self.settings_page.switch_to_page()
             self.settings_page.click_global_settings()
             toggle = self.settings_page.find_send_emails_toggle()

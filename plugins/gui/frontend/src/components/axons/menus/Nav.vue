@@ -14,7 +14,6 @@
     .x-nav {
         margin: 0px;
         padding: 0px;
-        overflow: auto;
         flex: 1 0 auto;
         background: $theme-black;
         transition: all ease-in 0.2s;

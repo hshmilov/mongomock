@@ -41,6 +41,7 @@ from axonius.plugin_base import add_rule
 from axonius.smart_json_class import SmartJsonClass
 from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.datetime import parse_date, is_date_real
 from axonius.utils.dns import query_dns
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import (ad_integer8_to_timedelta,
@@ -50,8 +51,7 @@ from axonius.utils.parsing import (ad_integer8_to_timedelta,
                                    get_first_object_from_dn,
                                    get_member_of_list_from_memberof,
                                    get_organizational_units_from_dn,
-                                   is_date_real, parse_bool_from_raw,
-                                   parse_date)
+                                   parse_bool_from_raw)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

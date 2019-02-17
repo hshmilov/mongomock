@@ -115,6 +115,9 @@
                 if (schema.type === 'array' && ops.exists) {
                     ops.exists = `(${ops.exists} and {field} != [])`
                 }
+                if (this.valueSchema.name == 'labels') {
+                    delete ops.size
+                }
                 return ops
             },
             opsList() {

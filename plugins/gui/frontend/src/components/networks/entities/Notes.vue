@@ -3,12 +3,11 @@
         <div class="header">
             <x-search-input v-model="searchValue" placeholder="Search Notes..." id="search-notes"/>
             <div class="actions">
-                <button class="x-btn link" v-if="selectedNotes && selectedNotes.length" @click="confirmRemoveNotes">Remove</button>
-                <button class="x-btn" @click="readOnly? undefined : createNote()" :class="{disabled: readOnly}">+ Note</button>
+                <x-button link v-if="selectedNotes && selectedNotes.length" @click="confirmRemoveNotes">Remove</x-button>
+                <x-button @click="createNote" :disabled="readOnly">+ Note</x-button>
             </div>
         </div>
-        <x-table :data="noteData" :fields="noteSchema" :sort="sort" id-field="uuid"
-                 v-model="readOnly? undefined : selectedNotes"
+        <x-table :data="noteData" :fields="noteSchema" :sort="sort" v-model="readOnly? undefined : selectedNotes"
                  :click-row-handler="readOnly? undefined : editNote" :click-col-handler="sortNotes"
                  :read-only="readOnlyNotes"/>
         <x-modal v-if="removeNoteModal.active" approve-text="Delete" @confirm="removeNotes"
@@ -29,6 +28,7 @@
 <script>
     import xSearchInput from '../../neurons/inputs/SearchInput.vue'
     import xTable from '../../axons/tables/Table.vue'
+    import xButton from '../../axons/inputs/Button.vue'
     import xModal from '../../axons/popover/Modal.vue'
     import xToast from '../../axons/popover/Toast.vue'
 
@@ -37,7 +37,7 @@
 
     export default {
         name: 'x-entity-notes',
-        components: {xSearchInput, xTable, xModal, xToast},
+        components: {xSearchInput, xTable, xButton, xModal, xToast},
         props: {
             module: {required: true}, entityId: {required: true}, data: {required: true},
             readOnly: {default: false}

@@ -1,4 +1,6 @@
 import logging
+from enum import Enum
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 from bson.json_util import JSONOptions, JSONMode, DatetimeRepresentation, default, object_hook
@@ -9,6 +11,12 @@ from types import GeneratorType
 
 # we use special JSONOptions with ISO8601 to fix serializing of datetime.datetime(9999, 12, 31, 23, 59, 59, 999999)
 json_options = JSONOptions(json_mode=JSONMode.LEGACY, datetime_representation=DatetimeRepresentation.ISO8601)
+
+
+def default_with_enums(obj):
+    if isinstance(obj, Enum):
+        return obj.value
+    return default(obj)
 
 
 def default_with_generators(obj):

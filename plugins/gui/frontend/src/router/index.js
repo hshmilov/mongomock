@@ -3,13 +3,15 @@ import Router from 'vue-router'
 import Account from '../components/pages/Account.vue'
 import Adapter from '../components/pages/Adapter.vue'
 import Adapters from '../components/pages/Adapters.vue'
-import Alert from '../components/pages/Alert.vue'
-import Alerts from '../components/pages/Alerts.vue'
 import Dashboard from '../components/pages/Dashboard.vue'
 import DashboardExplorer from '../components/pages/DashboardExplorer.vue'
 import Device from '../components/pages/Device.vue'
 import Devices from '../components/pages/Devices.vue'
 import DevicesQuery from '../components/pages/DevicesQuery.vue'
+import Enforcement from '../components/pages/Enforcement.vue'
+import Enforcements from '../components/pages/Enforcements.vue'
+import Tasks from '../components/pages/Tasks.vue'
+import Task from '../components/pages/Task.vue'
 import Instances from '../components/pages/Instances.vue'
 import Notification from '../components/pages/Notification.vue'
 import Notifications from '../components/pages/Notifications.vue'
@@ -32,7 +34,7 @@ export default new Router({
 			component: Dashboard,
 		},
 		{
-			path: '/cards/explorer',
+			path: '/dashboard/explorer',
 			name: 'Insights Explorer',
 			component: DashboardExplorer
 		},
@@ -73,14 +75,23 @@ export default new Router({
 			path: '/adapters/:id',
 			component: Adapter
 		},
+		{
+			path: '/enforcements/tasks',
+			name: 'Tasks',
+			component: Tasks
+		},
+		{
+			path: '/enforcements/tasks/:id',
+			component: Task
+		},
         {
-            path: '/alerts',
-            name: 'Alerts',
-            component: Alerts
+            path: '/enforcements',
+            name: 'Enforcements',
+            component: Enforcements
         },
 		{
-			path: '/alerts/:id',
-			component: Alert
+			path: '/enforcements/:id',
+			component: Enforcement
 		},
         {
             path: '/settings',

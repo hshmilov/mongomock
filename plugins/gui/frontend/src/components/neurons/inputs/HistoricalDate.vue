@@ -6,13 +6,15 @@
 
 
 <script>
-    import XDateEdit from '../schema/types/string/DateEdit.vue'
+    import xDateEdit from '../schema/types/string/DateEdit.vue'
     import {mapState, mapActions} from 'vuex'
     import {FETCH_FIRST_HISTORICAL_DATE, FETCH_ALLOWED_DATES} from '../../../store/modules/constants'
 
     export default {
         name: 'x-historical-date',
-        components: {XDateEdit},
+        components: {
+            xDateEdit
+        },
         props: ['value', 'module'],
         computed: {
             ...mapState({

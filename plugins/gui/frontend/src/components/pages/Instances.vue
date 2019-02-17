@@ -1,14 +1,9 @@
 <template>
     <x-page title="instances" class="x-instances">
-        <div align="right">
-            <button id="get-connection-string" class="x-btn" @click="connecting= !connecting"
-                    :class="{disabled:isReadOnly}">Connect Node</button>
-        </div>
         <x-table-wrapper title="Edit, Tag or Remove Instances" :loading="loading">
             <template slot="actions">
-                <div v-if="selectedInstance && selectedInstance.length" @click="removeServers" class="x-btn link">
-                    Remove
-                </div>
+                <x-button id="get-connection-string" @click="connecting= !connecting" :disabled="isReadOnly">Connect Node</x-button>
+                <x-button link v-if="selectedInstance && selectedInstance.length" @click="removeServers">Remove</x-button>
             </template>
             <x-table v-if="instances" slot="table" id-field="node_id" :data="instances" :fields="fields"
                      v-model="isReadOnly ? undefined : selectedInstance"
@@ -27,7 +22,7 @@
                 &lt;User-Nickname&gt;
             </div>
             <div slot="footer">
-                <button class="x-btn" @click="connecting= !connecting">OK</button>
+                <x-button @click="connecting= !connecting">OK</x-button>
             </div>
             <button>Copy To Clipboard</button>
         </x-modal>
@@ -43,8 +38,9 @@
 
 <script>
     import xPage from '../axons/layout/Page.vue'
-    import xTable from '../axons/tables/Table.vue'
     import xTableWrapper from '../axons/tables/TableWrapper.vue'
+    import xTable from '../axons/tables/Table.vue'
+    import xButton from '../axons/inputs/Button.vue'
     import xModal from '../axons/popover/Modal.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
@@ -52,7 +48,7 @@
 
     export default {
         name: 'x-instances',
-        components: {xPage, xTableWrapper, xTable, xModal},
+        components: {xPage, xTableWrapper, xTable, xButton, xModal},
         computed: {
             ...mapState({
                 isReadOnly(state) {

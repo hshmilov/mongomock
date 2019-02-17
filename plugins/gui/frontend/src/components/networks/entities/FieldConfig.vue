@@ -1,6 +1,6 @@
 <template>
     <div class="x-field-config">
-        <button @click="isActive = true" class="x-btn link">Edit Columns</button>
+        <x-button @click="isActive = true" link>Edit Columns</x-button>
         <x-modal v-if="isActive" @close="isActive = false">
             <template slot="body">
                 <div class="x-field-filter">
@@ -10,7 +10,7 @@
                 <x-checkbox-list :items="currentFields" v-model="selectedFields"/>
             </template>
             <template slot="footer">
-                <button class="x-btn" :tabindex="3" @click="isActive = false">Done</button>
+                <x-button :tabindex="3" @click="isActive = false">Done</x-button>
             </template>
         </x-modal>
     </div>
@@ -21,13 +21,15 @@
     import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
     import xSearchInput from '../../neurons/inputs/SearchInput.vue'
     import xCheckboxList from '../../neurons/inputs/CheckboxList.vue'
+    import xButton from '../../axons/inputs/Button.vue'
+
     import {mapState, mapGetters, mapMutations} from 'vuex'
     import {GET_DATA_FIELDS_BY_PLUGIN} from '../../../store/getters'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
 
     export default {
         name: 'x-field-config',
-        components: {xModal, xSelectSymbol, xSearchInput, xCheckboxList},
+        components: {xModal, xSelectSymbol, xSearchInput, xCheckboxList, xButton},
         props: {module: {required: true}},
         computed: {
             ...mapState({

@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 
+from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.plugin_base import PluginBase
 from axonius.entities import EntityType
@@ -16,7 +17,7 @@ def adapter_data(entity_type: EntityType):
     logger.info(f'Getting adapter data for entity {entity_type.name}')
 
     # pylint: disable=W0212
-    entity_collection = PluginBase.Instance._entity_views_db_map[entity_type]
+    entity_collection = PluginBase.Instance._entity_db_map[entity_type]
     adapter_entities = {
         'seen': 0, 'seen_gross': 0, 'unique': entity_collection.estimated_document_count(), 'counters': []
     }
@@ -27,8 +28,15 @@ def adapter_data(entity_type: EntityType):
     for res in entity_collection.aggregate(
             [
                 {
+                    '$match': {
+                        'adapters.pending_delete': {
+                            '$ne': True
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$adapters',
+                        '_id': f'$adapters.{PLUGIN_NAME}',
                         'count': {
                             '$sum': 1
                         }

@@ -1,11 +1,11 @@
 <template>
     <div class="x-calendar">
         <div class="calendar-details" v-if="details">
-            <img :src="require(`Logos/${details.image}.png`)" height="48"/>
+            <img :src="require(`Logos/adapters/${details.image}.png`)" height="48"/>
             <div v-for="field in details.fields">{{ field }}</div>
         </div>
         <div class="calendar-view">
-            <div @click="decCurrentWeek" class="x-btn link">&lt;</div>
+            <x-button link @click="decCurrentWeek">&lt;</x-button>
             <div v-for="day in currentWeekDays" class="day">
                 <div class="day-title">
                     <div>{{day.name}}</div>
@@ -13,7 +13,7 @@
                 </div>
                 <component v-if="day.instance_details" :is="details.program_type" :data="day" class="day-body"/>
             </div>
-            <div @click="incCurrentWeek" class="x-btn link">&gt;</div>
+            <x-button link @click="incCurrentWeek">&gt;</x-button>
         </div>
     </div>
 </template>
@@ -22,10 +22,11 @@
     import dose from '../../networks/health/PrescriptionDose.vue'
     import bolus from '../../networks/health/PrescriptionBolus.vue'
     import moment from 'moment'
+    import xButton from '../../axons/inputs/Button.vue'
 
     export default {
         name: 'x-calendar',
-        components: {dose, bolus},
+        components: {dose, bolus, xButton},
         props: {data: {required: true}, schema: {}},
         computed: {
             calendar() {
@@ -136,7 +137,7 @@
             display: grid;
             grid-template-columns: 1fr repeat(7, 4fr) 1fr;
 
-            .x-btn.link {
+            .x-button.link {
                 padding: 0 8px;
                 font-size: 24px;
             }

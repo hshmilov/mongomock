@@ -6,6 +6,7 @@ from flask import jsonify, request, has_request_context
 from passlib.hash import bcrypt
 
 from axonius.consts.metric_consts import ApiMetric
+from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils import gui_helpers
@@ -128,7 +129,7 @@ class API:
     @api_add_rule(f'devices', required_permissions={Permission(PermissionType.Devices,
                                                                PermissionLevel.ReadOnly)})
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        devices_collection = self._entity_views_db_map[EntityType.Devices]
+        devices_collection = self._entity_db_map[EntityType.Devices]
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
             'page': get_page_metadata(skip, limit,
@@ -146,7 +147,7 @@ class API:
     @api_add_rule(f'devices/count', required_permissions={Permission(PermissionType.Devices,
                                                                      PermissionLevel.ReadOnly)})
     def api_devices_count(self, mongo_filter):
-        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices]))
+        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Devices]))
 
     @api_add_rule(f'devices/<device_id>', required_permissions={Permission(PermissionType.Devices,
                                                                            PermissionLevel.ReadOnly)})
@@ -158,7 +159,7 @@ class API:
                   required_permissions={Permission(PermissionType.Devices,
                                                    ReadOnlyJustForGet)})
     def api_device_labels(self, mongo_filter):
-        return self._entity_labels(self.devices_db_view, self.devices, mongo_filter)
+        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
 
     #########
     # USERS #
@@ -171,7 +172,7 @@ class API:
     @api_add_rule(f'users', required_permissions={Permission(PermissionType.Users,
                                                              PermissionLevel.ReadOnly)})
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        users_collection = self._entity_views_db_map[EntityType.Users]
+        users_collection = self._entity_db_map[EntityType.Users]
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
         return_doc = {
             'page': get_page_metadata(skip, limit, gui_helpers.get_entities_count(mongo_filter, users_collection)),
@@ -188,7 +189,7 @@ class API:
     @api_add_rule(f'users/count', required_permissions={Permission(PermissionType.Users,
                                                                    PermissionLevel.ReadOnly)})
     def api_users_count(self, mongo_filter):
-        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users]))
+        return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Users]))
 
     @api_add_rule(f'users/<user_id>', required_permissions={Permission(PermissionType.Users,
                                                                        PermissionLevel.ReadOnly)})
@@ -200,39 +201,37 @@ class API:
                   required_permissions={Permission(PermissionType.Users,
                                                    ReadOnlyJustForGet)})
     def api_user_labels(self, mongo_filter):
-        return self._entity_labels(self.users_db_view, self.users, mongo_filter)
+        return self._entity_labels(self.users_db, self.users, mongo_filter)
 
     ##########
-    # ALERTS #
+    # ENFORCEMENTS #
     ##########
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
-    @gui_helpers.projected()
-    @api_add_rule(f'alerts', methods=['GET', 'PUT', 'DELETE'], required_permissions={Permission(PermissionType.Alerts,
-                                                                                                ReadOnlyJustForGet)})
-    def api_alerts(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+    @api_add_rule(f'alerts', methods=['GET', 'PUT', 'DELETE'],
+                  required_permissions={Permission(PermissionType.Enforcements, ReadOnlyJustForGet)})
+    def api_alerts(self, limit, skip, mongo_filter, mongo_sort):
         if request.method == 'GET':
-            alerts = self.get_alerts(limit, mongo_filter, mongo_projection, mongo_sort, skip)
+            enforcements = self.get_enforcements(limit, mongo_filter, mongo_sort, skip)
             return_doc = {
-                'page': get_page_metadata(skip, limit, len(alerts)),
-                'assets': alerts
+                'page': get_page_metadata(skip, limit, len(enforcements)),
+                'assets': enforcements
             }
             return jsonify(return_doc)
 
         if request.method == 'PUT':
-            report_to_add = request.get_json(silent=True)
-            return self.put_alert(report_to_add)
+            enforcement_to_add = request.get_json(silent=True)
+            return self.put_enforcement(enforcement_to_add)
 
-        if request.method == 'DELETE':
-            report_ids = self.get_request_data_as_object()
-            alert_selection = {
-                'ids': report_ids,
-                'include': True
-            }
-            return self.delete_alert(alert_selection)
-        return None
+        # Assuming DELETE method
+        enforcement_ids = self.get_request_data_as_object()
+        enforcement_selection = {
+            'ids': enforcement_ids,
+            'include': True
+        }
+        return self.delete_enforcement(enforcement_selection)
 
     ###########
     # QUERIES #
@@ -292,7 +291,7 @@ class API:
         """
 
         if action_type == 'upload_file':
-            return self._upload_file(self.device_control_plugin)
+            return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
 
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type

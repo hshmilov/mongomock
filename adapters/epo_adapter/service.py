@@ -2,13 +2,15 @@ import ipaddress
 import json
 import logging
 
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import is_hostname_valid, format_mac, is_valid_ip, parse_date, is_domain_valid
+from axonius.utils.parsing import is_hostname_valid, format_mac, is_valid_ip, is_domain_valid
 from epo_adapter.mcafee import client
 
 logger = logging.getLogger(f'axonius.{__name__}')

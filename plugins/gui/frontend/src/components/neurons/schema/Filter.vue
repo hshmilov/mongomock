@@ -5,7 +5,7 @@
                       v-model="expressions[i]" ref="expression"
                       @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
         <div class="footer">
-            <div @click="addExpression" class="x-btn light">+</div>
+            <x-button light @click="addExpression">+</x-button>
             <div v-if="error" class="error-text">{{ error }}</div>
         </div>
     </div>
@@ -13,11 +13,12 @@
 
 <script>
     import xExpression from './Expression.vue'
+    import xButton from '../../axons/inputs/Button.vue'
     import {expression, nestedExpression} from '../../../constants/filter'
 
     export default {
         name: 'x-filter',
-        components: {xExpression},
+        components: {xExpression, xButton},
         props: {module: {required: true}, value: {}},
         computed: {
             isFilterEmpty() {

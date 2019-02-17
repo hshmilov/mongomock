@@ -1,14 +1,16 @@
 import logging
 import xml.etree.ElementTree as ET
 
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import normalize_var_name, parse_date
+from axonius.utils.parsing import normalize_var_name
 from bigfix_adapter import consts
 from bigfix_adapter.connection import BigfixConnection
 

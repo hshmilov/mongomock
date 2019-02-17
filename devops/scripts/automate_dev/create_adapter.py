@@ -8,7 +8,7 @@ Basically we do the following things:
 -> add description to plugins/gui/frontend/src/constants/plugin_meta.js
     -> AUTOADAPTER - add description
 
--> create axonius-libs/src/libs/axonius-py/axonius/assets/logos/<adapter_name>_adapter.png
+-> create axonius-libs/src/libs/axonius-py/axonius/assets/logos/adapters/<adapter_name>_adapter.png
     -> AUTOADAPTER - replace this line with logo
 
 -> mkdir adapters/<adapter_name>_adapter
@@ -61,7 +61,7 @@ def get_action_table(adapter_name: str) -> OrderedDict:
 
     return OrderedDict({
         f'plugins/gui/frontend/src/constants/plugin_meta.js': (description_validator, description_action),
-        f'axonius-libs/src/libs/axonius-py/axonius/assets/logos/{adapter_name}_adapter.png': (not_exists_validator, image_action),
+        f'axonius-libs/src/libs/axonius-py/axonius/assets/logos/adapters/{adapter_name}_adapter.png': (not_exists_validator, image_action),
         f'adapters/{adapter_name}_adapter': (not_exists_validator, adapter_dir_action),
         f'adapters/{adapter_name}_adapter/__init__.py': (not_exists_validator, adapter_init_action),
         f'adapters/{adapter_name}_adapter/config.ini': (not_exists_validator, config_ini_action),

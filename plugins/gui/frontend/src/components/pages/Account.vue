@@ -4,11 +4,11 @@
             <x-tab title="Password" id="password-account-tab">
                 <x-form :schema="passwordFormSchema" v-model="passwordForm" @validate="updatePasswordValidity"/>
                 <div class="place-right">
-                    <button class="x-btn" :class="{disabled: !passwordFormComplete}" @click="savePassword">Save</button>
+                    <x-button :disabled="!passwordFormComplete" @click="savePassword">Save</x-button>
                 </div>
             </x-tab>
             <x-tab title="API Key" id="apikey-account-tab" :selected="true">
-                <button class="x-btn" @click="openResetKeyModal">Reset Key</button>
+                <x-button @click="openResetKeyModal">Reset Key</x-button>
                 <div class="x-grid">
                     <label>API Key:</label>
                     <div>{{apiKey['api_key']}}</div>
@@ -33,6 +33,7 @@
     import xTabs from '../axons/tabs/Tabs.vue'
     import xTab from '../axons/tabs/Tab.vue'
     import xForm from '../neurons/schema/Form.vue'
+    import xButton from '../axons/inputs/Button.vue'
     import xModal from '../axons/popover/Modal.vue'
     import xToast from '../axons/popover/Toast.vue'
 
@@ -42,7 +43,7 @@
 
     export default {
         name: 'x-account',
-        components: {xPage, xTabs, xTab, xForm, xModal, xToast},
+        components: {xPage, xTabs, xTab, xForm, xButton, xModal, xToast},
         data() {
             return {
                 passwordForm: {
@@ -104,7 +105,6 @@
                 this.resetKeyActive = false
             },
             savePassword() {
-                if (!this.passwordFormComplete) return
                 if (this.passwordForm.newPassword !== this.passwordForm.confirmNewPassword) {
                     this.message = 'Passwords don\'t match'
                     return
@@ -162,13 +162,13 @@
         }
 
         .password-account-tab {
-            .x-form .array {
+            .x-form .x-array-edit {
                 grid-template-columns: 1fr;
             }
         }
 
         .apikey-account-tab {
-            .x-btn {
+            .x-button {
                 margin-top: 12px;
             }
 

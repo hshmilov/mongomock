@@ -5,7 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from ensilo_adapter.connection import EnsiloConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.rest.connection import RESTConnection

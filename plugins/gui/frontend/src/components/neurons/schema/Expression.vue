@@ -5,30 +5,28 @@
                   class="x-select-logic"/>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
-        <label class="x-btn light checkbox-label expression-bracket-left" :class="{'active': expression.leftBracket}">
-            <input type="checkbox" v-model="expression.leftBracket">(</label>
-        <label class="x-btn light checkbox-label expression-not" :class="{ active: expression.not }">
-            <input type="checkbox" v-model="expression.not">NOT</label>
-        <label class="x-btn light checkbox-label expression-obj" :class="{ active: expression.obj }">
-            <input type="checkbox" v-model="expression.obj">OBJ</label>
+        <x-button light class="checkbox-label expression-bracket-left" :active="expression.leftBracket"
+                  @click="toggleLeftBracket">(</x-button>
+        <x-button light class="checkbox-label expression-not" :active="expression.not" @click="toggleNot">NOT</x-button>
+        <x-button light class="checkbox-label expression-obj" :active="expression.obj" @click="toggleObj">OBJ</x-button>
         <x-condition :module="module" v-model="expressionCond" :first="first" :is-parent="expression.obj"
                      @change="onChangeCondition" @error="onErrorCondition"/>
 
         <!-- Option to add ')' and to remove the expression -->
-        <label class="x-btn light checkbox-label expression-bracket-right" :class="{'active': expression.rightBracket}">
-            <input type="checkbox" v-model="expression.rightBracket">)</label>
-        <div class="x-btn link expression-remove" @click="$emit('remove')">x</div>
+        <x-button light class="checkbox-label expression-bracket-right" :active="expression.rightBracket"
+                  @click="toggleRightBracket">)</x-button>
+        <x-button link class="expression-remove" @click="$emit('remove')">x</x-button>
 
         <template v-if="expression.obj && expression.field">
             <template v-for="(nestedExpr, i) in expression.nested">
                 <div class="grid-span4"></div>
                 <x-condition :module="module" v-model="nestedExpr.expression" :parent-field="expression.field"
                              @change="onChangeCondition($event, i)" @error="onErrorCondition" :key="nestedExpr.i"/>
-                <button class="x-btn link condition-remove" @click="removeNestedExpression(i)">x</button>
+                <x-button link class="condition-remove" @click="removeNestedExpression(i)">x</x-button>
                 <div></div>
             </template>
             <div class="grid-span4"></div>
-            <button class="x-btn link expression-nest" @click="addNestedExpression">+</button>
+            <x-button link class="expression-nest" @click="addNestedExpression">+</x-button>
         </template>
     </div>
 </template>
@@ -37,6 +35,7 @@
     import xSelect from '../../axons/inputs/Select.vue'
     import xSelectTypedField from '../inputs/SelectTypedField.vue'
     import xCondition from './Condition.vue'
+    import xButton from '../../axons/inputs/Button.vue'
     import {nestedExpression} from '../../../constants/filter'
 
     import {mapMutations} from 'vuex'
@@ -46,7 +45,7 @@
     export default {
         name: 'x-expression',
         components: {
-            xSelect, xSelectTypedField, xCondition
+            xSelect, xSelectTypedField, xCondition, xButton
         },
         props: {
             value: {}, module: {required: true}, first: {default: false}
@@ -108,6 +107,18 @@
         },
         methods: {
             ...mapMutations({changeState: CHANGE_TOUR_STATE}),
+            toggleLeftBracket() {
+                this.expression.leftBracket = !this.expression.leftBracket
+            },
+            toggleRightBracket() {
+                this.expression.rightBracket = !this.expression.rightBracket
+            },
+            toggleNot() {
+                this.expression.not = !this.expression.not
+            },
+            toggleObj() {
+                this.expression.obj = !this.expression.obj
+            },
             checkErrors() {
                 if (!this.first && !this.expression.logicOp) {
                     return 'Logical operator is needed to add expression to the filter'
@@ -217,7 +228,7 @@
             }
         }
 
-        .x-btn.light {
+        .x-button.light {
             input {
                 display: none;
             }

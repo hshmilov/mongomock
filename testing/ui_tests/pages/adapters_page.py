@@ -20,7 +20,7 @@ class AdaptersPage(EntitiesPage):
     TEST_CONNECTIVITY = 'Test Connectivity'
     DEVICE_CHECKBOX = 'div.x-checkbox-container'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
-    ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.configuration>a'
+    ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.configuration>.x-button'
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test connectivity is not supported for this adapter.'
@@ -65,14 +65,14 @@ class AdaptersPage(EntitiesPage):
         return result
 
     def click_adapter(self, adapter_name):
-        self.click_button(adapter_name, button_class='title', button_type='div', call_space=False)
+        self.click_button(adapter_name, button_class='x-title', button_type='div', call_space=False)
         self.wait_for_table_to_load()
 
     def click_save(self):
         self.click_button(self.SAVE_BUTTON)
 
     def click_cancel(self):
-        self.click_button(self.CANCEL_BUTTON, button_class='x-btn link')
+        self.click_button(self.CANCEL_BUTTON, button_class='x-button link')
 
     def click_test_connectivity(self):
         self.click_button(self.TEST_CONNECTIVITY)
@@ -178,7 +178,7 @@ class AdaptersPage(EntitiesPage):
 
     def wait_for_adapter(self, adapter_name, retries=60 * 3, interval=2):
         for _ in range(retries):
-            self.test_base.alert_page.switch_to_page()
+            self.test_base.settings_page.switch_to_page()
             self.switch_to_page()
             try:
                 element = self.find_element_by_text(adapter_name)

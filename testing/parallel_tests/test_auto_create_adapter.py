@@ -62,7 +62,8 @@ def remove_generated_adapter(name):
     os.system('rm -rf {path}'.format(path=os.path.join(get_cortex_dir(),
                                                        f'adapters/{name}_adapter/')))
 
-    path_ = os.path.join(get_cortex_dir(), f'axonius-libs/src/libs/axonius-py/axonius/assets/logos/{name}_adapter.png')
+    path_ = os.path.join(
+        get_cortex_dir(), f'axonius-libs/src/libs/axonius-py/axonius/assets/logos/adapters/{name}_adapter.png')
     os.system('rm -rf {path}'.format(path=path_))
     os.system('rm -rf {path}'.format(path=os.path.join(get_cortex_dir(),
                                                        f'testing/parallel_tests/test_{name}.py')))

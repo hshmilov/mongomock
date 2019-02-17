@@ -74,12 +74,11 @@
         &.double {
             grid-row: 1 / span 2;
         }
-
         &.triple {
             grid-row: 1 / span 3;
         }
 
-        .x-title {
+        .title {
             text-transform: capitalize;
         }
 

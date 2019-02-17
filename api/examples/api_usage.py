@@ -1,7 +1,9 @@
 #!/usr/bin/env python36
 import logging
 
+#pylint: disable=E0611
 from axoniussdk import argument_parser
+#pylint: disable=E0611
 from axoniussdk.client import RESTClient
 
 __author__ = 'Axonius, Inc'
@@ -21,12 +23,12 @@ class ArgumentParser(argument_parser.ArgumentParser):
   %(prog)s -x https://axonius.local --api-key xxxx --api-secret yyyy --all-functions'''
 
 
-TRIGGERS_DEFAULT_VALUES = {'every_discovery': False,
-                           'new_entities': False,
-                           'previous_entities': False,
-                           'above': 0,
-                           'below': 0,
-                           }
+TRIGGERS_DEFAULT_VALUES = {
+    'new_entities': False,
+    'previous_entities': False,
+    'above': 0,
+    'below': 0,
+}
 
 ACTION_PUT_FILE = 'Touch Axonius File'
 PUT_FILE_EXAMPLE = 'echo \'Touched by axonius\' > /home/ubuntu/axonius_file'
@@ -34,7 +36,6 @@ PUT_FILE_EXAMPLE = 'echo \'Touched by axonius\' > /home/ubuntu/axonius_file'
 ACTION_RUN_SCRIPT = 'Echo Hello'
 ACTION_RUN_FILENAME = 'example.sh'
 RUN_SCRIPT_EXAMPLE = b'#!/bin/bash\necho hello world!'
-
 
 AXONIUS_API = '/api/V1'
 
@@ -281,12 +282,24 @@ class RESTExample:
 
         # Create new alert
         status_code, alert_id = self._client.put_alert(name=ALERT_NAME,
-                                                       triggers=trigger_dict,
-                                                       period='weekly',
-                                                       actions=[{'type': 'create_notification'}],
-                                                       view='Users Created in Last 30 Days',
-                                                       view_entity='users',
-                                                       severity='warning')
+                                                       triggers=[{
+                                                           'name': ALERT_NAME,
+                                                           'view': {
+                                                               'name': 'Users Created in Last 30 Days',
+                                                               'entity': 'users'
+                                                           },
+                                                           'conditions': trigger_dict,
+                                                           'period': 'weekly',
+                                                           'run_on': 'AllEntities'
+                                                       }],
+                                                       actions={
+                                                           'main': {
+                                                               'name': ALERT_NAME,
+                                                               'action': {
+                                                                   'action_name': 'create_notification'
+                                                               }
+                                                           }
+                                                       })
 
         assert status_code == 201, 'Failed to create new alert'
         assert len(alert_id) in [12, 24], 'Failed to get alert id'
@@ -300,7 +313,7 @@ class RESTExample:
         # delete alert
         status_code, resp = self._client.delete_alerts([alert_id])
         assert status_code == 200, 'Unable to delete alerts'
-        assert resp == '', 'invalid response'
+        assert resp.get('deleted', 0) == 1, 'invalid response'
 
         # validate that the alert exists
         status_code, alerts = self._client.get_alerts(fields='name')
@@ -326,7 +339,7 @@ class RESTExample:
         device_example = devices['assets'][0]
         device_id = device_example['internal_axon_id']
 
-        status_code, _ = self._client.run_action(device_ids=[device_id],   # The devices
+        status_code, _ = self._client.run_action(device_ids=[device_id],  # The devices
                                                  action_name=ACTION_PUT_FILE,  # The action name - will be shown as tag
                                                  command=PUT_FILE_EXAMPLE)
         assert status_code == 200

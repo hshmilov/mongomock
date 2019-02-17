@@ -7,13 +7,18 @@
                        :md-debounce="500" :class="{'no-icon': minimal, 'no-clear': !clearable}" ref="date">
             <label v-if="label">{{ label }}</label>
         </md-datepicker>
-        <button @click="onClear" class="x-btn link" v-if="value && clearable">X</button>
+        <x-button link @click="onClear" v-if="value && clearable">X</x-button>
     </div>
 </template>
 
 <script>
+    import xButton from '../../../../axons/inputs/Button.vue'
+
     export default {
         name: 'x-date-edit',
+        components: {
+            xButton
+        },
         props: {
             value: {
                 type: [String, Date],
@@ -77,7 +82,7 @@
             min-height: auto;
             margin-bottom: 0;
         }
-        .x-btn.link {
+        .x-button.link {
             margin-left: -32px;
             margin-bottom: -4px;
             z-index: 100;

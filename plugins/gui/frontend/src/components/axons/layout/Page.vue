@@ -1,17 +1,16 @@
 <template>
     <div class="x-page" :class="{ collapse: collapseSidebar }">
-        <div v-if="title || breadcrumbs" class="x-header">
-            <h4 class="x-title" v-if="title">{{ title }}</h4>
-            <h4 class="x-title" v-else>
+        <div v-if="title || breadcrumbs" class="header">
+            <h4 class="title" v-if="title">{{ title }}</h4>
+            <h4 class="title" v-else>
                 <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
                 <template v-for="breadcrumb in breadcrumbs.slice(0, breadcrumbs.length - 1)">
-                    <router-link :to="breadcrumb.path" active-class="" class="x-crumb">{{ breadcrumb.title }}
-                    </router-link>
+                    <router-link :to="breadcrumb.path" active-class="" class="crumb">{{ breadcrumb.title }}</router-link>
                 </template>
                 <!-- Adding currently viewed page without a link -->
-                {{breadcrumbs[breadcrumbs.length - 1].title}}
+                <span>{{breadcrumbs[breadcrumbs.length - 1].title}}</span>
             </h4>
-            <div class="x-action print-exclude">
+            <div class="action print-exclude">
                 <slot name="action"/>
             </div>
         </div>
@@ -52,18 +51,18 @@
             padding-left: 84px;
         }
 
-        > .x-header {
+        > .header {
             display: flex;
             text-transform: capitalize;
             z-index: 100;
             color: $theme-black;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
             padding: 12px 8px;
             border-top: 1px solid;
             border-bottom: 1px solid;
             border-color: rgba($theme-orange, 0.2);
 
-            .x-title {
+            .title {
                 flex: 1 0 auto;
                 font-weight: 200;
                 letter-spacing: 1px;
@@ -72,7 +71,7 @@
                 line-height: 30px;
                 display: inline-block;
 
-                .x-crumb {
+                .crumb {
                     position: relative;
                     margin-right: 18px;
 
@@ -83,7 +82,7 @@
                 }
             }
 
-            .x-action {
+            .action {
                 vertical-align: middle;
                 line-height: 24px;
                 font-size: 12px;

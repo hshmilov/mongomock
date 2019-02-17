@@ -3,7 +3,7 @@ from datetime import datetime
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import is_wmi_answer_ok
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 
 
 # DCOM Errors

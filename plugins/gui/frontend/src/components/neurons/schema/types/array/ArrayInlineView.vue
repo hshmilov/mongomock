@@ -15,11 +15,11 @@
 	import bool from '../boolean/BooleanView.vue'
 	import file from './FileView.vue'
 
-	import ArrayMixin from './array'
+	import arrayMixin from './array'
 
 	export default {
 		name: 'array',
-		mixins: [ArrayMixin],
+		mixins: [arrayMixin],
 		components: { string, number, integer, bool, file, array },
 		props: { },
         computed: {
@@ -41,7 +41,7 @@
                 if (this.schema.unique) {
 					items = Array.from(new Set(items))
                 }
-                return { ...items }
+                return items
             },
 			limitedItems() {
 				if (!this.filteredItems || !this.limit || (this.filteredItems.length <= this.limit)) {

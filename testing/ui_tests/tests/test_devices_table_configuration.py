@@ -12,11 +12,11 @@ from ui_tests.tests.ui_consts import TAG_NAME
 
 class TestDevicesTable(TestEntitiesTable):
     def _update_device_field(self, field_name, from_value, to_value):
-        self.axonius_system.db.get_entity_db_view(EntityType.Devices).update_one({
-            f'specific_data.data.{field_name}': from_value
+        self.axonius_system.db.get_entity_db(EntityType.Devices).update_one({
+            f'adapters.data.{field_name}': from_value
         }, {
             '$set': {
-                f'specific_data.$.data.{field_name}': to_value
+                f'adapters.$.data.{field_name}': to_value
             }
         })
 

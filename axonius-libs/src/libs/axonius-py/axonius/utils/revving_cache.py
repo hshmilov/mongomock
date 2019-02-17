@@ -259,6 +259,12 @@ class RevCached:
 
         self.trigger_cache_update_now()
 
+    def call_uncached(self, *args, **kwargs):
+        """
+        Please don't abuse this!
+        """
+        return self.__func(*args, **kwargs)
+
 
 def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cache_ttl: int = 3600 * 48,
                key_func: Callable = None):
@@ -267,6 +273,8 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
     You can call .update_cache on the method this decorates to trigger a cache update asynchronously
     You can call .clean_cache on the method this decorates to trigger a cache flush that will guarantee
         that the old value is deleted
+    You can call "call_uncached" on the method to force a recalculation. The value won't be saved for reference.
+        Please don't abuse this!
     """
 
     def wrap(func):
@@ -278,6 +286,7 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
 
         actual_wrapper.update_cache = cache.trigger_cache_update_now
         actual_wrapper.clean_cache = cache.sync_clean_cache
+        actual_wrapper.call_uncached = cache.call_uncached
 
         return actual_wrapper
 

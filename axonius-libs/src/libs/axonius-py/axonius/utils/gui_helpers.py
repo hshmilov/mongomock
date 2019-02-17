@@ -9,6 +9,9 @@ from typing import NamedTuple, Iterable, List
 import cachetools
 import dateutil
 import pymongo
+
+from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
+from axonius.entities import EntitiesNamespace
 from flask import request
 from pymongo.errors import PyMongoError
 from retry.api import retry_call
@@ -18,12 +21,20 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.parsing import parse_filter
+from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
+    parse_filter_non_entities
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
+
+FIELDS_TO_PROJECT = ['internal_axon_id', 'adapters.pending_delete', f'adapters.{PLUGIN_NAME}',
+                     'tags.type', 'tags.name', f'tags.{PLUGIN_NAME}',
+                     'accurate_for_datetime', ADAPTERS_LIST_LENGTH,
+                     'tags.data']
+
+FIELDS_TO_PROJECT_FOR_GUI = ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]
 
 
 def check_permissions(user_permissions, required_permissions, request_action: str) -> bool:
@@ -82,7 +93,7 @@ class PermissionType(Enum):
     Adapters = 'Adapters'
     Devices = 'Devices'
     Users = 'Users'
-    Alerts = 'Alerts'
+    Enforcements = 'Enforcements'
     Dashboard = 'Dashboard'
     Reports = 'Reports'
     Instances = 'Instances'
@@ -119,17 +130,37 @@ def add_rule_unauth(rule, *args, **kwargs):
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
-    Decorator stating that the view supports ?filter='adapters == 'active_directory_adapter''
+        Decorator stating that the view supports ?filter=... - to be used when the filter isn't expected to run on
+        entities
     """
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            filter_obj = dict()
             try:
-                filter_expr = request.args.get('filter')
+                filter_expr = request.args.get('filter', '')
                 history_date = request.args.get('history')
-                if filter_expr and filter_expr != '':
-                    filter_obj = parse_filter(filter_expr, history_date)
+                filter_obj = parse_filter_non_entities(filter_expr, history_date)
+            except Exception as e:
+                logger.exception('Failed in mongo filter')
+                return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
+            return func(self, mongo_filter=filter_obj, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def filtered_entities():
+    """
+        Decorator stating that the view supports ?filter=... when the filter is expected to run on entities
+    """
+
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            try:
+                filter_expr = request.args.get('filter', '')
+                history_date = request.args.get('history')
+                filter_obj = parse_filter(filter_expr, history_date)
             except Exception as e:
                 logger.exception('Failed in mongo filter')
                 return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
@@ -155,7 +186,18 @@ def sorted_endpoint():
                 desc_param = request.args.get('desc')
                 if sort_param:
                     logger.info(f'Parsing sort: {sort_param}')
-                    sort_obj[sort_param] = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
+                    direction = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
+
+                    if sort_param == 'labels':
+                        # TODO: Update script for this, otherwise we have to wait for a retag for sorting to work
+                        sort_obj['tags.label_value'] = direction
+                    else:
+                        splitted = sort_param.split('.')
+                        if splitted[0] == SPECIFIC_DATA or splitted[0] == ADAPTERS_DATA:
+                            splitted[0] = 'adapters'
+                            sort_obj['.'.join(splitted)] = direction
+                        else:
+                            sort_obj[sort_param] = direction
             except Exception as e:
                 return return_error('Could not create mongo sort. Details: {0}'.format(e), 400)
             return func(self, mongo_sort=sort_obj, *args, **kwargs)
@@ -320,7 +362,7 @@ def _perform_aggregation(entity_views_db,
     """
     pipeline = [{'$match': view_filter}]
     if projection and run_over_projection:
-        for field in ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]:
+        for field in FIELDS_TO_PROJECT:
             projection[field] = 1
         pipeline.append({'$project': projection})
     if sort:
@@ -349,17 +391,13 @@ def _perform_aggregation(entity_views_db,
 def _perform_find(entity_views_db,
                   limit, skip, view_filter, sort,
                   projection, entity_type,
-                  default_sort, run_over_projection):
+                  default_sort):
     """
     Tries to perform the given query using the 'find' method on mongo
     For parameter info see get_entities
     :raises PyMongoError: if some mongo error happened
     :return:
     """
-    if projection and run_over_projection:
-        for field in ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]:
-            projection[field] = 1
-
     find_sort = list(sort.items())
     if not find_sort and entity_type == EntityType.Devices:
         if default_sort:
@@ -380,7 +418,8 @@ def get_entities(limit: int, skip: int,
                  entity_type: EntityType,
                  default_sort: bool = True,
                  run_over_projection=True,
-                 history_date: datetime = None):
+                 history_date: datetime = None,
+                 ignore_errors: bool = False):
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -392,22 +431,52 @@ def get_entities(limit: int, skip: int,
     :param default_sort: adds an optional default sort using ADAPTERS_LIST_LENGTH
     :param run_over_projection: adds some common fields to the projection
     :param history_date: the date for which to fetch, or None for latest
+    :param ignore_errors: Passed to convert_db_entity_to_view_entity
     :return:
     """
+    db_projection = {}
+    if run_over_projection:
+        for field in FIELDS_TO_PROJECT_FOR_GUI:
+            if projection:
+                projection[field] = 1
+
+    if projection:
+        for field, v in projection.items():
+            splitted = field.split('.')
+            if splitted[0] == SPECIFIC_DATA:
+                splitted[0] = 'adapters'
+                db_projection['.'.join(splitted)] = v
+                splitted[0] = 'tags'
+                db_projection['.'.join(splitted)] = v
+            elif splitted[0] == ADAPTERS_DATA:
+                splitted[1] = 'data'
+
+                splitted[0] = 'adapters'
+                db_projection['.'.join(splitted)] = v
+                splitted[0] = 'tags'
+                db_projection['.'.join(splitted)] = v
+            else:
+                db_projection[field] = v
+
+    if run_over_projection or projection:
+        for field in FIELDS_TO_PROJECT:
+            db_projection[field] = 1
+
     entity_views_db = PluginBase.Instance._get_appropriate_view(history_date, entity_type)
     view_filter = get_historized_filter(view_filter, history_date)
     logger.debug(f'Fetching data for entity {entity_type.name}')
     limit = limit or 0
     skip = skip or 0
+
     try:
-        data_list = _perform_find(entity_views_db, limit, skip, view_filter, sort, projection, entity_type,
-                                  default_sort, run_over_projection)
+        data_list = _perform_find(entity_views_db, limit, skip, view_filter, sort, db_projection, entity_type,
+                                  default_sort)
     except PyMongoError:
         try:
-            logger.error("Find couldn't handle the weight! Going to slow path")
+            logger.exception("Find couldn't handle the weight! Going to slow path")
             data_list = _perform_aggregation(entity_views_db,
                                              limit, skip, view_filter, sort,
-                                             projection, entity_type,
+                                             db_projection, entity_type,
                                              default_sort, run_over_projection)
         except Exception:
             logger.exception("Exception when using perform aggregation")
@@ -417,6 +486,7 @@ def get_entities(limit: int, skip: int,
         raise
 
     for entity in data_list:
+        entity = convert_db_entity_to_view_entity(entity, ignore_errors=ignore_errors)
         if not projection:
             yield beautify_db_entry(entity)
         else:
@@ -450,9 +520,6 @@ def get_entities_count(entities_filter, entity_collection, history_date: datetim
     If "quick" is True, then will only count until 1000.
     """
     processed_filter = get_historized_filter(entities_filter, history_date)
-    if not processed_filter:
-        # If there's no filter, we can estimate documents, which is faster
-        return entity_collection.estimated_document_count()
 
     if quick:
         return entity_collection.count_documents(processed_filter, limit=1000)
@@ -688,29 +755,33 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
     """
     logger.info('Generating csv')
     string_output = io.StringIO()
-    entities = list(get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
+    entities = list(get_entities(None, None, mongo_filter, mongo_sort,
+                                 mongo_projection,
                                  entity_type,
                                  default_sort=default_sort,
                                  run_over_projection=False,
-                                 history_date=history))
+                                 history_date=history,
+                                 ignore_errors=True))
     if len(entities) > 0:
         # Beautifying the resulting csv.
         mongo_projection.pop('internal_axon_id', None)
-        mongo_projection.pop('unique_adapter_names', None)
         mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
+
         # Getting pretty titles for all generic fields as well as specific
         current_entity_fields = entity_fields(entity_type)
         for field in current_entity_fields['generic']:
             if field['name'] in mongo_projection:
                 mongo_projection[field['name']] = field['title']
-        for type in current_entity_fields['specific']:
-            for field in current_entity_fields['specific'][type]:
+
+        for type_ in current_entity_fields['specific']:
+            for field in current_entity_fields['specific'][type_]:
                 if field['name'] in mongo_projection:
-                    mongo_projection[field['name']] = f"{' '.join(type.split('_')).capitalize()}: {field['title']}"
+                    mongo_projection[field['name']] = f"{' '.join(type_.split('_')).capitalize()}: {field['title']}"
+
         for current_entity in entities:
             current_entity.pop('internal_axon_id', None)
-            current_entity.pop('unique_adapter_names', None)
             current_entity.pop(ADAPTERS_LIST_LENGTH, None)
+
             for field in mongo_projection.keys():
                 # Replace field paths with their pretty titles
                 if field in current_entity:
@@ -719,6 +790,7 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
                     if isinstance(current_entity[mongo_projection[field]], list):
                         canonized_values = [str(val) for val in current_entity[mongo_projection[field]]]
                         current_entity[mongo_projection[field]] = ','.join(canonized_values)
+
         dw = csv.DictWriter(string_output, mongo_projection.values())
         dw.writeheader()
         dw.writerows(entities)
@@ -774,10 +846,12 @@ def get_entity_labels(db) -> List[str]:
     :param db: the entities view db
     :return: all label strings
     """
-    return [x for x in db.distinct('labels') if x]
+    # TODO: This will be slow. Cache this? It's not trivial
+    return [x for x in db.distinct('tags.label_value') if x]
 
 
-def add_labels_to_entities(db, namespace, entities: Iterable[str], labels: Iterable[str], to_delete: bool):
+def add_labels_to_entities(db, namespace: EntitiesNamespace, entities: Iterable[str], labels: Iterable[str],
+                           to_delete: bool):
     """
     Add new tags to the list of given devices or remove tags from the list of given devices
     :param db: the entities view db
@@ -794,12 +868,12 @@ def add_labels_to_entities(db, namespace, entities: Iterable[str], labels: Itera
                 }
         },
         projection={
-            f'specific_data.{PLUGIN_UNIQUE_NAME}': 1,
-            f'specific_data.data.id': 1
+            f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+            f'adapters.data.id': 1,
         })
     # TODO: Figure out exactly what we want to tag and how, AX-2183
-    entities = [(entity['specific_data'][0][PLUGIN_UNIQUE_NAME],
-                 entity['specific_data'][0]['data']['id']) for entity in entities_from_db]
+    entities = [(entity['adapters'][0][PLUGIN_UNIQUE_NAME],
+                 entity['adapters'][0]['data']['id']) for entity in entities_from_db]
 
     namespace.add_many_labels(entities, labels=labels,
                               are_enabled=not to_delete)

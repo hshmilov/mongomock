@@ -7,7 +7,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from nessus_adapter.connection import NessusConnection
 from nessus_adapter.exceptions import NessusException
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 import requests

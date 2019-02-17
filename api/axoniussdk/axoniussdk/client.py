@@ -144,14 +144,8 @@ class RESTClient:
 
     def put_alert(self,
                   name: int,
-                  triggers: dict,
-                  period: str,
-                  actions: list,
-                  view: str,
-                  view_entity: str,
-                  severity: str,
-                  retrigger: bool = True,
-                  triggered: bool = False):
+                  triggers: list,
+                  actions: dict):
         # Notice that id = "new" tells the api this is a new alert.
         # Triggers should contain all the triggers with true (or int above 0) on activated triggers.
         # Actions type should be one of thses:
@@ -163,16 +157,11 @@ class RESTClient:
         # create_notification
         # tag_entities
 
-        data = {'id': 'new',
-                'name': name,
-                'triggers': triggers,
-                'period': period,
-                'actions': actions,
-                'view': view,
-                'viewEntity': view_entity,
-                'retrigger': retrigger,
-                'triggered': triggered,
-                'severity': severity}
+        data = {
+            'name': name,
+            'actions': actions,
+            'triggers': triggers
+        }
 
         return self.do_request('put', '/alerts', json=data)
 

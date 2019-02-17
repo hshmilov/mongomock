@@ -2,7 +2,7 @@
     <md-card class="x-maintenance">
         <md-card-expand>
             <md-card-expand-trigger>
-                <md-button class="x-btn link" :disabled="readOnly" id="maintenance_settings">ADVANCED SETTINGS</md-button>
+                <md-button class="x-button link" :disabled="readOnly" id="maintenance_settings">ADVANCED SETTINGS</md-button>
             </md-card-expand-trigger>
             <md-card-expand-content>
                 <md-card-content>
@@ -37,18 +37,15 @@
                             <div class="title">OR</div>
                             <div class="config">
                                 <template v-if="accessEndTime">
-                                    <div class="warning mr-12">Temporary Remote Support will end at: {{ accessEndTime
-                                        }}
-                                    </div>
-                                    <button class="x-btn" @click="stopTempAccess">Stop</button>
+                                    <div class="warning mr-12">Temporary Remote Support will end at: {{ accessEndTime }}</div>
+                                    <x-button @click="stopTempAccess">Stop</x-button>
                                 </template>
                                 <template v-else>
                                     <div class="mr-8">Give temporary Remote Support for</div>
                                     <input type="number" v-model="accessDuration" @keypress="validateNumber"
                                            class="mr-8" id="remote-access-timer"/>
                                     <div class="mr-12">Hours</div>
-                                    <button class="x-btn" :class="{disabled: !enableStartAccess}"
-                                            @click="startTempAccess">Start</button>
+                                    <x-button :disabled="!enableStartAccess" @click="startTempAccess">Start</x-button>
                                 </template>
                             </div>
                         </div>
@@ -70,6 +67,7 @@
 
 <script>
     import xCheckbox from '../../axons/inputs/Checkbox.vue'
+    import xButton from '../../axons/inputs/Button.vue'
     import xModal from '../../axons/popover/Modal.vue'
 
     import {mapState, mapActions} from 'vuex'
@@ -81,7 +79,7 @@
 
     export default {
         name: 'x-maintenance',
-        components: {xCheckbox, xModal},
+        components: {xCheckbox, xButton, xModal},
         props: {
             readOnly: {
                 type: Boolean, default: false
@@ -163,7 +161,6 @@
             },
             validateNumber,
             startTempAccess() {
-                if (!this.enableStartAccess) return
                 this.startMaintenance({duration: this.accessDuration})
             },
             stopTempAccess() {

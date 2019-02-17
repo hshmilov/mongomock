@@ -194,17 +194,17 @@ class AxoniusService:
     def get_devices_db(self):
         return self.db.get_entity_db(EntityType.Devices)
 
-    def get_devices_db_view(self):
-        return self.db.get_entity_db_view(EntityType.Devices)
-
     def get_users_db(self):
         return self.db.get_entity_db(EntityType.Users)
 
-    def get_users_db_view(self):
-        return self.db.get_entity_db_view(EntityType.Users)
-
-    def get_reports_db(self):
+    def get_enforcements_db(self):
         return self.db.get_collection(self.reports.unique_name, 'reports')
+
+    def get_actions_db(self):
+        return self.db.get_collection(self.reports.unique_name, 'saved_actions')
+
+    def get_tasks_db(self):
+        return self.db.get_collection(self.reports.unique_name, 'triggerable_history')
 
     def get_notifications_db(self):
         return self.db.get_collection(self.core.unique_name, 'notifications')
@@ -214,18 +214,15 @@ class AxoniusService:
 
     def insert_device(self, device_data):
         self.get_devices_db().insert_one(device_data)
-        self.aggregator.rebuild_views([device_data['internal_axon_id']])
 
     def delete_device_by_query(self, query):
         self.get_devices_db().delete_one(query)
-        self.aggregator.rebuild_views()
 
     def insert_user(self, user_data):
         self.get_users_db().insert_one(user_data)
-        self.aggregator.rebuild_views([user_data['internal_axon_id']])
 
     def insert_report(self, report_data):
-        self.get_reports_db().insert_one(report_data)
+        self.get_enforcements_db().insert_one(report_data)
 
     def db_find(self, db_name, collection_name, cond):
         return list(self.db.get_collection(db_name, collection_name).find(cond))
@@ -234,16 +231,8 @@ class AxoniusService:
         cursor = self.get_devices_db().find(cond)
         return list(cursor)
 
-    def get_devices_view_with_condition(self, cond):
-        cursor = self.get_devices_db_view().find(cond)
-        return list(cursor)
-
     def get_users_with_condition(self, cond):
         cursor = self.get_users_db().find(cond)
-        return list(cursor)
-
-    def get_users_view_with_condition(self, cond):
-        cursor = self.get_users_db_view().find(cond)
         return list(cursor)
 
     def get_device_by_id(self, adapter_name, device_id):
@@ -267,17 +256,6 @@ class AxoniusService:
         }
         return self.get_devices_with_condition(cond)
 
-    def get_device_view_by_id(self, adapter_name, device_id):
-        cond = {
-            'specific_data': {
-                "$elemMatch": {
-                    'data.id': device_id,
-                    PLUGIN_UNIQUE_NAME: adapter_name
-                }
-            }
-        }
-        return self.get_devices_view_with_condition(cond)
-
     def get_user_by_id(self, adapter_name, user_id):
         cond = {
             'adapters': {
@@ -288,17 +266,6 @@ class AxoniusService:
             }
         }
         return self.get_users_with_condition(cond)
-
-    def get_user_view_by_id(self, adapter_name, user_id):
-        cond = {
-            'specific_data': {
-                "$elemMatch": {
-                    'data.id': user_id,
-                    PLUGIN_UNIQUE_NAME: adapter_name
-                }
-            }
-        }
-        return self.get_users_view_with_condition(cond)
 
     def get_device_network_interfaces(self, adapter_name, device_id):
         device = self.get_device_by_id(adapter_name, device_id)
@@ -318,7 +285,7 @@ class AxoniusService:
             device_ids = [device.get('adapters', [{}])[0].get('data', {}).get('id')
                           for device in self.get_devices_by_adapter_name(plugin_unique_name)]
             pytest.fail("{0} exists more then once or not in {1}".format(some_device_id, device_ids))
-        devices = self.get_device_view_by_id(plugin_unique_name, some_device_id)
+        devices = self.get_device_by_id(plugin_unique_name, some_device_id)
         assert len(devices) == 1
 
     def assert_user_aggregated(self, adapter, client_details):
@@ -329,8 +296,6 @@ class AxoniusService:
 
     def assert_user_in_db(self, plugin_unique_name, some_device_id):
         users = self.get_user_by_id(plugin_unique_name, some_device_id)
-        assert len(users) == 1
-        users = self.get_user_view_by_id(plugin_unique_name, some_device_id)
         assert len(users) == 1
 
     def restart_plugin(self, plugin):

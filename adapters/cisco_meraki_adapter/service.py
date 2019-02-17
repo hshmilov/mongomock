@@ -8,7 +8,7 @@ from axonius.fields import Field, ListField
 from collections import defaultdict
 from cisco_meraki_adapter.connection import CiscoMerakiConnection
 from cisco_meraki_adapter.exceptions import CiscoMerakiException
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTConnection
 
 

@@ -30,9 +30,7 @@
                     </div>
                 </x-card>
                 <x-card title="New Chart" class="chart-new print-exclude">
-                    <div class="x-btn link" :class="{disabled: isReadOnly}" @click="createNewDashboard"
-                         id="dashboard_wizard">+
-                    </div>
+                    <x-button link :disabled="isReadOnly" @click="createNewDashboard" id="dashboard_wizard">+</x-button>
                 </x-card>
             </div>
             <x-wizard ref="wizard"/>
@@ -55,6 +53,7 @@
     import xWizard from '../networks/charts/Wizard.vue'
     import xEmptySystem from '../networks/onboard/EmptySystem.vue'
     import xModal from '../axons/popover/Modal.vue'
+    import xButton from '../axons/inputs/Button.vue'
     import xToast from '../axons/popover/Toast.vue'
     import xSearchInsights from '../neurons/inputs/SearchInsights.vue'
     import xHistoricalDate from '../neurons/inputs/HistoricalDate.vue'
@@ -72,7 +71,7 @@
         name: 'x-dashboard',
         components: {
             xPage, xCard, xCoverageCard, xDataDiscoveryCard, xHistogram, xPie, xSummary, xLine,
-            xCycle, xWizard, xEmptySystem, xModal, xToast, xSearchInsights, xHistoricalDate
+            xCycle, xWizard, xEmptySystem, xModal, xButton, xToast, xSearchInsights, xHistoricalDate
         },
         computed: {
             ...mapState({
@@ -221,7 +220,7 @@
                 this.$router.push({path: module})
             },
             createNewDashboard() {
-                if (!this.$refs.wizard || this.isReadOnly) return
+                if (!this.$refs.wizard) return
                 this.wizardActivated = true
                 this.$refs.wizard.activate()
             },
@@ -311,6 +310,7 @@
 
 <style lang="scss">
     .dashboard-charts {
+        padding: 8px;
         display: grid;
         grid-template-columns: repeat(auto-fill, 344px);
         grid-gap: 12px;

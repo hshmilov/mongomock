@@ -15,22 +15,22 @@
             <label>Intersecting Query:</label>
             <x-select :options="views[config.entity]" :searchable="true" v-model="config.intersecting[1]"
                       placeholder="query..." id="intersectingSecond" @input="$emit('state')"/>
-            <div @click="removeIntersecting(1)" class="link">x</div>
+            <x-button link @click="removeIntersecting(1)">x</x-button>
         </template>
-        <a @click="addIntersecting" class="x-btn light grid-span3" :class="{disabled: hasMaxViews}"
-           :title="addBtnTitle">+</a>
+        <x-button light :disabled="hasMaxViews" class="grid-span3" @click="addIntersecting" :title="addBtnTitle">+</x-button>
     </div>
 </template>
 
 <script>
+    import xButton from '../../axons/inputs/Button.vue'
     import xSelect from '../../axons/inputs/Select.vue'
     import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
-    import ChartMixin from './chart'
+    import chartMixin from './chart'
 
     export default {
         name: 'x-chart-intersect',
-        components: {xSelect, xSelectSymbol},
-        mixins: [ChartMixin],
+        components: {xButton, xSelect, xSelectSymbol},
+        mixins: [chartMixin],
         props: {value: {}, views: {required: true}},
         computed: {
             hasMaxViews() {
@@ -49,7 +49,6 @@
                 this.config.intersecting = this.config.intersecting.filter((item, i) => i !== index)
             },
             addIntersecting() {
-                if (this.hasMaxViews) return
                 this.config.intersecting.push('')
             },
             validate() {

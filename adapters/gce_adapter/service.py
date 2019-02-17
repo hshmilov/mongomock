@@ -16,7 +16,7 @@ from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

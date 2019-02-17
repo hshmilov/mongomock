@@ -7,7 +7,7 @@ from axonius.fields import Field
 from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.utils.parsing import make_dict_from_csv
 

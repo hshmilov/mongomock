@@ -8,7 +8,7 @@
                 <th v-for="field in dataField" nowrap :class="{sortable: clickColHandler}"
                     @click="clickCol(field.name)" @keyup.enter.stop="clickCol(field.name)">
 
-                    <img v-if="field.logo" class="logo md-image" :src="require(`Logos/${field.logo}.png`)" height="20">
+                    <img v-if="field.logo" class="logo md-image" :src="require(`Logos/adapters/${field.logo}.png`)" height="20">
                     {{ field.title }}<div v-if="clickColHandler" :class="`x-sort ${sortClass(field.name)}`"></div>
                 </th>
             </tr>
@@ -47,7 +47,7 @@
 		name: 'x-table',
         components: { xCheckbox, string, integer, number, bool, file, array },
         props: {
-			fields: {}, data: {}, pageSize: {}, sort: {}, idField: { default: 'id' }, value: {},
+			fields: {}, data: {}, pageSize: {}, sort: {}, idField: { default: 'uuid' }, value: {},
             clickRowHandler: {}, clickColHandler: {}, clickAllHandler: {},
             readOnly: { type: Array, default: () => {return []} }
         },
@@ -145,6 +145,11 @@
             }
             .array {
                 height: 24px;
+                .md-chip {
+                    background-color: rgba($theme-orange, 0.2);
+                    height: 20px;
+                    line-height: 20px;
+                }
             }
         }
     }

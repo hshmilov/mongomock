@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from axonius.consts import plugin_consts
 import uuid
 
@@ -23,6 +24,7 @@ def get_entity_adapter_dict(test_name, entity_adapter_id, plugin_name, plugin_un
 def get_entity_axonius_dict_multiadapter(test_name, list_of_adapter_data):
     return {
         'accurate_for_datetime': datetime.now(),
+        plugin_consts.ADAPTERS_LIST_LENGTH: len(list_of_adapter_data),
         'adapters': [
             get_entity_adapter_dict(test_name, *adapter_data)
             for adapter_data
@@ -36,6 +38,7 @@ def get_entity_axonius_dict_multiadapter(test_name, list_of_adapter_data):
 def get_entity_axonius_dict(test_name, entity_adapter_id, plugin_name, plugin_unique_name):
     return {
         'accurate_for_datetime': datetime.now(),
+        plugin_consts.ADAPTERS_LIST_LENGTH: 1,
         'adapters': [
             get_entity_adapter_dict(test_name, entity_adapter_id, plugin_name, plugin_unique_name)
         ],

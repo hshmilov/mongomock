@@ -40,10 +40,10 @@
     import segment from './Segment.vue'
     import abstract from './Abstract.vue'
     import timeline from './Timeline.vue'
-    import {entities} from '../../../constants/entities'
+
+    import viewsMixin from '../../../mixins/views'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
-    import {FETCH_DATA_VIEWS} from '../../../store/actions'
     import {SAVE_DASHBOARD} from '../../../store/modules/dashboard'
     import {NEXT_TOUR_STATE, CHANGE_TOUR_STATE} from '../../../store/modules/onboarding'
 
@@ -53,26 +53,12 @@
     export default {
         name: 'x-chart-wizard',
         components: {xFeedbackModal, xSelect, intersect, compare, segment, abstract, timeline},
+        mixins: [viewsMixin],
         props: {},
         computed: {
             ...mapState({
-                views(state) {
-                    return this.availableModules.reduce((map, module) => {
-                        map[module] = state[module].views.saved.data.map((view) => {
-                            return {name: view.name, title: view.name}
-                        })
-                        return map
-                    }, {})
-                },
                 dashboards(state) {
                     return state['dashboard']
-                },
-                availableModules(state) {
-                    if (!state.auth.currentUser.data) return {}
-                    let permissions = state.auth.currentUser.data.permissions
-                    return entities.filter(entity => {
-                        return permissions[entity.title] !== 'Restricted'
-                    }).map(entity => entity.name)
                 }
             }),
             metricOptions() {
@@ -83,9 +69,6 @@
                     {name: 'abstract', title: 'Field Summary'},
                     {name: 'timeline', title: 'Query Timeline'}
                 ]
-            },
-            entityOptions() {
-                return entities
             },
             availableViews() {
                 if (this.dashboard.metric === 'compare' || this.dashboard.metric === 'segment') {
@@ -129,7 +112,7 @@
         methods: {
             ...mapMutations({nextState: NEXT_TOUR_STATE, changeState: CHANGE_TOUR_STATE}),
             ...mapActions({
-                fetchViews: FETCH_DATA_VIEWS, saveDashboard: SAVE_DASHBOARD
+                saveDashboard: SAVE_DASHBOARD
             }),
             activate() {
                 this.isActive = true
@@ -152,11 +135,6 @@
             changeTourState(name) {
                 this.changeState({name})
             }
-        },
-        created() {
-            this.availableModules.forEach(module => {
-                this.fetchViews({module, type: 'saved'})
-            })
         },
         updated() {
             if (this.advanceState) {

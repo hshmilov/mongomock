@@ -142,12 +142,6 @@ class MongoService(WeaveService):
         if entity_type == EntityType.Devices:
             return self.client[AGGREGATOR_PLUGIN_NAME]['devices_db']
 
-    def get_entity_db_view(self, entity_type: EntityType):
-        if entity_type == EntityType.Users:
-            return self.client[AGGREGATOR_PLUGIN_NAME]['users_db_view']
-        if entity_type == EntityType.Devices:
-            return self.client[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
-
     def get_historical_entity_db_view(self, entity_type: EntityType):
         if entity_type == EntityType.Users:
             return self.client[AGGREGATOR_PLUGIN_NAME]['historical_users_db_view']

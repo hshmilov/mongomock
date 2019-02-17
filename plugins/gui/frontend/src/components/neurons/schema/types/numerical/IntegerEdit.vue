@@ -1,12 +1,12 @@
 <script>
-	import PrimitiveMixin from '../primitive.js'
-	import NumericalMixin from './numerical'
+	import primitiveMixin from '../primitive.js'
+	import numericalMixin from './numerical'
 	import xSelect from '../../../../axons/inputs/Select.vue'
     import { validateInteger } from '../../../../../constants/utils'
 
     export default {
 		name: 'x-integer-edit',
-        mixins: [PrimitiveMixin, NumericalMixin],
+        mixins: [primitiveMixin, numericalMixin],
         components: { xSelect },
         methods: {
 		    validateNumber: validateInteger,

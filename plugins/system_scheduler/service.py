@@ -255,7 +255,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
             self._run_plugins(PluginSubtype.Correlator)
 
-            self._request_db_rebuild(sync=True)
+            self._request_gui_dashboard_cache_clear()
 
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins(PluginSubtype.PostCorrelation)
@@ -265,7 +265,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
                 self._run_historical_phase()
 
-            self._request_db_rebuild(sync=True)
+            self._request_gui_dashboard_cache_clear(clear_slow=True)
 
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             if self._notify_on_adapters is True:
@@ -440,8 +440,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         logger.info(f'Got a stop request: Back to {scheduler_consts.Phases.Stable} Phase.')
         try:
             self.__stopping_initiated = True
-            # Let's rebuild once at the end for precaution
-            self._request_db_rebuild(sync=False)
             self._stop_plugins()
         finally:
             self.current_phase = scheduler_consts.Phases.Stable

@@ -54,24 +54,29 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        USERS_COLLECTION, ChartFuncs,
                                        ChartMetrics, ChartRangeTypes,
                                        ChartRangeUnits, ChartViews,
-                                       ResearchStatus)
+                                       ResearchStatus, SPECIFIC_DATA,
+                                       ADAPTERS_DATA)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
-                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
+                                          GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, NODE_ID, NODE_NAME,
                                           NODE_USER_PASSWORD, NOTES_DATA_TAG,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          SYSTEM_SETTINGS)
+                                          SYSTEM_SETTINGS, DEVICE_CONTROL_PLUGIN_NAME)
 from axonius.consts.metric_consts import (SystemMetric, ApiMetric, Query)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
+from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
+    ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD, \
+    LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, LAST_UPDATE_FIELD
+
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS
@@ -87,6 +92,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils import gui_helpers
+from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
 from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.utils.files import create_temp_file, get_local_config_file
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
@@ -99,7 +105,8 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
 from axonius.utils.metric import filter_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
-from axonius.utils.parsing import bytes_image_to_base64, parse_filter
+from axonius.utils.mongo_retries import mongo_retry
+from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
 from gui.api import API
@@ -582,12 +589,12 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     def _fetch_historical_entity(self, entity_type: EntityType, entity_id, history_date: datetime = None,
                                  projection=None):
-        return self._get_appropriate_view(history_date, entity_type). \
-            find_one(get_historized_filter(
-                {
-                    'internal_axon_id': entity_id
-                },
-                history_date), projection=projection)
+        return convert_db_entity_to_view_entity(self._get_appropriate_view(history_date, entity_type).
+                                                find_one(get_historized_filter(
+                                                    {
+                                                        'internal_axon_id': entity_id
+                                                    },
+                                                    history_date), projection=projection))
 
     def _user_entity_by_id(self, entity_id, history_date: datetime = None):
         return self._entity_by_id(EntityType.Users, entity_id, USER_ADVANCED_FILEDS, history_date)
@@ -601,9 +608,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
-        entity = self._fetch_historical_entity(entity_type, entity_id, history_date, projection={
-            'adapters_data': 0
-        })
+        entity = self._fetch_historical_entity(entity_type, entity_id, history_date)
         if entity is None:
             return return_error('Entity ID wasn\'t found', 404)
         for specific in entity['specific_data']:
@@ -807,8 +812,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         self._entity_db_map[entity_type].delete_many({'internal_axon_id': {
             '$in': self.__get_selected_internal_axon_ids(entities_selection, entity_type, mongo_filter)
         }})
-        self._request_db_rebuild(
-            sync=True, internal_axon_ids=entities_selection['ids'] if entities_selection['include'] else None)
         self._trigger('clear_dashboard_cache', blocking=False)
 
         return '', 200
@@ -826,7 +829,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         if entities_selection['include']:
             return entities_selection['ids']
         else:
-            return [entry['internal_axon_id'] for entry in self._entity_views_db_map[entity_type].find({
+            return [entry['internal_axon_id'] for entry in self._entity_db_map[entity_type].find({
                 '$and': [
                     {'internal_axon_id': {
                         '$nin': entities_selection['ids']
@@ -933,7 +936,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             pool.map_async(tag_adapter, entities).get()
 
         self._save_field_names_to_db(entity_type)
-        self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in entities])
         self._trigger('clear_dashboard_cache', blocking=False)
 
     def __get_entity_hyperlinks(self, entity_type: EntityType) -> Dict[str, str]:
@@ -979,10 +981,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         entities_selection = self.get_request_data_as_object()
         if not entities_selection:
             return return_error('No entity selection provided')
-        db = self._entity_views_db_map[entity_type]
+        db = self._entity_db_map[entity_type]
         projection = {
-            'specific_data.data.id': 1,
-            f'specific_data.{PLUGIN_UNIQUE_NAME}': 1
+            'adapters.data.id': 1,
+            f'adapters.{PLUGIN_UNIQUE_NAME}': 1
         }
         if entities_selection['include']:
             entities = db.find({
@@ -999,17 +1001,13 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 ]
             }, projection=projection)
 
-        def get_all_internal_axon_ids_altered():
-            for entity in entities:
-                adapters = entity['specific_data']
-                if len(adapters) < 2:
-                    continue
-                for adapter in adapters[:-1]:
-                    # Unlink all adapters except the last
-                    yield from self.unlink_adapter(entity_type, adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id'])
-
-        internal_axon_ids_altered = list(get_all_internal_axon_ids_altered())
-        self._request_db_rebuild(sync=True, internal_axon_ids=internal_axon_ids_altered)
+        for entity in entities:
+            adapters = entity['adapters']
+            if len(adapters) < 2:
+                continue
+            for adapter in adapters[:-1]:
+                # Unlink all adapters except the last
+                self.unlink_adapter(entity_type, adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id'])
 
         return ''
 
@@ -1019,7 +1017,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     @gui_helpers.historical()
     @gui_helpers.paginated()
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @gui_add_rule_logged_in('devices', methods=['GET', 'DELETE'],
@@ -1037,7 +1035,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                                      history_date=history))
 
     @gui_helpers.historical()
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @gui_add_rule_logged_in('devices/csv', required_permissions={Permission(PermissionType.Devices,
@@ -1059,7 +1057,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def device_by_id(self, device_id, history: datetime):
         return self._device_entity_by_id(device_id, history_date=history)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_helpers.historical()
     @gui_add_rule_logged_in('devices/count', required_permissions={Permission(PermissionType.Devices,
                                                                               PermissionLevel.ReadOnly)})
@@ -1085,14 +1083,14 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter))
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/labels', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              ReadOnlyJustForGet)})
     def device_labels(self, mongo_filter):
-        return self._entity_labels(self.devices_db_view, self.devices, mongo_filter)
+        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/disable', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
@@ -1110,7 +1108,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def device_notes_update(self, device_id, note_id):
         return self._entity_notes_update(EntityType.Devices, device_id, note_id)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/custom', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
@@ -1126,13 +1124,13 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def device_hyperlinks(self):
         return jsonify(self.__get_entity_hyperlinks(EntityType.Devices))
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/manual_link', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
     def devices_link(self, mongo_filter):
         return self.__link_many_entities(EntityType.Devices, mongo_filter)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/manual_unlink', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
@@ -1145,7 +1143,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     @gui_helpers.historical()
     @gui_helpers.paginated()
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @gui_add_rule_logged_in('users', methods=['GET', 'DELETE'], required_permissions={Permission(PermissionType.Users,
@@ -1162,7 +1160,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                                      history_date=history))
 
     @gui_helpers.historical()
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @gui_add_rule_logged_in('users/csv', required_permissions={Permission(PermissionType.Users,
@@ -1186,7 +1184,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         return self._user_entity_by_id(user_id, history_date=history)
 
     @gui_helpers.historical()
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/count', required_permissions={Permission(PermissionType.Users,
                                                                             PermissionLevel.ReadOnly)})
     def get_users_count(self, mongo_filter, history: datetime):
@@ -1199,7 +1197,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def user_fields(self):
         return jsonify(gui_helpers.entity_fields(EntityType.Users))
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/disable', methods=['POST'], required_permissions={Permission(PermissionType.Users,
                                                                                                 PermissionLevel.ReadWrite)})
     def disable_user(self, mongo_filter):
@@ -1213,12 +1211,12 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def user_views(self, limit, skip, mongo_filter):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/labels', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users,
                                                              ReadOnlyJustForGet)})
     def user_labels(self, mongo_filter):
-        return self._entity_labels(self.users_db_view, self.users, mongo_filter)
+        return self._entity_labels(self.users_db, self.users, mongo_filter)
 
     @gui_add_rule_logged_in('users/<user_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
@@ -1231,7 +1229,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def user_notes_update(self, user_id, note_id):
         return self._entity_notes_update(EntityType.Users, user_id, note_id)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/custom', methods=['POST'],
                             required_permissions={Permission(PermissionType.Users,
                                                              PermissionLevel.ReadWrite)})
@@ -1247,13 +1245,13 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def user_hyperlinks(self):
         return jsonify(self.__get_entity_hyperlinks(EntityType.Users))
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/manual_link', methods=['POST'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
     def users_link(self, mongo_filter):
         return self.__link_many_entities(EntityType.Users, mongo_filter)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/manual_unlink', methods=['POST'],
                             required_permissions={Permission(PermissionType.Users,
                                                              PermissionLevel.ReadWrite)})
@@ -1409,9 +1407,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             self.request_remote_plugin(f'trigger/execute?blocking={blocking}',
                                        STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                        method='POST')
-            self.request_remote_plugin(f'trigger/rebuild_entity_view?blocking={blocking}',
-                                       AGGREGATOR_PLUGIN_NAME,
-                                       method='POST')
         except Exception:
             # if there's no aggregator, there's nothing we can do
             logger.exception(f'Error fetching devices from {adapter_unique_name} for client {client_to_add}')
@@ -1494,8 +1489,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         if request.method == 'PUT':
             if old_node_id != node_id:
-                adapter_unique_name = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{node_id}/plugins'
-                                                                 f'/{adapter_name}').json().get('plugin_unique_name')
+                url = f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}'
+                adapter_unique_name = self.request_remote_plugin(url).json().get('plugin_unique_name')
 
             return self._query_client_for_devices(adapter_unique_name, data,
                                                   data_from_db_for_unchanged=client_from_db)
@@ -1515,7 +1510,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 # this is the "client_id" - i.e. AD server or AWS Access Key
                 local_client_id = client_from_db['client_id']
                 logger.info(f'client from db: {client_from_db}')
-                entities_to_rebuild = []
                 for entity_type in EntityType:
                     res = self._entity_db_map[entity_type].update_many(
                         {
@@ -1548,31 +1542,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                         ]
                     )
 
-                    to_rebuild = list(self._entity_db_map[entity_type].find(
-                        {
-                            'adapters': {
-                                '$elemMatch': {
-                                    '$and': [
-                                        {
-                                            PLUGIN_NAME: plugin_name
-                                        },
-                                        {
-                                            # and the device must be from this adapter
-                                            'client_used': local_client_id
-                                        }
-                                    ]
-                                }
-                            }
-                        },
-                        projection={'internal_axon_id': 1}
-                    ))
-
                     logger.info(f'Set pending_delete on {res.modified_count} axonius entities '
                                 f'(or some adapters in them) ' +
-                                f'from {res.matched_count} matches, rebuilding {len(to_rebuild)} entities')
-
-                    if not to_rebuild:
-                        continue
+                                f'from {res.matched_count} matches')
 
                     entities_to_pass_to_be_deleted = list(self._entity_db_map[entity_type].find(
                         {
@@ -1612,20 +1584,12 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
                             pool.map_async(delete_adapters, entities_to_delete).get()
 
-                        self._request_db_rebuild(sync=True)
-                        self._trigger('clear_dashboard_cache', blocking=False)
-
                     # while we can quickly mark all adapters to be pending_delete
                     # we still want to run a background task to delete them
                     tmp_entity_type = entity_type
                     run_and_forget(lambda: async_delete_entities(tmp_entity_type, entities_to_pass_to_be_deleted))
 
-                    entities_to_rebuild += to_rebuild
-
-                if entities_to_rebuild:
-                    self._request_db_rebuild(sync=True,
-                                             internal_axon_ids=[x['internal_axon_id'] for x in entities_to_rebuild])
-                    self._trigger('clear_dashboard_cache', blocking=False)
+            self._trigger('clear_dashboard_cache', blocking=False)
 
             return client_from_db
 
@@ -1634,7 +1598,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         action_type = action_data['action_type']
         entities_selection = action_data['entities']
         action_data['internal_axon_ids'] = entities_selection['ids'] if entities_selection['include'] else [
-            str(entry['internal_axon_id']) for entry in self.devices_db_view.find({
+            entry['internal_axon_id'] for entry in self.devices_db.find({
                 '$and': [
                     mongo_filter, {
                         'internal_axon_id': {
@@ -1646,12 +1610,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         del action_data['entities']
 
         try:
-            # TODO: Implement checking parameters here
             if 'action_name' not in action_data or ('command' not in action_data and 'binary' not in action_data):
                 return return_error('Some data is missing')
 
             self.request_remote_plugin('trigger/execute?priority=True&blocking=False',
-                                       self.device_control_plugin,
+                                       DEVICE_CONTROL_PLUGIN_NAME,
                                        'post',
                                        json=action_data)
             return '', 200
@@ -1671,100 +1634,287 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                             required_permissions={Permission(PermissionType.Adapters,
                                                              PermissionLevel.ReadWrite)})
     def actions_upload_file(self):
-        return self._upload_file(self.device_control_plugin)
+        return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
 
-    def get_alerts(self, limit, mongo_filter, mongo_projection, mongo_sort, skip):
+    ################
+    # ENFORCEMENTS #
+    ################
+
+    def get_enforcements(self, limit, mongo_filter, mongo_sort, skip):
         sort = []
         for field, direction in mongo_sort.items():
+            if field in [ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
+                field = f'actions.{field}'
             sort.append((field, direction))
         if not sort:
-            sort.append(('report_creation_time', pymongo.DESCENDING))
-        return [gui_helpers.beautify_db_entry(report) for report in self.reports_collection.find(
-            mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)]
+            sort.append((LAST_UPDATE_FIELD, pymongo.DESCENDING))
 
-    def put_alert(self, report_to_add):
-        view_name = report_to_add['view']
-        entity = EntityType(report_to_add['viewEntity'])
-        views_collection = self.gui_dbs.entity_query_views_db_map[entity]
-        if views_collection.find_one({'name': view_name}) is None:
-            return return_error(f'Missing view {view_name} requested for creating alert')
-        response = self.request_remote_plugin('reports', 'reports', method='put', json=report_to_add)
+        def beautify_enforcement(enforcement):
+            actions = enforcement[ACTIONS_FIELD]
+            trigger = enforcement[TRIGGERS_FIELD][0]
+            return gui_helpers.beautify_db_entry({
+                '_id': enforcement['_id'], 'name': enforcement['name'],
+                ACTIONS_MAIN_FIELD: actions[ACTIONS_MAIN_FIELD],
+                ACTIONS_SUCCESS_FIELD: actions.get(ACTIONS_SUCCESS_FIELD) or [],
+                ACTIONS_FAILURE_FIELD: actions.get(ACTIONS_FAILURE_FIELD) or [],
+                ACTIONS_POST_FIELD: actions.get(ACTIONS_POST_FIELD) or [],
+                'trigger_view': trigger['view']['name'],
+                LAST_TRIGGERED_FIELD: trigger[LAST_TRIGGERED_FIELD],
+                TIMES_TRIGGERED_FIELD: trigger[TIMES_TRIGGERED_FIELD],
+                LAST_UPDATE_FIELD: enforcement[LAST_UPDATE_FIELD]
+            })
+
+        return [beautify_enforcement(enforcement) for enforcement in self.enforcements_collection.find(
+            mongo_filter).sort(sort).skip(skip).limit(limit)]
+
+    def __process_enforcement_actions(self, actions):
+        # This is a transitional method, i.e. it's here to maximize compatibility with previous versions
+        @mongo_retry()
+        def create_saved_action(action) -> str:
+            """
+            Create a saved action from the given action and returns its name
+            """
+            if not action or not action.get('name'):
+                return ''
+            with self.enforcements_saved_actions_collection.start_session() as transaction:
+                if not action.get('uuid'):
+                    transaction.insert_one(action)
+                else:
+                    transaction.replace_one({
+                        '_id': ObjectId(action['uuid'])
+                    }, {
+                        'name': action['name'],
+                        'action': action['action']
+                    })
+                return action['name']
+
+        actions[ACTIONS_MAIN_FIELD] = create_saved_action(actions[ACTIONS_MAIN_FIELD])
+        actions[ACTIONS_SUCCESS_FIELD] = [create_saved_action(x) for x in actions.get(ACTIONS_SUCCESS_FIELD) or []]
+        actions[ACTIONS_FAILURE_FIELD] = [create_saved_action(x) for x in actions.get(ACTIONS_FAILURE_FIELD) or []]
+        actions[ACTIONS_POST_FIELD] = [create_saved_action(x) for x in actions.get(ACTIONS_POST_FIELD) or []]
+
+    def put_enforcement(self, enforcement_to_add):
+        self.__process_enforcement_actions(enforcement_to_add[ACTIONS_FIELD])
+        if not enforcement_to_add[TRIGGERS_FIELD]:
+            return return_error('Enforcement cannot be created without a trigger', 400)
+
+        if not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
+            enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
+        response = self.request_remote_plugin('reports', 'reports', method='put', json=enforcement_to_add)
         return response.text, response.status_code
 
-    def delete_alert(self, alert_selection):
+    def delete_enforcement(self, enforcement_selection):
         # Since other method types cause the function to return - here we have DELETE request
-        if alert_selection is None or (not alert_selection.get('ids')
-                                       and alert_selection.get('include')):
-            logger.error('No alert provided to be deleted')
+        if enforcement_selection is None or (not enforcement_selection.get('ids')
+                                             and enforcement_selection.get('include')):
+            logger.error('No enforcement provided to be deleted')
             return ''
 
         response = self.request_remote_plugin('reports', 'reports', method='DELETE',
-                                              json=alert_selection['ids'] if alert_selection['include'] else [
-                                                  str(report['_id']) for report in self.reports_collection.find(
-                                                      {}, projection={'_id': 1}) if str(report['_id'])
-                                                  not in alert_selection['ids']])
+                                              json=enforcement_selection['ids'] if enforcement_selection['include']
+                                              else [str(report['_id'])
+                                                    for report in self.enforcements_collection.find({
+                                                        '_id': {
+                                                            '$nin': [ObjectId(x) for x in enforcement_selection['ids']]
+                                                        }
+                                                    }, projection={'_id': 1})])
         if response is None:
-            return return_error('No response whether alert was removed')
+            return return_error('No response whether enforcement was removed')
         return response.text, response.status_code
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
-    @gui_helpers.projected()
-    @gui_add_rule_logged_in('alerts', methods=['GET', 'PUT', 'DELETE'],
-                            required_permissions={Permission(PermissionType.Alerts,
+    @gui_add_rule_logged_in('enforcements', methods=['GET', 'PUT', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Enforcements,
                                                              ReadOnlyJustForGet)})
-    def alert(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+    def enforcements(self, limit, skip, mongo_filter, mongo_sort):
         """
-        GET results in list of all currently configured alerts, with their query id they were created with
-        PUT Send report_service a new report to be configured
+        GET results in list of all currently configured enforcements, with their query id they were created with
+        PUT Send report_service a new enforcement to be configured
 
         :return:
         """
         if request.method == 'GET':
-            return jsonify(self.get_alerts(limit, mongo_filter, mongo_projection, mongo_sort, skip))
+            return jsonify(self.get_enforcements(limit, mongo_filter, mongo_sort, skip))
 
         if request.method == 'PUT':
-            report_to_add = request.get_json(silent=True)
-            return self.put_alert(report_to_add)
+            enforcement_to_add = request.get_json(silent=True)
+            return self.put_enforcement(enforcement_to_add)
 
-        alert_selection = self.get_request_data_as_object()
-        return self.delete_alert(alert_selection)
+        # Handle remaining method - DELETE
+        return self.delete_enforcement(self.get_request_data_as_object())
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in('alerts/count', required_permissions={Permission(PermissionType.Alerts,
-                                                                             PermissionLevel.ReadOnly)})
-    def alert_count(self, mongo_filter):
-        db_connection = self._get_db_connection()
-        report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
-        return jsonify(db_connection[report_service]['reports'].count_documents(mongo_filter))
+    @gui_add_rule_logged_in('enforcements/count', required_permissions={Permission(PermissionType.Enforcements,
+                                                                                   PermissionLevel.ReadOnly)})
+    def enforcements_count(self, mongo_filter):
+        return jsonify(self.enforcements_collection.count_documents(mongo_filter))
 
-    @gui_add_rule_logged_in('alerts/<alert_id>', methods=['GET', 'POST'],
-                            required_permissions={Permission(PermissionType.Alerts,
+    @gui_add_rule_logged_in('enforcements/<enforcement_id>', methods=['GET', 'POST'],
+                            required_permissions={Permission(PermissionType.Enforcements,
                                                              ReadOnlyJustForGet)})
-    def alerts_update(self, alert_id):
+    def enforcement_by_id(self, enforcement_id):
         """
 
-        :param alert_id:
+        :param enforcement_id:
         :return:
         """
         if request.method == 'GET':
-            return jsonify(gui_helpers.beautify_db_entry(self.reports_collection.find_one({'_id': ObjectId(alert_id)})))
+            def get_saved_action(name):
+                if not name:
+                    return {}
+                return gui_helpers.beautify_db_entry(self.enforcements_saved_actions_collection.find_one({
+                    'name': name
+                }))
 
-        alert_to_update = request.get_json(silent=True)
-        view_name = alert_to_update['view']
-        view_entity = alert_to_update['viewEntity']
-        assert view_entity in [x.value for x in EntityType.__members__.values()]
-        views = self.gui_dbs.entity_query_views_db_map[EntityType(view_entity)]
-        if views.find_one({'name': view_name}) is None:
-            return return_error(f'Missing view {view_name} requested for updating alert')
+            enforcement = self.enforcements_collection.find_one({
+                '_id': ObjectId(enforcement_id)
+            })
+            if not enforcement:
+                return return_error(f'Enforcement with id {enforcement_id} was not found', 400)
 
-        response = self.request_remote_plugin(f'reports/{alert_id}', 'reports', method='post',
-                                              json=alert_to_update)
+            actions = enforcement[ACTIONS_FIELD]
+            actions[ACTIONS_MAIN_FIELD] = get_saved_action(actions[ACTIONS_MAIN_FIELD])
+            actions[ACTIONS_SUCCESS_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_SUCCESS_FIELD) or []]
+            actions[ACTIONS_FAILURE_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_FAILURE_FIELD) or []]
+            actions[ACTIONS_POST_FIELD] = [get_saved_action(x) for x in actions.get(ACTIONS_POST_FIELD) or []]
+
+            for trigger in enforcement[TRIGGERS_FIELD]:
+                trigger['id'] = trigger['name']
+            return jsonify(gui_helpers.beautify_db_entry(enforcement))
+
+        # Handle remaining request - POST
+        enforcement_to_update = request.get_json(silent=True)
+        self.__process_enforcement_actions(enforcement_to_update[ACTIONS_FIELD])
+
+        response = self.request_remote_plugin(f'reports/{enforcement_id}', 'reports', method='post',
+                                              json=enforcement_to_update)
         if response is None:
-            return return_error('No response whether alert was updated')
+            return return_error('No response whether enforcement was updated')
+
+        for trigger in enforcement_to_update['triggers']:
+            trigger_res = self.request_remote_plugin(f'reports/{enforcement_id}/{trigger.get("id", trigger["name"])}',
+                                                     'reports', method='post', json=trigger)
+            if trigger_res is None or trigger_res.status_code == 500:
+                logger.error(f'Failed to save trigger {trigger["name"]}')
 
         return response.text, response.status_code
+
+    @gui_add_rule_logged_in('enforcements/actions', required_permissions={Permission(PermissionType.Enforcements,
+                                                                                     PermissionLevel.ReadOnly)})
+    def actions(self):
+        """
+        Returns all action names and their schema, as defined by the author of the class
+        """
+        response = self.request_remote_plugin('reports/actions', 'reports', method='get')
+        if response is None:
+            return return_error('Failed to get all actions and schemas', 400)
+
+        return jsonify(response.json()), response.status_code
+
+    @gui_add_rule_logged_in('enforcements/actions/saved', required_permissions={Permission(PermissionType.Enforcements,
+                                                                                           PermissionLevel.ReadOnly)})
+    def saved_actions(self):
+        """
+        Returns a list of all existing Saved Action names, in order to check duplicates
+        """
+        return jsonify([x['name'] for x in self.enforcements_saved_actions_collection.find({})])
+
+    @staticmethod
+    def __tasks_query(mongo_filter):
+        return {
+            '$and': [{
+                'job_name': 'run',
+                'job_completed_state': 'Successful',
+                'result': {
+                    '$type': 'object'
+                }
+            }, mongo_filter]
+        }
+
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_add_rule_logged_in('tasks', required_permissions={Permission(PermissionType.Enforcements,
+                                                                      PermissionLevel.ReadOnly)})
+    def enforcement_tasks(self, limit, skip, mongo_filter, mongo_sort):
+
+        def beautify_task(task):
+            """
+            Extract needed fields to build task as represented in the Frontend
+            """
+            main_successful_count = 0
+            main_unsuccessful_count = 0
+            main_results = task['result']['main']['action']['results']
+            if isinstance(main_results.get('successful_entities'), dict):
+                main_successful_count = len(main_results['successful_entities'].keys())
+                main_unsuccessful_count = len(main_results['unsuccessful_entities'].keys())
+            return gui_helpers.beautify_db_entry({
+                '_id': task['_id'],
+                'success_rate': f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}',
+                'enforcement': task['post_json']['report_name'],
+                ACTIONS_MAIN_FIELD: task['result']['main']['name'],
+                ACTIONS_SUCCESS_FIELD: [x['name'] for x in task['result'][ACTIONS_SUCCESS_FIELD]],
+                ACTIONS_FAILURE_FIELD: [x['name'] for x in task['result'][ACTIONS_FAILURE_FIELD]],
+                ACTIONS_POST_FIELD: [x['name'] for x in task['result'][ACTIONS_POST_FIELD]],
+                'trigger_view': task['result']['metadata']['trigger']['view']['name'],
+                'started_at': task['started_at'],
+                'finished_at': task['finished_at']
+            })
+
+        sort = []
+        for field, direction in mongo_sort.items():
+            if field in [ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
+                field = f'result.{field}.name'
+            elif field == 'enforcement':
+                field = 'post_json.report_name'
+            elif field == 'success_rate':
+                field = f'result.metadata.{field}'
+            sort.append((field, direction))
+        if not sort:
+            sort.append(('finished', pymongo.DESCENDING))
+        return jsonify([beautify_task(x) for x in self.enforcement_tasks_runs_collection.find(
+            self.__tasks_query(mongo_filter)).sort(sort).skip(skip).limit(limit)])
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('tasks/count', required_permissions={Permission(PermissionType.Enforcements,
+                                                                            PermissionLevel.ReadOnly)})
+    def enforcement_tasks_count(self, mongo_filter):
+        """
+        Counts how many 'run' tasks are documented in the trigger history of reports plugin
+        """
+        return jsonify(self.enforcement_tasks_runs_collection.count_documents(self.__tasks_query(mongo_filter)))
+
+    @gui_add_rule_logged_in('tasks/<task_id>', required_permissions={Permission(PermissionType.Enforcements,
+                                                                                PermissionLevel.ReadOnly)})
+    def enforcement_task_by_id(self, task_id):
+        """
+        Fetch an entire 'run' record with all its results, according to given task_id
+        """
+        def beautify_task(task):
+            """
+            Find the configuration that triggered this task and merge its details with task details
+            """
+            task_metadata = task['result']['metadata']
+            return gui_helpers.beautify_db_entry({
+                '_id': task['_id'],
+                'enforcement': task['post_json']['report_name'],
+                'view': task_metadata['trigger']['view']['name'],
+                'period': task_metadata['trigger']['period'],
+                'condition': task_metadata['triggered_reason'],
+                'started': task['started_at'],
+                'finished': task['finished_at'],
+                'result': task['result']
+            })
+
+        return jsonify(beautify_task(self.enforcement_tasks_runs_collection.find_one({
+            '_id': ObjectId(task_id)
+        })))
+
+    ###########
+    # PLUGINS #
+    ###########
 
     @gui_add_rule_logged_in('plugins')
     def plugins(self):
@@ -1898,7 +2048,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         return jsonify({
             'system': self._system_settings, 'global': {
                 'mail': self._email_settings['enabled'] if self._email_settings else False,
-                'syslog': self._syslog_settings['enabled'] if self._system_settings else False
+                'syslog': self._syslog_settings['enabled'] if self._system_settings else False,
+                'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
+                'serviceNow': self._service_now_settings['enabled'] if self._service_now_settings else False,
+                'freshService': self._fresh_service_settings['enabled'] if self._fresh_service_settings else False,
+                'jira': self._jira_servicedesk_settings['enabled'] if self._jira_servicedesk_settings else False
             }
         })
 
@@ -2900,7 +3054,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     def _get_dashboard(self, skip=0, limit=0):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
-        fetch devices_db_view with their view. Amount of results is mapped to each views' name, under 'data' key,
+        fetch devices_db with their view. Amount of results is mapped to each views' name, under 'data' key,
         to be returned with the dashboard definition.
 
         POST Save a new dashboard chart definition, given it has a name and at least one query attached
@@ -2976,7 +3130,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                     })
                 data_item['accurate_for_datetime'] = view['for_date']
             else:
-                data_item['value'] = self._entity_views_db_map[entity].count_documents(
+                data_item['value'] = self._entity_db_map[entity].count_documents(
                     parse_filter(view_dict['query']['filter']))
             data.append(data_item)
             total += data_item['value']
@@ -3009,7 +3163,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         if not intersecting or len(intersecting) < 1:
             raise Exception('Pie chart requires at least one views')
         # Query and data collections according to given parent's module
-        data_collection = self._entity_views_db_map[entity]
+        data_collection = self._entity_db_map[entity]
 
         base_view = {'query': {'filter': '', 'expressions': []}}
         base_queries = []
@@ -3086,6 +3240,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
         }, 'module': entity.value}, *data]
 
+    # pylint: disable=R0914
     def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):
         """
         Perform aggregation which matching given view's filter and grouping by give field, in order to get the
@@ -3097,7 +3252,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 of the given view's filter
         """
         # Query and data collections according to given module
-        data_collection = self._entity_views_db_map[entity]
+        data_collection = self._entity_db_map[entity]
         base_view = {'query': {'filter': '', 'expressions': []}}
         base_queries = []
         if view:
@@ -3112,9 +3267,39 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         base_query = {
             '$and': base_queries
         } if base_queries else {}
+
+        field_name = field['name']
+
+        if field_name.startswith(SPECIFIC_DATA):
+            empty_field_name = field_name[len(SPECIFIC_DATA) + 1:]
+            adapter_field_name = 'adapters.' + empty_field_name
+            tags_field_name = 'tags.' + empty_field_name
+
+        elif field_name.startswith(ADAPTERS_DATA):
+            splitted = field_name.split('.')
+            empty_field_name = 'data.' + '.'.join(splitted[2:])
+            adapter_field_name = 'adapters.' + empty_field_name
+            tags_field_name = 'tags.' + empty_field_name
+
         aggregate_results = data_collection.aggregate([
             {
-                '$match': base_query
+                '$match': {
+                    '$and': [base_query]
+                }
+            },
+            {
+                # TODO: We might need another $filter stage here for cases
+                # where two adapters have the same field name and the user *really* want to
+                # differentiate between the two cases.
+                # It's a bit complicated to do so I'm posponing this for later.
+                '$project': {
+                    'field': {
+                        '$concatArrays': [
+                            '$' + adapter_field_name,
+                            '$' + tags_field_name
+                        ]
+                    }
+                }
             },
             {
                 '$group': {
@@ -3122,7 +3307,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                         '$arrayElemAt': [
                             {
                                 '$filter': {
-                                    'input': '$' + field['name'],
+                                    'input': '$field',
                                     'cond': {
                                         '$ne': ['$$this', '']
                                     }
@@ -3155,14 +3340,27 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         data = []
         for item in aggregate_results:
             field_value = item['name']
+
             if field_value == 'No Value':
-                value_filter = f'not ({field["name"]} == exists(true))'
-            elif (isinstance(field_value, str)):
-                value_filter = f'{field["name"]} == \"{field_value}\"'
-            elif (isinstance(field_value, bool)):
-                value_filter = f'{field["name"]} == {str(field_value).lower()}'
-            data.append({'name': str(item['name']), 'value': item['value'], 'module': entity.value,
-                         'view': {**base_view, 'query': {'filter': f'{base_filter}{value_filter}'}}})
+                value_filter = f'not ({field_name} == exists(true))'
+            elif isinstance(field_value, str):
+                value_filter = f'{field_name} == \"{field_value}\"'
+            elif isinstance(field_value, bool):
+                value_filter = f'{field_name} == {str(field_value).lower()}'
+            else:
+                raise RuntimeError(f'unknown field_value({type(field_value)}) - {field_value}')
+
+            data.append({
+                'name': field_value,
+                'value': item['value'],
+                'module': entity.value,
+                'view': {
+                    **base_view,
+                    'query': {
+                        'filter': f'{base_filter}{value_filter}'
+                    }
+                }
+            })
 
         if chart_view == ChartViews.pie:
             total = data_collection.count_documents(base_query)
@@ -3171,18 +3369,33 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     def _fetch_chart_abstract(self, _: ChartViews, entity: EntityType, view, field, func, for_date=None):
         """
-
-        :param _: Placeholder to create uniform interface for the chart fetching methods
-        :return: One piece of data that is the calculation of given func on the values of given field, returning from
+        One piece of data that is the calculation of given func on the values of given field, returning from
                  given view's query
         """
         # Query and data collections according to given module
-        data_collection = self._entity_views_db_map[entity]
+        data_collection = self._entity_db_map[entity]
+        field_name = field['name']
+        if field_name.startswith(SPECIFIC_DATA):
+            adapter_field_name = 'adapters' + field_name[len(SPECIFIC_DATA):]
+            tags_field_name = 'tags' + field_name[len(SPECIFIC_DATA):]
+        elif field_name.startswith(ADAPTERS_DATA):
+            adapter_field_name = 'adapters' + field_name[len(ADAPTERS_DATA):]
+            tags_field_name = 'tags' + field_name[len(ADAPTERS_DATA):]
+
         base_view = {'query': {'filter': ''}}
         base_query = {
-            field['name']: {
-                '$exists': True
-            }
+            '$or': [
+                {
+                    adapter_field_name: {
+                        '$exists': True
+                    }
+                },
+                {
+                    tags_field_name: {
+                        '$exists': True
+                    }
+                }
+            ]
         }
         if view:
             base_view = self._find_filter_by_name(entity, view)
@@ -3205,11 +3418,15 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                     }
                 ]
             }
-        results = data_collection.find(base_query, projection={field['name']: 1})
+        results = data_collection.find(base_query, projection={
+            adapter_field_name: 1,
+            tags_field_name: 1
+        })
         count = 0
         sigma = 0
         for item in results:
-            field_values = gui_helpers.find_entity_field(item, field['name'])
+            field_values = gui_helpers.find_entity_field(convert_db_entity_to_view_entity(item, ignore_errors=True),
+                                                         field_name)
             if not field_values:
                 continue
             if ChartFuncs[func] == ChartFuncs.count:
@@ -3464,7 +3681,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         :return:
         """
         logger.info('Getting dashboard coverage')
-        devices_total = self.devices_db_view.estimated_document_count()
+        devices_total = self.devices_db.count_documents({
+            'adapters.pending_delete': {
+                '$ne': True
+            }
+        })
         if not devices_total:
             return []
 
@@ -3480,8 +3701,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
              'description': 'Add uncovered devices to the next scheduled vulnerability assessment scan.'}
         ]
         for item in coverage_list:
-            devices_property = self.devices_db_view.count_documents({
-                'specific_data.data.adapter_properties':
+            devices_property = self.devices_db.count_documents({
+                'adapters.data.adapter_properties':
                     {'$in': item['properties']}
             })
             item['portion'] = devices_property / devices_total
@@ -3566,7 +3787,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                         view_parsed = parse_filter(query_filter)
                         views.append({
                             **query,
-                            'count': self._entity_views_db_map[entity].count_documents(view_parsed)
+                            'count': self._entity_db_map[entity].count_documents(view_parsed)
                         })
                 adapter_clients_report = {}
                 adapter_unique_name = ''
@@ -3931,8 +4152,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     def dump_metrics(self):
         try:
-            adapter_devices = adapter_data(EntityType.Devices)
-            adapter_users = adapter_data(EntityType.Users)
+            # Uncached because the values here are important for metrics
+            adapter_devices = adapter_data.call_uncached(EntityType.Devices)
+            adapter_users = adapter_data.call_uncached(EntityType.Users)
 
             log_metric(logger, SystemMetric.GUI_USERS, self.__users_collection.count_documents({}))
             log_metric(logger, SystemMetric.DEVICES_SEEN, adapter_devices['seen'])
@@ -3941,13 +4163,12 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             log_metric(logger, SystemMetric.USERS_SEEN, adapter_users['seen'])
             log_metric(logger, SystemMetric.USERS_UNIQUE, adapter_users['unique'])
 
-            alerts = self.get_alerts(limit=0,
-                                     mongo_filter={},
-                                     mongo_projection=None,
-                                     mongo_sort={},
-                                     skip=0)
-            for alert in alerts:
-                log_metric(logger, SystemMetric.ALERT_RAW, str(alert))
+            enforcements = self.get_enforcements(limit=0,
+                                                 mongo_filter={},
+                                                 mongo_sort={},
+                                                 skip=0)
+            for enforcement in enforcements:
+                log_metric(logger, SystemMetric.ALERT_RAW, str(enforcement))
 
             def dump_per_adapter(mapping, subtype):
                 counters = mapping['counters']
@@ -4176,16 +4397,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         return self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION)
 
     @property
-    def reports_collection(self):
-        return self._get_collection('reports', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
-
-    @property
     def exec_report_collection(self):
         return self._get_collection('exec_reports_settings')
-
-    @property
-    def device_control_plugin(self):
-        return self.get_plugin_by_name(DEVICE_CONTROL_PLUGIN_NAME)[PLUGIN_UNIQUE_NAME]
 
     def get_plugin_unique_name(self, plugin_name):
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]

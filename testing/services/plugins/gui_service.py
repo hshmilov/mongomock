@@ -4,10 +4,8 @@ import secrets
 
 import requests
 
-from axonius.consts.gui_consts import (CONFIG_COLLECTION,
-                                       PREDEFINED_ROLE_ADMIN,
-                                       PREDEFINED_ROLE_RESTRICTED,
-                                       ROLES_COLLECTION, USERS_COLLECTION)
+from axonius.consts.gui_consts import (CONFIG_COLLECTION, ROLES_COLLECTION, USERS_COLLECTION,
+                                       PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -51,8 +49,10 @@ class GuiService(PluginService):
             self._update_schema_version_7()
         if self.db_schema_version < 8:
             self._update_schema_version_8()
+        if self.db_schema_version < 9:
+            self._update_schema_version_9()
 
-        if self.db_schema_version != 8:
+        if self.db_schema_version != 9:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -330,6 +330,58 @@ class GuiService(PluginService):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 8. Details: {e}')
 
+    def _update_schema_version_9(self):
+        print('Upgrade to schema 9')
+        try:
+
+            # All non-admin Users - change any Alerts screen permissions to be under Enforcements screen
+            users_col = self.db.get_collection(GUI_NAME, USERS_COLLECTION)
+            regular_users = users_col.find({
+                '$or': [{
+                    'admin': False
+                }, {
+                    'admin': {'$exists': False}
+                }]
+            })
+            for user in regular_users:
+                permissions = user['permissions']
+                if user['role_name'] == PREDEFINED_ROLE_ADMIN:
+                    default_perm = PermissionLevel.ReadWrite.name
+                else:
+                    default_perm = PermissionLevel.Restricted.name
+                permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
+                del permissions['Alerts']
+                users_col.update_one({
+                    '_id': user['_id']
+                }, {
+                    '$set': {
+                        'permissions': permissions
+                    }
+                })
+
+            # Roles - change any Alerts screen permissions to be under Enforcements screen
+            roles_col = self.db.get_collection(GUI_NAME, ROLES_COLLECTION)
+            for role in roles_col.find({}):
+                permissions = role['permissions']
+                if role['name'] == PREDEFINED_ROLE_ADMIN:
+                    default_perm = PermissionLevel.ReadWrite.name
+                elif role['name'] == PREDEFINED_ROLE_READONLY:
+                    default_perm = PermissionLevel.ReadOnly.name
+                else:
+                    default_perm = PermissionLevel.Restricted.name
+                permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
+                del permissions['Alerts']
+                roles_col.update_one({
+                    '_id': role['_id']
+                }, {
+                    '$set': {
+                        'permissions': permissions
+                    }
+                })
+            self.db_schema_version = 9
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 9. Details: {e}')
+
     @property
     def exposed_ports(self):
         """
@@ -362,24 +414,25 @@ class GuiService(PluginService):
 
     def get_dockerfile(self):
         build_command = '' if self.is_dev else '''
-# Compile npm. we assume we have it from axonius-libs
+# Compile npm, assuming we have it from axonius-libs
 RUN cd ./gui/frontend/ && npm run build
 '''
+        install_command = '' if self.is_dev else '''
+# Prepare build packages
+COPY ./frontend/package.json ./gui/frontend/package.json
+RUN cd ./gui/frontend && npm set progress=false && npm install
+# This must be the first thing so subsequent rebuilds will use this cache image layer
+# Docker builds the image from the dockerfile in stages [called layers], each layer is cached and reused if not changed
+# [since the line created it + the layer before it has not changed]
+# So as long as package.json file is not changed, installation will not be run again
+'''
+
         return ('''
 FROM axonius/axonius-libs
 
 # Set the working directory to /app
 WORKDIR /home/axonius/app
-
-# Compile npm
-COPY ./frontend/package.json ./gui/frontend/package.json
-# This must be the first thing so subsequent rebuilds will use this cache image layer
-# (Docker builds the image from the dockerfile in stages [called layers], each layer is cached and reused if it should
-#  not change [since the line created it + the layer before it has not changed]. So we moved the long process [of
-#  npm install and the COPY of the package.json that it depends on] to be the first thing. if the file wont change
-#  it would use the cached layer)
-RUN cd ./gui/frontend && npm set progress=false && npm install
-
+''' + install_command + '''
 # Copy the current directory contents into the container at /app
 COPY ./ ./gui/
 COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/

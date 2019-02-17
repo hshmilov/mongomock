@@ -45,11 +45,6 @@ class DeviceControlService(Triggerable, PluginBase):
                     'value': data
                 }
             else:
-                logger.info(f'{data} is type {type(data)} {traceback.format_tb(data.__traceback__)}')
-                data = data.args[0]  # extract inner data from exception
-                product = data['output'].get('product')
-                if product and isinstance(product, BaseException):
-                    data['output']['product'] = ''.join(traceback.format_tb(product.__traceback__))
                 try:
                     logger.info(f'{data} is type {type(data)} {traceback.format_tb(data.__traceback__)}')
                     data = data.args[0]  # extract inner data from exception

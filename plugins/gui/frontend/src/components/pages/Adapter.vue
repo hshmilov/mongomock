@@ -5,29 +5,23 @@
     ]" class="x-adapter">
         <x-table-wrapper title="Add or Edit Servers" :loading="loading">
             <template slot="actions">
-                <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="x-btn link">Remove
-                </div>
-                <div @click="configServer('new')" id="new_server"
-                     class="x-btn" :class="{ disabled: isReadOnly }">+ New Server
-                </div>
+                <x-button v-if="selectedServers && selectedServers.length" @click="removeServers">Remove</x-button>
+                <x-button @click="configServer('new')" id="new_server" :disabled="isReadOnly">+ New Server</x-button>
             </template>
-            <x-table slot="table" :fields="tableFields" id-field="uuid" v-model="isReadOnly? undefined: selectedServers"
+            <x-table slot="table" :fields="tableFields" v-model="isReadOnly? undefined: selectedServers"
                      :click-row-handler="isReadOnly? undefined: configServer" :data="adapterClients"/>
         </x-table-wrapper>
 
         <div class="config-settings">
-            <div class="header x-btn link" :class="{ disabled: isReadOnly }" @click="toggleSettings">
-                <svg-icon name="navigation/settings" :original="true" height="20"/>
-                Advanced Settings
-            </div>
+            <x-button link class="header" :disabled="isReadOnly" @click="toggleSettings">
+                <svg-icon name="navigation/settings" :original="true" height="20"/>Advanced Settings</x-button>
             <div class="content">
                 <x-tabs v-if="currentAdapter && currentAdapter[0] && advancedSettings" class="growing-y" ref="tabs">
                     <x-tab v-for="config, configName, i in currentAdapter[0].config" :key="i"
                            :title="config.schema.pretty_name || configName" :id="configName" :selected="!i">
                         <div class="configuration">
                             <x-form :schema="config.schema" v-model="config.config" @validate="validateConfig"/>
-                            <a @click="saveConfig(configName, config.config)" tabindex="1"
-                               class="x-btn" :class="{disabled: !configValid}">Save Config</a>
+                            <x-button @click="saveConfig(configName, config.config)" tabindex="1" :disabled="!configValid">Save Config</x-button>
                         </div>
                     </x-tab>
                 </x-tabs>
@@ -37,7 +31,7 @@
                  @close="toggleServerModal" @confirm="saveServer" @enter="promptSaveServer">
             <div slot="body">
                 <!-- Container for configuration of a single selected / added server -->
-                <x-logo-name :name="adapterPluginName" :title="adapterName"/>
+                <x-title :logo="`adapters/${adapterPluginName}`">{{ adapterName }}</x-title>
                 <div class="server-error" v-if="serverModal.error">
                     <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
                     <div class="error-text">{{serverModal.error}}</div>
@@ -45,17 +39,15 @@
                 <x-form :schema="adapterSchema" v-model="serverModal.serverData"
                         :api-upload="`adapters/${adapterId}/${serverModal.instanceName}`"
                         @submit="saveServer" @validate="validateServer"/>
-            </div>
-            <template slot="footer">
                 <div v-if="instances && instances.length > 0" id="serverInstancesList">
                     <label for="serverInstance" align="left">Choose Instance</label>
                     <x-select id="serverInstance" align="left" :options="instances" v-model="serverModal.instanceName"/>
                 </div>
-                <button @click="toggleServerModal" class="x-btn link">Cancel</button>
-                <button id="test_reachability" @click="testServer"
-                        class="x-btn" :class="{disabled: !serverModal.valid}">Test Connectivity</button>
-                <button id="save_server" @click="saveServer"
-                        class="x-btn" :class="{disabled: !serverModal.valid}">Save</button>
+            </div>
+            <template slot="footer">
+                <x-button link @click="toggleServerModal">Cancel</x-button>
+                <x-button id="test_reachability" @click="testServer" :disabled="!serverModal.valid">Test Connectivity</x-button>
+                <x-button id="save_server" @click="saveServer" :disabled="!serverModal.valid">Save</x-button>
             </template>
         </x-modal>
         <x-modal v-if="deleting" @close="closeConfirmDelete" @confirm="doRemoveServers" approve-text="Delete">
@@ -77,7 +69,8 @@
     import xForm from '../neurons/schema/Form.vue'
     import xModal from '../axons/popover/Modal.vue'
     import xSelect from '../axons/inputs/Select.vue'
-    import xLogoName from '../axons/visuals/LogoName.vue'
+    import xButton from '../axons/inputs/Button.vue'
+    import xTitle from '../axons/layout/Title.vue'
     import xToast from '../axons/popover/Toast.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
@@ -90,7 +83,9 @@
 
     export default {
         name: 'x-adapter',
-        components: {xPage, xTableWrapper, xTable, xTabs, xTab, xForm, xModal, xSelect, xLogoName, xToast},
+        components: {
+            xPage, xTableWrapper, xTable, xTabs, xTab, xForm, xModal, xSelect, xButton, xTitle, xToast
+        },
         computed: {
             ...mapState({
                 currentAdapter(state) {
@@ -186,7 +181,6 @@
                 archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG
             }),
             configServer(serverId) {
-                if (this.isReadOnly) return
                 this.message = ''
                 this.serverModal.valid = true
                 if (serverId === 'new') {
@@ -243,9 +237,6 @@
                 this.serverModal.valid = valid
             },
             saveServer() {
-                if (!this.serverModal.valid || this.isReadOnly) {
-                    return
-                }
                 this.message = 'Connecting to Server...'
                 this.updateServer({
                     adapterId: this.adapterId,
@@ -267,9 +258,6 @@
                 this.toggleServerModal()
             },
             testServer() {
-                if (!this.serverModal.valid) {
-                    return
-                }
                 this.message = 'Testing server connection...'
                 this.testAdapter({
                     adapterId: this.adapterId,
@@ -316,7 +304,6 @@
                 this.message = ''
             },
             toggleSettings() {
-                if (this.isReadOnly) return
                 if (this.advancedSettings) {
                     this.$refs.tabs.$el.classList.add('shrinking-y')
                     setTimeout(() => this.advancedSettings = false, 1000)
@@ -352,7 +339,7 @@
         .x-table-wrapper {
             height: auto;
 
-            .x-title {
+            .title {
                 font-weight: 300;
             }
 
@@ -394,7 +381,7 @@
         }
 
         .config-server {
-            .x-logo-name {
+            .x-title {
                 margin-bottom: 24px;
             }
 

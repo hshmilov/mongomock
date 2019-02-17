@@ -4,7 +4,8 @@ import requests
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
-from axonius.utils.parsing import parse_date, parse_date_with_timezone
+from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import parse_date_with_timezone
 from axonius.utils.wait import wait_until
 from ui_tests.pages.page import Page
 
@@ -26,13 +27,13 @@ class EntitiesPage(Page):
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'
     QUERY_SEARCH_EVERYWHERE_XPATH = '//div[@class=\'query-quick\']//div[contains(text(), \'Search in table:\')]'
-    QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-btn'
-    QUERY_NEST_EXPRESSION_CSS = '.x-filter .x-expression .x-btn.expression-nest'
+    QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-button'
+    QUERY_NEST_EXPRESSION_CSS = '.x-filter .x-expression .x-button.expression-nest'
     QUERY_BRACKET_LEFT_CSS = '.expression-bracket-left'
     QUERY_BRACKET_RIGHT_CSS = '.expression-bracket-right'
     QUERY_NOT_CSS = '.expression-not'
     QUERY_OBJ_CSS = '.expression-obj'
-    QUERY_REMOVE_EXPRESSION_CSS = '.x-btn.expression-remove'
+    QUERY_REMOVE_EXPRESSION_CSS = '.x-button.expression-remove'
     QUERY_LOGIC_DROPDOWN_CSS = 'div.x-select.x-select-logic'
     QUERY_ERROR_CSS = '.x-filter .error-text'
     QUERY_COMP_EXISTS = 'exists'
@@ -44,7 +45,7 @@ class EntitiesPage(Page):
     QUERY_LOGIC_OR = 'or'
     OUTDATED_TOGGLE_CSS = 'div.md-switch.md-theme-default > div > div'
     TABLE_SELECT_ALL_CHECKBOX_CSS = 'thead .x-checkbox'
-    TABLE_COUNT_CSS = '.x-table-header .x-title .count'
+    TABLE_COUNT_CSS = '.table-header .title .count'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
     TABLE_SECOND_ROW_CSS = 'tbody .x-row.clickable:nth-child(2)'
     TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
@@ -52,7 +53,7 @@ class EntitiesPage(Page):
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
-    TABLE_HEADER_XPATH = '//*[@id="app"]/div/div[2]/div/div[3]/div[1]/div[3]/table/thead/tr'
+    TABLE_HEADER_XPATH = '//div[@class=\'table-container\']/table/thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Active Directory'
     TABLE_HEADER_CELLS_CSS = 'th'
@@ -63,7 +64,7 @@ class EntitiesPage(Page):
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
     TABLE_ACTIONS_LINK_CSS = 'div.content.w-sm > div > div:nth-child(6) > div.item-content'
     TABLE_ACTIONS_UNLINK_CSS = 'div.content.w-sm > div > div:nth-child(7) > div.item-content'
-    TABLE_ACTION_ITEM_XPATH = '//div[@class=\'x-actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
+    TABLE_ACTION_ITEM_XPATH = '//div[@class=\'actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
@@ -105,7 +106,7 @@ class EntitiesPage(Page):
     CUSTOM_DATA_FIELD_VALUE_CSS = '.custom-fields .fields-item .item-value'
     CUSTOM_DATA_FIELD_ITEM = '.custom-fields .fields-item'
     CUSTOM_DATA_ERROR_CSS = '.footer .error-text'
-    CUSTOM_DATA_BULK_CONTAINER_CSS = '.x-actions'
+    CUSTOM_DATA_BULK_CONTAINER_CSS = '.actions'
 
     @property
     def url(self):
@@ -542,7 +543,7 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_UNLINK_CSS).click()
 
     def read_delete_dialog(self):
-        return self.wait_for_element_present_by_css('.x-actions .modal-body .warn-delete').text
+        return self.wait_for_element_present_by_css('.actions .modal-body .warn-delete').text
 
     def confirm_delete(self):
         self.click_button(self.DELETE_BUTTON)

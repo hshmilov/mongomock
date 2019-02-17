@@ -5,11 +5,11 @@
 
 <script>
     import xCheckbox from '../../../../axons/inputs/Checkbox.vue'
-    import PrimitiveMixin from '../primitive.js'
+    import primitiveMixin from '../primitive.js'
 
 	export default {
 		name: 'x-bool-edit',
-        mixins: [PrimitiveMixin],
+        mixins: [primitiveMixin],
         components: { xCheckbox },
         methods: {
 			isEmpty() {

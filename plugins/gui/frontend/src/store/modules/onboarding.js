@@ -19,8 +19,14 @@ export const onboarding = {
 	 */
 	state: {
 		emptyStates: {
-			mailSettings: false,
-			syslogSettings: false,
+			settings: {
+				mail: false,
+				syslog: false,
+				httpsLog: false,
+				serviceNow: false,
+				freshService: false,
+				jira: false
+			}
 		},
 		tourStates: {
 			active: false,
@@ -486,40 +492,44 @@ export const onboarding = {
 					id: 'query_select', title: 'SELECT A QUERY', align: 'bottom', emphasize: false,
 					content: 'Here you see the query you saved as well as predefined queries. Select any query to see the results.'
 				},
-				'alerts': {
-					id: 'alerts', title: 'DEFINE ALERTS', align: 'right', queue: 'devices', fixed: true,
-					content: 'Alerts monitor results of queries and take action.'
+				'enforcements': {
+					id: 'enforcements', title: 'DEFINE ENFORCEMENTS', align: 'right', queue: 'devices', fixed: true,
+					content: 'Enforcements allow monitoring results of queries and taking action accordingly.'
 				},
-				'alertNew': {
-					id: 'alert_new', title: 'NEW ALERT', align: 'left', queue: 'alerts',
-					content: 'Click to create an alerts for the query we just saved.'
+				'enforcementNew': {
+					id: 'enforcement_new', title: 'NEW ENFORCEMENT', align: 'left', queue: 'enforcements',
+					content: 'Click to create an Enforcement for the query we just saved.'
 				},
-				'alertName': {
-					id: 'alert_name', title: 'ALERT NAME', align: 'right',
-					content: 'Give the alerts a meaningful name that you\'ll recognize later.'
+				'enforcementName': {
+					id: 'enforcement_name', title: 'ENFORCEMENT NAME', align: 'bottom',
+					content: 'Give the enforcement a meaningful name that you\'ll recognize later.'
 				},
-				'alertQuery': {
-					id: 'alert_query', title: 'ALERT QUERY', align: 'right',
-					content: 'Select the name of the query you just saved.'
+				'enforcementTrigger': {
+					id: 'trigger', title: 'ENFORCEMENT TRIGGER', align: 'right',
+					content: 'Select the query to monitor and the frequency of monitoring it.'
 				},
-				'alertIncreased': {
-					id: 'alert_increased', title: 'ALERT TRIGGER', align: 'right',
-					content: 'Select how this alerts should be triggered.'
+				'actionMain': {
+					id: 'main_action', title: 'MAIN ACTION', align: 'right',
+					content: 'Select and configure a action to run on all query results.'
 				},
-				'alertAbove': {
-					id: 'alert_above', title: 'ALERT TRIGGER', align: 'bottom',
-					content: 'Choose the number of results that will trigger the alerts.'
+				'actionSuccess': {
+					id: 'success_action', title: 'SUCCESS ACTIONS', align: 'right',
+					content: 'Add actions to run on entities that succeeded the Main Action run.'
 				},
-				'alertAction': {
-					id: 'alert_notification', title: 'ALERT ACTION', align: 'right',
-					content: 'Choose the action to take when the alerts is triggered.'
+				'actionFailure': {
+					id: 'failure_action', title: 'FAILURE ACTIONS', align: 'right',
+					content: 'Add actions to run on entities that failed the Main Action run.'
 				},
-				'alertSave': {
-					id: 'alert_save', title: 'SAVE THE ALERT', align: 'left',
-					content: 'Click to save the alerts.'
+				'actionPost': {
+					id: 'post_action', title: 'POST ACTIONS', align: 'right',
+					content: 'Add actions that run regardless of the Main Action\'s result.'
+				},
+				'enforcementSave': {
+					id: 'enforcement_save', title: 'SAVE ENFORCEMENT', align: 'bottom',
+					content: 'Click to save the Enforcement.'
 				},
 				'settings': {
-					id: 'settings', title: 'SETTINGS', align: 'bottom', queue: 'alerts',
+					id: 'settings', title: 'SETTINGS', align: 'bottom', queue: 'enforcements',
 					content: 'Choose configuration options for system functionality.'
 				},
 				'lifecycleRate': {
@@ -542,21 +552,21 @@ export const onboarding = {
 				},
 				'global-settings-tab': {
 					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'top',
-					content: 'Enable and provide syslog credentials here for alerts.',
+					content: 'Enable and provide syslog credentials here for enforcements.',
 					actions: [
 						{ title: 'Next', state: 'serviceNow' }
 					]
 				},
 				'serviceNow': {
 					id: 'service_now_settings', title: 'ServiceNow SERVER CONFIG', align: 'top',
-					content: 'Enable and provide ServiceNow credentials here, or use the Adapter (if it is connected) for alerts.',
+					content: 'Enable and provide ServiceNow credentials here, or use the Adapter (if it is connected) for enforcements.',
 					actions: [
 						{ title: 'Next', state: 'mail' }
 					]
 				},
 				'mail': {
 					id: 'email_settings', title: 'MAIL SERVER CONFIG', align: 'top',
-					content: 'Enable and provide mail server credentials for alerts.',
+					content: 'Enable and provide mail server credentials for enforcements.',
 					actions: [
 						{ title: 'Next', state: 'execution' }
 					]
@@ -711,8 +721,8 @@ export const onboarding = {
 			queues: {
 				adapters: ['activeDirectory', 'network', 'virtualizationCloud', 'virtualizationLocal',
 					'agent', 'agentIT', 'va', 'mdm', 'serviceNowAdapter', 'oktaAdapter', 'csv', 'devices'],
-				devices: ['bestDevice', 'query', 'queryResults', 'alerts', 'dashboardBack'],
-				alerts: ['alertNew', 'settings'],
+				devices: ['bestDevice', 'query', 'queryResults', 'enforcements', 'dashboardBack'],
+				enforcements: ['enforcementNew', 'settings'],
 				dashboard: ['adapters', 'dashboardManaged', 'dashboardWizard'],
 				dashboardWizard: ['wizardIntersect', 'wizardModule', 'wizardMain', 'wizardSecond', 'wizardName']
 			}
@@ -720,7 +730,7 @@ export const onboarding = {
 	},
 	mutations: {
 		[ UPDATE_EMPTY_STATE ] (state, payload) {
-			state.emptyStates = { ...state.emptyStates, ...payload }
+			state.emptyStates.settings = { ...state.emptyStates.settings, ...payload.settings }
 		},
 		[ START_TOUR ] (state) {
 			state.tourStates.active = true

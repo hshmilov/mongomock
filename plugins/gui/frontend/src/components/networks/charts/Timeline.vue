@@ -8,10 +8,10 @@
             <x-select-symbol :options="entities" v-model="view.entity" type="icon" placeholder="Module..."/>
             <x-select :options="views[view.entity] || []" :searchable="true" v-model="view.name"
                       placeholder="Query..."/>
-            <div @click="removeView(index)" class="x-btn link" v-if="!isIntersection && index > 0">x</div>
+            <x-button link @click="removeView(index)" v-if="!isIntersection && index > 0">x</x-button>
             <div v-else></div>
         </template>
-        <button @click="addView" class="x-btn light grid-span3" :class="{ disabled: hasMaxViews }" :title="addBtnTitle">+</button>
+        <x-button light @click="addView" class="grid-span3" :disabled="hasMaxViews" :title="addBtnTitle">+</x-button>
         <div class="line-range grid-span3">
             <input type="radio" v-model="config.timeframe.type" value="absolute" id="range_absolute"/>
             <label for="range_absolute">Show results in date range</label>
@@ -35,9 +35,10 @@
 
 <script>
     import xSelect from '../../axons/inputs/Select.vue'
+    import xButton from '../../axons/inputs/Button.vue'
     import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
     import xDateEdit from '../../neurons/schema/types/string/DateEdit.vue'
-    import ChartMixin from './chart'
+    import chartMixin from './chart'
 
     import {mapState, mapActions} from 'vuex'
     import {FETCH_FIRST_HISTORICAL_DATE} from '../../../store/modules/constants'
@@ -45,8 +46,8 @@
     const dashboardView = {name: '', entity: ''}
     export default {
         name: 'x-chart-timeline',
-        mixins: [ChartMixin],
-        components: {xDateEdit, xSelect, xSelectSymbol},
+        mixins: [chartMixin],
+        components: {xDateEdit, xSelect, xButton, xSelectSymbol},
         props: {value: {}, views: {required: true}, entities: {required: true}},
         computed: {
             ...mapState({
@@ -134,7 +135,6 @@
                 this.config.views = this.config.views.filter((item, i) => i !== index)
             },
             addView() {
-                if (this.hasMaxViews) return
                 this.config.views.push({...dashboardView})
             },
             validate() {

@@ -1,4 +1,6 @@
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
+
+import dateutil
 
 
 def next_weekday(current_day, weekday):
@@ -16,3 +18,37 @@ def next_weekday(current_day, weekday):
 
 def time_from_now(duration_in_hours):
     return datetime.now() + timedelta(hours=duration_in_hours)
+
+
+def is_date_real(datetime_to_parse):
+    """
+    Often we might encounter a situation where a datetime is valid, but actually represents
+    an empty value. for that case we have this function.
+    :param datetime_to_parse:
+    :return: True if real, False otherwise.
+    """
+
+    # 1/1/1970 - Unix epoch
+    # 1/1/1601 - Windows NT epoch(The FILETIME structure records time in the form
+    #            of 100-nanosecond intervals since January 1, 1601.)
+
+    return isinstance(datetime_to_parse, datetime) and \
+        datetime_to_parse.replace(tzinfo=None) != datetime(1601, 1, 1) and \
+        datetime_to_parse.replace(tzinfo=None) != datetime(1970, 1, 1)
+
+
+def parse_date(datetime_to_parse):
+    """
+    Parses date and returns it as UTC
+    """
+    try:
+        if isinstance(datetime_to_parse, datetime):
+            # sometimes that happens too
+            return datetime_to_parse.astimezone(timezone.utc)
+        datetime_to_parse = str(datetime_to_parse)
+        d = dateutil.parser.parse(datetime_to_parse).astimezone(timezone.utc)
+
+        # Sometimes, this would be a fake date (see is_date_real). in this case return None
+        return d if is_date_real(d) else None
+    except (TypeError, ValueError):
+        return None

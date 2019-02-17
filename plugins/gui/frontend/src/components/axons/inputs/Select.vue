@@ -28,7 +28,12 @@
         name: 'x-select',
         components: {xDropdown, xSearchInput},
         props: {
-            options: {}, value: {}, placeholder: {}, searchable: {default: false}, id: {},
+            options: {}, value: {}, placeholder: {},
+            searchable: {
+                type: Boolean,
+                default: false
+            },
+            id: {},
             size: {}, alignAgile: {default: true}, container: {}, readOnly: {default: false}
         },
         computed: {

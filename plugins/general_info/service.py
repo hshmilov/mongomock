@@ -328,7 +328,7 @@ class GeneralInfoService(Triggerable, PluginBase):
 
         # 2. Go over all users. whatever we don't have, we must create first.
         for username in users.keys():
-            user = list(self.users.get(data={'id': username}))
+            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == {username}'))
             if len(user) == 0:
                 # user does not exists, create it.
                 user_dict = self._new_user_adapter()
@@ -344,29 +344,13 @@ class GeneralInfoService(Triggerable, PluginBase):
                     {'raw': [], 'parsed': [user_dict.to_dict()]},
                     EntityType.Users, False)
 
-        # 3. We have to rebuild the views db. But we don't have the internal axon id's.
-        # We need to refactor self._save_data_from_plugin to return the internal_axon_id's. Until we do that,
-        # We collect their internal axon id's .
-        # list(users.keys()) is not redundant, we need convert dict_keys to list or else pymongo will throw a
-        # can not decode object error
-        new_users = self.users_db.find({'adapters.data.id': {'$in': list(users.keys())}},
-                                       projection={'_id': False, 'internal_axon_id': True})
-        new_internal_axon_ids = [nu['internal_axon_id'] for nu in new_users]
-
-        try:
-            self._request_db_rebuild(sync=True, internal_axon_ids=new_internal_axon_ids).raise_for_status()
-        except Exception:
-            logger.exception(f'Error in rebuilding, continuing without it. This means we won\'t have some of the local'
-                             f'users until the next rebuild occurs, and these won\'t have associated devices until'
-                             f'next cycle of general_info occurs')
-
         # 4. Now go over all users again. for each user, associate all known devices.
         for username, linked_devices_and_users_list in users.items():
             # Create the new adapterdata for that user
             adapterdata_user = self._new_user_adapter()
 
             # Find that user. It should be in the view new.
-            user = list(self.users.get(data={'id': username}))
+            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == {username}'))
 
             # Do we have it? or do we need to create it?
             if len(user) > 1:

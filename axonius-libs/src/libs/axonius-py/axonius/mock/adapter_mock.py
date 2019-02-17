@@ -2,7 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 MOCK_SERVER = 'https://mockingbird'

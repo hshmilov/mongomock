@@ -11,7 +11,11 @@
 <script>
     export default {
         name: 'x-search-input',
-        props: {value: {}, placeholder: {default: ''}, disabled: {default: false}},
+        props: {
+            value: {},
+            placeholder: {default: 'Search...'},
+            disabled: {default: false}
+        },
         data() {
             return {
                 searchValue: this.value,

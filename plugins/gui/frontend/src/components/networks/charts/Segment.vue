@@ -14,7 +14,7 @@
     import xSelect from '../../axons/inputs/Select.vue'
     import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
     import xSelectTypedField from '../../neurons/inputs/SelectTypedField.vue'
-    import ChartMixin from './chart'
+    import chartMixin from './chart'
 
     import {mapGetters} from 'vuex'
     import {GET_DATA_FIELDS_BY_PLUGIN, GET_DATA_SCHEMA_BY_NAME} from '../../../store/getters'
@@ -22,7 +22,7 @@
     export default {
         name: 'x-chart-segment',
         components: {xSelect, xSelectSymbol, xSelectTypedField},
-        mixins: [ChartMixin],
+        mixins: [chartMixin],
         computed: {
             ...mapGetters({
                 getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME

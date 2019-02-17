@@ -1,6 +1,11 @@
 <template>
     <div class="x-entity-table">
-        <x-historical-date v-model="historical" :module="module" @error="$emit('error', $event)"/>
+        <span class="ec_results" style="float:left" v-if="ecFilter">
+            <i>Showing results only for entities from the given enforcement run </i> <x-button link @click="clearEc">show all</x-button>
+        </span>
+        <span class="historical">
+            <x-historical-date v-model="historical" :module="module" @error="$emit('error', $event)"/>
+        </span>
         <x-query :module="module" :read-only="isReadOnly"/>
         <x-table :module="module" id-field="internal_axon_id" ref="table" @click-row="configEntity"
                  v-model="isReadOnly? undefined: selection" @data="$emit('data', $event)">
@@ -8,8 +13,8 @@
                 <x-action-menu v-show="hasSelection" :module="module" :entities="selection" @done="updateEntities"/>
                 <!-- Modal for selecting fields to be presented in table, including adapters hierarchy -->
                 <x-field-config :module="module"/>
-                <div class="x-btn link" @click="exportCSV">Export CSV</div>
-                <button class="x-btn link" @click="navigateSavedQueries">Saved Queries</button>
+                <x-button link @click="exportCSV">Export CSV</x-button>
+                <x-button link @click="navigateSavedQueries">Saved Queries</x-button>
             </template>
         </x-table>
     </div>
@@ -21,6 +26,7 @@
     import xTable from '../../neurons/data/Table.vue'
     import xActionMenu from './ActionMenu.vue'
     import xFieldConfig from './FieldConfig.vue'
+    import xButton from '../../axons/inputs/Button.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
@@ -28,7 +34,7 @@
 
     export default {
         name: 'x-entity-table',
-        components: {xHistoricalDate, xQuery, xTable, xActionMenu, xFieldConfig},
+        components: {xHistoricalDate, xQuery, xTable, xActionMenu, xFieldConfig, xButton},
         props: {module: {required: true}},
         computed: {
             ...mapState({
@@ -42,7 +48,13 @@
                 },
                 allowedDates(state) {
                     return state.constants.allowedDates[this.module]
-                }
+                },
+                query(state) {
+                    return state[this.module].view.query
+                },
+                ecFilter(state) {
+                    return state[this.module].view.ecFilter
+                },
             }),
             historical: {
                 get() {
@@ -90,6 +102,14 @@
             },
             navigateSavedQueries() {
                 this.$router.push({path: `/${this.module}/query/saved`})
+            },
+            clearEc() {
+                this.updateView({
+                    module: this.module, view: {
+                        ecFilter: null,
+                        query: {...this.query}
+                    }
+                })
             }
         }
     }
@@ -98,5 +118,11 @@
 <style lang="scss">
     .x-entity-table {
         height: calc(100% - 36px);
+    }
+    .historical {
+        float: right;
+    }
+    .ec_results {
+        float: left;
     }
 </style>

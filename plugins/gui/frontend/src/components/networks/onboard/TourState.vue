@@ -8,20 +8,23 @@
                 <div class="title">{{currentState.title || '&nbsp;'}}</div>
             </div>
             <div class="content">{{currentState.content}}</div>
-            <div class="actions">
-                <button v-for="action in currentState.actions" @click="changeState({name: action.state})"
-                        class="x-btn">{{action.title}}</button>
+            <div class="actions" v-if="currentState.actions">
+                <x-button v-for="action in currentState.actions" :key="action.state"
+                          @click="changeState({name: action.state})">{{action.title}}</x-button>
             </div>
         </div>
     </div>
 </template>
 
 <script>
+    import xButton from '../../axons/inputs/Button.vue'
+
     import {mapState, mapMutations} from 'vuex'
     import {STOP_TOUR, CHANGE_TOUR_STATE} from '../../../store/modules/onboarding'
 
     export default {
         name: 'x-tour-state',
+        components: { xButton },
         props: {},
         computed: {
             ...mapState({
@@ -169,7 +172,7 @@
                 grid-template-columns: 1fr 1fr;
                 grid-gap: 8px;
 
-                .x-btn {
+                .x-button {
                     width: auto;
                 }
             }

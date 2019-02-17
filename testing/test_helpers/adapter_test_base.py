@@ -300,7 +300,6 @@ class AdapterTestBase:
 
         assert gui_service.delete_client(self.adapter_service.plugin_name, our_client_object_id).status_code == 200
         our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
-        out_client_id = self.some_client_id
 
         devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)[0]
         assert set(devices_response['adapters']) == {self.adapter_service.plugin_name, 'lol_adapter'}
@@ -317,7 +316,8 @@ class AdapterTestBase:
 
         devices_response = get_devices_by_id('lol_adapter', lol_id)[0]
         assert set(devices_response['adapters']) == {'lol_adapter'}
-        assert len(get_devices_by_id(self.adapter_service.plugin_name, out_id)) == 0
+        devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)
+        assert len(devices_response) == 0
 
         # test without linked devices
         axon_device = get_entity_axonius_dict_multiadapter('GUI_CLIENT_DELETE_TEST',
@@ -407,7 +407,6 @@ class AdapterTestBase:
 
         assert gui_service.delete_client(self.adapter_service.plugin_name, our_client_object_id).status_code == 200
         our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
-        out_client_id = self.some_client_id
 
         devices_response = get_users_by_id(self.adapter_service.plugin_name, out_id)[0]
         assert set(devices_response['adapters']) == {self.adapter_service.plugin_name}

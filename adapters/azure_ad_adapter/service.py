@@ -9,7 +9,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from azure_ad_adapter.connection import AUTHORITY_HOST_URL, AzureAdClient
 
 logger = logging.getLogger(f'axonius.{__name__}')

@@ -21,7 +21,7 @@
                         <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
                     </td>
                     <td class="row-data" :id="item.id">
-                        <x-logo-name :name="item.id" :title="item.title"/>
+                        <x-title :id="item.id" :logo="`adapters/${item.id}`">{{ item.title }}</x-title>
                     </td>
                     <td class="row-data">
                         <div class="content">{{ item.description }}</div>
@@ -36,7 +36,7 @@
 
 <script>
     import xPage from '../axons/layout/Page.vue'
-    import xLogoName from '../axons/visuals/LogoName.vue'
+    import xTitle from '../axons/layout/Title.vue'
     import xSearchInput from '../neurons/inputs/SearchInput.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
@@ -45,7 +45,7 @@
 
     export default {
         name: 'x-adapters',
-        components: {xPage, xLogoName, xSearchInput},
+        components: {xPage, xTitle, xSearchInput},
         computed: {
             ...mapState({
                 adaptersData(state) {

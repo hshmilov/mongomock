@@ -7,8 +7,9 @@ from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import (convert_ldap_searchpath_to_domain_name,
-                                   is_domain_valid, parse_date)
+                                   is_domain_valid)
 from sentinelone_adapter import consts
 from sentinelone_adapter.connection import SentinelOneConnection
 

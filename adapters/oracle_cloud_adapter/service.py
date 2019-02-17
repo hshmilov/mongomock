@@ -7,7 +7,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from oracle_cloud_adapter.client_id import get_client_id
 from oracle_cloud_adapter import consts

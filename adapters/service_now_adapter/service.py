@@ -12,7 +12,7 @@ from axonius.fields import Field
 from axonius.plugin_base import add_rule, return_error
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.mixins.configurable import Configurable
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -157,7 +157,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     @add_rule('create_computer', methods=['POST'])
     def create_service_now_computer(self):
         if self.get_method() != 'POST':
-            return return_error('Medhod not supported', 405)
+            return return_error('Method not supported', 405)
         service_now_dict = self.get_request_data_as_object()
         success = False
         for client_id in self._clients:

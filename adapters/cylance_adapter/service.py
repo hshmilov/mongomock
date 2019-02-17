@@ -7,8 +7,9 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import DEFAULT_MAC_EXTENSIONS, parse_date, is_hostname_valid
+from axonius.utils.parsing import DEFAULT_MAC_EXTENSIONS, is_hostname_valid
 from cylance_adapter.connection import CylanceConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -24,13 +25,16 @@ class CylanceAdapter(AdapterBase):
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config['domain']
 
-    def _test_reachability(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
-    def _connect_client(self, client_config):
+    @staticmethod
+    def _connect_client(client_config):
         try:
             connection = CylanceConnection(domain=client_config['domain'],
                                            app_id=client_config['app_id'], app_secret=client_config['app_secret'],
@@ -44,7 +48,8 @@ class CylanceAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         """
         Get all devices from a specific Cylance domain
 
@@ -56,7 +61,8 @@ class CylanceAdapter(AdapterBase):
         with client_data:
             yield from client_data.get_device_list()
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         """
         The schema CylanceAdapter expects from configs
 

@@ -39,6 +39,8 @@ class AggregatorService(PluginService):
             self._update_schema_version_6()
         if self.db_schema_version < 7:
             self._update_schema_version_7()
+        if self.db_schema_version < 8:
+            self._update_schema_version_8()
 
         if self.db_schema_version != 7:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
@@ -373,6 +375,40 @@ class AggregatorService(PluginService):
             print(f'Could not upgrade aggregator db to version 7. Details: {e}')
             traceback.print_exc()
 
+    def _update_schema_version_8(self):
+        """
+        We clear history before the rebuilds because the format has changed.
+        Yes, we lose history, but it's not critical according to the bigboss.
+        """
+        try:
+            for entity_type in EntityType:
+                history_col = self.db.get_historical_entity_db_view(entity_type)
+                if history_col.estimated_document_count():
+                    history_col.rename(f'history_{entity_type.value}_old_data')
+                else:
+                    try:
+                        history_col.drop()
+                    except Exception:
+                        pass
+
+                col = self.db.get_entity_db(entity_type)
+
+                for entity in col.find({
+                    'tags.type': 'label'
+                }):
+                    # Yes, this is slow, but meh
+                    for tag in entity.get('tags', []):
+                        if tag.get('type') == 'label' and tag.get('data') is True:
+                            tag['label_value'] = tag.get('name')
+                    col.replace_one({
+                        '_id': entity['_id']
+                    }, entity)
+
+            self.db_schema_version = 8
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 8. Details: {e}')
+            traceback.print_exc()
+
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):
         response = requests.post(self.req_url + f"/trigger/{adapter_id}", headers={API_KEY_HEADER: self.api_key})
@@ -380,15 +416,7 @@ class AggregatorService(PluginService):
         assert response.status_code == 200, \
             f"Error in response: {str(response.status_code)}, " \
             f"{str(response.content)}"
-        self.rebuild_views()
         return response
-
-    def rebuild_views(self, internal_axon_ids: List[str] = None):
-        url = f'/trigger/rebuild_entity_view?priority={bool(internal_axon_ids)}'
-        return requests.post(self.req_url + url, headers={API_KEY_HEADER: self.api_key},
-                             json={
-                                 'internal_axon_ids': internal_axon_ids
-        })
 
     def clean_db(self, blocking: bool):
         response = requests.post(
@@ -399,7 +427,6 @@ class AggregatorService(PluginService):
         assert response.status_code == 200, \
             f"Error in response: {str(response.status_code)}, " \
             f"{str(response.content)}"
-        self.rebuild_views()
 
     def is_up(self):
         return super().is_up() and {"Triggerable"}.issubset(self.get_supported_features())

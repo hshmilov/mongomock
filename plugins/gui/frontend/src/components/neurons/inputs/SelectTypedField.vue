@@ -1,7 +1,6 @@
 <template>
     <div class="x-select-typed-field">
-        <x-select-symbol v-if="isTyped" :options="options" v-model="fieldType" @input="updateAutoField"
-                         :class="{'no-text': hideText}"/>
+        <x-select-symbol v-if="isTyped" :options="options" v-model="fieldType" @input="updateAutoField" :minimal="minimal" />
         <x-select :options="currentFields" :value="value" @input="$emit('input', $event)" placeholder="field..."
                   :searchable="true" class="field-select" :class="{linked: isTyped}" :id="id"/>
     </div>
@@ -15,7 +14,7 @@
         name: 'x-select-typed-field',
         components: {xSelectSymbol, xSelect},
         props: {
-            options: {required: true}, value: {}, id: {}, hideText: {default: true}
+            options: {required: true}, value: {}, id: {}, minimal: {default: true}
         },
         computed: {
             isTyped() {
@@ -88,10 +87,6 @@
         .x-select-symbol {
             border-bottom-right-radius: 0;
             border-top-right-radius: 0;
-
-            &.no-text .x-select-trigger .logo-text {
-                display: none;
-            }
         }
 
         .field-select {

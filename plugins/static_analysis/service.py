@@ -14,6 +14,7 @@ from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase
+from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
 from axonius.utils.files import get_local_config_file
 
 from static_analysis.nvd_nist.nvd_search import NVDSearcher
@@ -98,13 +99,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # those devices must be processed - i.e. to find any CVEs in them and tag appropriately.
         with self.__nvd_lock:
             # filter to find only devices with any installed software
-            for device in self.devices_db_view.find(
-                    {
-                        'specific_data.data.installed_software.name': {
-                            '$exists': True
-                        }
-                    }):
-                self.__process_devices(device)
+            for device in self.devices_db.find(
+                    parse_filter('specific_data.data.installed_software.name == exists(true)')):
+                self.__process_devices(convert_db_entity_to_view_entity(device))
 
         # find all devices that -
         # 1. are part of group (2)
@@ -115,30 +112,12 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # will never be untagged!
         # this loop will find those devices and search them :)
         with self.__nvd_lock:
-            for device in self.devices_db_view.find(
-                    {
-                        'specific_data.data.installed_software.name': {
-                            '$exists': False
-                        },
-                        'specific_data': {
-                            '$elemMatch': {
-                                '$and': [
-                                    {
-                                        PLUGIN_NAME: self.plugin_name,
-                                    },
-                                    {
-                                        'data.software_cves': {
-                                            '$exists': True
-                                        }
-                                    },
-                                    {
-                                        'data.software_cves': {'$ne': []}
-                                    }
-                                ]
-                            }
-                        }
-                    }):
-                self.__process_devices(device)
+            for device in self.devices_db.find(
+                    parse_filter(
+                        f'not (specific_data.data.installed_software.name == exists(true)) and '
+                        f'adapters_data.{self.plugin_name}.software_cves == '
+                        f'match([software_cves == exists(true) and software_cves != []])')):
+                self.__process_devices(convert_db_entity_to_view_entity(device))
 
     def __process_devices(self, device) -> None:
         """

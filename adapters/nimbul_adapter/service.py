@@ -9,7 +9,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from nimbul_adapter.client_id import get_client_id
 from nimbul_adapter.connection import NimbulConnection
 

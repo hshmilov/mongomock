@@ -47,7 +47,6 @@ from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
-from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
                                           AGGREGATOR_PLUGIN_NAME,
@@ -73,6 +72,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PROXY_VERIFY,
                                           PROXY_FOR_ADAPTERS)
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.email_server import EmailServer
@@ -420,18 +420,12 @@ class PluginBase(Configurable, Feature):
         self.aggregator_db_connection = self._get_db_connection()[AGGREGATOR_PLUGIN_NAME]
         self.devices_db = self.aggregator_db_connection['devices_db']
         self.users_db = self.aggregator_db_connection['users_db']
-        self.devices_db_view = self.aggregator_db_connection['devices_db_view']
-        self.users_db_view = self.aggregator_db_connection['users_db_view']
         self.historical_devices_db_view = self.aggregator_db_connection['historical_devices_db_view']
         self.historical_users_db_view = self.aggregator_db_connection['historical_users_db_view']
 
         self._entity_db_map = {
             EntityType.Users: self.users_db,
             EntityType.Devices: self.devices_db,
-        }
-        self._entity_views_db_map = {
-            EntityType.Users: self.users_db_view,
-            EntityType.Devices: self.devices_db_view,
         }
 
         self._historical_entity_views_db_map = {
@@ -464,6 +458,11 @@ class PluginBase(Configurable, Feature):
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)
         self.users = axonius.entities.UsersNamespace(self)
+
+        self._namespaces = {
+            EntityType.Users: self.users,
+            EntityType.Devices: self.devices
+        }
 
         # An executor dedicated to inserting devices to the DB
         # the number of threads should be in a proportion to the number of actual core that can run them
@@ -895,34 +894,6 @@ class PluginBase(Configurable, Feature):
         """
         return self.get_available_plugins_from_core_uncached()
 
-    def _request_db_rebuild(self, sync=True, internal_axon_ids: List[str] = None):
-        """
-        Requests a db rebuild
-        :param sync: whether or not you want to wait until it ends
-        :param internal_axon_ids: if you want to rebuild only a part of the db, give the internal_axon_ids here
-        """
-
-        def make_request():
-            axon_ids = internal_axon_ids
-            if axon_ids and len(axon_ids) > 50000:
-                axon_ids = None
-                # if you're trying to process that much you're better of with a regular rebuild
-            elif axon_ids:
-                axon_ids = list(set(axon_ids))
-
-            url = f'trigger/rebuild_entity_view?blocking={sync}&priority={bool(axon_ids)}'
-            return self.request_remote_plugin(url,
-                                              AGGREGATOR_PLUGIN_NAME,
-                                              method='post',
-                                              json={
-                                                  'internal_axon_ids': axon_ids
-                                              }
-                                              )
-
-        if sync:
-            return make_request()
-        run_and_forget(make_request)
-
     def _request_gui_dashboard_cache_clear(self, clear_slow: bool = False):
         """
         Sometimes the system will make changes that will need to trigger a dashboard change
@@ -947,7 +918,7 @@ class PluginBase(Configurable, Feature):
                                                                      content=content,
                                                                      seen=False)).inserted_id
 
-    @cachetools.cached(cachetools.TTLCache(maxsize=10, ttl=20))
+    @cachetools.cached(cachetools.TTLCache(maxsize=100, ttl=20))
     def get_plugin_by_name(self, plugin_name, node_id=None, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
@@ -1204,7 +1175,7 @@ class PluginBase(Configurable, Feature):
     def _get_appropriate_view(self, historical, entity_type: EntityType):
         if historical:
             return self._historical_entity_views_db_map[entity_type]
-        return self._entity_views_db_map[entity_type]
+        return self._entity_db_map[entity_type]
 
     def _grab_file(self, field_data, stored_locally=True) -> gridfs.GridOut:
         """
@@ -1375,9 +1346,7 @@ class PluginBase(Configurable, Feature):
                     promises.append(Promise(functools.partial(run_in_executor_helper,
                                                               inserter,
                                                               insert_quickpath_to_db,
-                                                              args=[devices])).then(
-                        lambda result: self._request_db_rebuild(sync=False)
-                    ))
+                                                              args=[devices])))
 
                     inserted_data_count += len(devices)
                     logger.info(f"Over {inserted_data_count} to DB")
@@ -1411,7 +1380,6 @@ class PluginBase(Configurable, Feature):
                         logger.info(f"Entities went through: {inserted_data_count}; " +
                                     f"promises active: {len(promises)}; " +
                                     f"in DB: {inserted_data_count - len(promises)}")
-                        self._request_db_rebuild(sync=False)
 
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=20).total_seconds())
@@ -1446,9 +1414,6 @@ class PluginBase(Configurable, Feature):
 
         if should_log_info is True:
             logger.info(f"Finished inserting {entity_type} of client {client_name}")
-
-        if inserted_data_count:
-            self._request_db_rebuild(sync=False)
 
         return inserted_data_count
 
@@ -1744,13 +1709,12 @@ class PluginBase(Configurable, Feature):
         return self.__perform_tag(entity, identity_by_adapter, name, data, tag_type, action_if_exists, additional_data)
 
     @mongo_retry()
-    def link_adapters(self, entity: EntityType, correlation: CorrelationResult, rebuild: bool = True,
+    def link_adapters(self, entity: EntityType, correlation: CorrelationResult,
                       entities_candidates_hint: List[str] = None) -> str:
         """
         Performs a correlation between the entities given by 'correlation'
         :param entity: The entity type to use
         :param correlation: The information of the correlation - see definition of CorrelationResult
-        :param rebuild: Whether or not to rebuild the entities
         :param entities_candidates_hint: Optional: If passed, the code will ignore the associated_adapters
                                          passed and instead will use the internal_axon_ids given here
         :return: Internal axon ID of the entity built
@@ -1838,10 +1802,6 @@ class PluginBase(Configurable, Feature):
                 logger.exception("Unlink logic exception")
                 raise
 
-        if rebuild:
-            self._request_db_rebuild(sync=True,
-                                     internal_axon_ids=[x['internal_axon_id'] for x in entities_candidates] +
-                                                       [internal_axon_id])
         return internal_axon_id
 
     @mongo_retry()
@@ -2061,11 +2021,10 @@ class PluginBase(Configurable, Feature):
                                                        entity_to_split=axonius_entity)
                 self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db, session)
 
-    def add_many_labels_to_entity(self, entity: EntityType, identity_by_adapter, labels, are_enabled=True,
-                                  rebuild: bool = True) -> List[dict]:
+    def add_many_labels_to_entity(self, entity: EntityType, identity_by_adapter, labels,
+                                  are_enabled=True) -> List[dict]:
         """
         Tag many devices with many tags. if is_enabled = False, the labels are grayed out.
-        :param rebuild: Whether or not to trigger a rebuild afterwards
         :return: List of affected entities
         """
 
@@ -2073,58 +2032,48 @@ class PluginBase(Configurable, Feature):
             for label in labels:
                 for specific_identity in identity_by_adapter:
                     try:
-                        yield from self.add_label_to_entity(entity, [specific_identity], label, are_enabled,
-                                                            rebuild=False)
+                        yield from self.add_label_to_entity(entity, [specific_identity], label, are_enabled)
+
                     except Exception:
                         logger.exception(f'Problem adding label: {label} with identity: {specific_identity}')
 
         result = list(perform_many_tags())
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
         return result
 
     def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True,
-                            additional_data={},
-                            rebuild: bool = True) -> List[dict]:
+                            additional_data={}) -> List[dict]:
         """
         A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out.
-        :param rebuild: Whether or not to trigger a rebuild afterwards
         :return: List of affected entities
         """
         # all labels belong to GUI
         additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = GUI_NAME, GUI_NAME
 
+        # denormalization in favor of easier sorting
+        if is_enabled:
+            additional_data['label_value'] = label
+
         result = self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None,
                            additional_data)
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
         return result
 
     def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data={},
-                           action_if_exists='replace',
-                           rebuild: bool = True) -> List[dict]:
+                           action_if_exists='replace') -> List[dict]:
         """
         A shortcut to __tag with type "data"
-        :param rebuild: Whether or not to trigger a rebuild afterwards
         :return: List of affected entities
         """
         result = self._tag(entity, identity_by_adapter, name, data, "data", action_if_exists, None, additional_data)
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
         return result
 
     def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data,
-                                  action_if_exists="replace", client_used=None, additional_data={},
-                                  rebuild: bool = True) -> List[dict]:
+                                  action_if_exists="replace", client_used=None, additional_data={}) -> List[dict]:
         """
         A shortcut to __tag with type "adapterdata"
-        :param rebuild: Whether or not to trigger a rebuild afterwards
         :return: List of affected entities
         """
         result = self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
                            action_if_exists, client_used, additional_data)
-        if result and rebuild:
-            self._request_db_rebuild(sync=True, internal_axon_ids=[x['internal_axon_id'] for x in result])
         return result
 
     @add_rule("update_config", methods=['POST'], should_authenticate=False)
@@ -2161,15 +2110,18 @@ class PluginBase(Configurable, Feature):
                               'status': 2
                               }
 
-        if fresh_service_settings['enabled']:
-            try:
-                fresh_service_connection = FreshServiceConnection(domain=fresh_service_settings['domain'],
-                                                                  apikey=fresh_service_settings['api_key'])
+        if not fresh_service_settings['enabled']:
+            return 'No FreshService settings'
+        try:
+            fresh_service_connection = FreshServiceConnection(domain=fresh_service_settings['domain'],
+                                                              apikey=fresh_service_settings['api_key'])
 
-                with fresh_service_connection:
-                    fresh_service_connection.create_fresh_service_incident(dict_data=fresh_service_dict)
-            except Exception:
-                logger.exception(f'Got exception creating Fresh Service incident with {fresh_service_dict}')
+            with fresh_service_connection:
+                fresh_service_connection.create_fresh_service_incident(dict_data=fresh_service_dict)
+                return ''
+        except Exception as e:
+            logger.exception(f'Got exception creating Fresh Service incident with {fresh_service_dict}')
+            return f'Got exception creating FreshService incident: {str(e)}'
 
     def create_service_now_incident(self, short_description, description, impact):
         service_now_dict = {'short_description': short_description, 'description': description, 'impact': impact}
@@ -2177,7 +2129,9 @@ class PluginBase(Configurable, Feature):
         if service_now_settings['enabled'] is True:
             try:
                 if service_now_settings['use_adapter'] is True:
-                    self.request_remote_plugin('create_incident', 'service_now_adapter', 'post', json=service_now_dict)
+                    response = self.request_remote_plugin('create_incident', 'service_now_adapter', 'post',
+                                                          json=service_now_dict)
+                    return response.text
                 else:
                     service_now_connection = ServiceNowConnection(domain=service_now_settings['domain'],
                                                                   verify_ssl=service_now_settings.get("verify_ssl"),
@@ -2186,8 +2140,10 @@ class PluginBase(Configurable, Feature):
                                                                   https_proxy=service_now_settings.get("https_proxy"))
                     with service_now_connection:
                         service_now_connection.create_service_now_incident(service_now_dict)
-            except Exception:
+                        return ''
+            except Exception as e:
                 logger.exception(f"Got exception creating ServiceNow incident wiht {service_now_dict}")
+                return f'Got exception creating ServiceNow incident: {str(e)}'
 
     def create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                     manufacturer=None, os=None, serial_number=None):
@@ -2208,45 +2164,50 @@ class PluginBase(Configurable, Feature):
         serive_now_settings = self._service_now_settings
         if serive_now_settings['enabled'] is True:
             if serive_now_settings['use_adapter'] is True:
-                self.request_remote_plugin('create_computer', 'service_now_adapter', 'post', json=connection_dict)
-            else:
-                try:
-                    service_now_connection = ServiceNowConnection(domain=serive_now_settings['domain'],
-                                                                  verify_ssl=serive_now_settings.get("verify_ssl"),
-                                                                  username=serive_now_settings.get("username"),
-                                                                  password=serive_now_settings.get("password"),
-                                                                  https_proxy=serive_now_settings.get("https_proxy"))
-                    with service_now_connection:
-                        service_now_connection.create_service_now_computer(connection_dict)
-                except Exception:
-                    logger.exception(f"Got exception creating ServiceNow computer with {name}")
+                response = self.request_remote_plugin('create_computer', 'service_now_adapter', 'post',
+                                                      json=connection_dict)
+                return response.text
+            try:
+                service_now_connection = ServiceNowConnection(domain=serive_now_settings['domain'],
+                                                              verify_ssl=serive_now_settings.get("verify_ssl"),
+                                                              username=serive_now_settings.get("username"),
+                                                              password=serive_now_settings.get("password"),
+                                                              https_proxy=serive_now_settings.get("https_proxy"))
+                with service_now_connection:
+                    service_now_connection.create_service_now_computer(connection_dict)
+                    return ''
+            except Exception as e:
+                logger.exception(f"Got exception creating ServiceNow computer with {name}")
+                return f'Got exception creating ServiceNow computer: {str(e)}'
 
     def create_jira_ticket(self, summary, description):
         jira_servicedesk_settings = self._jira_servicedesk_settings
-        if jira_servicedesk_settings['enabled'] is True:
-            post_data = dict()
-            post_data['serviceDeskId'] = jira_servicedesk_settings['servicedesk_id']
-            post_data['requestTypeId'] = jira_servicedesk_settings['request_type_id']
-            post_data['requestFieldValues'] = dict()
-            post_data['requestFieldValues']['summary'] = summary
-            post_data['requestFieldValues']['description'] = description
-            domain = jira_servicedesk_settings['domain']
-            username = jira_servicedesk_settings['username']
-            verify_ssl = jira_servicedesk_settings.get('verify_ssl', False)
-            apikey = jira_servicedesk_settings['apikey']
-            proxies = dict()
-            proxies['http_proxy'] = None
-            proxies['https_proxy'] = jira_servicedesk_settings.get('https_proxy')
-            headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-            url = RESTConnection.build_url(domain=domain,
-                                           url_base_prefix=f'/rest/servicedeskapi/request').strip('/')
-            r = requests.post(url,
-                              headers=headers,
-                              verify=verify_ssl,
-                              proxies=proxies,
-                              auth=(username, apikey),
-                              json=post_data)
-            r.raise_for_status()
+        if jira_servicedesk_settings['enabled'] is not True:
+            return 'Jira Settings missing'
+        post_data = dict()
+        post_data['serviceDeskId'] = jira_servicedesk_settings['servicedesk_id']
+        post_data['requestTypeId'] = jira_servicedesk_settings['request_type_id']
+        post_data['requestFieldValues'] = dict()
+        post_data['requestFieldValues']['summary'] = summary
+        post_data['requestFieldValues']['description'] = description
+        domain = jira_servicedesk_settings['domain']
+        username = jira_servicedesk_settings['username']
+        verify_ssl = jira_servicedesk_settings.get('verify_ssl', False)
+        apikey = jira_servicedesk_settings['apikey']
+        proxies = dict()
+        proxies['http_proxy'] = None
+        proxies['https_proxy'] = jira_servicedesk_settings.get('https_proxy')
+        headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+        url = RESTConnection.build_url(domain=domain,
+                                       url_base_prefix=f'/rest/servicedeskapi/request').strip('/')
+        r = requests.post(url,
+                          headers=headers,
+                          verify=verify_ssl,
+                          proxies=proxies,
+                          auth=(username, apikey),
+                          json=post_data)
+        logger.info(r)
+        return r.text
 
     def send_external_info_log(self, message):
         try:
@@ -2294,6 +2255,24 @@ class PluginBase(Configurable, Feature):
                                                                      stored_locally=False),
                                source=email_settings.get('sender_address'))
         return None
+
+    # Some collection for the general public
+
+    @property
+    @cachetools.cached(cachetools.LFUCache(maxsize=1))
+    def enforcements_collection(self):
+        return self._get_collection('reports', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
+
+    @property
+    @cachetools.cached(cachetools.LFUCache(maxsize=1))
+    def enforcement_tasks_runs_collection(self):
+        return self._get_collection('triggerable_history',
+                                    db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
+
+    @property
+    @cachetools.cached(cachetools.LFUCache(maxsize=1))
+    def enforcements_saved_actions_collection(self):
+        return self._get_collection('saved_actions', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
 
     # Global settings
     # These are settings which are shared between all plugins. For example, all plugins should use the same

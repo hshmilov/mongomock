@@ -36,22 +36,6 @@
   color: $theme-orange;
 }
 
-.success {
-  color: $indicator-success;
-}
-
-.info {
-  color: $indicator-info;
-}
-
-.warning {
-  color: $indicator-warning;
-}
-
-.error {
-  color: $indicator-error;
-}
-
 .c-grey-3 {
   color: $grey-3;
 }
@@ -159,7 +143,6 @@ ul {
 }
 
 .logo {
-  margin-right: 4px;
   max-width: inherit;
   display: inline-block;
 }
@@ -356,81 +339,6 @@ table {
   }
 }
 
-.x-btn {
-  border: 0;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s ease-in;
-  color: $theme-white;
-  background-color: $theme-blue;
-  padding: 4px 12px;
-  text-align: center;
-  width: 120px;
-  font: 300 14px Roboto;
-  line-height: 20px;
-  &:hover {
-    color: $theme-white;
-    &:not(.disabled) {
-      box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
-    }
-  }
-  &.disabled {
-    opacity: 0.4;
-    cursor: default;
-    &:hover {
-      box-shadow: none;
-    }
-    &:focus {
-      outline: none;
-    }
-  }
-  &.inverse {
-    background-color: $theme-white;
-    color: $theme-blue;
-    border: 1px solid $theme-blue;
-  }
-  &.light {
-    background-color: $grey-2;
-    color: $theme-black;
-    width: 30px;
-    height: 30px;
-    line-height: 24px;
-    padding: 4px 0;
-    &.active {
-      background-color: $theme-black;
-      color: $grey-2;
-    }
-  }
-  &.right {
-    width: auto;
-    padding: 3px 12px;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-  &.link {
-    width: auto;
-    background-color: transparent;
-    color: $theme-blue;
-    border: 0;
-    .svg-fill { fill: $theme-blue; }
-    .svg-stroke { stroke: $theme-blue; }
-    &:hover {
-      box-shadow: none;
-      &:not(.disabled) {
-        text-shadow: $text-shadow;
-        .svg-fill { fill: $theme-orange; }
-        .svg-stroke { stroke: $theme-orange; }
-      }
-    }
-  }
-  &.great {
-    font-size: 16px;
-    line-height: 30px;
-  }
-  .svg-fill { fill: $theme-white; }
-  .svg-stroke { stroke: $theme-white; }
-}
-
 .sortable {
   .x-sort {
     position: relative;
@@ -611,6 +519,24 @@ table {
     transform: scale(1);
     transition: .3s cubic-bezier(.4, 0, .2, 1);
   }
+  &.md-chips {
+    margin-bottom: 0;
+    padding-top: 0;
+    min-height: auto;
+    &:after {
+      background-color: $grey-2;
+    }
+    .md-input {
+      border: 0;
+      font-size: 14px;
+      height: 28px;
+    }
+    .md-chip {
+      background-color: $grey-1;
+      height: 24px;
+      line-height: 24px;
+    }
+  }
 }
 
 /* Common Animations */
@@ -653,7 +579,7 @@ table {
   }
   .x-page, .x-page.collapse {
     padding: 0;
-    >.x-header {
+    >.header {
       display: block;
     }
     .x-body {

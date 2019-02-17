@@ -20,20 +20,21 @@
         </div>
         <div slot="footer">
             <template v-if="!status.success && !status.processing">
-                <button class="x-btn link" @click="handleClose">Cancel</button>
-                <button class="x-btn" :class="{disabled}" @click="handleConfirm" :id="approveId">{{ approveText }}</button>
+                <x-button link @click="handleClose">Cancel</x-button>
+                <x-button :disabled="disabled" @click="handleConfirm" :id="approveId">{{ approveText }}</x-button>
             </template>
         </div>
     </x-modal>
 </template>
 
 <script>
+    import xButton from '../../axons/inputs/Button.vue'
     import xModal from '../../axons/popover/Modal.vue'
     import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
     export default {
         name: 'x-feedback-modal',
-        components: {xModal, PulseLoader},
+        components: {xButton, xModal, PulseLoader},
         model: {
             prop: 'launch',
             event: 'change'
@@ -53,7 +54,6 @@
         },
         methods: {
             handleConfirm() {
-                if (this.disabled) return
                 if (this.status.error || this.status.success || this.status.processing) {
                     this.handleClose()
                 }

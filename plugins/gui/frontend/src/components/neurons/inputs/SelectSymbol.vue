@@ -1,9 +1,9 @@
 <template>
-    <x-select :options="options" :value="value" @input="selectOption" class="x-select-symbol"
-              :placeholder="placeholder" :id="id" size="sm" :searchable="true">
+    <x-select v-bind="{options, value, placeholder, id, readOnly, searchable: true, size: 'sm'}" @input="selectOption"
+              class="x-select-symbol" :class="{minimal}">
         <template slot-scope="{ option }">
             <div class="x-type-img">
-                <img v-if="type === 'img'" :src="require(`Logos/${option.name}.png`)"/>
+                <img v-if="type === 'img'" :src="require(`Logos/adapters/${option.name}.png`)"/>
                 <svg-icon v-else-if="type === 'icon'" :name="`navigation/${option.name}`" :original="true" width="30"/>
             </div>
             <div class="logo-text">{{option.title}}</div>
@@ -17,7 +17,15 @@
     export default {
         name: 'x-select-symbol',
         components: {xSelect},
-        props: {options: {required: true}, value: {}, type: {default: 'img'}, placeholder: {}, id: {}},
+        props: {
+            options: {required: true},
+            value: {},
+            type: {default: 'img'},
+            placeholder: {},
+            id: {},
+            minimal: Boolean,
+            readOnly: Boolean
+        },
         methods: {
             selectOption(option) {
                 this.$emit('input', option)
@@ -54,6 +62,9 @@
         .logo-text {
             max-width: 160px;
             margin-top: 2px;
+        }
+        &.minimal .x-select-trigger .logo-text {
+            display: none;
         }
     }
 </style>

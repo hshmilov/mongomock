@@ -8,6 +8,7 @@ class TestHyperlinks(TestBase):
 
         self.settings_page.switch_to_page()
         with StresstestService().contextmanager(take_ownership=True):
+            self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_adapter(stresstest_name)
             self.adapters_page.click_adapter(stresstest_name)
             self.adapters_page.wait_for_spinner_to_end()

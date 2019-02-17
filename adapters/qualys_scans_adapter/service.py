@@ -9,7 +9,7 @@ from axonius.fields import Field, ListField
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from qualys_scans_adapter import consts
 from qualys_scans_adapter.connection import QualysScansConnection
 

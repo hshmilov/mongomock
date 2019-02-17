@@ -12,7 +12,7 @@
 
 <style lang="scss">
     .x-box {
-        padding: 24px;
+        padding: 24px 12px;
         background-color: $theme-white;
         overflow: auto;
     }

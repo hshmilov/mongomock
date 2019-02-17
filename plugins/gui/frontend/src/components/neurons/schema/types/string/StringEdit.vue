@@ -9,13 +9,13 @@
 </template>
 
 <script>
-	import PrimitiveMixin from '../primitive.js'
+	import primitiveMixin from '../primitive.js'
     import xSelect from '../../../../axons/inputs/Select.vue'
     import xDateEdit from './DateEdit.vue'
 
 	export default {
 		name: 'x-string-edit',
-        mixins: [PrimitiveMixin],
+        mixins: [primitiveMixin],
         components: { xSelect, xDateEdit },
         data() {
             return {

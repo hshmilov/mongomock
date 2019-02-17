@@ -1,6 +1,6 @@
 <template>
     <div class="x-summary" :class="{updating: enumerating}">
-        <template v-for="item, index in displayData">
+        <template v-for="(item, index) in displayData">
             <component v-if="item.schema" :is="processType(item.schema)" :schema="item.schema" :value="item.value"
                        class="summary" @click.native="$emit('click-one', index)"/>
             <div v-else class="summary" @click="$emit('click-one', index)">{{ item.value }}</div>
@@ -17,7 +17,9 @@
     export default {
         name: 'x-summary',
         components: {string, number, integer},
-        props: {data: {required: true}},
+        props: {
+            data: {required: true}
+        },
         data() {
             return {
                 displayData: [...this.data],

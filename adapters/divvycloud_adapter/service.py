@@ -2,13 +2,15 @@
 import logging
 from datetime import datetime
 
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date, figure_out_cloud
+from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import figure_out_cloud
 from divvycloud_adapter import consts
 from divvycloud_adapter.connection import DivvyCloudConnection
 

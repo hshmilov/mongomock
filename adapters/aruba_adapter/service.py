@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+
 from aruba_adapter import arubaapi
 from aruba_adapter.connection import ArubaConnection
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -9,7 +10,8 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date, format_mac
+from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import format_mac
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

@@ -46,7 +46,6 @@ class TestDiscovery(TestBase):
 
         # delete those devices
         self.axonius_system.get_devices_db().delete_many({})
-        self.axonius_system.aggregator.rebuild_views()
         time.sleep(10)
         self.devices_page.switch_to_page()
         self.devices_page.refresh_table()
@@ -96,7 +95,6 @@ class TestDiscovery(TestBase):
         # now we're testing that the adapter can become a non-RT again and stop fetching
         # delete the devices brought,
         self.axonius_system.get_devices_db().delete_many({})
-        self.axonius_system.aggregator.rebuild_views()
         time.sleep(10)
         self.devices_page.switch_to_page()
         self.devices_page.refresh_table()

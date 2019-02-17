@@ -15,13 +15,11 @@ from types import FunctionType
 from typing import Callable, NewType, List
 
 import dateutil.parser
-import pql
-import json
 import pytz
 
 import axonius
-from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
+from axonius.utils.datetime import is_date_real
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -461,23 +459,6 @@ def format_ip_raw(value):
         raise ValueError(f'Invalid raw IP address: {value}')
 
 
-def is_date_real(datetime_to_parse):
-    """
-    Often we might encounter a situation where a datetime is valid, but actually represents
-    an empty value. for that case we have this function.
-    :param datetime_to_parse: 
-    :return: True if real, False otherwise.
-    """
-
-    # 1/1/1970 - Unix epoch
-    # 1/1/1601 - Windows NT epoch(The FILETIME structure records time in the form
-    #            of 100-nanosecond intervals since January 1, 1601.)
-
-    return type(datetime_to_parse) == datetime.datetime and \
-        datetime_to_parse.replace(tzinfo=None) != datetime.datetime(1601, 1, 1) and \
-        datetime_to_parse.replace(tzinfo=None) != datetime.datetime(1970, 1, 1)
-
-
 def parse_unix_timestamp(unix_timestamp):
     try:
         return datetime.datetime.utcfromtimestamp(unix_timestamp)
@@ -494,23 +475,6 @@ def parse_unix_timestamp(unix_timestamp):
 def is_hostname_valid(hostname):
     return hostname and hostname not in ['host.docker.internal', 'windows10.microdone.cn',
                                          'Screencast-Production-Encoder-to-Prepare-AMI']
-
-
-def parse_date(datetime_to_parse):
-    """
-    Parses date and returns it as UTC
-    """
-    try:
-        if type(datetime_to_parse) == datetime.datetime:
-            # sometimes that happens too
-            return datetime_to_parse.astimezone(datetime.timezone.utc)
-        datetime_to_parse = str(datetime_to_parse)
-        d = dateutil.parser.parse(datetime_to_parse).astimezone(datetime.timezone.utc)
-
-        # Sometimes, this would be a fake date (see is_date_real). in this case return None
-        return d if is_date_real(d) else None
-    except (TypeError, ValueError):
-        return None
 
 
 def parse_date_with_timezone(datetime_to_parse, time_zone):
@@ -1142,6 +1106,11 @@ def and_function(*functions) -> FunctionType:
     return tmp
 
 
+def make_dict_from_csv(csv_data):
+    return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data.splitlines()[0],
+                                                                             delimiters=[',', '\t']))
+
+
 def convert_many_queries_to_elemmatch_with_addition_conditional(datas, prefix, include_outdated: bool):
     """
     Helper for fix_specific_data
@@ -1353,8 +1322,3 @@ def remove_duplicates_by_reference(seq):
         seen[marker] = 1
         result.append(item)
     return result
-
-
-def make_dict_from_csv(csv_data):
-    return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data.splitlines()[0],
-                                                                             delimiters=[',', '\t']))

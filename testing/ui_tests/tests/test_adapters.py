@@ -65,7 +65,7 @@ class TestAdapters(TestBase):
 
     def wait_for_adapter_down(self, adapter_name, retires=60 * 3, interval=2):
         for _ in range(retires):
-            self.alert_page.switch_to_page()
+            self.settings_page.switch_to_page()
             self.adapters_page.switch_to_page()
             try:
                 element = self.adapters_page.find_element_by_text(adapter_name)

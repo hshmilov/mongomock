@@ -10,11 +10,11 @@
 </template>
 
 <script>
-	import PrimitiveMixin from '../primitive.js'
+	import primitiveMixin from '../primitive.js'
 
 	export default {
 		name: 'x-range-edit',
-		mixins: [PrimitiveMixin],
+		mixins: [primitiveMixin],
         created() {
 			if (!this.data) {
 				this.data = { lte: '', gte: '' }

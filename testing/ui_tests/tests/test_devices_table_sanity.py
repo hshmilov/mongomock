@@ -34,9 +34,9 @@ class TestDevicesTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
 
         self.devices_page.query_json_adapter()
-        self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row_checkbox()
         self.devices_page.open_delete_dialog()
         wait_until(lambda: self.DELETE_DIALOG_TEXT in self.devices_page.read_delete_dialog())

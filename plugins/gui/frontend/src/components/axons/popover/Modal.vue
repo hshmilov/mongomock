@@ -4,7 +4,7 @@
             <div :class="`modal-container w-${size}`">
                 <div class="modal-header" v-if="title">
                     <div class="title">{{ title }}</div>
-                    <button class="x-btn link" @click="$emit('close')" v-if="dismissable">x</button>
+                    <x-button link @click="$emit('close')" v-if="dismissable">x</x-button>
                 </div>
                 <div class="modal-body">
                     <slot name="body" @submit="$emit('confirm')">
@@ -13,8 +13,8 @@
                 </div>
                 <div class="modal-footer">
                     <slot name="footer">
-                        <button class="x-btn link" @click="$emit('close')">{{dismissText}}</button>
-                        <button class="x-btn" :class="{ disabled }" @click="onApprove" :id="approveId">{{approveText}}</button>
+                        <x-button link @click="$emit('close')">{{dismissText}}</x-button>
+                        <x-button :disabled="disabled" @click="onApprove" :id="approveId">{{approveText}}</x-button>
                     </slot>
                 </div>
             </div>
@@ -24,15 +24,17 @@
 </template>
 
 <script>
+    import xButton from '../../axons/inputs/Button.vue'
+
     export default {
         name: 'x-modal',
+        components: { xButton },
         props: {
             approveText: {default: 'OK'}, approveId: {}, dismissText: {default: 'Cancel'},
             disabled: {default: false}, size: {default: 'xl'}, title: {}, dismissable: {default: false}
         },
         methods: {
             onApprove() {
-                if (this.disabled) return
                 this.$emit('confirm')
             }
         },

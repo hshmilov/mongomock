@@ -5,8 +5,9 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import is_domain_valid, parse_date
+from axonius.utils.parsing import is_domain_valid
 from kaseya_adapter.connection import KaseyaConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')

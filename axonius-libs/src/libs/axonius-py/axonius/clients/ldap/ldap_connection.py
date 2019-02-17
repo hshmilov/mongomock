@@ -8,6 +8,7 @@ from retrying import retry
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
 from axonius.profiling.memory import asizeof
+from axonius.utils.datetime import parse_date
 from axonius.utils.retrying import retry_generator
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -16,7 +17,7 @@ import struct
 import itertools
 from collections import defaultdict
 from axonius.utils.parsing import get_exception_string, convert_ldap_searchpath_to_domain_name, \
-    ad_integer8_to_timedelta, parse_date, get_member_of_list_from_memberof
+    ad_integer8_to_timedelta, get_member_of_list_from_memberof
 from axonius.utils.files import create_temp_file
 import ssl
 from typing import TextIO, List, Tuple

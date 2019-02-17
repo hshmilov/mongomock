@@ -25,12 +25,13 @@
             <div v-if="!notificationAggregatedList.length" class="t-center">
                 <svg-icon name="symbol/success" :original="true" height="20px"></svg-icon>
             </div>
-            <div @click="navigateNotifications" class="x-btn link">View All</div>
+            <x-button link @click="navigateNotifications">View All</x-button>
         </div>
     </x-dropdown>
 </template>
 
 <script>
+    import xButton from '../axons/inputs/Button.vue'
     import xDropdown from '../axons/popover/Dropdown.vue'
 
     import {mapState, mapActions} from 'vuex'
@@ -40,7 +41,7 @@
 
     export default {
         name: 'x-notification-peek',
-        components: {xDropdown},
+        components: {xButton, xDropdown},
         computed: {
             ...mapState({
                 notificationUnseenCount(state) {
@@ -167,7 +168,7 @@
             }
         }
 
-        .x-btn {
+        .x-button {
             text-align: right;
             margin-bottom: -8px;
         }

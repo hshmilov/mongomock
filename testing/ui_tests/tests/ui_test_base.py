@@ -20,7 +20,7 @@ from services.ports import DOCKER_PORTS
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
-from ui_tests.pages.alert_page import AlertPage
+from ui_tests.pages.enforcements_page import EnforcementsPage
 from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.dashboard_page import DashboardPage
 from ui_tests.pages.devices_page import DevicesPage
@@ -185,13 +185,6 @@ class TestBase:
         except Exception:
             logger.exception('Error while saving JS logs')
 
-    # The reason for retrying here is due to an issue between this logic and the
-    # rebuild logic.
-    # The rebuild logic is aggregating into the devices/users collection and mongo can't handle this concurrency
-    # by itself. I've opened numerous bugs to mongo on this issue but they think I'm dumb.
-    # Anyway, the retry logic solves this race issue for the tests.
-    # This issue was observed here:
-    # https://teamcity.in.axonius.com/viewLog.html?buildId=44926&tab=buildResultsDiv&buildTypeId=Cortex_Nightly
     @retry(wait_fixed=100, stop_max_delay=60000)
     def _clean_db(self):
         if not self.axonius_system:
@@ -202,10 +195,10 @@ class TestBase:
 
         self.axonius_system.get_devices_db().delete_many({})
         self.axonius_system.get_users_db().delete_many({})
-        self.axonius_system.get_reports_db().delete_many({})
+        self.axonius_system.get_enforcements_db().delete_many({})
+        self.axonius_system.get_actions_db().delete_many({})
+        self.axonius_system.get_tasks_db().delete_many({})
         self.axonius_system.get_notifications_db().delete_many({})
-        self.axonius_system.db.get_entity_db_view(EntityType.Users).delete_many({})
-        self.axonius_system.db.get_entity_db_view(EntityType.Devices).delete_many({})
 
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Users))
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices))
@@ -264,7 +257,7 @@ class TestBase:
         self.devices_queries_page = DevicesQueriesPage(**params)
         self.users_page = UsersPage(**params)
         self.report_page = ReportPage(**params)
-        self.alert_page = AlertPage(**params)
+        self.enforcements_page = EnforcementsPage(**params)
         self.adapters_page = AdaptersPage(**params)
         self.notification_page = NotificationPage(**params)
         self.dashboard_page = DashboardPage(**params)
@@ -274,7 +267,7 @@ class TestBase:
     def get_all_screens(self):
         screens = (self.devices_page,
                    self.users_page,
-                   self.alert_page,
+                   self.enforcements_page,
                    self.adapters_page,
                    self.report_page,
                    self.instances_page)
@@ -287,7 +280,7 @@ class TestBase:
 
     def _create_history(self, entity_type: EntityType, update_field=None, days_to_fill=30):
         history_db = self.axonius_system.db.get_historical_entity_db_view(entity_type)
-        entity_count = self.axonius_system.db.get_entity_db_view(entity_type).count_documents({})
+        entity_count = self.axonius_system.db.get_entity_db(entity_type).count_documents({})
         if not entity_count:
             return []
         day_to_entity_count = []
@@ -301,7 +294,7 @@ class TestBase:
                 # Update the historical date being generated
                 entity['accurate_for_datetime'] = current_date
                 if update_field:
-                    entity['specific_data'][0]['data'][update_field] += f' {day}'
+                    entity['adapters'][0]['data'][update_field] += f' {day}'
 
             insert_many_result = history_db.insert_many(entities)
             # Save the count for testing the expected amount for the day is presented

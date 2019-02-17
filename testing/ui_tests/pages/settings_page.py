@@ -62,18 +62,18 @@ class SettingsPage(Page):
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
     # those are the fully fledged css selectors for the elements
-    CERT_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab > div > form ' \
-                            '> div.array > div:nth-child(7) > div > div > div:nth-child(4) > div > div > input[' \
-                            'type="file"] '
-    PRIVATE_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab > div > ' \
-                               'form > div.array > div:nth-child(7) > div > div > div:nth-child(5) > div > div > ' \
-                               'input[type="file"] '
-    CERT_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab >' \
-                                     ' div > form > div.array > div:nth-child(7) > div > div > div:nth-child(4) >' \
-                                     ' div > div > div.file-name '
-    PRIVATE_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab >' \
-                                        ' div > form > div.array > div:nth-child(7) > div > div > div:nth-child(5) >' \
-                                        ' div > div > div.file-name '
+    CERT_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+                            ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(7) > div > div' \
+                            ' > div:nth-child(4) > div > div > input[type="file"] '
+    PRIVATE_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+                               ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(7) > div > div' \
+                               ' > div:nth-child(5) > div > div > input[type="file"] '
+    CERT_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+                                     ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(7) > div > div' \
+                                     ' > div:nth-child(4) > div > div > div.file-name '
+    PRIVATE_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+                                        ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(7) > div > div' \
+                                        ' > div:nth-child(5) > div > div > div.file-name '
 
     @property
     def url(self):
@@ -110,6 +110,7 @@ class SettingsPage(Page):
         self.click_new_user()
         self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name)
         self.click_create_user()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def get_all_users_from_users_and_roles(self):
         return (x.text for x in self.driver.find_elements_by_css_selector('.user-details-title'))
@@ -125,7 +126,7 @@ class SettingsPage(Page):
 
     def is_save_button_enabled(self):
         button = self.get_save_button()
-        return button.get_attribute('class') != 'x-btn disabled'
+        return button.get_attribute('class') != 'x-button disabled'
 
     def click_save_button(self):
         self.get_save_button().click()
@@ -395,7 +396,7 @@ class SettingsPage(Page):
         labels = ('Adapters',
                   'Devices',
                   'Users',
-                  'Alerts',
+                  'Enforcements',
                   'Reports',
                   'Settings',
                   'Instances')

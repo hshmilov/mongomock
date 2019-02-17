@@ -1,16 +1,11 @@
 <template>
-    <div>{{ data.length }} Bytes</div>
+    <div>{{ value.filename }}</div>
 </template>
 
 <script>
 	export default {
 		name: 'x-array-view',
-        props: ['schema', 'value'],
-        data() {
-			return {
-				data: [ ...this.value ]
-            }
-        }
+        props: ['schema', 'value']
 	}
 </script>
 

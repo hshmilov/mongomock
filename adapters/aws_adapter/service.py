@@ -23,7 +23,7 @@ from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.utils.parsing import format_ip
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.mixins.configurable import Configurable
 from axonius.clients.shodan.connection import ShodanConnection
 

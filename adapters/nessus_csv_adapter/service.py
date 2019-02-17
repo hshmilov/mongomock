@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import make_dict_from_csv
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.fields import Field, JsonStringFormat, ListField

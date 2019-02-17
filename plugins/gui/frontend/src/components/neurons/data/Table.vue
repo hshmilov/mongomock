@@ -3,8 +3,8 @@
         <x-table-wrapper :title="tableTitle" :count="count.data_to_show" :loading="loading" :error="content.error">
             <div slot="state" v-if="selectionCount" class="selection">
                 <div>[ {{ selectionCount }} selected.</div>
-                <button v-if="enableSelectAll && !allSelected" @click="selectAllData" class="x-btn link">Select all</button>
-                <button v-else-if="allSelected" @click="clearAllData" class="x-btn link">Clear all</button>
+                <x-button v-if="enableSelectAll && !allSelected" @click="selectAllData" link>Select all</x-button>
+                <x-button v-else-if="allSelected" @click="clearAllData" link>Clear all</x-button>
                 <div>]</div>
             </div>
             <slot name="actions" slot="actions"/>
@@ -14,7 +14,7 @@
         </x-table-wrapper>
         <div class="x-pagination">
             <div class="x-sizes">
-                <div class="x-title">results per page:</div>
+                <div class="title">results per page:</div>
                 <div v-for="size, i in [20, 50, 100]" @click="onClickSize(size)" @keyup.enter="onClickSize(size)"
                      class="x-link" :class="{active: size === view.pageSize}">{{size}}</div>
             </div>
@@ -37,6 +37,7 @@
 <script>
     import xTableWrapper from '../../axons/tables/TableWrapper.vue'
     import xTable from '../../axons/tables/Table.vue'
+    import xButton from '../../axons/inputs/Button.vue'
 
     import {GET_DATA_FIELD_LIST_SPREAD} from '../../../store/getters'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
@@ -45,8 +46,10 @@
 
     export default {
         name: 'x-data-table',
-        components: {xTableWrapper, xTable},
-        props: {module: {required: true}, section: {}, idField: {default: 'id'}, value: {}, title: {}},
+        components: {xTableWrapper, xTable, xButton},
+        props: {
+            module: {required: true}, section: {}, idField: {default: 'uuid'}, value: {}, title: {}
+        },
         data() {
             return {
                 loading: true,
@@ -127,7 +130,7 @@
                 return Array.from({length: lastPage - firstPage + 1}, (x, i) => i + firstPage)
             },
             pageSelection() {
-                if (!this.value) return []
+                if (!this.value) return undefined
                 if (this.value.include === undefined) {
                     this.allSelected = false
                 }
@@ -308,7 +311,7 @@
             display: flex;
             line-height: 28px;
 
-            .x-title {
+            .title {
                 text-transform: uppercase;
             }
 

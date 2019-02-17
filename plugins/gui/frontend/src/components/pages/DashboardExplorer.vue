@@ -8,7 +8,7 @@
             <x-table v-for="entity in entities" :key="entity['internal_axon_id']" id-field="internal_axon_id"
                      :module="entity.name" section="explorer" @click-row="configEntity($event, entity.name)">
                 <template slot="actions">
-                    <button class="x-btn link" @click="viewEntities(entity.name)">View in {{ entity.title }}</button>
+                    <x-button link @click="viewEntities(entity.name)">View in {{ entity.title }}</x-button>
                 </template>
             </x-table>
         </div>
@@ -20,6 +20,7 @@
     import xPage from '../axons/layout/Page.vue'
     import xSearchInsights from '../neurons/inputs/SearchInsights.vue'
     import xTable from '../neurons/data/Table.vue'
+    import xButton from '../axons/inputs/Button.vue'
     import {entities} from '../../constants/entities'
 
     import {mapState, mapMutations} from 'vuex'
@@ -27,7 +28,7 @@
 
     export default {
         name: 'x-dashboard-explorer',
-        components: {xPage, xSearchInsights, xTable},
+        components: {xPage, xSearchInsights, xTable, xButton},
         computed: {
             ...mapState({
                 entityFilters(state) {

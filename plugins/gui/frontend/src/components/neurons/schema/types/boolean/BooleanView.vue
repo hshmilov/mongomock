@@ -10,13 +10,13 @@
 
 <script>
     import xCross from '../../../../axons/visuals/Cross.vue'
-    import HyperlinkMixin from '../hyperlink.js'
+    import hyperlinkMixin from '../hyperlink.js'
 
 	export default {
 		name: 'x-bool-view',
         components: { xCross },
         props: ['schema', 'value'],
-        mixins: [HyperlinkMixin],
+        mixins: [hyperlinkMixin],
         computed: {
 			processedData() {
 				if (Array.isArray(this.value)) {

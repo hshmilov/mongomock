@@ -5,7 +5,7 @@
         <button class="item-link" :title="disabled? undefined : name">
             <svg-icon v-if="icon" :name="`navigation/${icon}`" width="24" :original="true" />
             <div v-else class="empty-icon"></div>
-            <span>{{ name }}</span>
+            <div class="title">{{ title || name }}</div>
         </button>
         <slot/>
     </router-link>
@@ -14,7 +14,7 @@
 <script>
     export default {
 		name: 'x-nav-item',
-		props: [ 'name', 'path', 'icon', 'exact', 'disabled', 'id', 'clickHandler' ],
+		props: [ 'name', 'path', 'title', 'icon', 'exact', 'disabled', 'id', 'clickHandler' ],
         computed: {
             link() {
             	if (this.path) return { path: this.path }
@@ -73,6 +73,11 @@
                 width: 35px;
                 display: inline-block;
             }
+            .title {
+                transition: all ease-in 0.2s;
+                display: inline-block;
+                line-height: 20px;
+            }
         }
         &.disabled {
             .svg-icon {
@@ -119,10 +124,9 @@
         overflow: visible;
         .x-nav-item {
             overflow: hidden;
-            .item-link span {
-                transition: all ease-in 0.2s;
+            .item-link .title {
                 opacity: 0;
-                line-height: 20px;
+                transform: translateX(-200px);
             }
             .x-nav.collapse {
                 display: none;
@@ -138,7 +142,7 @@
                     background-color: $grey-5;
                     padding-left: 0;
                     display: block;
-                    .item-link span {
+                    .item-link .title {
                         opacity: 1;
                     }
                 }

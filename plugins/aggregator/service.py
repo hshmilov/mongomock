@@ -29,145 +29,14 @@ AggregatorPlugin.py: A Plugin for the devices aggregation process
 
 get_devices_job_name = "Get device job"
 
-aggregation_stages_for_entity_view = [
-    {
-        "$project": {
-            'filtered_adapters': {
-                '$filter': {
-                    'input': '$adapters',
-                    'as': 'adapter',
-                    'cond': {
-                        "$ne": [
-                            "$$adapter.pending_delete", True
-                        ]
-                    }
-                }
-            },
-            'internal_axon_id': 1,
-            'tags': 1,
-            ADAPTERS_LIST_LENGTH: 1
-        },
-    },
-    {
-        '$project': {
-            'internal_axon_id': 1,
-            ADAPTERS_LIST_LENGTH: 1,
-            'generic_data': {
-                '$filter': {
-                    'input': '$tags',
-                    'as': 'tag',
-                    'cond': {
-                        '$and': [
-                            {
-                                '$eq': ['$$tag.type', 'data']
-                            },
-                            {
-                                '$ne': ['$$tag.data', False]
-                            }
-                        ]
-                    }
-                }
-            },
-            'specific_data': {
-                '$concatArrays': [
-                    '$filtered_adapters',
-                    {
-                        '$filter': {
-                            'input': '$tags',
-                            'as': 'tag',
-                            'cond': {
-                                '$eq': ['$$tag.type', 'adapterdata']
-                            }
-                        }
-                    }
-                ]
-            },
-            'adapters': '$filtered_adapters.plugin_name',
-            'unique_adapter_names': '$filtered_adapters.plugin_unique_name',
-            'labels': {
-                '$filter': {
-                    'input': '$tags',
-                    'as': 'tag',
-                    'cond': {
-                        '$and': [
-                            {
-                                '$eq': ['$$tag.type', 'label']
-                            },
-                            {
-                                '$eq': ['$$tag.data', True]
-                            }
-                        ]
-                    }
-                }
-            },
-        }
-    },
-    {
-        '$project': {
-            'internal_axon_id': 1,
-            'generic_data': 1,
-            'adapters': 1,
-            'unique_adapter_names': 1,
-            'labels': '$labels.name',
-            'adapters_data': {
-                '$map': {
-                    'input': '$specific_data',
-                    'as': 'data',
-                    'in': {
-                        '$arrayToObject': {
-                            '$concatArrays': [
-                                [],
-                                [{
-                                    'k': '$$data.plugin_name',
-                                    'v': '$$data.data'
-                                }
-                                ]
-                            ]
-                        }
-                    }
-                }
-            },
-            'specific_data': 1,
-            ADAPTERS_LIST_LENGTH: 1}
-    },
-    {
-        '$match': {
-            'adapters': {
-                "$exists": True,
-                "$not": {"$size": 0}
-            }
-        }
-    }
-]
-
 
 class AggregatorService(Triggerable, PluginBase):
-    # This is the amount of delay we should wait before performing a full db rebuild again and again,
-    # to introduce some latency over entity_db so other processes can take place
-    MIN_DELAY_BETWEEN_FULL_DB_REBUILD = 10
-
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
         """
         self.__db_locks = {
             entity: LazyMultiLocker()
-            for entity in EntityType
-        }
-
-        self.__rebuild_db_view_lock = {
-            entity: threading.RLock()
-            for entity in EntityType
-        }
-
-        self.__rebuild_and_wait_db_view_lock = {
-            entity: threading.RLock()
-            for entity in EntityType
-        }
-
-        # the last time the DB has been rebuilt
-        self.__last_full_db_rebuild = {
-            entity: datetime.utcnow()
             for entity in EntityType
         }
 
@@ -196,64 +65,74 @@ class AggregatorService(Triggerable, PluginBase):
 
         # Setting up db
         self.__insert_indexes()
-        # perform an initial rebuild for consistency
-        for entity_type in EntityType:
-            self._rebuild_entity_view(entity_type)
 
     def __insert_indexes(self):
         """
         Insert useful indexes.
         :return: None
         """
-        def common_view_indexes(db):
-            # used for querying by it directly
-            db.create_index([('internal_axon_id', pymongo.ASCENDING)], background=True)
-            # used as a trick to split all devices by it relatively equally
-            # this will always be a single char, 1-9a-f (hex)
-            # then you can split the whole db using it to hack mongo
-            # into using multiple cores when aggregating
-            # https://axonius.atlassian.net/wiki/spaces/AX/pages/740229240/Implementing+and+integrating+historical+views
-            db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
-            # those used for querying by it
-            db.create_index([('specific_data.data.id', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.adapter_properties', pymongo.ASCENDING)], background=True)
-            # this is used for when you want to see a single snapshot in time
-            db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)], background=True)
-            # this is commonly filtered by
-            db.create_index([(f'adapters', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.os.type', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.os.distribution', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.last_seen', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.hostname', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.name', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.last_used_users', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.username', pymongo.ASCENDING)], background=True)
-            db.create_index([(f'specific_data.data.fetch_time', pymongo.ASCENDING)], background=True)
-
-            # this is commonly sorted by
-            db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
-
-            # this is used all the time by the GUI
-            db.create_index([(f'labels', pymongo.ASCENDING)], background=True)
-
-        def common_db_indexes(db):
+        def non_historic_indexes(db):
             db.create_index(
                 [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
                  ], unique=True, background=True)
-            db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
             db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
+
+        def historic_indexes(db):
+            db.create_index(
+                [(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
+                 ], background=True)
+            db.create_index([('internal_axon_id', pymongo.ASCENDING)], background=True)
+            db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
+
+        def common_db_indexes(db):
+            db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
             db.create_index([(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING)], background=True)
             db.create_index([('adapters.client_used', pymongo.DESCENDING)], background=True)
-            db.create_index([(PLUGIN_UNIQUE_NAME, pymongo.DESCENDING)], background=True)
+
+            # this is commonly filtered by the GUI
+            db.create_index([('adapters.data.id', pymongo.ASCENDING)], background=True)
+            db.create_index([('adapters.pending_delete', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.adapter_properties', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.os.type', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.os.distribution', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.last_seen', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.hostname', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.name', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.last_used_users', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.username', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.fetch_time', pymongo.ASCENDING)], background=True)
+
+            db.create_index([('tags.data.id', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.type', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.adapter_properties', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.os.type', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.os.distribution', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.last_seen', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.hostname', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.name', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.last_used_users', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.username', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.data.fetch_time', pymongo.ASCENDING)], background=True)
+
+            # For labels
+            db.create_index([(f'tags.name', pymongo.ASCENDING)], background=True)
+
+            # this is commonly sorted by
+            db.create_index([('adapter_list_length', pymongo.DESCENDING)], background=True)
 
         for entity_type in EntityType:
             common_db_indexes(self._entity_db_map[entity_type])
-            common_view_indexes(self._historical_entity_views_db_map[entity_type])
-            common_view_indexes(self._entity_views_db_map[entity_type])
+            non_historic_indexes(self._entity_db_map[entity_type])
+
+            common_db_indexes(self._historical_entity_views_db_map[entity_type])
+            historic_indexes(self._historical_entity_views_db_map[entity_type])
 
     def _request_insertion_from_adapters(self, adapter):
         """Get mapped data from all devices.
@@ -300,90 +179,8 @@ class AggregatorService(Triggerable, PluginBase):
                 continue
             yield (client_name, from_json(data.content))
 
-    def __rebuild_partial_view(self, from_db, to_db, internal_axon_ids: List[str]):
-        """
-        See docs for _rebuild_entity_view
-        """
-        internal_axon_ids = list(internal_axon_ids)
-        logger.debug(f"Performance: Starting partial rebuild for {len(internal_axon_ids)} devices")
-
-        processed_devices = list(from_db.aggregate([
-            {
-                "$match": {
-                    "internal_axon_id": {
-                        "$in": internal_axon_ids
-                    }
-                }
-            },
-            *aggregation_stages_for_entity_view,
-        ]))
-
-        to_db.delete_many(
-            filter={
-                "internal_axon_id": {
-                    "$in": internal_axon_ids
-                }
-            })
-
-        for device in processed_devices:
-            to_db.replace_one(
-                filter={
-                    "internal_axon_id": device['internal_axon_id']
-                },
-                replacement=device,
-                upsert=True
-            )
-
-        logger.debug("Performance: Done partial rebuild")
-
-    def _rebuild_entity_view(self, entity_type: EntityType, internal_axon_ids: List[str] = None):
-        """
-        Takes the "raw" db (i.e. devices_db), performs an aggregation over it to generate
-        the "pretty" view from it (i.e. devices_db_view)
-        :param entity_type: The entity type to rebuild for
-        :param internal_axon_ids: if not none, will rebuild for the given internal axon ids only
-        """
-
-        # The following creates a view that has all adapters and tags
-        # of type "adapterdata" inside one (unsorted!) array.
-        # also hides 'pending_delete" entities
-        from_db = self._entity_db_map[entity_type]
-        to_db = self._entity_views_db_map[entity_type]
-
-        if internal_axon_ids:
-            with self.__rebuild_db_view_lock[entity_type]:
-                return self.__rebuild_partial_view(from_db, to_db, internal_axon_ids)
-
-        with self.__rebuild_and_wait_db_view_lock[entity_type]:
-            # this is an expensive routine, and this may be called a lot,
-            last_rebuild = self.__last_full_db_rebuild[entity_type]
-            seconds_ago = (datetime.utcnow() - last_rebuild).total_seconds()
-            if seconds_ago < self.MIN_DELAY_BETWEEN_FULL_DB_REBUILD:
-                time.sleep(self.MIN_DELAY_BETWEEN_FULL_DB_REBUILD - seconds_ago)
-
-            with self.__rebuild_db_view_lock[entity_type]:
-                tmp_collection = self._get_db_connection()[to_db.database.name][f"temp_{to_db.name}"]
-                logger.debug("Performance: starting aggregating to tmp collection")
-                from_db.aggregate([
-                    {
-                        "$out": tmp_collection.name
-                    }
-                ])
-                logger.debug("Performance: starting aggregating to actual collection")
-                tmp_collection.aggregate([
-                    *aggregation_stages_for_entity_view,
-                    {
-                        "$out": to_db.name
-                    }
-                ])
-                logger.debug("Performance: starting drop temp collection")
-                tmp_collection.drop()
-                logger.debug("Performance: finished")
-
-            self.__last_full_db_rebuild[entity_type] = datetime.utcnow()
-
     def _save_entity_views_to_historical_db(self, entity_type: EntityType, now):
-        from_db = self._entity_views_db_map[entity_type]
+        from_db = self._entity_db_map[entity_type]
         to_db = self._historical_entity_views_db_map[entity_type]
 
         # using a tmp collection because $out can write with a lot of constraints
@@ -459,16 +256,6 @@ class AggregatorService(Triggerable, PluginBase):
             now = datetime.utcnow()
             for entity_type in EntityType:
                 self._save_entity_views_to_historical_db(entity_type, now)
-            return
-        elif job_name == 'rebuild_entity_view':
-            internal_axon_ids = post_json.get('internal_axon_ids') if post_json else None
-            for entity_type in EntityType:
-                self._rebuild_entity_view(entity_type, internal_axon_ids=internal_axon_ids)
-            if not internal_axon_ids:
-                # if not a partial rebuild - clear slow dashboards as well
-                self._request_gui_dashboard_cache_clear(True)
-            else:
-                self._request_gui_dashboard_cache_clear(False)
             return
         else:
             adapters = [adapter for adapter in adapters.values()

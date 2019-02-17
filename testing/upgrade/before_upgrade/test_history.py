@@ -46,34 +46,7 @@ SAMPLE_DOC = '''
     "adapters" : [ 
         "json_file_adapter"
     ],
-    "unique_adapter_names" : [ 
-        "json_file_adapter_0"
-    ],
     "labels" : [],
-    "adapters_data" : [ 
-        {
-            "json_file_adapter" : {
-                "id" : "cb_id1",
-                "name" : "CB 1",
-                "hostname" : "CB First",
-                "network_interfaces" : [ 
-                    {
-                        "mac" : "06:3A:9B:D7:D7:A8",
-                        "ips" : [ 
-                            "10.0.2.1", 
-                            "10.0.2.2", 
-                            "10.0.2.3"
-                        ]
-                    }
-                ],
-                "av_status" : "active",
-                "last_contact" : "-",
-                "sensor_version" : "0.4.1",
-                "test_alert_change" : 5,
-                "pretty_id" : "AX-86"
-            }
-        }
-    ],
     "short_axon_id" : "e"
 }'''
 

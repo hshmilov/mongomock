@@ -40,10 +40,19 @@
                 <a class="item-link" @click="navigateSettings" id="settings">
                     <svg-icon name="navigation/settings" :original="true" height="20"/>
                 </a>
-                <x-tip-info content="In order to send alerts through mail, define the server under settings"
-                            v-if="mailSettingsTip" @dismiss="mailSettingsTip = false"/>
-                <x-tip-info content="In order to send alerts through a syslog system, define the server under settings"
-                            v-if="syslogSettingsTip" @dismiss="syslogSettingsTip = false"/>
+                <x-tip-info content="In order to send alerts through mail, configure it under settings"
+                            v-if="isEmptySetting('mail')" @dismiss="dismissEmptySetting('mail')"/>
+                <x-tip-info content="In order to send alerts through a syslog system, configure it under settings"
+                            v-if="isEmptySetting('syslog')" @dismiss="dismissEmptySetting('syslog')"/>
+                <x-tip-info content="In order to send alerts through an Https log system, configure it under settings"
+                            v-if="isEmptySetting('httpsLog')" @dismiss="dismissEmptySetting('httpsLog')"/>
+                <x-tip-info content="In order to create a ServiceNow computer or incident, configure it under settings"
+                            v-if="isEmptySetting('serviceNow')" @dismiss="dismissEmptySetting('serviceNow')"/>
+                <x-tip-info content="In order to create a FreshService incident, configure it under settings"
+                            v-if="isEmptySetting('freshService')" @dismiss="dismissEmptySetting('freshService')"/>
+                <x-tip-info content="In order to create a Jira incident, configure it under settings"
+                            v-if="isEmptySetting('jira')" @dismiss="dismissEmptySetting('jira')"/>
+
             </li>
             <li class="nav-item">
                 <a @click="startTour" class="item-link">
@@ -75,8 +84,8 @@
                 collapseSidebar(state) {
                     return state.interaction.collapseSidebar
                 },
-                emptyStates(state) {
-                    return state.onboarding.emptyStates
+                emptySettings(state) {
+                    return state.onboarding.emptyStates.settings
                 },
                 researchStatus(state) {
                     return state.dashboard.lifecycle.data.status
@@ -101,21 +110,8 @@
                     return state.staticConfiguration.medicalConfig
                 },
             }),
-            mailSettingsTip: {
-                get() {
-                    return this.emptyStates.mailSettings
-                },
-                set(value) {
-                    this.updateEmptyState({mailSettings: value})
-                }
-            },
-            syslogSettingsTip: {
-                get() {
-                    return this.emptyStates.syslogSettings
-                },
-                set(value) {
-                    this.updateEmptyState({syslogSettings: value})
-                }
+            anyEmptySettings() {
+                return Object.values(this.emptySettings).find(value => value)
             }
         },
         data() {
@@ -156,16 +152,33 @@
                     this.$emit('access-violation', name)
                     return
                 }
-                if (this.mailSettingsTip || this.syslogSettingsTip) {
+                if (this.anyEmptySettings) {
                     this.$router.push({path: '/settings#global-settings-tab'})
-                    this.mailSettingsTip = false
-                    this.syslogSettingsTip = false
+                    this.dismissAllSettings()
                 } else {
                     this.$router.push({name: 'Settings'})
                 }
             },
             entityRestricted(entity) {
                 return this.userPermissions[entity] === 'Restricted'
+            },
+            isEmptySetting(name) {
+                return this.emptySettings[name]
+            },
+            dismissEmptySetting(name) {
+                this.updateEmptyState({
+                    settings: {
+                        [name]: false
+                    }
+                })
+            },
+            dismissAllSettings() {
+                this.updateEmptyState({
+                    settings: Object.keys(this.emptySettings).reduce((map, setting) => {
+                        map[setting] = false
+                        return map
+                    }, {})
+                })
             }
         },
         created() {

@@ -4,7 +4,7 @@ import ipaddress
 
 from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 from datetime import datetime

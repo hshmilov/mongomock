@@ -2,8 +2,8 @@
     <div class="x-users-roles">
         <div class="header">
             <h4 class="title">Users and Roles</h4>
-            <button class="x-btn" :class="{ disabled: readOnly }" id="config-roles" @click="openRoles">Roles</button>
-            <button class="x-btn" :class="{ disabled: readOnly }" id="create-user" @click="openCreateUser">+ New User</button>
+            <x-button :disabled="readOnly" id="config-roles" @click="openRoles">Roles</x-button>
+            <x-button :disabled="readOnly" id="create-user" @click="openCreateUser">+ New User</x-button>
         </div>
         <div v-for="user in users" class="user">
             <div class="user-details">
@@ -24,10 +24,8 @@
                 <h5 v-if="user.role_name !== 'Admin'">Permissions</h5>
                 <x-form v-if="user.role_name !== 'Admin'" :schema="permissionSchema" v-model="user.permissions"
                         @input="syncRole(user)" :read-only="readOnly"/>
-                <button class="x-btn link" id="user-settings-remove" :class="{ disabled: readOnly }"
-                        @click="openRemoveUser(user)">Remove</button>
-                <button class="x-btn link" id="user-settings-save" :class="{ disabled: readOnly }"
-                        @click="savePermissions(user)">Save</button>
+                <x-button link :disabled="readOnly" id="user-settings-remove" @click="openRemoveUser(user)">Remove</x-button>
+                <x-button link :disabled="readOnly" id="user-settings-save" @click="savePermissions(user)">Save</x-button>
             </div>
         </div>
         <x-modal v-if="userToCreate" @close="closeCreateUser" @confirm="performCreateUser" approve-text="Create User">
@@ -55,12 +53,12 @@
                 <label>Name</label>
                 <input type="text" class="name-role" v-model="rolesConfig.data.name"/>
                 <x-form :schema="permissionSchema" v-model="rolesConfig.data.permissions" :read-only="readOnly"/>
-                <button id="save-role-button" class="x-btn link" @click="saveRole">Save</button>
-                <button v-if="rolesConfig.selected" id="remove-role-button" class="x-btn link"
-                        @click="performRemoveRole">Remove</button>
+                <x-button link id="save-role-button" @click="saveRole">Save</x-button>
+                <x-button link v-if="rolesConfig.selected" id="remove-role-button"
+                          @click="performRemoveRole">Remove</x-button>
             </div>
             <div slot="footer">
-                <button class="x-btn" @click="closeRoles">Done</button>
+                <x-button @click="closeRoles">Done</x-button>
             </div>
         </x-modal>
     </div>
@@ -70,6 +68,7 @@
     import xForm from '../../neurons/schema/Form.vue'
     import xModal from '../../axons/popover/Modal.vue'
     import xSelect from '../../axons/inputs/Select.vue'
+    import xButton from '../../axons/inputs/Button.vue'
 
     import {mapState, mapActions} from 'vuex'
     import {
@@ -80,7 +79,7 @@
 
     export default {
         name: 'x-users-roles',
-        components: {xForm, xModal, xSelect},
+        components: {xForm, xModal, xSelect, xButton},
         props: {readOnly: {default: false}},
         computed: {
             ...mapState({
@@ -123,13 +122,13 @@
                         this.permissionSchemeItem('Devices'),
                         this.permissionSchemeItem('Users'),
                         this.permissionSchemeItem('Adapters'),
-                        this.permissionSchemeItem('Alerts'),
+                        this.permissionSchemeItem('Enforcements'),
                         this.permissionSchemeItem('Reports'),
                         this.permissionSchemeItem('Settings'),
                         this.permissionSchemeItem('Instances')
                     ],
                     required: [
-                        'Settings', 'Adapters', 'Users', 'Devices', 'Alerts', 'Dashboard', 'Reports', 'Instances'
+                        'Settings', 'Adapters', 'Users', 'Devices', 'Enforcements', 'Dashboard', 'Reports', 'Instances'
                     ],
                     type: 'array'
                 }
@@ -224,7 +223,6 @@
                 }
             },
             openCreateUser() {
-                if (this.readOnly) return
                 this.userToCreate = {...this.newUserTemplate}
             },
             performCreateUser() {
@@ -239,7 +237,6 @@
                 this.userToCreate = null
             },
             savePermissions(user) {
-                if (this.readOnly) return
                 this.changePermissions({
                     uuid: user.uuid, role_name: user.role_name, permissions: user.permissions
                 }).then(response => {
@@ -247,7 +244,6 @@
                 }).catch(error => this.$emit('toast', error.response.data.message))
             },
             openRemoveUser(user) {
-                if (this.readOnly) return
                 this.userToRemove = user
             },
             performRemoveUser() {
@@ -269,7 +265,6 @@
                 user.role_name = ''
             },
             openRoles() {
-                if (this.readOnly) return
                 this.rolesConfig.data = {
                     name: '', permissions: {...this.permissionsDefault}
                 }
@@ -378,7 +373,7 @@
         .x-form {
             text-align: left;
 
-            .array {
+            .x-array-edit {
                 grid-template-columns: 1fr 1fr 1fr;
             }
 
@@ -399,7 +394,7 @@
                 margin-bottom: 12px;
             }
 
-            .x-btn.link {
+            .x-button.link {
                 padding-left: 0;
             }
 

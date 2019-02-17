@@ -7,7 +7,8 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-from axonius.utils.parsing import parse_date, normalize_var_name
+from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import normalize_var_name
 from axonius.mixins.configurable import Configurable
 from clearpass_adapter.connection import ClearpassConnection
 from clearpass_adapter.client_id import get_client_id

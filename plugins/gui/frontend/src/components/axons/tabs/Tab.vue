@@ -8,8 +8,11 @@
     export default {
         name: 'x-tab',
         props: {
-            'id': {required: true}, 'title': {required: true}, 'selected': {default: false},
-            'logo': {}, 'outdated': {default: false}
+            id: {required: true},
+            title: {required: true},
+            selected: {default: false},
+            logo: {default: ''},
+            outdated: {default: false}
         },
         data() {
             return {

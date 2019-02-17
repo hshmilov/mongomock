@@ -33,6 +33,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.settings_page.switch_to_page()
             self.devices_page.switch_to_page()
             self.devices_page.click_sort_column(self.devices_page.FIELD_TAGS)
+            self.devices_page.wait_for_table_to_load()
             self.devices_page.click_row_checkbox()
             tag_to_remove = self.devices_page.get_first_tag_text()
             self.devices_page.remove_tag(tag_to_remove)

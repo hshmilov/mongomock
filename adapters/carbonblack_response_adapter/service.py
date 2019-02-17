@@ -8,7 +8,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from carbonblack_response_adapter.connection import \
     CarbonblackResponseConnection
 

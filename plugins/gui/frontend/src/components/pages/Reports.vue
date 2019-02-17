@@ -4,11 +4,10 @@
             <div class="v-spinner-bg" v-if="loading"></div>
             <pulse-loader :loading="loading" color="#FF7D46"/>
             <div class="x-report-download">
-                <a class="x-btn great" @click="startDownload" :class="{disabled: disableDownloadReport}"
-                   id="reports_download">
+                <x-button great :disabled="disableDownloadReport" @click="startDownload" id="reports_download">
                     <template v-if="downloading">DOWNLOADING...</template>
                     <template v-else>Download Now</template>
-                </a>
+                </x-button>
             </div>
             <div class="x-report-latest">
                 {{latestReportDate}}.
@@ -37,10 +36,9 @@
                                placeholder="" no-data-text="Type mail addresses..."/>
                 </div>
                 <div class="x-section x-btn-container">
-                    <button id="save-report" class="x-btn" :class="{disabled: !valid}" @click="scheduleExecReport">Save</button>
-                    <button id="test-report" class="x-btn inverse"
-                            :class="{ disabled: !hasRecipients || disableDownloadReport || isReadOnly }"
-                            @click="testExecReport">Test Now</button>
+                    <x-button id="save-report" :disabled="!valid" @click="scheduleExecReport">Save</x-button>
+                    <x-button inverse id="test-report" :disabled="!hasRecipients || disableDownloadReport || isReadOnly"
+                              @click="testExecReport">Test Now</x-button>
                 </div>
             </div>
         </x-box>
@@ -51,6 +49,7 @@
 <script>
     import xPage from '../axons/layout/Page.vue'
     import xBox from '../axons/layout/Box.vue'
+    import xButton from '../axons/inputs/Button.vue'
     import xToast from '../axons/popover/Toast.vue'
     import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
@@ -61,7 +60,7 @@
 
     export default {
         name: 'x-report',
-        components: {xPage, xBox, xToast, PulseLoader},
+        components: {xPage, xBox, xButton, xToast, PulseLoader},
         computed: {
             ...mapState({
                 isReadOnly(state) {
@@ -171,8 +170,9 @@
         .x-report-download {
             margin-bottom: 24px;
 
-            .x-btn {
+            .x-button {
                 background-color: $theme-orange;
+                width: auto;
             }
 
             .error-text {
@@ -202,7 +202,7 @@
         .x-btn-container {
             text-align: right;
 
-            .x-btn {
+            .x-button {
                 margin-left: 12px;
             }
         }

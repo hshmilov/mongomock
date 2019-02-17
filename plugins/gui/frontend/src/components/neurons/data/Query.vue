@@ -35,11 +35,11 @@
                 <div v-if="noResults">No results</div>
             </div>
         </x-dropdown>
-        <a class="x-btn link" :class="{disabled: disableSaveQuery}" @click="openSaveView" id="query_save">Save Query</a>
+        <x-button link :disabled="disableSaveQuery" @click="openSaveView" id="query_save">Save Query</x-button>
         <!-- Triggerable menu containing a wizard for building a query filter -->
         <x-dropdown class="query-wizard" align="right" :align-space="4" :align-agile="false" size="xl" :arrow="false"
                     ref="wizard" @activated="tour('queryField')">
-            <div slot="trigger" class="x-btn link" id="query_wizard">+ Query Wizard</div>
+            <x-button slot="trigger" link id="query_wizard">+ Query Wizard</x-button>
             <div slot="content">
                 <x-filter :module="module" v-model="queryExpressions" ref="filter" @change="updateFilter"
                           @error="filterValid = false"/>
@@ -47,8 +47,8 @@
                     in query
                 </md-switch>
                 <div class="place-right">
-                    <button class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</button>
-                    <button class="x-btn" @click="compileFilter" @keyup.enter="compileFilter">Search</button>
+                    <x-button link @click="clearFilter" @keyup.enter.native="clearFilter">Clear</x-button>
+                    <x-button @click="compileFilter" @keyup.enter.native="compileFilter">Search</x-button>
                 </div>
             </div>
         </x-dropdown>
@@ -70,6 +70,8 @@
     import xMenuItem from '../../axons/menus/MenuItem.vue'
     import xFilter from '../schema/Filter.vue'
     import xModal from '../../axons/popover/Modal.vue'
+    import xButton from '../../axons/inputs/Button.vue'
+
 
     import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
     import {GET_DATA_FIELDS_BY_PLUGIN} from '../../../store/getters'
@@ -83,7 +85,7 @@
     export default {
         name: 'x-query',
         components: {
-            xDropdown, xSearchInput, xMenu, xMenuItem, xFilter, xModal
+            xDropdown, xSearchInput, xMenu, xMenuItem, xFilter, xModal, xButton
         },
         props: {
             module: {required: true}, limit: {default: 5}, readOnly: {default: false}
@@ -101,7 +103,10 @@
                 },
                 selected(state) {
                     return state[this.module].view.fields
-                }
+                },
+                ecFilter(state) {
+                    return state[this.module].view.ecFilter
+                },
             }),
             ...mapGetters({
                 getDataFieldsByPlugin: GET_DATA_FIELDS_BY_PLUGIN
@@ -149,6 +154,7 @@
             isSearchSimple() {
                 /* Determine whether current search input value is an AQL filter, or just text */
                 if (!this.searchValue) return true
+                if (this.searchValue.indexOf('exists_in') != -1) return false
                 let simpleMatch = this.searchValue.match('[a-zA-Z0-9 -\._:]*')
                 return simpleMatch && simpleMatch.length === 1 && simpleMatch[0] === this.searchValue
             },
@@ -194,6 +200,9 @@
                 if (!this.inTextSearch) {
                     this.searchValue = newFilter
                 }
+            },
+            ecFilter() {
+                this.updateFilter(this.queryFilter)
             }
         },
         methods: {
@@ -268,7 +277,7 @@
                 this.filterValid = true
             },
             openSaveView() {
-                if (this.disableSaveQuery || this.searchValue === '') return
+                if (this.searchValue === '') return
                 this.saveModal.isActive = true
             },
             closeSaveView() {
@@ -307,14 +316,25 @@
                 this.changeState({name: stateName})
             },
             wrapFilterOptions(filter) {
+                if (!filter) filter = ''
                 filter = filter.replace(INCLUDE_OUDATED_MAGIC, '')
                 if (this.isUniqueAdapters && filter) {
                     filter = `${INCLUDE_OUDATED_MAGIC}${filter}`
                 }
+
+                if (this.ecFilter && filter.indexOf('exists_in(') == -1) {
+                    let ec = this.ecFilter
+                    filter = `exists_in(${ec.pretty_id},${ec.condition},${ec.i}, ${ec.success}) ${filter}`
+                }
+                else if (!this.ecFilter && filter.indexOf('exists_in(') != -1) {
+                    filter = filter.slice(0, filter.indexOf('exists_in(')) + filter.slice(filter.indexOf(')') + 1)
+                }
+
                 return filter
             }
         },
         created() {
+            this.updateFilter(this.queryFilter)
             this.searchQuery().then(() => {
                 if (this.$route.query.view) {
                     let requestedView = this.savedViews.find(view => view.name === this.$route.query.view)

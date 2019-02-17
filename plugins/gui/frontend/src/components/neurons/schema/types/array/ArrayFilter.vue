@@ -1,14 +1,13 @@
 <template>
-    <input v-else type="number" v-model="data" @input="input">
+    <input type="number" v-model="data" @input="input">
 </template>
 
 <script>
-    import PrimitiveMixin from '../primitive'
-    import xStringEdit from '../string/StringEdit.vue'
+    import primitiveMixin from '../primitive'
 
 	export default {
 		name: 'x-array-filter',
-        mixins: [PrimitiveMixin]
+        mixins: [primitiveMixin]
 	}
 </script>
 

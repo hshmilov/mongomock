@@ -3,15 +3,11 @@
         <x-search v-model="searchText" placeholder="Search Query Name..."/>
         <x-table-wrapper title="Queries" :count="queries.length" :loading="loading">
             <template slot="actions">
-                <div v-if="selected.length === 1" class="x-btn link" :class="{disabled: !isAlertsWrite}"
-                     @click="createAlert">+ New Alert
-                </div>
-                <div v-if="selected && selected.length" @click="removeQuery"
-                     class="x-btn link" :class="{ disabled: readOnly }">Remove
-                </div>
+                <x-button v-if="selected.length === 1" :disabled="!isEnforcementsWrite" link @click="createEnforcement">+ New Enforcement</x-button>
+                <x-button v-if="selected && selected.length" :disabled="readOnly" link @click="removeQuery">Remove</x-button>
             </template>
-            <x-table slot="table" id-field="uuid" :data="filteredQueries" :fields="fields"
-                     v-model="readOnly? undefined: selected" :click-row-handler="runQuery"/>
+            <x-table slot="table" :data="filteredQueries" :fields="fields" v-model="readOnly? undefined: selected"
+                     :click-row-handler="runQuery"/>
         </x-table-wrapper>
     </div>
 </template>
@@ -20,15 +16,16 @@
     import xSearch from '../../neurons/inputs/SearchInput.vue'
     import xTableWrapper from '../../axons/tables/TableWrapper.vue'
     import xTable from '../../axons/tables/Table.vue'
+    import xButton from '../../axons/inputs/Button.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {UPDATE_DATA_VIEW} from '../../../store/mutations'
     import {FETCH_DATA_VIEWS, REMOVE_DATA_VIEW} from '../../../store/actions'
-    import {UPDATE_ALERT_VIEW} from '../../../store/modules/alerts'
+    import {SET_ENFORCEMENT, initTrigger} from '../../../store/modules/enforcements'
 
     export default {
         name: 'x-queries-table',
-        components: {xSearch, xTableWrapper, xTable},
+        components: {xSearch, xTableWrapper, xTable, xButton},
         props: {
             module: {required: true}, readOnly: {default: false}
         },
@@ -37,10 +34,10 @@
                 queries(state) {
                     return state[this.module].views.saved.data
                 },
-                isAlertsWrite(state) {
+                isEnforcementsWrite(state) {
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
-                    return user.permissions.Alerts === 'ReadWrite' || user.admin
+                    return user.permissions.Enforcements === 'ReadWrite' || user.admin
                 }
             }),
             filteredQueries() {
@@ -66,7 +63,7 @@
         },
         methods: {
             ...mapMutations({
-                updateView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_VIEW
+                updateView: UPDATE_DATA_VIEW, setEnforcement: SET_ENFORCEMENT
             }),
             ...mapActions({
                 fetchDataQueries: FETCH_DATA_VIEWS, removeDataQuery: REMOVE_DATA_VIEW
@@ -77,12 +74,26 @@
 
                 this.$router.push({path: `/${this.module}`})
             },
-            createAlert() {
-                if (!this.selected.length || !this.isAlertsWrite) return
-
-                this.updateAlertQuery(this.selected[0])
-                /* Navigating to new alerts - requested query will be selected there */
-                this.$router.push({path: '/alerts/new'})
+            createEnforcement() {
+                this.setEnforcement({
+                    uuid: 'new',
+                    actions: {
+                        main: null,
+                        success: [],
+                        failure: [],
+                        post: []
+                    },
+                    triggers: this.selected.map(name => {
+                        return {...initTrigger,
+                            name: 'Trigger',
+                            view: {
+                                name, entity: this.module
+                            }
+                        }
+                    })
+                })
+                /* Navigating to new enforcement - requested queries will be selected as triggers there */
+                this.$router.push({path: '/enforcements/new'})
             },
             removeQuery() {
                 this.removeDataQuery({module: this.module, ids: this.selected})

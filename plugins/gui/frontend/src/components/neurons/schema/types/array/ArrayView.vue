@@ -2,7 +2,7 @@
     <div class="x-array-view">
         <div v-if="schema.title === 'SEPARATOR' && dataSchemaItems.length" class="separator">&nbsp;</div>
         <template v-else-if="schema.title && dataSchemaItems.length">
-            <div @click="toggleCollapsed" class="x-btn link expander">{{ collapsed? '+': '-'}}</div>
+            <x-button link @click="toggleCollapsed" class="expander">{{ collapsed? '+': '-'}}</x-button>
             <label :title="schema.description || ''" class="label">{{ schema.title }}</label>
         </template>
         <div class="array">
@@ -28,13 +28,14 @@
 	import integer from '../numerical/IntegerView.vue'
 	import bool from '../boolean/BooleanView.vue'
 	import file from './FileView.vue'
+    import xButton from '../../../../axons/inputs/Button.vue'
 
-    import ArrayMixin from './array'
+    import arrayMixin from './array'
 
 	export default {
 		name: 'array',
-		mixins: [ ArrayMixin ],
-		components: { xTypeWrap, string, number, integer, bool, file },
+		mixins: [ arrayMixin ],
+		components: { xTypeWrap, string, number, integer, bool, file, xButton },
         computed: {
 			collapsable() {
 				return this.schema.title && this.schema.title !== 'SEPARATOR'
@@ -84,7 +85,7 @@
             background-color: rgba($theme-orange, 0.2);
             margin: 12px 0;
         }
-        .x-btn.link.expander {
+        .x-button.link.expander {
             display: inline-block;
             padding: 0;
             width: 20px;

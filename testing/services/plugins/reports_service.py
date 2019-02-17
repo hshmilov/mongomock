@@ -1,4 +1,9 @@
+from datetime import datetime
+
 from services.plugin_service import PluginService
+from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
+    ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD,\
+    LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD
 
 
 class ReportsService(PluginService):
@@ -8,13 +13,17 @@ class ReportsService(PluginService):
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 1:
-            self._update_schema_version_1()
+            self._update_to_schema(1, self.__update_schema_version_1)
 
-        if self.db_schema_version != 1:
+        if self.db_schema_version < 2:
+            self._update_to_schema(2, self.__update_schema_version_2)
+
+        if self.db_schema_version != 2:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
-    def __update_schema_version_1(collection):
+    def __update_schema_version_1(db):
+        collection = db['reports']
         for report_data in collection.find():
             triggers = report_data['triggers']
             new_triggers = {}
@@ -27,15 +36,120 @@ class ReportsService(PluginService):
             report_data['triggers'] = new_triggers
             collection.replace_one({'_id': report_data['_id']}, report_data)
 
-    def _update_schema_version_1(self):
-        print('upgrade to schema 1')
+    def __update_schema_version_2(self, db):
+        reports_collection = db['reports']
+        saved_actions_collection = db['saved_actions']
+
+        def _update_action_data(action_type: str, data, severity):
+            """
+            The inner data for some action has changed its form
+            """
+            if action_type == 'send_emails':
+                return {
+                    'mailSubject': data.get('mailSubject'),
+                    'emailList': data.get('emailList', []),
+                    'emailListCC': data.get('emailListCC', []),
+                    'sendDeviceCSV': data.get('sendDeviceCSV', False),
+                    'sendDevicesChangesCSV': data.get('sendDevicesChangesCSV', False)
+                }
+            if action_type in ['tag_entities', 'tag_all_entities']:
+                return {
+                    'tag_name': data
+                }
+            if action_type == 'notify_syslog':
+                return {
+                    'send_device_data': data,
+                    'severity': severity
+                }
+            if action_type == 'create_fresh_service_incident':
+                return {
+                    'email': data
+                }
+            if action_type == 'create_service_now_incident':
+                return {
+                    'severity': severity
+                }
+            return {}
+
+        def _update_action_name(name):
+            return 'tag' if name in ['tag_all_entities', 'tag_entities'] else name
+
+        for report_data in reports_collection.find():
+            actions = report_data[ACTIONS_FIELD]
+            run_on = 'AddedEntities' if any('tag_entities' in action['type'] for action in actions) else 'AllEntities'
+
+            actions = [
+                {
+                    'action_name': _update_action_name(action['type']),
+                    'config': _update_action_data(action['type'], action.get('data', {}), report_data['severity'])
+                }
+                for action
+                in actions
+            ]
+
+            def saved_action_from_action(action):
+                action_name = action['action_name']
+                count_of_this_type = saved_actions_collection.count_documents({
+                    'action.action_name': action_name
+                })
+                generated_name = f'{action_name}_{count_of_this_type}'
+                saved_actions_collection.insert_one({
+                    'name': generated_name,
+                    'action': action
+                })
+                return generated_name
+
+            actions = [saved_action_from_action(x) for x in actions]
+            new_actions = {
+                ACTIONS_MAIN_FIELD: next(iter(actions), None),
+                ACTIONS_SUCCESS_FIELD: [],
+                ACTIONS_FAILURE_FIELD: [],
+                ACTIONS_POST_FIELD: actions[1:]
+            }
+            conditions = report_data['triggers']
+            del conditions['every_discovery']
+
+            result = self.db.client['aggregator'][f'{report_data["view_entity"]}_db'].find({
+                '_id': {
+                    '$in': [x['_id'] for x in report_data['result']]
+                }
+            }, {
+                'internal_axon_id': 1
+            })
+            triggers = [{
+                'name': 'Trigger',
+                'view': {
+                    'name': report_data['view'],
+                    'entity': report_data['view_entity']
+                },
+                'period': report_data['period'],
+                'conditions': conditions,
+                'run_on': run_on,
+                TIMES_TRIGGERED_FIELD: report_data['triggered'],
+                LAST_TRIGGERED_FIELD: report_data[LAST_TRIGGERED_FIELD],
+                'result': [x['internal_axon_id'] for x in result]
+            }]
+
+            new_report = {
+                '_id': report_data['_id'],
+                LAST_UPDATE_FIELD: datetime.utcnow(),
+                ACTIONS_FIELD: new_actions,
+                'name': report_data['name'],
+                LAST_TRIGGERED_FIELD: report_data['last_triggered'],
+                TRIGGERS_FIELD: triggers
+            }
+
+            reports_collection.replace_one({'_id': report_data['_id']}, new_report)
+
+    def _update_to_schema(self, version, to_call):
+        print(f'upgrade to schema {version}')
         try:
             db = self.db.client
             for x in [x for x in db.database_names() if x.startswith('reports_')]:
-                self.__update_schema_version_1(collection=db[x]['reports'])
-            self.db_schema_version = 1
+                to_call(db=db[x])
+            self.db_schema_version = version
         except Exception as e:
-            print(f'Could not upgrade reports db to version 1. Details: {e}')
+            print(f'Could not upgrade reports db to version {version}. Details: {e}')
 
     def _request_watches(self, method, *vargs, **kwargs):
         return getattr(self, method)('reports', api_key=self.api_key, *vargs, **kwargs)

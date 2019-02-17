@@ -13,6 +13,14 @@ export default {
 		'schema': {required: true}, 'value': {required: true}, 'apiUpload': {}
 	},
 	computed: {
+		data: {
+			get() {
+				return this.value || []
+			},
+			set(value) {
+				this.$emit('input', value)
+			}
+		},
 		isOrderedObject() {
 			return Array.isArray(this.schema.items)
 		},
@@ -64,13 +72,7 @@ export default {
 	},
 	data () {
 		return {
-			data: { ...this.value },
 			collapsed: false
-		}
-	},
-	watch: {
-		value(newValue) {
-			this.data = { ...newValue }
 		}
 	},
 	methods: {

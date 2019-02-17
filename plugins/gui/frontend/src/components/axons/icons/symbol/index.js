@@ -1,10 +1,12 @@
 /* eslint-disable */
 require('./error')
+require('./failure')
 require('./funnel')
 require('./histogram')
 require('./info')
 require('./line')
 require('./pie')
+require('./post')
 require('./running')
 require('./success')
 require('./summary')

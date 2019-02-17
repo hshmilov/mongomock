@@ -142,7 +142,7 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         """
         if isinstance(result, CorrelationResult):
             try:
-                self.link_adapters(self._entity_to_correlate, result, rebuild=False)
+                self.link_adapters(self._entity_to_correlate, result)
             except Exception:
                 logger.warning(f'Failed linking for some reason, {result}')
         if isinstance(result, WarningResult):
@@ -166,7 +166,6 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         logger.info(
             f'Correlator {self.plugin_unique_name} started to correlate {len(entities_to_correlate)} entities')
         self._map_correlation(entities_to_correlate)
-        self._request_db_rebuild(sync=False)
 
     @property
     @abstractmethod

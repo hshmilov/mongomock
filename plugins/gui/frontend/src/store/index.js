@@ -55,18 +55,19 @@ import {
 	GET_DATA_BY_ID, getDataByID,
 	SINGLE_ADAPTER, singleAdapter
 } from './getters'
-import { devices } from './modules/devices'
-import { users } from './modules/users'
-import { explorer } from './modules/explorer'
 import { adapters } from './modules/adapters'
-import { alerts } from './modules/alerts'
-import { notifications } from './modules/notifications'
 import { auth } from './modules/auth'
 import { constants } from './modules/constants'
 import { dashboard } from './modules/dashboard'
+import { devices } from './modules/devices'
+import { enforcements } from './modules/enforcements'
+import { explorer } from './modules/explorer'
+import { notifications } from './modules/notifications'
+import { onboarding } from './modules/onboarding'
 import { reports } from './modules/reports'
 import { settings } from './modules/settings'
-import { onboarding } from './modules/onboarding'
+import { tasks } from './modules/tasks'
+import { users } from './modules/users'
 import * as medicalConfig from '../constants/config.json'
 
 Vue.use(Vuex)
@@ -145,14 +146,15 @@ export default new Vuex.Store({
 		users,
 		explorer,
 		adapters,
-		alerts,
         notifications,
         auth,
         constants,
         dashboard,
 		reports,
 		settings,
-		onboarding
+		onboarding,
+        enforcements,
+        tasks
     }
 
 })

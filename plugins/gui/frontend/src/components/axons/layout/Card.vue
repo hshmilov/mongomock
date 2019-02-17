@@ -1,17 +1,32 @@
 <template>
     <div class="x-card">
-        <div class="x-header">
-            <div class="x-title" :title="title">{{title}}</div>
-            <div v-if="removable" class="x-remove" @click="$emit('remove')">x</div>
+        <div class="header">
+            <x-button link v-if="reversible" class="back" @click="$emit('back')">&lt;</x-button>
+            <template v-if="logo">
+                <x-title :logo="logo">{{title}}</x-title>
+            </template>
+            <div class="title" :title="title" v-else>{{title}}</div>
+            <x-button link v-if="removable" class="remove" @click="$emit('remove')">x</x-button>
         </div>
         <slot></slot>
     </div>
 </template>
 
 <script>
+    import xTitle from './Title.vue'
+    import xButton from '../inputs/Button.vue'
+
     export default {
         name: 'x-card',
-        props: {title: {required: true}, removable: {default: false}}
+        components: {
+            xTitle, xButton
+        },
+        props: {
+            title: {required: true},
+            logo: {},
+            removable: {default: false},
+            reversible: {default: false}
+        }
     }
 </script>
 
@@ -24,12 +39,31 @@
         padding: 12px;
         border-radius: 2px;
 
-        > .x-header {
-            flex: 0 1 auto;
+        > .header {
             display: flex;
+            width: 100%;
             margin-bottom: 12px;
 
-            > .x-title {
+            .back {
+                font-size: 24px;
+            }
+
+            >.x-title {
+                width: calc(100% - 36px);
+                .md-image {
+                    height: 48px;
+                }
+                .text {
+                    font-size: 24px;
+                    margin-left: 24px;
+                    text-overflow: ellipsis;
+                    width: calc(100% - 84px);
+                    overflow-x: hidden;
+                    line-height: 48px;
+                }
+            }
+
+            > .title {
                 flex: 1 0 auto;
                 font-size: 16px;
                 width: 280px;
@@ -38,7 +72,7 @@
                 overflow: hidden;
             }
 
-            .x-remove {
+            .remove {
                 padding: 0 4px;
                 margin-right: -2px;
                 line-height: 18px;

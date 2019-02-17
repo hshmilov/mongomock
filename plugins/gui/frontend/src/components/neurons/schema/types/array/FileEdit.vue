@@ -9,14 +9,19 @@
         <template v-else>
             <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file" :disabled="readOnly" :id="schema.name" />
             <div class="file-name" :class="{'error-border': error}">{{value ? value.filename : "No file chosen"}}</div>
-            <div class="x-btn link" :class="{ disabled: readOnly }" @click="selectFile">Choose file</div>
+            <x-button link :disabled="readOnly" @click="selectFile">Choose file</x-button>
         </template>
     </div>
 </template>
 
 <script>
+    import xButton from '../../../../axons/inputs/Button.vue'
+
+    import {currentHost} from '../../../../../store/actions'
+
     export default {
         name: 'x-array-edit',
+        components: { xButton },
         props: ['schema', 'value', 'apiUpload', 'readOnly'],
         data() {
             return {
@@ -28,7 +33,7 @@
         },
         methods: {
         	selectFile() {
-        	    if (this.readOnly) return
+                event.preventDefault()
         		this.$refs.file.click()
             },
             uploadFile(uploadEvent) {
@@ -45,7 +50,7 @@
 
                 this.uploading = true
                 let request = new XMLHttpRequest()
-                request.open('POST', `/api/${this.apiUpload}/upload_file`)
+                request.open('POST', `${currentHost}/api/${this.apiUpload}/upload_file`)
                 request.onload = (result) => {
                     let res = JSON.parse(result.srcElement.responseText)
                     this.uploading = false
@@ -89,7 +94,7 @@
             top: 0;
             z-index: 0;
         }
-        .x-btn.link {
+        .x-button.link {
             color: $theme-black;
             font-size: 12px;
             font-weight: 200;
@@ -118,7 +123,7 @@
             }
         }
     }
-    .x-form .array .object .upload-file input {
+    .x-form .x-array-edit .object .upload-file input {
         width: 10px;
     }
 </style>

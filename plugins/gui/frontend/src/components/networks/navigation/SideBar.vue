@@ -1,5 +1,5 @@
 <template>
-    <aside class="x-side-bar" v-bind:class="{ collapse: collapseSidebar }">
+    <aside class="x-side-bar" :class="{ collapse: collapseSidebar }">
         <div class="x-user">
             <div class="x-user-profile">
                 <img :src="userDetails.pic"/>
@@ -16,22 +16,22 @@
             </div>
         </div>
         <x-nav v-if="medicalConfig">
-            <x-nav-item v-bind="navigationLinkProps('Infuser Manager')" icon="pairing" :exact="true" id="pairing"/>
+            <x-nav-item v-bind="navigationProps('Infuser Manager')" icon="pairing" :exact="true" id="pairing"/>
             <x-nested-nav name="Settings" icon="settings" childRoot="/infuser_settings">
-                <x-nav-item v-bind="navigationLinkProps('Infuser')" id="infuser"/>
-                <x-nav-item v-bind="navigationLinkProps('Treatments')" id="treatments"/>
-                <x-nav-item v-bind="navigationLinkProps('Drug List')" id="drug-list"/>
-                <x-nav-item v-bind="navigationLinkProps('Preset Programs')" id="preset-programs"/>
+                <x-nav-item v-bind="navigationProps('Infuser')" id="infuser"/>
+                <x-nav-item v-bind="navigationProps('Treatments')" id="treatments"/>
+                <x-nav-item v-bind="navigationProps('Drug List')" id="drug-list"/>
+                <x-nav-item v-bind="navigationProps('Preset Programs')" id="preset-programs"/>
             </x-nested-nav>
         </x-nav>
         <x-nav v-else>
-            <x-nav-item v-bind="navigationLinkProps('Dashboard')" icon="dashboard" :exact="true" id="dashboard"/>
-            <x-nav-item v-bind="navigationLinkProps('Devices')" icon="devices" id="devices"/>
-            <x-nav-item v-bind="navigationLinkProps('Users')" icon="users" id="users"/>
-            <x-nav-item v-bind="navigationLinkProps('Alerts')" icon="alert" id="alerts"/>
-            <x-nav-item v-bind="navigationLinkProps('Adapters')" icon="adapter" id="adapters"/>
-            <x-nav-item v-bind="navigationLinkProps('Reports')" icon="report" id="reports"/>
-            <x-nav-item v-bind="navigationLinkProps('Instances')" icon="instances" id="instances"/>
+            <x-nav-item v-bind="navigationProps('Dashboard', 'dashboard')" :exact="true" />
+            <x-nav-item v-bind="navigationProps('Devices', 'devices')" />
+            <x-nav-item v-bind="navigationProps('Users', 'users')" />
+            <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
+            <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
+            <x-nav-item v-bind="navigationProps('Reports', 'reports')" />
+            <x-nav-item v-bind="navigationProps('Instances', 'instances')" />
         </x-nav>
     </aside>
 </template>
@@ -66,10 +66,13 @@
         }),
         methods: {
             ...mapActions({logout: LOGOUT}),
-            navigationLinkProps(name) {
+            navigationProps(name, id, title) {
                 let restricted = this.isRestricted(name)
                 return {
+                    id,
                     name,
+                    title,
+                    icon: id,
                     disabled: restricted,
                     clickHandler: restricted ? this.notifyAccess : undefined
                 }

@@ -9,16 +9,16 @@
                 <h3 class="title">Login</h3>
                 <x-form :schema="schema" v-if="!staticConfiguration.medicalConfig" v-model="credentials" @input="initError"
                         @validate="onValidate" @submit="onLogin" :error="auth.currentUser.error"/>
-                <button v-if="!staticConfiguration.medicalConfig" class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
+                <x-button v-if="!staticConfiguration.medicalConfig" :disabled="!complete" @click="onLogin">Login</x-button>
                 <div v-if="(oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled) && !staticConfiguration.medicalConfig"
                      class="t-center mt-12">Or</div>
                 <div class="login-options">
-                    <a @click="onOktaLogin" v-if="oktaConfig.enabled" id="okta_login_link" class="x-btn link"
-                       :class="{'grid-span2': singleLoginMethod}">Login with Okta</a>
-                    <a @click="onSamlLogin" v-if="samlConfig.enabled" id="saml_login_link" class="x-btn link"
-                       :class="{'grid-span2': singleLoginMethod}">Login with {{ samlConfig.idp_name }}</a>
-                    <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" id="ldap_login_link" class="x-btn link"
-                       :class="{'grid-span2': singleLoginMethod}">Login with LDAP</a>
+                    <x-button v-if="oktaConfig.enabled" @click="onOktaLogin" id="okta_login_link" link
+                       :class="{'grid-span2': singleLoginMethod}">Login with Okta</x-button>
+                    <x-button v-if="samlConfig.enabled" @click="onSamlLogin" id="saml_login_link" link
+                       :class="{'grid-span2': singleLoginMethod}">Login with {{ samlConfig.idp_name }}</x-button>
+                    <x-button v-if="ldapConfig.enabled" @click="toggleLdapLogin" id="ldap_login_link" link
+                       :class="{'grid-span2': singleLoginMethod}">Login with LDAP</x-button>
                 </div>
             </div>
         </div>
@@ -31,8 +31,8 @@
                 </div>
             </div>
             <div slot="footer">
-                <button class="x-btn link" @click="toggleLdapLogin">Cancel</button>
-                <button class="x-btn" :class="{disabled: !ldapData.complete}" @click="onLdapLogin">Login</button>
+                <x-button link @click="toggleLdapLogin">Cancel</x-button>
+                <x-button :disabled="!ldapData.complete" @click="onLdapLogin">Login</x-button>
             </div>
         </x-modal>
     </div>
@@ -41,6 +41,7 @@
 <script>
     import xForm from '../../neurons/schema/Form.vue'
     import xModal from '../../axons/popover/Modal.vue'
+    import xButton from '../../axons/inputs/Button.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS} from '../../../store/modules/auth'
@@ -48,7 +49,7 @@
 
     export default {
         name: 'x-login',
-        components: {xForm, xModal},
+        components: {xForm, xModal, xButton},
         watch: {
             oktaConfig() {
                 if (this.oktaConfig.enabled === true && this.$route.query.login_type === 'okta_login') {
@@ -121,7 +122,6 @@
                 this.ldapData.complete = valid
             },
             onLdapLogin() {
-                if (!this.ldapData.complete) return
                 if (!this.ldapData.credentials.domain) {
                     // workaround for default values not showing up
                     this.ldapData.credentials.domain = this.ldapConfig.default_domain
@@ -129,7 +129,6 @@
                 this.ldapLogin(this.ldapData.credentials)
             },
             onLogin() {
-                if (!this.complete) return
                 this.login(this.credentials)
             },
             onOktaLogin() {
@@ -204,7 +203,7 @@
                 }
 
                 .x-form {
-                    .array {
+                    .x-array-edit {
                         display: block;
 
                         .object {
@@ -218,7 +217,7 @@
                     }
                 }
 
-                .x-btn {
+                .x-button {
                     width: 100%;
                 }
 
@@ -227,7 +226,7 @@
                     grid-template-columns: 1fr 1fr;
                     grid-gap: 12px 0;
 
-                    .x-btn.link {
+                    .x-button.link {
                         width: auto;
                     }
 

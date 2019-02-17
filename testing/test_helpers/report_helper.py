@@ -17,8 +17,10 @@ def get_alert_dict(query_name, report_name):
         ],
         'result': [
         ],
-        'view': query_name,
-        'view_entity': 'devices',
+        'view': {
+            'name': query_name,
+            'entity': 'devices'
+        },
         'retrigger': True,
         'triggered': 0,
         'name': report_name,

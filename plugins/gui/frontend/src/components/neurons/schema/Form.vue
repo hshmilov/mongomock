@@ -1,7 +1,6 @@
 <template>
     <form class="x-form" @keyup.enter.stop="$emit('submit')">
-        <x-array-edit v-model="data" :schema="schema" :api-upload="apiUpload" :read-only="readOnly"
-                      @input="$emit('input', data)" @validate="onValidate"/>
+        <x-array-edit v-model="data" :schema="schema" :api-upload="apiUpload" :read-only="readOnly" @validate="onValidate"/>
         <div class="error">
             <template v-if="error">{{error}}</template>
             <template v-else-if="validity.error">{{ validity.error }}</template>
@@ -24,9 +23,18 @@
         name: 'x-form',
         components: {xArrayEdit},
         props: ['value', 'schema', 'error', 'apiUpload', 'readOnly'],
+        computed: {
+            data: {
+                get() {
+                    return this.value
+                },
+                set(value) {
+                    this.$emit('input', value)
+                }
+            }
+        },
         data() {
             return {
-                data: {...this.value},
                 validity: {
                     fields: [], error: ''
                 }
@@ -64,11 +72,6 @@
                     this.data[item.name] = undefined
                 })
             }
-        },
-        watch: {
-            value(newValue) {
-                this.data = {...newValue}
-            }
         }
     }
 </script>
@@ -77,7 +80,7 @@
     .x-form {
         font-size: 14px;
 
-        .array {
+        > .x-array-edit {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-gap: 12px 24px;
@@ -87,7 +90,6 @@
 
                 input, select {
                     width: 100%;
-                    border: 1px solid $grey-2;
 
                     &.error-border {
                         border-color: $indicator-error;

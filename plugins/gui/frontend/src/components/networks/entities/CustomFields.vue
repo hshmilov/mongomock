@@ -22,13 +22,13 @@
                                @input="onInputValue" :class="{'border-error': empty(field.value), 'item-value': true}"/>
                     <div v-else></div>
                 </template>
-                <button v-if="field.new" @click="removeField(i)" class="x-btn link">X</button>
+                <x-button v-if="field.new" @click="removeField(i)" link>X</x-button>
                 <div v-else></div>
             </div>
         </div>
         <div class="footer">
-            <button @click="addPredefinedField" class="x-btn link">+ Predefined field</button>
-            <button @click="addCustomField" class="x-btn link">+ New field</button>
+            <x-button @click="addPredefinedField" link>+ Predefined field</x-button>
+            <x-button @click="addCustomField" link>+ New field</x-button>
             <div v-if="error" class="error-text">{{ error }}</div>
         </div>
     </div>
@@ -40,10 +40,11 @@
     import number from '../../neurons/schema/types/numerical/NumberEdit.vue'
     import integer from '../../neurons/schema/types/numerical/IntegerEdit.vue'
     import bool from '../../neurons/schema/types/boolean/BooleanEdit.vue'
+    import xButton from '../../axons/inputs/Button.vue'
 
     export default {
         name: 'x-entity-custom-fields',
-        components: {xSelect, string, number, integer, bool},
+        components: {xSelect, string, number, integer, bool, xButton},
         props: {
             value: {},
             module: {required: true},
@@ -199,7 +200,7 @@
                     }
                 }
 
-                .x-btn.link {
+                .x-button.link {
                     line-height: 30px;
                     padding: 0;
                 }

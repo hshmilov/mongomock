@@ -48,9 +48,7 @@ def test_execution_modules(
 
     # Delete all devices beforehand.
     axonius_system.get_devices_db().drop()
-    axonius_system.get_devices_db_view().drop()
     axonius_system.get_users_db().drop()
-    axonius_system.get_users_db_view().drop()
 
     # Run a cycle, first just with AD.
     ad_fixture.add_client(ad_client1_details)
@@ -369,19 +367,19 @@ def test_execution_modules(
     assert pm_status_success > len(execution_eligible_devices) / 5
 
     # Check for users
-    assert axonius_system.get_users_db_view().find({'specific_data.data.is_local': True}).count() > 10
-    assert axonius_system.get_users_db_view().find({'specific_data.data.is_admin': True}).count() > 5
-    assert axonius_system.get_users_db_view().find({'specific_data.data.account_disabled': True}).count() > 5
-    assert axonius_system.get_users_db_view().find({'specific_data.data.is_locked': True}).count() > 0
-    assert axonius_system.get_users_db_view().find({'specific_data.data.password_not_required': True}).count() > 0
-    assert axonius_system.get_users_db_view().find(
-        {'specific_data.data.last_seen_in_devices': {'$exists': True}}).count() > 5
-    assert axonius_system.get_users_db_view().find(
-        {'specific_data.data.last_seen_in_devices': {'$exists': True}}).count() > 5
-    assert axonius_system.get_users_db_view().find(
-        {'specific_data.data.image': {'$exists': True}}).count() > 2
-    assert axonius_system.get_users_db_view().find(
-        {'specific_data.data.user_sid': TESTDOMAIN_USER_DUPLICATION_SID}).count() == 1, \
+    assert axonius_system.get_users_db().find({'adapters.data.is_local': True}).count() > 10
+    assert axonius_system.get_users_db().find({'adapters.data.is_admin': True}).count() > 5
+    assert axonius_system.get_users_db().find({'adapters.data.account_disabled': True}).count() > 5
+    assert axonius_system.get_users_db().find({'adapters.data.is_locked': True}).count() > 0
+    assert axonius_system.get_users_db().find({'adapters.data.password_not_required': True}).count() > 0
+    assert axonius_system.get_users_db().find(
+        {'adapters.data.last_seen_in_devices': {'$exists': True}}).count() > 5
+    assert axonius_system.get_users_db().find(
+        {'adapters.data.last_seen_in_devices': {'$exists': True}}).count() > 5
+    assert axonius_system.get_users_db().find(
+        {'adapters.data.image': {'$exists': True}}).count() > 2
+    assert axonius_system.get_users_db().find(
+        {'adapters.data.user_sid': TESTDOMAIN_USER_DUPLICATION_SID}).count() == 1, \
         f'Duplication check failed, sid {TESTDOMAIN_USER_DUPLICATION_SID} should appear only once because AD gets ' \
         f'correlation with wmi'
 

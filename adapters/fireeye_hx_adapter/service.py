@@ -8,7 +8,7 @@ from axonius.fields import Field
 from axonius.clients.rest.exception import RESTException
 from fireeye_hx_adapter.connection import FireeyeHxConnection
 from fireeye_hx_adapter import consts
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTConnection
 
 

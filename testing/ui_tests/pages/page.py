@@ -59,7 +59,7 @@ return (function(el, container){
 '''
 
 BUTTON_DEFAULT_TYPE = 'button'
-BUTTON_DEFAULT_CLASS = 'x-btn'
+BUTTON_DEFAULT_CLASS = 'x-button'
 BUTTON_TYPE_A = 'a'
 X_BODY = '.x-body'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
@@ -199,7 +199,7 @@ class Page:
 
     # this is a special case where the usual get_button doesn't work, name will be changed later
     def get_special_button(self, text):
-        elems = self.driver.find_elements_by_css_selector('button.x-btn')
+        elems = self.driver.find_elements_by_css_selector('button.x-button')
         for elem in elems:
             if elem.text == text:
                 return elem

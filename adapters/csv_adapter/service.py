@@ -9,8 +9,9 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.clients.rest.consts import DEFAULT_TIMEOUT
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import make_dict_from_csv, normalize_var_name, parse_date
+from axonius.utils.parsing import make_dict_from_csv, normalize_var_name
 from axonius.consts.csv_consts import get_csv_field_names
 
 logger = logging.getLogger(f'axonius.{__name__}')

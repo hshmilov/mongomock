@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from cynet_adapter.connection import CynetConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')

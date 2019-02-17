@@ -36,7 +36,7 @@ class MyAccountPage(Page):
 
     def is_save_button_enabled(self):
         button = self.get_save_button()
-        return button.get_attribute('class') != 'x-btn disabled'
+        return button.get_attribute('class') != 'x-button disabled'
 
     def click_save_button(self):
         self.get_save_button().click()

@@ -1,7 +1,7 @@
 <template>
     <div>
         <x-dropdown size="sm" align="right" :arrow="false" ref="dropdown">
-            <button slot="trigger" class="x-btn link">Actions</button>
+            <x-button slot="trigger" link>Actions</x-button>
             <x-menu slot="content">
                 <x-menu-item v-for="item in $children" v-if="item.title" :key="item.title"
                                   :title="item.title" @click="activate(item)"/>
@@ -29,6 +29,7 @@
     import xActionMenuItem from './ActionMenuItem.vue'
 	import xTagModal from '../popover/TagModal.vue'
     import xCustomFields from '../../networks/entities/CustomFields.vue'
+    import xButton from '../../axons/inputs/Button.vue'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
     import { GET_DATA_BY_ID } from '../../../store/getters'
@@ -38,7 +39,7 @@
 		name: 'x-action-menu',
         components: {
 			xDropdown, 'x-menu': xMenu, 'x-menu-item': xMenuItem,
-            xActionMenuItem, xTagModal, xCustomFields
+            xActionMenuItem, xTagModal, xCustomFields, xButton
         },
         props: { module: {required: true}, entities: {required: true} },
         computed: {

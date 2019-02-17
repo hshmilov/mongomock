@@ -5,17 +5,14 @@
         <x-tabs v-show="!loading" @click="determineState" @updated="initTourState">
             <x-tab title="Adapters Data" id="specific" key="specific" v-if="!singleAdapter" :selected="true">
                 <x-tabs :vertical="true">
-                    <x-tab v-for="item, i in sortedSpecificData" :id="item.id" :key="i" :selected="!i"
-                           :title="item.plugin_name" :logo="true" :outdated="item.outdated">
+                    <x-tab v-for="item, i in sortedSpecificData" :id="item.id" :key="i" :selected="!i" :outdated="item.outdated"
+                           :title="item.pretty_name || item.plugin_name" :logo="`adapters/${item.plugin_name}`">
                         <div class="d-flex content-header">
                             <div class="flex-expand server-info">
-                                <template v-if="item.client_used">
-                                    Data From: {{ item.client_used }}
-                                </template>
+                                <template v-if="item.client_used">Data From: {{ item.client_used }}</template>
                             </div>
-                            <button v-if="isGuiAdapterData(item)" @click="editFields" class="x-btn">Edit Fields</button>
-                            <button v-else @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced':
-                                'basic'}}</button>
+                            <x-button v-if="isGuiAdapterData(item)" @click="editFields">Edit Fields</x-button>
+                            <x-button v-else @click="toggleView" link>View {{viewBasic? 'advanced': 'basic'}}</x-button>
                         </div>
                         <x-list v-if="viewBasic || isGuiAdapterData(item)" :data="item"
                                 :schema="adapterSchema(item.plugin_name)"/>
@@ -54,12 +51,12 @@
             </x-tab>
             <x-tab title="Tags" id="tags" key="tags">
                 <div class="tag-edit">
-                    <button @click="activateTag" class="x-btn link" :class="{disabled: readOnly}">Edit Tags</button>
+                    <x-button @click="activateTag" link :disabled="readOnly">Edit Tags</x-button>
                 </div>
                 <div class="x-grid x-grid-col-2 w-lg">
                     <template v-for="label in entity.labels">
                         <div>{{ label }}</div>
-                        <div class="x-btn link" :class="{ disabled: readOnly }" @click="removeTag(label)">Remove</div>
+                        <x-button link :disabled="readOnly" @click="removeTag(label)">Remove</x-button>
                     </template>
                 </div>
             </x-tab>
@@ -77,15 +74,16 @@
 <script>
     import xTabs from '../../axons/tabs/Tabs.vue'
     import xTab from '../../axons/tabs/Tab.vue'
-    import xList from '../../neurons/schema/List.vue'
     import xTable from '../../axons/tables/Table.vue'
+    import xButton from '../../axons/inputs/Button.vue'
+    import xModal from '../../axons/popover/Modal.vue'
+    import xToast from '../../axons/popover/Toast.vue'
+    import xList from '../../neurons/schema/List.vue'
     import xCalendar from '../../neurons/schema/Calendar.vue'
     import xCustom from '../../neurons/schema/Custom.vue'
-    import xModal from '../../axons/popover/Modal.vue'
     import xTagModal from '../../neurons/popover/TagModal.vue'
     import xNotes from './Notes.vue'
     import xCustomFields from './CustomFields.vue'
-    import xToast from '../../axons/popover/Toast.vue'
     import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
     import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
@@ -93,6 +91,7 @@
     import {FETCH_DATA_BY_ID, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS, FETCH_DATA_HYPERLINKS} from '../../../store/actions'
     import {CHANGE_TOUR_STATE, UPDATE_TOUR_STATE} from '../../../store/modules/onboarding'
     import {guiPluginName, initCustomData} from '../../../constants/entities'
+    import {pluginMeta} from '../../../constants/plugin_meta'
 
     const lastSeenByModule = {
         'users': 'last_seen_in_devices',
@@ -101,8 +100,8 @@
     export default {
         name: 'x-entity-view',
         components: {
-            xTabs, xTab, xList, xTable, xCalendar, xCustom,
-            xModal, xTagModal, xNotes, xCustomFields, xToast, PulseLoader
+            xTabs, xTab, xList, xTable, xButton, xModal, xToast,
+            xCalendar, xCustom, xTagModal, xNotes, xCustomFields, PulseLoader
         },
         props: {module: {required: true}, readOnly: {default: false}},
         data() {
@@ -183,13 +182,18 @@
                     return new Date(secondSeen) - new Date(firstSeen)
                 }).map((item) => {
                     item.id = `${item.plugin_unique_name}_${item.data.id}`
+                    if (pluginMeta[item.plugin_name]) {
+                        item.pretty_name = pluginMeta[item.plugin_name].title
+                    }
                     if (lastSeen.has(item.plugin_name)) return {...item, outdated: true}
                     lastSeen.add(item.plugin_name)
                     return item
                 })
                 if (res[res.length - 1].plugin_name !== guiPluginName) {
                     // Add initial gui adapters data
-                    res.push(initCustomData(this.module))
+                    res.push({...initCustomData(this.module),
+                        pretty_name: pluginMeta[initCustomData(this.module).plugin_name].title
+                    })
                 }
                 return res
             },
@@ -206,7 +210,7 @@
             loading() {
                 return this.fetchingData || !this.fields || !this.fields.generic || !this.fields.schema
                     || !this.entity || this.entity.internal_axon_id !== this.entityId
-                    || this.entityDate !== this.historyDate
+                    || (this.historyDate && this.entityDate !== this.historyDate)
             },
             entityDate() {
                 if (!this.entity.accurate_for_datetime) return null
@@ -241,11 +245,11 @@
                 this.fetchDataByID({module: this.module, id: this.entityId, history: this.history})
             },
             removeTag(label) {
-                if (!this.$refs || !this.$refs.tagModal || this.readOnly) return
+                if (!this.$refs || !this.$refs.tagModal) return
                 this.$refs.tagModal.removeEntitiesLabels([label])
             },
             activateTag() {
-                if (!this.$refs || !this.$refs.tagModal || this.readOnly) return
+                if (!this.$refs || !this.$refs.tagModal) return
                 this.$refs.tagModal.activate()
             },
             toggleView() {
@@ -415,7 +419,7 @@
                 }
             }
 
-            .tag-edit .x-btn {
+            .tag-edit .x-button {
                 text-align: right;
             }
         }

@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from ui_tests.tests.ui_test_base import TestBase
@@ -31,6 +33,9 @@ class TestDashboard(TestBase):
     def test_dashboard_sanity(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
+
+        # Allow the caches to be rebuilt
+        time.sleep(5)
 
         # This triggers a dashboard reload
         self.settings_page.switch_to_page()
@@ -75,6 +80,14 @@ class TestDashboard(TestBase):
     def test_dashboard_coverage_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
+
+        # Allow the caches to be rebuilt
+        time.sleep(5)
+
+        # This triggers a dashboard reload
+        self.settings_page.switch_to_page()
+        self.dashboard_page.switch_to_page()
+
         self.dashboard_page.click_uncovered_pie_slice()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.find_search_value() == self.UNCOVERED_QUERY

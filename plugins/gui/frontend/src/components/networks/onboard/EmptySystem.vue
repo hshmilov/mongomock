@@ -5,18 +5,20 @@
         <div class="content">Congratulations! You are one step closer to<br>having all your assets visible in one place.
         </div>
         <div class="footer">
-            <button @click="onClickTour" class="x-btn">SHOW ME HOW</button>
+            <x-button @click="onClickTour">SHOW ME HOW</x-button>
         </div>
     </div>
 </template>
 
 <script>
+    import xButton from '../../axons/inputs/Button.vue'
+
     import {mapMutations} from 'vuex'
     import {START_TOUR, CHANGE_TOUR_STATE, STOP_TOUR} from '../../../store/modules/onboarding'
 
     export default {
         name: 'x-empty-system',
-        components: {},
+        components: {xButton},
         data() {
             return {
                 isActive: true
@@ -53,7 +55,7 @@
         .footer {
             text-align: center;
 
-            .x-btn {
+            .x-button {
                 width: auto;
             }
         }

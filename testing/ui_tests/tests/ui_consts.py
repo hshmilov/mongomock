@@ -44,9 +44,9 @@ class QueriesScreen:
     query_1_name = 'test_saved_query_1'
 
 
-class Alerts:
-    alert_name_1 = 'test_alert_1'
-    alert_query_1 = 'Windows Operating System'
+class Enforcements:
+    enforcement_name_1 = 'test_enforcement_1'
+    enforcement_query_1 = 'Windows Operating System'
 
 
 class Saml:

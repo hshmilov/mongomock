@@ -8,13 +8,13 @@
 </template>
 
 <script>
-    import HyperlinkMixin from '../hyperlink.js'
+    import hyperlinkMixin from '../hyperlink.js'
     import {mapState} from 'vuex'
 
     export default {
         name: 'x-integer-view',
         props: ['schema', 'value'],
-        mixins: [HyperlinkMixin],
+        mixins: [hyperlinkMixin],
         computed: {
             ...mapState({
                 percentageThresholds(state) {

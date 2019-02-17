@@ -2,7 +2,7 @@
     <div class="x-histogram" :class="{disabled: readOnly, condensed}">
         <div v-for="item, index in limitedData" class="histogram-item" @click="$emit('click-one', index)">
             <div class="item-bar">
-                <img v-if="condensed" :src="require(`Logos/${item.name}.png`)" width="30">
+                <img v-if="condensed" :src="require(`Logos/adapters/${item.name}.png`)" width="30">
                 <div class="bar-container">
                     <div :style="{width: calculateBarHeight(item.value) + 'px'}">
                         <div class="bar growing-x" :title="item.name"></div>

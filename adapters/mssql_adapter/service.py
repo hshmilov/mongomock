@@ -1,13 +1,15 @@
 import datetime
 import logging
 
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.clients.mssql.connection import MSSQLConnection
-from axonius.utils.parsing import normalize_var_name, parse_date
+from axonius.utils.parsing import normalize_var_name
 from axonius.fields import Field
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 from axonius.consts.csv_consts import get_csv_field_names

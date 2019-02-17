@@ -71,7 +71,7 @@ class SyslogService(WeaveService):
 
     @property
     def image(self):
-        return 'balabit/syslog-ng'
+        return 'axonius_syslog'
 
     @property
     def tcp_port(self):

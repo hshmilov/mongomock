@@ -53,4 +53,4 @@ class ReportPage(EntitiesPage):
             self.click_button('Save')
         except Exception:
             # safe to remove after 1.14
-            self.click_button('Save', button_type='a', call_space=False)
+            self.click_button('Save', call_space=False)

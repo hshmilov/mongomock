@@ -1,7 +1,6 @@
 <template>
     <x-page title="notifications">
-        <x-table module="notifications" title="Notifications" id-field="uuid" @click-row="navigateNotification"
-                 ref="table"/>
+        <x-table module="notifications" title="Notifications" @click-row="navigateNotification" ref="table"/>
     </x-page>
 </template>
 

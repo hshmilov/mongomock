@@ -8,8 +8,7 @@
                                 @validate="updateSchedulerValidity" :read-only="isReadOnly"
                                 api-upload="plugins/system_scheduler"/>
                         <div class="place-right">
-                            <button class="x-btn" id="research-settings-save" :class="{disabled: isResearchDisabled}"
-                                    @click="saveSchedulerSettings">Save</button>
+                            <x-button :disabled="isResearchDisabled" id="research-settings-save" @click="saveSchedulerSettings">Save</x-button>
                         </div>
                     </template>
                 </div>
@@ -21,8 +20,7 @@
                                 :read-only="isReadOnly" v-model="coreSettings.config" api-upload="plugins/core"/>
                         <div class="footer">
                             <x-maintenance :read-only="isReadOnly" v-if="$refs.global && $refs.global.isActive"/>
-                            <button class="x-btn" :class="{ disabled: !coreComplete || isReadOnly }"
-                                    @click="saveGlobalSettings" id="global-settings-save">Save</button>
+                            <x-button :disabled="!coreComplete || isReadOnly" @click="saveGlobalSettings" id="global-settings-save">Save</x-button>
                         </div>
                     </template>
                 </div>
@@ -33,8 +31,7 @@
                         <x-form :schema="guiSettings.schema" @validate="updateGuiValidity" :read-only="isReadOnly"
                                 v-model="guiSettings.config" api-upload="plugins/gui"/>
                         <div class="place-right">
-                            <button class="x-btn" id="gui-settings-save" :class="{disabled: !guiComplete || isReadOnly}"
-                                    @click="saveGuiSettings">Save</button>
+                            <x-button :disabled="!guiComplete || isReadOnly" id="gui-settings-save" @click="saveGuiSettings">Save</x-button>
                         </div>
                     </template>
                 </div>
@@ -56,9 +53,10 @@
     import xPage from '../axons/layout/Page.vue'
     import xTabs from '../axons/tabs/Tabs.vue'
     import xTab from '../axons/tabs/Tab.vue'
+    import xButton from '../axons/inputs/Button.vue'
+    import xToast from '../axons/popover/Toast.vue'
     import xForm from '../neurons/schema/Form.vue'
     import xCustom from '../neurons/schema/Custom.vue'
-    import xToast from '../axons/popover/Toast.vue'
     import xUsersRoles from '../networks/config/UsersRoles.vue'
     import xMaintenance from '../networks/config/Maintenance.vue'
 
@@ -71,7 +69,7 @@
     export default {
         name: 'x-settings',
         components: {
-            xPage, xTabs, xTab, xForm, xCustom, xToast, xUsersRoles, xMaintenance
+            xPage, xTabs, xTab, xButton, xToast, xForm, xCustom, xUsersRoles, xMaintenance
         },
         computed: {
             ...mapState({
@@ -143,7 +141,6 @@
                 return true
             },
             saveGlobalSettings() {
-                if (!this.coreComplete || this.isReadOnly) return
                 this.updatePluginConfig({
                     pluginId: 'core',
                     configName: 'CoreService',
@@ -165,7 +162,6 @@
                 })
             },
             saveSchedulerSettings() {
-                if (!this.schedulerComplete || !this.validResearchRate || this.isReadOnly) return
                 this.updatePluginConfig({
                     pluginId: 'system_scheduler',
                     configName: 'SystemSchedulerService',
@@ -188,7 +184,6 @@
                 this.guiComplete = valid
             },
             saveGuiSettings() {
-                if (!this.guiComplete || this.isReadOnly) return
                 this.updatePluginConfig({
                     pluginId: 'gui',
                     configName: 'GuiService',
@@ -252,7 +247,7 @@
             max-width: 840px;
         }
 
-        .tab-settings .x-form .array {
+        .tab-settings .x-form .x-array-edit {
             grid-template-columns: 1fr;
         }
 
@@ -266,13 +261,13 @@
                     flex: 1 0 auto;
                 }
 
-                > .x-btn {
+                > .x-button {
                     margin-top: 4px;
                 }
             }
         }
 
-        .research-settings-tab .tab-settings .x-form > .array {
+        .research-settings-tab .tab-settings .x-form > .x-array-edit {
             display: grid;
         }
 
