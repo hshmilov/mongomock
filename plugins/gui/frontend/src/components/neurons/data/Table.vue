@@ -48,7 +48,11 @@
         name: 'x-data-table',
         components: {xTableWrapper, xTable, xButton},
         props: {
-            module: {required: true}, section: {}, idField: {default: 'uuid'}, value: {}, title: {}
+            module: {required: true},
+            section: {},
+            idField: {default: 'uuid'},
+            value: {},
+            title: {}
         },
         data() {
             return {
@@ -130,7 +134,7 @@
                 return Array.from({length: lastPage - firstPage + 1}, (x, i) => i + firstPage)
             },
             pageSelection() {
-                if (!this.value) return undefined
+                if (this.value === undefined) return undefined
                 if (this.value.include === undefined) {
                     this.allSelected = false
                 }

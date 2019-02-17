@@ -10,24 +10,24 @@
             <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
         </div>
         <ul class="bar-nav" v-if="!medicalConfig">
-            <li class="nav-item" v-if="isDashboardWrite">
-                <button v-if="researchStatusLocal === 'starting'" class="item-link research-link disabled">
+            <li class="nav-item">
+                <button v-if="researchStatusLocal === 'starting'" class="item-link research-link" disabled>
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20"/>
                     <div>Initiating...</div>
                 </button>
                 <button v-else-if="researchStatusLocal === 'stopping'" @click="stopResearchNow"
-                        class="item-link research-link disabled">
+                        class="item-link research-link" disabled>
                     <svg-icon name="symbol/running" class="rotating" :original="true" height="20"/>
                     <div>Stopping...</div>
                 </button>
-                <button v-else-if="researchStatusLocal !== 'running'" @click="startResearchNow"
-                        class="item-link research-link" id="run_research">
-                    <svg-icon name="action/start" :original="true" height="20"/>
+                <button v-else-if="researchStatusLocal !== 'running'" @click="startResearchNow" id="run_research"
+                        class="item-link research-link" :disabled="!isDashboardWrite">
+                    <svg-icon name="action/start" :original="true" height="20" />
                     <div>Discover Now</div>
                 </button>
-                <button v-else-if="researchStatusLocal === 'running'" @click="stopResearchNow"
-                        class="item-link research-link" id="stop_research">
-                    <svg-icon name="action/stop" :original="true" height="20"/>
+                <button v-else-if="researchStatusLocal === 'running'" @click="stopResearchNow" id="stop_research"
+                        class="item-link research-link" :disabled="!isDashboardWrite">
+                    <svg-icon name="action/stop" :original="true" height="20" />
                     <div>Stop Discovery</div>
                 </button>
             </li>
@@ -327,6 +327,14 @@
 
                         .svg-stroke {
                             stroke: $theme-orange;
+                        }
+
+                        &:disabled {
+                            cursor: default;
+                            background-color: rgba($theme-black, 0.4);
+                            &:hover .svg-fill {
+                                fill: $grey-1;
+                            }
                         }
                     }
 
