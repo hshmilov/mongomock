@@ -412,5 +412,11 @@
                 margin-bottom: 24px;
             }
         }
+
+        .upload-file {
+            .file-name {
+                width: 120px;
+            }
+        }
     }
 </style>
