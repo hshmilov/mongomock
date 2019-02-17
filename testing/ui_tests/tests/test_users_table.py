@@ -8,7 +8,7 @@ class TestUsersTable(TestEntitiesTable):
     MAIL_COLUMN = 'Mail'
     QUERY_FILTER_USERNAME = 'specific_data.data.username%20%3D%3D%20regex(%22m%22)'
     QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
-                   'data.domain,specific_data.data.last_seen,specific_data.data.is_admin'
+                   'data.domain,specific_data.data.last_seen,specific_data.data.is_admin,labels'
 
     def test_users_fetched(self):
         self.settings_page.switch_to_page()
@@ -102,7 +102,6 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.switch_to_page()
         # filter the ui to fit the QUERY_FILTER_USERNAME of the csv
         self.users_page.query_user_name_contains('m')
-
         result = self.users_page.generate_csv('users',
                                               self.QUERY_FIELDS,
                                               self.QUERY_FILTER_USERNAME)

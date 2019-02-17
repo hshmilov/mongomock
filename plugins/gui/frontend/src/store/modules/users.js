@@ -6,7 +6,7 @@ export const users = {
         view: {
             page: 0, pageSize: 20, fields: [
                 'adapters', 'specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
-                'specific_data.data.last_seen', 'specific_data.data.is_admin',
+                'specific_data.data.last_seen', 'specific_data.data.is_admin', 'labels'
             ], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true},
             historical: null
         },
