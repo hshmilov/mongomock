@@ -19,6 +19,7 @@ class InfobloxAdapter(AdapterBase):
         served_by = Field(str, 'Served By')
         start_time = Field(datetime.datetime, 'Start Time')
         end_time = Field(datetime.datetime, 'End Time')
+        fingerprint = Field(str, 'Fingerprint')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -34,9 +35,12 @@ class InfobloxAdapter(AdapterBase):
     @staticmethod
     def _connect_client(client_config):
         try:
+            api_vesrion = 2.5 if client_config.get('use_api_version_25') else 2.2
             connection = InfobloxConnection(
+                api_vesrion,
                 domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                username=client_config['username'], password=client_config['password'])
+                username=client_config['username'], password=client_config['password']
+            )
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -88,13 +92,19 @@ class InfobloxAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'use_api_version_25',
+                    'title': 'Use API version 2.5',
+                    'type': 'bool'
                 }
             ],
             'required': [
                 'domain',
                 'username',
                 'password',
-                'verify_ssl'
+                'verify_ssl',
+                'use_api_version_25'
             ],
             'type': 'array'
         }
@@ -140,6 +150,7 @@ class InfobloxAdapter(AdapterBase):
 
                 ip_address = device_raw.get('address')
                 network = device_raw.get('network')
+                device.fingerprint = device_raw.get('fingerprint')
 
                 try:
                     device.add_nic(mac_address,

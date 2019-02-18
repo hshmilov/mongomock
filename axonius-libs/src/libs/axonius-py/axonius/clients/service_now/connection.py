@@ -18,6 +18,8 @@ class ServiceNowConnection(RESTConnection):
         self.__offset_size = consts.OFFSET_SIZE
         super().__init__(url_base_prefix='api/now/', *args, **kwargs)
         self._permanent_headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+        self.__number_of_incidents = 0
+        self.__number_of_new_computers = 0
 
     def _connect(self):
         if self._username is not None and self._password is not None:
@@ -120,17 +122,24 @@ class ServiceNowConnection(RESTConnection):
         impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
         short_description = service_now_dict.get('short_description', '')
         description = service_now_dict.get('description', '')
+        self.__number_of_incidents += 1
+        logger.info(f'Creating servicenow incident num {self.__number_of_incidents}: impact={impact}, '
+                    f'short_description={short_description}, description={description}')
         try:
             self.__add_dict_to_table('incident', {'impact': impact, 'urgency': impact,
                                                   'short_description': short_description, 'description': description})
             return True
         except Exception:
+            logger.exception(f'Exception while creating incident for num {self.__number_of_incidents}')
             return False
 
     def create_service_now_computer(self, connection_dict):
-
+        self.__number_of_new_computers += 1
+        logger.info(f'Creating service now computer num {self.__number_of_new_computers}')
         try:
             self.__add_dict_to_table('cmdb_ci_computer', connection_dict)
             return True
         except Exception:
+            logger.exception(f'Exception while creating incident for '
+                             f'num {self.__number_of_new_computers} with connection dict {connection_dict}')
             return False

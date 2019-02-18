@@ -9,10 +9,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class InfobloxConnection(RESTConnection):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, api_version: float, *args, **kwargs):
+        self.__api_version = api_version
         super().__init__(
             *args,
-            url_base_prefix='/wapi/v2.2/',
+            url_base_prefix=f'/wapi/v{api_version}/',
             headers={
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -56,10 +57,8 @@ class InfobloxConnection(RESTConnection):
                 raise
 
     def get_device_list(self):
+        fields_to_return = 'served_by,starts,ends,address,binding_state,hardware,client_hostname,network_view'
+        if self.__api_version >= 2.5:
+            fields_to_return += ',fingerprint'
         yield from self.__get_items_from_url('lease',
-                                             url_params={'_return_fields': 'served_by,'
-                                                                           'starts,ends,'
-                                                                           'address,'
-                                                                           'binding_state,'
-                                                                           'hardware,'
-                                                                           'client_hostname,network_view'})
+                                             url_params={'_return_fields': fields_to_return})

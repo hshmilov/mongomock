@@ -204,7 +204,7 @@ class FortigateAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': [
-                'onsts.DHCP_LEASE_TIME'
+                consts.DHCP_LEASE_TIME
             ],
             'pretty_name': 'Fortigate Configuration',
             'type': 'array'
@@ -217,4 +217,4 @@ class FortigateAdapter(AdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
-        self.__dhcp_lease_time = config[consts.DHCP_LEASE_TIME]
+        self.__dhcp_lease_time = config.get(consts.DHCP_LEASE_TIME, consts.DEFAULT_DHCP_LEASE_TIME)

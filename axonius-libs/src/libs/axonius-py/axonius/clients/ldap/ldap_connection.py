@@ -30,6 +30,7 @@ DEFAULT_LDAP_PAGE_SIZE = 900
 DEFAULT_LDAP_CONNECTION_TIMEOUT = 10
 DEFAULT_LDAP_RECIEVE_TIMEOUT = 120
 DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS = 10 * 1000  # 10 seconds
+LDAP_MAX_TRIES = 5
 
 
 def connect_to_server(
@@ -634,7 +635,7 @@ class LdapConnection(object):
 
             yield dict(printer)
 
-    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS)
+    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS, stop_max_attempt_number=LDAP_MAX_TRIES)
     def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
 
@@ -673,7 +674,7 @@ class LdapConnection(object):
         if one_device is None:
             return []
 
-    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS)
+    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS, stop_max_attempt_number=LDAP_MAX_TRIES)
     def get_users_list(self, should_get_nested_groups_for_user=True):
         """
         returns a list of objects representing the users in this DC.
@@ -728,7 +729,7 @@ class LdapConnection(object):
         # cycle.
         self.__ldap_groups = {}
 
-    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS)
+    @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS, stop_max_attempt_number=LDAP_MAX_TRIES)
     def get_dns_records(self, name=None):
         """
         Returns dns records for this zone.

@@ -107,6 +107,18 @@ class PluginService(WeaveService):
         result = core_service.register(self.api_key, unique_name)
         return result.status_code == 200
 
+    def trigger_execute(self, blocking: bool):
+        response = requests.post(
+            self.req_url + f'/trigger/execute?blocking={blocking}',
+            headers={API_KEY_HEADER: self.api_key}
+        )
+
+        assert response.status_code == 200, \
+            f'Error in response: {str(response.status_code)}, ' \
+            f'{str(response.content)}'
+
+        return response
+
     def is_up(self):
         return self._is_service_alive() and "Plugin" in self.get_supported_features()
 
