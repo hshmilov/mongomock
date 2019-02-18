@@ -3,7 +3,6 @@ const path = require('path')
 const { VueLoaderPlugin } = require('vue-loader')
 const CleanWebpackPlugin = require('clean-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const autoprefixer = require('autoprefixer')
 
 module.exports = {
     entry: {
@@ -21,11 +20,7 @@ module.exports = {
                 loader: 'vue-loader',
                 options: {
                     preserveWhitespace: false,
-                    postcss: [
-                        autoprefixer({
-                            browsers: ['last 7 versions']
-                        })
-                    ]
+                    autoprefixer: ['last 7 versions']
                 }
             },
             {
@@ -49,7 +44,6 @@ module.exports = {
         new CleanWebpackPlugin(['dist']),
         new HtmlWebpackPlugin({
             template: __dirname + '/index.html'
-        }),
-        autoprefixer
+        })
     ]
 }
