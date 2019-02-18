@@ -99,8 +99,18 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # those devices must be processed - i.e. to find any CVEs in them and tag appropriately.
         with self.__nvd_lock:
             # filter to find only devices with any installed software
-            for device in self.devices_db.find(
-                    parse_filter('specific_data.data.installed_software.name == exists(true)')):
+            # Since the process_devices operation can take a lot time, this can lead to a situation where
+            # mongodb throws 'cursor not found' . This happens if we did not fetch a page from mongodb within 10 minutes
+            # and this is possible if a page takes at least 10 minutes to process. a page, by default, is 100 documents.
+            # to handle this we save all candidates' internal_axon_ids and then fetch them only when needed.
+            for internal_axon_id_doc in self.devices_db.find(
+                    parse_filter('specific_data.data.installed_software.name == exists(true)'),
+                    projection={
+                        '_id': False,
+                        'internal_axon_id': True
+                    }
+            ):
+                device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
                 self.__process_devices(convert_db_entity_to_view_entity(device))
 
         # find all devices that -
@@ -112,11 +122,17 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # will never be untagged!
         # this loop will find those devices and search them :)
         with self.__nvd_lock:
-            for device in self.devices_db.find(
+            for internal_axon_id_doc in self.devices_db.find(
                     parse_filter(
                         f'not (specific_data.data.installed_software.name == exists(true)) and '
                         f'adapters_data.{self.plugin_name}.software_cves == '
-                        f'match([software_cves == exists(true) and software_cves != []])')):
+                        f'match([software_cves == exists(true) and software_cves != []])'),
+                    projection={
+                        '_id': False,
+                        'internal_axon_id': True
+                    }
+            ):
+                device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
                 self.__process_devices(convert_db_entity_to_view_entity(device))
 
     def __process_devices(self, device) -> None:
