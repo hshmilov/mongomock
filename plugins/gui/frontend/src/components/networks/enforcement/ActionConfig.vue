@@ -1,20 +1,41 @@
 <template>
-    <div class="x-action-config">
-        <div class="header">
-            <label for="action-name">Action Name:</label>
-            <input id="action-name" type="text" v-model="name" ref="name" :disabled="disableName" :class="{disabled: disableName}" />
-        </div>
-        <div class="main">
-            <template v-if="actionSchema && actionSchema.type">
-                <h4 class="title">Configuration</h4>
-                <x-form :schema="actionSchema" v-model="config" api-upload="actions" @validate="validateForm" :read-only="readOnly" />
-            </template>
-        </div>
-        <div class="footer">
-            <div class="error-text">{{nameError || formError}}</div>
-            <x-button v-if="!readOnly" :disabled="disableConfirm" @click="confirmAction">Save</x-button>
-        </div>
+  <div class="x-action-config">
+    <div class="header">
+      <label for="action-name">Action Name:</label>
+      <input
+        id="action-name"
+        ref="name"
+        v-model="name"
+        type="text"
+        :disabled="disableName"
+        :class="{disabled: disableName}"
+      >
     </div>
+    <div class="main">
+      <template v-if="actionSchema && actionSchema.type">
+        <h4 class="title">
+          Configuration
+        </h4>
+        <x-form
+          v-model="config"
+          :schema="actionSchema"
+          api-upload="actions"
+          :read-only="readOnly"
+          @validate="validateForm"
+        />
+      </template>
+    </div>
+    <div class="footer">
+      <div class="error-text">
+        {{ nameError || formError }}
+      </div>
+      <x-button
+        v-if="!readOnly"
+        :disabled="disableConfirm"
+        @click="confirmAction"
+      >Save</x-button>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -24,15 +45,27 @@
     import actionsMixin from '../../../mixins/actions'
 
     export default {
-        name: 'x-action-config',
+        name: 'XActionConfig',
         components: {
             xButton, xForm
         },
         mixins: [actionsMixin],
         props: {
-            value: {required: true},
-            exclude: Array,
+            value: {
+                type: Object,
+                required: true
+            },
+            exclude: {
+                type: Array,
+                default: () => []
+            },
             readOnly: Boolean
+        },
+        data() {
+            return {
+                nameValid: true,
+                formValid: true,
+            }
         },
         computed: {
             disableConfirm() {
@@ -88,23 +121,22 @@
             },
             nameError() {
                 if (this.disableName) return ''
-                this.nameValid = false
                 if (this.name === '') {
                     return 'Action Name is a required field'
                 } else if (this.actionNameExists(this.name) || this.exclude.includes(this.name)) {
                     return 'Name already taken by another saved Action'
                 }
-                this.nameValid = true
                 return ''
             }
         },
-        data() {
-            return {
-                nameValid: true,
-                formValid: true,
+        watch: {
+            nameError(newVal) {
+                this.nameValid = !newVal
             }
         },
-
+        mounted() {
+            this.$refs.name.focus()
+        },
         methods: {
             validateForm(valid) {
                 this.formValid = valid
@@ -112,9 +144,6 @@
             confirmAction() {
                 this.$emit('confirm')
             }
-        },
-        mounted() {
-            this.$refs.name.focus()
         }
     }
 </script>

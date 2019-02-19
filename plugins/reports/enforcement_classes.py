@@ -36,7 +36,7 @@ class ActionRunResults(DataClassJsonMixin):
 class SavedActionData(DataClassJsonMixin):
     # The class name of the action.
     # For regular actions, look at inheritors of ActionTypeBase in action_types/*
-    # For trigger summary actions, look at inheritors of TriggerSummaryTypeBase in alert_action_types/*
+    # For trigger summary actions, look at inheritors of ActionTypeAlert in action_types/*
     action_name: str
     # The config that will be passed (self._config in ActionTypeBase)
     config: object

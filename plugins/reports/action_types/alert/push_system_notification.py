@@ -2,12 +2,12 @@ import logging
 
 from axonius.consts import report_consts
 from reports.enforcement_classes import EntityResult
-from reports.alert_action_types.alert_action_type_base import AlertActionTypeBase
+from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class SystemNotificationAction(AlertActionTypeBase):
+class SystemNotificationAction(ActionTypeAlert):
     """
     Pushes a new system notification
     """

@@ -2,7 +2,7 @@ import logging
 
 from reports.action_types.action_type_base import ActionTypeBase
 from reports.enforcement_classes import EntitiesResult
-from reports.action_types.carbonblack_utils import carbonblack_action
+from reports.action_types.base.carbonblack_utils import carbonblack_action
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

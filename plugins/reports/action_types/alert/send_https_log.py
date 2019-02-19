@@ -4,10 +4,10 @@ from axonius.utils.json import to_json
 from axonius.consts import report_consts
 from axonius.utils.axonius_query_language import parse_filter
 from reports.enforcement_classes import EntityResult
-from reports.alert_action_types.alert_action_type_base import AlertActionTypeBase
+from reports.action_types.action_type_alert import ActionTypeAlert
 
 
-class SendHttpsLogAction(AlertActionTypeBase):
+class SendHttpsLogAction(ActionTypeAlert):
     """
     Sends a syslog
     """

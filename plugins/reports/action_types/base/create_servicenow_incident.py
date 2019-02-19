@@ -1,13 +1,13 @@
 import logging
 
 from axonius.consts import report_consts
-from reports.alert_action_types.alert_action_type_base import AlertActionTypeBase
+from reports.action_types.action_type_alert import ActionTypeAlert
 from reports.enforcement_classes import EntityResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ServiceNowIncidentAction(AlertActionTypeBase):
+class ServiceNowIncidentAction(ActionTypeAlert):
     """
     Creates an incident in the ServiceNow account
     """

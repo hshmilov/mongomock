@@ -7,7 +7,8 @@ from reports.action_types.action_type_base import ActionTypeBase
 from reports.enforcement_classes import Trigger, TriggeredReason, EntityResult
 
 
-class AlertActionTypeBase(ActionTypeBase, ABC):
+class ActionTypeAlert(ActionTypeBase, ABC):
+
     def __init__(self,
                  action_saved_name: str,
                  config,

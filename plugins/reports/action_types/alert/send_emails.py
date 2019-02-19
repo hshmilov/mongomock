@@ -1,6 +1,9 @@
 import logging
 import mimetypes
 from email.utils import make_msgid
+import os
+from jinja2 import Environment, FileSystemLoader
+
 
 from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
 
@@ -11,12 +14,35 @@ from axonius.utils import gui_helpers
 
 from axonius.consts import report_consts
 from axonius.utils.axonius_query_language import parse_filter
-from reports.action_types.templates import REPORTS_TEMPLATES
 from reports.enforcement_classes import EntityResult, TriggeredReason
-from reports.alert_action_types.alert_action_type_base import AlertActionTypeBase
+from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
+JINJA_ENV = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), '../', 'templates', 'report')))
 
+
+def __get_template(template_name):
+    """
+    Get the template with requested name, expected to be found in self.template_path and have the extension 'html'
+    :param template_name: Name of template file
+    :return: The template object
+    """
+    return JINJA_ENV.get_template(f'{template_name}.html')
+
+
+REPORTS_TEMPLATES = {
+    'report': __get_template('alert_report'),
+    'calc_area': __get_template('report_calc_area'),
+    'header': __get_template('report_header'),
+    'second_header': __get_template('report_second_header'),
+    'table_section': __get_template('report_tables_section'),
+    'adapter_image': __get_template('adapter_image'),
+    'entity_name_url': __get_template('entity_name_url'),
+    'table': __get_template('report_table'),
+    'table_head': __get_template('report_table_head'),
+    'table_row': __get_template('report_table_row'),
+    'table_data': __get_template('report_table_data')
+}
 
 # pylint: disable=W0212
 # This is oldcode, and these pylint disables come with that
@@ -24,7 +50,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=R0915
 
 
-class SendEmailsAction(AlertActionTypeBase):
+class SendEmailsAction(ActionTypeAlert):
     """
     Sends an email
     """

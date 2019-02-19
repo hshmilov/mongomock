@@ -22,10 +22,10 @@ from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, \
     ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, \
     LAST_UPDATE_FIELD, TRIGGERS_FIELD, LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD
 from reports.action_types.action_type_base import ActionTypeBase
+from reports.action_types.action_type_alert import ActionTypeAlert
 from reports.action_types.all_action_types import AllActionTypes
 from reports.enforcement_classes import ActionInRecipe, Recipe, TriggerPeriod, Trigger, \
     TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata, ActionRunResults
-from reports.alert_action_types.all_action_types import AllAlertActionTypes
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -282,13 +282,12 @@ class ReportsService(Triggerable, PluginBase):
         """
         All action names and their schema, as defined by the author of the class
         """
-        all_actions = {**AllActionTypes, **AllAlertActionTypes}
         return jsonify({
             action_name: {
                 'schema': action_class.config_schema(),
                 'default': action_class.default_config()
             }
-            for action_name, action_class in all_actions.items()})
+            for action_name, action_class in AllActionTypes.items()})
 
     def get_view_results(self, view_name: str, view_entity: EntityType) -> List:
         """
@@ -364,28 +363,16 @@ class ReportsService(Triggerable, PluginBase):
 
         def get_action_from_recipe_action(recipe_action: ActionInRecipe,
                                           internal_axon_ids: List[str]) -> ActionTypeBase:
-            if recipe_action.action.action_name in AllActionTypes:
-                return AllActionTypes[recipe_action.action.action_name](
-                    action_saved_name=recipe_action.name,
-                    config=recipe_action.action.config,
-                    run_configuration=trigger,
-                    report_data=report_data,
-                    triggered_set=triggered,
-                    internal_axon_ids=list(internal_axon_ids),
-                    entity_type=trigger.view.entity
-                )
-            if recipe_action.action.action_name in AllAlertActionTypes:
-                return AllAlertActionTypes[recipe_action.action.action_name](
-                    action_saved_name=recipe_action.name,
-                    config=recipe_action.action.config,
-                    run_configuration=trigger,
-                    report_data=report_data,
-                    triggered_set=triggered,
-                    internal_axon_ids=list(current_result),
-                    entity_type=trigger.view.entity,
-                    added_axon_ids=list(added_results),
-                    removed_axon_ids=list(removed_results)
-                )
+            action_class = AllActionTypes[recipe_action.action.action_name]
+            if issubclass(action_class, ActionTypeAlert):
+                return action_class(action_saved_name=recipe_action.name, config=recipe_action.action.config,
+                                    run_configuration=trigger, report_data=report_data, triggered_set=triggered,
+                                    internal_axon_ids=list(current_result), entity_type=trigger.view.entity,
+                                    added_axon_ids=list(added_results), removed_axon_ids=list(removed_results))
+            if issubclass(action_class, ActionTypeBase):
+                return action_class(action_saved_name=recipe_action.name, config=recipe_action.action.config,
+                                    run_configuration=trigger, report_data=report_data, triggered_set=triggered,
+                                    internal_axon_ids=list(internal_axon_ids), entity_type=trigger.view.entity)
             return None
 
         if not recipe.main:
