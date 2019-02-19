@@ -237,30 +237,15 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
         """
         Uses the DB and the `_get_scanner_correlator` logic to correlate the devices
         """
-        db = self._get_db_connection()
-        aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
-        devices = aggregator_db['devices_db'].aggregate([
-            {"$match": {}},
-            {'$project': {
-                'adapters': {
-                    '$map': {
-                        'input': '$adapters',
-                        'as': 'adapter',
-                        'in': {
-                            'accurate_for_datetime': '$$adapter.accurate_for_datetime',
-                            'plugin_name': '$$adapter.plugin_name',
-                            'plugin_unique_name': '$$adapter.plugin_unique_name',
-                            'data': {
-                                'id': '$$adapter.data.id',
-                                'os': '$$adapter.data.os',
-                                'hostname': '$$adapter.data.hostname',
-                                'network_interfaces': '$$adapter.data.network_interfaces',
-                            }
-                        }
-                    }
-                }
-            }}
-        ])
+        devices = self.devices_db.find(projection={
+            'adapters.accurate_for_datetime': 1,
+            f'adapters.{PLUGIN_NAME}': 1,
+            f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+            'adapters.data.id': 1,
+            'adapters.data.os': 1,
+            'adapters.data.hostname': 1,
+            'adapters.data.network_interfaces': 1,
+        })
         scanner = self._get_scanner_correlator(devices, self.plugin_name)
         device_count = 0
 
