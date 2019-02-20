@@ -1,6 +1,7 @@
 import datetime
 from typing import List
 
+import pytest
 from retrying import retry
 from flaky import flaky
 
@@ -98,6 +99,7 @@ class TestAlertActions(TestBase):
         self.enforcements_page.add_send_email()
         self.enforcements_page.find_missing_email_server_notification()
 
+    @pytest.mark.skip(f'AX-3352 Flaky!')
     def test_syslog_operation_multiple_actions(self):
         syslog_server = SyslogService()
         syslog_server.take_process_ownership()

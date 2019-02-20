@@ -22,6 +22,10 @@ class TestOracleVmAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    @pytest.mark.skip('flaky')
+    def test_devices_cleaning(self):
+        pass
+
     @pytest.mark.skip("No test environment.")
     def test_fetch_devices(self):
         pass
