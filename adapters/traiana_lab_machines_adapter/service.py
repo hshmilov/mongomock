@@ -94,7 +94,7 @@ class TraianaLabMachinesAdapter(AdapterBase):
             device.name = device_raw.get("name", "unknown")
             device.id = device_raw['id']
             device.figure_os(device_raw.get("os", ""))
-            device.add_nic('', [device_raw.get("ip")] if device_raw.get("ip") else [])
+            device.add_nic(None, [device_raw.get("ip")] if device_raw.get("ip") else [])
             device.set_raw(device_raw)
             yield device
 

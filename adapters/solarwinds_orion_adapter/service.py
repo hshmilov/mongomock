@@ -154,19 +154,9 @@ class SolarwindsOrionAdapter(AdapterBase):
                     device.uri = raw_device_data.get('Uri')
                     device.ip_address_guid = raw_device_data.get('IPAddressGUID')
 
-                    mac_addresses = raw_device_data.get('MacAddresses')
-                    ip_address = raw_device_data.get('IPAddress')
-
-                    if ip_address:
-                        ip_address = [ip_address]
-
-                    if mac_addresses and isinstance(mac_addresses, list):
-                        for address in mac_addresses:
-                            try:
-                                if ip_address:
-                                    device.add_nic(mac=address, ips=ip_address)
-                            except Exception:
-                                logger.exception(f'Faulty mac address in the server for {raw_device_data}')
+                    mac_addresses = raw_device_data.get('MacAddresses') or []
+                    ip_address = raw_device_data.get('IPAddress') or []
+                    device.add_ips_and_macs(mac_addresses, ip_address)
                     sw_list = raw_device_data.get('sw_list')
                     if sw_list and isinstance(sw_list, list):
                         for sw_data in sw_list:

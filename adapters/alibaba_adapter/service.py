@@ -133,8 +133,11 @@ class AlibabaAdapter(AdapterBase):
         try:
             device_nics = raw_device_data.get('NetworkInterfaces').get('NetworkInterface')
             for device_nic in device_nics:
-                device.add_nic(mac=device_nic.get('MacAddress'), ips=[device_nic.get(
-                    'PrimaryIpAddress')], name=device_nic.get('NetworkInterfaceId'))
+                try:
+                    device.add_nic(mac=device_nic.get('MacAddress'), ips=[device_nic.get(
+                        'PrimaryIpAddress')], name=device_nic.get('NetworkInterfaceId'))
+                except Exception:
+                    logger.error(f'Failed to add nic')
         except Exception as e:
             logger.error(f'Failed to get nics for device {device.id}')
 

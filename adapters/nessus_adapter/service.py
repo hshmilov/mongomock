@@ -190,9 +190,7 @@ class NessusAdapter(ScannerAdapterBase):
                     logger.exception(f"Problem with figure os on {device_raw}")
                 try:
                     macs = (device_raw.get('info', {}).get('mac-address') or '').split('\n')
-                    for mac in macs:
-                        device.add_nic(mac,
-                                       [device_raw.get('info', {}).get('host-ip', '')])
+                    device.add_ips_and_macs(macs, device_raw.get('info', {}).get('host-ip'))
                 except Exception:
                     logger.exception(f"Problems with add nic at device {device_raw}")
                 try:

@@ -103,17 +103,11 @@ class BitdefenderAdapter(AdapterBase):
                 device.hostname = device_raw.get('fqdn')
                 device.figure_os(device_raw.get('operatingSystemVersion'))
                 try:
-                    ip_address = device_raw.get('ip')
+                    ip_address = device_raw.get('ip') or []
                     if ip_address:
                         ip_address = ip_address.split(',')
-                    else:
-                        ip_address = None
-                    mac_addresses = device_raw.get('macs')
-                    if mac_addresses and isinstance(mac_addresses, list):
-                        for mac_address in mac_addresses:
-                            device.add_nic(mac_address, ip_address)
-                    elif ip_address:
-                        device.add_nic(None, ip_address)
+                    mac_addresses = device_raw.get('macs') or []
+                    device.add_ips_and_macs(mac_addresses, ip_address)
                 except Exception:
                     logger.exception(f'Problem adding nic to {device_raw}')
                 is_managed = device_raw.get('isManaged')

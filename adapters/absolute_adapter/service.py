@@ -202,7 +202,7 @@ class AbsoluteAdapter(AdapterBase):
                         if not mac:
                             mac = None
                         if ips or mac:
-                            device.add_nic(mac, ips, speed=str(nic_raw.get('speed')) is nic_raw.get('speed'))
+                            device.add_nic(mac, ips, speed=str(nic_raw.get('speed')) if nic_raw.get('speed') else None)
                     except Exception:
                         logger.exception(f'Problem adding nic to {device_raw} nic {nic_raw}')
                 device.figure_os((device_raw.get('os') or {}).get('name'))

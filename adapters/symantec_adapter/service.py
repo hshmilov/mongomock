@@ -151,15 +151,9 @@ class SymantecAdapter(AdapterBase):
                                            str(device_raw.get('osversion', '')),
                                            str(device_raw.get('osmajor', '')),
                                            str(device_raw.get('osminor', ''))]))
-                try:
-                    mac_addresses = device_raw.get('macAddresses', [])
-                    ip_addresses = device_raw.get('ipAddresses')
-                    if mac_addresses == []:
-                        device.add_nic(None, ip_addresses)
-                    for mac_address in mac_addresses:
-                        device.add_nic(mac_address, ip_addresses)
-                except Exception:
-                    logger.exception('Problem adding nic to Symantec')
+                mac_addresses = device_raw.get('macAddresses') or []
+                ip_addresses = device_raw.get('ipAddresses') or []
+                device.add_ips_and_macs(mac_addresses, ip_addresses)
                 device.online_status = str(device_raw.get('onlineStatus'))
                 device.agent_version = device_raw.get('agentVersion')
                 try:

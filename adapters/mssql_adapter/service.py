@@ -189,12 +189,7 @@ class MssqlAdapter(AdapterBase):
                 ips = (vals.get('ip') or '').split(',')
                 ips = [ip.strip() for ip in ips if ip.strip()]
 
-                try:
-                    if macs or ips:
-                        for mac in (macs or [None]):
-                            device.add_nic(mac=mac, ips=ips)
-                except Exception:
-                    logger.exception(f'Problem adding network interfaces {macs}, {ips}')
+                device.add_ips_and_macs(macs=macs, ips=ips)
 
                 device.set_raw(device_raw)
 

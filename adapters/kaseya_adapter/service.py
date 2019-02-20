@@ -130,11 +130,7 @@ class KaseyaAdapter(AdapterBase):
                 ip_addresses = [ip_address.strip() for ip_address in asset_raw.get('IPAddresses', '').split(',')]
                 mac_addresses = [mac_address_raw.strip() for mac_address_raw in
                                  asset_raw.get('MACAddresses', '').split(',')]
-                if mac_addresses != []:
-                    for mac_address in mac_addresses:
-                        device.add_nic(mac_address, ip_addresses)
-                elif ip_addresses != []:
-                    device.add_nic(None, ip_addresses)
+                device.add_ips_and_macs(mac_addresses, ip_addresses)
                 device.agent_id = str(agent_raw.get('AgentId', ''))
                 device.agent_version = str(agent_raw.get('AgentVersion', ''))
                 device.agent_status = str(agent_raw.get('Online', ''))

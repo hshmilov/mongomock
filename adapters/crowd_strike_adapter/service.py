@@ -124,11 +124,7 @@ class CrowdStrikeAdapter(AdapterBase):
                 device.agent_version = device_raw.get('agent_version')
                 mac_address = device_raw.get('mac_address')
                 local_ip = device_raw.get('local_ip')
-                if mac_address or local_ip:
-                    try:
-                        device.add_nic(mac_address, local_ip.split(',') if local_ip is not None else None)
-                    except Exception:
-                        logger.exception(f'Problem getting nic for {device_raw}')
+                device.add_ips_and_macs(mac_address, local_ip.split(',') if local_ip is not None else None)
                 try:
                     hostname = device_raw.get('hostname')
                     domain = device_raw.get('machine_domain')

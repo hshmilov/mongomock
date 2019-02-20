@@ -141,14 +141,9 @@ class CylanceAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting domain in {device_raw}')
                 try:
-                    mac_addresses = device_raw.get('mac_addresses')
-                    ip_addresses = device_raw.get('ip_addresses')
-                    if mac_addresses is None or mac_addresses == []:
-                        if ip_addresses is not None and ip_addresses != []:
-                            device.add_nic(None, list(ip_addresses))
-                    else:
-                        for mac_address in mac_addresses:
-                            device.add_nic(mac_address, list(ip_addresses))
+                    mac_addresses = device_raw.get('mac_addresses') or []
+                    ip_addresses = device_raw.get('ip_addresses') or []
+                    device.add_ips_and_macs(mac_addresses, ip_addresses)
                 except Exception:
                     logger.exception(f'Problem with adding nic to Cylance device {device_raw}')
                 device.agent_version = device_raw.get('agent_version', '')

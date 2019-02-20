@@ -121,15 +121,7 @@ class EnsiloAdapter(AdapterBase):
                     ip_addresses = device_raw.get("ipAddress")
                     if ip_addresses is not None:
                         ip_addresses = str(ip_addresses).split(",")
-                    if mac_addresses == []:
-                        if ip_addresses is not None:
-                            device.add_nic(None, ip_addresses)
-                    else:
-                        for mac_address in mac_addresses:
-                            if ip_addresses is not None:
-                                device.add_nic(mac_address, ip_addresses)
-                            else:
-                                device.add_nic(mac_address, None)
+                    device.add_ips_and_macs(mac_addresses, ip_addresses)
                 except Exception:
                     logger.exception("Problem with adding nic to ensilo device")
                 device.agent_version = device_raw.get("version", "")

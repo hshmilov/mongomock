@@ -126,11 +126,7 @@ class SaltstackAdapter(AdapterBase):
                             ips.extend(ips_list)
                 except Exception:
                     logger.exception(f'Problem getting macs for {device_raw}')
-                for mac in macs:
-                    try:
-                        device.add_nic(mac, ips)
-                    except Exception:
-                        logger.exception(f'Problem adding mac to {device_raw}')
+                device.add_ips_and_macs(macs, ips)
                 device.device_serial = device_raw.get('serialnumber')
                 try:
                     if isinstance(device_raw.get('username'), str):

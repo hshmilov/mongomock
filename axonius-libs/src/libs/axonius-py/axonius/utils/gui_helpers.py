@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import NamedTuple, Iterable, List
 
+import deepdiff
 import cachetools
 import dateutil
 import pymongo
@@ -539,6 +540,7 @@ def find_entity_field(entity_data, field_path):
     if entity_data is None:
         # Return no value for this path
         return ''
+
     if not field_path or isinstance(entity_data, str):
         # Return value corresponding with given path
         return entity_data
@@ -573,14 +575,21 @@ def find_entity_field(entity_data, field_path):
                         return False
                     if not isinstance(y, str):
                         return False
-                    x = x.lower()
-                    y = y.lower()
-                    return x in y or y in x
+                    x = x.lower().strip()
+                    y = y.lower().strip()
+                    if field_path in ['hostname']:
+                        return (x and x in y) or (y and y in x) or (x == y)
+                    return x == y
+
+                if not value:
+                    return False
 
                 if isinstance(value, str):
-                    return len([child for child in children if same_string(child, value)]) == 0
+                    return value.strip() and len([child for child in children if same_string(child, value)]) == 0
+
                 if isinstance(value, int):
                     return value not in children
+
                 if isinstance(value, dict):
                     # For a dict, check if there is an element of whom all keys are identical to value's keys
                     for inner_item in children:
@@ -591,8 +600,11 @@ def find_entity_field(entity_data, field_path):
 
             if type(child_value) == list:
                 # Check which elements of found value can be added to children
-                children = children + list(filter(new_instance, child_value))
-            elif new_instance(child_value):
+                add = list(filter(new_instance, child_value))
+                if add:
+                    children = children + add
+
+            elif new_instance(child_value) and child_value:
                 # Check if value found can be added to children
                 children.append(child_value)
 
@@ -613,6 +625,25 @@ def parse_entity_fields(entity_data, fields):
         if val is not None and ((type(val) != str and type(val) != list) or len(val)):
             field_to_value[field] = val
     return field_to_value
+
+
+def merge_entities_fields(entities_data, fields):
+    """ 
+        find all entities that are subset of other entites, and merge them.
+    """
+    results = []
+    parsed_entites_data = [parse_entity_fields(entity_data, fields) for entity_data in entities_data]
+    for subset_candidate in parsed_entites_data:
+        for superset_candidate in parsed_entites_data:
+            diff = deepdiff.DeepDiff(subset_candidate, superset_candidate, verbose_level=0)
+            if diff and all('item_added' in key for key in diff):
+                # Found subset
+                break
+        else:
+            # Not subset of anything append to results
+            if subset_candidate not in results:
+                results.append(subset_candidate)
+    return results
 
 
 def get_sort(view):

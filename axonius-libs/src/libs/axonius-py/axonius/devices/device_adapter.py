@@ -449,6 +449,58 @@ class DeviceAdapter(SmartJsonClass):
                         logger.exception(f'Invalid subnet: {repr(subnet)}')
         return obj
 
+    def add_ips_and_macs(self, macs=None, ips=None):
+        """
+            add a list of macs and ips that doesn't relates to the same nic
+        """
+        if macs is None:
+            macs = []
+
+        if ips is None:
+            ips = []
+
+        # Convert single string to list
+        if macs and isinstance(macs, (str, bytes)):
+            macs = [macs]
+
+        # Validate list, throw other
+        try:
+            macs = list(macs)
+        except TypeError as te:
+            logger.error(f'failed to handle mac {macs}')
+            macs = []
+
+        if ips and isinstance(ips, (str, bytes)):
+            ips = [ips]
+
+        # Validate list, throw other
+        try:
+            ips = list(ips)
+        except TypeError as te:
+            logger.error(f'failed to handle ips {ips}')
+            ips = []
+
+        # If only one mac assume the ips are related and just add nic
+        if macs and len(macs) == 1:
+            try:
+                self.add_nic(macs[0], ips)
+            except Exception:
+                logger.exception(f'Failed to add macs and ips {macs} {ips}')
+            return
+
+        # multiple mac, assume different interfaces
+        for mac in macs:
+            try:
+                self.add_nic(mac=mac)
+            except Exception:
+                logger.exception(f'Failed to add mac {mac}')
+
+        for ip in ips:
+            try:
+                self.add_nic(ips=[ip])
+            except Exception:
+                logger.exception(f'Failed to add ip {ip}')
+
     def add_nic(self, mac=None, ips=None, subnets=None, name=None,
                 speed=None, mtu=None, operational_status=None, admin_status=None,
                 vlans=None, port_type=None):

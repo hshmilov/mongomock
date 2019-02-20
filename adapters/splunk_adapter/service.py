@@ -151,11 +151,8 @@ class SplunkAdapter(AdapterBase, Configurable):
                             mac = mac[12:]
                     else:
                         macs = [mac]
-                    for mac in macs:
-                        if not ip:
-                            device.add_nic(mac, None)
-                        else:
-                            device.add_nic(mac, [ip])
+                    ips = ip.split(',') if ip and isinstance(ip, str) else []
+                    device.add_ips_and_macs(macs, ips)
 
                     dhcp_ids_sets.add(device_id)
                     device.splunk_source = "AD DHCP"

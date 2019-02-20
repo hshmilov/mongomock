@@ -165,11 +165,7 @@ class BigfixAdapter(AdapterBase):
                     ips = (device_raw.get('IP Address') or '').split(',') + \
                           (device_raw.get('IPv6 Address') or '').split(',')
                     ips = [ip.strip() for ip in ips]
-                    if not mac_addresses and ips:
-                        device.add_nic(None, ips)
-                    else:
-                        for mac_address in mac_addresses:
-                            device.add_nic(mac_address, ips)
+                    device.add_ips_and_macs(mac_addresses, ips)
                 except Exception:
                     logger.exception('Problem adding nic to Bigfix')
                 device.agent_version = device_raw.get('Agent Version')

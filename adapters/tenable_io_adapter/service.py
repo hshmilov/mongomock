@@ -146,19 +146,13 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             device.last_seen = parse_date(device_raw.get("last_seen", ""))
         except Exception:
             logger.exception(f"Problem with last seen for {device_raw}")
+        ipv4_raw = device_raw.get("ipv4s") or []
+        ipv6_raw = device_raw.get("ipv6s") or []
+        mac_addresses_raw = device_raw.get("mac_addresses") or []
         try:
-            ipv4_raw = device_raw.get("ipv4s", [])
-            ipv6_raw = device_raw.get("ipv6s", [])
-            mac_addresses_raw = device_raw.get("mac_addresses", [])
-            if mac_addresses_raw == []:
-                device.add_nic(None, ipv4_raw + ipv6_raw)
-            for mac_item in mac_addresses_raw:
-                try:
-                    device.add_nic(mac_item, ipv4_raw + ipv6_raw)
-                except Exception:
-                    logger.exception(f"Problem adding nic to {device_raw}")
+            device.add_ips_and_macs(mac_addresses_raw, ipv4_raw + ipv6_raw)
         except Exception:
-            logger.exception(f"Problem with IP at {device_raw}")
+            logger.exception(f'Failed to add ips and macs')
         try:
             os_list = device_raw.get("operating_systems")
             if len(os_list) > 0:
@@ -288,26 +282,18 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 ip_addresses = get_csv_value_filtered(first_asset, "IP Address")
                 mac_addresses = get_csv_value_filtered(first_asset, "MAC Address")
 
-                # Turn to lists
+                # Turn to lists.
                 ip_addresses = ip_addresses.split(",") if ip_addresses is not None else []
                 mac_addresses = mac_addresses.split(",") if mac_addresses is not None else []
 
-                if mac_addresses == [] and ip_addresses != []:
-                    device.add_nic(None, ip_addresses)
-
-                else:
-                    for mac_address in mac_addresses:
-                        while len(mac_address) > 17:
-                            try:
-                                mac_address_to_use = mac_address[:17]
-                                mac_address = mac_address[17:]
-                                device.add_nic(mac_address_to_use, ip_addresses)
-                            except Exception:
-                                logger.exception(f'Problem adding mac with {mac_address}')
-                        try:
-                            device.add_nic(mac_address, ip_addresses)
-                        except Exception:
-                            logger.exception(f'Problem adding mac with {mac_address}')
+                mac_address_to_use = []
+                for mac_address in mac_addresses:
+                    while len(mac_address) > 17:
+                        mac_address_to_use.append(mac_address[:17])
+                        mac_address = mac_address[17:]
+                    if len(mac_address) == 17:
+                        mac_address_to_use.append(mac_address)
+                device.add_ips_and_macs(mac_address_to_use, ip_addresses)
 
                 fqdn = get_csv_value_filtered(first_asset, "FQDN")
                 netbios = get_csv_value_filtered(first_asset, "NetBios")

@@ -126,16 +126,7 @@ class ClarotyAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting mac for {device_raw}')
                     macs = []
-                try:
-                    if macs == []:
-                        device.add_nic(None, ips)
-                    for mac in macs:
-                        try:
-                            device.add_nic(mac, ips)
-                        except Exception:
-                            logger.exception(f'Problem adding nic with mac {mac} to device {device_raw}')
-                except Exception:
-                    logger.exception(f'Problem adding nic to {device_raw}')
+                device.add_ips_and_macs(macs, ips)
                 try:
                     device.last_seen = parse_date(device_raw.get('last_seen'))
                 except Exception:
