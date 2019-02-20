@@ -744,15 +744,24 @@ def entity_fields(entity_type: EntityType):
         'specific': {},
     }
 
-    plugins_available = PluginBase.Instance.get_available_plugins_from_core()
-    exclude_specific_schema = set(item['name'] for item in generic_fields.get('items', []))
+    plugins_available = PluginBase.Instance._get_collection('configs', 'core').find({
+        '$or': [{
+            'plugin_type': {
+                '$in': [
+                    'Adapter', 'ScannerAdapter'
+                ]
+            }
+        }, {
+            'plugin_name': 'gui'
+        }]
+    }, {
+        PLUGIN_UNIQUE_NAME: 1, PLUGIN_NAME: 1
+    })
 
-    for plugin in plugins_available.values():
+    exclude_specific_schema = set(item['name'] for item in generic_fields.get('items', []))
+    for plugin in plugins_available:
         plugin_unique_name = plugin[PLUGIN_UNIQUE_NAME]
         plugin_name = plugin[PLUGIN_NAME]
-
-        if plugin_unique_name not in plugins_available:
-            continue
 
         plugin_fields_record = per_adapter_parsed_field.get(plugin_unique_name)
         if not plugin_fields_record:
