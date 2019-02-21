@@ -46,8 +46,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         # to fetching or correlation
         self.__realtime_lock = threading.Lock()
 
-        # This lock is held while the system is trying to stop
-        self.__stopping_lock = threading.Lock()
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
         self._research_phase_scheduler.add_job(func=self._trigger,

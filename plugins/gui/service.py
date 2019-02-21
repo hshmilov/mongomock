@@ -83,7 +83,7 @@ from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.fields import Field
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.triggerable import Triggerable, TriggerStates
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.types.correlation import CorrelationResult, CorrelationReason, MAX_LINK_AMOUNT
@@ -1892,6 +1892,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         Fetch an entire 'run' record with all its results, according to given task_id
         """
+
         def beautify_task(task):
             """
             Find the configuration that triggered this task and merge its details with task details
@@ -3603,19 +3604,22 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     @rev_cached(ttl=10, key_func=lambda self: 1)
     def __lifecycle(self):
+        is_running = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME).\
+            json()['state'] == TriggerStates.Triggered.name
         state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
             raise RuntimeError(f'Error fetching status of system scheduler. Reason: {state_response.text}')
 
         state_response = state_response.json()
         state = SchedulerState(**state_response['state'])
-        is_stopping = state_response['stopping']
         is_research = state.Phase == Phases.Research.name
 
-        if is_stopping:
+        if state_response['stopping']:
             nice_state = ResearchStatus.stopping
         elif is_research:
             nice_state = ResearchStatus.running
+        elif is_running:
+            nice_state = ResearchStatus.starting
         else:
             nice_state = ResearchStatus.done
 
@@ -3754,7 +3758,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not stop research phase. returned code: {response.status_code}, reason: {str(response.content)}')
+                f'Could not stop research phase. returned code: {response.status_code}, '
+                f'reason: {str(response.content)}')
             return return_error(f'Could not stop research phase {str(response.content)}', response.status_code)
 
         self.__lifecycle.clean_cache()
@@ -3771,6 +3776,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         :return:
         """
+
         def get_adapters_data():
             for adapter in adapters:
                 if not adapter.get('name'):
