@@ -16,6 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class SamangeAdapter(AdapterBase):
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         owner = Field(str, 'Owner')
         updated_at = Field(datetime.datetime, 'Updated At')
@@ -141,6 +142,7 @@ class SamangeAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Probelm getting owner at {device_raw}')
                 device.updated_at = parse_date(device_raw.get('updated_at'))
+                device.last_seen = parse_date(device_raw.get('detected_at'))
                 try:
                     device.department = (device_raw.get('department') or {}).get('name')
                 except Exception:

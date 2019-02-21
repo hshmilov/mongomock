@@ -1,7 +1,7 @@
 import logging
 from itertools import combinations
 
-from axonius.blacklists import ALL_BLACKLIST
+from axonius.blacklists import ALL_BLACKLIST, FROM_FIELDS_BLACK_LIST_REG, compare_reg_mac
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.correlator_base import (has_ad_or_azure_name, has_cloud_id,
                                      has_hostname, has_last_used_users,
@@ -18,6 +18,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_id, compare_last_used_users,
                                    get_ad_name_or_azure_display_name,
                                    get_asset_name, get_asset_or_host,
+                                   get_asset_snow_or_host, compare_snow_asset_hosts,
                                    get_bios_serial_or_serial, get_cloud_data,
                                    get_domain, get_hostname, get_id,
                                    get_last_used_users,
@@ -31,13 +32,15 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_from_juniper_and_asset_name,
                                    is_from_no_mac_adapters_with_empty_mac,
                                    is_junos_space_device,
-                                   is_old_device, is_sccm_or_ad,
+                                   is_old_device, is_sccm_or_ad, is_snow_device,
                                    is_splunk_vpn, normalize_adapter_devices,
                                    serials_do_not_contradict, compare_macs_or_one_is_jamf,
                                    not_aruba_adapters, cloud_id_do_not_contradict,
                                    not_contain_generic_jamf_names,
                                    get_serial_no_s, compare_serial_no_s,
-                                   get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s)
+                                   get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
+                                   get_hostname_or_serial, compare_hostname_serial,
+                                   is_from_twistlock_or_aws)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -73,6 +76,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # way to correlate the devices and so it won't be added to adapters_to_correlate
         return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users]
 
+    # pylint: disable=R0912
     def _correlate_mac(self, adapters_to_correlate):
         """
         To write a correlator rule we do a few things:
@@ -115,12 +119,22 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         mac_blacklist = set()
         mac_blacklist = mac_blacklist.union(ALL_BLACKLIST)
         for mac, matches in mac_indexed.items():
-            for x, y in combinations(matches, 2):
-                if (not hostnames_do_not_contradict(x, y)) and (not is_different_plugin(x, y)
-                                                                or (get_domain(x) and get_domain(y)
-                                                                    and compare_domain(x, y))):
+            found_reg_mac = False
+            for reg_mac in FROM_FIELDS_BLACK_LIST_REG:
+                if compare_reg_mac(reg_mac, mac):
                     mac_blacklist.add(mac)
+                    found_reg_mac = True
                     break
+            if found_reg_mac:
+                continue
+            for x, y in combinations(matches, 2):
+                if not hostnames_do_not_contradict(x, y):
+                    if mac not in mac_blacklist:
+                        logger.info(f'This could be bad mac {mac}')
+                        if not is_different_plugin(x, y) or (get_domain(x) and get_domain(y) and compare_domain(x, y)):
+                            logger.info(f'Added to blacklist {mac} for X {x} and Y {y}')
+                            mac_blacklist.add(mac)
+                            break
 
         for mac in mac_blacklist:
             if mac in mac_indexed:
@@ -233,6 +247,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'Bios serial or serials are equal'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_serial_with_hostname(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Hostname-Serial')
+        filtered_adapters_list = filter(get_hostname_or_serial, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_hostname_or_serial],
+                                      [compare_hostname_serial],
+                                      [get_serial],
+                                      [hostnames_do_not_contradict],
+                                      {'Reason': 'Hostname or serials are equal'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_serial_with_bios_serial_no_s(self, adapters_to_correlate):
         logger.info('Starting to correlate on Bios Serial No S')
         filtered_adapters_list = filter(get_bios_serial_or_serial, adapters_to_correlate)
@@ -259,6 +284,22 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                        serials_do_not_contradict,
                                        not_contain_generic_jamf_names],
                                       {'Reason': 'They have the same hostname and one is AD'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_with_twistlock(self, adapters_to_correlate):
+        """
+        AD correlation is a little more loose - we allow correlation based on hostname alone.
+        In order to lower the false positive rate we don't use the normalized hostname but rather the full one
+        """
+        logger.info('Starting to correlate on Twistlock')
+        filtered_adapters_list = filter(is_from_twistlock_or_aws,
+                                        filter(get_hostname, adapters_to_correlate))
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_hostname],
+                                      [compare_hostname],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same hostname are twistlock'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_with_no_mac_adapters(self, adapters_to_correlate):
@@ -337,6 +378,24 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_asset_snow_host(self, adapters_to_correlate):
+        """
+        Correlating by asset first + IP
+        :param adapters_to_correlate:
+        :return:
+        """
+        logger.info('Starting to correlate on snowAsset-Host')
+        filtered_adapters_list = filter(get_asset_snow_or_host, filter(get_normalized_ip, adapters_to_correlate))
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_asset_snow_or_host],
+                                      [compare_snow_asset_hosts],
+                                      [is_snow_device],
+                                      [ips_do_not_contradict_or_mac_intersection,
+                                       not_aruba_adapters,
+                                       cloud_id_do_not_contradict],
+                                      {'Reason': 'They have the same SNOW Asset + Hostname name'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_splunk_vpn_hostname(self, adapters_to_correlate):
         logger.info('Starting to correlate on Splunk VPN')
         filtered_adapters_list = filter(is_splunk_vpn, adapters_to_correlate)
@@ -366,6 +425,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
         yield from self._correlate_with_ad(adapters_to_correlate)
 
+        yield from self._correlate_with_twistlock(adapters_to_correlate)
+
         # Find adapters that share the same cloud type and cloud id
         yield from self._correlate_cloud_instances(adapters_to_correlate)
 
@@ -389,6 +450,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_asset_host(adapters_to_correlate)
 
         yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate)
+        yield from self._correlate_asset_snow_host(adapters_to_correlate)
 
         yield from self._correlate_splunk_vpn_hostname(adapters_to_correlate)
 
@@ -397,6 +459,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
         yield from self._correlate_serial_with_bios_serial_no_s(adapters_to_correlate)
         yield from self._correlate_serial_no_s(adapters_to_correlate)
+        yield from self._correlate_serial_with_hostname(adapters_to_correlate)
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
 

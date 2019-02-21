@@ -28,7 +28,7 @@
             },
 			limit() {
                 if (this.schemaItems.length && this.schemaItems[0].format === 'logo') {
-					return 8
+					return 10
                 }
                 return 2
             },

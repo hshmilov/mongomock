@@ -30,10 +30,13 @@ export const actionsMeta = {
         title: 'Block in Palo Alto'
     },
     create_service_now_computer: {
-        title: 'Create ServiceNow Computer',
+        title: 'Create ServiceNow Computer'
     },
     create_service_now_incident: {
-        title: 'Create ServiceNow Incident',
+        title: 'Create ServiceNow Incident'
+    },
+    create_jira_incident: {
+        title: 'Create Jira Issue'
     },
     send_emails: {
         title: 'Send Mail'
@@ -86,7 +89,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident']
+        items: ['create_service_now_incident', 'create_jira_incident']
     },
     notify: {
         title: 'Notify',

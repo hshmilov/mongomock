@@ -11,17 +11,35 @@ class MobileironConnection(RESTConnection):
                                          'Accept': 'application/json'},
                          **kwargs)
         self.__fetch_apps = False
+        self._users_dict = {}
 
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No user name or password')
         self._get('ping', do_basic_auth=True)
 
+    def _update_users_dict(self):
+        try:
+            total_count = DEVICE_PER_PAGE
+            offset = 0
+            while offset < min(total_count, MAX_DEVICES_COUNT):
+                response = self._get('authorized/users', url_params={'adminDeviceSpaceId': self._device_space_id,
+                                                                     'limit': DEVICE_PER_PAGE,
+                                                                     'offset': offset, 'query': ''})
+                for user_raw in response['results']:
+                    if user_raw.get('principal'):
+                        self._users_dict[user_raw.get('principal')] = user_raw
+                total_count = response.get('totalCount')
+                offset += DEVICE_PER_PAGE
+        except Exception:
+            logger.exception(f'Bad users response')
+
     def get_device_list(self, fetch_apps: bool = True):
         self.__fetch_apps = fetch_apps
-        device_space_id = self._get('device_spaces/mine')['results'][0]['id']
+        self._device_space_id = self._get('device_spaces/mine')['results'][0]['id']
+        self._update_users_dict()
         count = self._get(
-            'devices/count', url_params={'adminDeviceSpaceId': device_space_id, 'query': ''})['totalCount']
+            'devices/count', url_params={'adminDeviceSpaceId': self._device_space_id, 'query': ''})['totalCount']
         # We use only these fields, and when I tried to fetch all the fields the query gave me HTTP 400
         fields = 'common.id,common.uuid,ios.DeviceNamem,common.platform,common.ip_address,' \
                  'common.wifi_mac_address,common.client_version,common.model,android.security_patch,' \
@@ -31,7 +49,7 @@ class MobileironConnection(RESTConnection):
         while offset < min(count, MAX_DEVICES_COUNT):
             try:
                 logger.debug(f'Fetching devices {offset} to {offset+DEVICE_PER_PAGE}')
-                paged_devices_list = self._get('devices', url_params={'adminDeviceSpaceId': device_space_id,
+                paged_devices_list = self._get('devices', url_params={'adminDeviceSpaceId': self._device_space_id,
                                                                       'limit': DEVICE_PER_PAGE,
                                                                       'offset': offset, 'query': '',
                                                                       'fields': fields,
@@ -47,7 +65,7 @@ class MobileironConnection(RESTConnection):
                                 {
                                     'name': 'devices/appinventory',
                                     'url_params':
-                                        {'deviceUuids': str(device_uuid), 'adminDeviceSpaceId': device_space_id},
+                                        {'deviceUuids': str(device_uuid), 'adminDeviceSpaceId': self._device_space_id},
                                     'do_basic_auth': True
                                 }
                             )
@@ -69,7 +87,7 @@ class MobileironConnection(RESTConnection):
                         else:
                             logger.error(f'Error getting apps for device')
                 for device_raw in paged_devices_list:
-                    yield device_raw
+                    yield device_raw, self._users_dict
             except Exception:
                 logger.exception(f'Problem fetching devices at offset {offset}')
                 break

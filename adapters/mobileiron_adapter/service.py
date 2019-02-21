@@ -27,6 +27,8 @@ class MobileironAdapter(AdapterBase, Configurable):
         imsi = Field(str, 'Device IMSI')
         uuid = Field(str, 'Device UUID')
         current_phone_number = Field(str, 'Current phone number')
+        user_first_name = Field(str, 'User First Name')
+        user_last_name = Field(str, 'User Last Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -118,7 +120,7 @@ class MobileironAdapter(AdapterBase, Configurable):
 
     # pylint: disable=R1702,R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        for device_raw, users_dict in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('common.id')
@@ -151,6 +153,13 @@ class MobileironAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting security patch levle for {device_raw}')
                 device.user_id = device_raw.get('user.user_id')
+                try:
+                    user_raw = users_dict.get(device_raw.get('user.user_id'))
+                    if user_raw:
+                        device.user_first_name = user_raw.get('firstName')
+                        device.user_last_name = user_raw.get('lastName')
+                except Exception:
+                    logger.exception(f'Problem getting more users data')
                 try:
                     device.last_seen = parse_date(device_raw.get('common.miclient_last_connected_at'))
                 except Exception:

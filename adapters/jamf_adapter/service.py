@@ -55,6 +55,7 @@ class JamfAdapter(AdapterBase, Configurable):
         phone_number = Field(str, 'Phone Number')
         imei = Field(str, 'IMEI')
         disable_automatic_login = Field(str, 'Disable Automatic Login')
+        alternative_mac = Field(str, 'Alternative MAC Address')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -219,8 +220,12 @@ class JamfAdapter(AdapterBase, Configurable):
 
                     device.jamf_version = general_info.get('jamf_version')
                     try:
-                        device.add_nic(general_info.get('mac_address', ''), [general_info.get('last_reported_ip', '')])
-                        device.add_nic(general_info.get('alt_mac_address', ''))
+                        ips = general_info.get('last_reported_ip').split(',') \
+                            if general_info.get('last_reported_ip') else None
+                        mac = general_info.get('mac_address') if general_info.get('mac_address') else None
+                        if mac or ips:
+                            device.add_nic(general_info.get('mac_address'), ips)
+                        device.alternative_mac = general_info.get('alt_mac_address')
                     except Exception:
                         logger.exception(f"Problem adding nic to Jamf {str(device_raw)}")
 

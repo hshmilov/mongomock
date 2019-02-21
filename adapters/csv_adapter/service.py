@@ -1,6 +1,7 @@
 import datetime
 import logging
 import requests
+import chardet
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import GetDevicesError
@@ -58,7 +59,9 @@ class CsvAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Couldn\'t get csv info from URL')
         if 'csv' in data and csv_data is None:
-            csv_data = self._grab_file_contents(data['csv']).decode('utf-8')
+            csv_data_bytes = self._grab_file_contents(data['csv'])
+            encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+            csv_data = csv_data_bytes.decode(encoding)
         return make_dict_from_csv(csv_data), True, data.get('user_id')
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -75,7 +78,9 @@ class CsvAdapter(AdapterBase):
                 logger.exception(f'Couldn\'t get csv info from URL')
 
         if 'csv' in client_data and csv_data is None:
-            csv_data = self._grab_file_contents(client_data['csv']).decode('utf-8')
+            csv_data_bytes = self._grab_file_contents(client_data['csv'])
+            encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+            csv_data = csv_data_bytes.decode(encoding)
         return make_dict_from_csv(csv_data), True, client_data.get('user_id')
 
     def _clients_schema(self):
@@ -88,7 +93,7 @@ class CsvAdapter(AdapterBase):
                 },
                 {
                     'name': 'user_id',
-                    'title': 'CSV File ID',
+                    'title': 'CSV File Name',
                     'type': 'string'
                 },
                 {
@@ -187,9 +192,14 @@ class CsvAdapter(AdapterBase):
                 device.id = device_id
                 device.device_serial = vals.get('serial')
                 device.name = vals.get('name')
-                device.hostname = vals.get('hostname')
+                hostname = vals.get('hostname')
+                hostname_domain = None
+                if hostname and '\\' in hostname:
+                    hostname = hostname.split('\\')[1]
+                    hostname_domain = hostname.split('\\')[0]
+                device.hostname = hostname
                 device.device_model = vals.get('model')
-                device.domain = vals.get('domain')
+                device.domain = vals.get('domain') or hostname_domain
                 try:
                     last_seen = parse_date(vals.get('last_seen'))
                     if last_seen:

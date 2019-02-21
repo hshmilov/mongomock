@@ -1,15 +1,35 @@
 export const pluginMeta = {
+    counter_act_adapter: {
+        title: 'Forescout CounterACT',
+        description: 'The Forescout CounterACT platform provides insight into numerous types of network-connected devices.'
+    },
+    armis_adapter: {
+        title: 'Armis - BETA',
+        description: 'Armis provides device discovery, behavioral analytics to identify risks or attacks, and automatic protection.'
+    },
+    bluecat_adapter: {
+        title: 'BlueCat - BETA',
+        description: 'BlueCat Enterprise DNS connects all disparate DNS and DHCP with centralized management of all clients and critical assets.'
+    },
+    logrhythm_adapter: {
+        title: 'LogRhythm - BETA',
+        description: 'The LogRhythm platform combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation & orchestration in a single solution.'
+    },
+    twistlock_adapter: {
+        title: 'Twistlock - BETA',
+        description: 'Twistlock provides container and cloud native cybersecurity for teams using Docker, Kubernetes, serverless, and other cloud native technologies.'
+    },
     riverbed_adapter: {
         title: 'Riverbed - BETA',
         description: 'The SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges.'
     },
     checkpoint_r80_adapter: {
         title: 'CheckPoint R80 - BETA',
-        description: 'Check Point Infinity architecture delivers consolidated Gen V cyber security across networks, cloud, and mobile environments.'
+        description: 'Check Point is a provider of hardware and software products for IT security, including network security, endpoint security, mobile security, data security and security management.'
     },
     sysaid_adapter: {
-        title: 'Sysaid - BETA',
-        description: 'SysAid is an IT service management solution that offers all the ITIL essentials.'
+        title: 'Sysaid',
+        description: 'SysAid is an integrated ITSM, Service Desk and Help Desk software solution.'
     },
     mssql_adapter: {
         title: 'MSSQL Adapter',

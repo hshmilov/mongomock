@@ -13,6 +13,7 @@ class CorrelationReason(Enum):
     NonexistentDeduction = auto()  # Associativity over a nonexisting entity (a->b and b->c therefore a->c)
     StaticAnalysis = auto()
     UserManualLink = auto()
+    ServiceNowCreation = auto()
 
 
 # the reason for these data types is that it allows separation of the code that figures out correlations

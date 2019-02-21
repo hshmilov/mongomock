@@ -13,6 +13,7 @@ import os
 import socket
 import ssl
 import subprocess
+from jira import JIRA
 import sys
 import threading
 import traceback
@@ -2146,7 +2147,8 @@ class PluginBase(Configurable, Feature):
                 return f'Got exception creating ServiceNow incident: {str(e)}'
 
     def create_service_now_computer(self, name, mac_address=None, ip_address=None,
-                                    manufacturer=None, os=None, serial_number=None):
+                                    manufacturer=None, os=None, serial_number=None,
+                                    to_correlate_plugin_unique_name=None, to_correlate_device_id=None):
         connection_dict = dict()
         if name is None or name == "":
             return
@@ -2161,11 +2163,14 @@ class PluginBase(Configurable, Feature):
             connection_dict["serial_number"] = serial_number
         if os is not None and os != "":
             connection_dict["os"] = os
+        request_json = {'snow': connection_dict,
+                        'to_ccorrelate': {'to_correlate_plugin_unique_name': to_correlate_plugin_unique_name,
+                                          'device_id': to_correlate_device_id}}
         serive_now_settings = self._service_now_settings
         if serive_now_settings['enabled'] is True:
             if serive_now_settings['use_adapter'] is True:
                 response = self.request_remote_plugin('create_computer', 'service_now_adapter', 'post',
-                                                      json=connection_dict)
+                                                      json=request_json)
                 return response.text
             try:
                 service_now_connection = ServiceNowConnection(domain=serive_now_settings['domain'],
@@ -2180,34 +2185,25 @@ class PluginBase(Configurable, Feature):
                 logger.exception(f"Got exception creating ServiceNow computer with {name}")
                 return f'Got exception creating ServiceNow computer: {str(e)}'
 
-    def create_jira_ticket(self, summary, description):
-        jira_servicedesk_settings = self._jira_servicedesk_settings
-        if jira_servicedesk_settings['enabled'] is not True:
+    def create_jira_ticket(self, porject_name, summary, description, issue_type):
+        jira_settings = self._jira_settings
+        if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
-        post_data = dict()
-        post_data['serviceDeskId'] = jira_servicedesk_settings['servicedesk_id']
-        post_data['requestTypeId'] = jira_servicedesk_settings['request_type_id']
-        post_data['requestFieldValues'] = dict()
-        post_data['requestFieldValues']['summary'] = summary
-        post_data['requestFieldValues']['description'] = description
-        domain = jira_servicedesk_settings['domain']
-        username = jira_servicedesk_settings['username']
-        verify_ssl = jira_servicedesk_settings.get('verify_ssl', False)
-        apikey = jira_servicedesk_settings['apikey']
-        proxies = dict()
-        proxies['http_proxy'] = None
-        proxies['https_proxy'] = jira_servicedesk_settings.get('https_proxy')
-        headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-        url = RESTConnection.build_url(domain=domain,
-                                       url_base_prefix=f'/rest/servicedeskapi/request').strip('/')
-        r = requests.post(url,
-                          headers=headers,
-                          verify=verify_ssl,
-                          proxies=proxies,
-                          auth=(username, apikey),
-                          json=post_data)
-        logger.info(r)
-        return r.text
+        try:
+            jira = JIRA(options={'server': jira_settings['domain'],
+                                 'verify': jira_settings['verify_ssl']},
+                        basic_auth=(jira_settings['username'], jira_settings['password']))
+            issue_dict = {
+                'project': {'name': porject_name},
+                'summary': summary,
+                'description': description,
+                'issuetype': {'name': issue_type},
+            }
+            jira.create_issue(fields=issue_dict)
+            return ''
+        except Exception as e:
+            logger.exception('Error in Jira ticket')
+            return str(e)
 
     def send_external_info_log(self, message):
         try:
@@ -2288,7 +2284,7 @@ class PluginBase(Configurable, Feature):
         self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
-        self._jira_servicedesk_settings = config['jira_servicedesk_settings']
+        self._jira_settings = config['jira_settings']
         self._execution_enabled = config['execution_settings']['enabled']
         self._should_use_axr = config['execution_settings']['should_use_axr']
         self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
@@ -2477,10 +2473,10 @@ class PluginBase(Configurable, Feature):
                 },
                 {
                     'type': 'array',
-                    'title': 'Jira ServiceDesk Settings',
-                    'name': 'jira_servicedesk_settings',
-                    'required': ['enabled', 'domain', 'servicedesk_id', 'request_type_id',
-                                 'username', 'apikey', 'verify_ssl'],
+                    'title': 'Jira Settings',
+                    'name': 'jira_settings',
+                    'required': ['enabled', 'domain',
+                                 'username', 'password', 'verify_ssl'],
                     'items': [
                         {
                             "name": "enabled",
@@ -2489,18 +2485,8 @@ class PluginBase(Configurable, Feature):
                         },
                         {
                             "name": "domain",
-                            "title": "Jira ServiceDesk Domain",
+                            "title": "Jira Domain",
                             "type": "string"
-                        },
-                        {
-                            "name": "servicedesk_id",
-                            "title": "ServiceDesk ID",
-                            "type": "string"
-                        },
-                        {
-                            'name': 'request_type_id',
-                            'type': 'string',
-                            'title': 'Request Type ID'
                         },
                         {
                             "name": "username",
@@ -2508,8 +2494,8 @@ class PluginBase(Configurable, Feature):
                             "type": "string"
                         },
                         {
-                            "name": "apikey",
-                            "title": "API Token",
+                            "name": "password",
+                            "title": "Password",
                             "type": "string",
                             "format": "password"
                         },
@@ -2517,11 +2503,6 @@ class PluginBase(Configurable, Feature):
                             "name": "verify_ssl",
                             "title": "Verify SSL",
                             "type": "bool"
-                        },
-                        {
-                            "name": "https_proxy",
-                            "title": "HTTPS Proxy",
-                            "type": "string"
                         }
                     ],
                 },
@@ -2772,14 +2753,11 @@ class PluginBase(Configurable, Feature):
                 'api_key': None,
                 'admin_email': None
             },
-            'jira_servicedesk_settings': {
+            'jira_settings': {
                 'enabled': False,
                 'domain': None,
-                'servicedesk_id': None,
-                'request_type_id': None,
                 'username': None,
-                'apikey': None,
-                'https_proxy': None,
+                'password': None,
                 'verify_ssl': False
             },
             "email_settings": {

@@ -135,7 +135,7 @@ class EpoAdapter(AdapterBase):
             if not is_hostname_valid(name):
                 name = None
             hostname = device_raw.get('EPOComputerProperties.IPHostName')
-            if is_hostname_valid(hostname):
+            if not is_hostname_valid(hostname):
                 hostname = device_raw.get('EPOComputerProperties.ComputerName')
             if str(hostname).lower().endswith('.local') and \
                     ('dc=local' not in ((device_raw.get('EPOComputerLdapProperties.LdapOrgUnit') or '').lower())):
@@ -207,7 +207,8 @@ class EpoAdapter(AdapterBase):
                     name=device_raw.get("EPOComputerProperties.CPUType")
                 )
                 device.description = device_raw.get("EPOComputerProperties.Description")
-                if isinstance(device_raw.get('EPOComputerProperties.UserName'), str):
+                if isinstance(device_raw.get('EPOComputerProperties.UserName'), str) and \
+                        'N/A' not in device_raw.get('EPOComputerProperties.UserName'):
                     device.last_used_users = (device_raw.get('EPOComputerProperties.UserName') or '').split(',')
                 device.node_name = device_raw.get('EPOLeafNode.NodeName')
                 if isinstance(device_raw.get('EPOLeafNode.Tags'), str):

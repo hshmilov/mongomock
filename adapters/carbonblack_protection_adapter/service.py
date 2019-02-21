@@ -45,7 +45,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['CarbonblackProtection_Domain'], str(e))
             logger.exception(message)
-            raise ClientConnectionException(message)
+            raise ClientConnectionException(message[:300])
 
     def _query_devices_by_client(self, client_name, client_data):
         """

@@ -294,27 +294,36 @@ class vCenterApi(object):
         maxdepth = 100
         if depth > maxdepth:
             return
+        try:
+            # if this is a Datacenter
+            if hasattr(vm_root, 'vmFolder'):
+                vm_list = vm_root.vmFolder.childEntity
+                children = [self._parse_vm(c, depth + 1) for c in vm_list]
+                hosts = [self._parse_host(c) for c in vm_root.hostFolder.childEntity]
+                return vCenterNode(Name=vm_root.name, Type="Datacenter", Children=children + hosts)
+        except Exception:
+            logger.exception('Problem with VmFolder')
+            return None
 
-        # if this is a Datacenter
-        if hasattr(vm_root, 'vmFolder'):
-            vm_list = vm_root.vmFolder.childEntity
-            children = [self._parse_vm(c, depth + 1) for c in vm_list]
-            hosts = [self._parse_host(c) for c in vm_root.hostFolder.childEntity]
-            return vCenterNode(Name=vm_root.name, Type="Datacenter", Children=children + hosts)
-
-        # if this is a group it will have children. if it does, recurse into them
-        # and then return
-        if hasattr(vm_root, 'childEntity'):
-            vm_list = vm_root.childEntity
-            children = [self._parse_vm(c, depth + 1) for c in vm_list]
-            return vCenterNode(Name=vm_root.name, Type="Folder", Children=children)
-
-        # otherwise, we're perhaps dealing with a machine
-
-        parsed_data = self._parse_vm_host(vm_root)
-        config = parsed_data.get('config')
-        if not config:
-            logger.error("Got a machine without a config")
+        try:
+            # if this is a group it will have children. if it does, recurse into them
+            # and then return
+            if hasattr(vm_root, 'childEntity'):
+                vm_list = vm_root.childEntity
+                children = [self._parse_vm(c, depth + 1) for c in vm_list]
+                return vCenterNode(Name=vm_root.name, Type="Folder", Children=children)
+        except Exception:
+            logger.exception('Problem getting child')
+            return None
+        try:
+            # otherwise, we're perhaps dealing with a machine
+            parsed_data = self._parse_vm_host(vm_root)
+            config = parsed_data.get('config')
+            if not config:
+                logger.error("Got a machine without a config")
+                return None
+        except Exception:
+            logger.exception('Problem parting machine')
             return None
 
         name = config.get('name')
@@ -326,8 +335,12 @@ class vCenterApi(object):
         if template is None:
             logger.error("Got a machine without a template")
             return None
-
-        return vCenterNode(Name=name, Type="Template" if template else "Machine", Details=parsed_data)
+        try:
+            vcenter_node = vCenterNode(Name=name, Type="Template" if template else "Machine", Details=parsed_data)
+            return vcenter_node
+        except Exception:
+            logger.exception('Problem getting node')
+            return None
 
     @retry(stop_max_attempt_number=3, retry_on_exception=_should_retry_fetching)
     def get_all_vms(self):

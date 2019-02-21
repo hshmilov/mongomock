@@ -205,7 +205,14 @@ class AbsoluteAdapter(AdapterBase):
                             device.add_nic(mac, ips, speed=str(nic_raw.get('speed')) if nic_raw.get('speed') else None)
                     except Exception:
                         logger.exception(f'Problem adding nic to {device_raw} nic {nic_raw}')
-                device.figure_os((device_raw.get('os') or {}).get('name'))
+                try:
+                    os_raw = device_raw.get('os') or {}
+                    os_str = os_raw.get('name')
+                    if not os_str:
+                        os_str = os_raw.get('windowsDirectory')
+                    device.figure_os(os_str)
+                except Exception:
+                    logger.exception(f'Problem getting OS for {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

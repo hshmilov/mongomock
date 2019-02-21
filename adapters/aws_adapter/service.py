@@ -452,7 +452,7 @@ class AwsAdapter(AdapterBase, Configurable):
 
     def _query_devices_by_client(self, client_name, client_data_credentials):
         # we must re-create all credentials (const and temporary)
-
+        https_proxy = client_data_credentials.get(PROXY)
         client_data = self._connect_client_once(client_data_credentials, False)
         # First, we must get clients for everything we need
         client_data_aws_clients = dict()
@@ -501,7 +501,8 @@ class AwsAdapter(AdapterBase, Configurable):
                     if parsed_data_for_all_regions is None:
                         parsed_data_for_all_regions = self._query_devices_by_client_for_all_sources(
                             client_data_by_region)
-                    parse_data_for_source = self._query_devices_by_client_by_source(client_data_by_region)
+                    parse_data_for_source = self._query_devices_by_client_by_source(client_data_by_region,
+                                                                                    https_proxy=https_proxy)
                     parse_data_for_source.update(parsed_data_for_all_regions)
                     yield source_name, parse_data_for_source
                 except Exception:
@@ -599,7 +600,7 @@ class AwsAdapter(AdapterBase, Configurable):
 
         return raw_data
 
-    def _query_devices_by_client_by_source(self, client_data):
+    def _query_devices_by_client_by_source(self, client_data, https_proxy=None):
         """
         Get all AWS (EC2 & EKS) instances from a specific client
 
@@ -678,7 +679,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     logger.exception(f'could not parse subnets')
                 try:
                     if self.__shodan_key:
-                        shodan_connection = ShodanConnection(apikey=self.__shodan_key)
+                        shodan_connection = ShodanConnection(apikey=self.__shodan_key, https_proxy=https_proxy)
                         with shodan_connection:
                             for reservation in reservations:
                                 for device_raw in reservation.get('Instances', []):
@@ -1213,14 +1214,16 @@ class AwsAdapter(AdapterBase, Configurable):
                                 ec2_ips.append(public_ip)
                                 shodan_info = assoc.get('shodan_info')
                                 if shodan_info:
+                                    shodan_info_data = shodan_info.get('data')
+                                    if isinstance(shodan_info_data, dict):
+                                        shodan_info_data = [shodan_info_data]
+                                    if not isinstance(shodan_info_data, list):
+                                        shodan_info_data = []
                                     try:
                                         # shodan info crashed raw_data in the DB for a reason I don't know
                                         assoc.pop('shodan_info', None)
-                                        shodan_info_data = shodan_info.get('data')
                                         vulns_dict_list = []
-                                        if isinstance(shodan_info_data, dict):
-                                            vulns_dict_list = [shodan_info_data.get('vulns')] if \
-                                                isinstance(shodan_info_data.get('vulns'), dict) else None
+
                                         if isinstance(shodan_info_data, list):
                                             vulns_dict_list = [shodan_info_data_item.get('vulns')
                                                                for shodan_info_data_item in shodan_info_data
@@ -1236,15 +1239,43 @@ class AwsAdapter(AdapterBase, Configurable):
                                                                             else None))
                                                 except Exception:
                                                     logger.exception(f'Problem adding vuln name {vuln_name}')
+                                        cpe = []
+                                        http_server = None
+                                        http_site_map = None
+                                        http_location = None
+                                        http_security_text_hash = None
+                                        for shoda_data_raw in shodan_info_data:
+                                            try:
+                                                if shoda_data_raw.get('cpe'):
+                                                    cpe.extend(shoda_data_raw.get('cpe'))
+                                                http_info = shoda_data_raw.get('http')
+                                                if http_info and isinstance(http_info, dict):
+                                                    if not http_server:
+                                                        http_server = http_info.get('server')
+                                                    if not http_site_map:
+                                                        http_site_map = http_info.get('sitemap')
+                                                    if not http_location:
+                                                        http_location = http_info.get('location')
+                                                    if not http_security_text_hash:
+                                                        http_security_text_hash = http_info.get('securitytxt_hash')
+                                            except Exception:
+                                                logger.exception(f'problem with shodan data raw {shoda_data_raw}')
+                                        if not cpe:
+                                            cpe = None
                                         device.set_shodan_data(city=shodan_info.get('city'),
                                                                region_code=shodan_info.get('region_code'),
                                                                country_name=shodan_info.get('country_name'),
                                                                org=shodan_info.get('org'),
                                                                os=shodan_info.get('os'),
+                                                               cpe=cpe,
                                                                isp=shodan_info.get('isp'),
                                                                ports=shodan_info.get('ports')
                                                                if isinstance(shodan_info.get('ports'), list) else None,
-                                                               vulns=vulns)
+                                                               vulns=vulns,
+                                                               http_location=http_location,
+                                                               http_server=http_server,
+                                                               http_site_map=http_site_map,
+                                                               http_security_text_hash=http_security_text_hash)
                                     except Exception:
                                         logger.exception(f'Problem parsing shodan info for {public_ip}')
 

@@ -248,6 +248,8 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     vendor = Field(str, "Software Vendor")
     # This is not the same as Vendor in many cases. This is why I added it. OS
     publisher = Field(str, 'Software Publisher')
+    cve_count = Field(str, 'CVE Count')
+    sw_license = Field(str, 'License')
 
 
 class DeviceAdapterSoftwareCVE(SmartJsonClass):
@@ -282,6 +284,11 @@ class ShodanData(SmartJsonClass):
     isp = Field(str, 'ISP')
     ports = ListField(int, 'Ports')
     vulns = ListField(ShodanVuln, 'Vulnerabilities')
+    cpe = ListField(str, 'Cpe')
+    http_location = Field(str, 'HTTP Location')
+    http_server = Field(str, 'HTTP Server')
+    http_site_map = Field(str, 'HTTP Site Map')
+    http_security_text_hash = Field(str, 'HTTP Security Text')
 
 
 class DeviceSwapFile(SmartJsonClass):

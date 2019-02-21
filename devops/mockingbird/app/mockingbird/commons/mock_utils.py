@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.parsing import parse_date
+from axonius.utils.datetime import parse_date
 from mockingbird.commons.mock_network_entity import MockNetworkEntity, MockNetworkEntityProperties
 
 

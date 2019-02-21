@@ -3,6 +3,7 @@ DOCKER_PORTS = {
     'gui':                              443,
     'mockingbird':                      1443,
     'selenium-hub':                     4444,
+    'mongo-slave':                      4455,
     'execution':                        4999,
     'aggregator':                       5000,
     'active-directory-adapter':         5001,
@@ -123,7 +124,11 @@ DOCKER_PORTS = {
     'cisco-umbrella-adapter':           6046,
     'linux-ssh-adapter':                6047,
     'proxmox-adapter':                  6048,
+    'twistlock-adapter':                6049,
+    'logrhythm-adapter':                6050,
+    'bluecat-adapter':                  6051,
+    'armis-adapter':                    6052,
+    'counter-act-adapter':              6053,
     'diag':                             6666,  # reserved
     'mongo':                            27017,
-    'mongo-slave':                      27018,
 }

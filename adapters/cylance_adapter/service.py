@@ -112,12 +112,15 @@ class CylanceAdapter(AdapterBase):
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('id', '')
-                if device_id is None or device_id == '':
+                if not device_id:
                     logger.warning(f'No id of device {device_raw}')
                     continue
                 device.id = device_id + (device_raw.get('host_name') or '')
                 device.figure_os((device_raw.get('operatingSystem') or '') + ' ' + (device_raw.get('os_version') or ''))
                 hostname = device_raw.get('host_name') or ''
+                if not hostname and not device_raw.get('agent_version') and device_raw.get('state') == 'Offline':
+                    logger.warning(f'This is not a real device {device_raw}')
+                    continue
                 if not is_hostname_valid(hostname):
                     hostname = ''
                 try:

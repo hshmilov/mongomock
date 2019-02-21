@@ -192,11 +192,19 @@ class EsxAdapter(AdapterBase):
         if node_type == 'Template':
             return
         elif node_type == 'Machine':
-            device = self._parse_vm_machine(node, _curr_path)
-            device.device_type = ESXDeviceType.VMMachine
-            yield device
+            try:
+                device = self._parse_vm_machine(node, _curr_path)
+                device.device_type = ESXDeviceType.VMMachine
+                yield device
+            except Exception:
+                logger.exception('Problem getting machine')
+                return
         elif node_type == 'ESXHost':
-            device = self._parse_vm_machine(node, _curr_path)
+            try:
+                device = self._parse_vm_machine(node, _curr_path)
+            except Exception:
+                logger.exception('Problem getting esx host')
+                return
             if device is None:
                 return
             try:
@@ -214,7 +222,11 @@ class EsxAdapter(AdapterBase):
             yield device
         elif node_type in ('Datacenter', 'Folder', 'Root', 'Cluster'):
             for child in node.get('Children', [{}]):
-                yield from self._parse_raw_data(child, _curr_path + '/' + node['Name'])
+                try:
+                    yield from self._parse_raw_data(child, _curr_path + '/' + node['Name'])
+                except Exception:
+                    logger.exception(f'Problem getting special thing')
+                    continue
         else:
             raise RuntimeError('Found weird type of node: {}'.format(node['Type']))
 

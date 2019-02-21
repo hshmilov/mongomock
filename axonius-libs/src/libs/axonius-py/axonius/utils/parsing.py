@@ -43,6 +43,7 @@ OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks', 'darwin']
 # In some cases we don't want to use compare_hostnames because indexing using it is complicated
 # and in some cases indexsing is performance critical
 NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
+NET_BIOS_MAX_LENGTH = 15
 DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP', '.LOCALHOST']
 # In MacOs hostname of the same computer can return in different shapes,
 # that's why we would like to compare them without these strings
@@ -204,7 +205,7 @@ def figure_out_os(s):
     os_type = None
     distribution = None
     linux_names = ["linux", 'ubuntu', 'canonical', 'red hat',
-                   'debian', 'fedora', 'centos', 'oracle', 'opensuse', 'rhel server']
+                   'debian', 'fedora', 'centos', 'oracle', 'opensuse', 'rhel server', 'sles']
 
     ios_devices = ["iphone", "ipad", "apple"]
     ios_names = ios_devices + ["ios"]
@@ -615,7 +616,8 @@ def is_only_host_adapter_not_localhost(adapter_device):
                                                   'carbonblack_defense_adapter',
                                                   'carbonblack_protection_adapter',
                                                   'csv_adapter',
-                                                  'sysaid_adapter']) and \
+                                                  'sysaid_adapter',
+                                                  'logrhythm_adapter']) and \
         (not adapter_device.get('data').get('hostname') or
             'localhost' not in adapter_device.get('data').get('hostname').strip().lower())
 
@@ -623,6 +625,15 @@ def is_only_host_adapter_not_localhost(adapter_device):
 def is_sccm_or_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter' or \
         adapter_device.get('plugin_name') == 'sccm_adapter'
+
+
+def is_snow_device(adapter_device):
+    return adapter_device.get('plugin_name') == 'service_now_adapter'
+
+
+def is_from_twistlock_or_aws(adapter_device):
+    return adapter_device.get('plugin_name') == 'aws_adapter' or \
+        adapter_device.get('plugin_name') == 'twistlock_adapter'
 
 
 def is_azuread_or_ad_and_have_name(adapter_device):
@@ -707,9 +718,24 @@ def get_last_used_users(adapter_device):
     return None
 
 
+def normalize_username(username):
+    if not username:
+        return None
+    username = username.lower()
+    if '@' in username:
+        username = username.split('@')[0]
+    if '\\' in username:
+        username = username.split('\\')[1]
+    return username
+
+
 def compare_last_used_users(adapter_device1, adapter_device2):
     users1 = get_last_used_users(adapter_device1)
     users2 = get_last_used_users(adapter_device2)
+    if not users1 or not users2:
+        return False
+    users1 = [normalize_username(username) for username in users1 if normalize_username(username)]
+    users2 = [normalize_username(username) for username in users2 if normalize_username(username)]
     if not users1 or not users2:
         return False
     return is_items_in_list1_are_in_list2(users1, users2) or is_items_in_list1_are_in_list2(users2, users1)
@@ -770,6 +796,24 @@ def get_bios_serial_or_serial_no_s(adapter_device):
     return serial
 
 
+def get_hostname_or_serial(adapter_device):
+    serial = get_serial(adapter_device)
+    if serial:
+        return serial.lower()
+    hostname = get_hostname(adapter_device)
+    if hostname:
+        return hostname.split('.')[0].lower()
+    return None
+
+
+def compare_hostname_serial(adapter_device1, adapter_device2):
+    host_serial_1 = get_hostname_or_serial(adapter_device1)
+    host_serial_2 = get_hostname_or_serial(adapter_device2)
+    if host_serial_1 and host_serial_2 and host_serial_1 == host_serial_2:
+        return True
+    return False
+
+
 def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
     serial1 = get_bios_serial_or_serial_no_s(adapter_device1)
     serial2 = get_bios_serial_or_serial_no_s(adapter_device2)
@@ -800,6 +844,24 @@ def compare_serial_no_s(adapter_device1, adapter_device2):
     serial1 = get_serial_no_s(adapter_device1)
     serial2 = get_serial_no_s(adapter_device2)
     return serial1 and serial2 and serial1 == serial2
+
+
+def get_asset_snow_or_host(adapter_device):
+    if adapter_device.get('plugin_name') == 'service_now_adapter':
+        asset = get_asset_name(adapter_device)
+    else:
+        asset = get_hostname(adapter_device)
+    if asset:
+        return asset.lower().strip()
+    return None
+
+
+def compare_snow_asset_hosts(adapter_device1, adapter_device2):
+    asset1 = get_asset_snow_or_host(adapter_device1)
+    asset2 = get_asset_snow_or_host(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
 
 
 def get_asset_or_host(adapter_device):
@@ -864,9 +926,7 @@ def normalize_hostname(adapter_data):
         return split_hostname
 
 
-def compare_normalized_hostnames(host1, host2, first_element_only=False,
-                                 test_on_first_param_and_first_element=False,
-                                 test_on_second_param_and_first_element=False) -> bool:
+def compare_normalized_hostnames(host1, host2, first_element_only=False) -> bool:
     """
     As mentioned above in the documentation near the definition of NORMALIZED_HOSTNAME we want to compare hostnames not
     based on the domain as some adapters don't return one or return a default one even when one exists. After we
@@ -880,8 +940,7 @@ def compare_normalized_hostnames(host1, host2, first_element_only=False,
     """
     if first_element_only:
         if len(host1) > 0 and len(host2) > 0 and host1[0] != '' and host2[0] != '':
-            return (host1[0].startswith(host2[0]) and not test_on_second_param_and_first_element) or \
-                   (host2[0].startswith(host1[0]) and not test_on_first_param_and_first_element)
+            return host1[0][:15] == host2[0][:15]
         else:
             return False
     else:
@@ -944,15 +1003,9 @@ def serials_do_not_contradict(adapter_device1, adapter_device2):
 
 
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
-    cb_protection = False
-    if adapter_device1.get('plugin_name') == 'carbonblack_protection_adapter' or adapter_device2.get(
-            'plugin_name') == 'carbonblack_protection_adapter':
-        cb_protection = True
-    device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
-    device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)
-    return not device1_hostnames or not device2_hostnames or compare_normalized_hostnames(device1_hostnames,
-                                                                                          device2_hostnames,
-                                                                                          first_element_only=cb_protection)
+    if not get_hostname(adapter_device1) or not get_hostname(adapter_device2):
+        return True
+    return compare_device_normalized_hostname(adapter_device1, adapter_device2)
 
 
 def not_contain_generic_jamf_names(adapter_device1, adapter_device2):
@@ -980,9 +1033,17 @@ def compare_ips(adapter_device1, adapter_device2):
     return is_one_subset_of_the_other(adapter_device1.get(NORMALIZED_IPS), adapter_device2.get(NORMALIZED_IPS))
 
 
+def os_not_contradict(adapter_device1, adapter_device2):
+    os_type1 = get_os_type(adapter_device1)
+    os_type2 = get_os_type(adapter_device2)
+    if os_type1 and os_type2 and 'Windows' in [os_type1, os_type2] and 'OS X' in [os_type1, os_type2]:
+        return False
+    return True
+
+
 def compare_macs_or_one_is_jamf(adapter_device1, adapter_device2):
-    return compare_macs(adapter_device1, adapter_device2) or \
-        is_from_jamf(adapter_device1) or is_from_ad_or_jamf(adapter_device2)
+    return (compare_macs(adapter_device1, adapter_device2) or is_from_jamf(adapter_device1) or
+            is_from_jamf(adapter_device2)) and os_not_contradict(adapter_device1, adapter_device2)
 
 
 def compare_macs(adapter_device1, adapter_device2):
@@ -996,30 +1057,21 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
     :param adapter_device2: second device
     :return:
     """
-
-    def is_os_x(adapter_device):
-        return ((adapter_device.get("data") or {}).get("os") or {}).get("type", '') == "OS X"
-
     def is_in_short_names_adapters_and_long_name(adapter_device):
-        if adapter_device.get('plugin_name') in ['carbonblack_protection_adapter', 'active_directory_adapter'] \
-                and len(get_hostname(adapter_device).split('.')[0]) >= 15 and \
-                (is_os_x(adapter_device) or adapter_device.get('plugin_name') == 'carbonblack_protection_adapter'):
+        if adapter_device.get('plugin_name') in ['carbonblack_protection_adapter', 'active_directory_adapter',
+                                                 'lansweeper_adapter', 'sccm_adapter'] \
+                and len(get_hostname(adapter_device).split('.')[0]) == NET_BIOS_MAX_LENGTH:
             return True
         return False
 
     first_element_only = False
-    test_on_first_param_and_first_element = False
-    test_on_second_param_and_first_element = False
     if is_in_short_names_adapters_and_long_name(adapter_device2):
         first_element_only = True
-        test_on_first_param_and_first_element = True
     if is_in_short_names_adapters_and_long_name(adapter_device1):
         first_element_only = True
-        test_on_second_param_and_first_element = True
     return compare_normalized_hostnames(adapter_device1.get(NORMALIZED_HOSTNAME),
                                         adapter_device2.get(NORMALIZED_HOSTNAME),
-                                        first_element_only, test_on_first_param_and_first_element,
-                                        test_on_second_param_and_first_element)
+                                        first_element_only)
 
 
 def get_normalized_ip(adapter_device):

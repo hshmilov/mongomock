@@ -22,6 +22,7 @@ class CylanceConnection(RESTConnection):
         self._app_id = app_id
         self._app_secret = app_secret
         self._tid = tid
+        self._tokens = {}
 
     def _create_token_for_scopre(self, scope):
         if self._tid is not None and self._app_id is not None and self._app_secret is not None:
@@ -34,8 +35,7 @@ class CylanceConnection(RESTConnection):
             response = self._post('auth/v2/token', body_params={'auth_token': auth_token_encoded})
             if 'access_token' not in response:
                 raise RESTException(f'Couldnt get token from response {response}')
-            self._token = response['access_token']
-            self._session_headers['Authorization'] = 'Bearer ' + self._token
+            self._tokens[scope] = response['access_token']
         else:
             raise RESTException('No tid or app secrer or app id')
 
@@ -45,6 +45,7 @@ class CylanceConnection(RESTConnection):
 
     def _get_ids_bulks(self):
         page_num = 1
+        self._session_headers['Authorization'] = 'Bearer ' + self._tokens['device:list']
         devices_response_raw = self._get(
             'devices/v2', url_params={'page_size': consts.DEVICE_PER_PAGE, 'page': str(page_num)})
         yield [basic_device.get('id') for basic_device in devices_response_raw.get('page_items', [])]
@@ -55,6 +56,7 @@ class CylanceConnection(RESTConnection):
                 page_num += 1
                 if page_num % 100 == 0:
                     self._create_token_for_scopre('device:list')
+                self._session_headers['Authorization'] = 'Bearer ' + self._tokens['device:list']
                 yield [basic_device.get('id') for basic_device in
                        self._get('devices/v2', url_params={'page_size': consts.DEVICE_PER_PAGE,
                                                            'page': str(page_num)}).get('page_items', [])]
@@ -86,4 +88,5 @@ class CylanceConnection(RESTConnection):
                     async_requests.append({'name': f'devices/v2/{device_id}'})
                 except Exception:
                     logger.exception(f'Got problem with id {device_id}')
+            self._session_headers['Authorization'] = 'Bearer ' + self._tokens['device:read']
             yield from self._async_get_only_good_response(async_requests)

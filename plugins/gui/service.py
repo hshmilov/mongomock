@@ -2052,7 +2052,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
                 'serviceNow': self._service_now_settings['enabled'] if self._service_now_settings else False,
                 'freshService': self._fresh_service_settings['enabled'] if self._fresh_service_settings else False,
-                'jira': self._jira_servicedesk_settings['enabled'] if self._jira_servicedesk_settings else False
+                'jira': self._jira_settings['enabled'] if self._jira_settings else False
             }
         })
 

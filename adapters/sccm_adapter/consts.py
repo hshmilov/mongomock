@@ -35,3 +35,7 @@ QUERY_PATCH = 'Select ResourceID, Description0, FixComments0, InstallDate0, HotF
 QUERY_PROGRAM = 'Select ResourceID, DisplayName0, Version0 from v_GS_ADD_REMOVE_PROGRAMS'
 QUERY_PROGRAM_2 = 'Select ResourceID, DisplayName0, Version0 from v_GS_ADD_REMOVE_PROGRAMS_64'
 BIOS_QUERY = 'Select ResourceID, SerialNumber0, Manufacturer0 from v_GS_PC_BIOS'
+USERS_QUERY = 'Select MachineResourceID, UniqueUserName from v_UserMachineRelation'
+USERS_TOP_QUERY = 'Select ResourceID, TopConsoleUser0 from v_GS_SYSTEM_CONSOLE_USAGE_MAXGROUP'
+MALWARE_QUERY = 'Select ResourceID, EngineVersion, Version, LastFullScanDateTimeEnd, ' \
+                'ProductStatus, LastQuickScanDateTimeEnd, Enabled from v_GS_AntimalwareHealthStatus'

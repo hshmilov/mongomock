@@ -54,7 +54,7 @@ class PaloaltoPanoramaConnection(RESTConnection):
                 device_raw_dict[xml_property.tag] = xml_property.text
             if device_raw_dict.get('serial'):
                 serial_targets.append(device_raw_dict.get('serial'))
-            yield device_raw_dict, FIREWALL_DEVICE_TYPE
+            yield device_raw_dict, FIREWALL_DEVICE_TYPE, None
 
         serial_targets.append(None)
         for target in serial_targets:
@@ -73,7 +73,7 @@ class PaloaltoPanoramaConnection(RESTConnection):
                     if 'entries' in xml_entity.tag:
                         xml_arp_entries = xml_entity
                 for arp_xml_entry in xml_arp_entries:
-                    yield arp_xml_entry, ARP_TYPE
+                    yield arp_xml_entry, ARP_TYPE, target
             except Exception:
                 logger.exception(f'Problem with target {target}')
         for target in serial_targets:
@@ -88,6 +88,6 @@ class PaloaltoPanoramaConnection(RESTConnection):
                     error_msg = xml_response.attrib['status']
                     raise RESTException(f'Got bad request response {error_msg}')
                 for xml_vpn_entry in xml_response[0]:
-                    yield xml_vpn_entry, VPN_TYPE
+                    yield xml_vpn_entry, VPN_TYPE, target
             except Exception:
                 logger.exception(f'problem getting vpn info')

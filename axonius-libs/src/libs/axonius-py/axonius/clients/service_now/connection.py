@@ -116,7 +116,7 @@ class ServiceNowConnection(RESTConnection):
                     break
 
     def __add_dict_to_table(self, table_name, dict_data):
-        self._post(f'table/{str(table_name)}', body_params=dict_data)
+        return self._post(f'table/{str(table_name)}', body_params=dict_data)
 
     def create_service_now_incident(self, service_now_dict):
         impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
@@ -137,9 +137,9 @@ class ServiceNowConnection(RESTConnection):
         self.__number_of_new_computers += 1
         logger.info(f'Creating service now computer num {self.__number_of_new_computers}')
         try:
-            self.__add_dict_to_table('cmdb_ci_computer', connection_dict)
-            return True
+            device_raw = self.__add_dict_to_table('cmdb_ci_computer', connection_dict)['result']
+            return True, device_raw
         except Exception:
             logger.exception(f'Exception while creating incident for '
                              f'num {self.__number_of_new_computers} with connection dict {connection_dict}')
-            return False
+            return False, None

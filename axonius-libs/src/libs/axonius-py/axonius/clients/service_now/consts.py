@@ -15,3 +15,13 @@ USERS_TABLE_KEY = 'users_table'
 DEPARTMENT_TABLE_KEY = 'department_table'
 LOCATION_TABLE_KEY = 'location_table'
 ALM_ASSET_TABLE = 'alm_hardware'
+# pylint: disable=C0103
+INSTALL_STATUS_DICT = {'0': 'Retired',
+                       '1': 'Deployed',
+                       '10': 'Consumed',
+                       '2': 'On Order',
+                       '3': 'At Depot',
+                       '6': 'In Stock',
+                       '7': 'Disposed',
+                       '8': 'Missing',
+                       '9': 'In Transit'}

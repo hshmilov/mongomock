@@ -40,6 +40,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
         vpn_public_ip = Field(str, 'VPN Public IP')
         vpn_tunnel_type = Field(str, 'VPN Tunnel Type')
         vpn_lifetime = Field(str, 'VPN Lifetime')
+        pa_target = Field(str, 'PaloAlto Source Device')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -166,7 +167,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             logger.exception(f'Problem with fetching Firewall Device for {device_raw_dict}')
             return None
 
-    def _create_vpn_device(self, device_raw):
+    def _create_vpn_device(self, device_raw, target):
         try:
             device = self._new_device_adapter()
             device_raw_dict = dict()
@@ -178,6 +179,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
                 logger.warning(f'Bad device with no name or user {device_raw_dict}')
                 return None
             device.id = (computer or '') + '_' + (username or '')
+            device.pa_target = target
             device.hostname = computer
             if username:
                 device.last_used_users = [username]
@@ -206,7 +208,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             logger.exception(f'Problem with fetching vpn Device for {device_raw_dict}')
             return None
 
-    def _create_arp_device(self, device_raw):
+    def _create_arp_device(self, device_raw, target):
         try:
             device = self._new_device_adapter()
             device_raw_dict = dict()
@@ -218,6 +220,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
                 return None
             device.id = mac
             ip = device_raw_dict.get('ip')
+            device.pa_target = target
             if ip:
                 ips = [ip]
             else:
@@ -235,14 +238,14 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, device_type in devices_raw_data:
+        for device_raw, device_type, target in devices_raw_data:
             device = None
             if device_type == FIREWALL_DEVICE_TYPE:
                 device = self._create_firewall_device(device_raw)
             if device_type == ARP_TYPE:
-                device = self._create_arp_device(device_raw)
+                device = self._create_arp_device(device_raw, target)
             if device_type == VPN_TYPE:
-                device = self._create_vpn_device(device_raw)
+                device = self._create_vpn_device(device_raw, target)
             if device:
                 yield device
 
