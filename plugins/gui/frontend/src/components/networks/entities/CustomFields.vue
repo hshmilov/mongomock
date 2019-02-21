@@ -1,30 +1,36 @@
 <template>
     <div class="x-entity-custom-fields">
         <div class="custom-fields" ref="fields">
-            <div v-for="(field, i) in fieldConfig" class="fields-item" v-if="field && field.name !== 'id'">
-                <template v-if="field.predefined">
-                    <x-select :options="currentFieldOptions(field.name)" v-model="field.name" placeholder="Field..."
-                              :searchable="true" :read-only="!field.new" :container="$refs.fields" @input="onInputValue"
-                              :class="{'border-error': empty(field.name), 'item-name': true}"/>
-                    <component v-if="field.name" :is="fieldMap[field.name].type" :schema="fieldMap[field.name]"
-                               v-model="field.value"
-                               @input="onInputValue" :class="{'border-error': empty(field.value), 'item-value': true}"/>
+            <template v-for="(field, i) in fieldConfig" v-if="field && field.name !== 'id'">
+                <div class="fields-item"  >
+                    <template v-if="field.predefined">
+                        <x-select :options="currentFieldOptions(field.name)" v-model="field.name" placeholder="Field..."
+                                  :searchable="true" :read-only="!field.new" :container="$refs.fields" @input="onInputValue"
+                                  :class="{'border-error': hasFieldError(field), 'item-name': true}"/>
+                            <component v-if="field.name" :is="fieldMap[field.name].type" :schema="fieldMap[field.name]"
+                                   v-model="field.value"
+                                   @input="onInputValue" :class="{'border-error': hasFieldError(field), 'item-value': true}"/>
+                            <div v-else></div>
+                    </template>
+                    <template v-else>
+                        <div class="item-type">
+                            <x-select :options="typeOptions" v-model="field.type" placeholder="Type..." :searchable="true"
+                                      :class="{'border-error': empty(field.type) , 'item-type': true}"/>
+                                <input type="text" v-model="field.name" @keypress="validateFieldName" @input="onInputValue"
+                                       :class="{'border-error': duplicateFieldName(field.name) || hasFieldError(field), 'item-name': true}">
+                        </div>
+                        <component v-if="field.type" :is="field.type" :schema="{ type: field.type }" v-model="field.value"
+                                   @input="onInputValue" :class="{'border-error': hasFieldError(field), 'item-value': true}"/>
+                        <div v-else></div>
+                    </template>
+                    <x-button v-if="field.new" @click="removeField(i)" link>X</x-button>
                     <div v-else></div>
-                </template>
-                <template v-else>
-                    <div class="item-type">
-                        <x-select :options="typeOptions" v-model="field.type" placeholder="Type..." :searchable="true"
-                                  :class="{'border-error': empty(field.type), 'item-type': true}"/>
-                        <input type="text" v-model="field.name" @keypress="validateFieldName" @input="onInputValue"
-                               :class="{'border-error': empty(field.name) || duplicateFieldName(field.name), 'item-name': true}">
-                    </div>
-                    <component v-if="field.type" :is="field.type" :schema="{ type: field.type }" v-model="field.value"
-                               @input="onInputValue" :class="{'border-error': empty(field.value), 'item-value': true}"/>
-                    <div v-else></div>
-                </template>
-                <x-button v-if="field.new" @click="removeField(i)" link>X</x-button>
-                <div v-else></div>
-            </div>
+                </div>
+                <div class="fields-item" v-if="field && field.name !== 'id' && hasFieldError(field) && getExternalError(field) ">
+                    <div></div>
+                    <div class="error" >{{ getExternalError(field) }}</div>
+                </div>
+            </template>
         </div>
         <div class="footer">
             <x-button @click="addPredefinedField" link>+ Predefined field</x-button>
@@ -48,7 +54,8 @@
         props: {
             value: {},
             module: {required: true},
-            fields: {required: true}
+            fields: {required: true},
+            externalError: {}
         },
         data() {
             return {
@@ -156,6 +163,9 @@
                 event.preventDefault()
             },
             duplicateFieldName(fieldName) {
+                if(!fieldName){
+                    return false;
+                }
                 if (this.definedFields.filter(field => {
                     if (this.fieldMap[field]) {
                         return this.fieldMap[field].title === fieldName
@@ -167,6 +177,22 @@
                 }
                 this.error = ''
                 return false
+            },
+            hasFieldError(field){
+                if(this.empty(field.value) || (this.externalError && this.externalError[field.name])){
+                    return true
+                }
+                return false
+            },
+            getExternalError(field){
+                if(!this.externalError){
+                    return '';
+                }
+                if(!field) {
+                    return Object.values(this.externalError).join(', ')
+                } else {
+                    return this.externalError[field.name];
+                }
             }
         },
         created() {
@@ -175,6 +201,7 @@
                     name: fieldName, value: this.value[fieldName], predefined: true
                 }
             })
+            this.error = ''
         }
     }
 </script>
@@ -207,6 +234,10 @@
 
                 .border-error {
                     border: 1px solid $indicator-error;
+                }
+
+                .error {
+                    color: $indicator-error;
                 }
             }
         }

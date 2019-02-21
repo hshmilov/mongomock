@@ -388,8 +388,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
             session = {'user': user_db}
         self.config = {'medical': os.environ.get('MEDICAL', None) == 'true'}
-
-        Path('gui/frontend/src/constants/config.json').write_text(json.dumps(self.config))
+        try:
+            Path('gui/frontend/src/constants/config.json').write_text(json.dumps(self.config))
+        except Exception:
+            logger.exception(f'Problem with writing the config.json: {Exception}')
 
     def _mark_demo_views(self):
         """
@@ -909,15 +911,22 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         }))
 
         entity_to_add = self._new_device_adapter() if entity_type == EntityType.Devices else self._new_user_adapter()
+        errors = {}
         for k, v in post_data['data'].items():
             allowed_types = [str, int, bool, float]
             if type(v) not in allowed_types:
-                return return_error(f'{k} is of type {type(v)} which is not allowed')
-            if not entity_to_add.set_static_field(k, v):
-                # Save the field with a canonized name and title as received
-                new_field_name = '_'.join(k.split(' ')).lower()
-                entity_to_add.declare_new_field(new_field_name, Field(type(v), k))
-                setattr(entity_to_add, new_field_name, v)
+                errors[k] = f'{k} is of type {type(v)} which is not allowed'
+            try:
+                if not entity_to_add.set_static_field(k, v):
+                    # Save the field with a canonized name and title as received
+                    new_field_name = '_'.join(k.split(' ')).lower()
+                    entity_to_add.declare_new_field(new_field_name, Field(type(v), k))
+                    setattr(entity_to_add, new_field_name, v)
+            except Exception:
+                errors[k] = f'Value {v} not compatible with field {k}'
+
+        if len(errors) > 0:
+            return return_error(errors, 400)
 
         entity_to_add_dict = entity_to_add.to_dict()
 
@@ -1116,7 +1125,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         See self._entity_custom_data
         """
-        self._entity_custom_data(EntityType.Devices, mongo_filter)
+        result = self._entity_custom_data(EntityType.Devices, mongo_filter)
+        if result:
+            return result
         return '', 200
 
     @gui_add_rule_logged_in('devices/hyperlinks', required_permissions={Permission(PermissionType.Devices,

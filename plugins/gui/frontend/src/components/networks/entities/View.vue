@@ -65,7 +65,7 @@
         <x-modal v-if="fieldsEditor.active" @confirm="saveFieldsEditor" @close="closeFieldsEditor"
                  :disabled="!fieldsEditor.valid" approve-text="Save">
             <x-custom-fields slot="body" :module="module" v-model="fieldsEditor.data" :fields="customFields"
-                             @validate="validateFieldsEditor"/>
+                             @validate="validateFieldsEditor" :external-error="error"/>
         </x-modal>
         <x-toast v-if="toastMessage" :message="toastMessage" @done="removeToast"/>
     </div>
@@ -110,7 +110,8 @@
                 entities: [this.$route.params.id],
                 delayInitTourState: false,
                 fieldsEditor: {active: false},
-                toastMessage: ''
+                toastMessage: '',
+                error: ''
             }
         },
         computed: {
@@ -222,7 +223,7 @@
             },
             customFields() {
                 return (this.fields.specific.gui || this.fields.generic)
-            },
+            }
         },
         watch: {
             entity(newEntity, oldEntity) {
@@ -308,6 +309,7 @@
                 }
             },
             saveFieldsEditor() {
+                let self = this;
                 if (!this.fieldsEditor.valid) return
                 this.saveCustomData({
                     module: this.module, data: {
@@ -316,18 +318,17 @@
                         }, data: this.fieldsEditor.data
                     }
                 }).then((response) => {
-                    if (response.status === 200) {
-                        this.toastMessage = 'Saved Custom Data'
-                        this.fetchDataFields({module: this.module})
-                        this.fetchCurrentEntity()
-                        this.closeFieldsEditor()
-                    } else {
-                        this.toastMessage = response.data.message
-                    }
+                    this.toastMessage = 'Saved Custom Data'
+                    this.fetchDataFields({module: this.module})
+                    this.fetchCurrentEntity()
+                    this.closeFieldsEditor()
+                }).catch(error => {
+                    self.error = error.response.data.message
                 })
             },
             closeFieldsEditor() {
                 this.fieldsEditor = {active: false}
+                this.error = ''
             },
             validateFieldsEditor(valid) {
                 this.fieldsEditor.valid = valid
