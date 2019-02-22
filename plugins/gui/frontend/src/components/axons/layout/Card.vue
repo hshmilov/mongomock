@@ -24,8 +24,14 @@
         props: {
             title: {required: true},
             logo: {},
-            removable: {default: false},
-            reversible: {default: false}
+            removable: {
+                type: Boolean,
+                default: false
+            },
+            reversible: {
+                type: Boolean,
+                default: false
+            }
         }
     }
 </script>

@@ -91,7 +91,7 @@ class TriggeredReason(Enum):
     Defines the various reasons a trigger may be triggered
     """
 
-    manual = 'Manually ran'
+    manual = 'Manual run'
     every_discovery = 'Any results'
     new_entities = 'New entities were added'
     previous_entities = 'Previous entities were removed'
@@ -133,6 +133,7 @@ class TriggerPeriod(Enum):
     daily = auto()
     weekly = auto()
     monthly = auto()
+    never = auto()
 
 
 class RunOnEntities(Enum):

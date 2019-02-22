@@ -5,6 +5,7 @@ export const FETCH_ENFORCEMENT = 'FETCH_ENFORCEMENT'
 export const SET_ENFORCEMENT = 'SET_ENFORCEMENT'
 export const SAVE_ENFORCEMENT = 'SAVE_ENFORCEMENT'
 export const REMOVE_ENFORCEMENTS = 'REMOVE_ENFORCEMENTS'
+export const RUN_ENFORCEMENT = 'RUN_ENFORCEMENT'
 export const FETCH_ACTIONS = 'FETCH_ACTIONS'
 export const UPDATE_ACTIONS = 'UPDATE_ACTIONS'
 export const FETCH_SAVED_ACTIONS = 'FETCH_SAVED_ACTIONS'
@@ -31,7 +32,7 @@ export const initTrigger = {
         entity: ''
     },
     run_on: 'AllEntities',
-    period: 'all',
+    period: 'never',
     conditions: {
         new_entities: false,
         previous_entities: false,
@@ -164,7 +165,7 @@ export const enforcements = {
                     data: enforcement
                 }).then((response) => {
                     if (response.status === 200) {
-                        handleSuccess(enforcement.uuid)
+                        return handleSuccess(enforcement.uuid)
                     }
                 })
             } else {
@@ -175,6 +176,7 @@ export const enforcements = {
                 }).then((response) => {
                     if (response.status === 201 && response.data) {
                         handleSuccess(response.data)
+                        return response.data
                     }
                 })
             }
@@ -207,6 +209,12 @@ export const enforcements = {
             return dispatch(REQUEST_API, {
                 rule: 'enforcements/actions/saved',
                 type: UPDATE_SAVED_ACTIONS
+            })
+        },
+        [ RUN_ENFORCEMENT ] ({dispatch}, enforcementId) {
+            return dispatch(REQUEST_API, {
+                rule: `enforcements/${enforcementId}/trigger`,
+                method: 'POST'
             })
         }
     }

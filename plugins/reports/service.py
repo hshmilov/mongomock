@@ -3,7 +3,7 @@ import json
 import logging
 from itertools import chain
 from multiprocessing.pool import ThreadPool
-from typing import List, Iterable, Set, Tuple
+from typing import List, Iterable, Tuple
 
 from bson import json_util
 from bson.objectid import ObjectId
@@ -171,12 +171,11 @@ class ReportsService(Triggerable, PluginBase):
             if not len(run_configuration) == 1:
                 raise LookupError(f'Found {len(run_configuration)} instances of the given configuration')
             run_configuration = Trigger.from_dict(run_configuration[0])
-            result = self.__process_run_configuration(report, run_configuration)
+            result = self.__process_run_configuration(report, run_configuration, post_json.get('manual', False))
+            if not result:
+                return 'Not ran'
             result.metadata.pretty_id = self.__get_pretty_id()
-            if result:
-                result = json.loads(result.to_json(default=default_with_enums), object_hook=json_util.object_hook)
-            else:
-                result = 'Not ran'
+            result = json.loads(result.to_json(default=default_with_enums), object_hook=json_util.object_hook)
             return result
 
         raise NotImplementedError('No such job')
@@ -359,36 +358,36 @@ class ReportsService(Triggerable, PluginBase):
 
     @staticmethod
     def _get_triggered_reports(current_result, diff_dict: QueryResultDiff,
-                               requested_triggers: TriggerConditions) -> Set[TriggeredReason]:
+                               conditions: TriggerConditions) -> List[TriggeredReason]:
         """
         get the actual set of reports that was triggered this cycle
 
         :param diff_dict: dict that represent the changes between last cycle and this one.
-        :param requested_triggers: the user defined triggers
+        :param conditions: the user defined conditions for trigger
         :return: A set of triggered trigger reasons.
         """
-        if not requested_triggers.new_entities and \
-                not requested_triggers.previous_entities and \
-                requested_triggers.above is None and \
-                requested_triggers.below is None:
-            return {TriggeredReason.every_discovery}
+        if not conditions.new_entities and \
+                not conditions.previous_entities and \
+                conditions.above is None and \
+                conditions.below is None:
+            return [TriggeredReason.every_discovery]
 
         triggered = set()
 
         # If there was change
-        if requested_triggers.new_entities and diff_dict.added:
+        if conditions.new_entities and diff_dict.added:
             triggered.add(TriggeredReason.new_entities)
 
-        if requested_triggers.previous_entities and diff_dict.removed:
+        if conditions.previous_entities and diff_dict.removed:
             triggered.add(TriggeredReason.previous_entities)
 
-        if requested_triggers.above is not None and len(current_result) > int(requested_triggers.above):
+        if conditions.above is not None and len(current_result) > int(conditions.above):
             triggered.add(TriggeredReason.above)
 
-        if requested_triggers.below is not None and len(current_result) < int(requested_triggers.below):
+        if conditions.below is not None and len(current_result) < int(conditions.below):
             triggered.add(TriggeredReason.below)
 
-        return triggered
+        return list(triggered)
 
     def _call_actions(self,
                       report_data, recipe: Recipe,
@@ -499,7 +498,7 @@ class ReportsService(Triggerable, PluginBase):
             'i.name': run_configuration_name
         }])
 
-    def __process_run_configuration(self, report, trigger: Trigger) -> Recipe:
+    def __process_run_configuration(self, report, trigger: Trigger, manual: bool = False) -> Recipe:
         """
         Processes a run configuration:
         Figures out if it is supposed to run;
@@ -508,9 +507,12 @@ class ReportsService(Triggerable, PluginBase):
             Updates metadata and last results
         :param report: the relevant report with the recipe
         :param trigger: the specific run configuration to use
+        :param manual: the specific run was triggered manually, so no need to check period or conditions
         :return: Updated Recipe in case the configuration has run
         """
         result = None
+        if trigger.period == TriggerPeriod.never and not manual:
+            return result
 
         if trigger.last_triggered and trigger.period != TriggerPeriod.all:
             now = datetime.datetime.utcnow()
@@ -521,11 +523,11 @@ class ReportsService(Triggerable, PluginBase):
             if trigger.period == TriggerPeriod.monthly:
                 max_date = now - datetime.timedelta(days=31)
             if trigger.last_triggered > max_date:
-                return False
+                return result
         current_query_result = self.get_view_results(trigger.view.name, trigger.view.entity)
         query_difference = query_result_diff(current_query_result, self.__get_internal_axon_ids(trigger.result))
-        triggered_reason = list(self._get_triggered_reports(current_query_result, query_difference,
-                                                            trigger.conditions))
+        triggered_reason = self._get_triggered_reports(current_query_result, query_difference,
+                                                       trigger.conditions) if not manual else [TriggeredReason.manual]
 
         if not triggered_reason and trigger.result is None:
             # this means that this is the first run for a query that has specific conditions,

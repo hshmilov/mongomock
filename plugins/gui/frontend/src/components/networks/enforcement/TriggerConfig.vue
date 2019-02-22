@@ -1,41 +1,51 @@
 <template>
     <div class="x-trigger-config">
-        <h4 class="config-title">Enforcement Input</h4>
-        <div>Describe the entities for the Enforcement to run on:</div>
-        <div class="config-list">
-            <div class="config-base">
-                <label>Saved Query:</label>
-                <div class="base-query">
-                    <x-select-symbol v-bind="{options: entityOptions, type: 'icon', placeholder: 'mod', readOnly}" minimal v-model="config.view.entity" />
-                    <x-select :options="viewOptions" searchable placeholder="query name" :read-only="readOnly"
-                              v-model="config.view.name" class="query-name" />
+        <div class="main">
+            <h4 class="title">Enforcement Input</h4>
+            <div>Describe the entities for the Enforcement to run on:</div>
+            <div class="config">
+                <div class="config-base">
+                    <label>Saved Query:</label>
+                    <div class="base-query">
+                        <x-select-symbol v-bind="{options: entityOptions, type: 'icon', placeholder: 'mod', readOnly}" minimal v-model="config.view.entity" />
+                        <x-select :options="viewOptions" searchable placeholder="query name" :read-only="readOnly"
+                                  v-model="config.view.name" class="query-name" />
+                    </div>
+                </div>
+                <x-checkbox v-model="config.run_on" value="AddedEntities" :read-only="readOnly" label="Run on added entities only" />
+            </div>
+            <div class="section">
+                <div class="header">
+                    <x-checkbox v-model="showScheduling" :read-only="readOnly" />
+                    <h4 class="title" @click="toggleScheduling">Add Scheduling</h4>
+                </div>
+                <div v-if="showScheduling" class="main">
+                    <h5 class="title">Recurrence</h5>
+                    <div>Monitor your description over the period:</div>
+                    <div class="config">
+                        <div v-for="period in periodOptions" class="list-item">
+                            <input type="radio" :id="period.id" :value="period.name" v-model="config.period" :disabled="readOnly">
+                            <label :for="period.id" class="radio-label">{{period.title}}</label>
+                        </div>
+                    </div>
+                    <h5 class="title">Conditions</h5>
+                    <div>Detect the monitored changes and trigger upon:</div>
+                    <div class="config">
+                        <x-checkbox label="New entities were added to results" v-model="conditions.new_entities" :read-only="readOnly" />
+                        <x-checkbox label="Previous entities were subtracted from results" v-model="conditions.previous_entities" :read-only="readOnly" />
+                        <div class="config-item">
+                            <x-checkbox label="The number of results is above..." v-model="showAbove" :read-only="readOnly" />
+                            <input type="number" v-if="showAbove" v-model="conditions.above" @keypress="validateInteger" :disabled="readOnly" class="above">
+                        </div>
+                        <div class="config-item">
+                            <x-checkbox label="The number of results is below..." v-model="showBelow" :read-only="readOnly" />
+                            <input type="number" v-if="showBelow" v-model="conditions.below" @keypress="validateInteger" :disabled="readOnly" class="below">
+                        </div>
+                    </div>
                 </div>
             </div>
-            <x-checkbox v-model="config.run_on" value="AddedEntities" :read-only="readOnly" label="Run on added entities only" />
-        </div>
-        <h4 class="config-title">Recurrence</h4>
-        <div>Monitor your description over the period:</div>
-        <div class="config-list">
-            <div v-for="period in periodOptions" class="list-item">
-                <input type="radio" :id="period.id" :value="period.name" v-model="config.period" :disabled="readOnly">
-                <label :for="period.id" class="radio-label">{{period.title}}</label>
             </div>
-        </div>
-        <h4 class="config-title">Conditions</h4>
-        <div>Detect the monitored changes and trigger upon:</div>
-        <div class="config-list">
-            <x-checkbox label="New entities were added to results" v-model="conditions.new_entities" :read-only="readOnly" />
-            <x-checkbox label="Previous entities were subtracted from results" v-model="conditions.previous_entities" :read-only="readOnly" />
-            <div class="list-item">
-                <x-checkbox label="The number of results is above..." v-model="showAbove" :read-only="readOnly" />
-                <input type="number" v-if="showAbove" v-model="conditions.above" @keypress="validateInteger" :disabled="readOnly" class="above">
-            </div>
-            <div class="list-item">
-                <x-checkbox label="The number of results is below..." v-model="showBelow" :read-only="readOnly" />
-                <input type="number" v-if="showBelow" v-model="conditions.below" @keypress="validateInteger" :disabled="readOnly" class="below">
-            </div>
-        </div>
-        <div class="config-button">
+        <div class="footer">
             <x-button v-if="!readOnly" :disabled="disableConfirm" @click="confirmTrigger">Save</x-button>
         </div>
     </div>
@@ -58,7 +68,10 @@
         },
         mixins: [viewsMixin],
         props: {
-            value: {required: true},
+            value: {
+                type: Object,
+                default: () => {}
+            },
             readOnly: Boolean
         },
         computed: {
@@ -90,7 +103,7 @@
                 return this.config.conditions
             },
             disableConfirm() {
-                return Boolean(!(this.config.view.name && this.config.view.entity && this.config.period))
+                return Boolean(!(this.config.view.name && this.config.view.entity))
             },
             runOn() {
                 return this.config.run_on
@@ -104,12 +117,20 @@
                     })
                 }
                 return views
+            },
+            showScheduling: {
+                get() {
+                    return this.config.period !== 'never'
+                },
+                set(show) {
+                    this.config.period = show? 'all': 'never'
+                }
             }
         },
         data() {
             return {
                 showAbove: false,
-                showBelow: false
+                showBelow: false,
             }
         },
         watch: {
@@ -136,6 +157,9 @@
                 } else if (!show) {
                     this.config.conditions[name] = null
                 }
+            },
+            toggleScheduling() {
+                this.showScheduling = !this.showScheduling
             }
         }
     }
@@ -143,51 +167,75 @@
 
 <style lang="scss">
     .x-trigger-config {
-        .config-base {
-            display: flex;
-            align-items: center;
-            .base-query {
-                flex: 1 0 auto;
-                margin-left: 24px;
-                display: flex;
-                .x-select-symbol {
-                    width: 60px;
+        display: grid;
+        grid-template-rows: auto 30px;
+        align-items: start;
+        .main {
+            overflow: auto;
+            height: 100%;
+            .title {
+                margin: 24px 0 8px;
+            }
+            .config {
+                margin: 8px 0 8px 12px;
+                .config-base {
+                    display: flex;
+                    align-items: center;
+                    .base-query {
+                        flex: 1 0 auto;
+                        margin-left: 24px;
+                        display: flex;
+                        .x-select-symbol {
+                            width: 60px;
+                        }
+                        .query-name {
+                            flex: 1 0 auto;
+                        }
+                    }
+                    .md-switch {
+                        margin: 4px 0;
+                    }
                 }
-                .query-name {
-                    flex: 1 0 auto;
+                .radio-label {
+                    margin-left: 8px;
                 }
-            }
-            .md-switch {
-                margin: 4px 0;
-            }
-        }
-        .config-title {
-            margin: 24px 0 8px;
-        }
-        .config-list {
-            margin: 12px;
-            margin-right: 0;
-            .radio-label {
-                margin-left: 8px;
-            }
-            .x-checkbox {
-                line-height: 24px;
-            }
-            .list-item {
-                display: flex;
-                align-items: center;
-                line-height: 24px;
                 .x-checkbox {
-                    margin-right: 12px;
+                    line-height: 24px;
                 }
-                .above, .below {
-                    flex: 1 0 auto;
+                .config-item {
+                    display: flex;
+                    align-items: center;
+                    line-height: 24px;
+                    .x-checkbox {
+                        margin-right: 12px;
+                    }
+                    .above, .below {
+                        flex: 1 0 auto;
+                    }
+                }
+            }
+            .section {
+                .header {
+                    display: flex;
+                    align-items: center;
+                    margin-top: 24px;
+                    .x-checkbox {
+                        margin-bottom: 4px;
+                    }
+                    .title {
+                        margin: 0 0 0 8px;
+                        cursor: pointer;
+                    }
+                }
+                .main {
+                    margin-left: 24px;
+                    .title {
+                        margin: 12px 0;
+                    }
                 }
             }
         }
-        .config-button {
-            margin-top: 24px;
-            width: 100%;
+        .footer {
             text-align: right;
         }
     }

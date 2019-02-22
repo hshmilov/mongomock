@@ -1,38 +1,106 @@
 <template>
-    <x-page class="x-enforcement" :breadcrumbs="[
-        { title: 'enforcement center', path: { name: 'Enforcements'}},
-    	{ title: name }]">
-        <x-split-box>
-            <template slot="main">
-                <div class="header">
-                    <label>Enforcement Set Name</label>
-                    <input v-model="enforcement.name" ref="name" id="enforcement_name" @input="onNameInput" :disabled="isReadOnly">
-                </div>
-                <div class="body">
-                    <div class="body-flow">
-                        <x-action id="main_action" v-bind="mainAction" @click="selectActionMain" @remove="removeActionMain" />
-                        <x-action-group v-for="item in successiveActions" v-bind="item" :key="item.condition"
-                                        @select="selectAction" @remove="removeAction" />
-                        <x-trigger id="trigger" :title="trigger.name" :selected="trigger.selected" @click="selectTrigger(0)" />
-                    </div>
-                </div>
-                <div class="footer">
-                    <!--x-button emphasize @click="saveRun" disabled>Save & Run</x-button-->
-                    <x-button v-if="isReadOnly" @click="exit">Exit</x-button>
-                    <x-button v-else id="enforcement_save" :disabled="disableSave" @click="saveExit">Save & Exit</x-button>
-                </div>
-            </template>
-            <x-card slot="details" v-if="trigger.selected" v-bind="triggerConfCard" >
-                <x-trigger-config v-model="triggerInProcess.definition" @confirm="saveTrigger" :read-only="isReadOnly" />
-            </x-card>
-            <x-card slot="details" v-else-if="currentActionName" v-bind="actionConfCard" @back="restartAction">
-                <x-action-config v-model="actionInProcess.definition" :exclude="excludedNames" @confirm="saveAction" :read-only="isReadOnly" />
-            </x-card>
-            <x-card slot="details" v-else-if="actionInProcess.position" v-bind="actionLibCard">
-                <x-action-library :categories="actionCategories" @select="selectActionType" />
-            </x-card>
-        </x-split-box>
-    </x-page>
+  <x-page
+    class="x-enforcement"
+    :breadcrumbs="[
+      { title: 'enforcement center', path: { name: 'Enforcements'}},
+      { title: name }]"
+  >
+    <x-split-box>
+      <template slot="main">
+        <div class="header">
+          <label>Enforcement Set Name</label>
+          <input
+            id="enforcement_name"
+            ref="name"
+            v-model="enforcement.name"
+            :disabled="isReadOnly"
+            @input="onNameInput"
+          >
+        </div>
+        <div class="body">
+          <div class="body-flow">
+            <x-action
+              id="main_action"
+              v-bind="mainAction"
+              @click="selectActionMain"
+              @remove="removeActionMain"
+            />
+            <x-action-group
+              v-for="item in successiveActions"
+              :key="item.condition"
+              v-bind="item"
+              @select="selectAction"
+              @remove="removeAction"
+            />
+            <x-trigger
+              id="trigger"
+              :title="trigger.name"
+              :selected="trigger.selected"
+              @click="selectTrigger(0)"
+            />
+          </div>
+        </div>
+        <div class="footer">
+          <x-button
+            emphasize
+            :disabled="disableSave"
+            @click="saveRun"
+          >Save & Run</x-button>
+          <x-button
+            v-if="isReadOnly"
+            @click="exit"
+          >Exit</x-button>
+          <x-button
+            v-else
+            id="enforcement_save"
+            :disabled="disableSave"
+            @click="saveExit"
+          >Save & Exit</x-button>
+        </div>
+      </template>
+      <x-card
+        v-if="trigger.selected"
+        slot="details"
+        key="triggerConf"
+        title="Trigger Configuration"
+        logo="adapters/axonius"
+      >
+        <x-trigger-config
+          v-model="triggerInProcess.definition"
+          :read-only="isReadOnly"
+          @confirm="saveTrigger"
+        />
+      </x-card>
+      <x-card
+        v-else-if="currentActionName"
+        slot="details"
+        key="actionConf"
+        :title="actionConfTitle"
+        :logo="actionConfLogo"
+        reversible
+        @back="restartAction"
+      >
+        <x-action-config
+          v-model="actionInProcess.definition"
+          :exclude="excludedNames"
+          :read-only="isReadOnly"
+          @confirm="saveAction"
+        />
+      </x-card>
+      <x-card
+        v-else-if="actionInProcess.position"
+        slot="details"
+        key="actionLib"
+        title="Action Library"
+        logo="adapters/axonius"
+      >
+        <x-action-library
+          :categories="actionCategories"
+          @select="selectActionType"
+        />
+      </x-card>
+    </x-split-box>
+  </x-page>
 </template>
 
 <script>
@@ -50,7 +118,7 @@
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
     import {
-        initRecipe, initAction, initTrigger, FETCH_ENFORCEMENT, SAVE_ENFORCEMENT
+        initRecipe, initAction, initTrigger, FETCH_ENFORCEMENT, SAVE_ENFORCEMENT, RUN_ENFORCEMENT
     } from '../../store/modules/enforcements'
 
     import {
@@ -58,7 +126,7 @@
     } from '../../constants/enforcement'
 
     export default {
-        name: 'x-enforcement',
+        name: 'XEnforcement',
         components: {
             xPage, xSplitBox, xCard, xButton,
             xTrigger, xTriggerConfig,
@@ -118,28 +186,13 @@
                     }
                 })
             },
-            triggerConfCard() {
-                return {
-                    key: 'triggerConf',
-                    title: 'Trigger Configuration',
-                    logo: 'adapters/axonius'
-                }
+            actionConfTitle() {
+                if (!this.currentActionName) return ''
+                return `Action Library / ${actionsMeta[this.currentActionName].title}`
             },
-            actionConfCard() {
-                if (!this.currentActionName) return {}
-                return {
-                    key: 'actionConf',
-                    title: `Action Library / ${actionsMeta[this.currentActionName].title}`,
-                    logo: `actions/${this.currentActionName}`,
-                    reversible: true
-                }
-            },
-            actionLibCard() {
-                return {
-                    key: 'actionLib',
-                    title: 'Action Library',
-                    logo: 'adapters/axonius'
-                }
+            actionConfLogo() {
+                if (!this.currentActionName) return ''
+                return `actions/${this.currentActionName}`
             },
             currentActionName() {
                 if (!this.actionInProcess.definition || !this.actionInProcess.definition.action
@@ -185,12 +238,26 @@
                 }
             }
         },
+        created() {
+            if (!this.enforcementFetching && (!this.enforcementData.uuid || this.enforcementData.uuid !== this.id)) {
+                this.fetchEnforcement(this.id).then(() => {
+                    this.initData()
+                })
+            } else {
+                this.initData()
+            }
+        },
+        mounted() {
+            this.$refs.name.focus()
+            this.tour({name: 'enforcementName'})
+        },
         methods: {
             ...mapMutations({
                 tour: CHANGE_TOUR_STATE
             }),
             ...mapActions({
-                fetchEnforcement: FETCH_ENFORCEMENT, saveEnforcement: SAVE_ENFORCEMENT
+                fetchEnforcement: FETCH_ENFORCEMENT, saveEnforcement: SAVE_ENFORCEMENT,
+                runEnforcement: RUN_ENFORCEMENT
             }),
             initData() {
                 this.enforcement = {...this.enforcementData}
@@ -198,7 +265,8 @@
             },
             saveRun() {
                 this.saveEnforcement(this.enforcement).then((response) => {
-                    // TODO run!
+                    this.runEnforcement(this.id === 'new'? response: this.id)
+                    this.exit()
                 })
             },
             saveExit() {
@@ -311,19 +379,6 @@
             onNameInput() {
                 this.tour({name: 'actionMain'})
             }
-        },
-        created() {
-            if (!this.enforcementFetching && (!this.enforcementData.uuid || this.enforcementData.uuid !== this.id)) {
-                this.fetchEnforcement(this.id).then(() => {
-                    this.initData()
-                })
-            } else {
-                this.initData()
-            }
-        },
-        mounted() {
-            this.$refs.name.focus()
-            this.tour({name: 'enforcementName'})
         }
     }
 </script>

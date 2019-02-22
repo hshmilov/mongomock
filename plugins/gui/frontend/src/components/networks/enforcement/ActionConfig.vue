@@ -53,7 +53,7 @@
         props: {
             value: {
                 type: Object,
-                required: true
+                default: () => {}
             },
             exclude: {
                 type: Array,

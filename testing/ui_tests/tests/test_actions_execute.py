@@ -117,11 +117,6 @@ class TestAlertActions(TestBase):
 
             # switch to alerts page
             self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, COMMON_ALERT_QUERY)
-
-            # check all trigger causes so it will always jump
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.save_trigger()
-
             self.enforcements_page.add_push_system_notification()
 
             self.enforcements_page.add_notify_syslog(is_main=False)
@@ -147,11 +142,6 @@ class TestAlertActions(TestBase):
             # make another alert
             new_alert_name = f'{ENFORCEMENT_NAME} SSL'
             self.enforcements_page.create_basic_enforcement(new_alert_name, COMMON_ALERT_QUERY)
-
-            # check all trigger causes so it will always jump
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.save_trigger()
-
             self.enforcements_page.add_push_system_notification(f'{ENFORCEMENT_NAME} push')
 
             self.enforcements_page.add_notify_syslog(f'{ENFORCEMENT_NAME} syslog', False)
@@ -181,6 +171,7 @@ class TestAlertActions(TestBase):
             self.enforcements_page.click_new_enforcement()
             self.enforcements_page.fill_enforcement_name(ALERT_CHANGE_NAME)
             self.enforcements_page.select_trigger()
+            self.enforcements_page.check_scheduling()
             self.enforcements_page.select_saved_view(ALERT_CHANGE_NAME)
             self.enforcements_page.save_trigger()
             self.enforcements_page.add_push_system_notification()

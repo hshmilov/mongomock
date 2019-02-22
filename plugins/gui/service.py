@@ -1816,6 +1816,25 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         return response.text, response.status_code
 
+    @gui_add_rule_logged_in('enforcements/<enforcement_id>/trigger', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Enforcements, PermissionLevel.ReadWrite)})
+    def trigger_enforcement_by_id(self, enforcement_id):
+        """
+        Triggers a job for the requested enforcement with its first trigger
+        """
+        enforcement = self.enforcements_collection.find_one({
+            '_id': ObjectId(enforcement_id)
+        }, {
+            'name': 1,
+            TRIGGERS_FIELD: 1
+        })
+        response = self.request_remote_plugin('trigger/run', 'reports', method='post', json={
+            'report_name': enforcement['name'],
+            'configuration_name': enforcement[TRIGGERS_FIELD][0]['name'],
+            'manual': True
+        })
+        return response.text, response.status_code
+
     @gui_add_rule_logged_in('enforcements/actions', required_permissions={Permission(PermissionType.Enforcements,
                                                                                      PermissionLevel.ReadOnly)})
     def actions(self):

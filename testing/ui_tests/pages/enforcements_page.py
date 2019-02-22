@@ -45,8 +45,8 @@ class EnforcementsPage(EntitiesPage):
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
     ENFORCEMENTS_CHECKBOX = 'div.x-checkbox-container'
-    ABOVE_INPUT_CSS = '.config-list .list-item .above'
-    BELOW_INPUT_CSS = '.config-list .list-item .below'
+    ABOVE_INPUT_CSS = '.config .config-item .above'
+    BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[@title=\'{enforcement_name}\']'
     SEND_AN_EMAIL = 'Send an Email'
 
@@ -120,6 +120,9 @@ class EnforcementsPage(EntitiesPage):
     def check_enforcement_checkbox(self, text):
         self.find_element_by_text(text).click()
 
+    def check_scheduling(self):
+        self.check_enforcement_checkbox('Add Scheduling')
+
     def check_new(self):
         self.check_enforcement_checkbox(Trigger.NewEntities)
 
@@ -176,7 +179,7 @@ class EnforcementsPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.TRIGGER_CONTAINER_CSS).click()
         self.wait_for_element_present_by_css(self.TRIGGER_CONF_CONTAINER_CSS)
         # Appearance animation time
-        time.sleep(2)
+        time.sleep(0.6)
 
     def save_trigger(self):
         self.click_button(self.SAVE_BUTTON, scroll_into_view_container=self.TRIGGER_CONF_CONTAINER_CSS,
@@ -227,6 +230,7 @@ class EnforcementsPage(EntitiesPage):
         self.click_new_enforcement()
         self.fill_enforcement_name(enforcement_name)
         self.select_trigger()
+        self.check_scheduling()
         self.select_saved_view(enforcement_view)
         self.save_trigger()
 
