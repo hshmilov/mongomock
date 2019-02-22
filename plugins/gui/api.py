@@ -123,7 +123,7 @@ class API:
         return API_VERSION
 
     @gui_helpers.paginated()
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @api_add_rule(f'devices', required_permissions={Permission(PermissionType.Devices,
@@ -143,7 +143,7 @@ class API:
 
         return jsonify(return_doc)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @api_add_rule(f'devices/count', required_permissions={Permission(PermissionType.Devices,
                                                                      PermissionLevel.ReadOnly)})
     def api_devices_count(self, mongo_filter):
@@ -154,7 +154,7 @@ class API:
     def api_device_by_id(self, device_id):
         return self._device_entity_by_id(device_id)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @api_add_rule('devices/labels', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    ReadOnlyJustForGet)})
@@ -166,7 +166,7 @@ class API:
     #########
 
     @gui_helpers.paginated()
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
     @api_add_rule(f'users', required_permissions={Permission(PermissionType.Users,
@@ -185,7 +185,7 @@ class API:
 
         return jsonify(return_doc)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @api_add_rule(f'users/count', required_permissions={Permission(PermissionType.Users,
                                                                    PermissionLevel.ReadOnly)})
     def api_users_count(self, mongo_filter):
@@ -196,7 +196,7 @@ class API:
     def api_user_by_id(self, user_id):
         return self._user_entity_by_id(user_id)
 
-    @gui_helpers.filtered()
+    @gui_helpers.filtered_entities()
     @api_add_rule('users/labels', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Users,
                                                    ReadOnlyJustForGet)})
