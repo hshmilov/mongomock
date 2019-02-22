@@ -6,17 +6,27 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from axonius.fields import Field
-from checkpoint_r80_adapter.connection import CheckpointR80Connection
-from checkpoint_r80_adapter.client_id import get_client_id
+from code42_adapter.connection import Code42Connection
+from code42_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CheckpointR80Adapter(AdapterBase):
+class Code42Adapter(AdapterBase):
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        cp_type = Field(str, 'CheckPoint Device Type')
-        cp_domain = Field(str, 'CheckPoint Domain')
+        product_version = Field(str, 'Product Version')
+        device_service = Field(str, 'Device Service')
+        java_version = Field(str, 'Java Version')
+        agent_version = Field(str, 'Agent Version')
+        device_status = Field(str, 'Device Status')
+        device_type = Field(str, 'Device Type')
+        user_id = Field(str, 'User ID')
+        address = Field(str, 'Address')
+        remote_address = Field(str, 'Remote Address')
+        active_state = Field(bool, 'Active State')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -32,12 +42,11 @@ class CheckpointR80Adapter(AdapterBase):
     @staticmethod
     def _connect_client(client_config):
         try:
-            with CheckpointR80Connection(domain=client_config['domain'],
-                                         verify_ssl=client_config['verify_ssl'],
-                                         username=client_config['username'],
-                                         password=client_config['password'],
-                                         cp_domain=client_config.get('cp_domain'),
-                                         https_proxy=client_config.get('https_proxy')) as connection:
+            with Code42Connection(domain=client_config['domain'],
+                                  verify_ssl=client_config['verify_ssl'],
+                                  username=client_config['username'],
+                                  password=client_config['password'],
+                                  https_proxy=client_config.get('https_proxy')) as connection:
                 return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -61,7 +70,7 @@ class CheckpointR80Adapter(AdapterBase):
     @staticmethod
     def _clients_schema():
         """
-        The schema CheckpointR80Adapter expects from configs
+        The schema Code42Adapter expects from configs
 
         :return: JSON scheme
         """
@@ -69,7 +78,7 @@ class CheckpointR80Adapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'CheckpointR80 Host URL',
+                    'title': 'Code42 Domain',
                     'type': 'string'
                 },
                 {
@@ -82,11 +91,6 @@ class CheckpointR80Adapter(AdapterBase):
                     'title': 'Password',
                     'type': 'string',
                     'format': 'password'
-                },
-                {
-                    'name': 'cp_domain',
-                    'title': 'CheckPoint Domain',
-                    'type': 'string'
                 },
                 {
                     'name': 'verify_ssl',
@@ -112,36 +116,36 @@ class CheckpointR80Adapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device_id = device_raw.get('uid')
+                device_id = device_raw.get('guid')
                 if not device_id:
-                    logger.warning(f'Bad device with not ID {device_raw}')
+                    logger.warning(f'Bad device with no guid {device_raw}')
                     continue
                 device.id = device_id + '_' + (device_raw.get('name') or '')
-                device.name = device_raw.get('name')
-                device.cp_type = device_raw.get('type')
+                device.hostname = device_raw.get('name')
                 try:
-                    ips = [device_raw.get('ipv4-address')] if device_raw.get('ipv4-address') else None
-                    ips6 = [device_raw.get('ipv6-address')] if device_raw.get('ipv6-address') else None
+                    device.last_seen = parse_date(device_raw.get('lastConnected'))
+                except Exception:
+                    logger.exception(f'Problem getting last seen for {device_raw}')
+                try:
+                    device.figure_os((device_raw.get('osName') or '') + ' ' + (device_raw.get('osVersion') or ''))
+                except Exception:
+                    logger.exception(f'Problem getting os for {device_raw}')
+                device.product_version = device_raw.get('productVersion')
+                device.device_service = device_raw.get('service')
+                device.java_version = device_raw.get('javaVersion')
+                device.agent_version = str(device_raw.get('version')) if device_raw.get('version') else None
+                device.device_status = device_raw.get('status')
+                device.device_type = device_raw.get('type')
+                device.user_id = str(device_raw.get('userId')) if device_raw.get('userId') else None
+                device.address = device_raw.get('address')
+                device.remote_address = device_raw.get('remoteAddress')
+                device.active_state = device_raw.get('active')
 
-                    if ips and ips6:
-                        ips.extend(ips6)
-                    elif ips or ips6:
-                        ips = ips or ips6
-                    if ips:
-                        device.add_nic(None, ips)
-                except Exception:
-                    logger.exception(f'Problem adding nic to {device_raw}')
-                try:
-                    domain = device_raw.get('domain')
-                    if domain and isinstance(domain, dict):
-                        device.cp_domain = domain.get('name')
-                except Exception:
-                    logger.exception(f'Problem getting domain to {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception(f'Problem with fetching CheckpointR80 Device for {device_raw}')
+                logger.exception(f'Problem with fetching Code42 Device for {device_raw}')
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Network]
+        return [AdapterProperty.Agent]

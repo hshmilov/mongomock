@@ -116,6 +116,12 @@ class CybereasonAdapter(AdapterBase):
                 if not sensor_id:
                     logger.warning(f'Bad device with no id {sensor_id}')
                     continue
+                try:
+                    mac_raw = sensor_id.split('_')[-1]
+                    if mac_raw and isinstance(mac_raw, str) and len(mac_raw) == 12:
+                        device.add_nic(mac_raw, None)
+                except Exception:
+                    logger.exception('Problem getting MAC address')
                 device.id = sensor_id + '_' + (device_raw.get('machineName') or '')
                 device.name = device_raw.get('machineName')
                 device.hostname = device_raw.get('fqdn') or device_raw.get('machineName')

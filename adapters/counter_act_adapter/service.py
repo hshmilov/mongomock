@@ -40,7 +40,7 @@ class CounterActAdapter(AdapterBase):
         try:
             with CounterActConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
                                       username=client_config['username'], password=client_config['password'],
-                                      ) as connection:
+                                      https_proxy=client_config.get('https_proxy')) as connection:
                 return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -90,6 +90,11 @@ class CounterActAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [

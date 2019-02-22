@@ -616,6 +616,7 @@ def is_only_host_adapter_not_localhost(adapter_device):
                                                   'carbonblack_defense_adapter',
                                                   'carbonblack_protection_adapter',
                                                   'csv_adapter',
+                                                  'code42_adapter',
                                                   'sysaid_adapter',
                                                   'logrhythm_adapter']) and \
         (not adapter_device.get('data').get('hostname') or

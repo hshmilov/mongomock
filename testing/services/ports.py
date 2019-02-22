@@ -130,5 +130,6 @@ DOCKER_PORTS = {
     'armis-adapter':                    6052,
     'counter-act-adapter':              6053,
     'diag':                             6666,  # reserved
+    'code42-adapter':                   6667,
     'mongo':                            27017,
 }

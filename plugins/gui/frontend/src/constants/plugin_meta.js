@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    code42_adapter: {
+        title: 'Code42 - BETA',
+        description: 'Code42 provides data protection and visibility for data at rest and in motion on both endpoints and the cloud.'
+    },
     counter_act_adapter: {
         title: 'Forescout CounterACT',
         description: 'The Forescout CounterACT platform provides insight into numerous types of network-connected devices.'

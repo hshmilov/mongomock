@@ -17,7 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class TenableSecurityCenterAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        repository_id = Field(str, 'Repository ID')
+        repository_name = Field(str, 'Repository Name')
         score = Field(int, 'Score')
         total = Field(int, 'Total Vulnerabilities')
         severity_info = Field(int, 'Info Vulnerabilities Count')
@@ -149,8 +149,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
                 device.last_scan = last_scan_date
             except Exception:
                 logger.error(f'Couldn\'t parse last scan {last_scan}')
-
-        device.repository_id = raw_device_data.get('repositoryID')
+        try:
+            device.repository_name = (raw_device_data.get('repository') or {}).get('name')
+        except Exception:
+            logger.exception('Problem getting repository')
         device.score = raw_device_data.get('score')
         device.total = raw_device_data.get('total')
         device.severity_info = raw_device_data.get('severityInfo')
