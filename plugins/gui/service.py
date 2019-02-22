@@ -16,6 +16,7 @@ from multiprocessing.pool import ThreadPool
 from typing import Iterable, Tuple, Dict
 from uuid import uuid4
 from pathlib import Path
+
 import gridfs
 import ldap3
 import pymongo
@@ -105,6 +106,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
 from axonius.utils.metric import filter_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
+from axonius.utils.mongo_chunked import get_chunks_length
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.revving_cache import rev_cached
@@ -113,6 +115,7 @@ from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
+from gui.gui_logic.get_ec_historical_data_for_entity import get_all_task_data, TaskData
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -661,7 +664,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             },
             'labels': entity['labels'],
             'internal_axon_id': entity['internal_axon_id'],
-            'accurate_for_datetime': entity.get('accurate_for_datetime', None)
+            'accurate_for_datetime': entity.get('accurate_for_datetime', None),
+            'tasks': TaskData.schema().dump(list(get_all_task_data(entity['internal_axon_id'])), many=True)
         })
 
     def _disable_entity(self, entity_type: EntityType, mongo_filter):
@@ -1855,12 +1859,14 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             """
             Extract needed fields to build task as represented in the Frontend
             """
-            main_successful_count = 0
-            main_unsuccessful_count = 0
             main_results = task['result']['main']['action']['results']
-            if isinstance(main_results.get('successful_entities'), dict):
-                main_successful_count = len(main_results['successful_entities'].keys())
-                main_unsuccessful_count = len(main_results['unsuccessful_entities'].keys())
+
+            main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                      main_results['successful_entities'])
+
+            main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                        main_results['unsuccessful_entities'])
+
             return gui_helpers.beautify_db_entry({
                 '_id': task['_id'],
                 'success_rate': f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}',
@@ -1908,6 +1914,25 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             """
             Find the configuration that triggered this task and merge its details with task details
             """
+
+            def normalize_saved_action_results(saved_action_results):
+                saved_action_results['successful_entities'] = {
+                    'length': get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                saved_action_results['successful_entities']),
+                    '_id': saved_action_results['successful_entities']
+                }
+                saved_action_results['unsuccessful_entities'] = {
+                    'length': get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                saved_action_results['unsuccessful_entities']),
+                    '_id': saved_action_results['unsuccessful_entities']
+                }
+
+            normalize_saved_action_results(task['result']['main']['action']['results'])
+            for key in [ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
+                arr = task['result'][key]
+                for x in arr:
+                    normalize_saved_action_results(x['action']['results'])
+
             task_metadata = task['result']['metadata']
             return gui_helpers.beautify_db_entry({
                 '_id': task['_id'],

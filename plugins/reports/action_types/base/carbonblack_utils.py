@@ -4,7 +4,7 @@ from axonius.plugin_base import PluginBase
 
 def carbonblack_action(action_name, current_result):
 
-    results = {}
+    results = []
     for entry in current_result:
         for adapter_data in entry['adapters']:
             if adapter_data['plugin_name'] == 'carbonblack_response_adapter':
@@ -16,9 +16,11 @@ def carbonblack_action(action_name, current_result):
                 response = PluginBase.Instance.request_remote_plugin(action_name, 'carbonblack_response_adapter',
                                                                      'post', json=cb_response_dict)
                 if response.status_code == 200:
-                    results[entry['internal_axon_id']] = EntityResult(True, 'Success')
+                    res = EntityResult(entry['internal_axon_id'], True, 'Success')
                 elif response.status_code == 500:
-                    results[entry['internal_axon_id']] = EntityResult(False, response.data.message)
+                    res = EntityResult(entry['internal_axon_id'], False, response.data.message)
                 else:
-                    results[entry['internal_axon_id']] = EntityResult(False, 'Unexpected Error')
+                    res = EntityResult(entry['internal_axon_id'], False, 'Unexpected Error')
+
+                results.append(res)
     return results

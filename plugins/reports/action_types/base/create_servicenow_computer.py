@@ -37,7 +37,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             'adapters.data.network_interfaces.ips': 1
         }
         current_result = self._get_entities_from_view(service_now_projection)
-        results = {}
+        results = []
 
         for entry in current_result:
             name_raw = None
@@ -96,5 +96,6 @@ class ServiceNowComputerAction(ActionTypeBase):
                                                                     serial_number=serial_number_raw,
                                                                     to_correlate_plugin_unique_name=to_corre_plugin_id,
                                                                     to_correlate_device_id=to_correlate_device_id)
-            results[entry['internal_axon_id']] = EntityResult(not message, message or 'Success')
+
+            results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
         return results

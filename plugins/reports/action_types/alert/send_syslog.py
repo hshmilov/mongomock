@@ -3,7 +3,7 @@ from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.json import to_json
 
 from axonius.consts import report_consts
-from reports.enforcement_classes import EntityResult
+from reports.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 
@@ -42,13 +42,13 @@ class NotifySyslogAction(ActionTypeAlert):
             'severity': 'info'
         }
 
-    def run(self) -> EntityResult:
+    def _run(self) -> AlertActionResult:
         # Check if send device data is checked.
         query_name = self._run_configuration.view.name
 
         if not self._config.get('send_device_data'):
             if self._run_configuration.result:
-                prev_result_count = len(self._run_configuration.result)
+                prev_result_count = self._run_configuration.result_count
             else:
                 prev_result_count = 0
             query_link = self._generate_query_link(query_name).replace('\n', ' ')
@@ -60,7 +60,7 @@ class NotifySyslogAction(ActionTypeAlert):
                                                               old_results_num_of_devices=prev_result_count,
                                                               query_link=query_link)
             self._plugin_base.send_syslog_message(log_message, self._config['severity'])
-            return EntityResult(True, 'Sent Syslog message')
+            return AlertActionResult(True, 'Sent Syslog message')
 
         query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
             {
@@ -81,4 +81,4 @@ class NotifySyslogAction(ActionTypeAlert):
             entity['alert_name'] = self._report_data['name']
             self._plugin_base.send_syslog_message(to_json(entity), self._config['severity'])
 
-        return EntityResult(True, 'Sent Devices data to Syslog')
+        return AlertActionResult(True, 'Sent Devices data to Syslog')

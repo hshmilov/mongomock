@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from bson import ObjectId
+
 from services.plugin_service import PluginService
 from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
     ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD,\
@@ -109,13 +111,25 @@ class ReportsService(PluginService):
             conditions = report_data['triggers']
             del conditions['every_discovery']
 
-            result = self.db.client['aggregator'][f'{report_data["view_entity"]}_db'].find({
+            result = list(self.db.client['aggregator'][f'{report_data["view_entity"]}_db'].find({
                 '_id': {
                     '$in': [x['_id'] for x in report_data['result']]
                 }
             }, {
                 'internal_axon_id': 1
+            }))
+
+            # This won't overflow because the list comes out of a report, which is a document, therefore the list
+            # is shorter than document_max_size (16mb)
+            chunk_group_id = ObjectId()
+            insert_result = db['internal_axon_ids_lists'].insert_one({
+                'chunk': [x['internal_axon_id'] for x in result],
+                'chunk_group_id': chunk_group_id,
+                'chunk_number': 0,
+                'count': len(result),
+                'next': None
             })
+
             triggers = [{
                 'name': 'Trigger',
                 'view': {
@@ -127,7 +141,7 @@ class ReportsService(PluginService):
                 'run_on': run_on,
                 TIMES_TRIGGERED_FIELD: report_data['triggered'],
                 LAST_TRIGGERED_FIELD: report_data[LAST_TRIGGERED_FIELD],
-                'result': [x['internal_axon_id'] for x in result]
+                'result': chunk_group_id
             }]
 
             new_report = {

@@ -50,13 +50,13 @@ class RunCmd(ActionTypeBase):
                                                          'post',
                                                          json=action_data).json()
 
-        def prettify_output(result: dict) -> EntityResult:
+        def prettify_output(id_, result: dict) -> EntityResult:
             value = result['value']
             success = result['success']
-            return EntityResult(success, value)
+            return EntityResult(id_, success, value)
 
-        return {
-            k: prettify_output(v)
+        return [
+            prettify_output(k, v)
             for k, v
             in result.items()
-        }
+        ]

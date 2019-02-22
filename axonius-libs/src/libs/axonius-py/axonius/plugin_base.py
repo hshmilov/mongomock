@@ -36,6 +36,7 @@ from funcy import chunks
 from namedlist import namedtuple
 from promise import Promise
 from pymongo import MongoClient
+from pymongo.collection import Collection
 from retrying import retry
 # bson is requirement of mongo and its not recommended to install it manually
 from tlssyslog import TLSSysLogHandler
@@ -1160,7 +1161,7 @@ class PluginBase(Configurable, Feature):
                                               localthresholdms=1000)
         return self.__mongo_client
 
-    def _get_collection(self, collection_name, db_name=None):
+    def _get_collection(self, collection_name, db_name=None) -> Collection:
         """
         Returns all configs for the current plugin.
 
@@ -1173,7 +1174,7 @@ class PluginBase(Configurable, Feature):
             db_name = self.plugin_unique_name
         return self._get_db_connection()[db_name][collection_name]
 
-    def _get_appropriate_view(self, historical, entity_type: EntityType):
+    def _get_appropriate_view(self, historical, entity_type: EntityType) -> Collection:
         if historical:
             return self._historical_entity_views_db_map[entity_type]
         return self._entity_db_map[entity_type]
@@ -1307,7 +1308,7 @@ class PluginBase(Configurable, Feature):
                     else:
                         # this is regular first-seen device, make its own value
                         db_to_use.insert_one({
-                            "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert),
+                            "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
                             "accurate_for_datetime": datetime.now(),
                             "adapters": [parsed_to_insert],
                             "tags": [],
@@ -1325,7 +1326,7 @@ class PluginBase(Configurable, Feature):
             def insert_quickpath_to_db(devices):
                 all_parsed = (self._create_axonius_entity(client_name, data, entity_type) for data in devices)
                 db_to_use.insert_many(({
-                    "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert),
+                    "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
                     "accurate_for_datetime": datetime.now(),
                     "adapters": [parsed_to_insert],
                     "tags": [],
@@ -1817,16 +1818,17 @@ class PluginBase(Configurable, Feature):
         _entities_db = self._entity_db_map[entity]
         with _entities_db.start_session() as session:
             with session.start_transaction():
-                return self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session)
+                return self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session, entity)
 
     @staticmethod
     def __perform_unlink_with_session(adapter_id: str, plugin_unique_name: str,
-                                      session, entity_to_split=None) -> Tuple[str, str]:
+                                      session, entity_type: EntityType, entity_to_split=None) -> Tuple[str, str]:
         """
         Perform an unlink given a session on a particular adapter entity
         :param adapter_id: the id of the adapter to unlink
         :param plugin_unique_name: the plugin unique name of the adapter
         :param session: the session to use, this also implies the DB to use
+        :param entity_type: the entity type
         :param entity_to_split: if not none, uses this as the entity (optimization)
         :return: Tuple of two strings that represent the internal_axon_ids altered
         """
@@ -1849,7 +1851,7 @@ class PluginBase(Configurable, Feature):
             raise CorrelateException(f'Weird entity: {entity_to_split}')
         adapter_to_extract = adapter_to_extract[0]
 
-        internal_axon_id = get_preferred_internal_axon_id_from_dict(adapter_to_extract)
+        internal_axon_id = get_preferred_internal_axon_id_from_dict(adapter_to_extract, entity_type)
         new_axonius_entity = {
             "internal_axon_id": internal_axon_id,
             "accurate_for_datetime": datetime.now(),
@@ -1866,7 +1868,7 @@ class PluginBase(Configurable, Feature):
                                        if x[PLUGIN_UNIQUE_NAME] != adapter_to_extract[PLUGIN_UNIQUE_NAME] or
                                        x['data']['id'] != adapter_to_extract['data']['id']
                                        ][0]
-            update_internal_axon_id = get_preferred_internal_axon_id_from_dict(selected_adapter_entity)
+            update_internal_axon_id = get_preferred_internal_axon_id_from_dict(selected_adapter_entity, entity_type)
 
         # figure out which adapters should stay on the current entity (axonius_entity_to_split - remaining adapters)
         # and those that should move to the new axonius entity
@@ -2018,7 +2020,7 @@ class PluginBase(Configurable, Feature):
                 # that the current adapterentity is the last adapter in the axoniusentity
                 # in which case - there is no reason to unlink it, just to delete it
                 if len(axonius_entity['adapters']) > 1:
-                    self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session,
+                    self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session, entity,
                                                        entity_to_split=axonius_entity)
                 self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db, session)
 
@@ -2269,6 +2271,12 @@ class PluginBase(Configurable, Feature):
     @cachetools.cached(cachetools.LFUCache(maxsize=1))
     def enforcements_saved_actions_collection(self):
         return self._get_collection('saved_actions', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
+
+    @property
+    @cachetools.cached(cachetools.LFUCache(maxsize=1))
+    def enforcement_tasks_action_results_id_lists(self):
+        return self._get_collection('action_results',
+                                    db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
 
     # Global settings
     # These are settings which are shared between all plugins. For example, all plugins should use the same

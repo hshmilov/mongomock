@@ -149,8 +149,8 @@
                     return action.results.successful ? 'success' : 'error'
                 }
 
-                let successCount = Object.keys(action.results['successful_entities']).length
-                let failureCount = Object.keys(action.results['unsuccessful_entities']).length
+                let successCount = action.results['successful_entities'].length
+                let failureCount = action.results['unsuccessful_entities'].length
                 if (!failureCount && !successCount) return 'disabled'
                 let ratio = successCount / (failureCount + successCount)
                 if (ratio === 1) return 'success'

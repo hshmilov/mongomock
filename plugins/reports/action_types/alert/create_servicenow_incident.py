@@ -1,8 +1,8 @@
 import logging
 
 from axonius.consts import report_consts
+from reports.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
-from reports.enforcement_classes import EntityResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -58,7 +58,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'incident_title': None
         }
 
-    def run(self) -> EntityResult:
+    def _run(self) -> AlertActionResult:
         query_name = self._run_configuration.view.name
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
             len(self._added_axon_ids)
@@ -76,4 +76,4 @@ class ServiceNowIncidentAction(ActionTypeAlert):
         if self._config.get('description_default') is True:
             log_message_full += log_message
         message = self._plugin_base.create_service_now_incident(self._config['incident_title'], log_message, impact)
-        return EntityResult(not message, message or 'Success')
+        return AlertActionResult(not message, message or 'Success')

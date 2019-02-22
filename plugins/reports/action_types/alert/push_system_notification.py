@@ -1,7 +1,7 @@
 import logging
 
 from axonius.consts import report_consts
-from reports.enforcement_classes import EntityResult
+from reports.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -22,7 +22,7 @@ class SystemNotificationAction(ActionTypeAlert):
         return {
         }
 
-    def run(self) -> EntityResult:
+    def _run(self) -> AlertActionResult:
         query_name = self._run_configuration.view.name
         title = report_consts.REPORT_TITLE.format(name=self._report_data['name'], query=query_name)
 
@@ -37,4 +37,4 @@ class SystemNotificationAction(ActionTypeAlert):
                                                       query_link=self._generate_query_link(query_name))
 
         result = self._plugin_base.create_notification(title, content)
-        return EntityResult(bool(result), 'Created notification' if not result else 'Failed creating notification')
+        return AlertActionResult(bool(result), 'Created notification' if result else 'Failed creating notification')

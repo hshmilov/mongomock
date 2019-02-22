@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import auto, Enum
-from typing import List, Optional, Dict
+from typing import List, Optional
 
+from bson import ObjectId
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 
@@ -9,16 +10,25 @@ from axonius.entities import EntityType
 
 
 @dataclass(frozen=True)
-class EntityResult(DataClassJsonMixin):
+class AlertActionResult(DataClassJsonMixin):
     # Whether or not the execution was successful
     successful: bool
     # Execution result
-    status: dict
+    status: object
+
+
+@dataclass(frozen=True)
+class EntityResult(DataClassJsonMixin):
+    # The internal axon id this refers to
+    internal_axon_id: str
+    # Whether or not the execution was successful
+    successful: bool
+    # Execution result
+    status: object
 
 
 # This represents each entity in the results of an execution of an action
-# str (internal_axon_id) -> EntityResult
-EntitiesResult = Dict[str, EntityResult]
+EntitiesResult = List[EntityResult]
 
 
 # This is the result of an action that was ran
@@ -32,14 +42,37 @@ class ActionRunResults(DataClassJsonMixin):
     exception_state: str
 
 
+# This is the result of an action that was ran as it will be saved in the DB
+@dataclass(frozen=True)
+class DBActionRunResults(DataClassJsonMixin):
+    # See ActionRunResults and EntitiesResult
+    successful_entities: ObjectId
+    # See ActionRunResults and EntitiesResult
+    unsuccessful_entities: ObjectId
+    # If the action has raised an exception is will appear here,
+    # otherwise it will have the first of the EntityResults' status, which will be primarily used
+    # by the GUI for alert actions
+    message_state: str
+
+
+class SavedActionType(Enum):
+    """
+    The type of the saved action
+    """
+    action = 'action'
+    alert = 'alert'
+
+
 @dataclass
 class SavedActionData(DataClassJsonMixin):
-    # The class name of the action.
     # For regular actions, look at inheritors of ActionTypeBase in action_types/*
     # For trigger summary actions, look at inheritors of ActionTypeAlert in action_types/*
     action_name: str
     # The config that will be passed (self._config in ActionTypeBase)
     config: object
+    # The type of the action.
+    # This should be SavedActionType, but enum works so bad with dataclasses, I won't bother fixing this up
+    action_type: Optional[str] = None
     # This will represent the action results in the DB, where applicable
     results: Optional[ActionRunResults] = None
 
@@ -128,8 +161,10 @@ class Trigger(DataClassJsonMixin):
     period: TriggerPeriod
     # The last time this configuration has ran
     last_triggered: datetime
-    # List of internal axon ids that the query has yielded last time
-    result: List[str]
+    # Foreign reference to the list of internal axon ids that the query has yielded last time
+    result: ObjectId
+    # Result count
+    result_count: int
     # Amount of times the trigger validated
     times_triggered: int
     # Which entities to run upon
@@ -144,6 +179,7 @@ class Trigger(DataClassJsonMixin):
             period=TriggerPeriod(to_parse['period']),
             last_triggered=to_parse.get('last_triggered'),
             result=to_parse.get('result'),
+            result_count=to_parse.get('result_count'),
             times_triggered=to_parse.get('times_triggered', 0),
             run_on=RunOnEntities(to_parse['run_on'])
         )

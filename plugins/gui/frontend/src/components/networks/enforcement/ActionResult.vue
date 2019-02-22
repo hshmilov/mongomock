@@ -5,11 +5,11 @@
             <x-array-view :schema="schema" :value="data.action.config" v-if="schema" />
         </template>
         <h4 class="title">Results</h4>
-        <div v-if="isResultGeneral" class="result-container">
-            <svg-icon :name="`symbol/${status}`" :original="true" height="20px"></svg-icon>
-            <div class="result">{{data.action.results.status || data.action.results}}</div>
+        <div v-if="isResultAlertAction" class="result-container">
+            <svg-icon :name="`symbol/${alertStatus}`" :original="true" height="20px"></svg-icon>
+            <div class="result" @click="$emit('click-one', alertStatus == 'success' ? 0 : 1)">{{alertStatusMessage}}</div>
         </div>
-        <x-summary v-else :data="resultData" @click-one="index => $emit('click-one', index)"/>
+        <x-summary v-else :data="resultData" @click-one="$emit('click-one', $event)"/>
     </div>
 </template>
 
@@ -49,22 +49,24 @@
 
                 return this.actionsDef[this.data.action['action_name']].schema
             },
-            isResultGeneral() {
-                return (this.data.action.results.successful !== undefined)
+            isResultAlertAction() {
+                return (this.data.action.action_type == 'alert')
             },
-            status() {
-                if (this.data.action.results.successful) return 'success'
-
+            alertStatus() {
+                if (this.data.action.results.successful_entities.length > 0) return 'success'
                 return 'error'
+            },
+            alertStatusMessage() {
+                return this.data.action.results.message_state
             },
             viewObj() {
                 return this.savedViews.find(item => item.name === this.view).view
             },
             successEntities() {
-                return Object.keys(this.data.action.results['successful_entities'])
+                return this.data.action.results['successful_entities']
             },
             failureEntities() {
-                return Object.keys(this.data.action.results['unsuccessful_entities'])
+                return this.data.action.results['unsuccessful_entities']
             },
             resultData() {
                 return [{

@@ -20,7 +20,14 @@ def generic_success(internal_axon_ids: Iterable[str], reason: str = 'Success') -
     :param reason: The success reasnn
     :return: A proper return value for _run
     """
-    return {x: EntityResult(True, reason) for x in internal_axon_ids}
+    return [EntityResult(x, True, reason) for x in internal_axon_ids]
+
+
+def generic_fail(internal_axon_ids: Iterable[str], reason: str = 'Failure') -> EntitiesResult:
+    """
+    See generic_success
+    """
+    return [EntityResult(x, False, reason) for x in internal_axon_ids]
 
 
 class ActionTypeBase(ABC):
@@ -113,19 +120,31 @@ class ActionTypeBase(ABC):
         Should use the self._config, self._internal_axon_ids and over data provided
         """
         try:
-            res = self._run()
+            res = list(self._run())
+            res_dict = {
+                x.internal_axon_id: x
+                for x
+                in res
+            }
+
             internal_axon_ids_set = set(self._internal_axon_ids)
-            unexpected_entities = set(res) - internal_axon_ids_set
+            unexpected_entities = set(res_dict) - internal_axon_ids_set
             if unexpected_entities:
                 logger.warning(f'Found unexpected entities in res: {unexpected_entities} for {type(self).__name__}')
 
-            successful_entities = {x: y for x, y in res.items() if y.successful and x in internal_axon_ids_set}
-            unsuccessful_entities = {x: y for x, y in res.items() if not y.successful and x in internal_axon_ids_set}
-            unsuccessful_entities.update({
-                x: EntityResult(False, 'Not reported back')
-                for x in internal_axon_ids_set
-                if x not in res
-            })
+            successful_entities = [EntityResult(x.internal_axon_id, x.successful, x.status)
+                                   for x
+                                   in res
+                                   if x.successful and x.internal_axon_id in internal_axon_ids_set]
+
+            unsuccessful_entities = [EntityResult(x.internal_axon_id, x.successful, x.status)
+                                     for x
+                                     in res
+                                     if not x.successful and x.internal_axon_id in internal_axon_ids_set]
+
+            for x in internal_axon_ids_set:
+                if x not in res_dict:
+                    unsuccessful_entities.append(EntityResult(x, False, 'Not reported back'))
 
             return ActionRunResults(successful_entities, unsuccessful_entities, '')
         except Exception as e:
@@ -133,8 +152,8 @@ class ActionTypeBase(ABC):
                 f'Error - {e} - performing action {type(self).__name__} with parameters '
                 f'{self._triggered_set}, {self._config},')
             tb = ''.join(traceback.format_tb(e.__traceback__))
-            return ActionRunResults(dict(),
-                                    {x: EntityResult(False, f'Error {e}') for x in self._internal_axon_ids},
+            return ActionRunResults([],
+                                    [EntityResult(x, False, f'Error {e}') for x in self._internal_axon_ids],
                                     f'{str(e)}\n{tb}')
 
     @abstractmethod

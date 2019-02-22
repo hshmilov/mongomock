@@ -2,7 +2,7 @@ import logging
 
 from axonius.consts import report_consts
 from reports.action_types.action_type_alert import ActionTypeAlert
-from reports.enforcement_classes import EntityResult
+from reports.enforcement_classes import AlertActionResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -62,7 +62,7 @@ class JiraIncidentAction(ActionTypeAlert):
             'incident_title': None
         }
 
-    def run(self) -> EntityResult:
+    def _run(self) -> AlertActionResult:
         query_name = self._run_configuration.view.name
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
             len(self._added_axon_ids)
@@ -80,4 +80,4 @@ class JiraIncidentAction(ActionTypeAlert):
         message = self._plugin_base.create_jira_ticket(self._config['project_name'],
                                                        self._config['incident_title'],
                                                        log_message_full, self._config['issue_type'])
-        return EntityResult(not message, message or 'Success')
+        return AlertActionResult(not message, message or 'Success')

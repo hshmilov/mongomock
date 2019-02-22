@@ -1,8 +1,9 @@
 import datetime
 import json
 import logging
+from itertools import chain
 from multiprocessing.pool import ThreadPool
-from typing import List, Tuple, Iterable, Set
+from typing import List, Iterable, Set, Tuple
 
 from bson import json_util
 from bson.objectid import ObjectId
@@ -21,11 +22,13 @@ from axonius.utils.files import get_local_config_file
 from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, \
     ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, \
     LAST_UPDATE_FIELD, TRIGGERS_FIELD, LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD
-from reports.action_types.action_type_base import ActionTypeBase
+from axonius.utils.mongo_chunked import insert_chunked, read_chunked, create_indexes_on_collection
 from reports.action_types.action_type_alert import ActionTypeAlert
+from reports.action_types.action_type_base import ActionTypeBase
 from reports.action_types.all_action_types import AllActionTypes
 from reports.enforcement_classes import ActionInRecipe, Recipe, TriggerPeriod, Trigger, \
-    TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata, ActionRunResults
+    TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata, ActionRunResults, \
+    DBActionRunResults, EntityResult, SavedActionType
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -55,6 +58,10 @@ def query_result_diff(current_result: list, last_result: list) -> QueryResultDif
 
 
 class ReportsService(Triggerable, PluginBase):
+    # The amount of internal_axon_ids that are saved in a single document in self.__internal_axon_ids_lists
+    # Should be lower than document size, while not too low so pagination is common
+    INTERNAL_AXON_IDS_PER_DOCUMENT = 100 * 1000
+
     def __init__(self, *args, **kwargs):
         """ This service is responsible for alerting users in several ways and cases when a
                         report query result changes. """
@@ -64,14 +71,51 @@ class ReportsService(Triggerable, PluginBase):
         self.__saved_actions_collection = self._get_collection('saved_actions')
         self.__saved_actions_collection.create_index([('name', pymongo.DESCENDING)], unique=True)
 
+        # For the pretty id
         self.__running_id_collection = self._get_collection('running_id')
-
         self._get_collection('triggerable_history').create_index([('result.metadata.pretty_id', pymongo.DESCENDING)],
                                                                  unique=True,
                                                                  partialFilterExpression={
                                                                      'result.metadata.pretty_id': {
                                                                          '$exists': True
                                                                      }})
+
+        # We can't save the lists of internal axon ids within our document, so we save those here
+        # This is used for the report itself, i.e. to save state
+        self.__internal_axon_ids_lists = self._get_collection('internal_axon_ids_lists')
+
+        # We can't save the lists of internal axon ids within our document, so we save those here
+        # This is used for the results of actions, the type here is EntitiesResult
+        self.__action_results = self._get_collection('action_results')
+
+        create_indexes_on_collection(self.__internal_axon_ids_lists)
+        create_indexes_on_collection(self.__action_results)
+        self.__action_results.create_index([('chunk.internal_axon_id', pymongo.ASCENDING)])
+
+    def __save_entities_result(self, data: ActionRunResults) -> DBActionRunResults:
+        """
+        Like __insert_new_list_internal_axon_ids, but specifically for EntitiesResult
+        """
+        schema = EntityResult.schema()
+        success = insert_chunked(self.__action_results, ReportsService.INTERNAL_AXON_IDS_PER_DOCUMENT,
+                                 (schema.dump(x) for x in data.successful_entities))
+        fail = insert_chunked(self.__action_results, ReportsService.INTERNAL_AXON_IDS_PER_DOCUMENT,
+                              (schema.dump(x) for x in data.unsuccessful_entities))
+        return DBActionRunResults(success, fail, data.exception_state or
+                                  next(chain(data.successful_entities, data.unsuccessful_entities)).status)
+
+    def __insert_new_list_internal_axon_ids(self, internal_axon_ids: List[str]) -> ObjectId:
+        """
+        Inserts the given list into the DB in a paginated form, and returns the _id
+        """
+        return insert_chunked(self.__internal_axon_ids_lists, ReportsService.INTERNAL_AXON_IDS_PER_DOCUMENT,
+                              internal_axon_ids)
+
+    def __get_internal_axon_ids(self, id_: ObjectId) -> Iterable[str]:
+        """
+        Gets an iterator for the list of internal axon ids from the internal_axon_ids_lists collection
+        """
+        return read_chunked(self.__internal_axon_ids_lists, id_)
 
     def __recipe_from_db(self, db_data, metadata: RecipeRunMetadata = None) -> Recipe:
         """
@@ -215,8 +259,10 @@ class ReportsService(Triggerable, PluginBase):
 
     def __process_trigger(self, trigger):
         trigger_obj = Trigger.from_dict(trigger)
-        trigger_obj.result = self.get_view_results(trigger_obj.view.name, trigger_obj.view.entity)
-        return json.loads(trigger_obj.to_json(default=default_with_enums))
+        view_result = self.get_view_results(trigger_obj.view.name, trigger_obj.view.entity)
+        trigger_obj.result = self.__insert_new_list_internal_axon_ids(view_result)
+        trigger_obj.result_count = len(view_result)
+        return json.loads(trigger_obj.to_json(default=default_with_enums), object_hook=json_util.object_hook)
 
     def __processed_triggers(self, triggers: List[dict]) -> Iterable[Trigger]:
         """
@@ -344,8 +390,8 @@ class ReportsService(Triggerable, PluginBase):
 
         return triggered
 
-    @staticmethod
-    def _call_actions(report_data, recipe: Recipe,
+    def _call_actions(self,
+                      report_data, recipe: Recipe,
                       triggered: List[TriggeredReason],
                       trigger: Trigger,
                       current_result: List[str],
@@ -365,15 +411,24 @@ class ReportsService(Triggerable, PluginBase):
                                           internal_axon_ids: List[str]) -> ActionTypeBase:
             action_class = AllActionTypes[recipe_action.action.action_name]
             if issubclass(action_class, ActionTypeAlert):
-                return action_class(action_saved_name=recipe_action.name, config=recipe_action.action.config,
-                                    run_configuration=trigger, report_data=report_data, triggered_set=triggered,
-                                    internal_axon_ids=list(current_result), entity_type=trigger.view.entity,
-                                    added_axon_ids=list(added_results), removed_axon_ids=list(removed_results))
+                return action_class(action_saved_name=recipe_action.name,
+                                    config=recipe_action.action.config,
+                                    run_configuration=trigger,
+                                    report_data=report_data,
+                                    triggered_set=triggered,
+                                    internal_axon_ids=list(current_result),
+                                    entity_type=trigger.view.entity,
+                                    added_axon_ids=list(added_results),
+                                    removed_axon_ids=list(removed_results))
             if issubclass(action_class, ActionTypeBase):
-                return action_class(action_saved_name=recipe_action.name, config=recipe_action.action.config,
-                                    run_configuration=trigger, report_data=report_data, triggered_set=triggered,
-                                    internal_axon_ids=list(internal_axon_ids), entity_type=trigger.view.entity)
-            return None
+                return action_class(action_saved_name=recipe_action.name,
+                                    config=recipe_action.action.config,
+                                    run_configuration=trigger,
+                                    report_data=report_data,
+                                    triggered_set=triggered,
+                                    internal_axon_ids=list(internal_axon_ids),
+                                    entity_type=trigger.view.entity)
+            raise RuntimeError('No such action')
 
         if not recipe.main:
             return recipe
@@ -382,6 +437,8 @@ class ReportsService(Triggerable, PluginBase):
                                                     list(current_result))
 
         recipe.main.action.results = main_action.run()
+        recipe.main.action.action_type = SavedActionType.alert.name if isinstance(main_action, ActionTypeAlert) \
+            else SavedActionType.action.name
 
         def get_all_actions() -> Iterable[Tuple[ActionInRecipe, ActionTypeBase]]:
             """
@@ -390,12 +447,13 @@ class ReportsService(Triggerable, PluginBase):
             entities in it (according to the recipe: either those that succeed, failed or all of them)
             """
             main_result = recipe.main.action.results
-            if isinstance(main_result, ActionRunResults):
-                successful_entities = list(main_result.successful_entities)
-                unsuccessful_entities = list(main_result.unsuccessful_entities)
-            else:
-                successful_entities = current_result if main_result.successful else []
-                unsuccessful_entities = current_result if not main_result.successful else []
+            successful_entities = [x.internal_axon_id
+                                   for x
+                                   in main_result.successful_entities]
+            unsuccessful_entities = [x.internal_axon_id
+                                     for x
+                                     in main_result.unsuccessful_entities]
+            recipe.main.action.results = self.__save_entities_result(main_result)
 
             successful_count = len(successful_entities)
             unsuccessful_count = len(unsuccessful_entities)
@@ -418,7 +476,9 @@ class ReportsService(Triggerable, PluginBase):
                 """
                 if not action:
                     return
-                recipe_action.action.results = action.run()
+                recipe_action.action.action_type = SavedActionType.alert.name if isinstance(action, ActionTypeAlert) \
+                    else SavedActionType.action.name
+                recipe_action.action.results = self.__save_entities_result(action.run())
 
             pool.starmap_async(_run, get_all_actions()).wait(timeout=3600)
 
@@ -463,17 +523,19 @@ class ReportsService(Triggerable, PluginBase):
             if trigger.last_triggered > max_date:
                 return False
         current_query_result = self.get_view_results(trigger.view.name, trigger.view.entity)
-        query_difference = query_result_diff(current_query_result, trigger.result)
+        query_difference = query_result_diff(current_query_result, self.__get_internal_axon_ids(trigger.result))
         triggered_reason = list(self._get_triggered_reports(current_query_result, query_difference,
                                                             trigger.conditions))
 
         if not triggered_reason and trigger.result is None:
             # this means that this is the first run for a query that has specific conditions,
             # it is vital to update the run_configuration.result for future triggers
+            id_ = self.__insert_new_list_internal_axon_ids(current_query_result)
             self.__update_run_configuration(report['_id'], trigger.name,
                                             {
                                                 '$set': {
-                                                    f'{TRIGGERS_FIELD}.$[i].result': current_query_result
+                                                    f'{TRIGGERS_FIELD}.$[i].result': id_,
+                                                    f'{TRIGGERS_FIELD}.$[i].result_count': len(current_query_result)
                                                 }})
 
         logger.debug(f'Triggered with {triggered_reason} '
@@ -492,7 +554,8 @@ class ReportsService(Triggerable, PluginBase):
             # Update last triggered.
             self.__update_run_configuration(report['_id'], trigger.name, {
                 '$set': {
-                    f'{TRIGGERS_FIELD}.$[i].result': current_query_result,
+                    f'{TRIGGERS_FIELD}.$[i].result': self.__insert_new_list_internal_axon_ids(current_query_result),
+                    f'{TRIGGERS_FIELD}.$[i].result_count': len(current_query_result),
                     f'{TRIGGERS_FIELD}.$[i].{LAST_TRIGGERED_FIELD}': datetime.datetime.utcnow()
                 },
                 '$inc': {

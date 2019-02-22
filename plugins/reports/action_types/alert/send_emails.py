@@ -14,7 +14,8 @@ from axonius.utils import gui_helpers
 
 from axonius.consts import report_consts
 from axonius.utils.axonius_query_language import parse_filter
-from reports.enforcement_classes import EntityResult, TriggeredReason
+from reports.enforcement_classes import AlertActionResult
+from reports.enforcement_classes import TriggeredReason
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -107,11 +108,11 @@ class SendEmailsAction(ActionTypeAlert):
             'sendDevicesChangesCSV': False
         }
 
-    def run(self) -> EntityResult:
+    def _run(self) -> AlertActionResult:
         mail_sender = self._plugin_base.mail_sender
         if not mail_sender:
             logger.info('Email cannot be sent because no email server is configured')
-            return EntityResult(False, 'Email is disabled')
+            return AlertActionResult(False, 'Email is disabled')
 
         query_name = self._run_configuration.view.name
         subject = self._config.get('mailSubject') if \
@@ -164,7 +165,7 @@ class SendEmailsAction(ActionTypeAlert):
         html_sections = []
         prev_result_count = 0
         if self._run_configuration.result:
-            prev_result_count = len(self._run_configuration.result)
+            prev_result_count = self._run_configuration.result_count
 
         query_link = self._generate_query_link(query_name)
 
@@ -204,7 +205,7 @@ class SendEmailsAction(ActionTypeAlert):
             {'query_link': query_link, 'image_cid': image_cid[1:-1], 'content': ''.join(html_sections)})
 
         email.send(html_data)
-        return EntityResult(True, 'Sent email')
+        return AlertActionResult(True, 'Sent email')
 
     def __create_table_in_email(self, email, query_filter, sections: list, images_cids: dict,
                                 limit: int, header: str):

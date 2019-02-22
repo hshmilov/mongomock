@@ -9,6 +9,7 @@ import pql
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.utils.datetime import parse_date
+from axonius.utils.mongo_chunked import read_chunked
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -260,7 +261,13 @@ def figure_out_axon_internal_id_from_query(recipe_run_pretty_id: str, condition:
         action = list_of_actions
     else:
         action = list_of_actions[index_in_conditon]
-    return list(action['action']['results'][entities_returned_type])
+    return [x['internal_axon_id']
+            for x
+            in read_chunked(PluginBase.Instance.enforcement_tasks_action_results_id_lists,
+                            action['action']['results'][entities_returned_type],
+                            projection={
+                                'chunk.internal_axon_id': 1
+                            })]
 
 
 def parse_filter(filter_str: str, history_date=None):
@@ -323,7 +330,7 @@ def parse_filter(filter_str: str, history_date=None):
     res = {
         '$and': [res]
     }
-    if recipe_result_subset:
+    if recipe_result_subset is not None:
         res['$and'].append({
             'internal_axon_id': {
                 '$in': recipe_result_subset

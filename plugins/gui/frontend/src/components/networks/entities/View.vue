@@ -5,7 +5,8 @@
         <x-tabs v-show="!loading" @click="determineState" @updated="initTourState">
             <x-tab title="Adapters Data" id="specific" key="specific" v-if="!singleAdapter" :selected="true">
                 <x-tabs :vertical="true">
-                    <x-tab v-for="item, i in sortedSpecificData" :id="item.id" :key="i" :selected="!i" :outdated="item.outdated"
+                    <x-tab v-for="item, i in sortedSpecificData" :id="item.id" :key="i" :selected="!i"
+                           :outdated="item.outdated"
                            :title="item.pretty_name || item.plugin_name" :logo="`adapters/${item.plugin_name}`">
                         <div class="d-flex content-header">
                             <div class="flex-expand server-info">
@@ -42,6 +43,16 @@
                     <x-tab v-for="item, i in entityExtendedData" :title="item.name" :id="`data_${i}`" :key="`data_${i}`"
                            :selected="!i">
                         <x-custom :data="item.data"/>
+                    </x-tab>
+                </x-tabs>
+            </x-tab>
+            <x-tab title="Enforcement Runs" id="ec_runs" key="tasks" v-if="entityEcData.length">
+                <x-tabs :vertical="true">
+                    <x-tab v-for="item, i in entityEcData" :title="`${item.recipe_name}, run ${item.recipe_pretty_id}`"
+                           :id="`ecdata_${i}`"
+                           :key="`ecdata_${i}`"
+                           :selected="!i">
+                        <x-table :data="item.actions" :fields="ecActionFields"/>
                     </x-tab>
                 </x-tabs>
             </x-tab>
@@ -150,7 +161,9 @@
                         item.title = schema.title
                         if (Array.isArray(schema.items)) {
                             schema.items = schema.items.filter(field =>
-                                !field.name.includes('raw') && (!field.items || !Array.isArray(field.items))).map(field => { return { ...field, path: [this.module, 'aggregator', ...schema.name.split('.').slice(1)] } })
+                                !field.name.includes('raw') && (!field.items || !Array.isArray(field.items))).map(field => {
+                                return {...field, path: [this.module, 'aggregator', ...schema.name.split('.').slice(1)]}
+                            })
                         }
                         return {...item, schema: {...schema, title: undefined}}
                     })
@@ -192,7 +205,8 @@
                 })
                 if (res[res.length - 1].plugin_name !== guiPluginName) {
                     // Add initial gui adapters data
-                    res.push({...initCustomData(this.module),
+                    res.push({
+                        ...initCustomData(this.module),
                         pretty_name: pluginMeta[initCustomData(this.module).plugin_name].title
                     })
                 }
@@ -201,6 +215,9 @@
             entityExtendedData() {
                 if (!this.entity.generic || !this.entity.generic.data) return []
                 return this.entity.generic.data.filter(item => item.name !== 'Notes')
+            },
+            entityEcData() {
+                return this.entity.tasks || []
             },
             entityNotes() {
                 if (!this.entity.generic || !this.entity.generic.data) return []
@@ -223,6 +240,30 @@
             },
             customFields() {
                 return (this.fields.specific.gui || this.fields.generic)
+            },
+            ecActionFields() {
+                return [
+                    {
+                        'name': 'action_name',
+                        'title': 'Action Name',
+                        'type': 'string'
+                    },
+                    {
+                        'name': 'action_type',
+                        'title': 'Action Name',
+                        'type': 'string'
+                    },
+                    {
+                        'name': 'success',
+                        'title': 'Result',
+                        'type': 'string'
+                    },
+                    {
+                        'name': 'additional_info',
+                        'title': 'Additional Info',
+                        'type': 'string'
+                    },
+                ]
             }
         },
         watch: {
@@ -344,7 +385,7 @@
             },
         },
         created() {
-            this.fetchDataHyperlinks({ module: this.module})
+            this.fetchDataHyperlinks({module: this.module})
             if (!this.entity || this.entity.internal_axon_id !== this.entityId || this.entityDate !== this.historyDate) {
                 this.fetchCurrentEntity()
             } else {
