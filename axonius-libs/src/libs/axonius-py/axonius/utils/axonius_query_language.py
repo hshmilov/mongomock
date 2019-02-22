@@ -4,6 +4,7 @@ import logging
 import re
 
 from typing import List
+from bson.json_util import default
 import pql
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
@@ -298,7 +299,23 @@ def parse_filter(filter_str: str, history_date=None):
                                                                       condition,
                                                                       int(index_in_condition),
                                                                       entities_returned_type)
+    filter_str = process_filter(filter_str, history_date)
+    res = translate_filter_not(pql.find(filter_str)) if filter_str else {}
+    post_process_filter(res, include_outdated)
+    convert_to_main_db(res)
+    res = {
+        '$and': [res]
+    }
+    if recipe_result_subset:
+        res['$and'].append({
+            'internal_axon_id': {
+                '$in': recipe_result_subset
+            }
+        })
+    return res
 
+
+def process_filter(filter_str, history_date):
     # Handle predefined sequence representing a range of some time units from now back
     matches = re.search(r'NOW\s*-\s*(\d+)([hdw])', filter_str)
     while matches:
@@ -320,23 +337,21 @@ def parse_filter(filter_str: str, history_date=None):
         filter_str = filter_str.replace(matches.group(0), f'not ({matches.group(1)})')
         matches = re.search(r'NOT\s*\[(.*)\]', filter_str)
 
-    matches = re.findall(re.compile(r'match\s*\((\[.*\])\)'), filter_str)
+    matches = re.findall(re.compile(r'match\s*\((\[.*?\])\)'), filter_str)
     for match in matches:
-        filter_str = filter_str.replace(match, json.dumps(pql.find(match[1:-1])))
+        filter_str = filter_str.replace(match, json.dumps(pql.find(match[1:-1]), default=default_iso_date))
 
-    res = translate_filter_not(pql.find(filter_str)) if filter_str else {}
-    post_process_filter(res, include_outdated)
-    convert_to_main_db(res)
-    res = {
-        '$and': [res]
-    }
-    if recipe_result_subset is not None:
-        res['$and'].append({
-            'internal_axon_id': {
-                '$in': recipe_result_subset
-            }
-        })
-    return res
+    matches = re.findall(re.compile(r'({"\$date": (.*?)})'), filter_str)
+    for match in matches:
+        filter_str = filter_str.replace(match[0], f'date({match[1]})')
+
+    return filter_str
+
+
+def default_iso_date(obj):
+    if isinstance(obj, datetime.datetime):
+        return {'$date': obj.strftime('%m/%d/%Y %I:%M %p')}
+    return default(obj)
 
 
 def translate_filter_not(filter_obj):
@@ -441,31 +456,6 @@ def parse_filter_non_entities(filter_str: str, history_date=None):
         return {}
 
     filter_str = filter_str.strip()
-
-    # Handle predefined sequence representing a range of some time units from now back
-    matches = re.search(r'NOW\s*-\s*(\d+)([hdw])', filter_str)
-    while matches:
-        computed_date = datetime.datetime.now() if not history_date else parse_date(history_date)
-        # Create the start date intended
-        if matches.group(2) == 'h':
-            computed_date -= datetime.timedelta(hours=int(matches.group(1)))
-        elif matches.group(2) == 'd':
-            computed_date -= datetime.timedelta(days=int(matches.group(1)))
-        elif matches.group(2) == 'w':
-            computed_date -= datetime.timedelta(days=int(matches.group(1)) * 7)
-        # Remove the predefined sequence
-        filter_str = filter_str.replace(matches.group(0), computed_date.strftime('%m/%d/%Y %I:%M %p'))
-        # Find next sequence
-        matches = re.search(r'NOW\s*-\s*(\d+)([hdw])', filter_str)
-
-    matches = re.search(r'NOT\s*\[(.*)\]', filter_str)
-    while matches:
-        filter_str = filter_str.replace(matches.group(0), f'not ({matches.group(1)})')
-        matches = re.search(r'NOT\s*\[(.*)\]', filter_str)
-
-    matches = re.findall(re.compile(r'match\s*\((\[.*\])\)'), filter_str)
-    for match in matches:
-        filter_str = filter_str.replace(match, json.dumps(pql.find(match[1:-1])))
-
+    filter_str = process_filter(filter_str, history_date)
     res = translate_filter_not(pql.find(filter_str)) if filter_str else {}
     return res

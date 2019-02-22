@@ -16,6 +16,8 @@ class DevicesPage(EntitiesPage):
     FIELD_VLANS_VLAN_NAME = 'Vlans: Vlan Name'
     FIELD_VLANS_TAG_ID = 'Vlans: Tag ID'
     FIELD_VLAN_NAME = 'Vlan Name'
+    FIELD_USERS = 'Users'
+    FIELD_USERS_LAST_USE = 'Last Use Time'
     FIELD_TAG_ID = 'Tag ID'
     FIELD_OS_TYPE = 'OS: Type'
     FIELD_TAGS = 'Tags'

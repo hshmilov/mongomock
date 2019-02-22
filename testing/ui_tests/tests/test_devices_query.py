@@ -1,4 +1,6 @@
 from ui_tests.tests.ui_test_base import TestBase
+from axonius.utils.wait import wait_until
+from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
                                                     DEVICE_MAC,
@@ -242,6 +244,7 @@ class TestDevicesQuery(TestBase):
 
         self._test_complex_obj_subnets()
         self._test_complex_obj_vlans()
+        self._test_complex_obj_dates()
 
     def _test_complex_obj_subnets(self):
         # Network Interfaces -> Subnets exists should return results
@@ -289,6 +292,52 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert not len(self.devices_page.get_all_data())
         self.devices_page.clear_query_wizard()
+
+    def _test_complex_obj_dates(self):
+        self.devices_page.close_dropdown()
+        with GeneralInfoService().contextmanager(take_ownership=True):
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True)
+            self.settings_page.save_and_wait_for_toaster()
+            self.base_page.run_discovery()
+
+            # Wait for WMI info
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(self.devices_page.AD_WMI_ADAPTER_FILTER)
+            self.devices_page.enter_search()
+            self.devices_page.wait_for_table_to_load()
+            wait_until(self.devices_page.get_all_data, total_timeout=60 * 25)
+            # Refresh to have the Users field available (not automatically fetched)
+            self.devices_page.refresh()
+            self.devices_page.wait_for_table_to_load()
+
+            # Start building complex query
+            self.devices_page.click_query_wizard()
+            self.devices_page.add_query_expression()
+            expressions = self.devices_page.find_expressions()
+            assert len(expressions) == 2
+
+            self.devices_page.toggle_obj(expressions[0])
+            self.devices_page.select_query_field(self.devices_page.FIELD_USERS, expressions[0])
+            conditions = self.devices_page.find_conditions(expressions[0])
+            assert len(conditions) == 2
+            self.devices_page.select_query_field(self.devices_page.FIELD_USERS_LAST_USE, conditions[1])
+            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, conditions[1])
+            self.devices_page.fill_query_value(2, conditions[1])
+            self.devices_page.wait_for_table_to_load()
+            assert len(self.devices_page.get_all_data())
+
+            self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
+            self.devices_page.toggle_obj(expressions[1])
+            self.devices_page.select_query_field(self.devices_page.FIELD_USERS, expressions[1])
+            conditions = self.devices_page.find_conditions(expressions[1])
+            assert len(conditions) == 2
+            self.devices_page.select_query_field(self.devices_page.FIELD_USERS_LAST_USE, conditions[1])
+            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, conditions[1])
+            self.devices_page.fill_query_value(5, conditions[1])
+            assert len(self.devices_page.get_all_data())
+            self.devices_page.clear_query_wizard()
 
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
