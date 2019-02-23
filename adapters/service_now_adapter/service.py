@@ -42,6 +42,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         u_casper_status = Field(str, 'Casper Status')
         u_altiris_status = Field(str, 'Altiris Status')
         first_deployed = Field(datetime.datetime, 'First Deployed')
+        created_at = Field(datetime.datetime, 'Created At')
+        created_by = Field(str, 'Created By')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -203,6 +205,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 device.discovery_source = device_raw.get('discovery_source')
                 device.first_discovered = parse_date(device_raw.get('first_discovered'))
                 device.last_discovered = parse_date(device_raw.get('last_discovered'))
+                device.created_at = parse_date((device_raw.get('sys_created_on')))
+                device.created_by = device_raw.get('sys_created_by')
             except Exception:
                 logger.exception(f'Problem addding source stuff to {device_raw}')
             try:

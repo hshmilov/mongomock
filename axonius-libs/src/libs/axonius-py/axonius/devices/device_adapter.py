@@ -263,6 +263,12 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     cve_severity = Field(str, "CVE Severity (Metric V3)")
 
 
+class ShareData(SmartJsonClass):
+    name = Field(str, 'Name')
+    description = Field(str, 'Description')
+    path = Field(str, 'Path')
+
+
 class DeviceTagKeyValue(SmartJsonClass):
     """ A Definition for a key-value tag """
     tag_key = Field(str, "Tag Key")
@@ -375,6 +381,9 @@ class DeviceAdapter(SmartJsonClass):
     cloud_provider = Field(str, "Cloud Provider")
     cloud_id = Field(str, "Cloud ID")
     shodan_data = Field(ShodanData, 'Shodan Data')
+    processes = ListField(str, 'Running Processes')
+    services = ListField(str, 'Services')
+    shares = ListField(ShareData, 'Shares')
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
@@ -648,6 +657,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_swap_file(self, name, size_in_gb):
         self.swap_files.append(DeviceSwapFile(name=name, size_in_gb=size_in_gb))
+
+    def add_share(self, **kwargs):
+        self.shares.append(ShareData(**kwargs))
 
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name

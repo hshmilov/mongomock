@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field
@@ -21,6 +22,9 @@ class SamangeAdapter(AdapterBase):
         owner = Field(str, 'Owner')
         updated_at = Field(datetime.datetime, 'Updated At')
         department = Field(str, 'Department')
+
+    class MyUserAdapter(UserAdapter):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -58,6 +62,33 @@ class SamangeAdapter(AdapterBase):
         """
         with client_data:
             yield from client_data.get_device_list()
+
+    @staticmethod
+    def _query_users_by_client(key, data):
+        with data:
+            yield from data.get_user_list()
+
+    # pylint: disable=W0221
+    def _parse_users_raw_data(self, raw_data):
+        for user_raw in raw_data:
+            try:
+                user = self._new_user_adapter()
+                user.mail = user_raw.get('email')
+                user.username = user_raw.get('name')
+                try:
+                    user.user_department = (user_raw.get('department') or {}).get('name')
+                except Exception:
+                    logger.exception(f'Problem getting department for {user_raw}')
+                try:
+                    user.user_manager = (user_raw.get('reports_to') or {}).get('email')
+                except Exception:
+                    logger.exception(f'Problem getting manager for {user_raw}')
+                user.user_telephone_number = user_raw.get('phone')
+                user.account_disabled = user_raw.get('disabled')
+                user.set_raw(user_raw)
+                yield user
+            except Exception:
+                logger.exception(f'Problem getting user {user_raw}')
 
     @staticmethod
     def _clients_schema():

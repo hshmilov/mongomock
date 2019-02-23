@@ -23,15 +23,30 @@ class SamangeConnection(RESTConnection):
                   url_params={'page': 1,
                               'per_page': DEVICE_PER_PAGE})
 
+    # pylint: disable=R0912
     def get_device_list(self):
-        response = self._get('hardwares.json',
-                             url_params={'page': 1,
-                                         'per_page': DEVICE_PER_PAGE},
-                             return_response_raw=True,
-                             use_json_in_response=False)
-        total_pages = int(response.headers['X-Total-Pages'])
+        response_raw = self._get('hardwares.json',
+                                 url_params={'page': 1,
+                                             'per_page': DEVICE_PER_PAGE},
+                                 return_response_raw=True,
+                                 use_json_in_response=False)
+        total_pages = int(response_raw.headers['X-Total-Pages'])
+        response = response_raw.json()
+        try:
+            software_hrefs = [{'name': device_raw.get('softwares_href'),
+                               'force_full_url': True} for device_raw in response]
+            software_hrefs_hidden = [{'name': device_raw.get('hidden_softwares_href'),
+                                      'force_full_url': True} for device_raw in response]
+            for device_raw, software_response in zip(response, self._async_get(software_hrefs)):
+                if self._is_async_response_good(software_response):
+                    device_raw['software'] = software_response
+            for device_raw, software_hidden_response in zip(response, self._async_get(software_hrefs_hidden)):
+                if self._is_async_response_good(software_hidden_response):
+                    device_raw['hidden_software'] = software_hidden_response
+        except Exception:
+            logger.exception(f'Problem getting software for page 1')
         page = 2
-        yield from response.json()
+        yield from response
         while page < min(total_pages, int(MAX_NUMBER_OF_DEVICES / DEVICE_PER_PAGE)):
             try:
                 response = self._get('hardwares.json',
@@ -52,6 +67,28 @@ class SamangeConnection(RESTConnection):
                             device_raw['hidden_software'] = software_hidden_response
                 except Exception:
                     logger.exception(f'Problem getting software for page {page}')
+                yield from response
+                page += 1
+            except Exception:
+                logger.exception(f'Problem at page {page}')
+                break
+
+    def get_user_list(self):
+        response = self._get('users.json',
+                             url_params={'page': 1,
+                                         'per_page': DEVICE_PER_PAGE},
+                             return_response_raw=True,
+                             use_json_in_response=False)
+        total_pages = int(response.headers['X-Total-Pages'])
+        page = 2
+        yield from response.json()
+        while page < min(total_pages, int(MAX_NUMBER_OF_DEVICES / DEVICE_PER_PAGE)):
+            try:
+                response = self._get('users.json',
+                                     url_params={'page': page,
+                                                 'per_page': DEVICE_PER_PAGE})
+                if not response:
+                    break
                 yield from response
                 page += 1
             except Exception:

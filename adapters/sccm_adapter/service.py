@@ -270,14 +270,18 @@ class SccmAdapter(AdapterBase):
                         device.add_nic(None, ips_empty_mac)
                 except Exception:
                     logger.exception(f'Problem getting IP for {device_raw}')
-                free_physical_memory = device_raw.get('FreePhysicalMemory0')
-                device.free_physical_memory = float(free_physical_memory) if free_physical_memory else None
-                total_physical_memory = device_raw.get('TotalPhysicalMemory0')
-                device.total_physical_memory = float(device_raw.get('TotalPhysicalMemory0')) \
-                    if total_physical_memory else None
-                if total_physical_memory and free_physical_memory:
-                    device.physical_memory_percentage = 100 * \
-                        (1 - device.free_physical_memory / device.total_physical_memory)
+                try:
+                    free_physical_memory = device_raw.get('FreePhysicalMemory0')
+                    device.free_physical_memory = float(free_physical_memory) / \
+                        (1024**2) if free_physical_memory else None
+                    total_physical_memory = device_raw.get('TotalPhysicalMemory0')
+                    device.total_physical_memory = float(device_raw.get('TotalPhysicalMemory0')) / (1024**2) \
+                        if total_physical_memory else None
+                    if total_physical_memory and free_physical_memory:
+                        device.physical_memory_percentage = 100 * \
+                            (1 - device.free_physical_memory / device.total_physical_memory)
+                except Exception:
+                    logger.exception(f'problem adding memory stuff to {device_raw}')
                 try:
                     if isinstance(asset_bios_dict.get(device_raw.get('ResourceID')), dict):
                         bios_data = asset_bios_dict.get(device_raw.get('ResourceID'))

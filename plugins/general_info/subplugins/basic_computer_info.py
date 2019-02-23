@@ -38,7 +38,10 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             "select Description, EstimatedChargeRemaining, BatteryStatus from Win32_Battery",
             "select Caption from Win32_TimeZone",
             "select SerialNumber from Win32_BaseBoard",
-            "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration"
+            "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration",
+            'select Name from Win32_Process',
+            'select Name from Win32_Service',
+            'select Name, Description, Path from Win32_Share'
         ]
         ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS)
 
@@ -55,7 +58,10 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         win32_timezone = result[7]
         win32_baseboard = result[8]
         win32_networkadapterconfiguration = result[9]
-        bad_configuration_lsa = result[10]
+        win32_processes = result[10]
+        win32_services = result[11]
+        win32_shares = result[12]
+        bad_configuration_lsa = result[13]
 
         # Win32_Processor
         try:
@@ -308,7 +314,42 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                     )
         except Exception:
             self.logger.exception(f"Win32_NetworkAdapterConfiguration {win32_networkadapterconfiguration}")
+        try:
+            assert is_wmi_answer_ok(win32_processes), 'WMI Answer has an exception'
+            adapterdata_device.processes = []
+            for process_data in win32_processes['data']:
+                try:
+                    if process_data.get('Name'):
+                        adapterdata_device.processes.append(process_data.get('Name'))
+                except Exception:
+                    self.logger.exception(f'Problem with process data {process_data}')
+        except Exception:
+            self.logger.exception(f'Win32 processes issues {win32_processes}')
 
+        try:
+            assert is_wmi_answer_ok(win32_services), 'WMI Answer has an exception'
+            adapterdata_device.services = []
+            for service_data in win32_services['data']:
+                try:
+                    if service_data.get('Name'):
+                        adapterdata_device.services.append(service_data.get('Name'))
+                except Exception:
+                    self.logger.exception(f'Problem with service data {service_data}')
+        except Exception:
+            self.logger.exception(f'Win32 services issues {win32_services}')
+
+        try:
+            assert is_wmi_answer_ok(win32_shares), 'WMI Answer has an exception'
+            for share_data in win32_shares['data']:
+                try:
+                    if share_data.get('Name'):
+                        adapterdata_device.add_share(name=share_data.get('Name'),
+                                                     description=share_data.get('Description'),
+                                                     path=share_data.get('Path'))
+                except Exception:
+                    self.logger.exception(f'Problem with share data {share_data}')
+        except Exception:
+            self.logger.exception(f'Win32 shares issues {win32_shares}')
         # Bad Configurations Config
 
         try:
