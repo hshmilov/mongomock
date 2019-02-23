@@ -301,14 +301,13 @@ class GeneralInfoService(Triggerable, PluginBase):
         # 1. Get all devices which have users associations, and map all these devices to one global users object.
         devices_with_users_association = self.devices_db.find({
             '$or': [
-                {'adapters.data.users': {'$exists': True}},
                 {'tags.data.users': {'$exists': True}}
             ]
         })
         users = {}
         for device in devices_with_users_association:
             # Get a list of all users associated for this device.
-            all_device_data = device.get('adapters', []) + device.get('tags', [])
+            all_device_data = device.get('tags', [])
             for sd_users in [d['data']['users'] for d in all_device_data
                              if isinstance(d['data'], dict) and d['data'].get('users') is not None]:
                 # for each user associated, add a (device, user) tuple.
