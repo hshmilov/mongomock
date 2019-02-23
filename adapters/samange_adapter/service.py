@@ -73,6 +73,11 @@ class SamangeAdapter(AdapterBase):
         for user_raw in raw_data:
             try:
                 user = self._new_user_adapter()
+                user_id = user_raw.get('id')
+                if user_id is None:
+                    logger.warning(f'Bad user with no id: {user_raw}')
+                    continue
+                user.id = str(user_id) + '_' + (user_raw.get('name') or '')
                 user.mail = user_raw.get('email')
                 user.username = user_raw.get('name')
                 try:
