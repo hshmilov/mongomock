@@ -22,6 +22,13 @@ def ldap_connection():
                           bytes([]), True, True)
 
 
+@pytest.fixture(scope='module')
+def ldap_gc_connection():
+    return LdapConnection(ADDRESS, USERNAME,
+                          PASSWORD, None, 900, SSLState[SSLState.Unencrypted.name], bytes([]), bytes([]),
+                          bytes([]), True, True, connect_with_gc_mode=True)
+
+
 def test_users_and_full_memberof(ldap_connection: LdapConnection):
     users = list(ldap_connection.get_users_list())
 
@@ -241,6 +248,16 @@ def test_get_report_statistics(ldap_connection: LdapConnection):
     assert fs['Domain Trusts'][0]['direction'] == 'Two-Way'
     assert 'Domain Integrated DNS Zones' in fs
     assert 'Domain GPOs' in fs
+
+
+def test_get_all_domains_from_gc(ldap_gc_connection: LdapConnection, ldap_connection: LdapConnection):
+    # Check assertion path
+    with pytest.raises(AssertionError):
+        ldap_connection.gc_get_all_domains_in_forest()
+
+    # Check gc working path
+    result = ldap_gc_connection.gc_get_all_domains_in_forest()
+    assert all([dn.lower() in ['west.testdomain.test', 'raindomain.test', 'testdomain.test'] for dn in result])
 
 
 def test_reconnect_after_disconnection(ldap_connection: LdapConnection):

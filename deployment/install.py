@@ -122,12 +122,14 @@ def install(first_time, root_pass):
         set_booted_for_production()
 
     set_special_permissions(root_pass)
+    # chown before start Axonius which tends to be the failure point in bad updates.
+    chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
 
     # This parts tends to have problems. Minimize the code after it as much as possible.
     start_axonius()
     run_discovery()
 
-    # Chown after the run, to make log file which are created afterwards be also part of it
+    # Chown again after the run, to make log file which are created afterwards be also part of it
     chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
 
     if not first_time:

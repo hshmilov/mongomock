@@ -65,8 +65,6 @@ class UserAdapter(SmartJsonClass):
     employee_id = Field(str, 'Employee ID')     # could have letters so its a string
     employee_number = Field(str, 'Employee Number')     # could have letters so its a string
     employee_type = Field(str, 'Employee Type')     # could have letters so its a string
-    member_in_groups = Field(str, 'Groups membership (memberOf)')
-    member_in_groups_including_nested = Field(str, 'All Groups membership(nested memberOf)')
 
     required = ['id', 'username']
 

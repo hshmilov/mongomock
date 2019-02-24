@@ -36,6 +36,21 @@ def test_regular_usage():
     } == device.get_fields_info()
 
 
+def test_usage_with_inner_subclasses():
+    class MyDeviceSubclass(SmartJsonClass):
+        num = Field(int, 'Number')
+
+    class MyDeviceWithSubClass(SmartJsonClass):
+        hostname = Field(str, 'hostname')
+        subclass = Field(MyDeviceSubclass)
+
+    device = MyDeviceWithSubClass()
+    device.hostname = 'WIN7-TD'
+    device['subclass'] = MyDeviceSubclass()
+    device['subclass']['num'] = 5   # access through []
+    assert {'hostname': 'WIN7-TD', 'subclass': {'num': 5}} == device.to_dict()
+
+
 @pytest.mark.skip('TODO: add advance fields usage tests: AX-2393')
 def test_advance_fields_usage():
     pass

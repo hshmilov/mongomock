@@ -22,7 +22,7 @@ class RESTClient:
         self._logger = logging.getLogger('RESTClient')
 
     def do_request(self, action: str, url: str, **kwargs):
-        """ Sends axnoius rest api to the server """
+        """ Sends axonius rest api to the server """
         kwargs.update(self._request_args)
 
         full_url = f'{self._url}{AXONIUS_API}{url}'

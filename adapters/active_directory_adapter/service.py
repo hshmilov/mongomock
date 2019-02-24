@@ -9,7 +9,7 @@ import threading
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
@@ -106,11 +106,13 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_service_principal_name = ListField(str, "AD Service Principal Name")
         ad_printers = ListField(ADPrinter, "AD Attached Printers")
         ad_dfsr_shares = ListField(ADDfsrShare, "AD DFSR Shares")
+        ad_dc_source = Field(str, 'AD DC Source')
 
     class MyUserAdapter(UserAdapter, ADEntity):
         user_managed_objects = ListField(str, "AD User Managed Objects")
         user_account_control = Field(int, 'User Account Control')
         account_lockout = Field(bool, "Account Lockout")
+        ad_dc_source = Field(str, 'AD DC Source')
 
     def __init__(self):
 
@@ -120,11 +122,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self._resolving_thread_lock = threading.RLock()
 
         self.__devices_data_db = self._get_collection(DEVICES_DATA)
-        self.__fetch_users_image = True
-        self.__should_get_nested_groups_for_user = True
-        self.__ldap_page_size = DEFAULT_LDAP_PAGE_SIZE
-        self.__ldap_connection_timeout = DEFAULT_LDAP_CONNECTION_TIMEOUT
-        self.__ldap_recieve_timeout = DEFAULT_LDAP_RECIEVE_TIMEOUT
         executors = {'default': ThreadPoolExecutor(3)}
         self._background_scheduler = LoggedBackgroundScheduler(executors=executors)
 
@@ -213,6 +210,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self.__ldap_page_size = config.get('ldap_page_size', DEFAULT_LDAP_PAGE_SIZE)
         self.__ldap_connection_timeout = config.get('ldap_connection_timeout', DEFAULT_LDAP_CONNECTION_TIMEOUT)
         self.__ldap_recieve_timeout = config.get('ldap_recieve_timeout', DEFAULT_LDAP_RECIEVE_TIMEOUT)
+        self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
 
         # Change interval of report generation thread
         try:
@@ -258,13 +256,43 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                               self._grab_file_contents(dc_details.get('cert_file')),
                               self._grab_file_contents(dc_details.get('private_key')),
                               dc_details.get('fetch_disabled_devices', False),
-                              dc_details.get('fetch_disabled_users', False)
+                              dc_details.get('fetch_disabled_users', False),
+                              connect_with_gc_mode=dc_details.get('is_ad_gc', False)
                               )
 
     def _connect_client(self, dc_details):
         message = ''
         try:
-            return self._get_ldap_connection(dc_details)
+            success_domains = {}
+            all_domains = {}
+            failure_domains = {}
+            dc = self._get_ldap_connection(dc_details)
+            if dc.is_in_gc_mode:
+                # This is a request by the user to connect to a DC which is a GC, and get all domains in forest.
+                for found_domain in dc.gc_get_all_domains_in_forest():
+                    try:
+                        logger.info(f'GC: Found {found_domain}')
+                        found_dc_details = dc_details.copy()
+                        found_dc_details['dc_name'] = found_domain
+                        found_dc_details['is_ad_gc'] = False
+                        all_domains[found_domain] = found_dc_details
+                        if not success_domains:
+                            # Try to add at least one domain.
+                            success_domains[found_domain.lower()] = self._get_ldap_connection(found_dc_details)
+                    except Exception as e:
+                        logger.exception(f'Problem adding dc found by gc: {found_domain}: {get_exception_string()}')
+                        failure_domains[found_domain.lower()] = str(e)
+
+                if not success_domains:
+                    if len(failure_domains) > 0:
+                        raise ClientConnectionException(f'Can not connect: {failure_domains[0]}')
+                    else:
+                        raise ClientConnectionException(f'Did not find any server in the GC.')
+
+            else:
+                # This is the normal path where a user simply puts a domain.
+                all_domains[dc_details['dc_name'].lower()] = dc_details
+            return all_domains
         except LdapException as e:
             additional_msg = ''
             if "socket connection error while opening: timed out" in str(e):
@@ -272,14 +300,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
             message = f'Error in ldap process for dc {dc_details["dc_name"]}{additional_msg}.'
             logger.exception(message)
-        except KeyError as e:
-            if "dc_name" in dc_details:
-                message = f'Key error for dc {dc_details["dc_name"]}.'
-            else:
-                message = "Missing dc name for configuration line"
-            logger.exception(message)
         except Exception:
-            logger.exception('Error in _connect_client')
+            logger.exception(f'Error in _connect_client: {get_exception_string()}')
         raise ClientConnectionException(message)
 
     def _clients_schema(self):
@@ -332,6 +354,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "name": "fetch_disabled_users",
                     "title": "Fetch Disabled Users",
                     "type": "bool"
+                },
+                {
+                    'name': 'is_ad_gc',
+                    'title': 'Connect to Global Catalog (GC)',
+                    'type': 'bool'
                 }
             ],
             "required": [
@@ -343,7 +370,45 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             "type": "array"
         }
 
-    def _query_devices_by_client(self, client_name, client_data: LdapConnection):
+    def _resolve_clients(self, client_data_dict, should_verbose_notify=False):
+        success_clients = dict()
+        failure_clients = dict()
+        for client_name, client_data_dict in client_data_dict.items():
+            try:
+                logger.info(f'Trying to connect to {client_name}')
+                success_clients[client_name] = self._get_ldap_connection(client_data_dict)
+            except Exception as e:
+                logger.exception(f'Can not connect to {client_name}')
+                failure_clients[client_name] = str(e)
+
+        if self.__verbose_auth_notifications and should_verbose_notify:
+            content = ''
+            for failure_client, failure_reason in failure_clients.items():
+                content += f'{failure_client}: {failure_reason}\n\n'
+            self.create_notification(
+                f'Active Directory Adapter: {len(success_clients)} / {len(client_data_dict.values())} successful connections',
+                content=content
+            )
+
+        if not success_clients:
+            raise ClientConnectionException(f'Could not connect to any of the clients')
+
+        return success_clients
+
+    def _resolve_client_from_client_dict_and_entity(self, client_data, entity_data):
+        try:
+            return client_data[entity_data['data']['ad_dc_source'].lower()]
+        except Exception:
+            pass
+
+        try:
+            return client_data[entity_data['data']['raw']['AXON_DC_ADDR'].lower()]
+        except Exception:
+            pass
+
+        return client_data[convert_ldap_searchpath_to_domain_name(entity_data['data']['distinguishedName']).lower()]
+
+    def _query_devices_by_client(self, client_name, client_data_dict: Dict[str, dict]):
         """
         Get all devices from a specific Dc
 
@@ -352,20 +417,24 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         :return: iter(dict) with all the attributes returned from the DC per client
         """
-        # We set it once here, no need to do it again in the users fetch.
-        if self.__ldap_page_size is not None:
-            client_data.set_ldap_page_size(self.__ldap_page_size)
+        success_clients = self._resolve_clients(client_data_dict, should_verbose_notify=True)
+        for client_name, client_data in success_clients.items():
+            try:
+                if self.__ldap_page_size is not None:
+                    client_data.set_ldap_page_size(self.__ldap_page_size)
 
-        if self.__ldap_connection_timeout is not None:
-            client_data.set_ldap_connection_timeout(self.__ldap_connection_timeout)
+                if self.__ldap_connection_timeout is not None:
+                    client_data.set_ldap_connection_timeout(self.__ldap_connection_timeout)
 
-        if self.__ldap_recieve_timeout is not None:
-            client_data.set_ldap_recieve_timeout(self.__ldap_recieve_timeout)
+                if self.__ldap_recieve_timeout is not None:
+                    client_data.set_ldap_recieve_timeout(self.__ldap_recieve_timeout)
 
-        client_data.reconnect()
-        return client_data.get_extended_devices_list()
+                client_data.reconnect()
+                yield client_name, client_data.get_extended_devices_list()
+            except Exception:
+                logger.exception(f'Could not fetch devices from {client_name}')
 
-    def _query_users_by_client(self, client_name, client_data):
+    def _query_users_by_client(self, client_name, client_data_dict: Dict[str, dict]):
         """
         Get a list of users from a specific DC.
 
@@ -373,9 +442,16 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         :param client_data: The data of the client.
         :return:
         """
+        success_clients = self._resolve_clients(client_data_dict)
 
-        client_data.reconnect()
-        return client_data.get_users_list(should_get_nested_groups_for_user=self.__should_get_nested_groups_for_user)
+        for client_name, client_data in success_clients.items():
+            try:
+                client_data.reconnect()
+                yield client_name, client_data.get_users_list(
+                    should_get_nested_groups_for_user=self.__should_get_nested_groups_for_user
+                )
+            except Exception:
+                logger.exception(f'Could not fetch users from {client_name}')
 
     def _parse_generic_ad_raw_data(self, ad_entity: ADEntity, raw_data: dict):
         """
@@ -429,7 +505,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         ad_entity.parse_user_account_control(raw_data.get("userAccountControl"))
 
-    def _parse_users_raw_data(self, raw_data):
+    def _parse_users_raw_data(self, client_data_result_dict: dict):
+        for client_data_name, client_data_result in client_data_result_dict:
+            try:
+                yield from self._parse_users_raw_data_client(client_data_result)
+            except Exception:
+                logger.exception(f'Exception while yielding users from client data {client_data_name}')
+
+    def _parse_users_raw_data_client(self, raw_data):
         """
         Gets raw data and yields User objects.
         :param user_raw_data: the raw data we get.
@@ -461,6 +544,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     continue
 
                 user.username = username
+                user.ad_dc_source = user_raw.get('AXON_DC_ADDR')
                 user.description = user_raw.get('description')
                 user.domain = domain_name
                 user.id = f"{username}@{domain_name}"  # Should be the unique identifier of that user.
@@ -797,7 +881,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         return printers_raw_dict
 
-    def _parse_raw_data(self, extended_devices_list):
+    def _parse_raw_data(self, client_data_result_dict: dict):
+        for client_data_name, client_data_result in client_data_result_dict:
+            try:
+                yield from self._parse_raw_data_client(client_data_result)
+            except Exception:
+                logger.exception(f'Exception while yielding devices from client data {client_data_name}')
+
+    def _parse_raw_data_client(self, extended_devices_list):
         devices_raw_data = extended_devices_list['devices']
 
         # Note that we have to convert all hostnames to lower since ldap sometimes returns them in their
@@ -844,6 +935,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     no_timestamp_count += 1
 
                 device = self._new_device_adapter()
+                device.ad_dc_source = device_raw.get('AXON_DC_ADDR')
                 self._parse_generic_ad_raw_data(device, device_raw)
                 device.description = device_raw.get('description')
                 device.network_interfaces = []
@@ -1441,21 +1533,25 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell", "execute_binary",
                 "execute_axr"]
 
-    def _enable_user(self, user_data, client_data):
+    def _enable_user(self, user_data, client_data_dict):
+        client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, user_data)
         dn = user_data['raw'].get('distinguishedName')
         assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
         assert client_data.get_session("user_enabler").change_entity_enabled_state(dn, True), "Failed enabling user"
 
-    def _disable_user(self, user_data, client_data):
+    def _disable_user(self, user_data, client_data_dict):
+        client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, user_data)
         dn = user_data['raw'].get('distinguishedName')
         assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
         assert client_data.get_session("user_disabler").change_entity_enabled_state(dn, False), "Failed disabling user"
 
-    def _enable_device(self, device_data, client_data):
+    def _enable_device(self, device_data, client_data_dict):
+        client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, device_data)
         dn = device_data['raw'].get('distinguishedName')
         assert client_data.get_session("device_enabler").change_entity_enabled_state(dn, True), "Failed enabling device"
 
-    def _disable_device(self, device_data, client_data):
+    def _disable_device(self, device_data, client_data_dict):
+        client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, device_data)
         dn = device_data['raw'].get('distinguishedName')
         assert client_data.get_session("device_disabler").change_entity_enabled_state(
             dn, False), "Failed disabling device"
@@ -1473,6 +1569,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "name": "sync_resolving",
                     "title": "Wait for DNS resolving",
                     "type": "bool"
+                },
+                {
+                    'name': 'verbose_auth_notifications',
+                    'title': 'Show verbose notifications about connection failures',
+                    'type': 'bool'
                 },
                 {
                     "name": "report_generation_interval",
@@ -1513,7 +1614,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 'should_get_nested_groups_for_user',
                 'ldap_page_size',
                 'ldap_connection_timeout',
-                'ldap_receive_timeout'
+                'ldap_receive_timeout',
+                'verbose_auth_notifications'
             ],
             "pretty_name": "Active Directory Configuration",
             "type": "array"
@@ -1525,6 +1627,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             'resolving_enabled': True,
             "sync_resolving": False,
             "report_generation_interval": 30,
+            'verbose_auth_notifications': False,
             'fetch_users_image': True,
             'should_get_nested_groups_for_user': True,
             'ldap_page_size': DEFAULT_LDAP_PAGE_SIZE,

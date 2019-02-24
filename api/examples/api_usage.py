@@ -108,6 +108,7 @@ class RESTExample:
     def get_examples(cls):
         examples_functions = (cls.get_devices1,
                               cls.get_devices2,
+                              cls.get_devices_with_query,
                               cls.get_devices_count,
                               cls.get_device_by_id,
                               cls.get_devices_views,
@@ -162,6 +163,23 @@ class RESTExample:
         # https://localhost/api/V1/devices?skip=0&limit=50&fields=adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.os.type,specific_data.data.network_interfaces.ips,specific_data.data.network_interfaces.mac,labels&filter=adapters%20==%20%22active_directory_adapter%22%20and%20adapters%20==%20%22nexpose_adapter%22
         status_code, devices = self._client.get_devices(skip=0, limit=50, fields=fields, filter_=filter_)
         assert status_code == 200, 'failed to get devices'
+
+    def get_devices_with_query(self):
+        # This will tell the api to bring these specific fields.
+        fields = ','.join(
+            ['adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.os.type',
+             'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'])
+
+        # Get all devices that have some ip
+        filter_ = '((specific_data.data.network_interfaces.ips == exists(true) and not ' \
+                  'specific_data.data.network_interfaces.ips == type(10)) and ' \
+                  'specific_data.data.network_interfaces.ips != "")'
+
+        # The request would look like this
+        status_code, devices = self._client.get_devices(skip=0, limit=50, fields=fields, filter_=filter_)
+        assert status_code == 200, 'failed to get devices'
+        assert devices['page']['totalResources'] > 0
+        assert len(devices['assets'][0]['specific_data.data.hostname']) > 0
 
     def get_device_by_id(self):
         # Fetch some devices to find any id for the exmaple

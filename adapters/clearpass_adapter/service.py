@@ -26,7 +26,6 @@ class ClearpassAdapter(AdapterBase, Configurable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-        self.__get_extended_info = True
 
     @staticmethod
     def _get_client_id(client_config):

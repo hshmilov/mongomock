@@ -24,13 +24,13 @@ from typing import TextIO, List, Tuple
 import ldap3
 from axonius.types.ssl_state import SSLState
 
-
 # Connection consts
 DEFAULT_LDAP_PAGE_SIZE = 900
 DEFAULT_LDAP_CONNECTION_TIMEOUT = 10
 DEFAULT_LDAP_RECIEVE_TIMEOUT = 120
 DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS = 10 * 1000  # 10 seconds
 LDAP_MAX_TRIES = 5
+AD_GC_PORT = 3268
 
 
 def connect_to_server(
@@ -42,7 +42,8 @@ def connect_to_server(
         cert_file: TextIO,
         ca_file: TextIO,
         ldap_connection_timeout: int,
-        ldap_recieve_timeout: int
+        ldap_recieve_timeout: int,
+        connect_with_gc_mode: bool
 ) -> ldap3.Connection:
     """
     This function will connect to an LDAP server.
@@ -56,9 +57,11 @@ def connect_to_server(
     :param ca_file:
     :param ldap_connection_timeout: socket connection timeout in seconds
     :param ldap_recieve_timeout: socket recieve timeout in seconds
+    :param connect_with_gc_mode: should connect to this dc in Global Catalog mode
     :return: The successfully binded connection
     :raises: ldap3.core.exceptions.LDAPException
     """
+    port = AD_GC_PORT if connect_with_gc_mode else None
     if use_ssl != SSLState.Unencrypted:
         validation = ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE
         tls = ldap3.Tls(
@@ -66,9 +69,11 @@ def connect_to_server(
             local_certificate_file=cert_file.name if cert_file else None,
             ca_certs_file=ca_file.name if ca_file else None,
             validate=validation)
-        ldap_server = ldap3.Server(server_address, connect_timeout=ldap_connection_timeout, use_ssl=True, tls=tls)
+        ldap_server = ldap3.Server(
+            server_address, connect_timeout=ldap_connection_timeout, use_ssl=True, tls=tls, port=port
+        )
     else:
-        ldap_server = ldap3.Server(server_address, connect_timeout=ldap_connection_timeout)
+        ldap_server = ldap3.Server(server_address, connect_timeout=ldap_connection_timeout, port=port)
     ldap_connection = ldap3.Connection(
         ldap_server, user=user_name, password=user_password,
         raise_exceptions=True, receive_timeout=ldap_recieve_timeout)
@@ -158,7 +163,8 @@ class LdapConnection(object):
             should_fetch_disabled_devices=False,
             should_fetch_disabled_users=False,
             ldap_connection_timeout=DEFAULT_LDAP_CONNECTION_TIMEOUT,
-            ldap_recieve_timeout=DEFAULT_LDAP_RECIEVE_TIMEOUT
+            ldap_recieve_timeout=DEFAULT_LDAP_RECIEVE_TIMEOUT,
+            connect_with_gc_mode=False
     ):
         """Class initialization.
 
@@ -168,6 +174,7 @@ class LdapConnection(object):
         :param str user_password: Password
         :param str dns_server: Address of other dns server
         :param bool use_ssl: Whether or not to use ssl. If true, ca_file_data, cert_file and private_key must be set
+        :param connect_with_gc_mode: if True, connects in Global Catalog mode.
         """
         self.server_addr = server_addr
         self.user_name = user_name
@@ -178,6 +185,7 @@ class LdapConnection(object):
         self.__ldap_connection_timeout = ldap_connection_timeout
         self.__ldap_recieve_timeout = ldap_recieve_timeout
         self.__use_ssl = use_ssl
+        self.__connect_with_gc_mode = connect_with_gc_mode
         self.should_fetch_disabled_devices = should_fetch_disabled_devices
         self.should_fetch_disabled_users = should_fetch_disabled_users
         self.ca_file_data_param = ca_file_data
@@ -196,6 +204,10 @@ class LdapConnection(object):
 
         self.extra_sessions = {}
         self.__ldap_groups = {}
+
+    @property
+    def is_in_gc_mode(self):
+        return self.__connect_with_gc_mode is True
 
     def get_session(self, name):
         """
@@ -253,7 +265,7 @@ class LdapConnection(object):
             self.ldap_connection = connect_to_server(
                 self.server_addr, self.user_name, self.user_password,
                 self.__use_ssl, self.__private_key_file, self.__cert_file,
-                self.__ca_file, self.__ldap_connection_timeout, self.__ldap_recieve_timeout
+                self.__ca_file, self.__ldap_connection_timeout, self.__ldap_recieve_timeout, self.__connect_with_gc_mode
             )
 
             # Get domain configurations. The following have to be, they are critical values
@@ -286,6 +298,7 @@ class LdapConnection(object):
             attributes = '*'
 
         if search_base is None:
+            # Note! an empty string search base is a valid search base for GC. So, do not change to 'if search_base'!
             search_base = self.domain_name
 
         if search_scope is None:
@@ -671,6 +684,7 @@ class LdapConnection(object):
                 logger.debug(f"Got {devices_count} devices so far")  # this is also printer in pluginbase
             yield device_dict
 
+        logger.info(f"{self.server_addr}: Finished with {devices_count} users.")
         if one_device is None:
             return []
 
@@ -720,7 +734,7 @@ class LdapConnection(object):
 
             yield dict(user)
 
-        logger.info(f"Finished with {users_count} users.")
+        logger.info(f"{self.server_addr}: Finished with {users_count} users.")
         logger.info(f'Finished getting all users & their groups, recursively. time: {time.time()- get_users_start}')
         logger.info(f'Approximate size in memory so far for ldap groups: '
                     f'{asizeof(self.__ldap_groups)/(1024**2)} mb')
@@ -798,11 +812,12 @@ class LdapConnection(object):
 
             if name is None:
                 # We brought many dns records.
-                logger.info(f"Finished Yielding {dns_record_i} dns records.")
+                logger.info(f"{self.server_addr}: Finished Yielding {dns_record_i} dns records.")
 
                 # If we were asked to bring the whole zone but didn't bring anythign..
                 if dns_record_i == 0:
-                    logger.warning(f"Didn't bring any DNS Record! do we have this zone? try chainging "
+                    logger.warning(f"{self.server_addr}: Didn't bring any DNS Record! "
+                                   f"do we have this zone? try chainging "
                                    f"search_base to only self.domaindnszones_naming_context to search the whole dns")
         except Exception:
             logger.exception("exception while querying dns")
@@ -1739,3 +1754,13 @@ class LdapConnection(object):
                 "data": gpo_table
         }
         ]
+
+    # GC Relevant functions
+    def gc_get_all_domains_in_forest(self):
+        assert self.__connect_with_gc_mode is True, 'Must be in GC Mode'
+        domains = self._ldap_search(
+            '(objectClass=domain)',
+            attributes=['distinguishedName'],
+            search_base=''  # GC Requires empty search base.
+        )
+        return [convert_ldap_searchpath_to_domain_name(dn['distinguishedName']) for dn in list(domains)]
