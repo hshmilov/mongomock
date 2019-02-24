@@ -129,11 +129,11 @@ class TriggerPeriod(Enum):
         return name
 
     # every cycle
-    all = auto()
-    daily = auto()
-    weekly = auto()
-    monthly = auto()
-    never = auto()
+    all = 'Every Discovery Cycle'
+    daily = 'Daily'
+    weekly = 'Weekly'
+    monthly = 'Monthly'
+    never = 'Manually only'
 
 
 class RunOnEntities(Enum):
@@ -177,7 +177,7 @@ class Trigger(DataClassJsonMixin):
             name=to_parse['name'],
             view=TriggerView(to_parse['view']['name'], EntityType(to_parse['view']['entity'])),
             conditions=TriggerConditions.schema().make_triggerconditions(to_parse['conditions']),
-            period=TriggerPeriod(to_parse['period']),
+            period=TriggerPeriod[to_parse['period']],
             last_triggered=to_parse.get('last_triggered'),
             result=to_parse.get('result'),
             result_count=to_parse.get('result_count'),

@@ -1,7 +1,7 @@
 import logging
 
+from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 from reports.action_types.action_type_base import ActionTypeBase
-from reports.enforcement_classes import EntitiesResult, EntityResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

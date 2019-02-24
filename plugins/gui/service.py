@@ -111,6 +111,7 @@ from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
+from axonius.types.enforcement_classes import TriggerPeriod
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.gui_logic.adapter_data import adapter_data
@@ -2838,6 +2839,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         constants = dict()
         constants['permission_levels'] = dictify_enum(PermissionLevel)
         constants['permission_types'] = dictify_enum(PermissionType)
+        constants['trigger_periods'] = dictify_enum(TriggerPeriod)
         return jsonify(constants)
 
     def __invalidate_sessions(self, user_id: str):

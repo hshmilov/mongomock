@@ -1,9 +1,9 @@
 import logging
 
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
+from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 
 from reports.action_types.action_type_base import ActionTypeBase
-from reports.enforcement_classes import EntitiesResult, EntityResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

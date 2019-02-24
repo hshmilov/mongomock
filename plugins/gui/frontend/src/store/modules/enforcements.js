@@ -120,7 +120,7 @@ export const enforcements = {
         [ UPDATE_SAVED_ACTIONS ] (state, payload) {
             state.savedActions.fetching = payload.fetching
             state.savedActions.error = payload.error
-            if (payload.data && payload.data.length) {
+            if (payload.data) {
                 state.savedActions.data = payload.data
             }
         }

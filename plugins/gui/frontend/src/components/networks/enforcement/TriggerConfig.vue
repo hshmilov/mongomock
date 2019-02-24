@@ -59,7 +59,7 @@
 
     import viewsMixin from '../../../mixins/views'
     import { validateInteger } from '../../../constants/utils'
-    import {triggerPeriods, triggerPeriodMeta} from '../../../constants/enforcement'
+    import {mapState} from 'vuex'
 
     export default {
         name: 'x-trigger-config',
@@ -75,6 +75,11 @@
             readOnly: Boolean
         },
         computed: {
+            ...mapState({
+                triggerPeriods(state) {
+                    return state.constants.constants.trigger_periods
+                }
+            }),
             config: {
                 get() {
                     if (!this.value) return {}
@@ -85,9 +90,9 @@
                 }
             },
             periodOptions() {
-                return triggerPeriods.map(name => {
+                return Object.entries(this.triggerPeriods).map(([name, title]) => {
                     return {
-                        name, title: triggerPeriodMeta[name], id: `${name}_period`
+                        name, title, id: `${name}_period`
                     }
                 })
             },

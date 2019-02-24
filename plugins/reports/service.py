@@ -5,6 +5,7 @@ from itertools import chain
 from multiprocessing.pool import ThreadPool
 from typing import List, Iterable, Tuple
 
+from enum import Enum
 from bson import json_util
 from bson.objectid import ObjectId
 import pymongo
@@ -16,19 +17,19 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.utils.json import default_with_enums
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.files import get_local_config_file
 from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, \
     ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, \
     LAST_UPDATE_FIELD, TRIGGERS_FIELD, LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD
+from axonius.types.enforcement_classes import ActionInRecipe, Recipe, TriggerPeriod, Trigger, \
+    TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata, ActionRunResults, \
+    DBActionRunResults, EntityResult, SavedActionType
 from axonius.utils.mongo_chunked import insert_chunked, read_chunked, create_indexes_on_collection
+
 from reports.action_types.action_type_alert import ActionTypeAlert
 from reports.action_types.action_type_base import ActionTypeBase
 from reports.action_types.all_action_types import AllActionTypes
-from reports.enforcement_classes import ActionInRecipe, Recipe, TriggerPeriod, Trigger, \
-    TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata, ActionRunResults, \
-    DBActionRunResults, EntityResult, SavedActionType
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -174,8 +175,9 @@ class ReportsService(Triggerable, PluginBase):
             result = self.__process_run_configuration(report, run_configuration, post_json.get('manual', False))
             if not result:
                 return 'Not ran'
+
             result.metadata.pretty_id = self.__get_pretty_id()
-            result = json.loads(result.to_json(default=default_with_enums), object_hook=json_util.object_hook)
+            result = json.loads(result.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
             return result
 
         raise NotImplementedError('No such job')
@@ -256,12 +258,20 @@ class ReportsService(Triggerable, PluginBase):
             logger.exception(message)
             return return_error(message, 400)
 
+    @staticmethod
+    def __default_for_trigger(obj):
+        if isinstance(obj, TriggerPeriod):
+            return obj.name
+        if isinstance(obj, Enum):
+            return obj.value
+        return json_util.default(obj)
+
     def __process_trigger(self, trigger):
         trigger_obj = Trigger.from_dict(trigger)
         view_result = self.get_view_results(trigger_obj.view.name, trigger_obj.view.entity)
         trigger_obj.result = self.__insert_new_list_internal_axon_ids(view_result)
         trigger_obj.result_count = len(view_result)
-        return json.loads(trigger_obj.to_json(default=default_with_enums), object_hook=json_util.object_hook)
+        return json.loads(trigger_obj.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
 
     def __processed_triggers(self, triggers: List[dict]) -> Iterable[Trigger]:
         """
@@ -285,7 +295,6 @@ class ReportsService(Triggerable, PluginBase):
                 LAST_UPDATE_FIELD: datetime.datetime.utcnow(),
                 ACTIONS_FIELD: report_data['actions'],
                 'name': report_data['name'],
-                LAST_TRIGGERED_FIELD: None,
                 TRIGGERS_FIELD: list(self.__processed_triggers(report_data[TRIGGERS_FIELD]))
             }
 
@@ -308,7 +317,11 @@ class ReportsService(Triggerable, PluginBase):
         Deletes reports from the DB using their _id
         """
         report_ids = [ObjectId(report_id) for report_id in reports_ids]
-        return self.__reports_collection.delete_many({'_id': {'$in': report_ids}})
+        return self.__reports_collection.delete_many({
+            '_id': {
+                '$in': report_ids
+            }
+        })
 
     def __get_pretty_id(self) -> int:
         """

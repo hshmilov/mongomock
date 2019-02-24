@@ -1,8 +1,8 @@
 import logging
 
 from axonius.consts import report_consts
+from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
-from reports.enforcement_classes import AlertActionResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

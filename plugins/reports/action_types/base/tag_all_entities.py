@@ -1,8 +1,8 @@
 import logging
 
 from axonius.utils.gui_helpers import add_labels_to_entities
+from axonius.types.enforcement_classes import EntitiesResult
 from reports.action_types.action_type_base import ActionTypeBase, generic_success
-from reports.enforcement_classes import EntitiesResult
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

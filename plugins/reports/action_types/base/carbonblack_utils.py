@@ -1,4 +1,4 @@
-from reports.enforcement_classes import EntityResult
+from axonius.types.enforcement_classes import EntityResult
 from axonius.plugin_base import PluginBase
 
 

@@ -1,12 +1,11 @@
+from types import GeneratorType
+import json
+from collections.abc import KeysView, ValuesView, ItemsView
+from bson.json_util import JSONOptions, JSONMode, DatetimeRepresentation, default, object_hook
 import logging
 from enum import Enum
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-from bson.json_util import JSONOptions, JSONMode, DatetimeRepresentation, default, object_hook
-from collections.abc import KeysView, ValuesView, ItemsView
-import json
-from types import GeneratorType
 
 
 # we use special JSONOptions with ISO8601 to fix serializing of datetime.datetime(9999, 12, 31, 23, 59, 59, 999999)

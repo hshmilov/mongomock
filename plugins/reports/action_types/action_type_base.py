@@ -6,7 +6,7 @@ from typing import Set, List, Iterable
 from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
-from reports.enforcement_classes import Trigger, ActionRunResults, EntitiesResult, EntityResult, TriggeredReason
+from axonius.types.enforcement_classes import Trigger, ActionRunResults, EntitiesResult, EntityResult, TriggeredReason
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

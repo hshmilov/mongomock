@@ -14,8 +14,7 @@ from axonius.utils import gui_helpers
 
 from axonius.consts import report_consts
 from axonius.utils.axonius_query_language import parse_filter
-from reports.enforcement_classes import AlertActionResult
-from reports.enforcement_classes import TriggeredReason
+from axonius.types.enforcement_classes import AlertActionResult, TriggeredReason
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')

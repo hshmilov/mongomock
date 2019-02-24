@@ -36,7 +36,7 @@
     import {FETCH_TASK} from '../../store/modules/tasks'
 
     import {
-        mainCondition, successCondition, failCondition, postCondition, triggerPeriodMeta, actionsMeta
+        mainCondition, successCondition, failCondition, postCondition, actionsMeta
     } from '../../constants/enforcement'
 
     export default {
@@ -48,10 +48,16 @@
         },
         computed: {
             ...mapState({
+                triggerPeriods(state) {
+                    if (!state.constants.constants || !state.constants.constants.trigger_periods) {
+                        return {}
+                    }
+                    return state.constants.constants.trigger_periods
+                },
                 taskData(state) {
                     return {
                         ...state.tasks.current.data,
-                        period: triggerPeriodMeta[state.tasks.current.data.period]
+                        period: this.triggerPeriods[state.tasks.current.data.period]
                     }
                 }
             }),

@@ -10,11 +10,17 @@
         <div class="header">
           <label>Enforcement Set Name</label>
           <input
+            v-if="id === 'new'"
             id="enforcement_name"
             ref="name"
             v-model="enforcement.name"
             :disabled="isReadOnly"
             @input="onNameInput"
+          >
+          <input
+            v-else
+            :value="enforcement.name"
+            disabled
           >
         </div>
         <div class="body">
@@ -379,6 +385,21 @@
             onNameInput() {
                 this.tour({name: 'actionMain'})
             }
+        },
+        created() {
+            if (!this.enforcementFetching && (!this.enforcementData.uuid || this.enforcementData.uuid !== this.id)) {
+                this.fetchEnforcement(this.id).then(() => {
+                    this.initData()
+                })
+            } else {
+                this.initData()
+            }
+        },
+        mounted() {
+            if (this.$refs.name) {
+                this.$refs.name.focus()
+            }
+            this.tour({name: 'enforcementName'})
         }
     }
 </script>

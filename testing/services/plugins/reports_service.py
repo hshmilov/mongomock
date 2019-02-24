@@ -149,7 +149,6 @@ class ReportsService(PluginService):
                 LAST_UPDATE_FIELD: datetime.utcnow(),
                 ACTIONS_FIELD: new_actions,
                 'name': report_data['name'],
-                LAST_TRIGGERED_FIELD: report_data['last_triggered'],
                 TRIGGERS_FIELD: triggers
             }
 

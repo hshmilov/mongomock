@@ -119,13 +119,3 @@ export const actionCategories = [
     'patch_device', 'block_fw', 'create_cmdb_computer', 'notify', 'create_incident',
     'axonius'
 ]
-
-export const triggerPeriodMeta = {
-    'all': 'Every Discovery Cycle',
-    'daily': 'Daily',
-    'weekly': 'Weekly',
-    'monthly': 'Monthly'
-}
-export const triggerPeriods = [
-    'all', 'daily', 'weekly','monthly'
-]
