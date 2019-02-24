@@ -106,7 +106,7 @@
                     schema = schema.items
                 }
                 if (schema.enum && schema.format !== 'predefined') {
-                    ops = {...ops, equals: compOps[schema.type].equals}
+                    ops = {...ops, equals: compOps[schema.type].equals, exists: compOps[schema.type].exists}
                 } else if (schema.format) {
                     ops = {...ops, ...compOps[schema.format]}
                 } else {
