@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import auto, Enum
-from typing import List, Optional
+from typing import List, Optional, Iterable
 
 from bson import ObjectId
 from dataclasses import dataclass
@@ -28,7 +28,7 @@ class EntityResult(DataClassJsonMixin):
 
 
 # This represents each entity in the results of an execution of an action
-EntitiesResult = List[EntityResult]
+EntitiesResult = Iterable[EntityResult]
 
 
 # This is the result of an action that was ran

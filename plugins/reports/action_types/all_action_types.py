@@ -4,6 +4,8 @@ from reports.action_types.action_type_base import ActionTypeBase
 from reports.action_types.base.carbonblack_isolate import CarbonblackIsolateAction
 from reports.action_types.base.carbonblack_unisolate import CarbonblackUnisolateAction
 from reports.action_types.base.create_servicenow_computer import ServiceNowComputerAction
+from reports.action_types.base.disable_entity import DisableEntities
+from reports.action_types.base.enable_entity import EnableEntities
 from reports.action_types.base.run_cmd import RunCmd
 from reports.action_types.base.run_executable import RunExecutable
 from reports.action_types.base.tag_all_entities import TagAllEntitiesAction
@@ -29,5 +31,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'notify_syslog': NotifySyslogAction,
     'send_https_log': SendHttpsLogAction,
     'create_service_now_incident': ServiceNowIncidentAction,
-    'create_jira_incident': JiraIncidentAction
+    'create_jira_incident': JiraIncidentAction,
+    'enable_entities': EnableEntities,
+    'disable_entities': DisableEntities
 }

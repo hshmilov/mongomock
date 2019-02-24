@@ -21,7 +21,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 from pathlib import Path
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Set
 
 import cachetools
 import func_timeout
@@ -2237,6 +2237,20 @@ class PluginBase(Configurable, Feature):
             proxies['https'] = https_proxy
             r = requests.post(url=url, data=message, proxies=proxies)
             r.raise_for_status()
+
+    def _adapters_with_feature(self, feature: str) -> Set[str]:
+        """
+        Returns all plugins unique names of plugins that have a specific feature
+        """
+        return set(x[PLUGIN_UNIQUE_NAME]
+                   for x in
+                   self._get_db_connection()['core']['configs'].find(
+                       filter={
+                           'supported_features': feature,
+                       },
+                       projection={
+                           PLUGIN_UNIQUE_NAME: 1
+                       }))
 
     @property
     def mail_sender(self):

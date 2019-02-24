@@ -69,14 +69,20 @@ class ActionTypeBase(ABC):
         self._entity_type = entity_type
         self._plugin_base = PluginBase.Instance
 
+    @property
+    def entity_db(self):
+        """
+        The entity_db according to entity_type
+        """
+        return self._plugin_base._entity_db_map[self._entity_type]
+
     def _get_entities_from_view(self, projection=None):
         """
         Gets the relevant entities for this action from the view (using internal_axon_ids)
         :param projection: optional projection to the DB
         :return: Cursor
         """
-        db = self._plugin_base._entity_db_map[self._entity_type]
-        return db.find({
+        return self.entity_db.find({
             'internal_axon_id': {
                 '$in': self._internal_axon_ids
             }

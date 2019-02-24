@@ -2,6 +2,12 @@ export const actionsMeta = {
     run_executable_windows: {
         title: 'Deploy on Windows Device'
     },
+    enable_entities: {
+        title: 'Enable users or devices'
+    },
+    disable_entities: {
+        title: 'Disable users or devices'
+    },
     run_executable_linux: {
         title: 'Deploy on Linux Device'
     },
@@ -61,7 +67,7 @@ export const actionsMeta = {
     },
     deploy_software: {
         title: 'Deploy Software',
-        items: ['run_executable_windows', 'run_executable_linux']
+        items: ['run_executable_windows', 'run_executable_linux', 'enable_entities', 'disable_entities']
     },
     run_command: {
         title: 'Run Command',
