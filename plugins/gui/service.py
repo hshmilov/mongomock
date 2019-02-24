@@ -1410,19 +1410,28 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         # if there's no aggregator, that's fine
         try:
             logger.info(f'Requesting {adapter_unique_name} to fetch data from newly added client {client_id}')
-            response = self.request_remote_plugin(f'trigger/insert_to_db',
-                                                  adapter_unique_name, method='POST',
-                                                  json={
-                                                      'client_name': client_id
-                                                  })
-            logger.info(f'{adapter_unique_name} finished fetching data for {client_id}')
-            blocking = True
-            self.request_remote_plugin(f'trigger/execute?blocking={blocking}',
-                                       STATIC_CORRELATOR_PLUGIN_NAME,
-                                       method='POST')
-            self.request_remote_plugin(f'trigger/execute?blocking={blocking}',
-                                       STATIC_USERS_CORRELATOR_PLUGIN_NAME,
-                                       method='POST')
+
+            def inserted_to_db(*_):
+                logger.info(f'{adapter_unique_name} finished fetching data for {client_id}')
+                self._trigger('clear_dashboard_cache', blocking=False)
+                self.request_remote_plugin('trigger/execute?blocking=True',
+                                           STATIC_CORRELATOR_PLUGIN_NAME,
+                                           method='POST')
+                self.request_remote_plugin('trigger/execute?blocking=True',
+                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
+                                           method='POST')
+                self._trigger('clear_dashboard_cache', blocking=False)
+
+            def rejected(err):
+                logger.exception(f'Failed fetching from {adapter_unique_name} for {client_to_add}', exc_info=err)
+
+            self.async_request_remote_plugin(f'trigger/insert_to_db?blocking=True',
+                                             adapter_unique_name, method='POST',
+                                             json={
+                                                 'client_name': client_id
+                                             }).then(did_fulfill=inserted_to_db,
+                                                     did_reject=rejected)
+
         except Exception:
             # if there's no aggregator, there's nothing we can do
             logger.exception(f'Error fetching devices from {adapter_unique_name} for client {client_to_add}')
@@ -1598,7 +1607,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                                 except Exception as e:
                                     logger.exception(e)
 
-                            pool.map_async(delete_adapters, entities_to_delete).get()
+                            pool.map(delete_adapters, entities_to_delete)
+                            self._trigger('clear_dashboard_cache', blocking=False)
 
                     # while we can quickly mark all adapters to be pending_delete
                     # we still want to run a background task to delete them
@@ -1606,7 +1616,6 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                     run_and_forget(lambda: async_delete_entities(tmp_entity_type, entities_to_pass_to_be_deleted))
 
             self._trigger('clear_dashboard_cache', blocking=False)
-
             return client_from_db
 
     def run_actions(self, action_data, mongo_filter):
@@ -3661,7 +3670,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
     @rev_cached(ttl=10, key_func=lambda self: 1)
     def __lifecycle(self):
-        is_running = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME).\
+        is_running = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME). \
             json()['state'] == TriggerStates.Triggered.name
         state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:

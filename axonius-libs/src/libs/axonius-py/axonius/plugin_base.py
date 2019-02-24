@@ -97,7 +97,7 @@ from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
-                                     run_in_executor_helper)
+                                     run_in_executor_helper, ThreadPoolExecutorReusable)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -469,7 +469,10 @@ class PluginBase(Configurable, Feature):
         # An executor dedicated to inserting devices to the DB
         # the number of threads should be in a proportion to the number of actual core that can run them
         # since these things are more IO bound here - we allow ourselves to fire more than the number of cores we have
-        self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
+        self._common_executor = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
+
+        # An executor dedicated for running execution promises
+        self.execution_promises = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
 
         if "ScannerAdapter" not in self.specific_supported_features():
             # This is only used if it's the first time inserting to the DB - i.e. the DB is empty of any device
@@ -483,9 +486,6 @@ class PluginBase(Configurable, Feature):
             self.__first_time_inserter = None
 
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
-
-        # An executor dedicated for running execution promises
-        self.execution_promises = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
 
         # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
         # since it will try to reject functions and not promises.
@@ -505,7 +505,9 @@ class PluginBase(Configurable, Feature):
         self.__save_hyperlinks_to_db()
 
         # Used by revving_cache
-        self.cached_operation_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutor(10)})
+        self.cached_operation_scheduler = LoggedBackgroundScheduler(executors={
+            'default': ThreadPoolExecutorReusable(self._common_executor)
+        })
         self.cached_operation_scheduler.start()
 
         run_and_forget(self.__call_delayed_initialization)
@@ -874,6 +876,17 @@ class PluginBase(Configurable, Feature):
             headers[X_UI_USER_SOURCE] = user_source
 
         return requests.request(method, url, headers=headers, **kwargs)
+
+    def async_request_remote_plugin(self, *args, **kwargs) -> Promise:
+        """
+        See request_remote_plugin for parameters.
+        Runs the request async, and returns a promise for it.
+        """
+        return Promise(functools.partial(run_in_executor_helper,
+                                         self._common_executor,
+                                         self.request_remote_plugin,
+                                         args=args,
+                                         kwargs=kwargs))
 
     def get_available_plugins_from_core_uncached(self):
         """
@@ -1372,7 +1385,7 @@ class PluginBase(Configurable, Feature):
 
                     inserted_data_count += 1
                     promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                              self.__data_inserter,
+                                                              self._common_executor,
                                                               insert_data_to_db,
                                                               args=[data_to_update, parsed_to_insert])))
 

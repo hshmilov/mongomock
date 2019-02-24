@@ -6,6 +6,8 @@ from datetime import datetime
 from threading import RLock
 import logging
 
+from apscheduler.executors.pool import BasePoolExecutor
+
 from axonius.logging.logger import clean_locks_from_logger
 from axonius.thread_stopper import ThreadStopper, StopThreadException
 
@@ -117,6 +119,15 @@ def run_and_forget(call_this):
     Run a method on a remote worker without caring about the result, if it ever comes
     """
     GLOBAL_RUN_AND_FORGET.submit(call_this)
+
+
+class ThreadPoolExecutorReusable(BasePoolExecutor):
+    """
+    An executor that runs jobs in the pool given
+    """
+
+    def __init__(self, pool):
+        super(ThreadPoolExecutorReusable, self).__init__(pool)
 
 
 def timeout_iterator(iterable, timeout):
