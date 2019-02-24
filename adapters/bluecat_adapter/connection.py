@@ -3,7 +3,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from bluecat_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
+from bluecat_adapter.consts import DEVICE_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -17,8 +17,12 @@ class BluecatConnection(RESTConnection):
                                   'Accept': 'application/json'}, **kwargs)
 
     def _refresh_token(self):
-        response = self._get(f'login?username={self._username}&password={self._password}',
-                             use_json_in_response=False)
+        try:
+            response = self._get(f'login?username={self._username}&password={self._password}',
+                                 use_json_in_response=False)
+        except Exception:
+            logger.exception('Authentication Error')
+            raise RESTException('Authentication Error')
         response = str(response)
         if 'ERROR' in response:
             raise RESTException('Bad Authentication')
@@ -41,66 +45,35 @@ class BluecatConnection(RESTConnection):
 
     # pylint: disable=R0912
     def get_device_list(self):
-        networks_ids = []
-        offset = 0
-        response = self._get(f'searchByObjectTypes?'
-                             f'keyword=$network_ip&types=IP4Network&start={offset}&count={DEVICE_PER_PAGE}')
-        for network_raw in response:
-            if network_raw.get('id'):
-                networks_ids.append(network_raw.get('id'))
-        while response and offset < MAX_NUMBER_OF_DEVICES:
+        networks_ids = set()
+        for key_num in range(1, 256):
             try:
-                offset += DEVICE_PER_PAGE
-                if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
-                    self._refresh_token()
                 response = self._get(f'searchByObjectTypes?'
-                                     f'keyword=$network_ip&types=IP4Network&start={offset}&count={DEVICE_PER_PAGE}')
+                                     f'keyword={key_num}$&types=IP4Network&start=0&'
+                                     f'count={DEVICE_PER_PAGE}')
                 for network_raw in response:
-                    if network_raw.get('id') and network_raw.get('id') not in networks_ids:
-                        networks_ids.append(network_raw.get('id'))
+                    if network_raw.get('id'):
+                        networks_ids.add(network_raw.get('id'))
             except Exception:
-                logger.exception(f'Problem at offset {offset}')
-                break
+                logger.exception(f'Problem getting key num')
         if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
             self._refresh_token()
         # pylint: disable=R1702
+        networks_ids = list(networks_ids)
         for network_id in networks_ids:
             try:
-                offset = 0
-                response = self._get(f'searchByObjectTypes?parentId={network_id}&type=IP4Address'
-                                     f'&start={offset}&count={DEVICE_PER_PAGE}')
+                response = self._get(f'getEntities?parentId={network_id}&type=IP4Address'
+                                     f'&start=0&count={DEVICE_PER_PAGE}')
                 for device_raw in response:
                     try:
                         host_id = device_raw.get('id')
                         if host_id:
-                            dns_name_raw = self._get(f'searchByObjectTypes?entityId={host_id}&type=HostRecord&'
-                                                     f'start={offset}&count={DEVICE_PER_PAGE}')
+                            dns_name_raw = self._get(f'getLinkedEntities?entityId={host_id}&type=HostRecord&'
+                                                     f'start=0&count={DEVICE_PER_PAGE}')
                             if isinstance(dns_name_raw, list) and len(dns_name_raw) > 0:
                                 device_raw['dns_name'] = dns_name_raw[0].get('name')
                     except Exception:
                         logger.exception(f'Problem getting dns name for {device_raw}')
                     yield device_raw
-
-                while response and offset < MAX_NUMBER_OF_DEVICES:
-                    try:
-                        offset += DEVICE_PER_PAGE
-                        if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
-                            self._refresh_token()
-                        response = self._get(f'searchByObjectTypes?parentId={network_id}&type=IP4Address'
-                                             f'&start={offset}&count={DEVICE_PER_PAGE}')
-                        for device_raw in response:
-                            try:
-                                host_id = device_raw.get('id')
-                                if host_id:
-                                    dns_name_raw = self._get(f'searchByObjectTypes?entityId={host_id}&type=HostRecord&'
-                                                             f'start={offset}&count={DEVICE_PER_PAGE}')
-                                    if isinstance(dns_name_raw, list) and len(dns_name_raw) > 0:
-                                        device_raw['dns_name'] = dns_name_raw[0].get('name')
-                            except Exception:
-                                logger.exception(f'Problem getting dns name for {device_raw}')
-                            yield device_raw
-                    except Exception:
-                        logger.exception(f'Problem at offset {offset}')
-                        break
             except Exception:
                 logger.exception(f'Problem getting network id {network_id}')

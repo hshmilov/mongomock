@@ -53,7 +53,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
     def default_config() -> dict:
         return {
             'severity': 'info',
-            'description_default': None,
+            'description_default': False,
             'incident_description': None,
             'incident_title': None
         }

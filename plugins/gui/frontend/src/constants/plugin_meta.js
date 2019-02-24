@@ -12,7 +12,7 @@ export const pluginMeta = {
         description: 'Armis provides device discovery, behavioral analytics to identify risks or attacks, and automatic protection.'
     },
     bluecat_adapter: {
-        title: 'BlueCat - BETA',
+        title: 'BlueCat',
         description: 'BlueCat Enterprise DNS connects all disparate DNS and DHCP with centralized management of all clients and critical assets.'
     },
     logrhythm_adapter: {
@@ -20,7 +20,7 @@ export const pluginMeta = {
         description: 'The LogRhythm platform combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation & orchestration in a single solution.'
     },
     twistlock_adapter: {
-        title: 'Twistlock - BETA',
+        title: 'Twistlock',
         description: 'Twistlock provides container and cloud native cybersecurity for teams using Docker, Kubernetes, serverless, and other cloud native technologies.'
     },
     riverbed_adapter: {

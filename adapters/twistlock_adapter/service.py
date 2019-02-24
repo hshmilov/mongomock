@@ -41,6 +41,7 @@ class TwistlockAdapter(AdapterBase):
         container_app = Field(str, 'Container Application')
         image_name = Field(str, 'Image Name')
         profile_id = Field(str, 'Profile ID')
+        last_modified = Field(datetime.datetime, 'Last Modified')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -149,7 +150,7 @@ class TwistlockAdapter(AdapterBase):
             if not device_raw.get('hostname'):
                 logger.warning(f'Bad device with no Host name {device_raw}')
                 return None
-            device.id = 'AGENT_' + device_raw.get('hostname') + '_' + device_raw.get('ips')
+            device.id = 'AGENT_' + device_raw.get('hostname') + '_' + (device_raw.get('ips') or '')
             device.hostname = device_raw.get('hostname')
             ips = device_raw.get('ips')
             try:
@@ -213,6 +214,7 @@ class TwistlockAdapter(AdapterBase):
 
             cve_vulnerability_distribution = device_info.get('cveVulnerabilityDistribution')
             if cve_vulnerability_distribution and isinstance(cve_vulnerability_distribution, dict):
+                device.cve_vulnerability_distribution = VulnerabilitiesCount()
                 for key, value in cve_vulnerability_distribution.items():
                     try:
                         # pylint: disable=E1137

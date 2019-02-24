@@ -56,7 +56,7 @@ class JiraIncidentAction(ActionTypeAlert):
     def default_config() -> dict:
         return {
             'issue_type': None,
-            'description_default': None,
+            'description_default': False,
             'incident_description': None,
             'project_name': None,
             'incident_title': None

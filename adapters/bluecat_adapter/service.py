@@ -17,6 +17,8 @@ class BluecatAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         device_state = Field(str, 'Device State')
         device_comments = Field(str, 'Device Comments')
+        location_code = Field(str, 'Location Code')
+        vendor_class_identifier = Field(str, 'Vendor Class Identifier')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -95,30 +97,40 @@ class BluecatAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=R1702
+    # pylint: disable=R1702,R0912
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('id')
-                if not device_id:
+                if device_id is None:
                     logger.warning(f'Bad device with no id {device_id}')
                     continue
-                device.id = device_id + '_' + (device_raw.get('name') or '')
+                device.id = str(device_id) + '_' + (device_raw.get('name') or '')
                 device.name = device_raw.get('name').split(',')[0] if device_raw.get('name') else None
                 device.hostname = device_raw.get('dns_name')
                 device_properties = device_raw.get('properties')
+                mac = None
+                ips = None
                 try:
                     if isinstance(device_properties, str) and device_properties:
                         for property_raw in \
                                 [device_property.split('=')
                                  for device_property in device_properties.split('|')[:-1] if '=' in device_property]:
                             if property_raw[0] == 'address':
-                                device.add_nic(None, [property_raw[1]])
+                                ips = [property_raw[1]]
+                            elif property_raw[0] == 'macAddress':
+                                mac = property_raw[1]
                             elif property_raw[0] == 'state':
                                 device.device_state = property_raw[1]
                             elif property_raw[0] == 'comments':
                                 device.device_comments = property_raw[1]
+                            elif property_raw[0] == 'locationCode':
+                                device.location_code = property_raw[1]
+                            elif property_raw[0] == 'vendorClassIdentifier':
+                                device.vendor_class_identifier = property_raw[1]
+                    if mac or ips:
+                        device.add_nic(mac, ips)
                 except Exception:
                     logger.exception(f'Problem getting properties for {device_raw}')
                 device.set_raw(device_raw)
