@@ -5,7 +5,7 @@ import logging.handlers
 from axonius.logging.customised_json_formatter import CustomisedJSONFormatter
 
 BYTES_LIMIT = 5 * 1024 * 1024  # 5MB
-
+VERBOSE_BYTES_LIMIT = 15 * 1024 * 1024  # 15MB
 
 LOGGER = None
 
@@ -22,6 +22,7 @@ def _create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
     :param str log_directory: The path for the log file.
     """
     regular_log_path = os.path.join(log_directory, f'{plugin_unique_name}.axonius.log')
+    verbose_regular_log_path = os.path.join(log_directory, f'{plugin_unique_name}.verbose.axonius.log')
 
     # Creating the logger using our customized logger formatter
     formatter = CustomisedJSONFormatter(plugin_unique_name)
@@ -29,12 +30,21 @@ def _create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
     file_handler = logging.handlers.RotatingFileHandler(regular_log_path,
                                                         maxBytes=BYTES_LIMIT,
                                                         backupCount=3)
+    file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)
+
+    verbose_file_handler = logging.handlers.RotatingFileHandler(verbose_regular_log_path,
+                                                                maxBytes=VERBOSE_BYTES_LIMIT,
+                                                                backupCount=3)
+    verbose_file_handler.setFormatter(formatter)
+    verbose_file_handler.setLevel(logging.DEBUG)
 
     # Building the logger object
     logger = logging.getLogger('axonius')
     logger.addHandler(file_handler)
-    logger.setLevel(log_level)
+    logger.setLevel(logging.DEBUG)
+
+    logger.addHandler(verbose_file_handler)
     return logger
 
 
