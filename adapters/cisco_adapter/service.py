@@ -82,6 +82,11 @@ class CiscoAdapter(AdapterBase):
                     'type': 'integer',
                     'description': 'Protocol Port (Default: standart port)'
                 },
+                {
+                    'name': 'description',
+                    'title': 'Description',
+                    'type': 'string',
+                },
 
             ],
             'required': [

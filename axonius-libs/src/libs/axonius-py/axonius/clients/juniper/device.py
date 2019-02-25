@@ -1,4 +1,6 @@
 import logging
+import datetime
+
 from axonius.devices.device_adapter import (DeviceAdapter,
                                             DeviceAdapterNetworkInterface,
                                             DeviceAdapterVlan,
@@ -323,6 +325,9 @@ def create_juniper_device(create_device_func, raw_device):
         device.device_type = 'Juniper Device'
         device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
         device.figure_os('junos')
+
+        # we are running on the endpoint, so the last seen is right now
+        device.last_seen = datetime.datetime.now()
 
         id_ = _get_id_for_juniper(raw_device)
         if not id_:

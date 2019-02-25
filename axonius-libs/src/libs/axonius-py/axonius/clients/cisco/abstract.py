@@ -2,6 +2,7 @@ import logging
 import itertools
 from functools import reduce
 from collections import defaultdict
+import datetime
 
 from axonius.adapter_base import AdapterProperty
 from axonius.devices.device_adapter import (DeviceAdapter, Field,
@@ -248,6 +249,8 @@ class BasicInfoData(AbstractCiscoData):
         if device:
             device.fetch_proto = 'CLIENT'
             device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
+            # we are running on the endpoint, so the last seen is right now
+            device.last_seen = datetime.datetime.now()
         return device
 
     def get_protocol_type(self):
