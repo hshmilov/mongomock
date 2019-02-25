@@ -31,6 +31,7 @@
                     <h5 class="title">Conditions</h5>
                     <div>Detect the monitored changes and trigger upon:</div>
                     <div class="config">
+                        <x-checkbox label="Any result" :read-only="readOnly" :data="true" />
                         <x-checkbox label="New entities were added to results" v-model="conditions.new_entities" :read-only="readOnly" />
                         <x-checkbox label="Previous entities were subtracted from results" v-model="conditions.previous_entities" :read-only="readOnly" />
                         <div class="config-item">

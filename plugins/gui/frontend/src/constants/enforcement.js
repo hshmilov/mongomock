@@ -15,10 +15,13 @@ export const actionsMeta = {
         title: 'Isolate in CarbonBlack'
     },
     carbonblack_unisolate: {
-        title: 'Remove isolation in CarbonBlack'
+        title: 'Unisolate in CarbonBlack'
+    },
+    scan_with_qualys: {
+        title: 'Add to Qualys'
     },
     scan_with_tenable: {
-        title: 'Scan in Tenable'
+        title: 'Add to Tenable'
     },
     patch_device_windows: {
         title: 'Patch Windows Device'
@@ -78,8 +81,8 @@ export const actionsMeta = {
         items: ['carbonblack_isolate', 'carbonblack_unisolate']
     },
     scan_va: {
-        title: 'Scan Device in VA',
-        items: ['scan_with_tenable']
+        title: 'Add Device to VA Scan',
+        items: ['scan_with_qualys', 'scan_with_tenable']
     },
     patch_device: {
         title: 'Patch Device',

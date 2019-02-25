@@ -2849,7 +2849,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         constants = dict()
         constants['permission_levels'] = dictify_enum(PermissionLevel)
         constants['permission_types'] = dictify_enum(PermissionType)
-        constants['trigger_periods'] = dictify_enum(TriggerPeriod)
+        constants['trigger_periods'] = dictify_enum([x for x in TriggerPeriod if x.name != 'never'])
         return jsonify(constants)
 
     def __invalidate_sessions(self, user_id: str):

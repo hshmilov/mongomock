@@ -538,7 +538,7 @@ class ReportsService(Triggerable, PluginBase):
         if trigger.period == TriggerPeriod.never and not manual:
             return result
 
-        if trigger.last_triggered and trigger.period != TriggerPeriod.all:
+        if trigger.last_triggered and trigger.period != TriggerPeriod.all and not manual:
             now = datetime.datetime.utcnow()
             if trigger.period == TriggerPeriod.daily:
                 max_date = now - datetime.timedelta(days=1)
