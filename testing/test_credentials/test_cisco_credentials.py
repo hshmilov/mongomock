@@ -1,11 +1,11 @@
-cisco_creds = {
+cisco_ssh_creds = {
     'host': '192.168.10.6',
     'protocol': 'ssh',
     'username': 'cisco',
     'password': 'cisco',
 }
 
-cisco_snmp_creds = {
+cisco_creds = {
     'host': '192.168.10.6',
     'community': 'public',
 }

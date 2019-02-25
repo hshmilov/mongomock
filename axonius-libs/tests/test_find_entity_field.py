@@ -3,6 +3,7 @@
 from axonius.devices.device_adapter import DeviceAdapter, Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.gui_helpers import (find_entity_field,
+                                       parse_entity_fields,
                                        merge_entities_fields)
 
 # pylint: disable=line-too-long
@@ -13,6 +14,7 @@ class MyObject(SmartJsonClass):
     list_test = ListField(str, 'list_test')
     list_test_int = ListField(int, 'list_test_int')
     int_test = Field(int, 'int_test')
+    hostname = Field(str, 'hostname')
 
 
 class MyDeviceAdapter(DeviceAdapter):
@@ -50,16 +52,19 @@ def test_basic_string_logic():
 
 def test_hostname_logic():
     device = MyDeviceAdapter(set(), set())
-    device.hostname = 'asdf'
+    device.hostname = 'cisco-switch'
 
     device2 = MyDeviceAdapter(set(), set())
-    device2.hostname = 'asdfqwer'
+    device2.hostname = 'cisco-switch.axonius.lan'
 
-    assert find_entity_field([device.to_dict(), device2.to_dict()], 'hostname') == ['asdf']
+    device3 = MyDeviceAdapter(set(), set())
+    assert parse_entity_fields([device.to_dict(), device2.to_dict(), device3.to_dict()],
+                               ['hostname']) == {'hostname': ['cisco-switch']}
 
-    device2.hostname = 'asd2fqwer'
+    device2.hostname = 'cisco-switc1'
 
-    assert find_entity_field([device.to_dict(), device2.to_dict()], 'hostname') == ['asdf', 'asd2fqwer']
+    result = parse_entity_fields([device.to_dict(), device2.to_dict(), device3.to_dict()], ['hostname'])
+    assert result == {'hostname': ['cisco-switch', 'cisco-switc1']}
 
 
 def test_list_logic():
@@ -262,3 +267,16 @@ def test_merge_list_logic():
     result = merge_entities_fields(
         list(map(lambda x: x.to_dict(), [device2, device])), fields)
     assert result == [{'object_test.list_test': ['a']}]
+
+
+def test_hostname_obj():
+    device = MyDeviceAdapter(set(), set())
+    device.object_test = MyObject()
+    device.object_test.hostname = 'cisco-switch'
+
+    device2 = MyDeviceAdapter(set(), set())
+    device2.object_test = MyObject()
+    device2.object_test.hostname = 'cisco-switch.axonius.lan'
+
+    assert parse_entity_fields([device.to_dict(), device2.to_dict()],
+                               ['object_test.hostname']) == {'object_test.hostname': ['cisco-switch']}

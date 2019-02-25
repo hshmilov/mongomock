@@ -37,6 +37,8 @@ FIELDS_TO_PROJECT = ['internal_axon_id', 'adapters.pending_delete', f'adapters.{
 
 FIELDS_TO_PROJECT_FOR_GUI = ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]
 
+SUBSTRING_FIELDS = ['hostname']
+
 
 def check_permissions(user_permissions, required_permissions, request_action: str) -> bool:
     """
@@ -577,7 +579,9 @@ def find_entity_field(entity_data, field_path):
                         return False
                     x = x.lower().strip()
                     y = y.lower().strip()
-                    if field_path in ['hostname']:
+
+                    last_part = field_path.split('.')[-1]
+                    if last_part in SUBSTRING_FIELDS:
                         return (x and x in y) or (y and y in x) or (x == y)
                     return x == y
 
