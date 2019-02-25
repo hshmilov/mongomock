@@ -317,11 +317,22 @@ class ReportsService(Triggerable, PluginBase):
         Deletes reports from the DB using their _id
         """
         report_ids = [ObjectId(report_id) for report_id in reports_ids]
-        return self.__reports_collection.delete_many({
+        report_ids_query = {
             '_id': {
                 '$in': report_ids
             }
+        }
+        all_actions = [
+            [x[ACTIONS_MAIN_FIELD]] + x[ACTIONS_SUCCESS_FIELD] + x[ACTIONS_FAILURE_FIELD] + x[ACTIONS_POST_FIELD]
+            for x
+            in [report['actions'] for report in self.__reports_collection.find(report_ids_query, {'actions': 1})]
+        ]
+        self.__saved_actions_collection.delete_many({
+            'name': {
+                '$in': [action for sub_actions in all_actions for action in sub_actions]
+            }
         })
+        return self.__reports_collection.delete_many(report_ids_query)
 
     def __get_pretty_id(self) -> int:
         """
