@@ -1,7 +1,6 @@
 import random
 import string
 
-from mockingbird.commons import mock_utils
 from mockingbird.commons.mock_network_device import MockNetworkDevice, MockNetworkDeviceProperties
 from mockingbird.commons.adapter_parser import AdapterParser
 from aws_adapter.service import AwsAdapter
@@ -21,7 +20,7 @@ class AwsAdapterParser(AdapterParser):
     @staticmethod
     def _parse_device(device: AwsAdapter.MyDeviceAdapter, network_device: MockNetworkDevice):
         device.id = 'i-' + ''.join(random.choices(string.hexdigits, k=16))
-        device.name = device.id + '-' + network_device.name
+        device.name = network_device.name
         device.os = network_device.os
         device.cloud_id = device.id
         device.cloud_provider = 'AWS'

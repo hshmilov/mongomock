@@ -21,7 +21,7 @@ class EsxAdapterParser(AdapterParser):
         device.hostname = network_device.hostname
         device.os = network_device.os
         device.hard_drives = network_device.hard_drives
-        device.name = (network_device.name or network_device.hostname) + '-ESX'
+        device.name = (network_device.name or network_device.hostname)
         device.network_interfaces = network_device.network_interfaces
 
         yield device

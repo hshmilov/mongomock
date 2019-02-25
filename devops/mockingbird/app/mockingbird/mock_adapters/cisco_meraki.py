@@ -16,7 +16,7 @@ class CiscoMerakiAdapterParser(AdapterParser):
 
     @staticmethod
     def _parse_device(device: CiscoMerakiAdapter.MyDeviceAdapter, network_device: MockNetworkDevice):
-        device.id = f'cisco-meraki-{network_device.name}'
+        device.id = f'meraki-{network_device.network_interfaces[0].ips[0]}'
         device.name = network_device.name
         device.hostname = network_device.hostname
         device.network_interfaces = network_device.network_interfaces

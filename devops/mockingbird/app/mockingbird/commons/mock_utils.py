@@ -11,6 +11,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from mockingbird.commons.mock_network_entity import MockNetworkEntity, MockNetworkEntityProperties
+from mockingbird.commons import consts
 
 
 def ip2int(addr):
@@ -131,7 +132,8 @@ def get_random_windows_host_os() -> str:
             'Windows 8.1 Pro', 'Windows 8.1 Enterprise',
             'Windows 8',
             'Windows 7 Enterprise', 'Windows 7 Ultimate',
-            'Windows Vista Business', 'Windows Vista Enterprise'
+            'Windows Vista Business', 'Windows Vista Enterprise',
+            'Windows XP SP2'
         ]
     )
 
@@ -162,12 +164,33 @@ def get_random_software_list() -> List[dict]:
             'name': 'Adobe Acrobat Reader DC',
             'version': '19.010.20069'
         },
+    ]
+
+
+def get_random_software_vulnerable_list() -> List[dict]:
+    return [
         {
             'vendor': 'Adobe Systems Incorporated',
             'name': 'Adobe Flash Player 30 PPAPI',
             'version': '30.0.0.113'
         },
     ]
+
+
+def get_random_hardware_list() -> List[dict]:
+    return consts.CONNECTED_HARDWARE
+
+
+def get_random_shares_list() -> List[dict]:
+    return consts.SHARES
+
+
+def get_random_services_list() -> List[dict]:
+    return consts.SERVICES
+
+
+def get_random_processes_list() -> List[dict]:
+    return consts.PROCESSES
 
 
 def get_random_linux_software_list() -> List[dict]:

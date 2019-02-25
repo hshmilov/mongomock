@@ -21,6 +21,7 @@ EMPLOYEE_ID_START = 880000
 COMPANY_SITE_LOCATIONS = ['Columbus', 'Richmond', 'New York', 'Boston']
 WINDOWS_DEVICES_IN_NETWORK = 11849  # Number of devices in network
 LINUX_DEVICES_IN_NETWORK = 7412
+WEIRD_DEVICES_IN_NETWORK = 5
 USERS_IN_NETWORK = round(WINDOWS_DEVICES_IN_NETWORK * 1.1)
 
 USER_EXISTENCE_STATS = {
@@ -50,14 +51,14 @@ LAST_SEEN_STATS = {
     ],
     MockNetworkDeviceProperties.EpoDevice: [
         {
-            'percentage': 0.998,
+            'percentage': 0.999,
             'function': mock_utils.last_seen_generator,
             'args': (6, 0)
         },
         {
-            'percentage': 0.002,
+            'percentage': 0.001,
             'function': mock_utils.last_seen_generator,
-            'args': (365, 7)
+            'args': (365, 30)
         }
     ],
     MockNetworkDeviceProperties.CarbonBlackResponseDevice: [
@@ -220,9 +221,9 @@ def user_creator(i: int, network: MockNetwork, user: MockNetworkUser):
 
 def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevice):
     # Generic Data
-    user = network.get_random_name(i)
-    device.last_used_users = [user]
-    device.name = mock_utils.get_random_windows_pc_name(username=user)
+    user = network.get_user_by_id(i)
+    device.last_used_users = [user.username]
+    device.name = mock_utils.get_random_windows_pc_name(username=user.display_name)
     device.hostname = device.name
     device.add_nic(network.generate_mac(), [network.generate_ip()])
     device.domain = DOMAIN
@@ -233,6 +234,16 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
     device.device_disabled = random.randint(1, 100) <= 1  # 1% are disabled
     for software in random.sample(mock_utils.get_random_software_list(), k=2):
         device.add_installed_software(**software)   # pylint: disable=not-a-mapping
+
+    if random.randint(1, 1000) <= 8:  # 0.008
+        for software in random.sample(mock_utils.get_random_software_vulnerable_list(), k=1):
+            device.add_installed_software(**software)
+
+    if random.randint(1, 10) <= 5:  # 50% have chrome
+        if random.randint(1, 1000) < 4:   # 0.004 * 0.5 = 0.002 (0.2%) have old chrome with a cve
+            device.add_installed_software(name='Google Chrome', version='65.0.3325.147', vendor='Google Inc.')
+        else:
+            device.add_installed_software(name='Google Chrome', version='72.0.3626.109', vendor='Google Inc.')
 
     # Hardware
     device.total_physical_memory = random.choice([4, 8, 16])
@@ -245,6 +256,7 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
     # Set up cpu's
     device.total_number_of_cores = device.total_physical_memory / 4
 
+    # Pure general info things
     device.add_security_patch(security_patch_id='KB3199986')
     device.add_security_patch(security_patch_id='KB3200970')
 
@@ -253,6 +265,55 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
         for available_security_patches in mock_utils.get_random_windows_available_security_patches():
             device.add_available_security_patch(**available_security_patches)
 
+    # They all have the same users
+    device.add_users(
+        user_sid=user.get_specific(MockNetworkUserProperties.ADUser).ad_sid,
+        username=user.username,
+        is_local=False,
+        is_admin=user.is_admin,
+        last_use_date=user.last_seen
+    )
+
+    device.add_users(
+        user_sid=f'S-1-5-21-{random.randint(10000, 99999)}-{random.randint(1000000, 9999999)}',
+        username=f'Administrator@{device.name.upper()}',
+        is_local=True,
+        is_admin=True,
+        is_disabled=False,
+    )
+
+    is_guest_admin = True if random.randint(1, 1000) <= 1 else False
+    device.add_users(
+        user_sid=f'S-1-5-21-{random.randint(10000, 99999)}-{random.randint(1000000, 9999999)}',
+        username=f'Guest@{device.name.upper()}',
+        is_local=True,
+        is_admin=False,
+        is_disabled=is_guest_admin,
+    )
+
+    device.add_local_admin(admin_name=f'Domain Admins@{DOMAIN}', admin_type='Group Membership')
+    device.add_local_admin(admin_name=f'Administrator@{device.name.upper()}', admin_type='Admin User')
+    if is_guest_admin:
+        device.add_local_admin(admin_name=f'Guest@{device.name.upper()}', admin_type='Admin User')
+    if user.is_admin:
+        device.add_local_admin(admin_name=user.username, admin_type='Admin User')
+
+    hardware_list = mock_utils.get_random_hardware_list()
+    for hardware in random.sample(hardware_list, k=int(len(hardware_list) * 0.9)):
+        device.add_connected_hardware(**hardware)   # pylint: disable=not-a-mapping
+
+    shares_list = mock_utils.get_random_shares_list()
+    for share in random.sample(shares_list, k=int(len(shares_list) * 0.9)):
+        device.add_share(**share)  # pylint: disable=not-a-mapping
+
+    processes = mock_utils.get_random_processes_list()
+    random.shuffle(processes)
+    device.processes = processes[:int(len(processes) * 0.9)]
+
+    services = mock_utils.get_random_services_list()
+    random.shuffle(services)
+    device.services = services[:int(len(services) * 0.9)]
+
     # Adapter-Specific data
     # AD
     ad_specific = AdAdapterParser.new_device_adapter()
@@ -260,10 +321,9 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
     device.add_specific(MockNetworkDeviceProperties.ADDevice, ad_specific)
 
     # Properties
-    if random.randint(1, 10) <= 9:
+    if random.randint(1, 1000) <= 994:
         device.add_property(MockNetworkDeviceProperties.ADDevice)
-        if random.randint(1, 100) <= 85:
-            device.add_property(MockNetworkDeviceProperties.SccmDevice)
+        device.add_property(MockNetworkDeviceProperties.SccmDevice)
     if random.randint(1, 100) <= 90:
         device.add_property(MockNetworkDeviceProperties.CarbonBlackResponseDevice)
         device.add_specific(
@@ -274,9 +334,9 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
         device.add_property(MockNetworkDeviceProperties.EsxDevice)
     if random.randint(1, 100) <= 85:
         device.add_property(MockNetworkDeviceProperties.QualysScansDevice)
-    if random.randint(1, 100) <= 97:
+    if random.randint(1, 100) <= 92:
         device.add_property(MockNetworkDeviceProperties.CiscoMerakiDevice)
-    if random.randint(1, 100) <= 98:
+    if random.randint(1, 1000) <= 996:
         device.add_property(MockNetworkDeviceProperties.EpoDevice)
 
     if random.randint(1, 10) <= 4:
@@ -328,25 +388,31 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
     )[0]
     device.add_property(host_platform)
 
-    if random.randint(1, 10) <= 9:
-        device.add_property(MockNetworkDeviceProperties.ChefDevice)
+    if random.randint(1, 100) <= 95:
+        # 5% of linuxes are not known. They are simply machines on ESX or AWS.
+        if random.randint(1, 10) <= 8:
+            device.add_property(MockNetworkDeviceProperties.ChefDevice)
 
-    if random.randint(1, 10) <= 9 and \
-            host_platform not in [MockNetworkDeviceProperties.GCEDevice, MockNetworkDeviceProperties.AzureDevice]:
-        # Qualys doesn't scan azure and gce
-        device.add_property(MockNetworkDeviceProperties.QualysScansDevice)
+        if random.randint(1, 10) <= 8 and \
+                host_platform not in [MockNetworkDeviceProperties.GCEDevice, MockNetworkDeviceProperties.AzureDevice]:
+            # Qualys doesn't scan azure and gce
+            device.add_property(MockNetworkDeviceProperties.QualysScansDevice)
 
-    if random.randint(1, 100) <= 94:
-        device.add_property(MockNetworkDeviceProperties.CiscoMerakiDevice)
+        if random.randint(1, 100) <= 95:
+            device.add_property(MockNetworkDeviceProperties.CiscoMerakiDevice)
 
-    if random.randint(1, 100) <= 90:
-        device.add_property(MockNetworkDeviceProperties.CarbonBlackResponseDevice)
-        device.add_specific(
-            MockNetworkDeviceProperties.CarbonBlackResponseDevice,
-            CarbonBlackResponseAdapterParser.new_device_adapter()
-        )
-    if random.randint(1, 100) <= 97:
-        device.add_property(MockNetworkDeviceProperties.EpoDevice)
+        if random.randint(1, 100) <= 86:
+            device.add_property(MockNetworkDeviceProperties.CarbonBlackResponseDevice)
+            device.add_specific(
+                MockNetworkDeviceProperties.CarbonBlackResponseDevice,
+                CarbonBlackResponseAdapterParser.new_device_adapter()
+            )
+        if random.randint(1, 100) <= 90:
+            device.add_property(MockNetworkDeviceProperties.EpoDevice)
+
+    else:
+        if random.randint(1, 2) == 1:
+            device.add_property(MockNetworkDeviceProperties.ChefDevice)
 
     # IP's
     ips = [network.generate_ip()]
@@ -395,6 +461,13 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
     device.add_specific(MockNetworkDeviceProperties.AWSDevice, aws_specific)
 
 
+def weird_devices_creator(i: int, network: MockNetwork, device: MockNetworkDevice):
+    # Lets generate a server name
+    ips = [network.generate_ip()]
+    device.add_nic(network.generate_mac(mac_type='china-mobile-iot'), ips)
+    device.add_property(MockNetworkDeviceProperties.CiscoMerakiDevice)
+
+
 def set_epo_isolated(device: MockNetworkDevice):
     # Prepare the isolating adapterdata part
     cbr_device = device.get_specific(MockNetworkDeviceProperties.CarbonBlackResponseDevice)
@@ -426,6 +499,9 @@ def main():
     print(f'[+] Creating devices')
     ids = network.create_devices(WINDOWS_DEVICES_IN_NETWORK, windows_device_creator)
     ids += network.create_devices(LINUX_DEVICES_IN_NETWORK, linux_servers_creator)
+
+    print(f'[+] Creating weird devices')
+    ids += network.create_devices(WEIRD_DEVICES_IN_NETWORK, weird_devices_creator)
 
     print(f'[+] Setting last seen')
     network.set_devices_attributes(ids, LAST_SEEN_STATS)

@@ -71,7 +71,8 @@ class MockNetwork:
     def generate_mac(self, mac_type='intel'):
         mac_address_prefix = {
             'intel': '88:53:2E:',
-            'dell': '50:9A:4C:'
+            'dell': '50:9A:4C:',
+            'china-mobile-iot': '1C:25:E1:'
         }
 
         if mac_type == 'random':
@@ -95,6 +96,12 @@ class MockNetwork:
 
     def get_users(self) -> List[MockNetworkUser]:
         return self.__entities[MockNetworkEntities.MockNetworkUserEntity]
+
+    def get_device_by_id(self, _id: int) -> MockNetworkEntities.MockNetworkDeviceEntity:
+        return self.get_devices()[_id]
+
+    def get_user_by_id(self, _id: int) -> MockNetworkEntities.MockNetworkUserEntity:
+        return self.get_users()[_id]
 
     def dump_devices(self) -> List[dict]:
         return [mock_utils.recursive_remove_none(device.to_dict()) for device in self.get_devices()]
