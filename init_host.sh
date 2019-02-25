@@ -54,7 +54,7 @@ add-apt-repository -y ppa:jonathonf/python-3.6
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 _wait_for_apt update
 echo "Installing various dependencies..."
-_wait_for_apt install -y open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
+_wait_for_apt install -y sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
 echo "Installing python 3.6..."
 _wait_for_apt install -y python3.6 python3.6-dev python3.6-venv ipython python-pip
 curl https://bootstrap.pypa.io/get-pip.py | python3.6
