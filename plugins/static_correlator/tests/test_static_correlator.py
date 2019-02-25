@@ -2,7 +2,7 @@ import datetime
 import itertools
 import uuid
 
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME
 from axonius.devices.device_adapter import (IPS_FIELD, MAC_FIELD,
                                             NETWORK_INTERFACES_FIELD, OS_FIELD)
 from axonius.types.correlation import CorrelationResult
@@ -194,7 +194,7 @@ def test_rule_ip_hostname_special_osx():
                                  'type': 'OS X'},
                              network_interfaces=[{MAC_FIELD: 'myma324c',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    device2 = get_raw_device(plugin_name='active_directory_adapter',
+    device2 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME,
                              hostname='ubuntulololwith.co.il.local',
                              os={'bitness': 32,
                                  'distribution': 'Ubuntu',
@@ -497,9 +497,9 @@ def test_rule_one_is_ad_and_full_hostname():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'my234mac',
                                                   IPS_FIELD: ['1.31.1.1']}])
-    device1['adapters'][0]['plugin_name'] = 'active_directory_adapter'
+    device1['adapters'][0]['plugin_name'] = ACTIVE_DIRECTORY_PLUGIN_NAME
     device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter1'
-    device2['adapters'][0]['plugin_name'] = 'active_directory_adapter'
+    device2['adapters'][0]['plugin_name'] = ACTIVE_DIRECTORY_PLUGIN_NAME
     device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter2'
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 1)
 
@@ -522,10 +522,10 @@ def test_rule_one_is_ad_and_full_hostname_fail_on_hostname_even_with_default_dom
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'my234mac',
                                                   IPS_FIELD: ['1.31.1.1']}])
-    device1['adapters'][0]['plugin_name'] = 'active_directory_adapter'
-    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
-    device2['adapters'][0]['plugin_name'] = 'active_directory_adapter'
-    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
+    device1['adapters'][0]['plugin_name'] = ACTIVE_DIRECTORY_PLUGIN_NAME
+    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter_1'
+    device2['adapters'][0]['plugin_name'] = ACTIVE_DIRECTORY_PLUGIN_NAME
+    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter_1'
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 0)
 
 
@@ -656,14 +656,14 @@ def test_rule_correlate_cloud_instances():
 
 
 def test_rule_correlate_ad_sccm_id():
-    device1 = get_raw_device(plugin_name='active_directory_adapter', device_id='SomeDeviceId')
+    device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME, device_id='SomeDeviceId')
     device2 = get_raw_device(plugin_name='sccm_adapter', device_id='SomeDeviceId')
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same ID and one is AD and the '
                                                                       'second is SCCM', 1)
 
 
 def test_rule_correlate_ad_azure_ad():
-    device1 = get_raw_device(plugin_name='active_directory_adapter', device_id='SomeDeviceId',
+    device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME, device_id='SomeDeviceId',
                              more_params=[('ad_name', 'ofir')])
     device2 = get_raw_device(plugin_name='azure_ad_adapter', device_id='SomeDeviceId',
                              more_params=[('azure_display_name', 'Ofir')])
@@ -727,7 +727,7 @@ def test_no_correlation_if_ad_present():
         network_interfaces=[{MAC_FIELD: 'myma324c',
                              IPS_FIELD: ['1.1.1.2']}])
     device1['adapters'].append({
-        PLUGIN_NAME: 'active_directory',
+        PLUGIN_NAME: ACTIVE_DIRECTORY_PLUGIN_NAME,
         PLUGIN_UNIQUE_NAME: 'active_directory_1',
         'data': {
             'id': 'lala1'
@@ -741,7 +741,7 @@ def test_no_correlation_if_ad_present():
                              network_interfaces=[{MAC_FIELD: 'mymac',
                                                   IPS_FIELD: ['1.1.1.1']}])
     device2['adapters'].append({
-        PLUGIN_NAME: 'active_directory',
+        PLUGIN_NAME: ACTIVE_DIRECTORY_PLUGIN_NAME,
         PLUGIN_UNIQUE_NAME: 'active_directory_1',
         'data': {
             'id': 'lala2'
@@ -752,7 +752,7 @@ def test_no_correlation_if_ad_present():
 
 def test_correlation_if_ad_present_and_only_it_gets():
     device1 = get_raw_device(
-        plugin_name='active_directory',
+        plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME,
         hostname='ubuntuLolol',
         os={'bitness': 32,
             'distribution': 'Ubuntu',
@@ -771,7 +771,7 @@ def test_correlation_if_ad_present_and_only_it_gets():
         }
     })
     device2 = get_raw_device(
-        plugin_name='active_directory',
+        plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME,
         hostname='ubuntulolol',
         os={'bitness': 32,
             'distribution': 'Ubuntu',
@@ -791,6 +791,50 @@ def test_correlation_if_ad_present_and_only_it_gets():
     })
     res = list(correlate([device1, device2]))
     assert len(res) == 1
+
+
+def test_no_correlation_if_ad_contredict():
+    """ test that _bigger_picture_decision logics works """
+    device1 = get_raw_device(
+        plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME,
+        hostname='ubuntuLolol1',
+        os={'bitness': 32,
+            'distribution': 'Ubuntu',
+            'type': 'Linux'},
+        domain='TEST',
+        network_interfaces=[{MAC_FIELD: 'mymac',
+                             IPS_FIELD: ['1.1.1.2']}])
+    device1['adapters'].append({
+        PLUGIN_NAME: 'blat_adapter',
+        PLUGIN_UNIQUE_NAME: 'blat_adapter_1',
+        'data': {
+            'id': 'lala1',
+            'hostname': 'blat',
+            'network_interfaces': [{MAC_FIELD: 'mymac',
+                                    IPS_FIELD: ['1.1.1.1']}]
+        }
+    })
+    device2 = get_raw_device(
+        plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME,
+        hostname='ubuntulolol',
+        os={'bitness': 32,
+            'distribution': 'Ubuntu',
+            'type': 'Linux'},
+        domain='Test',
+        network_interfaces=[{MAC_FIELD: 'mymac',
+                             IPS_FIELD: ['1.1.1.1']}])
+    device2['adapters'].append({
+        PLUGIN_NAME: 'blat_adapter',
+        PLUGIN_UNIQUE_NAME: 'blat_adapter_1',
+        'data': {
+            'id': 'lala2',
+            'hostname': 'blat',
+            'network_interfaces': [{MAC_FIELD: 'mymac',
+                                    IPS_FIELD: ['1.1.1.1']}]
+        }
+    })
+    res = list(correlate([device1, device2]))
+    assert len(res) == 0
 
 
 if __name__ == '__main__':

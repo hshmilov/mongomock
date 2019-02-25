@@ -18,6 +18,9 @@ STATIC_USERS_CORRELATOR_PLUGIN_NAME = 'static_users_correlator'
 SYSTEM_SCHEDULER_PLUGIN_NAME = 'system_scheduler'
 DEVICE_CONTROL_PLUGIN_NAME = 'device_control'
 
+# ADAPTERS #
+ACTIVE_DIRECTORY_PLUGIN_NAME = 'active_directory_adapter'
+
 # FIELDS #
 ADAPTERS_LIST_LENGTH = 'adapter_list_length'
 PLUGIN_UNIQUE_NAME = 'plugin_unique_name'

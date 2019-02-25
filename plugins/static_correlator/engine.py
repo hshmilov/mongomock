@@ -2,7 +2,7 @@ import logging
 from itertools import combinations
 
 from axonius.blacklists import ALL_BLACKLIST, FROM_FIELDS_BLACK_LIST_REG, compare_reg_mac
-from axonius.consts.plugin_consts import PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME
 from axonius.correlator_base import (has_ad_or_azure_name, has_cloud_id,
                                      has_hostname, has_last_used_users,
                                      has_mac, has_name, has_serial)
@@ -487,11 +487,11 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                  first_adapter_device, second_adapter_device) -> bool:
         # Don't correlate devices that have AD in them but are not correlated according to AD
         # AX-2107
-        ad_in_first = any(x[PLUGIN_NAME] == 'active_directory' for x in first_axonius_device['adapters'])
-        ad_in_second = any(x[PLUGIN_NAME] == 'active_directory' for x in second_axonius_device['adapters'])
+        ad_in_first = any(x[PLUGIN_NAME] == ACTIVE_DIRECTORY_PLUGIN_NAME for x in first_axonius_device['adapters'])
+        ad_in_second = any(x[PLUGIN_NAME] == ACTIVE_DIRECTORY_PLUGIN_NAME for x in second_axonius_device['adapters'])
         if ad_in_first and ad_in_second:
-            if first_adapter_device[PLUGIN_NAME] != 'active_directory' or \
-                    second_adapter_device[PLUGIN_NAME] != 'active_directory':
+            if first_adapter_device[PLUGIN_NAME] != ACTIVE_DIRECTORY_PLUGIN_NAME or \
+                    second_adapter_device[PLUGIN_NAME] != ACTIVE_DIRECTORY_PLUGIN_NAME:
                 return False
 
         return True
