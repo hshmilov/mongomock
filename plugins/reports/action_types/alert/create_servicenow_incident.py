@@ -18,7 +18,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'incident_title',
-                    'title': 'Incident Title',
+                    'title': 'Incident Short Description',
                     'type': 'string'
                 },
                 {
@@ -69,11 +69,10 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                                                           num_of_current_devices=len(self._internal_axon_ids),
                                                           old_results_num_of_devices=old_results_num_of_devices,
                                                           query_link=self._generate_query_link(query_name))
-        log_message += '\n'
         impact = report_consts.SERVICE_NOW_SEVERITY.get(self._config['severity'],
                                                         report_consts.SERVICE_NOW_SEVERITY['error'])
         log_message_full = self._config['incident_description']
         if self._config.get('description_default') is True:
-            log_message_full += log_message
+            log_message_full += '\n' + log_message
         message = self._plugin_base.create_service_now_incident(self._config['incident_title'], log_message, impact)
         return AlertActionResult(not message, message or 'Success')

@@ -17,8 +17,8 @@ class JiraIncidentAction(ActionTypeAlert):
         return {
             'items': [
                 {
-                    'name': 'project_name',
-                    'title': 'Project Name',
+                    'name': 'project_key',
+                    'title': 'Project Key',
                     'type': 'string'
                 },
                 {
@@ -45,7 +45,7 @@ class JiraIncidentAction(ActionTypeAlert):
             'required': [
                 'description_default',
                 'incident_description',
-                'project_name',
+                'project_key',
                 'incident_title',
                 'issue_type'
             ],
@@ -58,7 +58,7 @@ class JiraIncidentAction(ActionTypeAlert):
             'issue_type': None,
             'description_default': False,
             'incident_description': None,
-            'project_name': None,
+            'project_key': None,
             'incident_title': None
         }
 
@@ -73,11 +73,10 @@ class JiraIncidentAction(ActionTypeAlert):
                                                           num_of_current_devices=len(self._internal_axon_ids),
                                                           old_results_num_of_devices=old_results_num_of_devices,
                                                           query_link=self._generate_query_link(query_name))
-        log_message += '\n'
         log_message_full = self._config['incident_description']
         if self._config.get('description_default') is True:
-            log_message_full += log_message
-        message = self._plugin_base.create_jira_ticket(self._config['project_name'],
+            log_message_full += '\n' + log_message
+        message = self._plugin_base.create_jira_ticket(self._config['project_key'],
                                                        self._config['incident_title'],
                                                        log_message_full, self._config['issue_type'])
         return AlertActionResult(not message, message or 'Success')

@@ -2204,7 +2204,7 @@ class PluginBase(Configurable, Feature):
                 logger.exception(f"Got exception creating ServiceNow computer with {name}")
                 return f'Got exception creating ServiceNow computer: {str(e)}'
 
-    def create_jira_ticket(self, porject_name, summary, description, issue_type):
+    def create_jira_ticket(self, porject_key, summary, description, issue_type):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
@@ -2213,7 +2213,7 @@ class PluginBase(Configurable, Feature):
                                  'verify': jira_settings['verify_ssl']},
                         basic_auth=(jira_settings['username'], jira_settings['password']))
             issue_dict = {
-                'project': {'name': porject_name},
+                'project': {'key': porject_key},
                 'summary': summary,
                 'description': description,
                 'issuetype': {'name': issue_type},

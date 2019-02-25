@@ -13,6 +13,9 @@ from axonius.clients.mssql.connection import MSSQLConnection
 import sccm_adapter.consts as consts
 from axonius.fields import Field, ListField
 
+DESKTOP_CHASIS_VALUE = ['3', '4', '6', '7', '15']
+LAPTOP_CHASIS_VALUE = ['8', '9', '10', '21']
+
 
 class SccmAdapter(AdapterBase):
 
@@ -28,6 +31,7 @@ class SccmAdapter(AdapterBase):
         malware_last_full_scan = Field(datetime.datetime, 'Malware Protecion Last Full Scan')
         malware_last_quick_scan = Field(datetime.datetime, 'Malware Protecion Last Quick Scan')
         malware_enabled = Field(str, 'Malware Protecion Enabled Status')
+        desktop_or_laptop = Field(str, 'Desktop Or Laptop', enum=['Desktop', 'Laptop'])
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -60,6 +64,16 @@ class SccmAdapter(AdapterBase):
         try:
             client_data.connect()
 
+            asset_chasis_dict = dict()
+            try:
+                for asset_chasis_data in client_data.query(consts.CHASIS_QUERY):
+                    asset_id = asset_chasis_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    asset_chasis_dict[asset_id] = asset_chasis_data
+            except Exception:
+                logger.exception(f'Problem getting chasis')
+
             asset_lenovo_dict = dict()
             try:
                 for asset_lenovo_data in client_data.query(consts.LENOVO_QUERY):
@@ -68,7 +82,7 @@ class SccmAdapter(AdapterBase):
                         continue
                     asset_lenovo_dict[asset_id] = asset_lenovo_data
             except Exception:
-                logger.exception(f'Problem getting top users')
+                logger.exception(f'Problem getting lenovo')
 
             asset_top_dict = dict()
             try:
@@ -162,11 +176,11 @@ class SccmAdapter(AdapterBase):
             if not self._last_seen_timedelta:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict,\
-                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict
+                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict, asset_chasis_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
-                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict
+                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict, asset_chasis_dict
         finally:
             client_data.logout()
 
@@ -212,7 +226,8 @@ class SccmAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
-            asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict in\
+            asset_bios_dict, asset_users_dict, asset_top_dict, \
+            asset_malware_dict, asset_lenovo_dict, asset_chasis_dict in\
                 devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -311,6 +326,16 @@ class SccmAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting top user data dor {device_raw}')
 
+                try:
+                    if isinstance(asset_chasis_dict.get(device_raw.get('ResourceID')), dict):
+                        chasis_data = asset_chasis_dict.get(device_raw.get('ResourceID'))
+                        chasis_types = chasis_data.get('ChassisTypes0')
+                        if chasis_types and str(chasis_types) in DESKTOP_CHASIS_VALUE:
+                            device.desktop_or_laptop = 'Desktop'
+                        elif chasis_types and str(chasis_types) in LAPTOP_CHASIS_VALUE:
+                            device.desktop_or_laptop = 'Laptop'
+                except Exception:
+                    logger.exception(f'Problem getting chasis data dor {device_raw}')
                 try:
                     if isinstance(asset_malware_dict.get(device_raw.get('ResourceID')), dict):
                         malware_data = asset_malware_dict.get(device_raw.get('ResourceID'))

@@ -40,3 +40,4 @@ USERS_TOP_QUERY = 'Select ResourceID, TopConsoleUser0 from v_GS_SYSTEM_CONSOLE_U
 MALWARE_QUERY = 'Select ResourceID, EngineVersion, Version, LastFullScanDateTimeEnd, ' \
                 'ProductStatus, LastQuickScanDateTimeEnd, Enabled from v_GS_AntimalwareHealthStatus'
 LENOVO_QUERY = 'select ResourceID, Version0 from v_GS_COMPUTER_SYSTEM_PRODUCT'
+CHASIS_QUERY = 'select ResourceID, ChassisTypes0 from v_GS_SYSTEM_ENCLOSURE'

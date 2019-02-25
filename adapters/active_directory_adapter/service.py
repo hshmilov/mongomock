@@ -396,17 +396,24 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         return success_clients
 
     def _resolve_client_from_client_dict_and_entity(self, client_data, entity_data):
+        client_data_dict = None
         try:
-            return client_data[entity_data['data']['ad_dc_source'].lower()]
+            client_data_dict = client_data[entity_data['ad_dc_source'].lower()]
         except Exception:
             pass
 
         try:
-            return client_data[entity_data['data']['raw']['AXON_DC_ADDR'].lower()]
+            if not client_data_dict:
+                client_data_dict = client_data[entity_data['raw']['AXON_DC_ADDR'].lower()]
         except Exception:
             pass
 
-        return client_data[convert_ldap_searchpath_to_domain_name(entity_data['data']['distinguishedName']).lower()]
+        if not client_data_dict:
+            # If its not here then crash since we couldn't get the device client
+            client_data_dict = \
+                client_data[convert_ldap_searchpath_to_domain_name(entity_data['distinguishedName']).lower()]
+
+        return self._get_ldap_connection(client_data_dict)
 
     def _query_devices_by_client(self, client_name, client_data_dict: Dict[str, dict]):
         """
