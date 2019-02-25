@@ -190,11 +190,14 @@ class RevCached:
         Updates the value in the cache for the function with the given parameters
         """
         with self.__initial_values_lock_dict[cache_entry.key]:
+            started_time = datetime.now()
             try:
                 cache_entry.calculated_value = self.__func(*cache_entry.args, **cache_entry.kwargs)
                 cache_entry.exception = None
             except Exception as e:
                 cache_entry.exception = e
+            logger.debug(f'Calculated {self.__func.__name__}({cache_entry.args}, {cache_entry.kwargs})'
+                         f' in {(datetime.now() - started_time).total_seconds()}')
 
             cache_entry.event.set()
 

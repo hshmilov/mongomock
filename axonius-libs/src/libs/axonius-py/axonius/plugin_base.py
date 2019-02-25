@@ -1002,35 +1002,6 @@ class PluginBase(Configurable, Feature):
         self._check_registered_thread(retries=0)
         return ''
 
-    @add_rule('logger', methods=['GET', 'PUT'], should_authenticate=False)
-    def _logger_func(self):
-        """ /logger - In order to change logger settings
-
-        Accepts:
-            GET - In order to get the current logger details (currently just logging level)
-            PUT - In order to change logger details. available params:
-                'level': The wanted logging level (string)
-        """
-        logging_types = {'debug': logging.DEBUG,
-                         'info': logging.INFO,
-                         'warning': logging.WARNING,
-                         'error': logging.ERROR,
-                         'fatal': logging.FATAL}
-        if self.get_method() == 'PUT':
-            wanted_level = self.get_url_param('level')
-            if wanted_level is None:
-                return return_error("missing wanted_level parameter", 400)
-            wanted_level = wanted_level.lower()
-            if wanted_level in logging_types.keys():
-                self.log_level = logging_types[wanted_level]
-                logger.setLevel(self.log_level)
-                return ''
-            else:
-                error_string = "Unsupported log level \"{wanted_level}\", available log levels are {levels}"
-                return return_error(error_string.format(wanted_level=wanted_level, levels=logging_types.keys()), 400)
-        else:
-            return logging.getLevelName(self.log_level)
-
     @add_rule('debug/run_gc/<generation>', methods=['POST'])
     def run_gc(self, generation: int):
         """
@@ -2031,12 +2002,15 @@ class PluginBase(Configurable, Feature):
                     }
                 })
                 if not axonius_entity:
+                    logger.debug(f'{entity}, {plugin_unique_name}, {adapter_id} not found for deletion')
                     return  # deleting an empty adapter shouldn't be hard
 
                 # if the condition below isn't met it means
                 # that the current adapterentity is the last adapter in the axoniusentity
                 # in which case - there is no reason to unlink it, just to delete it
-                if len(axonius_entity['adapters']) > 1:
+                amount_of_adapters = len(axonius_entity['adapters'])
+                if amount_of_adapters > 1:
+                    logger.debug(f'{entity}, {plugin_unique_name}, {adapter_id} has  {amount_of_adapters}')
                     self.__perform_unlink_with_session(adapter_id, plugin_unique_name, session, entity,
                                                        entity_to_split=axonius_entity)
                 self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db, session)

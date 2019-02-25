@@ -22,7 +22,7 @@ def _create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
     :param str log_directory: The path for the log file.
     """
     regular_log_path = os.path.join(log_directory, f'{plugin_unique_name}.axonius.log')
-    verbose_regular_log_path = os.path.join(log_directory, f'{plugin_unique_name}.verbose.axonius.log')
+    verbose_regular_log_path = os.path.join(log_directory, f'{plugin_unique_name}.verbose.axonius.debug')
 
     # Creating the logger using our customized logger formatter
     formatter = CustomisedJSONFormatter(plugin_unique_name)
