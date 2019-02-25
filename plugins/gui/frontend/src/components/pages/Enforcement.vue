@@ -410,7 +410,7 @@
             > .main {
                 display: grid;
                 grid-template-rows: 48px auto 48px;
-                align-items: start;
+                align-items: flex-start;
                 .header {
                     display: grid;
                     grid-template-columns: 1fr 2fr;

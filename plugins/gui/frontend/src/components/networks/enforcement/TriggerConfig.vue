@@ -173,8 +173,8 @@
 <style lang="scss">
     .x-trigger-config {
         display: grid;
-        grid-template-rows: auto 30px;
-        align-items: start;
+        grid-template-rows: calc(100% - 30px) 30px;
+        align-items: flex-start;
         .main {
             overflow: auto;
             height: 100%;

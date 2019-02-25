@@ -32,8 +32,8 @@
             }
         },
         methods: {
-        	selectFile() {
-                event.preventDefault()
+        	selectFile(e) {
+                e.preventDefault()
         		this.$refs.file.click()
             },
             uploadFile(uploadEvent) {

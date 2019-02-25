@@ -151,8 +151,8 @@
 <style lang="scss">
     .x-action-config {
         display: grid;
-        grid-template-rows: 60px auto 48px;
-        align-items: start;
+        grid-template-rows: 60px calc(100% - 108px) 48px;
+        align-items: flex-start;
         .header {
             display: grid;
             grid-template-columns: 1fr 2fr;

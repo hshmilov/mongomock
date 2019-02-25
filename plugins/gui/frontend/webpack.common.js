@@ -19,8 +19,7 @@ module.exports = {
                 test: /\.vue$/,
                 loader: 'vue-loader',
                 options: {
-                    preserveWhitespace: false,
-                    autoprefixer: ['last 7 versions']
+                    preserveWhitespace: false
                 }
             },
             {

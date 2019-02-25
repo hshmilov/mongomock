@@ -69,7 +69,7 @@
 <style lang="scss">
     .x-action-group {
         display: flex;
-        align-items: start;
+        align-items: flex-start;
         .condition {
             margin-left: 12px;
             margin-top: 14px;

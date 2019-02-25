@@ -254,7 +254,7 @@
         .global-settings-tab {
             .footer {
                 display: flex;
-                align-items: start;
+                align-items: flex-start;
 
                 .md-card {
                     width: 80%;
