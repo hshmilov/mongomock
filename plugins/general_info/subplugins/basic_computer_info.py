@@ -316,11 +316,10 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             self.logger.exception(f"Win32_NetworkAdapterConfiguration {win32_networkadapterconfiguration}")
         try:
             assert is_wmi_answer_ok(win32_processes), 'WMI Answer has an exception'
-            adapterdata_device.processes = []
             for process_data in win32_processes['data']:
                 try:
                     if process_data.get('Name'):
-                        adapterdata_device.processes.append(process_data.get('Name'))
+                        adapterdata_device.add_process(name=process_data.get('Name'))
                 except Exception:
                     self.logger.exception(f'Problem with process data {process_data}')
         except Exception:
@@ -328,11 +327,10 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         try:
             assert is_wmi_answer_ok(win32_services), 'WMI Answer has an exception'
-            adapterdata_device.services = []
             for service_data in win32_services['data']:
                 try:
                     if service_data.get('Name'):
-                        adapterdata_device.services.append(service_data.get('Name'))
+                        adapterdata_device.add_service(name=service_data.get('Name'))
                 except Exception:
                     self.logger.exception(f'Problem with service data {service_data}')
         except Exception:

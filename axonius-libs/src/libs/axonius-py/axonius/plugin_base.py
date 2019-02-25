@@ -94,7 +94,7 @@ from axonius.utils.debug import is_debug_attached
 from axonius.utils.hash import get_preferred_internal_axon_id_from_dict
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import mongo_retry
-from axonius.utils.parsing import get_exception_string
+from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable)
@@ -1441,6 +1441,10 @@ class PluginBase(Configurable, Feature):
         :param entity_type: the type of the entity (see EntityType)
         :return: dict
         """
+
+        # Remove large ints from the data object, since mongodb can not handle integers that are larger than 8 bytes
+        data = remove_large_ints(data, data.get('id', f'{self.plugin_unique_name}_unidentified_device'))
+
         parsed_to_insert = {
             'client_used': client_name,
             'plugin_type': self.plugin_type,

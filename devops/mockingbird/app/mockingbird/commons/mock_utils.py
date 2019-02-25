@@ -186,11 +186,11 @@ def get_random_shares_list() -> List[dict]:
 
 
 def get_random_services_list() -> List[dict]:
-    return consts.SERVICES
+    return [{'name': line} for line in consts.SERVICES]
 
 
 def get_random_processes_list() -> List[dict]:
-    return consts.PROCESSES
+    return [{'name': line} for line in consts.PROCESSES]
 
 
 def get_random_linux_software_list() -> List[dict]:

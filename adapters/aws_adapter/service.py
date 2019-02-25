@@ -44,6 +44,7 @@ REGIONS_NAMES = ['us-west-2', 'us-west-1', 'us-east-2', 'us-east-1', 'ap-south-1
                  'eu-west-2', 'eu-west-3', 'sa-east-1', 'us-gov-west-1']
 PAGE_NUMBER_FLOOD_PROTECTION = 9000
 AWS_ENDPOINT_FOR_REACHABILITY_TEST = f'https://apigateway.us-east-2.amazonaws.com/'   # endpoint for us-east-2
+BOTO3_FILTERS_LIMIT = 100
 
 
 '''
@@ -113,10 +114,16 @@ def _describe_images_from_client_by_id(ec2_client, amis):
     # the reason I use 'Filters->image-id' and not ImageIds is because if I'd use ImageIds
     # would've raise an exception if an image is not found
     # all images are returned at once so no progress is logged
-    described_images = ec2_client.describe_images(Filters=[{'Name': 'image-id', 'Values': list(amis)}])
+    described_images = dict()
+    amis = list(amis)
 
-    # make a dictionary from ami key to the value
-    return {image['ImageId']: image for image in described_images['Images']}
+    # Filters are limited, usually with 200. So we batch requests of 100
+    for i in range(0, len(amis), BOTO3_FILTERS_LIMIT):
+        result = ec2_client.describe_images(Filters=[{'Name': 'image-id', 'Values': amis[i:i + BOTO3_FILTERS_LIMIT]}])
+        for image in result['Images']:
+            described_images[image['ImageId']] = image
+
+    return described_images
 
 
 def _describe_vpcs_from_client(ec2_client):

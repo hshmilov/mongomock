@@ -303,6 +303,14 @@ class DeviceSwapFile(SmartJsonClass):
     size_in_gb = Field(int, 'Size (GB)')
 
 
+class ProcessData(SmartJsonClass):
+    name = Field(str, 'Name')
+
+
+class ServiceData(SmartJsonClass):
+    name = Field(str, 'Name')
+
+
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
@@ -381,8 +389,8 @@ class DeviceAdapter(SmartJsonClass):
     cloud_provider = Field(str, "Cloud Provider")
     cloud_id = Field(str, "Cloud ID")
     shodan_data = Field(ShodanData, 'Shodan Data')
-    processes = ListField(str, 'Running Processes')
-    services = ListField(str, 'Services')
+    processes = ListField(ProcessData, 'Running Processes')
+    services = ListField(ServiceData, 'Services')
     shares = ListField(ShareData, 'Shares')
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
 
@@ -660,6 +668,12 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_share(self, **kwargs):
         self.shares.append(ShareData(**kwargs))
+
+    def add_process(self, **kwargs):
+        self.processes.append(ProcessData(**kwargs))
+
+    def add_service(self, **kwargs):
+        self.services.append(ServiceData(**kwargs))
 
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name

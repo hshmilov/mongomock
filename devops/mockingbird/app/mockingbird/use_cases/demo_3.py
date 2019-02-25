@@ -306,13 +306,13 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
     for share in random.sample(shares_list, k=int(len(shares_list) * 0.9)):
         device.add_share(**share)  # pylint: disable=not-a-mapping
 
-    processes = mock_utils.get_random_processes_list()
-    random.shuffle(processes)
-    device.processes = processes[:int(len(processes) * 0.9)]
+    processes_list = mock_utils.get_random_processes_list()
+    for process in random.sample(processes_list, k=int(len(processes_list) * 0.9)):
+        device.add_process(**process)  # pylint: disable=not-a-mapping
 
-    services = mock_utils.get_random_services_list()
-    random.shuffle(services)
-    device.services = services[:int(len(services) * 0.9)]
+    services_list = mock_utils.get_random_services_list()
+    for service in random.sample(services_list, k=int(len(services_list) * 0.9)):
+        device.add_share(**service)  # pylint: disable=not-a-mapping
 
     # Adapter-Specific data
     # AD

@@ -64,6 +64,8 @@ ALLOWED_VAR_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01
 # first use if for correlation at is_old_device
 DEFAULT_NUMBER_OF_DAYS_FOR_OLD_DEVICE = 7
 
+TO_REMOVE_VALUE = object()
+
 pair_comparator = NewType('pair_comparator', FunctionType)
 parameter_function = NewType('parameter_function', Callable)
 
@@ -1178,3 +1180,34 @@ def remove_duplicates_by_reference(seq):
         seen[marker] = 1
         result.append(item)
     return result
+
+
+def remove_large_ints(data, name: str):
+    """
+    Go over a dict and remove any number which is larger than 8 bytes, since MongoDB can't eat it.
+    :param data: the
+    """
+    if isinstance(data, int) and data > (2 ** 64) - 1:
+        logger.warning(f'Warning! removing {name} with value {data} '
+                       f'since its larger than 8 bytes!')
+        return TO_REMOVE_VALUE
+
+    if isinstance(data, dict):
+        new_dict = dict()
+        for key, value in data.items():
+            new_value = remove_large_ints(value, f'{name}_{key}')
+            if new_value is not TO_REMOVE_VALUE:
+                new_dict[key] = new_value
+
+        return new_dict
+
+    if isinstance(data, list):
+        new_list = []
+        for i, value in enumerate(data):
+            new_value = remove_large_ints(value, f'{name}_{i}')
+            if new_value is not TO_REMOVE_VALUE:
+                new_list.append(new_value)
+
+        return new_list
+
+    return data
