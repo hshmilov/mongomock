@@ -79,7 +79,6 @@ systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
 gpasswd -a ubuntu docker
-newgrp docker
 echo "Installing weave"
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
