@@ -60,6 +60,16 @@ class SccmAdapter(AdapterBase):
         try:
             client_data.connect()
 
+            asset_lenovo_dict = dict()
+            try:
+                for asset_lenovo_data in client_data.query(consts.LENOVO_QUERY):
+                    asset_id = asset_lenovo_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    asset_lenovo_dict[asset_id] = asset_lenovo_data
+            except Exception:
+                logger.exception(f'Problem getting top users')
+
             asset_top_dict = dict()
             try:
                 for asset_top_data in client_data.query(consts.USERS_TOP_QUERY):
@@ -151,12 +161,12 @@ class SccmAdapter(AdapterBase):
 
             if not self._last_seen_timedelta:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
-                    yield device_raw, asset_software_dict, asset_patch_dict, \
-                        asset_program_dict, asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict
+                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict,\
+                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
-                    yield device_raw, asset_software_dict, asset_patch_dict,\
-                        asset_program_dict, asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict
+                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
+                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict
         finally:
             client_data.logout()
 
@@ -202,7 +212,7 @@ class SccmAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
-            asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict in\
+            asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict in\
                 devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -282,11 +292,13 @@ class SccmAdapter(AdapterBase):
                             (1 - device.free_physical_memory / device.total_physical_memory)
                 except Exception:
                     logger.exception(f'problem adding memory stuff to {device_raw}')
+                device_manufacturer = None
                 try:
                     if isinstance(asset_bios_dict.get(device_raw.get('ResourceID')), dict):
                         bios_data = asset_bios_dict.get(device_raw.get('ResourceID'))
                         device.bios_serial = bios_data.get('SerialNumber0')
-                        device.device_manufacturer = bios_data.get('Manufacturer0')
+                        device_manufacturer = bios_data.get('Manufacturer0')
+                        device.device_manufacturer = device_manufacturer
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
                 device.sccm_type = device_raw.get('SystemType0')
@@ -310,7 +322,13 @@ class SccmAdapter(AdapterBase):
                         device.malware_enabled = malware_data.get('Enabled')
                 except Exception:
                     logger.exception(f'Problem getting malware data dor {device_raw}')
-                device.device_model = device_raw.get('Model0')
+                try:
+                    if not device_manufacturer or 'LENOVO' not in device_manufacturer.upper():
+                        device.device_model = device_raw.get('Model0')
+                    elif isinstance(asset_lenovo_dict.get(device_raw.get('ResourceID')), dict):
+                        device.device_model = asset_lenovo_dict.get(device_raw.get('ResourceID')).get('Version0')
+                except Exception:
+                    logger.exception(f'Problem getting model for {device_raw}')
                 processes = device_raw.get('NumberOfProcesses0')
                 device.number_of_processes = int(processes) if processes else None
                 processors = device_raw.get('NumberOfProcessors0')
