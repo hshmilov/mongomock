@@ -2,12 +2,6 @@ export const actionsMeta = {
     run_executable_windows: {
         title: 'Deploy on Windows Device'
     },
-    enable_entities: {
-        title: 'Enable users or devices'
-    },
-    disable_entities: {
-        title: 'Disable users or devices'
-    },
     run_executable_linux: {
         title: 'Deploy on Linux Device'
     },
@@ -38,6 +32,12 @@ export const actionsMeta = {
     create_service_now_computer: {
         title: 'Create ServiceNow Computer'
     },
+    enable_entities: {
+        title: 'Enable users or devices'
+    },
+    disable_entities: {
+        title: 'Disable users or devices'
+    },
     create_service_now_incident: {
         title: 'Create ServiceNow Incident'
     },
@@ -67,7 +67,7 @@ export const actionsMeta = {
     },
     deploy_software: {
         title: 'Deploy Software',
-        items: ['run_executable_windows', 'run_executable_linux', 'enable_entities', 'disable_entities']
+        items: ['run_executable_windows', 'run_executable_linux']
     },
     run_command: {
         title: 'Run Command',
@@ -93,6 +93,10 @@ export const actionsMeta = {
         title: 'Create CMDB Computer',
         items: ['create_service_now_computer']
     },
+    manage_directory: {
+        title: 'Manage Active Directory Services',
+        items: ['enable_entities', 'disable_entities']
+    },
     create_incident: {
         title: 'Create Incident',
         items: ['create_service_now_incident', 'create_jira_incident']
@@ -116,6 +120,6 @@ export const postCondition = 'post'
 
 export const actionCategories = [
     'deploy_software', 'run_command', 'isolate_edr', 'scan_va',
-    'patch_device', 'block_fw', 'create_cmdb_computer', 'notify', 'create_incident',
-    'axonius'
+    'patch_device', 'block_fw', 'create_cmdb_computer', 'manage_directory',
+    'notify', 'create_incident', 'axonius'
 ]
