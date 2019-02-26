@@ -307,7 +307,7 @@
         }
 
         .x-cross .first, .x-cross .second {
-            top: -8px;
+            top: 0px;
         }
 
         .x-pagination {
