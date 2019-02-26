@@ -313,8 +313,8 @@ class TestAdapters(TestBase):
 
     def _check_ad_adapter_client_deletion(self, with_entities_deletion):
         # Prepare test
-        assert wait_until(self._are_ad_devices_present)
-        assert wait_until(self._are_ad_users_present)
+        assert wait_until(self._are_ad_devices_present, total_timeout=60 * 10)
+        assert wait_until(self._are_ad_users_present, total_timeout=60 * 10)
 
         # Execute action
 
@@ -323,8 +323,8 @@ class TestAdapters(TestBase):
         # check action was executed
 
         if with_entities_deletion:
-            wait_until(lambda: not self._are_ad_devices_present())
-            wait_until(lambda: not self._are_ad_users_present())
+            wait_until(lambda: not self._are_ad_devices_present(), total_timeout=60 * 10)
+            wait_until(lambda: not self._are_ad_users_present(), total_timeout=60 * 10)
         else:
             assert self._are_ad_devices_present()
             assert self._are_ad_users_present()
