@@ -45,6 +45,7 @@ export const compOps = {
     time: {exists},
     ip: {
         subnet: '{field}_raw == match({"$gte": {val}, "$lte": {val}})',
+        contains,
         equals,
         'isIPv4': '{field} == regex("\\.")',
         'isIPv6': '{field} == regex(":")',
