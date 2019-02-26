@@ -121,13 +121,13 @@ def install(first_time, root_pass):
         os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
         set_booted_for_production()
 
-    set_special_permissions(root_pass)
     # chown before start Axonius which tends to be the failure point in bad updates.
     chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
 
     # This parts tends to have problems. Minimize the code after it as much as possible.
     start_axonius()
     run_discovery()
+    set_special_permissions(root_pass)
 
     # Chown again after the run, to make log file which are created afterwards be also part of it
     chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
@@ -238,7 +238,7 @@ def chown_folder(root_pass, path):
 def set_special_permissions(root_pass):
     # Adding write permissions on .axonius_settings so node_maker can touch a new node.marker
     os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
-    cmd = f'chmod o+w {AXONIUS_SETTINGS_PATH}'
+    cmd = f'chmod -R o+w {AXONIUS_SETTINGS_PATH}'
     run_as_root(cmd.split(), root_pass)
 
 
