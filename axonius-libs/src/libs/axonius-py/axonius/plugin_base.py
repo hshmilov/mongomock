@@ -2042,10 +2042,7 @@ class PluginBase(Configurable, Feature):
         """
         # all labels belong to GUI
         additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = GUI_NAME, GUI_NAME
-
-        # denormalization in favor of easier sorting
-        if is_enabled:
-            additional_data['label_value'] = label
+        additional_data['label_value'] = label if is_enabled else ''
 
         result = self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None,
                            additional_data)
