@@ -123,6 +123,9 @@ class EnforcementsPage(EntitiesPage):
     def check_scheduling(self):
         self.check_enforcement_checkbox('Add Scheduling')
 
+    def check_conditions(self):
+        self.check_enforcement_checkbox('Add Conditions')
+
     def check_new(self):
         self.check_enforcement_checkbox(Trigger.NewEntities)
 
@@ -244,6 +247,7 @@ class EnforcementsPage(EntitiesPage):
 
         self.create_basic_enforcement(enforcement_name, enforcement_view)
         self.select_trigger()
+        self.check_conditions()
         if new:
             self.check_new()
         if previous:

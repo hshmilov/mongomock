@@ -150,7 +150,8 @@
                 updateView: UPDATE_DATA_VIEW
             }),
             getStatus(action) {
-                if (!action.results || typeof (action.results) === 'string') return 'error'
+                if (!action.results) return 'disabled'
+                if (typeof (action.results) === 'string') return 'error'
                 if (action.results.successful !== undefined) {
                     return action.results.successful ? 'success' : 'error'
                 }
@@ -177,7 +178,7 @@
                 return this.actionInView.position.i
             },
             runFilter(index) {
-                let success = index == 0 ? 'successful_entities' : 'unsuccessful_entities'
+                let success = index === 0 ? 'successful_entities' : 'unsuccessful_entities'
                 let i = this.actionInView.position.i || 0
 
                 this.updateView({
@@ -187,7 +188,10 @@
                             pretty_id: this.taskData.result.metadata.pretty_id,
                             condition: this.actionInView.position.condition,
                             i,
-                            success
+                            success,
+                            details: {
+                                enforcement: this.name, action: this.actionInView.definition.name
+                            }
                         }
                     }
                 })

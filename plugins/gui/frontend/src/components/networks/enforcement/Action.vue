@@ -31,7 +31,7 @@
             text() {
                 if (this.title) return this.title
 
-                return `${this.condition} action`
+                return `${this.condition} actions ...`
             },
             removable() {
                 return !this.readOnly && Boolean(this.title)

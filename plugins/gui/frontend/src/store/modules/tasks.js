@@ -19,7 +19,7 @@ export const tasks = {
                 generic: [{
                     name: 'success_rate', title: 'Successful / Total', type: 'string'
                 }, {
-                    name: 'enforcement', title: 'Enforcement Name', type: 'string'
+                    name: 'enforcement', title: 'Name', type: 'string'
                 }, {
                     name: 'main', title: 'Main Action', type: 'string'
                 }, {

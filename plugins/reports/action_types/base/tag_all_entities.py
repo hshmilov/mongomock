@@ -37,6 +37,8 @@ class TagAllEntitiesAction(ActionTypeBase):
         }
 
     def _run(self) -> EntitiesResult:
+        if not self._internal_axon_ids:
+            return []
         db = self._plugin_base._entity_db_map[self._entity_type]
         namespace = self._plugin_base._namespaces[self._entity_type]
         add_labels_to_entities(db, namespace, self._internal_axon_ids, [self._config['tag_name']], False)

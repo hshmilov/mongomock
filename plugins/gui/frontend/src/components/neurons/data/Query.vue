@@ -330,7 +330,7 @@
                     }
                     filter = `exists_in(${ec.pretty_id},${ec.condition},${ec.i}, ${ec.success}) ${filter}`
                 }
-                else if (!this.ecFilter && filter.indexOf('exists_in(') != -1) {
+                else if (!this.ecFilter && filter.indexOf('exists_in(') !== -1) {
                     filter = filter.slice(0, filter.indexOf('exists_in(')) + filter.slice(filter.indexOf(')') + 1).trim()
                 }
 

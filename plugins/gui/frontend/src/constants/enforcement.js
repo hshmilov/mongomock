@@ -6,10 +6,10 @@ export const actionsMeta = {
         title: 'Deploy on Linux Device'
     },
     run_command_windows: {
-        title: 'Run Windows CMD'
+        title: 'Run Windows Command'
     },
     run_command_linux: {
-        title: 'Run Shell Script'
+        title: 'Run Shell Command'
     },
     carbonblack_isolate: {
         title: 'Isolate in CarbonBlack'
@@ -54,7 +54,7 @@ export const actionsMeta = {
         title: 'Send to Syslog System'
     },
     send_https_log: {
-        title: 'Send to Https Log System'
+        title: 'Send to HTTPS Log System'
     },
     create_notification: {
         title: 'Push System Notification'

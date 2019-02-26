@@ -44,7 +44,7 @@
                             v-if="isEmptySetting('mail')" @dismiss="dismissEmptySetting('mail')"/>
                 <x-tip-info content="In order to send alerts through a syslog system, configure it under settings"
                             v-if="isEmptySetting('syslog')" @dismiss="dismissEmptySetting('syslog')"/>
-                <x-tip-info content="In order to send alerts through an Https log system, configure it under settings"
+                <x-tip-info content="In order to send alerts through an HTTPS log system, configure it under settings"
                             v-if="isEmptySetting('httpsLog')" @dismiss="dismissEmptySetting('httpsLog')"/>
                 <x-tip-info content="In order to create a ServiceNow computer or incident, configure it under settings"
                             v-if="isEmptySetting('serviceNow')" @dismiss="dismissEmptySetting('serviceNow')"/>

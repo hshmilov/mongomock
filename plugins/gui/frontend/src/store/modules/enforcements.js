@@ -55,7 +55,7 @@ export const enforcements = {
         fields: {
             data: {
                 generic: [{
-                    name: 'name', title: 'Enforcement Set Name', type: 'string'
+                    name: 'name', title: 'Name', type: 'string'
                 }, {
                     name: 'main', title: 'Main Action', type: 'string'
                 }, {

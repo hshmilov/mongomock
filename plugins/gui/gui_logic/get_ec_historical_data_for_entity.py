@@ -100,6 +100,8 @@ def get_all_task_data(internal_axon_id: str) -> Iterable[TaskData]:
         actions = []
         for action in _get_all_actions_from_recipe(result_data):
             action_results = action['action']['results']
+            if not action_results:
+                continue
 
             relevant_group = groups.get(action_results['successful_entities'])
             if relevant_group:

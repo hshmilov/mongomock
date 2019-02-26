@@ -3,7 +3,7 @@ import logging
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 
-from reports.action_types.action_type_base import ActionTypeBase
+from reports.action_types.action_type_base import ActionTypeBase, generic_fail
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -27,7 +27,7 @@ class RunExecutable(ActionTypeBase):
                 },
                 {
                     'name': 'params',
-                    'title': 'Command line parameters',
+                    'title': 'Command line',
                     'type': 'string'
                 }
             ],
@@ -56,9 +56,13 @@ class RunExecutable(ActionTypeBase):
                                                          DEVICE_CONTROL_PLUGIN_NAME,
                                                          'post',
                                                          json=action_data).json()
+        if result.get('status') == 'error':
+            return generic_fail(self._internal_axon_ids, result)
 
         def prettify_output(id_, result: dict) -> EntityResult:
             value = result['value']
+            if isinstance(value, dict):
+                value = value['status']
             success = result['success']
             return EntityResult(id_, success, value)
 

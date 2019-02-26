@@ -190,6 +190,7 @@ class TestAlertActions(TestBase):
             self.enforcements_page.edit_enforcement(ALERT_CHANGE_NAME)
             self.enforcements_page.change_tag_entities(ALERT_CHANGE_NAME, TAG_NEW_COMMENT)
             self.enforcements_page.select_trigger()
+            self.enforcements_page.check_conditions()
             self.enforcements_page.check_new()
             self.enforcements_page.check_new_entities()
             self.enforcements_page.save_trigger()

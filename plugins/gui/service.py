@@ -1703,15 +1703,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             if not action or not action.get('name'):
                 return ''
             with self.enforcements_saved_actions_collection.start_session() as transaction:
-                if not action.get('uuid'):
-                    transaction.insert_one(action)
-                else:
-                    transaction.replace_one({
-                        '_id': ObjectId(action['uuid'])
-                    }, {
-                        'name': action['name'],
-                        'action': action['action']
-                    })
+                if 'uuid' in action:
+                    del action['uuid']
+                    del action['date_fetched']
+                transaction.insert_one(action)
                 return action['name']
 
         actions[ACTIONS_MAIN_FIELD] = create_saved_action(actions[ACTIONS_MAIN_FIELD])
@@ -1812,8 +1807,22 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         # Handle remaining request - POST
         enforcement_to_update = request.get_json(silent=True)
-        self.__process_enforcement_actions(enforcement_to_update[ACTIONS_FIELD])
 
+        # Remove old enforcement's actions
+        enforcement_actions = self.enforcements_collection.find_one({
+            '_id': ObjectId(enforcement_id)
+        }, {
+            'actions': 1
+        })['actions']
+        self.enforcements_saved_actions_collection.delete_many({
+            'name': {
+                '$in':
+                    [enforcement_actions[ACTIONS_MAIN_FIELD]] + enforcement_actions[ACTIONS_SUCCESS_FIELD]
+                    + enforcement_actions[ACTIONS_FAILURE_FIELD] + enforcement_actions[ACTIONS_POST_FIELD]
+            }
+        })
+
+        self.__process_enforcement_actions(enforcement_to_update[ACTIONS_FIELD])
         response = self.request_remote_plugin(f'reports/{enforcement_id}', 'reports', method='post',
                                               json=enforcement_to_update)
         if response is None:
@@ -1946,6 +1955,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             """
 
             def normalize_saved_action_results(saved_action_results):
+                if not saved_action_results:
+                    return
+
                 saved_action_results['successful_entities'] = {
                     'length': get_chunks_length(self.enforcement_tasks_action_results_id_lists,
                                                 saved_action_results['successful_entities']),

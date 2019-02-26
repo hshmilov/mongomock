@@ -46,13 +46,13 @@
                     </x-tab>
                 </x-tabs>
             </x-tab>
-            <x-tab title="Enforcement Runs" id="ec_runs" key="tasks" v-if="entityEcData.length">
+            <x-tab title="Enforcement Tasks" id="ec_runs" key="tasks" v-if="entityEcData.length">
                 <x-tabs :vertical="true">
-                    <x-tab v-for="item, i in entityEcData" :title="`${item.recipe_name}, run ${item.recipe_pretty_id}`"
+                    <x-tab v-for="item, i in entityEcData" :title="`${item.recipe_name} - Task ${item.recipe_pretty_id}`"
                            :id="`ecdata_${i}`"
                            :key="`ecdata_${i}`"
                            :selected="!i">
-                        <x-table :data="item.actions" :fields="ecActionFields"/>
+                        <x-table :data="processTaskActions(item.actions)" :fields="ecActionFields"/>
                     </x-tab>
                 </x-tabs>
             </x-tab>
@@ -103,6 +103,7 @@
     import {CHANGE_TOUR_STATE, UPDATE_TOUR_STATE} from '../../../store/modules/onboarding'
     import {guiPluginName, initCustomData} from '../../../constants/entities'
     import {pluginMeta} from '../../../constants/plugin_meta'
+    import {actionsMeta} from '../../../constants/enforcement'
 
     const lastSeenByModule = {
         'users': 'last_seen_in_devices',
@@ -250,13 +251,13 @@
                     },
                     {
                         'name': 'action_type',
-                        'title': 'Action Name',
+                        'title': 'Action Type',
                         'type': 'string'
                     },
                     {
                         'name': 'success',
                         'title': 'Result',
-                        'type': 'string'
+                        'type': 'bool'
                     },
                     {
                         'name': 'additional_info',
@@ -383,6 +384,14 @@
                 let data = item.data
                 return fields.filter(field => data.find(currentData => currentData[field.name]))
             },
+            processTaskActions(actions) {
+                return actions.map(action => {
+                    if (!actionsMeta[action.action_type]) return action
+                    return {...action,
+                        action_type: actionsMeta[action.action_type].title
+                    }
+                })
+            }
         },
         created() {
             this.fetchDataHyperlinks({module: this.module})

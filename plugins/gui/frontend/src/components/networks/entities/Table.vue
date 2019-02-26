@@ -1,7 +1,8 @@
 <template>
     <div class="x-entity-table">
         <span class="ec_results" style="float:left" v-if="ecFilter">
-            <i>Showing results only for entities from the given enforcement run </i> <x-button link @click="clearEc">show all</x-button>
+            <i>Showing results of action {{ecFilter.details.action}} from enforcement {{ecFilter.details.enforcement}}</i>
+            <x-button link @click="clearEc">clear</x-button>
         </span>
         <span class="historical">
             <x-historical-date v-model="historical" :module="module" @error="$emit('error', $event)"/>

@@ -390,10 +390,8 @@ class ReportsService(Triggerable, PluginBase):
         :param conditions: the user defined conditions for trigger
         :return: A set of triggered trigger reasons.
         """
-        if not conditions.new_entities and \
-                not conditions.previous_entities and \
-                conditions.above is None and \
-                conditions.below is None:
+        if (not conditions.new_entities and not conditions.previous_entities
+                and conditions.above is None and conditions.below is None):
             return [TriggeredReason.every_discovery]
 
         triggered = set()

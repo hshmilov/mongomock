@@ -89,6 +89,7 @@
         <x-action-config
           v-model="actionInProcess.definition"
           :exclude="excludedNames"
+          :include="allowedActionNames"
           :read-only="isReadOnly"
           @confirm="saveAction"
         />
@@ -170,16 +171,17 @@
             },
             mainAction() {
                 let main = this.actions[mainCondition]
-                let selected = this.actionInProcess.position && this.actionInProcess.position.condition === mainCondition
-                if (!main || !main.name) return {
-                    condition: mainCondition, selected
-                }
-
-                return {
+                let mainAction = {
                     condition: mainCondition, key: mainCondition,
-                    selected, readOnly: this.isReadOnly,
+                    selected: this.mainActionSelected, readOnly: this.isReadOnly
+                }
+                if (!main || !main.name) return mainAction
+                return {...mainAction,
                     name: main.action['action_name'], title: main.name
                 }
+            },
+            mainActionSelected() {
+                return this.actionInProcess.position && this.actionInProcess.position.condition === mainCondition
             },
             successiveActions() {
                 return [successCondition, failCondition, postCondition].map(condition => {
@@ -229,8 +231,9 @@
                         return allNames
                     }, [])
 
-                if (this.actionInProcess.position.condition === mainCondition || !this.actions.name) return allNames
-                return [...allNames, this.actions.main.name]
+                if (!this.actions[mainCondition] || !this.actions[mainCondition].name
+                        || this.actionInProcess.position.condition === mainCondition) return allNames
+                return [...allNames, this.actions[mainCondition].name]
             }
         },
         data() {
@@ -241,7 +244,8 @@
                 },
                 triggerInProcess: {
                     position: null, definition: null
-                }
+                },
+                allowedActionNames: []
             }
         },
         created() {
@@ -304,13 +308,22 @@
                 this.selectAction(this.actionInProcess.position.condition, this.actionInProcess.position.i)
             },
             removeAction(condition, i) {
+                if (this.actions[condition][i].name) {
+                  this.allowedActionNames.push(this.actions[condition][i].name)
+                }
                 this.actions[condition].splice(i, 1)
                 if (condition === this.actionInProcess.position.condition) {
                     this.selectAction(this.actionInProcess.position.condition, this.actionInProcess.position.i)
                 }
             },
             removeActionMain() {
+                if (this.actions[mainCondition].name) {
+                  this.allowedActionNames.push(this.actions[mainCondition].name)
+                }
                 this.actions[mainCondition] = null
+                if (this.mainActionSelected) {
+                  this.selectActionMain()
+                }
             },
             selectActionType(name) {
                 this.actionInProcess.definition.action['action_name'] = name

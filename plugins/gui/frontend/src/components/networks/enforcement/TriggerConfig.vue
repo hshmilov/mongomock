@@ -1,55 +1,143 @@
 <template>
-    <div class="x-trigger-config">
-        <div class="main">
-            <h4 class="title">Enforcement Input</h4>
-            <div>Describe the entities for the Enforcement to run on:</div>
-            <div class="config">
-                <div class="config-base">
-                    <label>Saved Query:</label>
-                    <div class="base-query">
-                        <x-select-symbol v-bind="{options: entityOptions, type: 'icon', placeholder: 'mod', readOnly}" minimal v-model="config.view.entity" />
-                        <x-select :options="viewOptions" searchable placeholder="query name" :read-only="readOnly"
-                                  v-model="config.view.name" class="query-name" />
-                    </div>
-                </div>
-                <x-checkbox v-model="config.run_on" value="AddedEntities" :read-only="readOnly" label="Run on added entities only" />
-            </div>
-            <div class="section">
-                <div class="header">
-                    <x-checkbox v-model="showScheduling" :read-only="readOnly" />
-                    <h4 class="title" @click="toggleScheduling">Add Scheduling</h4>
-                </div>
-                <div v-if="showScheduling" class="main">
-                    <h5 class="title">Recurrence</h5>
-                    <div>Monitor your description over the period:</div>
-                    <div class="config">
-                        <div v-for="period in periodOptions" class="list-item">
-                            <input type="radio" :id="period.id" :value="period.name" v-model="config.period" :disabled="readOnly">
-                            <label :for="period.id" class="radio-label">{{period.title}}</label>
-                        </div>
-                    </div>
-                    <h5 class="title">Conditions</h5>
-                    <div>Detect the monitored changes and trigger upon:</div>
-                    <div class="config">
-                        <x-checkbox label="Any result" :read-only="readOnly" :data="true" />
-                        <x-checkbox label="New entities were added to results" v-model="conditions.new_entities" :read-only="readOnly" />
-                        <x-checkbox label="Previous entities were subtracted from results" v-model="conditions.previous_entities" :read-only="readOnly" />
-                        <div class="config-item">
-                            <x-checkbox label="The number of results is above..." v-model="showAbove" :read-only="readOnly" />
-                            <input type="number" v-if="showAbove" v-model="conditions.above" @keypress="validateInteger" :disabled="readOnly" class="above">
-                        </div>
-                        <div class="config-item">
-                            <x-checkbox label="The number of results is below..." v-model="showBelow" :read-only="readOnly" />
-                            <input type="number" v-if="showBelow" v-model="conditions.below" @keypress="validateInteger" :disabled="readOnly" class="below">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            </div>
-        <div class="footer">
-            <x-button v-if="!readOnly" :disabled="disableConfirm" @click="confirmTrigger">Save</x-button>
+  <div class="x-trigger-config">
+    <div class="main">
+      <h4 class="title">
+        Input
+      </h4>
+      <div>Select the Saved Query for the Enforcement Set to act on:</div>
+      <div class="config">
+        <div class="config-base">
+          <label>Saved Query:</label>
+          <div class="base-query">
+            <x-select-symbol
+              v-model="config.view.entity"
+              :options="entityOptions"
+              type="icon"
+              placeholder="mod"
+              :read-only="readOnly"
+              minimal
+            />
+            <x-select
+              v-model="config.view.name"
+              :options="viewOptions"
+              searchable
+              placeholder="query name"
+              :read-only="readOnly"
+              class="query-name"
+            />
+          </div>
         </div>
+        <x-checkbox
+          v-model="config.run_on"
+          value="AddedEntities"
+          :read-only="readOnly"
+          label="Run on added entities only"
+        />
+      </div>
+      <div class="section">
+        <div class="header">
+          <x-checkbox
+            v-model="showScheduling"
+            :read-only="readOnly"
+          />
+          <h4
+            class="title"
+            @click="toggleScheduling"
+          >Add Scheduling</h4>
+        </div>
+        <div
+          v-if="showScheduling"
+          class="main"
+        >
+          <h5 class="title">
+            Recurrence
+          </h5>
+          <div class="config">
+            <div
+              v-for="period in periodOptions"
+              :key="period.name"
+              class="list-item"
+            >
+              <input
+                :id="period.id"
+                v-model="config.period"
+                type="radio"
+                :value="period.name"
+                :disabled="readOnly"
+              >
+              <label
+                :for="period.id"
+                class="radio-label"
+              >{{ period.title }}</label>
+            </div>
+          </div>
+          <div class="header">
+            <x-checkbox
+              v-model="showConditions"
+              :read-only="readOnly"
+            />
+            <h5
+              class="title"
+              @click="toggleConditions"
+            >Add Conditions</h5>
+          </div>
+          <div>Detect changes in the query results and trigger upon</div>
+          <div
+            v-if="showConditions"
+            class="config"
+          >
+            <x-checkbox
+              v-model="conditions.new_entities"
+              label="New entities were added to results"
+              :read-only="readOnly"
+            />
+            <x-checkbox
+              v-model="conditions.previous_entities"
+              label="Previous entities were subtracted from results"
+              :read-only="readOnly"
+            />
+            <div class="config-item">
+              <x-checkbox
+                v-model="showAbove"
+                label="The number of results is above..."
+                :read-only="readOnly"
+              />
+              <input
+                v-if="showAbove"
+                v-model="above"
+                type="number"
+                :disabled="readOnly"
+                class="above"
+                @keypress="validateInteger"
+              >
+            </div>
+            <div class="config-item">
+              <x-checkbox
+                v-model="showBelow"
+                label="The number of results is below..."
+                :read-only="readOnly"
+              />
+              <input
+                v-if="showBelow"
+                v-model="below"
+                type="number"
+                :disabled="readOnly"
+                class="below"
+                @keypress="validateInteger"
+              >
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+    <div class="footer">
+      <x-button
+        v-if="!readOnly"
+        :disabled="disableConfirm"
+        @click="confirmTrigger"
+      >Save</x-button>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -63,7 +151,7 @@
     import {mapState} from 'vuex'
 
     export default {
-        name: 'x-trigger-config',
+        name: 'XTriggerConfig',
         components: {
             xSelect, xButton, xCheckbox, xSelectSymbol
         },
@@ -98,14 +186,6 @@
                 })
             },
             conditions() {
-                this.showAbove = (this.config.conditions.above !== null)
-                this.showBelow = (this.config.conditions.below !== null)
-                if (this.showAbove) {
-                    this.config.conditions.above = parseInt(this.config.conditions.above)
-                }
-                if (this.showBelow) {
-                    this.config.conditions.below = parseInt(this.config.conditions.below)
-                }
                 return this.config.conditions
             },
             disableConfirm() {
@@ -131,41 +211,82 @@
                 set(show) {
                     this.config.period = show? 'all': 'never'
                 }
+            },
+            anyConditions() {
+                if (!this.conditions) return false
+                return this.conditions.new_entities || this.conditions.previous_entities
+                        || this.conditions.above || this.conditions.below
+            },
+            showAbove: {
+                get() {
+                    return Boolean(this.config.conditions.above)
+                },
+                set(show) {
+                    this.config.conditions.above = show? 1: null
+                }
+            },
+            showBelow: {
+                get() {
+                    return Boolean(this.config.conditions.below)
+                },
+                set(show) {
+                    this.config.conditions.below = show? 1: null
+                }
+            },
+            above: {
+                get() {
+                    return this.conditions.above
+                },
+                set(value) {
+                    if (value) {
+                        this.conditions.above = parseInt(value)
+                    }
+                }
+            },
+            below: {
+                get() {
+                    return this.conditions.below
+                },
+                set(value) {
+                    if (value) {
+                        this.conditions.below = parseInt(value)
+                    }
+                }
             }
         },
         data() {
             return {
-                showAbove: false,
-                showBelow: false,
+              showConditions: false
             }
         },
         watch: {
-            showAbove(show) {
-                this.initConditionValues(show, 'above')
-            },
-            showBelow(show) {
-                this.initConditionValues(show, 'below')
-            },
             runOn() {
                 if (!this.runOn) {
                     this.config.run_on = 'AllEntities'
                 }
             }
         },
+        mounted() {
+            this.showConditions = this.anyConditions
+        },
         methods: {
             validateInteger,
             confirmTrigger() {
                 this.$emit('confirm')
             },
-            initConditionValues(show, name) {
-                if (show && !this.config.conditions[name]) {
-                    this.config.conditions[name] = 0
-                } else if (!show) {
-                    this.config.conditions[name] = null
-                }
-            },
             toggleScheduling() {
                 this.showScheduling = !this.showScheduling
+            },
+            toggleConditions() {
+                this.showConditions = !this.showConditions
+                if (!this.showConditions) {
+                  this.config.conditions = {
+                    new_entities: false,
+                    previous_entities: false,
+                    above: null,
+                    below: null
+                  }
+                }
             }
         }
     }
@@ -235,9 +356,6 @@
                 }
                 .main {
                     margin-left: 24px;
-                    .title {
-                        margin: 12px 0;
-                    }
                 }
             }
         }

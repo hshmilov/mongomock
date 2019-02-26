@@ -262,6 +262,8 @@ def figure_out_axon_internal_id_from_query(recipe_run_pretty_id: str, condition:
         action = list_of_actions
     else:
         action = list_of_actions[index_in_conditon]
+    if not action['action']['results']:
+        return []
     return [x['internal_axon_id']
             for x
             in read_chunked(PluginBase.Instance.enforcement_tasks_action_results_id_lists,
@@ -306,7 +308,7 @@ def parse_filter(filter_str: str, history_date=None):
     res = {
         '$and': [res]
     }
-    if recipe_result_subset:
+    if recipe_result_subset is not None:
         res['$and'].append({
             'internal_axon_id': {
                 '$in': recipe_result_subset

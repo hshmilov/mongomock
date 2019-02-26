@@ -9,7 +9,8 @@
             <svg-icon :name="`symbol/${alertStatus}`" :original="true" height="20px"></svg-icon>
             <div class="result" @click="$emit('click-one', alertStatus == 'success' ? 0 : 1)">{{alertStatusMessage}}</div>
         </div>
-        <x-summary v-else :data="resultData" @click-one="$emit('click-one', $event)"/>
+        <x-summary v-else-if="resultData" :data="resultData" @click-one="$emit('click-one', $event)"/>
+        <div v-else>Not ran</div>
     </div>
 </template>
 
@@ -50,7 +51,7 @@
                 return this.actionsDef[this.data.action['action_name']].schema
             },
             isResultAlertAction() {
-                return (this.data.action.action_type == 'alert')
+                return this.data.action.action_type === 'alert'
             },
             alertStatus() {
                 if (this.data.action.results.successful_entities.length > 0) return 'success'
@@ -63,12 +64,15 @@
                 return this.savedViews.find(item => item.name === this.view).view
             },
             successEntities() {
+                if (!this.data.action.results) return []
                 return this.data.action.results['successful_entities']
             },
             failureEntities() {
+                if (!this.data.action.results) return []
                 return this.data.action.results['unsuccessful_entities']
             },
             resultData() {
+                if (!this.successEntities.length && !this.failureEntities.length) return null
                 return [{
                     name: 'Entities Succeeded',
                     value: this.successEntities.length
