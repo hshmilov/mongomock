@@ -121,8 +121,14 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
                 device.description = device_raw.get('description')
                 device.figure_os((device_raw.get('osShortName') or '') + ' ' + (device_raw.get('osName') or ''))
                 try:
-                    if device_raw.get('ipAddress', '') != '' or device_raw.get('macAddress', '') != '':
-                        device.add_nic(device_raw.get('macAddress'), device_raw.get('ipAddress', '').split(','))
+                    ips = None
+                    mac = device_raw.get('macAddress')
+                    if not mac or 'Unknown' == mac:
+                        mac = None
+                    if device_raw.get('ipAddress') and isinstance(device_raw.get('ipAddress'), str):
+                        ips = device_raw.get('ipAddress').split(',')
+                    if ips or mac:
+                        device.add_nic(mac, ips)
                 except Exception:
                     logger.exception('Problem with adding nic to CarbonblackProtection device')
                 try:
