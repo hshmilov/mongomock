@@ -1,3 +1,4 @@
+import time
 import datetime
 from typing import List
 
@@ -40,6 +41,8 @@ class TestAlertActions(TestBase):
             self.enforcements_page.create_notifying_enforcement(alert_name, COMMON_ALERT_QUERY)
             result.append(alert_name)
         self.base_page.run_discovery()
+        # we need to wait for the notifications in the UI to refresh
+        time.sleep(31)
         return result
 
     def test_notification_sanity(self):
