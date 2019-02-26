@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
-from axonius.devices.device_adapter import DeviceAdapter, Field, ListField
+import time
+
+from axonius.devices.device_adapter import (DeviceAdapter,
+                                            DeviceAdapterConnectedHardware,
+                                            Field, ListField)
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.gui_helpers import (find_entity_field,
-                                       parse_entity_fields,
-                                       merge_entities_fields)
+                                       merge_entities_fields,
+                                       parse_entity_fields)
 
 # pylint: disable=line-too-long
 
@@ -280,3 +284,39 @@ def test_hostname_obj():
 
     assert parse_entity_fields([device.to_dict(), device2.to_dict()],
                                ['object_test.hostname']) == {'object_test.hostname': ['cisco-switch']}
+
+
+def test_merge_speed():
+    device = MyDeviceAdapter(set(), set())
+
+    for i in range(1000):
+        device.connected_hardware.append(DeviceAdapterConnectedHardware(name=f'asdf{i}', manufacturer=f'qwer{i}'))
+
+    device2 = MyDeviceAdapter(set(), set())
+
+    for i in range(1000):
+        device2.connected_hardware.append(DeviceAdapterConnectedHardware(name=f'asdf{i}'))
+    for i in range(1000):
+        device2.connected_hardware.append(DeviceAdapterConnectedHardware(name=f'asdf{i}', manufacturer=f'zxcv{i}'))
+
+    start = time.time()
+    result = merge_entities_fields([device.to_dict(), device2.to_dict()],
+                                   ['connected_hardware.name', 'connected_hardware.manufacturer'])
+    end = time.time()
+    assert len(result) == 2
+    assert len(result[0]['connected_hardware.name']) == 1000
+    assert end - start < 10
+
+    devices = []
+    for _ in range(10):
+        device = MyDeviceAdapter(set(), set())
+
+        for i in range(800):
+            device.connected_hardware.append(DeviceAdapterConnectedHardware(name=f'asdf{i}', manufacturer=f'qwer{i}'))
+        devices.append(device)
+
+    start = time.time()
+    result = merge_entities_fields([device.to_dict() for device in devices],
+                                   ['connected_hardware.name', 'connected_hardware.manufacturer'])
+    end = time.time()
+    assert end - start < 10

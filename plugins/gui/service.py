@@ -649,7 +649,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 return None
             # Flatten items of this advanced field list, for presentation in table
             fields = [field['name'] for field in category_schema['items']]
-            return [gui_helpers.parse_entity_fields(val_item, fields) for val_item in category_data[category_schema['name']]]
+            return gui_helpers.merge_entities_fields(category_data[category_schema['name']], fields)
 
         # Specific is returned as is, to show all adapter datas.
         # Generic fields are divided to basic which are all merged through all adapter datas

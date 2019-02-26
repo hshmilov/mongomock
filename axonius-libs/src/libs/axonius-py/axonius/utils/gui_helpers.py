@@ -2,11 +2,11 @@ import csv
 import io
 import json
 import logging
+import itertools
 from datetime import datetime
 from enum import Enum
 from typing import NamedTuple, Iterable, List
 
-import deepdiff
 import cachetools
 import dateutil
 import pymongo
@@ -631,16 +631,77 @@ def parse_entity_fields(entity_data, fields):
     return field_to_value
 
 
+def _is_subjson_check_list_value(subset_list, superset_list):
+    subset_dicts = [item for item in subset_list if isinstance(item, dict)]
+    subset_regs = [item for item in subset_list if not isinstance(item, (dict, list))]
+    subset_lists = [item for item in subset_list if isinstance(item, list)]
+
+    superset_dicts = [item for item in superset_list if isinstance(item, dict)]
+    superset_regs = [item for item in superset_list if not isinstance(item, (dict, list))]
+    superset_lists = [item for item in superset_list if isinstance(item, list)]
+
+    if subset_regs != superset_regs:
+        if not all(subset_reg in superset_regs for subset_reg in subset_regs):
+            return False
+    else:
+        return True
+
+    if not _is_subjson_check_list_value(subset_lists, superset_lists):
+        return False
+
+    if len(subset_dicts) > len(superset_dicts):
+        return False
+
+    if not all(itertools.starmap(is_subjson, zip(subset_dicts, superset_dicts))):
+        return False
+
+    return True
+
+
+def _is_subjson_check_value(subset_value, superset_value):
+    if type(superset_value) is not type(subset_value):
+        return False
+
+    if superset_value == subset_value:
+        return True
+
+    if isinstance(subset_value, dict):
+        return is_subjson(subset_value, superset_value)
+
+    if isinstance(subset_value, list):
+        return _is_subjson_check_list_value(subset_value, superset_value)
+
+    return False
+
+
+def is_subjson(subset, superset):
+    if subset.items() <= superset.items():
+        return True
+
+    if subset.items() > superset.items():
+        return False
+
+    for key, value in subset.items():
+        if key not in superset:
+            return False
+
+        if not _is_subjson_check_value(value, superset[key]):
+            return False
+    return True
+
+
 def merge_entities_fields(entities_data, fields):
     """ 
         find all entities that are subset of other entites, and merge them.
     """
     results = []
-    parsed_entites_data = [parse_entity_fields(entity_data, fields) for entity_data in entities_data]
-    for subset_candidate in parsed_entites_data:
-        for superset_candidate in parsed_entites_data:
-            diff = deepdiff.DeepDiff(subset_candidate, superset_candidate, verbose_level=0)
-            if diff and all('item_added' in key for key in diff):
+    parsed_entities_data = [parse_entity_fields(entity_data, fields) for entity_data in entities_data]
+    for subset_candidate in parsed_entities_data:
+        for superset_candidate in parsed_entities_data:
+            if subset_candidate == superset_candidate:
+                continue
+
+            if is_subjson(subset_candidate, superset_candidate):
                 # Found subset
                 break
         else:
