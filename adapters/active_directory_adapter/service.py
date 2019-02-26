@@ -275,7 +275,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         found_dc_details = dc_details.copy()
                         found_dc_details['dc_name'] = found_domain
                         found_dc_details['is_ad_gc'] = False
-                        all_domains[found_domain] = found_dc_details
+                        all_domains[found_domain.lower()] = found_dc_details
                         if not success_domains:
                             # Try to add at least one domain.
                             success_domains[found_domain.lower()] = self._get_ldap_connection(found_dc_details)
@@ -373,10 +373,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _resolve_clients(self, client_data_dict, should_verbose_notify=False):
         success_clients = dict()
         failure_clients = dict()
-        for client_name, client_data_dict in client_data_dict.items():
+        for client_name, client_data_dict_val in client_data_dict.items():
             try:
                 logger.info(f'Trying to connect to {client_name}')
-                success_clients[client_name] = self._get_ldap_connection(client_data_dict)
+                success_clients[client_name] = self._get_ldap_connection(client_data_dict_val)
             except Exception as e:
                 logger.exception(f'Can not connect to {client_name}')
                 failure_clients[client_name] = str(e)
@@ -386,7 +386,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             for failure_client, failure_reason in failure_clients.items():
                 content += f'{failure_client}: {failure_reason}\n\n'
             self.create_notification(
-                f'Active Directory Adapter: {len(success_clients)} / {len(client_data_dict.values())} successful connections',
+                f'Active Directory Adapter: {len(success_clients)} / {len(client_data_dict.values())} '
+                f'successful connections',
                 content=content
             )
 
@@ -411,7 +412,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         if not client_data_dict:
             # If its not here then crash since we couldn't get the device client
             client_data_dict = \
-                client_data[convert_ldap_searchpath_to_domain_name(entity_data['distinguishedName']).lower()]
+                client_data[convert_ldap_searchpath_to_domain_name(entity_data['raw']['distinguishedName']).lower()]
 
         return self._get_ldap_connection(client_data_dict)
 
