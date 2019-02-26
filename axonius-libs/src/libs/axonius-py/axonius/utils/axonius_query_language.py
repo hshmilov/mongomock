@@ -401,9 +401,7 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
     specific_data = list(filtered_adapters)
     specific_data.extend(tag
                          for tag in entity['tags']
-                         if (ignore_errors and 'type' not in 'tag')
-                         or
-                         tag['type'] == 'adapterdata')
+                         if (ignore_errors and 'type' not in tag) or tag['type'] == 'adapterdata')
 
     try:
         adapters_data = {
