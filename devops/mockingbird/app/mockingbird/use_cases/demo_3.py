@@ -312,7 +312,7 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
 
     services_list = mock_utils.get_random_services_list()
     for service in random.sample(services_list, k=int(len(services_list) * 0.9)):
-        device.add_share(**service)  # pylint: disable=not-a-mapping
+        device.add_service(**service)  # pylint: disable=not-a-mapping
 
     # Adapter-Specific data
     # AD

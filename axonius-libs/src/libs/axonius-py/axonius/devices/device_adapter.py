@@ -389,9 +389,9 @@ class DeviceAdapter(SmartJsonClass):
     cloud_provider = Field(str, "Cloud Provider")
     cloud_id = Field(str, "Cloud ID")
     shodan_data = Field(ShodanData, 'Shodan Data')
-    processes = ListField(ProcessData, 'Running Processes')
-    services = ListField(ServiceData, 'Services')
-    shares = ListField(ShareData, 'Shares')
+    processes = ListField(ProcessData, 'Running Processes', json_format=JsonArrayFormat.table)
+    services = ListField(ServiceData, 'Services', json_format=JsonArrayFormat.table)
+    shares = ListField(ShareData, 'Shares', json_format=JsonArrayFormat.table)
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
