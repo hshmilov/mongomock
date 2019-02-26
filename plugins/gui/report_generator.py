@@ -278,7 +278,8 @@ class ReportGenerator(object):
         slices = []
         for i, slice_def in enumerate(self._calculate_pie_slices(portions)):
             parameters = {'path': slice_def['path'],
-                          'colour': 'url(#intersection)' if queries[i].get('intersection') else colours[i]}
+                          'colour': 'url(#intersection)' if queries[i].get('intersection') else colours[
+                              i % len(colours)]}
             if i:
                 parameters['text'] = f'{round(portions[i] * 100)}%' if i else ''
                 parameters['x'] = slice_def['text_x']
