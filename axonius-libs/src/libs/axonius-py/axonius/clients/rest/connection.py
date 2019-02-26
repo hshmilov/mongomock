@@ -1,6 +1,7 @@
 import http.client
 import logging
 import math
+import threading
 from abc import ABC, abstractmethod
 from json.decoder import JSONDecodeError
 from typing import Tuple
@@ -75,6 +76,7 @@ class RESTConnection(ABC):
         self._permanent_headers = headers if headers is not None else {}
         self._session_headers = {}
         self._session = None
+        self._session_lock = threading.Lock()
 
     @staticmethod
     def build_url(domain: str, port: int = None, url_base_prefix: str = '/', use_domain_path: bool = False):
@@ -379,9 +381,14 @@ class RESTConnection(ABC):
                     yield ValueError(msg)
 
     def __enter__(self):
+        if self._session_lock.acquire(blocking=False) is False:
+            raise RESTAlreadyConnected('Already Connected')
         self.connect()
         return self
 
     # pylint: disable=C0103
     def __exit__(self, _type, value, tb):
-        self.close()
+        try:
+            self.close()
+        finally:
+            self._session_lock.release()

@@ -228,18 +228,22 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
+    @staticmethod
+    def get_connection(client_config):
+        https_proxy = client_config.get('https_proxy')
+        if https_proxy and https_proxy.startswith('http://'):
+            https_proxy = 'https://' + https_proxy[len('http://'):]
+        connection = ServiceNowConnection(
+            domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
+            username=client_config['username'],
+            password=client_config['password'], https_proxy=https_proxy)
+        with connection:
+            pass  # check that the connection credentials are valid
+        return connection
+
     def _connect_client(self, client_config):
         try:
-            https_proxy = client_config.get('https_proxy')
-            if https_proxy and https_proxy.startswith('http://'):
-                https_proxy = 'https://' + https_proxy[len('http://'):]
-            connection = ServiceNowConnection(
-                domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                username=client_config['username'],
-                password=client_config['password'], https_proxy=https_proxy)
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -315,11 +319,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         service_now_dict = self.get_request_data_as_object()
         success = False
         for client_id in self._clients:
-            # Note that we are assuming this connection is not open since this function will run in a post correlator
-            # stage. If this function will be called while in a cycle, the cycle will stop (socket will be closed..)
-            # TODO: Change that to use a get_session (a copy of the connection)
-            with self._clients[client_id]:
-                success = success or self._clients[client_id].create_service_now_incident(service_now_dict)
+            conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with conn:
+                success = success or conn.create_service_now_incident(service_now_dict)
                 if success is True:
                     return '', 200
         return 'Failure', 400
@@ -332,11 +334,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         service_now_dict = request_json.get('snow')
         success = False
         for client_id in self._clients:
-            # Note that we are assuming this connection is not open since this function will run in a post correlator
-            # stage. If this function will be called while in a cycle, the cycle will stop (socket will be closed..)
-            # TODO: Change that to use a get_session (a copy of the connection)
-            with self._clients[client_id]:
-                result_status, device_raw = self._clients[client_id].create_service_now_computer(service_now_dict)
+            conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with conn:
+                result_status, device_raw = conn.create_service_now_computer(service_now_dict)
                 success = success or result_status
                 if success is True:
                     device = self.create_snow_device(device_raw=device_raw,

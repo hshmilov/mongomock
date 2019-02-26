@@ -32,20 +32,25 @@ class CarbonblackResponseAdapter(AdapterBase):
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
+    @staticmethod
+    def get_connection(client_config):
+        connection = CarbonblackResponseConnection(domain=client_config['domain'],
+                                                   verify_ssl=client_config.get('verify_ssl', False),
+                                                   username=client_config.get('username'),
+                                                   password=client_config.get('password'),
+                                                   apikey=client_config.get('apikey'),
+                                                   headers={'Content-Type': 'application/json',
+                                                            'Accept': 'application/json'},
+                                                   url_base_prefix='api/',
+                                                   https_proxy=client_config.get('https_proxy'))
+        with connection:
+            pass  # check that the connection credentials are valid
+
+        return connection
+
     def _connect_client(self, client_config):
         try:
-            connection = CarbonblackResponseConnection(domain=client_config['domain'],
-                                                       verify_ssl=client_config.get('verify_ssl', False),
-                                                       username=client_config.get('username'),
-                                                       password=client_config.get('password'),
-                                                       apikey=client_config.get('apikey'),
-                                                       headers={'Content-Type': 'application/json',
-                                                                'Accept': 'application/json'},
-                                                       url_base_prefix='api/',
-                                                       https_proxy=client_config.get('https_proxy'))
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -191,7 +196,7 @@ class CarbonblackResponseAdapter(AdapterBase):
             cb_response_dict = self.get_request_data_as_object()
             device_id = cb_response_dict.get('device_id')
             client_id = cb_response_dict.get('client_id')
-            cb_obj = self._clients[client_id]
+            cb_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
             with cb_obj:
                 device_raw = cb_obj.update_isolate_status(device_id, is_isolating)
             device = self._create_device(device_raw)

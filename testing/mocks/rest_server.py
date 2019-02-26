@@ -37,6 +37,14 @@ def mock_services(func):
     return func_wrapper
 
 
+@APP.route('/api/devices/<amount>')
+@mock_services
+def devices(amount):
+    return jsonify([
+        {'id': i} for i in range(int(amount))
+    ])
+
+
 @APP.route('/echo/<what>')
 @mock_services
 def echo(what):

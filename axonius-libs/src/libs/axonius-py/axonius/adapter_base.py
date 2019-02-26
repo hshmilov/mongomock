@@ -1122,6 +1122,15 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
         return self._clients_collection.find()
 
+    def _get_client_config_by_client_id(self, client_id: str):
+        """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
+        """
+        current_client = self._clients_collection.find_one({'client_id': client_id})
+        if not current_client or not current_client.get('client_config'):
+            # No credentials to attempt reconnection
+            raise adapter_exceptions.CredentialErrorException(f'No credentials found for client {client_id} in the db.')
+        return current_client['client_config']
+
     def _update_clients_schema_in_db(self, schema):
         """
         Every adapter has to update the DB about the scheme it expects for its clients.
