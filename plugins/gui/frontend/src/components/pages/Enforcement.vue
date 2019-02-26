@@ -4,6 +4,7 @@
     :breadcrumbs="[
       { title: 'enforcement center', path: { name: 'Enforcements'}},
       { title: name }]"
+    beta
   >
     <x-split-box>
       <template slot="main">

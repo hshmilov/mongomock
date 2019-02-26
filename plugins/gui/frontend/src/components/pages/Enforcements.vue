@@ -1,5 +1,5 @@
 <template>
-    <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: isReadOnly}">
+    <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: isReadOnly}" beta>
         <x-table module="enforcements" @click-row="navigateEnforcement" title="Enforcement Sets" v-model="isReadOnly? undefined: selection">
             <template slot="actions">
                 <x-button link v-if="hasSelection" @click="remove">Remove</x-button>

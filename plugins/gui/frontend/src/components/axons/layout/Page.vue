@@ -1,12 +1,16 @@
 <template>
     <div class="x-page" :class="{ collapse: collapseSidebar }">
         <div v-if="title || breadcrumbs" class="header">
-            <h4 class="title" v-if="title">{{ title }}</h4>
+            <template v-if="title">
+                <h4 class="title">{{ title }}</h4>
+                <md-chip v-if="beta">BETA</md-chip>
+            </template>
             <h4 class="title" v-else>
                 <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
-                <template v-for="breadcrumb in breadcrumbs.slice(0, breadcrumbs.length - 1)">
-                    <router-link :to="breadcrumb.path" active-class="" class="crumb">{{ breadcrumb.title }}</router-link>
-                </template>
+                <div v-for="(breadcrumb, i) in breadcrumbs.slice(0, breadcrumbs.length - 1)" class="crumb">
+                    <router-link :to="breadcrumb.path" active-class="">{{ breadcrumb.title }}</router-link>
+                    <md-chip v-if="beta && !i">BETA</md-chip>
+                </div>
                 <!-- Adding currently viewed page without a link -->
                 <span>{{breadcrumbs[breadcrumbs.length - 1].title}}</span>
             </h4>
@@ -25,7 +29,14 @@
 
     export default {
         name: 'x-page',
-        props: ['title', 'breadcrumbs'],
+        props: {
+            title: String,
+            breadcrumbs: Array,
+            beta: {
+                type: Boolean,
+                default: false
+            }
+        },
         computed: mapState({
             collapseSidebar(state) {
                 return state.interaction.collapseSidebar
@@ -53,6 +64,7 @@
 
         > .header {
             display: flex;
+            align-items: center;
             text-transform: capitalize;
             z-index: 100;
             color: $theme-black;
@@ -63,13 +75,12 @@
             border-color: rgba($theme-orange, 0.2);
 
             .title {
-                flex: 1 0 auto;
                 font-weight: 200;
                 letter-spacing: 1px;
                 margin: 0;
                 vertical-align: middle;
                 line-height: 30px;
-                display: inline-block;
+                display: flex;
 
                 .crumb {
                     position: relative;
@@ -92,6 +103,13 @@
                 &:hover {
                     color: $theme-orange;
                 }
+            }
+
+            .md-chip {
+                background-color: rgba($theme-orange, 0.2);
+                height: 20px;
+                line-height: 20px;
+                margin-left: 4px;
             }
         }
 

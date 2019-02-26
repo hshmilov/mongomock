@@ -7,7 +7,10 @@
                 <md-list slot="md-expand" v-if="getItems(category).length">
                     <md-list-item v-for="action in getItems(category)" :key="action" @click="onClickAction(action)">
                         <x-title :logo="`actions/${action}`" :disabled="disabled(action)">{{ getTitle(action) }}</x-title>
-                        <img v-if="disabled(action)" :src="require('Logos/actions/lock.png')" height="24" class="md-image" />
+                        <div v-if="disabled(action)" class="action-disabled">
+                            <i>Coming soon</i>
+                            <img :src="require('Logos/actions/lock.png')" height="24" class="md-image" />
+                        </div>
                     </md-list-item>
                 </md-list>
             </md-list-item>
@@ -66,6 +69,15 @@
             .x-title {
                 .md-image {
                     height: 36px;
+                }
+            }
+            .action-disabled {
+                display: flex;
+                font-size: 14px;
+                font-weight: 300;
+                align-items: center;
+                .md-image {
+                    margin-left: 8px;
                 }
             }
             .md-list-expand {

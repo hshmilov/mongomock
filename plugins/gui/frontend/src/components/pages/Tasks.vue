@@ -1,7 +1,7 @@
 <template>
     <x-page class="x-tasks" :breadcrumbs="[
         { title: 'enforcement center', path: { name: 'Enforcements'}},
-    	{ title: 'enforcement tasks' }]">
+    	{ title: 'enforcement tasks' }]" beta>
 
         <x-table module="tasks" @click-row="viewTask" title="Enforcement Tasks" />
     </x-page>
