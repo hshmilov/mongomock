@@ -157,8 +157,6 @@ def setup_instances_user():
     except KeyError:
         if not os.path.exists(INSTANCE_IS_MASTER_MARKER_PATH):
             print_state(f'Generating {INSTANCE_CONNECT_USER_NAME} user')
-            for current_file in [INSTANCES_SETUP_SCRIPT_PATH, 'axonius.sh', 'prepare_python_env.sh']:
-                subprocess.check_call(['chmod', '+xr', os.path.join(AXONIUS_DEPLOYMENT_PATH, current_file)])
             subprocess.check_call(['/usr/sbin/useradd', '-s',
                                    INSTANCES_SETUP_SCRIPT_PATH, '-G', 'docker,sudo', INSTANCE_CONNECT_USER_NAME])
             subprocess.check_call(
@@ -240,6 +238,11 @@ def set_special_permissions(root_pass):
     os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
     cmd = f'chmod -R o+w {AXONIUS_SETTINGS_PATH}'
     run_as_root(cmd.split(), root_pass)
+
+    # Adding write and execute permissions on all the scripts node_maker uses.
+    for current_file in [INSTANCES_SETUP_SCRIPT_PATH, 'axonius.sh', 'prepare_python_env.sh']:
+        cmd = f'chmod +xr {current_file}'
+        run_as_root(cmd.split(), root_pass)
 
 
 def stop_weave_network():
