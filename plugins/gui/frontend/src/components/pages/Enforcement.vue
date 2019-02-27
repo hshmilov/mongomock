@@ -49,20 +49,21 @@
         </div>
         <div class="footer">
           <x-button
-            emphasize
-            :disabled="disableSave"
-            @click="saveRun"
-          >Save & Run</x-button>
-          <x-button
             v-if="isReadOnly"
             @click="exit"
           >Exit</x-button>
-          <x-button
-            v-else
-            id="enforcement_save"
-            :disabled="disableSave"
-            @click="saveExit"
-          >Save & Exit</x-button>
+          <template v-else>
+            <x-button
+              emphasize
+              :disabled="disableSave"
+              @click="saveRun"
+            >Save & Run</x-button>
+            <x-button
+              id="enforcement_save"
+              :disabled="disableSave"
+              @click="saveExit"
+            >Save & Exit</x-button>
+          </template>
         </div>
       </template>
       <x-card
