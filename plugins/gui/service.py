@@ -116,6 +116,7 @@ from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
+from gui.gui_logic.get_dashboard_coverage import get_dashboard_coverage
 from gui.gui_logic.get_ec_historical_data_for_entity import get_all_task_data, TaskData
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
@@ -3093,7 +3094,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         self.__generate_dashboard_fast.update_cache()
         adapter_data.update_cache()
         get_fielded_plugins.update_cache()
-        self._get_dashboard_coverage.update_cache()
+        get_dashboard_coverage.update_cache()
 
     def __generate_dashboard_uncached(self, dashboard):
         """
@@ -3133,7 +3134,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         return self.__generate_dashboard_uncached(dashboard)
 
-    def _get_dashboard(self, skip=0, limit=0):
+    def _get_dashboard(self, skip=0, limit=0, uncached: bool = False):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
         fetch devices_db with their view. Amount of results is mapped to each views' name, under 'data' key,
@@ -3141,6 +3142,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
 
         POST Save a new dashboard chart definition, given it has a name and at least one query attached
 
+        If 'uncached' is True, then this will return a non cached version
         :return:
         """
         logger.info('Getting dashboard')
@@ -3153,7 +3155,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 # Let's fetch and execute them query filters, depending on the chart's type
                 try:
                     dashboard_metric = ChartMetrics[dashboard['metric']]
-                    if dashboard_metric == ChartMetrics.timeline:
+                    if uncached:
+                        yield self.__generate_dashboard_uncached(dashboard)
+                    elif dashboard_metric == ChartMetrics.timeline:
                         # slow dashboard cache
                         yield self.__generate_dashboard(dashboard)
                     else:
@@ -3758,52 +3762,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             logger.exception(error)
         return return_error(error, 400)
 
-    @rev_cached(ttl=120, key_func=lambda self: 1)
-    def _get_dashboard_coverage(self):
-        """
-        Measures the coverage portion, according to sets of properties that devices' adapters may have.
-        Portion is calculated out of total devices amount.
-        Currently returns coverage for devices composed of adapters that are:
-        - Managed ('Manager' or 'Agent')
-        - Endpoint Protected
-        - Vulnerability Assessed
-
-        :return:
-        """
-        logger.info('Getting dashboard coverage')
-        devices_total = self.devices_db.count_documents({
-            'adapters.pending_delete': {
-                '$ne': True
-            }
-        })
-        if not devices_total:
-            return []
-
-        coverage_list = [
-            {'name': 'managed_coverage', 'title': 'Managed Device',
-             'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
-             'description': 'Deploy appropriate agents on unmanaged devices, and add them to Active Directory.'},
-            {'name': 'endpoint_coverage', 'title': 'Endpoint Protection',
-             'properties': [AdapterProperty.Endpoint_Protection_Platform.name],
-             'description': 'Add an endpoint protection solution to uncovered devices.'},
-            {'name': 'vulnerability_coverage', 'title': 'VA Scanner',
-             'properties': [AdapterProperty.Vulnerability_Assessment.name],
-             'description': 'Add uncovered devices to the next scheduled vulnerability assessment scan.'}
-        ]
-        for item in coverage_list:
-            devices_property = self.devices_db.count_documents({
-                'adapters.data.adapter_properties':
-                    {'$in': item['properties']}
-            })
-            item['portion'] = devices_property / devices_total
-
-        return coverage_list
-
     @gui_add_rule_logged_in('dashboard/coverage', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
     def get_dashboard_coverage(self):
-        return jsonify(self._get_dashboard_coverage())
+        return jsonify(get_dashboard_coverage())
 
     @gui_add_rule_logged_in('get_latest_report_date', methods=['GET'],
                             required_permissions={Permission(PermissionType.Reports,
@@ -4065,9 +4028,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         logger.info('Starting to generate report')
         report_data = {
-            'adapter_devices': adapter_data(EntityType.Devices),
-            'adapter_users': adapter_data(EntityType.Users),
-            'covered_devices': self._get_dashboard_coverage(),
+            'adapter_devices': adapter_data.call_uncached(EntityType.Devices),
+            'adapter_users': adapter_data.call_uncached(EntityType.Users),
+            'covered_devices': get_dashboard_coverage.call_uncached(),
             'custom_charts': list(self._get_dashboard()),
             'views_data': self._get_saved_views_data()
         }
