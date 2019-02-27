@@ -65,8 +65,8 @@
                         this.$emit('change', false)
                         setTimeout(() => {
                             this.status.success = false
-                        }, 2000)
-                    }, 100)
+                        }, 800)
+                    }, 600)
                 }).catch((error) => {
                     this.status.processing = false
                     this.status.error = error.message

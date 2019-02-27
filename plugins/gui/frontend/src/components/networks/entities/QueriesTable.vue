@@ -52,6 +52,9 @@
                     {name: 'view->query->filter', title: 'Filter', type: 'string'},
                     {name: 'timestamp', title: 'Save Time', type: 'string', format: 'date-time'}
                 ]
+            },
+            selectedNames() {
+                return this.queries.filter(query => this.selected.includes(query.uuid)).map(query => query.name)
             }
         },
         data() {
@@ -83,7 +86,7 @@
                         failure: [],
                         post: []
                     },
-                    triggers: this.selected.map(name => {
+                    triggers: this.selectedNames.map(name => {
                         return {...initTrigger,
                             name: 'Trigger',
                             view: {

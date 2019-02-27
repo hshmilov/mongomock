@@ -149,12 +149,12 @@
             },
             disableSaveQuery() {
                 /* Determine whether query cannot be saved right now or it can */
-                return this.readOnly || this.queryFilter === '' || this.queryFilter !== this.searchValue || !this.filterValid
+                return this.readOnly || this.queryFilter === '' || !this.filterValid
             },
             isSearchSimple() {
                 /* Determine whether current search input value is an AQL filter, or just text */
                 if (!this.searchValue) return true
-                if (this.searchValue.indexOf('exists_in') != -1) return false
+                if (this.searchValue.indexOf('exists_in') !== -1) return false
                 let simpleMatch = this.searchValue.match('[a-zA-Z0-9 -\._:]*')
                 return simpleMatch && simpleMatch.length === 1 && simpleMatch[0] === this.searchValue
             },

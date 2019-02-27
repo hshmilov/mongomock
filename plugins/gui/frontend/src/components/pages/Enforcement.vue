@@ -84,7 +84,7 @@
         key="actionConf"
         :title="actionConfTitle"
         :logo="actionConfLogo"
-        reversible
+        :reversible="currentActionReversible"
         @back="restartAction"
       >
         <x-action-config
@@ -235,6 +235,12 @@
                 if (!this.actions[mainCondition] || !this.actions[mainCondition].name
                         || this.actionInProcess.position.condition === mainCondition) return allNames
                 return [...allNames, this.actions[mainCondition].name]
+            },
+            currentActionReversible() {
+              let position = this.actionInProcess.position
+              if (!position) return false
+              return (this.mainActionSelected && !Boolean(this.mainAction.name)) ||
+                      (!this.mainActionSelected && this.actions[position.condition].length === position.i)
             }
         },
         data() {

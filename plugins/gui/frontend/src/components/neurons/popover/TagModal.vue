@@ -1,6 +1,6 @@
 <template>
     <x-feedback-modal v-model="isActive" :handle-save="saveTags" :message="`Tagged ${taggedCount} ${module}!`"
-                      class="x-tag-modal" @enter="$refs.searchInput.focus()">
+                      class="x-tag-modal" @enter="onEnter">
         <x-search-input v-model="searchValue" ref="searchInput" tabindex="1"/>
         <x-checkbox-list :items="currentLabels" v-model="selected"/>
     </x-feedback-modal>
@@ -61,6 +61,10 @@
             }),
             activate() {
                 this.isActive = true
+            },
+            onEnter() {
+                if (!this.$refs.searchInput) return
+                this.$refs.searchInput.focus()
             },
             saveTags() {
                 /* Separate added and removed tags and create an uber promise returning after both are updated */

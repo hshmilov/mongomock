@@ -178,6 +178,9 @@
                     this.$emit('input', config)
                 }
             },
+            viewEntity() {
+              return this.config.view.entity
+            },
             periodOptions() {
                 return Object.entries(this.triggerPeriods).map(([name, title]) => {
                     return {
@@ -238,9 +241,8 @@
                     return this.conditions.above
                 },
                 set(value) {
-                    if (value) {
-                        this.conditions.above = parseInt(value)
-                    }
+                  if (!value) return
+                  this.conditions.above = parseInt(value) > 0 ? parseInt(value) : 0
                 }
             },
             below: {
@@ -248,9 +250,8 @@
                     return this.conditions.below
                 },
                 set(value) {
-                    if (value) {
-                        this.conditions.below = parseInt(value)
-                    }
+                  if (!value) return
+                  this.conditions.below = parseInt(value) > 0 ? parseInt(value) : 0
                 }
             }
         },
@@ -263,6 +264,11 @@
             runOn() {
                 if (!this.runOn) {
                     this.config.run_on = 'AllEntities'
+                }
+            },
+            viewEntity(newEntity, oldEntity) {
+                if (newEntity !== oldEntity) {
+                  this.config.view.name = ''
                 }
             }
         },

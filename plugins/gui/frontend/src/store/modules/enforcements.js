@@ -158,7 +158,7 @@ export const enforcements = {
                 dispatch(FETCH_ENFORCEMENT, id)
             }
 
-            if (enforcement.uuid) {
+            if (enforcement.uuid && enforcement.uuid !== 'new') {
                 return dispatch(REQUEST_API, {
                     rule: `enforcements/${enforcement.uuid}`,
                     method: 'POST',
