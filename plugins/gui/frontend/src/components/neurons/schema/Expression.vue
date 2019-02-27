@@ -131,13 +131,13 @@
                 if (!this.expression.i) {
                     this.expression.logicOp = ''
                 }
+                if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
+                    this.$emit('change', {filter: '', bracketWeight: 0})
+                    return
+                }
                 let error = this.errorCondition || this.checkErrors()
                 if (error) {
                     this.$emit('change', {error})
-                    return
-                }
-                if (!this.expression.field || (this.expression.obj && !this.nestedExpressionCond)) {
-                    this.$emit('change', {filter: '', bracketWeight: 0})
                     return
                 }
                 let filterStack = []
@@ -196,9 +196,7 @@
             }
         },
         created() {
-            if (this.expression.field) {
-                this.compileExpression()
-            }
+            this.compileExpression()
         }
     }
 </script>

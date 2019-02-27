@@ -47,6 +47,11 @@
         },
         methods: {
             compileFilter(index, payload) {
+                let rebuild = this.rebuild
+                if (this.filters.length === this.expressions.length) {
+                    this.rebuild = false
+                }
+                
                 if (payload.error) {
                     this.error = payload.error
                     this.$emit('error')
@@ -66,12 +71,9 @@
                 // No compilation error - can remove existing error
                 this.error = ''
 
-                if (this.rebuild) {
+                if (rebuild) {
                     // Rebuild state is when expressions are given on initialization
                     // and filters should be updated but not passed on, in case the user edited the filter
-                    if (this.filters.length === this.expressions.length) {
-                        this.rebuild = false
-                    }
                     return
                 }
                 // In ongoing update state - propagating the filter and expression values

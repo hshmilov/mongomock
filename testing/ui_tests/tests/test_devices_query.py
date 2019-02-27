@@ -336,6 +336,7 @@ class TestDevicesQuery(TestBase):
             self.devices_page.select_query_field(self.devices_page.FIELD_USERS_LAST_USE, conditions[1])
             self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, conditions[1])
             self.devices_page.fill_query_value(5, conditions[1])
+            self.devices_page.wait_for_table_to_load()
             assert len(self.devices_page.get_all_data())
             self.devices_page.clear_query_wizard()
 
