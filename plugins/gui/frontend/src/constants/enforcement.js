@@ -6,10 +6,10 @@ export const actionsMeta = {
         title: 'Deploy on Linux Device'
     },
     run_command_windows: {
-        title: 'Run Windows Command'
+        title: 'Run Windows Shell Command'
     },
     run_command_linux: {
-        title: 'Run Shell Command'
+        title: 'Run Linux Shell Command'
     },
     carbonblack_isolate: {
         title: 'Isolate in CarbonBlack'
@@ -53,7 +53,7 @@ export const actionsMeta = {
     create_jira_incident: {
         title: 'Create Jira Issue'
     },
-    create_sysaid: {
+    create_sysaid_incident: {
         title: 'Create Sysaid Incident'
     },
     send_emails: {
@@ -111,7 +111,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_jira_incident', 'create_sysaid']
+        items: ['create_service_now_incident', 'create_jira_incident', 'create_sysaid_incident']
     },
     notify: {
         title: 'Notify',

@@ -40,12 +40,14 @@ class CybereasonAdapter(AdapterBase):
 
     @staticmethod
     def get_connection(client_config):
-        with CybereasonConnection(domain=client_config['domain'],
-                                  verify_ssl=client_config['verify_ssl'],
-                                  username=client_config['username'],
-                                  password=client_config['password'],
-                                  https_proxy=client_config.get('https_proxy')) as connection:
-            return connection
+        connection = CybereasonConnection(domain=client_config['domain'],
+                                          verify_ssl=client_config['verify_ssl'],
+                                          username=client_config['username'],
+                                          password=client_config['password'],
+                                          https_proxy=client_config.get('https_proxy'))
+        with connection:
+            pass
+        return connection
 
     def _connect_client(self, client_config):
         try:
@@ -184,6 +186,8 @@ class CybereasonAdapter(AdapterBase):
             cybereason_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
             with cybereason_obj:
                 device_raw = cybereason_obj.update_isolate_status(pylum_id, malop_id, do_isolate)
+            if not device_raw:
+                return_error('Problem isolating device', 400)
             device = self._create_device(device_raw)
             if device:
                 self._save_data_from_plugin(
