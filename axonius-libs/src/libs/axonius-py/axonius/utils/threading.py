@@ -8,7 +8,6 @@ import logging
 
 from apscheduler.executors.pool import BasePoolExecutor
 
-from axonius.logging.logger import clean_locks_from_logger
 from axonius.thread_stopper import ThreadStopper, StopThreadException
 
 import func_timeout
@@ -83,7 +82,6 @@ def run_in_thread_helper(thread: ReusableThread, method_to_call, resolve, reject
             reject(e)
         except (StopThreadException, func_timeout.exceptions.FunctionTimedOut):
             logger.exception(f'StopThread or Timeout in {method_to_call.__name__} using thread {thread}')
-            clean_locks_from_logger()
 
     thread.start(resolver)
 
