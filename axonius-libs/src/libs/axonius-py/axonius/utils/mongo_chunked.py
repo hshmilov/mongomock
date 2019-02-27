@@ -18,7 +18,7 @@ def insert_chunked(collection: Collection, chunk_size: int, data: Iterable[objec
             # the chunked data
             'chunk': chunk,
             # the index of the current chunk
-            'chunk_number': chunk,
+            'chunk_number': chunk_number,
             # the amount of data in the chunk
             'count': len(chunk),
             # the next chunk's _id
