@@ -747,8 +747,10 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 if not view.get('predefined'):
                     return True
                 for expression in view['view']['query'].get('expressions', []):
-                    adapter_matches = re.findall(r'adapters_data\.(\w*)\.', expression.get('field', ''))
-                    if adapter_matches and list(filter(lambda x: x not in fielded_plugins, adapter_matches)):
+                    adapter_matches = re.findall(r'adapters_data\.(\w*?)\.', expression.get('field', ''))
+                    if not adapter_matches:
+                        continue
+                    if list(filter(lambda x: all(x not in y for y in fielded_plugins), adapter_matches)):
                         return False
                 return True
 

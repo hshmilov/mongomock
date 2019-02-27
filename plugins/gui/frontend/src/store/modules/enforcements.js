@@ -57,27 +57,15 @@ export const enforcements = {
                 generic: [{
                     name: 'name', title: 'Name', type: 'string'
                 }, {
+                    name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
+                }, {
                     name: 'main', title: 'Main Action', type: 'string'
-                }, {
-                    name: 'success', title: 'Success Actions', type: 'array', items: {
-                        type: 'string'
-                    }
-                }, {
-                    name: 'failure', title: 'Failure Actions', type: 'array', items: {
-                        type: 'string'
-                    }
-                }, {
-                    name: 'post', title: 'Post Actions', type: 'array', items: {
-                        type: 'string'
-                    }
                 }, {
                     name: 'trigger_view', title: 'Trigger Query Name', type: 'string'
                 }, {
                     name: 'last_triggered', title: 'Last Triggered', type: 'string', format: 'date-time'
                 }, {
                     name: 'times_triggered', title: 'Times Triggered', type: 'integer'
-                }, {
-                    name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
                 }, {
                     name: 'user', title: 'User', type: 'string'
                 }]

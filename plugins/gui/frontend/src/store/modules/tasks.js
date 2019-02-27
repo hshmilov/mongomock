@@ -23,18 +23,6 @@ export const tasks = {
                 }, {
                     name: 'main', title: 'Main Action', type: 'string'
                 }, {
-                    name: 'success', title: 'Success Actions', type: 'array', items: {
-                        type: 'string'
-                    }
-                }, {
-                    name: 'failure', title: 'Failure Actions', type: 'array', items: {
-                        type: 'string'
-                    }
-                }, {
-                    name: 'post', title: 'Post Actions', type: 'array', items: {
-                        type: 'string'
-                    }
-                }, {
                     name: 'trigger_view', title: 'Trigger Query Name', type: 'string'
                 }, {
                     name: 'started_at', title: 'Started', type: 'string', format: 'date-time'
