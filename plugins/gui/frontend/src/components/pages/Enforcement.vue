@@ -175,7 +175,8 @@
                 let main = this.actions[mainCondition]
                 let mainAction = {
                     condition: mainCondition, key: mainCondition,
-                    selected: this.mainActionSelected, readOnly: this.isReadOnly
+                    selected: this.mainActionSelected, readOnly: this.isReadOnly,
+                    titlePrefix: 'action'
                 }
                 if (!main || !main.name) return mainAction
                 return {...mainAction,

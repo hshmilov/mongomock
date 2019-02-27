@@ -11,17 +11,19 @@
 
 <script>
     import xTextBox from '../../axons/layout/TextBox.vue'
-    import xButton from '../../axons/inputs/Button.vue'
 
     export default {
         name: 'x-action',
         components: {
-            xTextBox, xButton
+            xTextBox
         },
         props: {
             id: String,
             name: String,
             title: String,
+            titlePrefix: {
+                default: 'actions'
+            },
             condition: String,
             readOnly: Boolean,
             selected: Boolean,
@@ -31,7 +33,7 @@
             text() {
                 if (this.title) return this.title
 
-                return `${this.condition} actions ...`
+                return `${this.condition} ${this.titlePrefix} ...`
             },
             removable() {
                 return !this.readOnly && Boolean(this.title)
