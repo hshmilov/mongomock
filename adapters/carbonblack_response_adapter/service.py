@@ -189,7 +189,7 @@ class CarbonblackResponseAdapter(AdapterBase):
     def unisolate_device(self):
         return self._parse_isolating_request(False)
 
-    def _parse_isolating_request(self, is_isolating):
+    def _parse_isolating_request(self, do_isolate):
         try:
             if self.get_method() != 'POST':
                 return return_error('Method not supported', 405)
@@ -198,12 +198,13 @@ class CarbonblackResponseAdapter(AdapterBase):
             client_id = cb_response_dict.get('client_id')
             cb_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
             with cb_obj:
-                device_raw = cb_obj.update_isolate_status(device_id, is_isolating)
+                device_raw = cb_obj.update_isolate_status(device_id, do_isolate)
             device = self._create_device(device_raw)
-            self._save_data_from_plugin(
-                client_id,
-                {'raw': [], 'parsed': [device.to_dict()]},
-                EntityType.Devices, False)
+            if device:
+                self._save_data_from_plugin(
+                    client_id,
+                    {'raw': [], 'parsed': [device.to_dict()]},
+                    EntityType.Devices, False)
         except Exception as e:
             logger.exception(f'Problem during isolating changes')
             return_error(str(e), 500)

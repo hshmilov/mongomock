@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.fields import Field
 from cybereason_adapter.connection import CybereasonConnection
 from cybereason_adapter.client_id import get_client_id
@@ -15,6 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CybereasonAdapter(AdapterBase):
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         agent_status = Field(str, 'Agent Status')
         agent_version = Field(str, 'Agent Version')
@@ -23,6 +25,7 @@ class CybereasonAdapter(AdapterBase):
         ransomware_status = Field(str, 'Ransomware Status')
         isolated = Field(bool, 'Isolated')
         prevention_status = Field(str, 'Prevention Status')
+        pylum_id = Field(str, 'Pylum ID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -36,14 +39,17 @@ class CybereasonAdapter(AdapterBase):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
     @staticmethod
-    def _connect_client(client_config):
+    def get_connection(client_config):
+        with CybereasonConnection(domain=client_config['domain'],
+                                  verify_ssl=client_config['verify_ssl'],
+                                  username=client_config['username'],
+                                  password=client_config['password'],
+                                  https_proxy=client_config.get('https_proxy')) as connection:
+            return connection
+
+    def _connect_client(self, client_config):
         try:
-            with CybereasonConnection(domain=client_config['domain'],
-                                      verify_ssl=client_config['verify_ssl'],
-                                      username=client_config['username'],
-                                      password=client_config['password'],
-                                      https_proxy=client_config.get('https_proxy')) as connection:
-                return connection
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -108,46 +114,83 @@ class CybereasonAdapter(AdapterBase):
             'type': 'array'
         }
 
+    def _create_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            sensor_id = device_raw.get('sensorId')
+            if not sensor_id:
+                logger.warning(f'Bad device with no id {sensor_id}')
+                return None
+            try:
+                mac_raw = sensor_id.split('_')[-1]
+                if mac_raw and isinstance(mac_raw, str) and len(mac_raw) == 12:
+                    device.add_nic(mac_raw, None)
+            except Exception:
+                logger.exception('Problem getting MAC address')
+            device.pylum_id = device_raw.get('pylumId')
+            device.id = sensor_id + '_' + (device_raw.get('machineName') or '')
+            device.name = device_raw.get('machineName')
+            device.hostname = device_raw.get('fqdn') or device_raw.get('machineName')
+            device.public_ip = device_raw.get('externalIpAddress')
+            if device_raw.get('internalIpAddress'):
+                device.add_nic(None, [device_raw.get('internalIpAddress')])
+            device.site_name = device_raw.get('siteName')
+            device.ransomware_status = device_raw.get('ransomwareStatus')
+            device.isolated = device_raw.get('isolated')
+            agent_status = device_raw.get('status')
+            device.agent_status = agent_status
+            if agent_status == 'Online':
+                device.last_seen = datetime.datetime.utcnow()
+            elif isinstance(device_raw.get('disconnectionTime'), int):
+                try:
+                    device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('disconnectionTime') / 1000)
+                except Exception:
+                    logger.exception(f'Problem adding last seen to {device_raw}')
+            device.prevention_status = device_raw.get('preventionStatus')
+            device.figure_os((device_raw.get('osType') or '') + ' ' + (device_raw.get('osVersionType') or ''))
+
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching Cybereason Device for {device_raw}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            try:
-                device = self._new_device_adapter()
-                sensor_id = device_raw.get('sensorId')
-                if not sensor_id:
-                    logger.warning(f'Bad device with no id {sensor_id}')
-                    continue
-                try:
-                    mac_raw = sensor_id.split('_')[-1]
-                    if mac_raw and isinstance(mac_raw, str) and len(mac_raw) == 12:
-                        device.add_nic(mac_raw, None)
-                except Exception:
-                    logger.exception('Problem getting MAC address')
-                device.id = sensor_id + '_' + (device_raw.get('machineName') or '')
-                device.name = device_raw.get('machineName')
-                device.hostname = device_raw.get('fqdn') or device_raw.get('machineName')
-                device.public_ip = device_raw.get('externalIpAddress')
-                if device_raw.get('internalIpAddress'):
-                    device.add_nic(None, [device_raw.get('internalIpAddress')])
-                device.site_name = device_raw.get('siteName')
-                device.ransomware_status = device_raw.get('ransomwareStatus')
-                device.isolated = device_raw.get('isolated')
-                agent_status = device_raw.get('status')
-                device.agent_status = agent_status
-                if agent_status == 'Online':
-                    device.last_seen = datetime.datetime.utcnow()
-                elif isinstance(device_raw.get('disconnectionTime'), int):
-                    try:
-                        device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('disconnectionTime') / 1000)
-                    except Exception:
-                        logger.exception(f'Problem adding last seen to {device_raw}')
-                device.prevention_status = device_raw.get('preventionStatus')
-                device.figure_os((device_raw.get('osType') or '') + ' ' + (device_raw.get('osVersionType') or ''))
-
-                device.set_raw(device_raw)
+            device = self._create_device(device_raw)
+            if device:
                 yield device
-            except Exception:
-                logger.exception(f'Problem with fetching Cybereason Device for {device_raw}')
 
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent, AdapterProperty.Endpoint_Protection_Platform]
+
+    @add_rule('isolate_device', methods=['POST'])
+    def isolate_device(self):
+        return self._parse_isolating_request(True)
+
+    @add_rule('unisolate_device', methods=['POST'])
+    def unisolate_device(self):
+        return self._parse_isolating_request(False)
+
+    def _parse_isolating_request(self, do_isolate):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            cybereason_response_dict = self.get_request_data_as_object()
+            pylum_id = cybereason_response_dict.get('pylum_id')
+            malop_id = cybereason_response_dict.get('malop_id')
+            client_id = cybereason_response_dict.get('client_id')
+            cybereason_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with cybereason_obj:
+                device_raw = cybereason_obj.update_isolate_status(pylum_id, malop_id, do_isolate)
+            device = self._create_device(device_raw)
+            if device:
+                self._save_data_from_plugin(
+                    client_id,
+                    {'raw': [], 'parsed': [device.to_dict()]},
+                    EntityType.Devices, False)
+        except Exception as e:
+            logger.exception(f'Problem during isolating changes')
+            return_error(str(e), 500)
+        return '', 200

@@ -17,6 +17,12 @@ export const actionsMeta = {
     carbonblack_unisolate: {
         title: 'Unisolate in CarbonBlack'
     },
+    cybereason_isolate: {
+        title: 'Isolate in Cybereason'
+    },
+    cybereason_unisolate: {
+        title: 'Unisolate in Cybereason'
+    },
     scan_with_qualys: {
         title: 'Add to Qualys'
     },
@@ -81,7 +87,7 @@ export const actionsMeta = {
     },
     isolate_edr: {
         title: 'Isolate Device in EDR',
-        items: ['carbonblack_isolate', 'carbonblack_unisolate']
+        items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate']
     },
     scan_va: {
         title: 'Add Device to VA Scan',
