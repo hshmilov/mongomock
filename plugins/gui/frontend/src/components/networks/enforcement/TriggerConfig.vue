@@ -200,7 +200,7 @@
             viewOptions() {
                 if (!this.views || !this.config.view.entity) return
                 let views = this.views[this.config.view.entity]
-                if (!views.some(view => view.name === this.config.view.name)) {
+                if (this.config.view.name && !views.some(view => view.name === this.config.view.name)) {
                     views.push({
                         name: this.config.view.name, title: `${this.config.view.name} (deleted)`
                     })

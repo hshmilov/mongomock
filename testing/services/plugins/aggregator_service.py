@@ -398,8 +398,8 @@ class AggregatorService(PluginService):
                 }):
                     # Yes, this is slow, but meh
                     for tag in entity.get('tags', []):
-                        if tag.get('type') == 'label' and tag.get('data') is True:
-                            tag['label_value'] = tag.get('name')
+                        if tag.get('type') == 'label':
+                            tag['label_value'] = tag.get('name') if tag.get('data', False) else ''
                     col.replace_one({
                         '_id': entity['_id']
                     }, entity)
