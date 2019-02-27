@@ -3426,11 +3426,16 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             if field_value == 'No Value':
                 value_filter = f'not ({field_name} == exists(true))'
             elif isinstance(field_value, str):
-                value_filter = f'{field_name} == \"{field_value}\"'
+                value_filter = f'{field_name} == "{field_value}"'
             elif isinstance(field_value, bool):
                 value_filter = f'{field_name} == {str(field_value).lower()}'
+            elif isinstance(field_value, int):
+                value_filter = f'{field_name} == {field_value}'
+            elif isinstance(field_value, datetime):
+                value_filter = f'{field_name} == date("{field_value}")'
             else:
-                raise RuntimeError(f'unknown field_value({type(field_value)}) - {field_value}')
+                # you can't search by other types, currently unsupported
+                value_filter = ''
 
             data.append({
                 'name': field_value,
