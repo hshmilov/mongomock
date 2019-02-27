@@ -2,7 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from sysaid_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
+from axonius.clients.sysaid.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -14,6 +14,18 @@ class SysaidConnection(RESTConnection):
         super().__init__(*args, url_base_prefix='api/v1',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
+
+    def create_sysaid_incident(self, sysaid_dict):
+        description = sysaid_dict.get('description')
+        self._post('sr',
+                   body_params={'info': [{'key': 'notes',
+                                          'value': [
+                                              {'text': description}
+                                          ]
+                                          }
+                                         ]
+                                }
+                   )
 
     def _connect(self):
         if not self._username or not self._password:

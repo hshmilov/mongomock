@@ -47,6 +47,9 @@ export const actionsMeta = {
     create_jira_incident: {
         title: 'Create Jira Issue'
     },
+    create_sysaid: {
+        title: 'Create Sysaid Incident'
+    },
     send_emails: {
         title: 'Send Mail'
     },
@@ -102,7 +105,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_jira_incident']
+        items: ['create_service_now_incident', 'create_jira_incident', 'create_sysaid']
     },
     notify: {
         title: 'Notify',

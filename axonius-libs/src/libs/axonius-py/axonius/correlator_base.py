@@ -144,7 +144,7 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
             try:
                 self.link_adapters(self._entity_to_correlate, result)
             except Exception:
-                logger.warning(f'Failed linking for some reason, {result}')
+                logger.exception(f'Failed linking for some reason, {result}')
         if isinstance(result, WarningResult):
             logger.warning(f'{result.title}, {result.content}: {result.notification_type}')
             self.create_notification(result.title, result.content, result.notification_type)

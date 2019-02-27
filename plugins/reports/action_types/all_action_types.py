@@ -15,6 +15,7 @@ from reports.action_types.alert.send_emails import SendEmailsAction
 from reports.action_types.alert.send_https_log import SendHttpsLogAction
 from reports.action_types.alert.send_syslog import NotifySyslogAction
 from reports.action_types.alert.create_servicenow_incident import ServiceNowIncidentAction
+from reports.action_types.alert.create_sysaid_incident import SysaidIncidentAction
 from reports.action_types.alert.create_jira_incident import JiraIncidentAction
 
 
@@ -33,5 +34,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_service_now_incident': ServiceNowIncidentAction,
     'create_jira_incident': JiraIncidentAction,
     'enable_entities': EnableEntities,
-    'disable_entities': DisableEntities
+    'disable_entities': DisableEntities,
+    'create_sysaid': SysaidIncidentAction
 }

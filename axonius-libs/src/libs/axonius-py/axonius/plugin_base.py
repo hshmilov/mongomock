@@ -48,6 +48,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.service_now.connection import ServiceNowConnection
+from axonius.clients.sysaid.connection import SysaidConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
@@ -2136,6 +2137,28 @@ class PluginBase(Configurable, Feature):
                 logger.exception(f"Got exception creating ServiceNow incident wiht {service_now_dict}")
                 return f'Got exception creating ServiceNow incident: {str(e)}'
 
+    def create_sysaid_incident(self, description):
+        sysaid_dict = {'description': description}
+        sysaid_settings = self._sysaid_settings
+        if sysaid_settings['enabled'] is True:
+            try:
+                if sysaid_settings['use_adapter'] is True:
+                    response = self.request_remote_plugin('create_incident', 'sysaid_adapter', 'post',
+                                                          json=sysaid_dict)
+                    return response.text
+                else:
+                    sysaid_connection = SysaidConnection(domain=sysaid_settings['domain'],
+                                                         verify_ssl=sysaid_settings.get("verify_ssl"),
+                                                         username=sysaid_settings.get("username"),
+                                                         password=sysaid_settings.get("password"),
+                                                         https_proxy=sysaid_settings.get("https_proxy"))
+                    with sysaid_connection:
+                        sysaid_connection.create_sysaid_incident(sysaid_dict)
+                        return ''
+            except Exception as e:
+                logger.exception(f"Got exception creating Sysaid incident wiht {sysaid_dict}")
+                return f'Got exception creating Sysaid incident: {str(e)}'
+
     def create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                     manufacturer=None, os=None, serial_number=None,
                                     to_correlate_plugin_unique_name=None, to_correlate_device_id=None):
@@ -2318,6 +2341,7 @@ class PluginBase(Configurable, Feature):
             self._syslog_settings = current_syslog
 
         self._service_now_settings = config['service_now_settings']
+        self._sysaid_settings = config['sysaid_settings']
         self._fresh_service_settings = config['fresh_service_settings']
 
         global_ssl = config['global_ssl']
@@ -2614,6 +2638,52 @@ class PluginBase(Configurable, Feature):
                     "items": [
                         {
                             "name": "enabled",
+                            "title": "Use Sysaid",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "use_adapter",
+                            "title": "Use Sysaid Adapter",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "domain",
+                            "title": "Sysaid Domain",
+                            "type": "string"
+                        },
+                        {
+                            "name": "username",
+                            "title": "User Name",
+                            "type": "string"
+                        },
+                        {
+                            "name": "password",
+                            "title": "Password",
+                            "type": "string",
+                            "format": "password"
+                        },
+                        {
+                            "name": "verify_ssl",
+                            "title": "Verify SSL",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "https_proxy",
+                            "title": "HTTPS Proxy",
+                            "type": "string"
+                        }
+                    ],
+                    "required": [
+                        "enabled"
+                    ],
+                    "type": "array",
+                    "name": "sysaid_settings",
+                    "title": "Sysaid Settings",
+                },
+                {
+                    "items": [
+                        {
+                            "name": "enabled",
                             "title": "Execution Enabled",
                             "type": "bool",
                             "required": True
@@ -2749,6 +2819,15 @@ class PluginBase(Configurable, Feature):
     def global_settings_defaults():
         return {
             "service_now_settings": {
+                "enabled": False,
+                "use_adapter": False,
+                "domain": None,
+                "username": None,
+                "password": None,
+                "https_proxy": None,
+                "verify_ssl": True
+            },
+            "sysaid_settings": {
                 "enabled": False,
                 "use_adapter": False,
                 "domain": None,

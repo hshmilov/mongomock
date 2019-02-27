@@ -7,8 +7,9 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
+from axonius.plugin_base import add_rule, return_error
 from axonius.utils.parsing import normalize_var_name
-from sysaid_adapter.connection import SysaidConnection
+from axonius.clients.sysaid.connection import SysaidConnection
 from sysaid_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -21,6 +22,26 @@ class SysaidAdapter(AdapterBase):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
+    @add_rule('create_incident', methods=['POST'])
+    def create_sysaid_incident_in_adapter(self):
+        if self.get_method() != 'POST':
+            return return_error('Medhod not supported', 405)
+        sysaid_dict = self.get_request_data_as_object()
+        success = False
+        for client_id in self._clients:
+            conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with conn:
+                success = success or conn.create_sysaid_incident(sysaid_dict)
+                if success is True:
+                    return '', 200
+        return 'Failure', 400
+
+    @staticmethod
+    def get_connection(client_config):
+        with SysaidConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
+                              username=client_config['username'], password=client_config['password']) as connection:
+            return connection
+
     @staticmethod
     def _get_client_id(client_config):
         return get_client_id(client_config)
@@ -29,12 +50,9 @@ class SysaidAdapter(AdapterBase):
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
-    @staticmethod
-    def _connect_client(client_config):
+    def _connect_client(self, client_config):
         try:
-            with SysaidConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                                  username=client_config['username'], password=client_config['password']) as connection:
-                return connection
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
