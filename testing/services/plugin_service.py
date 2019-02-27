@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import gridfs
 import requests
@@ -252,6 +253,8 @@ class AdapterService(PluginService):
         return from_json(response.content)
 
     def trigger_clean_db(self):
+        # This help guarantee consistency for transactions
+        time.sleep(1)
         response = requests.post(self.req_url + "/trigger/clean_devices?priority=True",
                                  headers={API_KEY_HEADER: self.api_key})
 
