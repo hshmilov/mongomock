@@ -48,4 +48,3 @@ class Feature(ABC):
         """
         Return the features this plugin adds
         """
-        pass

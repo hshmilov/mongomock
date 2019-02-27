@@ -216,9 +216,8 @@ class InstanceManager:
             if (end_time - start_time) > timeout:
                 raise ValueError(f'Error, instance {instance_name} with job {job_name} and commands {commands} '
                                  f'timeout and was killed with SIGKILL. Output is {output}')
-            else:
-                raise ValueError(f'Error, instance {instance_name} with job {job_name} and '
-                                 f'commands {commands} returned rc {rc}: {output}')
+            raise ValueError(f'Error, instance {instance_name} with job {job_name} and '
+                             f'commands {commands} returned rc {rc}: {output}')
 
         return output
 

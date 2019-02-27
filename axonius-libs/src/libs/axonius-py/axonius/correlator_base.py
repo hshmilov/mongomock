@@ -174,7 +174,6 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         Which type of entity to correlate.
         This decides which DB the correlator will look at.
         """
-        pass
 
     @abstractmethod
     def _correlate(self, entities: list):
@@ -183,7 +182,6 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
         :param entities: list of full axonius entities (not entities IDs!)
         :return: list(CorrelationResult or WarningResult)
         """
-        pass
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

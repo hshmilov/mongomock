@@ -172,7 +172,6 @@ adapters/qcore_adapter/server/pump_connection.py
 adapters/qcore_adapter/server/pump_state.py
 adapters/qcore_adapter/tests/generate_pumpsim_scripts.py
 adapters/qcore_adapter/tests/protocol/cap_file_reader.py
-adapters/qcore_adapter/tests/protocol/test_response_builder.py
 adapters/qcore_adapter/tests/protocol/qtp/test_qtp_message.py
 adapters/qcore_adapter/tests/protocol/qtp/qca/test_qca_message.py
 adapters/qcore_adapter/tests/protocol/qtp/qdp/pending.py

@@ -83,12 +83,11 @@ class AzureAdClient(RESTConnection):
 
             if 'error validating credentials' in str(e).lower():
                 raise RESTException(f'Error validating credentials')
-            elif 'was not found in the directory' in str(e).lower():
+            if 'was not found in the directory' in str(e).lower():
                 raise RESTException(f'Application ID was not found in the directory')
-            elif 'not found. this may happen if there are no active subscriptions for the tenant.' in str(e).lower():
+            if 'not found. this may happen if there are no active subscriptions for the tenant.' in str(e).lower():
                 raise RESTException(f'Tenant ID {self._tenant_id} not found')
-            else:
-                raise
+            raise
 
     def _renew_token_if_needed(self):
         if datetime.now() >= self._token_expires_date:

@@ -36,7 +36,6 @@ class TriggerableStopped(Exception):
     """
     Used internally by triggerable to signal a stop
     """
-    pass
 
 
 class TriggerStates(Enum):
@@ -147,7 +146,6 @@ class Triggerable(Feature, ABC):
         :param post_json: additional JSON data received from post
         :return: ignored
         """
-        pass
 
     def _stopped(self, job_name: str):
         """
@@ -155,7 +153,6 @@ class Triggerable(Feature, ABC):
         If you want to be notified, override this
         :param job_name: the name of the job stopped
         """
-        pass
 
     def _get_state(self, job_name: str):
         """

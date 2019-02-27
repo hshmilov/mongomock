@@ -51,9 +51,9 @@ def test_users_and_full_memberof(ldap_connection: LdapConnection):
     groups = ldap_connection.get_nested_groups_for_object(users_dict['avidor'])
     # Currently, Hierarchy is "Avidor" <- "R&D" <- "Circular-Tower" <- "Tel Aviv" <- "Israel"
     # Another hierarchy is "Avidor" <- "AWS Admins" <- "Cloud Team"
-    assert any(True if 'Israel' in group else False for group in groups)
-    assert any(True if 'Cloud Team' in group else False for group in groups)
-    assert not any(True if 'VA Team' in group else False for group in groups)
+    assert any('Israel' in group for group in groups)
+    assert any('Cloud Team' in group for group in groups)
+    assert not any('VA Team' in group for group in groups)
 
 
 def test_devices(ldap_connection: LdapConnection):
@@ -170,7 +170,7 @@ def test_get_extended_devices(ldap_connection: LdapConnection):
 
     extended_keys = ldap_connection.get_extended_devices_list().keys()
 
-    assert all([True if key in extended_keys else False for key in keys])
+    assert all([key in extended_keys for key in keys])
 
 
 def test_get_exchange_servers(ldap_connection: LdapConnection):

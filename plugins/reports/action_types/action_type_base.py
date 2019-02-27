@@ -110,7 +110,6 @@ class ActionTypeBase(ABC):
         """
         The wanted schema from the config needed for the action
         """
-        pass
 
     @staticmethod
     @abstractmethod
@@ -118,7 +117,6 @@ class ActionTypeBase(ABC):
         """
         The default config to display to the user
         """
-        pass
 
     def run(self) -> ActionRunResults:
         """
@@ -167,4 +165,3 @@ class ActionTypeBase(ABC):
         """
         See self.run
         """
-        pass

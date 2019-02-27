@@ -1,3 +1,5 @@
+import time
+
 from axonius.utils.wait import wait_until
 
 from ui_tests.tests.ui_test_base import TestBase
@@ -23,6 +25,8 @@ class TestLinkUnlink(TestBase):
         wait_until(lambda: self.devices_page.count_entities() == 1)
 
         self.devices_page.select_all_page_rows_checkbox()
+        # for some reason, the pop up for "devices were linked" can be opened still or opened now
+        time.sleep(10)
         self.devices_page.open_unlink_dialog()
         wait_until(lambda: 'You are about to unlink 1 devices.' in self.devices_page.read_delete_dialog())
         self.devices_page.confirm_link()

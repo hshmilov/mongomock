@@ -53,8 +53,7 @@ class InfobloxConnection(RESTConnection):
             logger.exception(f'can not log in')
             if '401 client error' in str(e).lower():
                 raise RESTException(f'401 Unauthorized - Please check your login credentials')
-            else:
-                raise
+            raise
 
     def get_device_list(self):
         fields_to_return = 'served_by,starts,ends,address,binding_state,hardware,client_hostname,network_view'

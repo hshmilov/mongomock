@@ -481,7 +481,6 @@ else:
         This is called right before running the docker.
         This is a good place to put any DB upgrades.
         """
-        pass
 
     @contextmanager
     def contextmanager(self, *, should_delete=True, take_ownership=False):
