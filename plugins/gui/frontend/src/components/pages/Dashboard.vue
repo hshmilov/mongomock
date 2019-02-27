@@ -148,7 +148,7 @@
                         return `${Math.round(leftToRun / thresholds[i - 1])} ${units[i - 1]}`
                     }
                 }
-                return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
+                return `${Math.round(leftToRun / thresholds[thresholds.length - 1])} ${units[units.length - 1]}`
             },
             isEmptySystem() {
                 if (this.deviceDiscovery.seen === undefined || this.dashboardFirstUse === null) return null
