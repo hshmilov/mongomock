@@ -34,7 +34,6 @@ from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
 import OpenSSL
 
-from axonius.adapter_base import AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
