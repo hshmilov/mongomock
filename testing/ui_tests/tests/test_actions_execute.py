@@ -2,7 +2,6 @@ import time
 import datetime
 from typing import List
 
-import pytest
 from retrying import retry
 from flaky import flaky
 
@@ -27,7 +26,7 @@ def create_enforcement_name(number, enforcement_name=ENFORCEMENT_NAME):
     return f'{enforcement_name} {number}'
 
 
-@retry(stop_max_attempt_number=1200, wait_fixed=100)
+@retry(stop_max_attempt_number=5 * 60, wait_fixed=1000)
 def _verify_in_syslog_data(syslog_service: SyslogService, text):
     last_log = list(syslog_service.get_syslog_data())[-10:]
     assert any(bytes(text, 'ascii') in l for l in last_log)
@@ -102,7 +101,6 @@ class TestAlertActions(TestBase):
         self.enforcements_page.add_send_email()
         self.enforcements_page.find_missing_email_server_notification()
 
-    @pytest.mark.skip(f'AX-3352 Flaky!')
     def test_syslog_operation_multiple_actions(self):
         syslog_server = SyslogService()
         syslog_server.take_process_ownership()
