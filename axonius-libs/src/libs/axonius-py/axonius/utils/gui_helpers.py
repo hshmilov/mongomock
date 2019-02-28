@@ -3,9 +3,10 @@ import io
 import json
 import logging
 import itertools
+from collections import defaultdict
 from datetime import datetime
 from enum import Enum
-from typing import NamedTuple, Iterable, List
+from typing import NamedTuple, Iterable, List, Dict
 
 import cachetools
 import dateutil
@@ -352,10 +353,38 @@ def beautify_user_entry(user):
     return user
 
 
+def _normalize_db_projection_for_aggregation(projection: Dict[str, int]):
+    """
+    If you specify a projection as follows to $project in an aggregation stage:
+    {
+        'tags.data': 1,
+        'tags.data.something': 1
+    }
+    Mongo yells:
+    "Invalid $project :: caused by :: specification contains two conflicting paths."
+
+    Poor mongo, can't handle some real world queries...
+    Solution: Eliminate the specific-most projection, and keep the outermost projection.
+    """
+    indexed = defaultdict(list)
+    for k in projection.keys():
+        splitted = k.split('.')
+        splitted_len = len(splitted)
+        if splitted_len > 1:
+            indexed[splitted_len].append(splitted)
+
+    for k, v in indexed.items():
+        for entry in v:
+            for i in range(1, k):
+                if '.'.join(entry[:i]) in projection:
+                    del projection['.'.join(entry)]
+                    continue
+
+
 def _perform_aggregation(entity_views_db,
                          limit, skip, view_filter, sort,
                          projection, entity_type,
-                         default_sort, run_over_projection):
+                         default_sort):
     """
     Performs the required query on the DB using the aggregation method.
     This method is more reliable as it allows for the DB to use the disk by it is much slower in most cases.
@@ -364,9 +393,7 @@ def _perform_aggregation(entity_views_db,
     :return:
     """
     pipeline = [{'$match': view_filter}]
-    if projection and run_over_projection:
-        for field in FIELDS_TO_PROJECT:
-            projection[field] = 1
+    if projection:
         pipeline.append({'$project': projection})
     if sort:
         pipeline.append({'$sort': sort})
@@ -446,6 +473,10 @@ def get_entities(limit: int, skip: int,
     if projection:
         for field, v in projection.items():
             splitted = field.split('.')
+
+            if field in ['adapters', 'labels']:
+                continue
+
             if splitted[0] == SPECIFIC_DATA:
                 splitted[0] = 'adapters'
                 db_projection['.'.join(splitted)] = v
@@ -465,6 +496,8 @@ def get_entities(limit: int, skip: int,
         for field in FIELDS_TO_PROJECT:
             db_projection[field] = 1
 
+    _normalize_db_projection_for_aggregation(db_projection)
+
     entity_views_db = PluginBase.Instance._get_appropriate_view(history_date, entity_type)
     view_filter = get_historized_filter(view_filter, history_date)
     logger.debug(f'Fetching data for entity {entity_type.name}')
@@ -480,7 +513,7 @@ def get_entities(limit: int, skip: int,
             data_list = _perform_aggregation(entity_views_db,
                                              limit, skip, view_filter, sort,
                                              db_projection, entity_type,
-                                             default_sort, run_over_projection)
+                                             default_sort)
         except Exception:
             logger.exception("Exception when using perform aggregation")
             raise

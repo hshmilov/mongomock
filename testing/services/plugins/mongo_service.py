@@ -58,6 +58,7 @@ class MongoService(WeaveService):
         return ['mongod',
                 '--keyFile', '/docker-entrypoint-initdb.d/mongodb.key',
                 '--replSet', 'axon-cluster',
+                '--config', '/etc/mongod.conf',
                 f'--wiredTigerCacheSizeGB={cache_size}'
                 ]
 
@@ -66,6 +67,7 @@ class MongoService(WeaveService):
     FROM mongo:4.0
     
     COPY docker-entrypoint-initdb.d/* /docker-entrypoint-initdb.d/
+    COPY mongod.conf /etc/mongod.conf
     RUN chmod 600 /docker-entrypoint-initdb.d/*
     RUN chown mongodb:mongodb /docker-entrypoint-initdb.d/*
     """[1:]
