@@ -413,6 +413,12 @@
             width: 100%;
             height: 100%;
 
+            .header {
+                .x-title .text {
+                    white-space: pre-wrap;
+                }
+            }
+
             .body {
                 .content-header {
                     padding-bottom: 4px;
