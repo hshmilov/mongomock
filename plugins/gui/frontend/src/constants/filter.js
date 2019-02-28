@@ -58,7 +58,8 @@ export const compOps = {
     },
     tag: {
         contains,
-        equals
+        equals,
+        exists: exists_str
     },
     image: {
         exists: exists_str
