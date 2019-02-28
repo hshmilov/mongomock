@@ -15,6 +15,30 @@ from axonius.fields import Field, ListField
 
 DESKTOP_CHASIS_VALUE = ['3', '4', '6', '7', '15']
 LAPTOP_CHASIS_VALUE = ['8', '9', '10', '21']
+CHASIS_VALUE_FULL_DICT = {'1': 'Virtual Machine',
+                          '2': 'Blade Server',
+                          '3': 'Desktop',
+                          '4': 'Low-Profile Desktop',
+                          '5': 'Pizza Box',
+                          '6': 'Mini Tower',
+                          '7': 'Tower',
+                          '8': 'Portable',
+                          '9': 'Laptop',
+                          '10': 'Notebook',
+                          '11': 'Hand Held',
+                          '12': 'Docking Station',
+                          '13': 'All-in-One',
+                          '14': 'Sub Notebook',
+                          '15': 'Space Saving Chassis',
+                          '16': 'Ultra Small Form Factor',
+                          '17': 'Server Tower Chassis',
+                          '18': 'Mobile Device in Docking Station',
+                          '19': 'Sub-Chassis',
+                          '20': 'Bus-Expansion Chassis',
+                          '21': 'Peripheral Chassis',
+                          '22': 'Storage Chassis',
+                          '23': 'Rack Mount Unit',
+                          '24': 'Sealed-Case PC'}
 
 
 class SccmAdapter(AdapterBase):
@@ -32,6 +56,7 @@ class SccmAdapter(AdapterBase):
         malware_last_quick_scan = Field(datetime.datetime, 'Malware Protecion Last Quick Scan')
         malware_enabled = Field(str, 'Malware Protecion Enabled Status')
         desktop_or_laptop = Field(str, 'Desktop Or Laptop', enum=['Desktop', 'Laptop'])
+        chasis_value = Field(str, 'Chasis Value')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -330,6 +355,8 @@ class SccmAdapter(AdapterBase):
                     if isinstance(asset_chasis_dict.get(device_raw.get('ResourceID')), dict):
                         chasis_data = asset_chasis_dict.get(device_raw.get('ResourceID'))
                         chasis_types = chasis_data.get('ChassisTypes0')
+                        if chasis_types and isinstance(chasis_types, str):
+                            device.chasis_value = CHASIS_VALUE_FULL_DICT.get(chasis_types)
                         if chasis_types and str(chasis_types) in DESKTOP_CHASIS_VALUE:
                             device.desktop_or_laptop = 'Desktop'
                         elif chasis_types and str(chasis_types) in LAPTOP_CHASIS_VALUE:
