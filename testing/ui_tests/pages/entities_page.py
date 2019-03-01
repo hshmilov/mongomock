@@ -226,6 +226,7 @@ class EntitiesPage(Page):
     def open_search_list(self):
         self.key_down_arrow_down(self.find_query_search_input())
 
+    @retry(wait_fixed=500, stop_max_attempt_number=30)
     def select_query_by_name(self, query_name):
         el = self.wait_for_element_present_by_xpath(self.QUERY_SEARCH_DROPDOWN_XPATH.format(query_name_text=query_name))
         el.click()
