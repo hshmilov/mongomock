@@ -17,8 +17,6 @@ from reports.action_types.alert.send_syslog import NotifySyslogAction
 from reports.action_types.alert.create_servicenow_incident import ServiceNowIncidentAction
 from reports.action_types.alert.create_sysaid_incident import SysaidIncidentAction
 from reports.action_types.alert.create_jira_incident import JiraIncidentAction
-from reports.action_types.base.cybereason_isolate import CybereasonIsolateAction
-from reports.action_types.base.cybereason_unisolate import CybereasonUnisolateAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -26,8 +24,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'tag': TagAllEntitiesAction,
     'carbonblack_isolate': CarbonblackIsolateAction,
     'carbonblack_unisolate': CarbonblackUnisolateAction,
-    'cybereason_isolate': CybereasonIsolateAction,
-    'cybereason_unisolate': CybereasonUnisolateAction,
     'untag': UntagAllEntitiesAction,
     'run_executable_windows': RunExecutable,
     'run_command_windows': RunCmd,
