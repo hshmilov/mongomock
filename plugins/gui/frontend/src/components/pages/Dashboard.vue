@@ -19,7 +19,7 @@
                         :removable="!isReadOnly" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
                     <div class="card-history" v-if="chart.metric !== 'timeline'">
                         <x-historical-date v-model="chartsCurrentlyShowing[chart.uuid]" @clear="clearDate(chart.uuid)"
-                                           @input="confirmPickDate(chart.uuid, chart.name)" />
+                                           @input="confirmPickDate(chart.uuid, chart.name)" />card-history
                     </div>
                     <component :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
                 </x-card>

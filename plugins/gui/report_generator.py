@@ -38,6 +38,7 @@ class ReportGenerator(object):
             'pie_gradient': self._get_template('summary/pie_gradient'),
             'histogram': self._get_template('summary/histogram_chart'),
             'histogram_bar': self._get_template('summary/histogram_bar'),
+            'summary': self._get_template('summary/summary'),
             'view': self._get_template('view_data/view'),
             'table': self._get_template('view_data/table'),
             'row': self._get_template('view_data/table_row'),
@@ -152,6 +153,8 @@ class ReportGenerator(object):
                             continue
                         svg2png(bytestring=byte_string, write_to=query_pie_filename)
                         content = f'<img src="{query_pie_filename}">'
+                    elif custom_chart['view'] == ChartViews.summary.name:
+                        content = self._create_summary_chart(custom_chart['data'])
                     if not content:
                         continue
                     charts_added += 1
@@ -292,6 +295,22 @@ class ReportGenerator(object):
             'defs': self.templates['pie_gradient'].render({'colour1': colours[1], 'colour2': colours[3]}),
             'content': '\n'.join(slices)
         })
+
+    def _create_summary_chart(self, data):
+        """
+        Create a bar for each item of given data, with width according to its count and relative to the largest data.
+        Combine create bars to a histogram, with remainder indicating amount of bars not shown due to limit.
+
+        :param data:
+        :param limit: How many bars to show - textual takes up double row per bar
+        :param textual:
+        :return:
+        """
+        value = data[0].get('value', 0)
+        title = data[0].get('name', 0)
+
+        return self.templates['summary'].render({'value': value,
+                                                 'title': title})
 
     def _create_adapter(self, queries, views):
         """

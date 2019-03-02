@@ -309,3 +309,29 @@ a {
     text-align: center;
     float: right;
 }
+
+.summary-field {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    flex-direction: column;
+    line-height: 24px;
+    font-size: 14px;
+}
+
+.summary-field .value {
+    font-size: 60px;
+    line-height: 72px;
+    display: inline-block;
+    color: #0076FF;
+    text-align: left;
+    width: 105px;
+}
+
+.summary-field .title {
+    display: inline-block;
+    max-width: 160px;
+    text-align: left;
+    margin: auto;
+    margin-left: 12px;
+    text-transform: capitalize;
+}
