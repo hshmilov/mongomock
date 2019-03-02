@@ -2,6 +2,8 @@ import logging
 
 import cachetools
 
+from axonius.utils.threading import singlethreaded
+
 logger = logging.getLogger(f'axonius.{__name__}')
 from pyVmomi.VmomiSupport import Enum as pyVmomiEnum
 from retrying import retry
@@ -214,6 +216,7 @@ class vCenterApi(object):
                            Type='ESXHost',
                            Details=host)
 
+    @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=120))
     def __get_tagdata_from_tagid(self, tag_id: str) -> TagModel:
         """

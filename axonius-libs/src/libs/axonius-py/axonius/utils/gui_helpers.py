@@ -25,6 +25,7 @@ from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
     parse_filter_non_entities
+from axonius.utils.threading import singlethreaded
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -768,6 +769,7 @@ def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str
     field_schema['items'] = list(valid_items())
 
 
+@singlethreaded()
 @cachetools.cached(cachetools.LRUCache(maxsize=len(EntityType)))
 def _get_generic_fields(entity_type: EntityType):
     """

@@ -1,9 +1,9 @@
 import concurrent.futures
 import multiprocessing
 import queue
-import sys
+from collections import defaultdict
 from datetime import datetime
-from threading import RLock
+from threading import RLock, Lock
 import logging
 
 from apscheduler.executors.pool import BasePoolExecutor
@@ -11,7 +11,6 @@ from apscheduler.executors.pool import BasePoolExecutor
 from axonius.thread_stopper import ThreadStopper, StopThreadException
 
 import func_timeout
-
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -226,3 +225,32 @@ class LazyMultiLocker(object):
         :return:
         """
         return any(x.locked() for x in self.__locks.values())
+
+
+def singlethreaded():
+    """
+    Makes sure the inner function will only run once at any time, with respect to the arguments
+    given to the function.
+
+    For example, if you run func(1) and func(1) on two threads, one of them will wait until the other finishes.
+    But you are free to run func(1) and func(2) on two threads.
+
+    Classical usage is with cachetools, for example:
+    @singlethreaded()
+    @cachetools.cached(cachetools.LFUCache(maxsize=1))
+    def my_method(x):
+        pass
+    """
+
+    def wrap(func):
+        locker = defaultdict(Lock)
+
+        def actual_wrapper(*args, **kwargs):
+            from axonius.utils.revving_cache import hashkey
+
+            with locker[hashkey(func, *args, **kwargs)]:
+                return func(*args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap

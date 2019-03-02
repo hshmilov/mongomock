@@ -98,7 +98,7 @@ from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
-                                     run_in_executor_helper, ThreadPoolExecutorReusable)
+                                     run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -903,6 +903,7 @@ class PluginBase(Configurable, Feature):
             # There's no point in issuing many requests for this,
             return self.__get_available_plugins_from_core_locked()
 
+    @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
     def __get_available_plugins_from_core_locked(self):
         """
@@ -934,6 +935,7 @@ class PluginBase(Configurable, Feature):
                                                                      content=content,
                                                                      seen=False)).inserted_id
 
+    @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=100, ttl=20))
     def get_plugin_by_name(self, plugin_name, node_id=None, verify_single=True, verify_exists=True):
         """
@@ -2282,22 +2284,26 @@ class PluginBase(Configurable, Feature):
     # Some collection for the general public
 
     @property
+    @singlethreaded()
     @cachetools.cached(cachetools.LFUCache(maxsize=1))
     def enforcements_collection(self):
         return self._get_collection('reports', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
 
     @property
+    @singlethreaded()
     @cachetools.cached(cachetools.LFUCache(maxsize=1))
     def enforcement_tasks_runs_collection(self):
         return self._get_collection('triggerable_history',
                                     db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
 
     @property
+    @singlethreaded()
     @cachetools.cached(cachetools.LFUCache(maxsize=1))
     def enforcements_saved_actions_collection(self):
         return self._get_collection('saved_actions', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
 
     @property
+    @singlethreaded()
     @cachetools.cached(cachetools.LFUCache(maxsize=1))
     def enforcement_tasks_action_results_id_lists(self):
         return self._get_collection('action_results',
