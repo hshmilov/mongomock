@@ -295,21 +295,22 @@ class TestAdapters(TestBase):
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
             self.adapters_page.add_server(ad_client1_details)
+            self.settings_page.switch_to_page()
+            self.base_page.run_discovery()
 
     @staticmethod
-    def _are_ad_entities_present(page, field):
+    def _are_ad_entities_present(page):
         page.switch_to_page()
         page.wait_for_table_to_load()
         page.run_filter_query(page.AD_ADAPTER_FILTER)
         page.wait_for_table_to_load()
-        all_entity_field_values = page.get_column_data(field)
-        return len(all_entity_field_values) > 1
+        return page.count_entities() > 0
 
     def _are_ad_devices_present(self):
-        return self._are_ad_entities_present(self.devices_page, self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+        return self._are_ad_entities_present(self.devices_page)
 
     def _are_ad_users_present(self):
-        return self._are_ad_entities_present(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
+        return self._are_ad_entities_present(self.users_page)
 
     def _check_ad_adapter_client_deletion(self, with_entities_deletion):
         # Prepare test
@@ -318,36 +319,38 @@ class TestAdapters(TestBase):
 
         # Execute action
 
-        self.adapters_page.clean_adapter_servers(AD_NAME, with_entities_deletion)
-
-        # check action was executed
-
-        if with_entities_deletion:
-            wait_until(lambda: not self._are_ad_devices_present(), total_timeout=60 * 10)
-            wait_until(lambda: not self._are_ad_users_present(), total_timeout=60 * 10)
-        else:
-            assert self._are_ad_devices_present()
-            assert self._are_ad_users_present()
-
-    def _check_delete_adapter(self, associated_entities):
-        self.adapters_page.switch_to_page()
-        self.adapters_page.wait_for_spinner_to_end()
         try:
-            try:
-                self._check_ad_adapter_client_deletion(with_entities_deletion=associated_entities)
-            finally:
-                self.adapters_page.clean_adapter_servers(AD_NAME)
+            self.adapters_page.clean_adapter_servers(AD_NAME, with_entities_deletion)
+            self.adapters_page.wait_for_spinner_to_end()
+
+            # check action was executed
+
+            if with_entities_deletion:
+                wait_until(lambda: not self._are_ad_devices_present(), total_timeout=60 * 10)
+                wait_until(lambda: not self._are_ad_users_present(), total_timeout=60 * 10)
+            else:
+                assert self._are_ad_devices_present()
+                assert self._are_ad_users_present()
+
         finally:
             self.adapters_page.switch_to_page()
             self.adapters_page.wait_for_spinner_to_end()
             self.adapters_page.add_server(ad_client1_details)
+            self.adapters_page.wait_for_server_green()
+
+            # The discovery is here to make sure that the adapter is idle once we finish
+            self.settings_page.switch_to_page()
+            self.base_page.run_discovery()
 
     def test_delete_adapter_without_associated_entities(self):
-        self.adapters_page.add_server(ad_client1_details)
-        self._check_delete_adapter(False)
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self._check_ad_adapter_client_deletion(with_entities_deletion=False)
 
     def test_delete_adapter_with_associated_entities(self):
-        self._check_delete_adapter(True)
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self._check_ad_adapter_client_deletion(with_entities_deletion=True)
 
     def test_add_server(self):
         self.adapters_page.add_server(ad_client1_details)
