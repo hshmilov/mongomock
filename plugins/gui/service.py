@@ -3465,24 +3465,44 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         # Query and data collections according to given module
         data_collection = self._entity_db_map[entity]
         field_name = field['name']
-        if field_name.startswith(SPECIFIC_DATA):
-            adapter_field_name = 'adapters' + field_name[len(SPECIFIC_DATA):]
-            tags_field_name = 'tags' + field_name[len(SPECIFIC_DATA):]
-        elif field_name.startswith(ADAPTERS_DATA):
-            adapter_field_name = 'adapters' + field_name[len(ADAPTERS_DATA):]
-            tags_field_name = 'tags' + field_name[len(ADAPTERS_DATA):]
+        splitted = field_name.split('.')
+
+        additional_elemmatch_data = {}
+
+        if splitted[0] == SPECIFIC_DATA:
+            processed_field_name = '.'.join(splitted[1:])
+        elif splitted[0] == ADAPTERS_DATA:
+            processed_field_name = 'data.' + '.'.join(splitted[2:])
+            additional_elemmatch_data = {
+                PLUGIN_NAME: splitted[1]
+            }
+        else:
+            raise Exception(f'Can\'t handle this field {field_name}')
+
+        adapter_field_name = 'adapters.' + processed_field_name
+        tags_field_name = 'tags.' + processed_field_name
 
         base_view = {'query': {'filter': ''}}
         base_query = {
             '$or': [
                 {
-                    adapter_field_name: {
-                        '$exists': True
+                    'adapters': {
+                        '$elemMatch': {
+                            processed_field_name: {
+                                '$exists': True
+                            },
+                            **additional_elemmatch_data
+                        }
                     }
                 },
                 {
-                    tags_field_name: {
-                        '$exists': True
+                    'tags': {
+                        '$elemMatch': {
+                            processed_field_name: {
+                                '$exists': True
+                            },
+                            **additional_elemmatch_data
+                        }
                     }
                 }
             ]
@@ -3496,6 +3516,7 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
                 ]
             }
             base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and ' if view else ''
+
         field_compare = 'true' if field['type'] == 'bool' else 'exists(true)'
         base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == {field_compare}'
         if for_date:
@@ -3510,7 +3531,9 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
             }
         results = data_collection.find(base_query, projection={
             adapter_field_name: 1,
-            tags_field_name: 1
+            tags_field_name: 1,
+            f'adapters.{PLUGIN_NAME}': 1,
+            f'tags.{PLUGIN_NAME}': 1
         })
         count = 0
         sigma = 0
