@@ -242,11 +242,9 @@ a {
     margin-top: 1px;
 }
 .title {
-    /*white-space: nowrap;*/
-    /*text-overflow: ellipsis;*/
-    /*overflow: hidden;*/
     width: 100%;
     display: inline-block;
+    overflow-wrap: break-word;
 }
 
 .box {
