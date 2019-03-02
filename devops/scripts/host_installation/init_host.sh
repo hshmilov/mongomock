@@ -84,12 +84,14 @@ curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 echo "Setting system-wide settings"
 sudo timedatectl set-timezone UTC
+
 if [ $(cat /etc/environment | grep LC_ALL | wc -l) -ne 0 ]; then
     echo "Locale settings exist"
 else
     echo export LC_ALL=\"en_US.UTF-8\" >> /etc/environment
     echo export LC_CTYPE=\"en_US.UTF-8\" >> /etc/environment
 fi
+
 if [ $(cat /etc/passwd | grep netconfig | wc -l) -ne 0 ]; then
     echo "User netconfig exists"
 else
@@ -110,6 +112,20 @@ else
     service ssh restart
     echo "Done setting user netconfig"
 fi
+
+# adding customer user
+if [ $(cat /etc/passwd | grep customer | wc -l) -ne 0 ]; then
+    echo "User customer exists"
+else
+    echo "Setting customer user"
+    useradd customer
+    mkdir /home/customer
+    chown customer:customer /home/customer
+    /usr/sbin/usermod -s /bin/bash customer
+    /usr/sbin/usermod -aG sudo customer
+    echo customer:customer | /usr/sbin/chpasswd
+fi
+
 echo "Installing swap"
 if [ $(cat /etc/fstab | grep swapfile | wc -l) -ne 0 ]; then
     echo "Swap file exists"
