@@ -11,7 +11,7 @@ class CheckpointR80Connection(RESTConnection):
     """ rest client for CheckpointR80 adapter """
 
     def __init__(self, *args, cp_domain: str = None, **kwargs):
-        super().__init__(*args, url_base_prefix='web_api/v1.4',
+        super().__init__(*args, url_base_prefix='web_api',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
         self._cp_domain = cp_domain
@@ -19,10 +19,12 @@ class CheckpointR80Connection(RESTConnection):
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
+        body_params = {'user': self._username,
+                       'password': self._password}
+        if self._cp_domain:
+            body_params['domain'] = self._cp_domain
         response = self._post('login',
-                              body_params={'user': self._username,
-                                           'password': self._password,
-                                           'domain': self._cp_domain})
+                              body_params=body_params)
         if 'sid' not in response:
             raise RESTException(f'Got bad response with no token {response}')
         self._session_headers['X-chkp-sid'] = response['sid']

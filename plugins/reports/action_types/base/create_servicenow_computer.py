@@ -79,10 +79,10 @@ class ServiceNowComputerAction(ActionTypeBase):
                     manufacturer_raw = data_from_adapter.get('device_manufacturer')
             # Make sure that we have name
             if name_raw is None and asset_name_raw is None:
-                results[entry['internal_axon_id']] = EntityResult(False, 'Device With No Name')
+                results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
                 continue
             if found_snow:
-                results[entry['internal_axon_id']] = EntityResult(False, 'Device Already With ServiceNow Adapter')
+                results.append(EntityResult(entry['internal_axon_id'], False, 'Device Already With ServiceNow Adapter'))
                 continue
 
             # If we don't have hostname we use asset name

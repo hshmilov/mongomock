@@ -32,7 +32,7 @@ class ShodanAdapter(ScannerAdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            with ShodanConnection(apikey=client_config['apikey'],
+            with ShodanConnection(apikey=client_config['apikey'], domain_prefered=client_config.get('domain'),
                                   https_proxy=client_config.get('https_proxy')) as connection:
                 if client_config.get('cidr'):
                     connection.get_cidr_info(client_config['cidr'].split(',')[0])
@@ -99,6 +99,11 @@ class ShodanAdapter(ScannerAdapterBase):
         """
         return {
             'items': [
+                {
+                    'name': 'domain',
+                    'title': 'Shodan Domain',
+                    'type': 'string'
+                },
                 {
                     'name': 'cidr',
                     'title': 'CIDR',

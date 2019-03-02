@@ -264,8 +264,6 @@ class CorrelatorEngineBase(ABC):
         # it's now assured that if two adapter_devices have the same plugin_name and id, they are consecutive.
         for a, b in pairwise(all_adapter_devices):
             if a['plugin_name'] == b['plugin_name'] and a['data']['id'] == b['data']['id']:
-                assert a[PLUGIN_UNIQUE_NAME] != b[PLUGIN_UNIQUE_NAME], \
-                    f"Two exact adapters were found, {a[PLUGIN_UNIQUE_NAME]} and {b[PLUGIN_UNIQUE_NAME]}"
                 yield CorrelationResult(associated_adapters=[(a[PLUGIN_UNIQUE_NAME], a['data']['id']),
                                                              (b[PLUGIN_UNIQUE_NAME], b['data']['id'])],
                                         data={

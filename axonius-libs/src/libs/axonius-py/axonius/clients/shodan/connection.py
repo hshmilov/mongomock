@@ -4,8 +4,8 @@ from axonius.clients.rest.connection import RESTConnection
 
 
 class ShodanConnection(RESTConnection):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, url_base_prefix='shodan', domain='api.shodan.io',
+    def __init__(self, *args, domain_prefered=None, **kwargs):
+        super().__init__(*args, url_base_prefix='shodan', domain=domain_prefered or 'api.shodan.io',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)

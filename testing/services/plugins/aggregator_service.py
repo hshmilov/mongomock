@@ -42,7 +42,7 @@ class AggregatorService(PluginService):
         if self.db_schema_version < 8:
             self._update_schema_version_8()
 
-        if self.db_schema_version != 7:
+        if self.db_schema_version != 8:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
