@@ -6,11 +6,17 @@ from retrying import retry
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class CustomRetryOperation(Exception):
+    """
+    Raise this when you want to retry when within a @mongo_retry for non transaction reasons
+    """
+
+
 def retry_if_mongo_error(exception):
     """
     Return whether or not the exception originates from Mongo
     """
-    return isinstance(exception, (OperationFailure, ConnectionFailure))
+    return isinstance(exception, (OperationFailure, ConnectionFailure, CustomRetryOperation))
 
 
 def mongo_retry():

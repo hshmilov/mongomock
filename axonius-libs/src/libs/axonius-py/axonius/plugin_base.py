@@ -94,7 +94,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.hash import get_preferred_internal_axon_id_from_dict
 from axonius.utils.json_encoders import IteratorJSONEncoder
-from axonius.utils.mongo_retries import mongo_retry
+from axonius.utils.mongo_retries import mongo_retry, CustomRetryOperation
 from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
@@ -1994,19 +1994,25 @@ class PluginBase(Configurable, Feature):
         :param adapter_id: The ID of the given adapt
         """
         _entities_db = self._entity_db_map[entity]
+        db_filter = {
+            'adapters': {
+                '$elemMatch': {
+                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
+                    'data.id': adapter_id
+                }
+            }
+        }
         with _entities_db.start_session() as session:
             with session.start_transaction():
-                axonius_entity = session.find_one({
-                    'adapters': {
-                        '$elemMatch': {
-                            PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                            'data.id': adapter_id
-                        }
-                    }
-                })
+                axonius_entity = session.find_one(db_filter)
                 if not axonius_entity:
                     logger.debug(f'{entity}, {plugin_unique_name}, {adapter_id} not found for deletion')
-                    return  # deleting an empty adapter shouldn't be hard
+
+                    # If the transaction is playing with us
+                    if _entities_db.count_documents(db_filter, limit=1):
+                        raise CustomRetryOperation()
+
+                    return
 
                 # if the condition below isn't met it means
                 # that the current adapterentity is the last adapter in the axoniusentity
