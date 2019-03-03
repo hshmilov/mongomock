@@ -345,12 +345,13 @@ class GuiService(PluginService):
             })
             for user in regular_users:
                 permissions = user['permissions']
-                if user['role_name'] == PREDEFINED_ROLE_ADMIN:
+                if user.get('role_name') == PREDEFINED_ROLE_ADMIN:
                     default_perm = PermissionLevel.ReadWrite.name
                 else:
                     default_perm = PermissionLevel.Restricted.name
                 permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
-                del permissions['Alerts']
+                if 'Alerts' in permissions:
+                    del permissions['Alerts']
                 users_col.update_one({
                     '_id': user['_id']
                 }, {
@@ -370,7 +371,8 @@ class GuiService(PluginService):
                 else:
                     default_perm = PermissionLevel.Restricted.name
                 permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
-                del permissions['Alerts']
+                if 'Alerts' in permissions:
+                    del permissions['Alerts']
                 roles_col.update_one({
                     '_id': role['_id']
                 }, {
