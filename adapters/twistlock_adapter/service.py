@@ -174,7 +174,7 @@ class TwistlockAdapter(AdapterBase):
             logger.exception(f'Problem with defender device {device_raw}')
             return None
 
-    # pylint: disable=R0912
+    # pylint: disable=R0912,R1702
     def _create_host_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -190,37 +190,47 @@ class TwistlockAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting OS for {device_raw}')
             try:
-                packages = (device_info.get('packages') or {}).get('pkgs')
+                device_data = device_info.get('data')
+                if not device_data or not isinstance(device_data, dict):
+                    device_data = {}
+                packages = device_data.get('packages')
                 if packages and isinstance(packages, list):
                     for package in packages:
                         try:
-                            device.add_installed_software(name=package.get('name'),
-                                                          version=package.get('version'),
-                                                          cve_count=package.get('cveCount'),
-                                                          sw_license=package.get('license'))
+                            if isinstance(package, dict) and isinstance(package.get('pkgs'), list):
+                                for pkg_item in package.get('pkgs'):
+                                    try:
+                                        device.add_installed_software(name=pkg_item.get('name'),
+                                                                      version=pkg_item.get('version'),
+                                                                      cve_count=pkg_item.get('cveCount'),
+                                                                      sw_license=pkg_item.get('license'))
+                                    except Exception:
+                                        logger.exception(f'Problem with package item')
                         except Exception:
                             logger.exception(f'Problem adding package {package}')
             except Exception:
                 logger.exception(f'Problem adding sw to {device_raw}')
-            compliance_distribution = device_info.get('complianceDistribution')
-            if compliance_distribution and isinstance(compliance_distribution, dict):
-                device.compliance_distribution = VulnerabilitiesCount()
-                for key, value in compliance_distribution.items():
+            compliance_distribution_raw = device_info.get('complianceDistribution')
+            if compliance_distribution_raw and isinstance(compliance_distribution_raw, dict):
+                compliance_distribution = VulnerabilitiesCount()
+                for key, value in compliance_distribution_raw.items():
                     try:
                         # pylint: disable=E1137
-                        device.compliance_distribution[key] = value
+                        compliance_distribution[key] = value
                     except Exception:
                         logger.exception(f'Problem with key {key} and value {value}')
+                device.compliance_distribution = compliance_distribution
 
-            cve_vulnerability_distribution = device_info.get('cveVulnerabilityDistribution')
-            if cve_vulnerability_distribution and isinstance(cve_vulnerability_distribution, dict):
-                device.cve_vulnerability_distribution = VulnerabilitiesCount()
-                for key, value in cve_vulnerability_distribution.items():
+            cve_vulnerability_distribution_raw = device_info.get('cveVulnerabilityDistribution')
+            if cve_vulnerability_distribution_raw and isinstance(cve_vulnerability_distribution_raw, dict):
+                cve_vulnerability_distribution = VulnerabilitiesCount()
+                for key, value in cve_vulnerability_distribution_raw.items():
                     try:
                         # pylint: disable=E1137
-                        device.cve_vulnerability_distribution[key] = value
+                        cve_vulnerability_distribution[key] = value
                     except Exception:
                         logger.exception(f'Problem with key {key} and value {value}')
+                device.cve_vulnerability_distribution = cve_vulnerability_distribution
 
             device.set_raw(device_raw)
             return device
