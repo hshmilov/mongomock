@@ -27,7 +27,7 @@ def create_enforcement_name(number, enforcement_name=ENFORCEMENT_NAME):
 
 @retry(stop_max_attempt_number=5 * 60, wait_fixed=1000)
 def _verify_in_syslog_data(syslog_service: SyslogService, text):
-    last_log = list(syslog_service.get_syslog_data())[-10:]
+    last_log = list(syslog_service.get_syslog_data())[-100:]
     assert any(bytes(text, 'ascii') in l for l in last_log)
 
 
