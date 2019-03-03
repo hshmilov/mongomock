@@ -70,7 +70,7 @@ LAST_SEEN_STATS = {
         {
             'percentage': 0.01,
             'function': mock_utils.last_seen_generator,
-            'args': (365, 300)
+            'args': (365, 30)
         }
     ],
     MockNetworkDeviceProperties.ChefDevice: [
@@ -336,8 +336,15 @@ def windows_device_creator(i: int, network: MockNetwork, device: MockNetworkDevi
         device.add_property(MockNetworkDeviceProperties.QualysScansDevice)
     if random.randint(1, 100) <= 92:
         device.add_property(MockNetworkDeviceProperties.CiscoMerakiDevice)
+
     if random.randint(1, 1000) <= 996:
         device.add_property(MockNetworkDeviceProperties.EpoDevice)
+        device.add_installed_software(name='McAfee ePO', version='5.9.0.732', vendor='McAfee')
+    else:
+        # from the windows devices on which EPO is not installed, take 10% of devices,
+        # and still put  it in the installed software list.
+        if random.randint(1, 100) <= 10:
+            device.add_installed_software(name='McAfee ePO', version='5.9.0.732', vendor='McAfee')
 
     if random.randint(1, 10) <= 4:
         device.add_property(MockNetworkDeviceProperties.SplunkDevice)

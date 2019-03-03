@@ -132,4 +132,5 @@ DOCKER_PORTS = {
     'diag':                             6666,  # reserved
     'code42-adapter':                   6667,
     'mongo':                            27017,
+    'mockingbird-db':                   28017
 }

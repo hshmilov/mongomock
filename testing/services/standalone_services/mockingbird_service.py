@@ -75,4 +75,4 @@ class MockingbirdService(WeaveService):
 
     @property
     def exposed_ports(self):
-        return [(DOCKER_PORTS[self.name], 443)]
+        return [(DOCKER_PORTS[self.name], 443), (DOCKER_PORTS[self.name + '-db'], 27017)]
