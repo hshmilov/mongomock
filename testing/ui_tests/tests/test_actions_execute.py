@@ -1,4 +1,3 @@
-import time
 import datetime
 from typing import List
 
@@ -40,8 +39,6 @@ class TestAlertActions(TestBase):
             self.enforcements_page.create_notifying_enforcement(alert_name, COMMON_ALERT_QUERY)
             result.append(alert_name)
         self.base_page.run_discovery()
-        # we need to wait for the notifications in the UI to refresh
-        time.sleep(31)
         return result
 
     def test_notification_sanity(self):
@@ -72,6 +69,7 @@ class TestAlertActions(TestBase):
 
     def test_single_notification(self):
         notification_name = self.create_notifications(1)[0]
+        self.notification_page.wait_for_count(1)
 
         self.devices_page.switch_to_page()
         self.notification_page.click_notification_peek()
@@ -81,6 +79,7 @@ class TestAlertActions(TestBase):
 
     def test_notification_timezone(self):
         self.create_notifications(1)
+        self.notification_page.wait_for_count(1)
         self.notification_page.switch_to_page()
         wait_until(func=self.notification_page.get_rows_from_notification_table, total_timeout=60 * 5)
         rows = self.notification_page.get_rows_from_notification_table()
