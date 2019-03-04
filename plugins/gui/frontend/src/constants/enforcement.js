@@ -47,6 +47,9 @@ export const actionsMeta = {
     enable_entities: {
         title: 'Enable users or devices'
     },
+    slack_send_message: {
+        title: 'Send Slack Message'
+    },
     disable_entities: {
         title: 'Disable users or devices'
     },
@@ -118,7 +121,7 @@ export const actionsMeta = {
     },
     notify: {
         title: 'Notify',
-        items: ['send_emails', 'notify_syslog', 'send_https_log', 'create_notification']
+        items: ['send_emails', 'notify_syslog', 'send_https_log', 'create_notification', 'slack_send_message']
     },
     axonius: {
         title: 'Axonius Utilities',

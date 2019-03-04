@@ -17,6 +17,7 @@ from reports.action_types.alert.send_syslog import NotifySyslogAction
 from reports.action_types.alert.create_servicenow_incident import ServiceNowIncidentAction
 from reports.action_types.alert.create_sysaid_incident import SysaidIncidentAction
 from reports.action_types.alert.create_jira_incident import JiraIncidentAction
+from reports.action_types.alert.send_slack_message import SlackSendMessageAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -35,5 +36,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_jira_incident': JiraIncidentAction,
     'enable_entities': EnableEntities,
     'disable_entities': DisableEntities,
-    'create_sysaid_incident': SysaidIncidentAction
+    'create_sysaid_incident': SysaidIncidentAction,
+    'slack_send_message': SlackSendMessageAction
 }
