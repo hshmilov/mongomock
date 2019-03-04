@@ -41,8 +41,10 @@ class AggregatorService(PluginService):
             self._update_schema_version_7()
         if self.db_schema_version < 8:
             self._update_schema_version_8()
+        if self.db_schema_version < 9:
+            self._update_schema_version_9()
 
-        if self.db_schema_version != 8:
+        if self.db_schema_version != 9:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -407,6 +409,29 @@ class AggregatorService(PluginService):
             self.db_schema_version = 8
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 8. Details: {e}')
+            traceback.print_exc()
+
+    def _update_schema_version_9(self):
+        """
+        We clear history before the rebuilds because the format has changed.
+        Yes, we lose history, but it's not critical according to the bigboss.
+        """
+        try:
+            for entity_type in EntityType:
+                global_fields_for_entity = self.db.client['aggregator'][entity_type.value + '_fields']
+                global_fields_for_entity.delete_many({
+                    'name': 'dynamic',
+                    'schema': {
+                        '$exists': True
+                    },
+                    PLUGIN_UNIQUE_NAME: {
+                        '$exists': False
+                    }
+                })
+
+            self.db_schema_version = 9
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 9. Details: {e}')
             traceback.print_exc()
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
