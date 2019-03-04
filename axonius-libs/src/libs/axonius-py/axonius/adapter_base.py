@@ -317,7 +317,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
 
         skipped_count = 0
-        users_ids = []
+        users_ids = set()
 
         cutoff_last_seen, _ = self.__user_time_cutoff()
 
@@ -329,7 +329,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if parsed_user_id in users_ids:
                 logger.error(f"Error! user with id {parsed_user_id} already yielded! skipping")
                 continue
-            users_ids.append(parsed_user_id)
+            users_ids.add(parsed_user_id)
 
             parsed_user = parsed_user.to_dict()
             parsed_user = self._remove_big_keys(parsed_user, parsed_user.get('id', 'unidentified user'))
