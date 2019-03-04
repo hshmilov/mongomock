@@ -196,6 +196,9 @@ class RESTConnection(ABC):
     def _put(self, *args, **kwargs):
         return self._do_request('PUT', *args, **kwargs)
 
+    def _patch(self, *args, **kwargs):
+        return self._do_request('PATCH', *args, **kwargs)
+
     # pylint: disable=R0912, R0913, R0914
     def _do_request(self, method, name, url_params=None, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,

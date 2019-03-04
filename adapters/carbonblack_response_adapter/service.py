@@ -207,5 +207,5 @@ class CarbonblackResponseAdapter(AdapterBase):
                     EntityType.Devices, False)
         except Exception as e:
             logger.exception(f'Problem during isolating changes')
-            return_error(str(e), 500)
+            return return_error(str(e), 500)
         return '', 200

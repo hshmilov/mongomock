@@ -45,10 +45,17 @@ class ShodanAdapter(ScannerAdapterBase):
                 csv_data = make_dict_from_csv(csv_data)
                 if 'CIDR' not in csv_data.fieldnames:
                     raise ClientConnectionException('The CSV file is missing the CIDR column')
+                dns_field_name = None
+                for field_name in csv_data.fieldnames:
+                    if field_name and field_name.replace(' ', '').lower() == 'dnsname':
+                        dns_field_name = field_name
                 cidr_list = []
                 for cidr_raw in csv_data:
                     if cidr_raw.get('CIDR'):
-                        cidr_list.append([cidr_raw.get('CIDR'), cidr_raw.get('DNS Name')])
+                        cidr_dns_name = None
+                        if dns_field_name:
+                            cidr_dns_name = cidr_raw.get(dns_field_name)
+                        cidr_list.append([cidr_raw.get('CIDR'), cidr_dns_name])
                 return connection, cidr_list
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(

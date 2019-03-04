@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from carbonblack_defense_adapter.connection import CarbonblackDefenseConnection
@@ -23,9 +24,33 @@ class CarbonblackDefenseAdapter(AdapterBase):
         policy_name = Field(str, 'Policy Name')
         public_ip = Field(str, 'Public IP')
         email = Field(str, 'Email')
+        basic_device_id = Field(str, 'Basic ID')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
+
+    @add_rule('change_policy', methods=['POST'])
+    def change_policy(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            cb_defense_dict = self.get_request_data_as_object()
+            device_id = cb_defense_dict.get('device_id')
+            client_id = cb_defense_dict.get('client_id')
+            policy_name = cb_defense_dict.get('policy_name')
+            cb_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with cb_obj:
+                device_raw = cb_obj.change_policy(device_id, policy_name)
+            device = self._create_device(device_raw)
+            if device:
+                self._save_data_from_plugin(
+                    client_id,
+                    {'raw': [], 'parsed': [device.to_dict()]},
+                    EntityType.Devices, False)
+        except Exception as e:
+            logger.exception(f'Problem during isolating changes')
+            return return_error(str(e), 500)
+        return '', 200
 
     def _get_client_id(self, client_config):
         return client_config['domain']
@@ -33,20 +58,20 @@ class CarbonblackDefenseAdapter(AdapterBase):
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
+    @staticmethod
+    def get_connection(client_config):
+        connection = CarbonblackDefenseConnection(domain=client_config['domain'],
+                                                  verify_ssl=client_config['verify_ssl'],
+                                                  https_proxy=client_config.get('https_proxy'),
+                                                  apikey=client_config['apikey'],
+                                                  connector_id=client_config['connector_id'])
+        with connection:
+            pass  # check that the connection credentials are valid
+        return connection
+
     def _connect_client(self, client_config):
         try:
-            apikey = client_config['apikey']
-            connector_id = client_config['connector_id']
-            connection = CarbonblackDefenseConnection(domain=client_config['domain'],
-                                                      verify_ssl=client_config['verify_ssl'],
-                                                      https_proxy=client_config.get('https_proxy'),
-                                                      headers={'Content-Type': 'application/json',
-                                                               'Accept': 'application/json',
-                                                               'X-Auth-Token': f'{apikey}/{connector_id}'},
-                                                      url_base_prefix='integrationServices/v3/')
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -109,54 +134,61 @@ class CarbonblackDefenseAdapter(AdapterBase):
             'type': 'array'
         }
 
+    def _create_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('deviceId')
+            if device_id is not None and device_id != '':
+                device.id = str(device_id) + (device_raw.get('name') or '')
+            else:
+                logger.warning(f'Bad device ID {device_raw}')
+                return None
+            device.basic_device_id = device_id
+            hostname = device_raw.get('name')
+            if hostname and '\\' in hostname:
+                split_hostname = hostname.split('\\')
+                device.hostname = split_hostname[1]
+                device.domain = split_hostname[0]
+                device.part_of_domain = True
+            else:
+                device.hostname = hostname
+            try:
+                device.figure_os((device_raw.get('deviceType') or '') + ' ' + (device_raw.get('osVersion') or ''))
+            except Exception:
+                logger.exception(f'Problem adding os to :{device_raw}')
+            try:
+                macs = (device_raw.get('macAddress') or '').split(',')
+                for mac in macs:
+                    device.add_nic(mac, None)
+            except Exception:
+                logger.exception(f'Problem adding macs to {device_raw}')
+            try:
+                if device_raw.get('lastInternalIpAddress'):
+                    device.add_nic(None, (device_raw.get('lastInternalIpAddress') or '').split(','))
+            except Exception:
+                logger.exception('Problem with adding nic to CarbonblackDefense device')
+            try:
+                device.last_seen = datetime.datetime.fromtimestamp(max((device_raw.get('lastReportedTime') or 0),
+                                                                       (device_raw.get('lastContact') or 0)) / 1000)
+            except Exception:
+                logger.exception('Problem getting Last seen in CarbonBlackDefense')
+            device.av_status = str(device_raw.get('avStatus'))
+            device.status = device_raw.get('status')
+            device.email = device_raw.get('email')
+            device.sensor_version = device_raw.get('sensorVersion')
+            device.policy_name = device_raw.get('policyName')
+            device.public_ip = device_raw.get('lastExternalIpAddress')
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching CarbonblackDefense Device {device_raw}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            try:
-                device = self._new_device_adapter()
-                device_id = device_raw.get('deviceId')
-                if device_id is not None and device_id != '':
-                    device.id = str(device_id) + (device_raw.get('name') or '')
-                else:
-                    logger.warning(f'Bad device ID {device_raw}')
-                    continue
-                hostname = device_raw.get('name')
-                if hostname and '\\' in hostname:
-                    split_hostname = hostname.split('\\')
-                    device.hostname = split_hostname[1]
-                    device.domain = split_hostname[0]
-                    device.part_of_domain = True
-                else:
-                    device.hostname = hostname
-                try:
-                    device.figure_os((device_raw.get('deviceType') or '') + ' ' + (device_raw.get('osVersion') or ''))
-                except Exception:
-                    logger.exception(f'Problem adding os to :{device_raw}')
-                try:
-                    macs = (device_raw.get('macAddress') or '').split(',')
-                    for mac in macs:
-                        device.add_nic(mac, None)
-                except Exception:
-                    logger.exception(f'Problem adding macs to {device_raw}')
-                try:
-                    if device_raw.get('lastInternalIpAddress'):
-                        device.add_nic(None, (device_raw.get('lastInternalIpAddress') or '').split(','))
-                except Exception:
-                    logger.exception('Problem with adding nic to CarbonblackDefense device')
-                try:
-                    device.last_seen = datetime.datetime.fromtimestamp(max((device_raw.get('lastReportedTime') or 0),
-                                                                           (device_raw.get('lastContact') or 0)) / 1000)
-                except Exception:
-                    logger.exception('Problem getting Last seen in CarbonBlackDefense')
-                device.av_status = str(device_raw.get('avStatus'))
-                device.status = device_raw.get('status')
-                device.email = device_raw.get('email')
-                device.sensor_version = device_raw.get('sensorVersion')
-                device.policy_name = device_raw.get('policyName')
-                device.public_ip = device_raw.get('lastExternalIpAddress')
-                device.set_raw(device_raw)
+            device = self._create_device(device_raw)
+            if device:
                 yield device
-            except Exception:
-                logger.exception(f'Problem with fetching CarbonblackDefense Device {device_raw}')
 
     @classmethod
     def adapter_properties(cls):

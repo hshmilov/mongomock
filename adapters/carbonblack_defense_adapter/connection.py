@@ -1,12 +1,21 @@
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.exception import RESTException
 from carbonblack_defense_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CarbonblackDefenseConnection(RESTConnection):
+
+    def __init__(self, *args, connector_id: str = None, **kwargs):
+        self._connector_id = connector_id
+        super().__init__(*args, url_base_prefix='integrationServices/v3/',
+                         headers={'Content-Type': 'application/json',
+                                  'Accept': 'application/json',
+                                  }, **kwargs)
+        self._permanent_headers['X-Auth-Token'] = f'{self._apikey}/{self._connector_id}'
 
     def _connect(self):
         self._get('device')
@@ -24,3 +33,10 @@ class CarbonblackDefenseConnection(RESTConnection):
                                                            'start': str(row_number)})['results']
         except Exception:
             logger.exception(f'Problem getting device in row number: {row_number}')
+
+    def change_policy(self, device_id, policy_name):
+        response = self._patch(f'device/{device_id}',
+                               body_params={'policyName': policy_name})
+        if not response.get('success') is True:
+            raise RESTException(f'Bad response for policy change: {response[:300]}')
+        return response.get('deviceInfo')
