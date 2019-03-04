@@ -33,6 +33,7 @@ DOCKER_PORTS = {
     'infinite-sleep-adapter':           5116,
     'service-now-adapter':              5117,
     'crowd-strike-adapter':             5118,
+    'stresstest-users-adapter':         5119,
     'claroty-adapter':                  5123,
     'cisco-meraki-adapter':             5130,
     'tenable-io-adapter':               5141,
