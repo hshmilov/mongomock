@@ -154,8 +154,10 @@ def set_export_status(export_identifier):
         json_result = bm.get_export_running_log(export_identifier)
     else:
         status = request.form["status"]
+        git_hash = request.form["git_hash"]
 
-        json_result = (bm.update_export_status(export_identifier, "completed" if int(status) == 0 else "failed"))
+        json_result = (
+            bm.update_export_status(export_identifier, "completed" if int(status) == 0 else "failed", git_hash))
 
     return jsonify({"result": json_result, "current": {}})
 

@@ -852,6 +852,7 @@
             ["Client Name", exp['client_name']],
             ["Comments", exp['comments']],
             ["Status", exp['status']],
+            ["Git Hash", exp['git_hash']],
             ["Last Modified", exp['date']],
             ["Download Link", exp['download_link']],
             ["ami ID", exp['ami_id']],

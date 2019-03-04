@@ -105,6 +105,19 @@
       "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `branch`}} {{user `fork`}} {{user `password`}} {{user `build_name`}}"
     },
     {
+      "type": "shell",
+      "inline": [
+        "cd /home/ubuntu/cortex",
+        "git log --oneline -1 --format=%H > /home/ubuntu/git_hash.txt"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "/home/ubuntu/git_hash.txt",
+      "direction": "download",
+      "destination": "./axonius_{{user `build_name`}}_git_hash.txt"
+    },
+    {
       "type": "file",
       "source": "/home/ubuntu/cortex/axonius_{{user `build_name`}}.py",
       "direction": "download",

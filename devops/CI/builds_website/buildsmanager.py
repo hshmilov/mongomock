@@ -510,12 +510,13 @@ class BuildsManager(object):
             "cd /home/ubuntu/exports/",
             "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_generate_installer.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME),
+            "git_hash=$(cat ./axonius_{0}_git_hash.txt)".format(version),
             "/usr/local/bin/packer build -force -var build_name={0} -var fork={1} -var branch={2} -var image={3} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
                 version, fork, branch, OVA_IMAGE_NAME),
             "return_code=$?",
             "/home/ubuntu/.local/bin/aws s3 cp ./build_{0}.log s3://{1}/".format(
                 version, S3_BUCKET_NAME_FOR_EXPORT_LOGS),
-            "curl -k -v -F \"status=$return_code\" https://{1}/exports/{0}/status".format(
+            "curl -k -v -F \"status=$return_code\" -F \"git_hash=$git_hash\" https://{1}/exports/{0}/status".format(
                 version, BUILDS_HOST)
         ])
 
@@ -550,7 +551,7 @@ class BuildsManager(object):
         with ssh.open_sftp().open('/home/ubuntu/exports/build_{0}.log'.format(export_version), 'r') as remote_file:
             return {'value': remote_file.read().decode('utf-8')}
 
-    def update_export_status(self, export_id, status):
+    def update_export_status(self, export_id, status, git_hash):
         try:
             log = self.s3_client.get_object(Bucket=S3_BUCKET_NAME_FOR_EXPORT_LOGS, Key='build_{0}.log'.format(export_id))[
                 'Body'].read().decode('utf-8')
@@ -564,7 +565,8 @@ class BuildsManager(object):
                                                                      "download_link": "<a href='http://{0}.s3-accelerate.amazonaws.com/{1}/{1}/{1}_export.ova'>Click here</a>".format(
                                                                          S3_BUCKET_NAME_FOR_OVA,
                                                                          export['version']),
-                                                                     "ami_id": ami_id}})
+                                                                     "ami_id": ami_id,
+                                                                     "git_hash": git_hash}})
         return export is not None
 
     def deleteConfiguration(self, object_id):
