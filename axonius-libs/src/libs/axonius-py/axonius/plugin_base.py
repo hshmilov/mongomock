@@ -636,12 +636,13 @@ class PluginBase(Configurable, Feature):
                         current_dynamic_schema['items'].append(old_dynamic_field)
 
             # Save the new dynamic schema
-            fields_collection.update({
+            fields_collection.update_one({
                 'name': 'dynamic',
                 PLUGIN_UNIQUE_NAME: self.plugin_unique_name
             }, {
-                'name': 'dynamic',
-                'schema': current_dynamic_schema
+                '$set': {
+                    'schema': current_dynamic_schema
+                }
             }, upsert=True)
 
             # extend the overall schema
