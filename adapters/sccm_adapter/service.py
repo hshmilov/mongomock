@@ -89,6 +89,18 @@ class SccmAdapter(AdapterBase):
         try:
             client_data.connect()
 
+            asset_encryption_dict = dict()
+            try:
+                for asset_encryption_data in client_data.query(consts.ENCRYPTION_QUERY):
+                    asset_id = asset_encryption_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_encryption_dict:
+                        asset_encryption_dict[asset_id] = []
+                    asset_encryption_dict[asset_id].append(asset_encryption_data)
+            except Exception:
+                logger.exception(f'Problem getting query asset_encryption_dict')
+
             asset_chasis_dict = dict()
             try:
                 for asset_chasis_data in client_data.query(consts.CHASIS_QUERY):
@@ -200,12 +212,14 @@ class SccmAdapter(AdapterBase):
 
             if not self._last_seen_timedelta:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
-                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict,\
-                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict, asset_chasis_dict
+                    yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
+                        asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
-                        asset_users_dict, asset_top_dict, asset_malware_dict, asset_lenovo_dict, asset_chasis_dict
+                        asset_users_dict, asset_top_dict, asset_malware_dict, \
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict
         finally:
             client_data.logout()
 
@@ -252,7 +266,7 @@ class SccmAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
             asset_bios_dict, asset_users_dict, asset_top_dict, \
-            asset_malware_dict, asset_lenovo_dict, asset_chasis_dict in\
+            asset_malware_dict, asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict in\
                 devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -270,6 +284,24 @@ class SccmAdapter(AdapterBase):
                     if users_raw and isinstance(users_raw, list):
                         device.last_used_users = [user_raw.get('UniqueUserName') for user_raw in users_raw
                                                   if user_raw.get('UniqueUserName')]
+                except Exception:
+                    logger.exception(f'Problem adding users to {device_raw}')
+
+                try:
+                    encryptions_raw = asset_encryption_dict.get(device_raw.get('ResourceID'))
+                    if encryptions_raw and isinstance(encryptions_raw, list):
+                        for drive_enc_data in encryptions_raw:
+                            try:
+                                is_encrypted = None
+                                if str(drive_enc_data.get('ProtectionStatus0')) == '1':
+                                    is_encrypted = True
+                                elif str(drive_enc_data.get('ProtectionStatus0')) == '0':
+                                    is_encrypted = False
+
+                                device.add_hd(path=drive_enc_data.get('DriveLetter0'),
+                                              is_encrypted=is_encrypted)
+                            except Exception:
+                                logger.exception(f'Problem getting enc data for {drive_enc_data}')
                 except Exception:
                     logger.exception(f'Problem adding users to {device_raw}')
                 device.resource_id = str(device_raw.get('ResourceID'))
