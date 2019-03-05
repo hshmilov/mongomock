@@ -92,7 +92,7 @@ teamcity-messages==1.21
 pefile==2018.8.8
 psutil==5.4.8
 dataclasses==0.6
-dataclasses-json==0.2.0
+dataclasses-json==0.2.2
 proxmoxer==1.0.3
 pip-licenses==1.10.0
 deepdiff==3.3.0
