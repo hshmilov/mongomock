@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import auto, Enum
-from typing import List, Optional, Iterable
+from typing import List, Optional, Dict
 
 from bson import ObjectId
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ class AlertActionResult(DataClassJsonMixin):
     # Whether or not the execution was successful
     successful: bool
     # Execution result
-    status: object
+    status: dict
 
 
 @dataclass(frozen=True)
@@ -24,11 +24,11 @@ class EntityResult(DataClassJsonMixin):
     # Whether or not the execution was successful
     successful: bool
     # Execution result
-    status: object
+    status: dict
 
 
 # This represents each entity in the results of an execution of an action
-EntitiesResult = Iterable[EntityResult]
+EntitiesResult = List[EntityResult]
 
 
 # This is the result of an action that was ran
@@ -69,7 +69,7 @@ class SavedActionData(DataClassJsonMixin):
     # For trigger summary actions, look at inheritors of ActionTypeAlert in action_types/*
     action_name: str
     # The config that will be passed (self._config in ActionTypeBase)
-    config: object
+    config: Dict[str, str]
     # The type of the action.
     # This should be SavedActionType, but enum works so bad with dataclasses, I won't bother fixing this up
     action_type: Optional[str] = None

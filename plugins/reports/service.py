@@ -127,7 +127,7 @@ class ReportsService(Triggerable, PluginBase):
         def get_action(name) -> ActionInRecipe:
             if not name:
                 return name
-            return ActionInRecipe.schema().load(self.__saved_actions_collection.find_one({
+            return ActionInRecipe.schema().make_actioninrecipe(self.__saved_actions_collection.find_one({
                 'name': name
             }, projection={
                 '_id': 0

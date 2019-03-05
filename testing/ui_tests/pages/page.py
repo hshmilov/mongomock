@@ -498,6 +498,7 @@ class Page:
     @staticmethod
     def __upload_file_on_element(element, file_path):
         element.send_keys(file_path)
+        time.sleep(2)  # AX-3475
 
     @staticmethod
     def upload_file_on_element(element, file_content):

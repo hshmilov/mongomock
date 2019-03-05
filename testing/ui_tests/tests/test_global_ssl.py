@@ -58,7 +58,7 @@ class TestGlobalSSL(TestBase):
         # Test that wrong hostname produces an error
         self.settings_page.set_global_ssl_settings('badhostname', cert_data, private_data)
         self.settings_page.click_save_button()
-        self.settings_page.find_toaster(
+        self.settings_page.wait_for_toaster(
             'Hostname does not match the hostname in the certificate file, hostname in given cert is localhost')
 
         # Test that the right hostname works

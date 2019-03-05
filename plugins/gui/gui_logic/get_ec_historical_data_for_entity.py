@@ -11,7 +11,7 @@ class TaskActionData(DataClassJsonMixin):
     action_name: str
     action_type: str
     success: bool
-    additional_info: object
+    additional_info: dict
 
 
 @dataclass(frozen=True)
