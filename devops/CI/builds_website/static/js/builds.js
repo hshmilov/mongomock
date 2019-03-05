@@ -237,7 +237,8 @@
             ["EC2 ID", inst['ec2']['id']],
             ["State", inst['ec2']['state']],
             ["Instance & System Status", instance_and_system_status],
-            ["Image", inst['ec2']['image_description']],
+            ["Image Name", inst['ec2']['image_name']],
+            ["Image Description", inst['ec2']['image_description']],
             ["Instance Type", inst['ec2']['instance_type']],
             ["Key Name", inst['ec2']['key_name']],
             ["Private IP Address", inst['ec2']['private_ip_address']],
@@ -584,14 +585,49 @@
     function new_instance_by_release_code_change(code_choice_option) {
         code_source = code_choice_option;
         if (code_choice_option === "Release") {
+            // Showing the correct Branch, Release or AMI ID select
             $("#new_instance_fork_and_branch_select_cell").hide();
+            $("#new_instance_ami_select_cell").hide();
             $("#new_instance_release_select_cell").show();
+
+            // Remove Warning
+            $("#export_instance_warning").hide();
+
+            // Setting up the default  for Releases
+            $("#new_vm_empty_server").prop("checked", false);
+            $("#new_vm_empty_server").prop("disabled", false);
+            $("#new_vm_set_credentials").prop("checked", true);
+            empty_server_checkbox(false)
             new_instance_modal_branch_change($("#new_vm_release")[0].value, 'axonius/cortex')
-        }
-        else {
+        } else if ((code_choice_option === "Branch")) {
+            // Showing the correct Branch, Release or AMI ID select
             $("#new_instance_release_select_cell").hide();
+            $("#new_instance_ami_select_cell").hide();
             $("#new_instance_fork_and_branch_select_cell").show()
+
+            // Remove Warning
+            $("#export_instance_warning").hide();
+
+            // Setting up the default "Configurations" for "Branch"
+            $("#new_vm_empty_server").prop("checked", false);
+            $("#new_vm_empty_server").prop("disabled", false);
+            $("#new_vm_set_credentials").prop("checked", true);
+            empty_server_checkbox(false)
             new_instance_modal_branch_change($("#new_vm_branch")[0].value, $("#new_vm_fork")[0].value)
+        } else {
+            // Showing the correct Branch, Release or AMI ID select
+            $("#new_instance_release_select_cell").hide();
+            $("#new_instance_fork_and_branch_select_cell").hide();
+            $("#new_instance_ami_select_cell").show();
+
+            // Show Warning!
+            $("#export_instance_warning").show();
+
+            // Setting up the default "Configurations" for "AMI"
+            $("#new_vm_empty_server").prop("checked", false);
+            $("#new_vm_set_credentials").prop("checked", false);
+            $("#new_vm_empty_server").prop("disabled", true);
+            empty_server_checkbox(true)
         }
     }
     function load_release_list(page_number) {
@@ -613,6 +649,15 @@
                 }
             })
             .fail(exception_modal)
+    }
+    function load_ami_list(exports_data) {
+        var select = $("#new_vm_ami");
+
+        exports_data.forEach(function (i) {
+            if (i.ami_id) {
+                select.append($("<option>").attr("value", i.ami_id).text(i.version));
+            }
+        });
     }
     function load_fork_list() {
         var select = $("#new_vm_fork").html("");
@@ -697,10 +742,13 @@
         if (code_source === "Release") {
             data["fork"] = 'axonius/cortex';
             data["branch"] = $("#new_vm_release")[0].value;
-        }
-        else {
+        } else if (code_source === "Branch") {
             data["fork"] = $("#new_vm_fork")[0].value;
             data["branch"] = $("#new_vm_branch")[0].value;
+        } else {
+            data["fork"] = '';
+            data["branch"] = '';
+            data["image_id"] = $("#new_vm_ami")[0].value;
         }
 
         data["name"] = $("#new_vm_name")[0].value;
@@ -1306,6 +1354,12 @@
                 }
             }
         });
+        flush_url("/exports", function(data) {
+            current_exports = data["result"];
+            rewrite_exports_table();
+            update_export_details(0);
+            load_ami_list(current_exports)
+        });
         flush_url("/instances?instance_type=Demo-VM", function(data) {
             current_demos = data["current"];
             rewrite_demos_table();
@@ -1316,11 +1370,6 @@
                     break;
                 }
             }
-        });
-        flush_url("/exports", function(data) {
-            current_exports = data["result"];
-            rewrite_exports_table();
-            update_export_details(0);
         });
         flush_url("/exportsinprogress", function(data) {
             current_exports_in_progress = data["current"];

@@ -240,6 +240,7 @@ def instances():
             raise ValueError("Got unsupported ec2 type")
 
         security_group = request.form['security_group']
+        image_id = request.form.get('image_id', None)
 
         json_result = (bm.add_instance(
             request.form["name"],
@@ -250,8 +251,16 @@ def instances():
             request.form["branch"],
             request.form["public"] == 'true',
             vm_type=instance_type,
-            security_group_id=security_group
+            security_group_id=security_group,
+            image_id=image_id
         ))
+
+        if image_id is not None:
+            st.post_channel(
+                f'owner "{session["builds_user_full_name"]}" has raised an instance that will be connected to chef.',
+                channel='test_machines',
+                attachments=[InstanceMonitor.get_instance_attachment(
+                    bm.getInstances(ec2_id=json_result["instance_id"], vm_type=instance_type)[0], [])])
 
     return jsonify({"result": json_result, "current": bm.getInstances(vm_type=instance_type)})
 

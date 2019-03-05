@@ -420,12 +420,15 @@
                         </td>
                     </tr>
                     <tr>
-                        <td width="20%">Branch or Release</td>
+                        <td width="20%">Branch, Release or AMI ID</td>
                         <td>
                             <input style="width: 30px" type="radio" name="fork_or_release" value="Branch" checked="checked" onchange="new_instance_by_release_code_change(this.value)">
                             Branch &nbsp;
                             <input style="width: 30px" type="radio" name="fork_or_release" value="Release" onchange="new_instance_by_release_code_change(this.value)">
                             Release
+                            <input style="width: 30px" type="radio" name="fork_or_release" value="AMI Image" onchange="new_instance_by_release_code_change(this.value)">
+                            AMI Image
+                            <p id="export_instance_warning" style="font-weight: bold; color: red" hidden>Warning: This instance will register to chef automatically!!</p>
                         </td>
                     </tr>
                     <tr id="new_instance_fork_and_branch_select_cell">
@@ -449,6 +452,13 @@
                         <td width="20%">Release</td>
                         <td>
                             <select class="form-control" id='new_vm_release' onchange="new_instance_modal_branch_change(this.value, 'axonius/cortex')">
+                            </select>
+                        </td>
+                    </tr>
+                    <tr id="new_instance_ami_select_cell" hidden="hidden">
+                        <td width="20%">Export</td>
+                        <td>
+                            <select class="form-control" id='new_vm_ami'>
                             </select>
                         </td>
                     </tr>

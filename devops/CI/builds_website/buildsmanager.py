@@ -30,6 +30,7 @@ DEFAULT_SECURITY_GROUP = "sg-8e00dce6"
 
 IMAGE_ID = "ami-0653e888ec96eab9b"  # Official 'Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-11-14'
 HD_SIZE_FOR_INSTANCE_IN_GIB = 100
+HD_SIZE_FOR_INSTANCE_IN_GIB_FOR_EXPORT_BASED_INSTANCES = 196
 OVA_IMAGE_NAME = "Axonius-operational-export-106"
 
 S3_EXPORT_PREFIX = "vm-"
@@ -364,6 +365,7 @@ class BuildsManager(object):
                      vm_type=BUILDS_INSTANCE_VM_TYPE, security_group_id=DEFAULT_SECURITY_GROUP):
         """As the name suggests, make a new instance."""
 
+        image_id = image_id or IMAGE_ID
         # Give names to our instance and volume
         name_tag = [
             {"Key": "Name", "Value": "{0}-{1}".format(vm_type, name)},
@@ -393,7 +395,7 @@ class BuildsManager(object):
                     "DeviceName": "/dev/sda1",
                     "Ebs": {
                         "DeleteOnTermination": True,
-                        "VolumeSize": HD_SIZE_FOR_INSTANCE_IN_GIB
+                        "VolumeSize": HD_SIZE_FOR_INSTANCE_IN_GIB if image_id == IMAGE_ID else HD_SIZE_FOR_INSTANCE_IN_GIB_FOR_EXPORT_BASED_INSTANCES
                     }
                 }
             ],
