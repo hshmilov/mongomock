@@ -83,6 +83,7 @@ class AggregatorService(Triggerable, PluginBase):
                  ], background=True)
             db.create_index([('internal_axon_id', pymongo.ASCENDING)], background=True)
             db.create_index([('short_axon_id', pymongo.ASCENDING)], background=True)
+            db.create_index([('accurate_for_datetime', pymongo.ASCENDING)], background=True)
 
         def common_db_indexes(db):
             db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)], background=True)
