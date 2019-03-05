@@ -382,7 +382,8 @@ class EntitiesPage(Page):
 
     def is_query_error(self, text=None):
         if not text:
-            return self.wait_for_element_absent_by_css(self.QUERY_ERROR_CSS)
+            self.wait_for_element_absent_by_css(self.QUERY_ERROR_CSS)
+            return True
         return text == self.driver.find_element_by_css_selector(self.QUERY_ERROR_CSS).text
 
     def click_save_query(self):
@@ -648,7 +649,8 @@ class EntitiesPage(Page):
 
     def is_custom_error(self, error_text=None):
         if not error_text:
-            return self.wait_for_element_absent_by_css(self.CUSTOM_DATA_ERROR_CSS)
+            self.wait_for_element_absent_by_css(self.CUSTOM_DATA_ERROR_CSS)
+            return True
         return error_text == self.driver.find_element_by_css_selector(self.CUSTOM_DATA_ERROR_CSS).text
 
     def open_custom_data_bulk(self):

@@ -72,6 +72,7 @@ SLEEP_INTERVAL = 0.2
 
 class Page:
     LOADING_SPINNER_CSS = '.v-spinner-bg'
+    LOADING_SPINNER_CSS2 = '.v-spinner'
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
     CHECKBOX_WITH_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and child::label[text()=\'{label_text}\']]'
     CHECKBOX_CSS = 'div.x-checkbox-container'
@@ -297,13 +298,13 @@ class Page:
         raise TimeoutException(f'Timeout while waiting for {value}')
 
     def wait_for_element_absent_by_id(self, element_id, *vargs, **kwargs):
-        return self.wait_for_element_absent(By.ID, element_id, *vargs, **kwargs)
+        self.wait_for_element_absent(By.ID, element_id, *vargs, **kwargs)
 
     def wait_for_element_absent_by_css(self, css_selector, *vargs, **kwargs):
-        return self.wait_for_element_absent(By.CSS_SELECTOR, css_selector, *vargs, **kwargs)
+        self.wait_for_element_absent(By.CSS_SELECTOR, css_selector, *vargs, **kwargs)
 
     def wait_for_element_absent_by_xpath(self, xpath, *vargs, **kwargs):
-        return self.wait_for_element_absent(By.XPATH, xpath, *vargs, **kwargs)
+        self.wait_for_element_absent(By.XPATH, xpath, *vargs, **kwargs)
 
     def wait_for_element_absent(self,
                                 by,
@@ -315,9 +316,9 @@ class Page:
             try:
                 element = self.find_element(by, value, element)
                 if not element:
-                    return True
+                    return
             except (NoSuchElementException, StaleElementReferenceException):
-                return True
+                return
             time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for {value} to disappear')
 
@@ -465,7 +466,8 @@ class Page:
         element.send_keys(Keys.ARROW_DOWN)
 
     def wait_for_spinner_to_end(self):
-        return self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
+        self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
+        self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS2)
 
     def wait_for_table_to_load(self):
         self.wait_for_element_present_by_xpath(TABLE_SPINNER_NOT_DISPLAYED_XPATH)

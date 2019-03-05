@@ -117,6 +117,7 @@ from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.get_dashboard_coverage import get_dashboard_coverage
 from gui.gui_logic.get_ec_historical_data_for_entity import get_all_task_data, TaskData
+from gui.gui_logic.historical_dates import first_historical_date, all_historical_dates
 from gui.okta_login import try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -3044,24 +3045,13 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('first_historical_date', methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadOnly)})
-    def first_historical_date(self):
-        dates = {}
-        for entity_type in EntityType:
-            historical_for_entity = self._historical_entity_views_db_map[entity_type].find_one({}, sort=[(
-                'accurate_for_datetime', 1)], projection=['accurate_for_datetime'])
-            if historical_for_entity:
-                dates[entity_type.value] = historical_for_entity['accurate_for_datetime']
-
-        return jsonify(dates)
+    def get_first_historical_date(self):
+        return jsonify(first_historical_date())
 
     @gui_add_rule_logged_in('get_allowed_dates', required_permissions=[Permission(PermissionType.Dashboard,
                                                                                   PermissionLevel.ReadOnly)])
-    def all_historical_dates(self):
-        dates = {}
-        for entity_type in EntityType:
-            entity_dates = self._historical_entity_views_db_map[entity_type].distinct('accurate_for_datetime')
-            dates[entity_type.value] = {x.date().isoformat(): x.isoformat() for x in entity_dates}
-        return jsonify(dates)
+    def get_all_historical_dates(self):
+        return jsonify(all_historical_dates())
 
     @gui_helpers.paginated()
     @gui_add_rule_logged_in('dashboard', methods=['POST', 'GET'],
@@ -3094,6 +3084,8 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         adapter_data.update_cache()
         get_fielded_plugins.update_cache()
         get_dashboard_coverage.update_cache()
+        first_historical_date.clean_cache()
+        all_historical_dates.clean_cache()
 
     def __generate_dashboard_uncached(self, dashboard):
         """

@@ -282,6 +282,7 @@ class TestBase:
         history_db = self.axonius_system.db.get_historical_entity_db_view(entity_type)
         entity_count = self.axonius_system.db.get_entity_db(entity_type).count_documents({})
         if not entity_count:
+            self.base_page.run_discovery()
             return []
         day_to_entity_count = []
         for day in range(1, days_to_fill):
@@ -299,6 +300,7 @@ class TestBase:
             insert_many_result = history_db.insert_many(entities)
             # Save the count for testing the expected amount for the day is presented
             day_to_entity_count.append(len(insert_many_result.inserted_ids))
+        self.base_page.run_discovery()
         return day_to_entity_count
 
     def _update_and_create_history(self, entity_type: EntityType):
