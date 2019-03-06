@@ -199,6 +199,9 @@ def sorted_endpoint():
                     else:
                         splitted = sort_param.split('.')
                         if splitted[0] == SPECIFIC_DATA or splitted[0] == ADAPTERS_DATA:
+                            if splitted[0] == ADAPTERS_DATA:
+                                splitted[1] = 'data'
+
                             splitted[0] = 'adapters'
                             sort_obj['.'.join(splitted)] = direction
                         else:
