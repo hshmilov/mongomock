@@ -8,6 +8,7 @@
       "json_file",
       "stresstest_scanner",
       "stresstest",
+      "stresstest_users",
       "infinite_sleep"
     ],
     "remove-from-exclude": []

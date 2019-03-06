@@ -3,8 +3,7 @@ from ui_tests.tests.ui_consts import Enforcements
 from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestPrepareEnforcement(TestBase):
-
+class TestEnforcement(TestBase):
     def test_create_enforcement(self):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()

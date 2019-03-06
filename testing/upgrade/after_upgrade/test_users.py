@@ -7,7 +7,7 @@ from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestPrepareUsers(TestBase):
+class TestUsers(TestBase):
     def test_hidden_user(self):
         self.settings_page.switch_to_page()
         self.settings_page.wait_for_spinner_to_end()
