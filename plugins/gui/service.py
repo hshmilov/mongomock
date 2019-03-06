@@ -325,10 +325,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
         self.__all_sessions = {}
-        self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
-
+        self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
-        self.wsgi_app.config['SECRET_KEY'] = self.api_key  # a secret key which is used in sessions created by flask
+        self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
 
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
