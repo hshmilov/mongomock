@@ -113,6 +113,7 @@ from axonius.utils.threading import run_and_forget
 from axonius.types.enforcement_classes import TriggerPeriod
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
+from gui.feature_flags import FeatureFlags
 from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.get_dashboard_coverage import get_dashboard_coverage
@@ -287,7 +288,7 @@ if os.environ.get('HOT', None) == 'true':
     session = None
 
 
-class GuiService(Triggerable, PluginBase, Configurable, API):
+class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
@@ -2071,6 +2072,11 @@ class GuiService(Triggerable, PluginBase, Configurable, API):
         """
         Set a specific config on a specific plugin
         """
+
+        if config_name == FeatureFlags.__name__ and (session.get('user') or {}).get('user_name') != AXONIUS_USER_NAME:
+            logger.error(f'Request to modify {FeatureFlags.__name__} from a regular user!')
+            return jsonify({'config': {}, 'schema': {}})  # keep gui happy, but don't show/change the flags
+
         if request.method == 'POST':
             config_to_set = request.get_json(silent=True)
             if config_to_set is None:

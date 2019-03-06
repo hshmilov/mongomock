@@ -36,6 +36,17 @@
                     </template>
                 </div>
             </x-tab>
+            <x-tab title="Feature flags" id="feature-flags-tab" v-if="isAxonius">
+                <div class="tab-settings">
+                    <template>
+                        <x-form :schema="featureFlags.schema" @validate="updateGuiValidity" :read-only="isReadOnly"
+                                v-model="featureFlags.config" api-upload="plugins/gui"/>
+                        <div class="place-right">
+                            <x-button :disabled="!guiComplete || isReadOnly" id="feature-flags-save" @click="saveFeatureFlags">Save</x-button>
+                        </div>
+                    </template>
+                </div>
+            </x-tab>
             <x-tab title="Manage Users" id="user-settings-tab" v-if="isAdmin">
                 <x-users-roles :read-only="isReadOnly" @toast="message = $event"/>
             </x-tab>
@@ -90,12 +101,19 @@
                     if (!state.settings.configurable.gui) return null
                     return state.settings.configurable.gui.GuiService
                 },
+                featureFlags(state) {
+                    if (!state.settings.configurable.gui) return null
+                    return state.settings.configurable.gui.FeatureFlags
+                },
                 users(state) {
                     return state.auth.allUsers.data
                 },
                 isAdmin(state) {
                     return state.auth.currentUser.data &&
                         (state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin')
+                },
+                isAxonius(state) {
+                    return state.auth.currentUser.data.user_name === '_axonius'
                 }
             }),
             validResearchRate() {
@@ -197,6 +215,15 @@
                     })
                 })
             },
+            saveFeatureFlags() {
+                this.updatePluginConfig({
+                    pluginId: 'gui',
+                    configName: 'FeatureFlags',
+                    config: this.featureFlags.config
+                }).then(response => {
+                    this.createToast(response)
+                })
+            },
             removeToast() {
                 this.message = ''
             },
@@ -215,6 +242,10 @@
             this.loadPluginConfig({
                 pluginId: 'gui',
                 configName: 'GuiService'
+            })
+            this.loadPluginConfig({
+                pluginId: 'gui',
+                configName: 'FeatureFlags'
             })
             this.loadPluginConfig({
                 pluginId: 'core',
