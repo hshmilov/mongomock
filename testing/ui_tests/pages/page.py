@@ -501,15 +501,15 @@ class Page:
         time.sleep(2)  # AX-3475
 
     @staticmethod
-    def upload_file_on_element(element, file_content):
+    def upload_file_on_element(element, file_content, is_bytes=False):
         with NamedTemporaryFile(delete=False, prefix=TEMP_FILE_PREFIX) as temp_file:
-            temp_file.write(bytes(file_content, 'ascii'))
+            temp_file.write(file_content if is_bytes else bytes(file_content, 'ascii'))
             temp_file.file.flush()
             return Page.__upload_file_on_element(element, temp_file.name)
 
-    def upload_file_by_id(self, input_id, file_content):
+    def upload_file_by_id(self, input_id, file_content, is_bytes=False):
         element = self.driver.find_element_by_id(input_id)
-        self.upload_file_on_element(element, file_content)
+        self.upload_file_on_element(element, file_content, is_bytes)
 
     def close_dropdown(self):
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()

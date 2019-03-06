@@ -35,16 +35,16 @@ client_details = {
             "av_status": "active",
             "last_contact": "-",
             "sensor_version": "0.4.1",
-            "test_alert_change" : 5
+            "test_enforcement_change" : 5
             }
         ],
        "fields" : ["id", "network_interfaces", "av_status", "last_contact", "sensor_version", "name", "hostname", 
-                   "test_alert_change"],
+                   "test_enforcement_change"],
        "additional_schema" : [
             {"name": "av_status", "title": "AvStatus", "type": "string"},
             {"name": "last_contact", "title": "Last Contact", "type": "string"},
             {"name": "sensor_version", "title": "Sensor Version", "type": "string"},
-            {"name": "test_alert_change", "title": "Test Alert Change", "type": "integer"}
+            {"name": "test_enforcement_change", "title": "Test Enforcement Change", "type": "integer"}
         ],
        "raw_fields" : []
     }

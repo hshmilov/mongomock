@@ -107,6 +107,8 @@ class EntitiesPage(Page):
     CUSTOM_DATA_ERROR_CSS = '.footer .error-text'
     CUSTOM_DATA_BULK_CONTAINER_CSS = '.actions'
 
+    ENFORCEMENT_RESULTS_HEADER = 'Showing results of action {action_name} from enforcement {enforcement_name}'
+
     @property
     def url(self):
         raise NotImplementedError
@@ -656,3 +658,7 @@ class EntitiesPage(Page):
     def open_custom_data_bulk(self):
         self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
         self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data...')).click()
+
+    def find_enforcement_results_header(self, enforcement_name, action_name):
+        return self.find_element_by_text(
+            self.ENFORCEMENT_RESULTS_HEADER.format(enforcement_name=enforcement_name, action_name=action_name))
