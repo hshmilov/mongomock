@@ -17,4 +17,7 @@ git push upstream ${name_of_version}
 
 source upload_to_aws_latest.sh ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY} ${name_of_version} --prod
 
+echo "OVA link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}/${name_of_version}/${name_of_version}_export.ova"
+echo "Upgrader link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}/axonius_${name_of_version}.py"
+
 echo "Release checklist is finished successfully!"
