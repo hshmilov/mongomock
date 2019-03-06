@@ -1,6 +1,7 @@
 """A minimal http server for CI purpouses; Allows you to view and control your current machines and docker images."""
 import traceback
 import os
+import json
 from functools import wraps
 from slacknotifier import SlackNotifier
 from instancemonitor import MONITORING_BOT_METADATA_NAMESPACE, InstanceMonitor, SHOULD_DELETE_OLD_MESSAGES
@@ -15,6 +16,7 @@ NORMAL_EC2_TYPE = "t2.large"
 STRONG_EC2_TYPE = "t2.2xlarge"
 
 DEVELOPMENT_MODE = os.environ.get('BUILDS_DEBUG') == 'true'
+TOKEN_FILE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tokens.json')
 
 # set the project root directory as the static folder, you can set others.
 app = Flask(__name__, static_url_path='/static')
@@ -28,6 +30,7 @@ app.register_blueprint(blueprint, url_prefix="/login")
 
 db = None
 bm = buildsmanager.BuildsManager()
+auth_tokens = json.loads(open(TOKEN_FILE_PATH, 'r').read())
 st = SlackNotifier(os.environ['SLACK_WORKSPACE_APP_BOT_API_TOKEN'], 'builds')
 INSTALL_DEMO_SCRIPT = """# how to use: curl -k https://builds-local.axonius.lan/install[?fork=axonius&branch=develop&exclude=ad,esx,puppet&set_credentials=true] | bash -
 set -e
@@ -62,9 +65,13 @@ def authorize(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not slack.authorized:
+
             if DEVELOPMENT_MODE:
-                session['builds_user_full_name'] = 'Development'
-                session['builds_user_id'] = 'U6CU068S0'  # Avidor's slack id
+                session['builds_user_full_name'] = auth_tokens['Development']['builds_user_full_name']
+                session['builds_user_id'] = auth_tokens['Development']['builds_user_id']  # Avidor's slack id
+            elif 'x-auth-token' in request.headers and request.headers['x-auth-token'] in auth_tokens:
+                session['builds_user_full_name'] = auth_tokens[request.headers['x-auth-token']]['builds_user_full_name']
+                session['builds_user_id'] = auth_tokens[request.headers['x-auth-token']]['builds_user_id']
             else:
                 return render_template("login.html", slack_login_url=url_for("slack.login"))
 
@@ -132,7 +139,7 @@ def exports_post():
             owner=(session['builds_user_full_name'], session['builds_user_id']),
             fork=request.form["fork"],
             branch=request.form["branch"],
-            client_name=request.form["client_name"],
+            client_name=request.form.get("client_name", ''),
             comments=request.form["comments"]))
 
     return jsonify({"result": json_result, "current": json_result})

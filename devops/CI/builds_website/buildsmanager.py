@@ -505,7 +505,7 @@ class BuildsManager(object):
         commands = []
         if len(running_exports) == 0:
             commands.append(
-                "rm -f /home/ubuntu/exports/axonius_*.py; rm -rf /home/ubuntu/exports/output-axonius-*")
+                "rm -f /home/ubuntu/exports/axonius_*.py; rm -rf /home/ubuntu/exports/output-axonius-*; rm -f /home/ubuntu/exports/build_*.log; rm -f /home/ubuntu/exports/axonius_*_git_hash.txt")
 
         export_id = ObjectId()
         commands.extend([
