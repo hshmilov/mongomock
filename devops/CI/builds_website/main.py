@@ -40,7 +40,7 @@ cd /home/ubuntu/cortex
 git init
 # Beware! do not save this token.
 git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}
-./init_host.sh
+./devops/scripts/host_installation/init_host.sh
 cd install
 chmod 777 *
 # Notice that this raises the system in debug mode (all ports are opened outside and files are mounted from the outside of the system).

@@ -42,8 +42,8 @@ echo "hostname: $(hostname)"
 echo ""
 
 echo "Updating the sources..."
-#chmod a+x wait-apt-get.sh
 
+_wait_for_apt upgrade -y -f
 _wait_for_apt install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
@@ -102,8 +102,8 @@ else
     usermod -s /home/netconfig/login netconfig
     echo netconfig:netconfig | /usr/sbin/chpasswd
     cd "$(dirname "$0")"
-    cp devops/scripts/host_installation/ip_wizard/login.c /home/netconfig/login.c
-    cp devops/scripts/host_installation/ip_wizard/login.py /home/netconfig/login.py
+    cp ./ip_wizard/login.c /home/netconfig/login.c
+    cp ./ip_wizard/login.py /home/netconfig/login.py
     cd /home/netconfig
     gcc login.c -o login && chown root:root /home/netconfig/login && chmod 4555 /home/netconfig/login
     chown root:root /home/netconfig/login.py
