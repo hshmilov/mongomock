@@ -72,6 +72,8 @@ class ResearchStatus(Enum):
 
 CONFIG_COLLECTION = 'GuiService'
 
+USERS_CONFIG_COLLECTION = 'users_config'
+
 ######################
 # Exec report consts #
 ######################

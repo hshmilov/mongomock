@@ -39,6 +39,7 @@ from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts import adapter_consts
+from axonius.consts.plugin_consts import DASHBOARD_COLLECTION
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        EXEC_REPORT_EMAIL_CONTENT,
@@ -55,7 +56,7 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        ChartMetrics, ChartRangeTypes,
                                        ChartRangeUnits, ChartViews,
                                        ResearchStatus, SPECIFIC_DATA,
-                                       ADAPTERS_DATA)
+                                       ADAPTERS_DATA, USERS_CONFIG_COLLECTION)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
@@ -116,7 +117,6 @@ from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
-from gui.gui_logic.get_dashboard_coverage import get_dashboard_coverage
 from gui.gui_logic.get_ec_historical_data_for_entity import get_all_task_data, TaskData
 from gui.gui_logic.historical_dates import first_historical_date, all_historical_dates
 from gui.okta_login import try_connecting_using_okta
@@ -321,23 +321,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                         'api_secret': secrets.token_urlsafe()
                         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(get_local_config_file(__file__),
-                         requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
-        self.__all_sessions = {}
-        self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
-        self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
-        self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
-
-        self._elk_addr = self.config['gui_specific']['elk_addr']
-        self._elk_auth = self.config['gui_specific']['elk_auth']
-        self.__users_collection = self._get_collection(USERS_COLLECTION)
-        self.__roles_collection = self._get_collection(ROLES_COLLECTION)
+    def __add_defaults(self):
         self._add_default_roles()
-        if self._get_collection('users_config').find_one({}) is None:
-            self._get_collection('users_config').insert_one({
+        if self.__users_config_collection.find_one({}) is None:
+            self.__users_config_collection.insert_one({
                 'external_default_role': PREDEFINED_ROLE_RESTRICTED
             })
+
         current_user = self.__users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
             # User doesn't exist, this must be the installation process
@@ -358,6 +348,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             self.system_collection.insert_one({
                 'type': 'maintenance', 'provision': True, 'analytics': True, 'troubleshooting': True
             })
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
+        self.__all_sessions = {}
+        self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
+        self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
+        self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
+
+        self._elk_addr = self.config['gui_specific']['elk_addr']
+        self._elk_auth = self.config['gui_specific']['elk_auth']
+        self.__users_collection = self._get_collection(USERS_COLLECTION)
+        self.__roles_collection = self._get_collection(ROLES_COLLECTION)
+        self.__users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
+
+        self.__add_defaults()
 
         # Start exec report scheduler
         self.exec_report_lock = threading.RLock()
@@ -489,7 +495,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_dashboard_chart(name, data['metric'], data['view'], json.loads(data['config']))
+                    dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
+                    if dashboard_collection.find_one({'name': name}):
+                        logger.info(f'dashboard with {name} already exists, not adding')
+                        continue
+
+                    self._insert_dashboard_chart(dashboard_name=name,
+                                                 dashboard_metric=data['metric'],
+                                                 dashboard_view=data['view'],
+                                                 dashboard_data=json.loads(data['config']),
+                                                 hide_empty=data.get('hide_empty', False))
                 except Exception as e:
                     logger.exception(f'Error adding default dashboard chart {name}. Reason: {repr(e)}')
         except Exception as e:
@@ -530,8 +545,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                 {'name': name, 'adapters': json.loads(report['adapters'])}, upsert=True)
         logger.info(f'Added report {name} id: {result.upserted_id}')
 
-    def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data):
-        dashboard_collection = self._get_collection('dashboard')
+    def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data, hide_empty=False):
+        dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
         existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
             logger.info(f'Report {dashboard_name} already exists under id: {existed_dashboard_chart["_id"]}')
@@ -541,7 +556,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                   {'name': dashboard_name,
                                                    'metric': dashboard_metric,
                                                    'view': dashboard_view,
-                                                   'config': dashboard_data}, upsert=True)
+                                                   'config': dashboard_data,
+                                                   'hide_empty': hide_empty}, upsert=True)
         logger.info(f'Added report {dashboard_name} id: {result.upserted_id}')
 
     def _set_first_time_use(self):
@@ -2398,7 +2414,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return: None
         """
         role_name = None
-        config_doc = self._get_collection('users_config').find_one({})
+        config_doc = self.__users_config_collection.find_one({})
         if config_doc and config_doc.get('external_default_role'):
             role_name = config_doc['external_default_role']
         user = self.__create_user_if_doesnt_exist(username, first_name, last_name, picname, source, role_name=role_name)
@@ -2838,7 +2854,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         if request.method == 'GET':
-            config_doc = self._get_collection('users_config').find_one({})
+            config_doc = self.__users_config_collection.find_one({})
             if not config_doc or 'external_default_role' not in config_doc:
                 return ''
             return config_doc['external_default_role']
@@ -2851,7 +2867,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if self.__roles_collection.find_one(filter_archived(default_role_data)) is None:
             logger.error(f'Role {default_role_data["name"]} was not found and cannot be default')
             return return_error(f'Role {default_role_data["name"]} was not found and cannot be default')
-        self._get_collection('users_config').replace_one({}, {
+        self.__users_config_collection.replace_one({}, {
             'external_default_role': default_role_data['name']
         }, upsert=True)
         return ''
@@ -3024,7 +3040,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         of some "card" (collection of views) in the past
         """
 
-        card = self._get_collection('dashboard').find_one({'_id': ObjectId(card_uuid)})
+        card = self._get_collection(DASHBOARD_COLLECTION).find_one({'_id': ObjectId(card_uuid)})
         if not card:
             return return_error('Card doesn\'t exist')
 
@@ -3072,7 +3088,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return return_error('Name required in order to save Dashboard Chart', 400)
         if not dashboard_data.get('config'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
-        update_result = self._get_collection('dashboard').replace_one(
+        update_result = self._get_collection(DASHBOARD_COLLECTION).replace_one(
             {'name': dashboard_data['name']}, dashboard_data, upsert=True)
         if not update_result.upserted_id and not update_result.modified_count:
             return return_error('Error saving dashboard chart', 400)
@@ -3088,7 +3104,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.__generate_dashboard_fast.update_cache()
         adapter_data.update_cache()
         get_fielded_plugins.update_cache()
-        get_dashboard_coverage.update_cache()
         first_historical_date.clean_cache()
         all_historical_dates.clean_cache()
 
@@ -3142,7 +3157,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         logger.info('Getting dashboard')
-        for dashboard in self._get_collection('dashboard').find(filter=filter_archived(), skip=skip, limit=limit):
+        for dashboard in self._get_collection(DASHBOARD_COLLECTION).find(filter=filter_archived(), skip=skip, limit=limit):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
@@ -3705,7 +3720,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Fetches data, according to definition saved for the dashboard named by given name
         :return:
         """
-        update_result = self._get_collection('dashboard').update_one(
+        update_result = self._get_collection(DASHBOARD_COLLECTION).update_one(
             {'_id': ObjectId(dashboard_id)}, {'$set': {'archived': True}})
         if not update_result.modified_count:
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
@@ -3780,12 +3795,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             error = f'Could not get adapter data for entity {entity_name}'
             logger.exception(error)
         return return_error(error, 400)
-
-    @gui_add_rule_logged_in('dashboard/coverage', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
-    def get_dashboard_coverage(self):
-        return jsonify(get_dashboard_coverage())
 
     @gui_add_rule_logged_in('get_latest_report_date', methods=['GET'],
                             required_permissions={Permission(PermissionType.Reports,
@@ -4049,7 +4058,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         report_data = {
             'adapter_devices': adapter_data.call_uncached(EntityType.Devices),
             'adapter_users': adapter_data.call_uncached(EntityType.Users),
-            'covered_devices': get_dashboard_coverage.call_uncached(),
             'custom_charts': list(self._get_dashboard()),
             'views_data': self._get_saved_views_data()
         }

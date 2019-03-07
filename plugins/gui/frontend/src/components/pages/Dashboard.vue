@@ -11,17 +11,13 @@
                                        :filter="isDevicesRestricted? undefined: runFilter"/>
                 <x-data-discovery-card :data="dashboard.dataDiscovery.users.data" module="users"
                                        :filter="isUsersRestricted? undefined: runFilter"/>
-                <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title"
-                                 :data="item"
-                                 @click-one="runCoverageFilter(item.properties, $event)"
-                                 :read-only="isDevicesRestricted"/>
-                <x-card v-for="(chart, chartInd) in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
+                <x-card v-for="(chart, chartInd) in charts" :key="chart.name" :title="chart.name"
                         :removable="!isReadOnly" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
                     <div class="card-history" v-if="chart.metric !== 'timeline'">
                         <x-historical-date v-model="chartsCurrentlyShowing[chart.uuid]" @clear="clearDate(chart.uuid)"
                                            @input="confirmPickDate(chart.uuid, chart.name)" />card-history
                     </div>
-                    <component :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
+                    <component :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" :id="getId(chart.name) + '_view'"/>
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                     <x-cycle :data="lifecycle.subPhases"/>
@@ -43,7 +39,6 @@
 <script>
     import xPage from '../axons/layout/Page.vue'
     import xCard from '../axons/layout/Card.vue'
-    import xCoverageCard from '../neurons/cards/CoverageCard.vue'
     import xDataDiscoveryCard from '../neurons/cards/DataDiscoveryCard.vue'
     import xHistogram from '../axons/charts/Histogram.vue'
     import xPie from '../axons/charts/Pie.vue'
@@ -59,7 +54,7 @@
     import xHistoricalDate from '../neurons/inputs/HistoricalDate.vue'
 
     import {
-        FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
+        FETCH_DISCOVERY_DATA, FETCH_DASHBOARD, REMOVE_DASHBOARD,
         FETCH_HISTORICAL_SAVED_CARD, FETCH_DASHBOARD_FIRST_USE
     } from '../../store/modules/dashboard'
     import {UPDATE_DATA_VIEW} from '../../store/mutations'
@@ -70,7 +65,7 @@
     export default {
         name: 'x-dashboard',
         components: {
-            xPage, xCard, xCoverageCard, xDataDiscoveryCard, xHistogram, xPie, xSummary, xLine,
+            xPage, xCard, xDataDiscoveryCard, xHistogram, xPie, xSummary, xLine,
             xCycle, xWizard, xEmptySystem, xModal, xButton, xToast, xSearchInsights, xHistoricalDate
         },
         computed: {
@@ -79,7 +74,7 @@
                     return state.dashboard
                 },
                 charts(state) {
-                    return state.dashboard.charts.data.map(chart => {
+                    let charts = state.dashboard.charts.data.map(chart => {
                         if (chart.metric === 'timeline') return chart
                         return {
                             ...chart, showingHistorical: this.dateChosen[chart.uuid],
@@ -98,6 +93,9 @@
                             }).filter(x => x)
                         }
                     })
+                    // filter out charts without data or with hide_empty and remainder 100%
+                    charts = charts.filter(chart => chart && chart.data && ((!Boolean(chart.hide_empty)) || (chart.data.filter(data => data.remainder && data.value == 1).length == 0)))
+                    return charts
                 },
                 devicesView(state) {
                     return state.devices.view
@@ -183,23 +181,13 @@
                 updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
             }),
             ...mapActions({
-                fetchDiscoveryData: FETCH_DISCOVERY_DATA, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
+                fetchDiscoveryData: FETCH_DISCOVERY_DATA,
                 fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE, saveView: SAVE_VIEW,
                 fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
                 fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD
             }),
-            runCoverageFilter(properties, covered) {
-                if (!properties || !properties.length) return
-                if (covered === 2) {
-                    this.runFilter(`specific_data.data.adapter_properties in ['${properties.join('\',\'')}']`, 'devices')
-                } else {
-                    this.runFilter(properties.map((property) => {
-                        return `(not(specific_data.data.adapter_properties == "${property}"))`
-                    }).join(' and '), 'devices')
-                }
-            },
             runChartFilter(chartInd, queryInd) {
-                let query = this.dashboard.charts.data[chartInd].data[queryInd]
+                let query = this.charts[chartInd].data[queryInd]
                 if ((query.module === 'devices' && this.isDevicesRestricted)
                     || (query.module === 'users' && this.isUsersRestricted)) {
                     return
@@ -263,7 +251,7 @@
             const getDashboardData = () => {
                 return Promise.all([
                     this.fetchDiscoveryData({module: 'devices'}), this.fetchDiscoveryData({module: 'users'}),
-                    this.fetchDashboard(), this.fetchDashboardCoverage()
+                    this.fetchDashboard()
                 ]).then(() => {
                     if (this._isDestroyed) return
                     this.timer = setTimeout(getDashboardData, 30000)

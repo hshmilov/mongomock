@@ -52,6 +52,9 @@
                     } else if (item.intersection) {
                         return {class: `fill-intersection-${index - 1}-${index}`, ...item}
                     }
+                    if (this.data.length == 2) {
+                        return {class: `indicator-fill-${Math.ceil(item.value * 4)}`, ...item}
+                    }
                     return {class: `extra-fill-${(index % 6) || 6}`, ...item}
                 })
             },
@@ -88,6 +91,10 @@
                     title = 'Intersection'
                     components.push({...this.processedData[this.inHover - 1]})
                     components.push({...this.processedData[this.inHover + 1]})
+                }
+                if (this.inHover == 0) {
+                    title = 'Excluding'
+                    components = this.processedData.filter(data => !data.intersection && !data.remainder)
                 }
                 return {
                     parentTitle: this.data[0].name, title, percentage, class: this.processedData[this.inHover].class,

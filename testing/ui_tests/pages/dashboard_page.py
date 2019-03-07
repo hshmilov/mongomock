@@ -12,13 +12,12 @@ class DashboardPage(Page):
     DEVICE_DISCOVERY = 'Device Discovery'
     USER_DISCOVERY = 'User Discovery'
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
-    UNCOVERED_PIE_SLICE_CSS = 'svg > g#managed_coverage_1 > text.scaling'
-    COVERED_PIE_SLICE_CSS = 'svg > g#managed_coverage_2 > text.scaling'
+    UNCOVERED_PIE_SLICE_CSS = 'svg > g#managed_device_coverage_view_0 > text.scaling'
+    COVERED_PIE_SLICE_CSS = 'svg > g#managed_device_coverage_view_1 > text.scaling'
     INTERSECTION_PIE_INTERSECTION_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(4) > text'
     SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(2)'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(3)'
     SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(1)'
-    COVERAGE_CARD_CSS = 'div.x-card.x-coverage-card'
     NEW_CARD_WIZARD_CSS = '#dashboard_wizard'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
@@ -51,7 +50,7 @@ class DashboardPage(Page):
             f'{self.CONGRATULATIONS}\nhaving all your assets visible in one place.'
 
     def find_managed_device_coverage_card(self):
-        return self.driver.find_element_by_css_selector(self.COVERAGE_CARD_CSS)
+        return self.driver.find_element_by_id(self.get_card_id_from_title(self.MANAGED_DEVICE_COVERAGE))
 
     def find_system_lifecycle_card(self):
         return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')
@@ -144,12 +143,12 @@ class DashboardPage(Page):
         return True
 
     def get_summary_card_text(self, card_title):
-        card_id = self.get_card_id_from_title(card_title)
-        return self.wait_for_element_present_by_css(self.SUMMARY_CARD_TEXT_CSS.format(id=card_id))
+        card_id_css = self.get_card_id_css_from_title(card_title)
+        return self.wait_for_element_present_by_css(self.SUMMARY_CARD_TEXT_CSS.format(id=card_id_css))
 
     def get_card(self, card_title):
-        card_id = self.get_card_id_from_title(card_title)
-        return self.wait_for_element_present_by_css(card_id)
+        card_id_css = self.get_card_id_css_from_title(card_title)
+        return self.wait_for_element_present_by_css(card_id_css)
 
     def get_all_cards(self):
         return self.driver.find_elements_by_css_selector('div.x-card')
@@ -160,8 +159,8 @@ class DashboardPage(Page):
         pie.find_element_by_css_selector('svg').click()
 
     def remove_card(self, card_title):
-        card_id = self.get_card_id_from_title(card_title)
-        self.driver.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS.format(id=f'{card_id}')).click()
+        card_id_css = self.get_card_id_css_from_title(card_title)
+        self.driver.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS.format(id=f'{card_id_css}')).click()
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -173,26 +172,31 @@ class DashboardPage(Page):
         return int(pie.find_element_by_css_selector(self.COVERED_PIE_SLICE_CSS).text.rstrip('%'))
 
     def click_uncovered_pie_slice(self):
-        self.click_pie_slice(self.UNCOVERED_PIE_SLICE_CSS, self.COVERAGE_CARD_CSS)
+        card_id = self.get_card_id_from_title(self.MANAGED_DEVICE_COVERAGE)
+        self.click_pie_slice(self.UNCOVERED_PIE_SLICE_CSS, card_id)
 
     def click_covered_pie_slice(self):
-        self.click_pie_slice(self.COVERED_PIE_SLICE_CSS, self.COVERAGE_CARD_CSS)
+        card_id = self.get_card_id_from_title(self.MANAGED_DEVICE_COVERAGE)
+        self.click_pie_slice(self.COVERED_PIE_SLICE_CSS, card_id)
 
     def click_intersection_pie_slice(self, card_title):
         card_id = self.get_card_id_from_title(card_title)
-        self.click_pie_slice(self.INTERSECTION_PIE_INTERSECTION_SLICE_CSS.format(id=card_id), card_id)
+        card_id_css = self.get_card_id_css_from_title(card_title)
+        self.click_pie_slice(self.INTERSECTION_PIE_INTERSECTION_SLICE_CSS.format(id=card_id_css), card_id)
 
     def click_symmetric_difference_base_query_pie_slice(self, card_title):
         card_id = self.get_card_id_from_title(card_title)
-        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS.format(id=card_id), card_id)
+        card_id_css = self.get_card_id_css_from_title(card_title)
+        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS.format(id=card_id_css), card_id)
 
     def click_symmetric_difference_first_query_pie_slice(self, card_title):
         card_id = self.get_card_id_from_title(card_title)
-        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS.format(id=card_id), card_id)
+        card_id_css = self.get_card_id_css_from_title(card_title)
+        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS.format(id=card_id_css), card_id)
 
-    def click_pie_slice(self, slice_css, card_css):
-        self.wait_for_element_present_by_css(card_css)
-        card = self.driver.find_element_by_css_selector(card_css)
+    def click_pie_slice(self, slice_css, card_id):
+        self.wait_for_element_present_by_id(card_id)
+        card = self.driver.find_element_by_id(card_id)
         pie = self.get_pie_chart_from_card(card)
         pie.find_element_by_css_selector(slice_css).click()
 
@@ -202,6 +206,11 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_card_id_from_title(card_title):
+        id_string = '_'.join(card_title.lower().split(' '))
+        return id_string
+
+    @staticmethod
+    def get_card_id_css_from_title(card_title):
         id_string = '_'.join(card_title.split(' '))
         return f'#{id_string}'
 

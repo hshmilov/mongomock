@@ -13,9 +13,6 @@ export const SAVE_DASHBOARD = 'SAVE_DASHBOARD'
 export const REMOVE_DASHBOARD = 'REMOVE_DASHBOARD'
 export const UPDATE_REMOVED_DASHBOARD = 'UPDATE_REMOVED_DASHBOARD'
 
-export const FETCH_DASHBOARD_COVERAGE = 'FETCH_DASHBOARD_COVERAGE'
-export const UPDATE_DASHBOARD_COVERAGE = 'UPDATE_DASHBOARD_COVERAGE'
-
 export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
 
 export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE'
@@ -29,7 +26,6 @@ export const dashboard = {
 			users: {data: {}, fetching: false, error: '' }
 		},
 		charts: { data: [], fetching: false, error: '' },
-		coverage: { data: {}, fetching: false, error: '' },
 		firstUse: { data: null, fetching: false, error: '' }
 	},
 	mutations: {
@@ -70,13 +66,6 @@ export const dashboard = {
                 })
                 state.charts.data = [ ...state.charts.data ]
             }
-		},
-		[ UPDATE_DASHBOARD_COVERAGE ] (state, payload) {
-			state.coverage.fetching = payload.fetching
-			state.coverage.error = payload.error
-			if (payload.data && Object.keys(payload.data).length) {
-				state.coverage.data = payload.data
-			}
 		},
 		[ UPDATE_REMOVED_DASHBOARD ] (state, dashboardId) {
 			state.charts.data = state.charts.data.filter(dashboard => dashboard.uuid !== dashboardId)
@@ -146,12 +135,6 @@ export const dashboard = {
 				if (response.status === 200) {
 					commit(UPDATE_REMOVED_DASHBOARD, dashboardId)
 				}
-			})
-		},
-		[ FETCH_DASHBOARD_COVERAGE ] ({dispatch}) {
-			return dispatch(REQUEST_API, {
-				rule: 'dashboard/coverage',
-				type: UPDATE_DASHBOARD_COVERAGE
 			})
 		},
 		[ FETCH_HISTORICAL_SAVED_CARD ] ({ dispatch }, payload) {

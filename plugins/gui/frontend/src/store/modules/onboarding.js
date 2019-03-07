@@ -622,14 +622,14 @@ export const onboarding = {
 					content: 'The Axonius cards gives a system-wide snapshot.'
 				},
 				'dashboardManaged': {
-					id: 'managed_coverage', title: 'MANAGEMENT COVERAGE', align: 'right', emphasize: false,
+					id: 'managed_device_coverage', title: 'MANAGEMENT COVERAGE', align: 'right', emphasize: false,
 					content: 'The coverage chart shows the percentage of devices managed by an adapters.',
 					actions: [
 						{ title: 'Next', state: 'dashboardManagedQuery' }
 					]
 				},
 				'dashboardManagedQuery': {
-					id: 'managed_coverage', title: 'MANAGEMENT COVERAGE', align: 'bottom',
+					id: 'managed_device_coverage', title: 'MANAGEMENT COVERAGE', align: 'bottom',
 					content: 'Click to see unmanaged devices.'
 				},
 				'dashboardBack': {

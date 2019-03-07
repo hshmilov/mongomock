@@ -42,6 +42,14 @@ BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.booted
 INSTANCE_CONNECT_USER_NAME = 'node_maker'
 INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
 
+CHMOD_FILES = [
+    INSTANCES_SETUP_SCRIPT_PATH,
+    os.path.join(AXONIUS_DEPLOYMENT_PATH, 'axonius.sh'),
+    os.path.join(AXONIUS_DEPLOYMENT_PATH, 'prepare_python_env.sh'),
+    os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops/scripts/log_utils/raw_log.py'),
+    os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops/scripts/discover_now.py'),
+]
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -241,8 +249,7 @@ def set_special_permissions(root_pass):
     run_as_root(cmd.split(), root_pass)
 
     # Adding write and execute permissions on all the scripts node_maker uses.
-    for current_file in [INSTANCES_SETUP_SCRIPT_PATH, os.path.join(AXONIUS_DEPLOYMENT_PATH, 'axonius.sh'),
-                         os.path.join(AXONIUS_DEPLOYMENT_PATH, 'prepare_python_env.sh')]:
+    for current_file in CHMOD_FILES:
         cmd = f'chmod +xr {current_file}'
         run_as_root(cmd.split(), root_pass)
 
