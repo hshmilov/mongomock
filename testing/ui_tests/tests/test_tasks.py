@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from axonius.utils.parsing import parse_date_with_timezone
+from axonius.utils.parsing import normalize_timezone_date
 from services.plugins.device_control_service import DeviceControlService
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -32,8 +32,8 @@ class TestTasks(TestBase):
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_ENFORCEMENT)
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_MAIN_ACTION)
         assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME)
-        assert datetime.now().strftime('%Y-%m-%d') == parse_date_with_timezone(
-            self.enforcements_page.get_column_data(self.FIELD_COMPLETED)[0], 'Israel').strftime('%Y-%m-%d')
+        assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
+            self.enforcements_page.get_column_data(self.FIELD_COMPLETED)[0])
 
     def _check_action_result(self, result_element, entities_count, action_name=ENFORCEMENT_NAME):
         assert result_element.text == str(entities_count)

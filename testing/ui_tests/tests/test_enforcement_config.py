@@ -7,7 +7,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until
-from axonius.utils.parsing import parse_date_with_timezone
+from axonius.utils.parsing import normalize_timezone_date
 from services.adapters.json_file_service import JsonFileService
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.pages.enforcements_page import ActionCategory, Action
@@ -297,8 +297,8 @@ class TestEnforcementSanity(TestBase):
         # Check triggered state of Enforcement in table
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_NAME)
         assert COMMON_ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME)
-        assert datetime.now().strftime('%Y-%m-%d') == parse_date_with_timezone(
-            self.enforcements_page.get_column_data(self.FIELD_LAST_TRIGGERED)[0], 'Israel').strftime('%Y-%m-%d')
+        assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
+            self.enforcements_page.get_column_data(self.FIELD_LAST_TRIGGERED)[0])
         assert '1' in self.enforcements_page.get_column_data(self.FIELD_TIMES_TRIGGERED)
 
     def test_coming_soon(self):

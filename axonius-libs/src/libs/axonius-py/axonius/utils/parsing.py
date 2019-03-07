@@ -19,7 +19,7 @@ import pytz
 
 import axonius
 from axonius.entities import EntityType
-from axonius.utils.datetime import is_date_real
+from axonius.utils.datetime import is_date_real, parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -498,6 +498,20 @@ def parse_date_with_timezone(datetime_to_parse, time_zone):
         return d if is_date_real(d) else None
     except (TypeError, ValueError):
         return None
+
+
+def normalize_timezone_date(date_str: str) -> str:
+    """
+    Converts given string to a datetime object, along with 'Israel' timezone.
+    Parses this date and converts back to str, now in UTC time.
+
+    :param date_str: String representing a date in format %Y-%m-%d %H:%M:%S
+    :return:
+    """
+    parsed_date = parse_date_with_timezone(date_str, 'Israel')
+    if not parsed_date:
+        return date_str
+    return parse_date(parsed_date).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def is_items_in_list1_are_in_list2(list1, list2):

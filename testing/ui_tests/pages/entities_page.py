@@ -5,7 +5,7 @@ from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import parse_date_with_timezone
+from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
 from ui_tests.pages.page import Page
 
@@ -515,12 +515,7 @@ class EntitiesPage(Page):
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)
         for index, data_row in enumerate(csv_data_rows):
             for ui_data_row in ui_data_rows[index]:
-                ui_row = ui_data_row
-                parsed_date = parse_date_with_timezone(ui_row, 'Israel')
-                if parsed_date:
-                    parsed_date = parse_date(parsed_date)
-                    ui_row = parsed_date.strftime('%Y-%m-%d %H:%M:%S')
-                assert ui_row in data_row
+                assert normalize_timezone_date(ui_data_row) in data_row
 
     def query_json_adapter(self):
         self.run_filter_query(self.JSON_ADAPTER_FILTER)
