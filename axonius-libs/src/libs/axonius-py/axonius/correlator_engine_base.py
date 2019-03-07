@@ -312,7 +312,7 @@ class CorrelatorEngineBase(ABC):
     def _correlation_preconditions(self):
         pass
 
-    def correlate(self, devices, use_markers=False):
+    def correlate(self, devices, use_markers=False, correlation_config=None):
         """
         This calls `_raw_correlate` and also does some significant post processing.
         Post processing involves checking that correlations made are only between available devices
@@ -322,7 +322,7 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: iter(CorrelationResult or WarningResult)
         """
-
+        self._correlation_config = correlation_config
         logic_correlations = self._preprocess_devices(devices)
         devices = list(self._prefilter_device(devices))
         plugin_name_to_adapter_device = {

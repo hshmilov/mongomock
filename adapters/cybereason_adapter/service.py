@@ -181,13 +181,12 @@ class CybereasonAdapter(AdapterBase):
                 return return_error('Method not supported', 405)
             cybereason_response_dict = self.get_request_data_as_object()
             pylum_id = cybereason_response_dict.get('pylum_id')
-            malop_id = cybereason_response_dict.get('malop_id')
             client_id = cybereason_response_dict.get('client_id')
             cybereason_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
             with cybereason_obj:
-                device_raw = cybereason_obj.update_isolate_status(pylum_id, malop_id, do_isolate)
+                device_raw = cybereason_obj.update_isolate_status(pylum_id, do_isolate)
             if not device_raw:
-                return_error('Problem isolating device', 400)
+                return return_error('Problem isolating device', 400)
             device = self._create_device(device_raw)
             if device:
                 self._save_data_from_plugin(
@@ -196,5 +195,5 @@ class CybereasonAdapter(AdapterBase):
                     EntityType.Devices, False)
         except Exception as e:
             logger.exception(f'Problem during isolating changes')
-            return_error(str(e), 500)
+            return return_error(str(e), 500)
         return '', 200

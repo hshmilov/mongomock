@@ -1,4 +1,3 @@
-import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -16,13 +15,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ArmisAdapter(AdapterBase):
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 90 * 24
+
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         device_category = Field(str, 'Device Category')
-        first_seen = Field(datetime.datetime, 'First Seen')
         risk_level = Field(int, 'Risk Level')
         armis_tags = ListField(str, 'Armis Tags')
-        device_type = ListField(str, 'Device Type')
+        device_type = Field(str, 'Device Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -118,6 +118,8 @@ class ArmisAdapter(AdapterBase):
                 try:
                     ips = device_raw.get('ipAddress').split(',') if device_raw.get('ipAddress') else None
                     mac = device_raw.get('macAddress') if device_raw.get('macAddress') else None
+                    if len(mac) != 17:
+                        mac = None
                     if ips or mac:
                         device.add_nic(mac, ips)
                 except Exception:

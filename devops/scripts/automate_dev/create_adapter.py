@@ -180,7 +180,7 @@ def connection_action(filename: str, adapter_name: str):
 def client_id_action(filename: str, _):
     template = \
         """def get_client_id(client_config):
-    return 'AUTOADAPTER - you should return the id (for example: client_config["hostname"])'
+    return 'AUTOADAPTER - you should return the id (for example: client_config['domain'])'
 """
     with open(filename, 'w') as file_:
         file_.write(template)

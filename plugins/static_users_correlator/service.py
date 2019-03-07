@@ -9,10 +9,12 @@ class StaticUsersCorrelatorService(CorrelatorBase):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
-        self._correlation_engine = StaticUserCorrelatorEngine(email_prefix_correlation=self._email_prefix_correlation)
+        self._correlation_engine = StaticUserCorrelatorEngine()
 
     def _correlate(self, entities: list):
-        return self._correlation_engine.correlate(entities)
+        return self._correlation_engine.correlate(entities,
+                                                  correlation_config={
+                                                      'email_prefix_correlation': self._email_prefix_correlation})
 
     @property
     def _entity_to_correlate(self) -> EntityType:

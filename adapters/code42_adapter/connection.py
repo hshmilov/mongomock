@@ -30,8 +30,7 @@ class Code42Connection(RESTConnection):
                                          'pgNum': page_num},
                              do_basic_auth=True)
         yield from response['data']['computers']
-        total = response['data'].get('totalCount') or 0
-        while page_num * DEVICE_PER_PAGE < min(MAX_NUMBER_OF_DEVICES, total):
+        while page_num * DEVICE_PER_PAGE < MAX_NUMBER_OF_DEVICES:
             try:
                 page_num += 1
                 response = self._get('Computer',

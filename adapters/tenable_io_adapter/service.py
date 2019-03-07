@@ -264,7 +264,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 # This chars are false, we get bad csv sometimes
                 false_uuid = ['=', '|', ':']
                 if uuid is None or host is None or any(elem in uuid for elem in false_uuid):
-                    logger.warning(f"Bad asset {device_raw}, continuing")
+                    logger.debug(f"Bad asset {device_raw}, continuing")
                     continue
                 assets_dict[uuid].append(device_raw)
             except Exception:

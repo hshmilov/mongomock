@@ -1,6 +1,10 @@
 export const pluginMeta = {
+    dynatrace_adapter: {
+        title: 'Dynatrace - BETA',
+        description: 'The Dynatrace software intelligence platform provides application performance management, cloud infrastructure monitoring, AI-based analytics, and digital experience management.'
+    },
     code42_adapter: {
-        title: 'Code42 - BETA',
+        title: 'Code42',
         description: 'Code42 provides data protection and visibility for data at rest and in motion on both endpoints and the cloud.'
     },
     counter_act_adapter: {
@@ -8,7 +12,7 @@ export const pluginMeta = {
         description: 'The Forescout CounterACT platform provides insight into numerous types of network-connected devices.'
     },
     armis_adapter: {
-        title: 'Armis - BETA',
+        title: 'Armis',
         description: 'Armis provides device discovery, behavioral analytics to identify risks or attacks, and automatic protection.'
     },
     bluecat_adapter: {
@@ -28,7 +32,7 @@ export const pluginMeta = {
         description: 'The SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges.'
     },
     checkpoint_r80_adapter: {
-        title: 'CheckPoint R80 - BETA',
+        title: 'CheckPoint R80',
         description: 'Check Point is a provider of hardware and software products for IT security, including network security, endpoint security, mobile security, data security and security management.'
     },
     sysaid_adapter: {

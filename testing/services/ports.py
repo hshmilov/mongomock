@@ -132,6 +132,7 @@ DOCKER_PORTS = {
     'counter-act-adapter':              6053,
     'diag':                             6666,  # reserved
     'code42-adapter':                   6667,
+    'dynatrace-adapter':                6668,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

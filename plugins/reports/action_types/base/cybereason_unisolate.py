@@ -16,14 +16,8 @@ class CybereasonUnisolateAction(ActionTypeBase):
     def config_schema() -> dict:
         return {
             'items': [
-                {
-                    'name': 'malop_id',
-                    'title': 'Malware OP ID',
-                    'type': 'string'
-                }
             ],
             'required': [
-                'malop_id'
             ],
             'type': 'array'
         }
@@ -47,4 +41,4 @@ class CybereasonUnisolateAction(ActionTypeBase):
             'adapters.client_used': 1,
             'adapters.data.pylum_id': 1,
             'adapters.plugin_name': 1
-        }), self._config['malop_id'])
+        }))

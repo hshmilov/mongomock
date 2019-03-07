@@ -6,7 +6,7 @@ from axonius.plugin_base import PluginBase
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-def cybereason_action(action_name, current_result, malop_id):
+def cybereason_action(action_name, current_result):
 
     results = []
     for entry in current_result:
@@ -17,7 +17,6 @@ def cybereason_action(action_name, current_result, malop_id):
                     client_id = adapter_data['client_used']
                     cybereason_response_dict = dict()
                     cybereason_response_dict['pylum_id'] = pylum_id
-                    cybereason_response_dict['malop_id'] = malop_id
                     cybereason_response_dict['client_id'] = client_id
                     response = PluginBase.Instance.request_remote_plugin(action_name, 'cybereason_adapter',
                                                                          'post', json=cybereason_response_dict)

@@ -106,9 +106,6 @@ def normalize_adapter_users(users):
 
 
 class StaticUserCorrelatorEngine(CorrelatorEngineBase):
-    def __init__(self, *args,  email_prefix_correlation=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__email_prefix_correlation = email_prefix_correlation
 
     @property
     def _correlation_preconditions(self):
@@ -178,5 +175,5 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn(normalize_adapter_users(entities))
         yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
-        if self.__email_prefix_correlation:
+        if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:
             yield from self._correlate_email_prefix(normalize_adapter_users(entities))

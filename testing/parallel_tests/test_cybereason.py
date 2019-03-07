@@ -1,4 +1,3 @@
-import pytest
 
 # pylint: disable=unused-import
 from services.adapters.cybereason_service import CybereasonService, cybereason_fixture
@@ -35,19 +34,3 @@ class TestCybereasonAdapter(AdapterTestBase):
     @property
     def some_user_id(self):
         raise NotImplementedError()
-
-    @pytest.mark.skip('AX-2944')
-    def test_fetch_devices(self):
-        pass
-
-    @pytest.mark.skip('AX-2944')
-    def test_removing_adapter_creds_with_devices(self):
-        pass
-
-    @pytest.mark.skip('AX-2944')
-    def test_removing_adapter_creds_with_users(self):
-        pass
-
-    @pytest.mark.skip('AX-2944')
-    def test_check_reachability(self):
-        pass

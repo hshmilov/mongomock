@@ -72,7 +72,8 @@ class MSSQLConnection(object):
             batch = True
             while batch:
                 batch = results.fetchmany(self.devices_paging)
-                logger.info(f"Got {devices_count*self.devices_paging} devices so far")
+                if devices_count < 10 or devices_count % 1000 == 0:
+                    logger.info(f"Got {devices_count*self.devices_paging} devices so far")
                 devices_count += 1
                 for row in batch:
                     yield dict(zip(columns, row))

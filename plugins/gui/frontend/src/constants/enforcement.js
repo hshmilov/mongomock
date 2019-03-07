@@ -41,7 +41,7 @@ export const actionsMeta = {
     create_service_now_computer: {
         title: 'Create ServiceNow Computer'
     },
-        carbonblack_defense_change_policy: {
+    carbonblack_defense_change_policy: {
         title: 'Change Carbonblack Defense Policy'
     },
     enable_entities: {

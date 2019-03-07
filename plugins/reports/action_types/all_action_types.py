@@ -18,6 +18,9 @@ from reports.action_types.alert.create_servicenow_incident import ServiceNowInci
 from reports.action_types.alert.create_sysaid_incident import SysaidIncidentAction
 from reports.action_types.alert.create_jira_incident import JiraIncidentAction
 from reports.action_types.alert.send_slack_message import SlackSendMessageAction
+from reports.action_types.base.cybereason_isolate import CybereasonIsolateAction
+from reports.action_types.base.cybereason_unisolate import CybereasonUnisolateAction
+from reports.action_types.base.carbonblack_defense_change_policy import CarbonblackDefenseChangePolicyAction
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -37,5 +40,8 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'enable_entities': EnableEntities,
     'disable_entities': DisableEntities,
     'create_sysaid_incident': SysaidIncidentAction,
-    'slack_send_message': SlackSendMessageAction
+    'slack_send_message': SlackSendMessageAction,
+    'carbonblack_defense_change_policy': CarbonblackDefenseChangePolicyAction,
+    'cybereason_isolate': CybereasonIsolateAction,
+    'cybereason_unisolate': CybereasonUnisolateAction
 }

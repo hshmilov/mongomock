@@ -30,13 +30,16 @@ class {capital_adapter_name}Adapter(AdapterBase):
 
     @staticmethod
     def get_connection(client_config):
-        with {capital_adapter_name}Connection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                                              username=client_config['username'], password=client_config['password']
-                                              ) as connection:
-            return connection
+        connection = {capital_adapter_name}Connection(domain=client_config['domain'],
+                                                      verify_ssl=client_config['verify_ssl'],
+                                                      https_proxy=client_config.get('https_proxy'),
+                                                      username=client_config['username'],
+                                                      password=client_config['password'])
+        with connection:
+            pass
+        return connection
 
-    @staticmethod
-    def _connect_client(client_config):
+    def _connect_client(self, client_config):
         try:
             return self.get_connection(client_config)
         except RESTException as e:
@@ -87,6 +90,11 @@ class {capital_adapter_name}Adapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                }},
+                {{
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'bool'
                 }}
             ],
             'required': [
@@ -98,15 +106,26 @@ class {capital_adapter_name}Adapter(AdapterBase):
             'type': 'array'
         }}
 
+    def _create_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('')
+            if device_id is None:
+                logger.warning.(f'Bad device with no ID {{device_raw}}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('') or '')
+            # AUTOADAPTER - create device
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            try:
-                device = self._new_device_adapter()
-                # AUTOADAPTER - create device
-                device.set_raw(device_raw)
+            device = self._create_device(device_raw)
+            if device:
                 yield device
-            except Exception:
-                logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
 
     @classmethod
     def adapter_properties(cls):

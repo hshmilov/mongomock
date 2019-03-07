@@ -2527,7 +2527,7 @@ class PluginBase(Configurable, Feature):
                     'items': [
                         {
                             "name": "enabled",
-                            "title": "Use Jira ServiceDesk",
+                            "title": "Use Jira",
                             "type": "bool"
                         },
                         {
