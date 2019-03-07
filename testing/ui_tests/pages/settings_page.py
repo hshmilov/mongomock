@@ -2,6 +2,7 @@ import time
 
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE
 from services.axon_service import TimeoutException
 from ui_tests.pages.page import X_BODY, Page
 
@@ -54,6 +55,7 @@ class SettingsPage(Page):
     READ_WRITE_PERMISSION = 'Read and edit'
     RESTRICTED_PERMISSION = 'Restricted'
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
+    BAD_PROXY_TOASTER = PROXY_ERROR_MESSAGE
     SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'
     SELECT_OPTION_CSS = 'div.x-select-option'
     READ_ONLY_ROLE = 'Read Only User'
@@ -461,6 +463,9 @@ class SettingsPage(Page):
 
     def fill_proxy_address(self, proxy_addr):
         self.fill_text_field_by_element_id('proxy_addr', proxy_addr)
+
+    def fill_proxy_port(self, port):
+        self.fill_text_field_by_element_id('proxy_port', port)
 
     def fill_remote_access_timeout(self, timeout):
         self.fill_text_field_by_element_id('remote-access-timer', timeout)

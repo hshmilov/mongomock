@@ -113,3 +113,4 @@ LOGGED_IN_MARKER_PATH = AXONIOUS_SETTINGS_PATH / '.logged_in'
 # Other consts
 SPECIFIC_DATA = 'specific_data'
 ADAPTERS_DATA = 'adapters_data'
+PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'

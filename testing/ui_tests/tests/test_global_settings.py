@@ -97,9 +97,21 @@ class TestGlobalSettings(TestBase):
         self.settings_page.wait_for_spinner_to_end()
 
         self.settings_page.set_proxy_settings_enabled()
-        self.settings_page.fill_proxy_address('1.2.3.4')
+        self.settings_page.fill_proxy_address('10.0.236.211')
+        self.settings_page.fill_proxy_port('8888')
         self.settings_page.save_and_wait_for_toaster()
 
         (content, _, _) = self.axonius_system.core.get_file_contents_from_container('/tmp/proxy_data.txt')
         content = content.decode().strip()
-        assert content == '{"creds": "1.2.3.4:8080", "verify": true}'
+        assert content == '{"creds": "10.0.236.211:8888", "verify": true}'
+
+    def test_bad_proxy_settings(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        self.settings_page.wait_for_spinner_to_end()
+
+        self.settings_page.set_proxy_settings_enabled()
+        self.settings_page.fill_proxy_address('1.2.3.4')
+        self.settings_page.fill_proxy_port('1234')
+        self.settings_page.click_save_button()
+        self.settings_page.wait_for_toaster(self.settings_page.BAD_PROXY_TOASTER)

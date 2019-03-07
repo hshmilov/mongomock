@@ -56,7 +56,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        ChartMetrics, ChartRangeTypes,
                                        ChartRangeUnits, ChartViews,
                                        ResearchStatus, SPECIFIC_DATA,
-                                       ADAPTERS_DATA, USERS_CONFIG_COLLECTION)
+                                       ADAPTERS_DATA, PROXY_ERROR_MESSAGE,
+                                       USERS_CONFIG_COLLECTION)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
@@ -65,11 +66,17 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           CORE_UNIQUE_NAME,
                                           GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
-                                          METADATA_PATH, NODE_ID, NODE_NAME,
-                                          NODE_USER_PASSWORD, NOTES_DATA_TAG,
-                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          METADATA_PATH,
+                                          NODE_ID,
+                                          NODE_NAME,
+                                          NODE_USER_PASSWORD,
+                                          NOTES_DATA_TAG,
+                                          PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          SYSTEM_SETTINGS, DEVICE_CONTROL_PLUGIN_NAME)
+                                          SYSTEM_SETTINGS,
+                                          DEVICE_CONTROL_PLUGIN_NAME,
+                                          PROXY_SETTINGS)
 from axonius.consts.metric_consts import (SystemMetric, ApiMetric, Query)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
@@ -109,6 +116,7 @@ from axonius.utils.mongo_administration import (get_collection_capped_size,
 from axonius.utils.mongo_chunked import get_chunks_length
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import bytes_image_to_base64
+from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
 from axonius.types.enforcement_classes import TriggerPeriod
@@ -404,6 +412,30 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             Path('gui/frontend/src/constants/config.json').write_text(json.dumps(self.config))
         except Exception:
             logger.exception(f'Problem with writing the config.json: {Exception}')
+
+    @staticmethod
+    def is_proxy_allows_web(config):
+        if config['enabled'] is False:
+            return True
+
+        proxies = None
+        try:
+            logger.info(f'checking the following proxy config {config}')
+            proxy_string = to_proxy_string(config)
+            if proxy_string:
+                proxies = {'https': f'https://{proxy_string}'}
+
+            test_request = requests.get('https://manage.chef.io', proxies=proxies, timeout=7)
+            retcode = test_request.status_code
+            if retcode == 200:
+                logger.info('Proxy test passed')
+                return True
+            else:
+                logger.error(f'proxy test failed with code {retcode}')
+                return False
+        except Exception:
+            logger.exception(f'proxy test failed')
+            return False
 
     def _mark_demo_views(self):
         """
@@ -2120,6 +2152,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                         message = f'Could not connect to mail server "{email_settings["smtpHost"]}"'
                         logger.exception(message)
                         return return_error(message, 400)
+
+                proxy_settings = config_to_set.get(PROXY_SETTINGS)
+                if not self.is_proxy_allows_web(proxy_settings):
+                    return return_error(PROXY_ERROR_MESSAGE, 400)
 
                 global_ssl = config_to_set.get('global_ssl')
                 if global_ssl and global_ssl.get('enabled') is True:

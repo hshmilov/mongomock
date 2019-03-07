@@ -29,6 +29,7 @@ from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
 from axonius.utils.files import get_local_config_file
 from axonius.utils.mongo_administration import set_mongo_parameter
+from axonius.utils.proxy_utils import to_proxy_string
 from core.exceptions import PluginNotFoundError
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -594,7 +595,7 @@ class CoreService(PluginBase, Configurable):
         try:
             # This string is used by chef!
             with open('/tmp/proxy_data.txt', 'w') as f:
-                proxy_string = self.to_proxy_string(self._proxy_settings)
+                proxy_string = to_proxy_string(self._proxy_settings)
                 verify = self._proxy_settings[PROXY_VERIFY]
 
                 proxy_json = {
@@ -615,29 +616,6 @@ class CoreService(PluginBase, Configurable):
         online_plugins = self.online_plugins.keys()
         if online_plugins:
             self.__config_updater_pool.map_async(update_plugin, online_plugins)
-
-    @staticmethod
-    def to_proxy_string(proxy_data):
-        """
-        Format proxy paramteres into proxy string format without the protocol prefix
-        :param proxy_data: dict with proxy params such as user name, port ip etc
-        """
-        if not proxy_data['enabled'] or not proxy_data[PROXY_ADDR] or proxy_data[PROXY_ADDR] == '':
-            return ''
-
-        addr = proxy_data[PROXY_ADDR]
-
-        addr = addr.strip().lower()
-        addr = addr.replace('https://', '')
-        addr = addr.replace('http://', '')
-
-        ip_port = f'{addr}:{proxy_data[PROXY_PORT]}'
-        proxy_string = ip_port
-        if proxy_data[PROXY_USER]:
-            proxy_string = f'{proxy_data[PROXY_USER]}:{proxy_data[PROXY_PASSW]}@{ip_port}'
-
-        urllib3.ProxyManager(f'http://{proxy_string}')
-        return proxy_string
 
     @classmethod
     def _db_config_schema(cls) -> dict:
