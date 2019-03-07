@@ -101,6 +101,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.add_send_email()
         self.enforcements_page.find_missing_email_server_notification()
 
+    @flaky(max_runs=3)
     def test_syslog_operation_multiple_actions(self):
         syslog_server = SyslogService()
         syslog_server.take_process_ownership()
