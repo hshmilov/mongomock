@@ -13,21 +13,7 @@ class TripWireEnterpriseConnection(RESTConnection):
                          **kwargs)
 
     def _connect(self):
-        self._get('operations/operations', do_basic_auth=True)
+        self._get('nodes', do_basic_auth=True)
 
     def get_device_list(self):
-        operations = self._get('operations/operations', do_basic_auth=True)
-        for operation in operations:
-            try:
-                source_id = operation.get('sourceId')
-                external_id = operation.get('externalId')
-                if not source_id or not external_id:
-                    logging.warning(f'Bad operation with bad IDs {operation}')
-                    continue
-                asset_per_operation = self._get(f'operations/{source_id}/{external_id}/assets',
-                                                do_basic_auth=True)
-                for asset in asset_per_operation:
-                    asset['operation'] = operation
-                    yield asset
-            except Exception:
-                logger.exception(f'Problemg getting operation {operation}')
+        yield from self._get('nodes', do_basic_auth=True)

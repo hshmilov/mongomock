@@ -81,8 +81,16 @@ class SolarwindsConnection(object):
                     node['MacAddresses'] = node_id_to_mac[node_id]
                 if node_id in node_id_to_sw:
                     node['sw_list'] = node_id_to_sw[node_id]
-                yield node
+                yield node, 'node'
             except Exception:
                 logger.exception(f'Problem parsing specific node {node}')
-
+        try:
+            wifi_results = self.client.query('Select  Description, Name, NodeID, LastUpdate, FirstUpdate,'
+                                             ' MAC, IPAddress, ID, InstanceType, '
+                                             'DisplayName, SSID from Orion.Packages.Wireless.Clients')
+            if wifi_results and wifi_results.get('results'):
+                for device_raw in wifi_results.get('results'):
+                    yield device_raw, 'wifi'
+        except Exception:
+            logger.exception(f'Problem getting wifi info')
         logger.info('Parsed all of the device data from the Orion DB')

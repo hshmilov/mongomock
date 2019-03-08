@@ -1,4 +1,3 @@
-
 import datetime
 import logging
 
@@ -6,7 +5,8 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.utils.datetime import parse_date
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from tripwire_enterprise_adapter.client_id import get_client_id
 from tripwire_enterprise_adapter.connection import TripWireEnterpriseConnection
@@ -17,24 +17,27 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class TripwireEnterpriseAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        source_id = Field(str, 'Source ID')
-        external_id = Field(str, 'External ID')
-        has_agent = Field(bool, 'Has Agent')
-        is_axon = Field(bool, 'Is Axon')
-        agent_name = Field(str, 'Agent Name')
-        agent_version = Field(str, 'Agent Version')
-        asset_status = Field(str, 'Asset Status')
-        start_time = Field(datetime.datetime, 'Start Time')
-        delegate_name = Field(str, 'Delegate Name')
-        delegate_agent_version = Field(str, 'Delegate Agent Version')
-        current_duration_seconds = Field(float, 'Current Duration Seconds')
-        average_duration_seconds = Field(float, 'Average Duration Seconds')
-        standard_deviation_seconds = Field(float, 'Standard Deviation Seconds')
-        rule_complete_count = Field(int, 'Rule Complete Count')
-        rule_total_count = Field(int, 'Rule Total Count')
-        operation_name = Field(str, 'Operation Name')
-        operation_descritpion = Field(str, 'Operation Description')
-        operation_type = Field(str, 'Operation Type')
+        tracking_id = Field(str, 'Tracking ID')
+        last_check = Field(datetime.datetime, 'Last Check')
+        modified_time = Field(datetime.datetime, 'Modified Time')
+        imported_time = Field(datetime.datetime, 'Imported Time')
+        last_registration = Field(datetime.datetime, 'Last Registration')
+        has_failures = Field(bool, 'Has Failures')
+        agent_version = Field(str, 'Agent Versoin')
+        is_disabled = Field(str, 'Is Disabled')
+        is_socks_proxy = Field(str, 'Is Socks Proxy')
+        max_severity = Field(int, 'Max Severity')
+        real_time_enabled = Field(bool, 'Real Time Enabled')
+        rmi_host = Field(str, 'RMI Host')
+        rmi_port = Field(str, 'RMI Port')
+        tripwire_tags = ListField(str, 'Tripwire Tags')
+        element_count = Field(int, 'Element Count')
+        agent_capabilities = ListField(str, 'Agent Capabilities')
+        agent_uuid = Field(str, 'Agent UUID')
+        audit_enabled = Field(bool, 'Audit Enabled')
+        event_generator_installed = Field(bool, 'Evenet Generator Installed')
+        event_generator_enabled = Field(bool, 'Evenet Generator Enabled')
+        licensed_features = ListField(str, 'Licensed Features')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -56,13 +59,14 @@ class TripwireEnterpriseAdapter(AdapterBase):
                                                       https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass
+            return connection
         except Exception as e:
             logger.error(f'Failed to connect to client {client_id}')
             raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
-            yield from client_data.get_devices()
+            yield from client_data.get_device_list()
 
     def _clients_schema(self):
         return {
@@ -103,37 +107,70 @@ class TripwireEnterpriseAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=R0915
     def create_device(self, device_raw):
         device = self._new_device_adapter()
-        name = device_raw.get('name')
-        source_id = device_raw.get('sourceId')
-        external_id = device_raw.get('externalId')
-        if not name:
+        device_id = device_raw.get('id')
+        if not device_id:
             logger.warning(f'Bad device with no name {device_raw}')
             return None
-        device.id = name + '_' + (source_id or '') + '_' + (external_id or '')
-        device.has_agent = device_raw.get('hasAgent')
-        device.is_axon = device_raw.get('isAxon')
-        device.agent_version = device_raw.get('agentVersion')
-        device.asset_status = device_raw.get('status')
-        device.agent_name = device_raw.get('agent')
-        device.start_time = device_raw.get('startTime')
-        device.delegate_name = device_raw.get('delegate')
-        device.delegate_agent_version = device_raw.get('delegateAgentVersion')
-        device.current_duration_seconds = device_raw.get('currentDurationSeconds')
-        device.average_duration_seconds = device_raw.get('averageDurationSeconds')
-        device.standard_deviation_seconds = device_raw.get('standardDeviationSeconds')
-        device.rule_complete_count = device_raw.get('ruleCompleteCount')
-        device.rule_total_count = device_raw.get('ruleTotalCount')
+        device.id = device_id + '_' + (device_raw.get('name') or '')
+        device.hostname = device_raw.get('name')
         try:
-            operation = device_raw.get('operation')
-            if operation and isinstance(operation, dict):
-                device.operation_name = operation.get('name')
-                device.operation_descritpion = operation.get('description')
-                device.operation_type = operation.get('type')
+            device.add_ips_and_macs(macs=device_raw.get('macAddresses'), ips=device_raw.get('ipAddresses'))
         except Exception:
-            logger.exception(f'Problem adding opeartion to {device_raw}')
+            logger.exception(f'Problem adding nic to {device_raw}')
+        device.tracking_id = device_raw.get('trackingId')
+        try:
+            device.last_check = parse_date(device_raw.get('lastCheck'))
+            device.imported_time = parse_date(device_raw.get('importedTime'))
+            device.modified_time = parse_date(device_raw.get('modifiedTime'))
+            device.last_registration = parse_date(device_raw.get('lastRegistration'))
 
+        except Exception:
+            logger.exception(f'Problem adding parse date {device_raw}')
+        device.device_manufacturer = device_raw.get('make')
+        device.device_model = device_raw.get('model')
+        device.has_failures = device_raw.get('hasFailures')
+        device.agent_version = device_raw.get('agentVersion')
+        device.description = device_raw.get('description')
+        device.is_disabled = device_raw.get('isDisabled')
+        device.is_socks_proxy = device_raw.get('isSocksProxy')
+        device.real_time_enabled = device_raw.get('realTimeEnabled')
+        device.rmi_host = device_raw.get('rmiHost')
+        device.rmi_port = device_raw.get('rmiPort')
+        try:
+            device.max_severity = device_raw.get('maxSeverity')
+        except Exception:
+            logger.exception(f'Problem getting max severity for {device_raw}')
+        try:
+            if device_raw.get('tags') and isinstance(device_raw.get('tags'), list):
+                for tag_raw in device_raw.get('tags'):
+                    if tag_raw and isinstance(tag_raw, dict):
+                        device.tripwire_tags.append(tag_raw.get('tag'))
+        except Exception:
+            logger.exception(f'Problem adding tags to {device_raw}')
+        try:
+            device.element_count = device_raw.get('elementCount')
+        except Exception:
+            logger.exception(f'Problem getting element count for {device_raw}')
+        try:
+            device.agent_capabilities = device_raw.get('commonAgentCapabilities')
+        except Exception:
+            logger.exception(f'Problem getting agent capabilities for {device_raw}')
+        try:
+            device.figure_os((device_raw.get('commonAgentOsName') or '') + ' ' +
+                             (device_raw.get('commonAgentOsVersion') or ''))
+        except Exception:
+            logger.exception(f'Prbolem getting os for {device_raw}')
+        device.agent_uuid = device_raw.get('commonAgentUuid')
+        device.audit_enabled = device_raw.get('auditEnabled')
+        device.event_generator_installed = device_raw.get('eventGeneratorInstalled')
+        device.event_generator_enabled = device_raw.get('eventGeneratorEnabled')
+        try:
+            device.licensed_features = device_raw.get('licensedFeatures')
+        except Exception:
+            logger.exception(f'Problem getting license features for {device_raw}')
         device.set_raw(device_raw)
         return device
 
