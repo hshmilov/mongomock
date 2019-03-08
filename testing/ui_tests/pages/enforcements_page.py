@@ -78,6 +78,7 @@ class EnforcementsPage(EntitiesPage):
 
     def click_new_enforcement(self):
         self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
         self.wait_for_element_present_by_text(self.NEW_ENFORCEMENT_BUTTON)
         self.find_new_enforcement_button().click()
         self.wait_for_element_present_by_css(self.TRIGGER_CONTAINER_CSS)
