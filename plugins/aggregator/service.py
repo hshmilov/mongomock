@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 from datetime import datetime
-from typing import List
 
 import pymongo
 from axonius.adapter_base import is_plugin_adapter
@@ -124,6 +123,7 @@ class AggregatorService(Triggerable, PluginBase):
 
             # For labels
             db.create_index([(f'tags.name', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'tags.label_value', pymongo.ASCENDING)], background=True)
 
             # this is commonly sorted by
             db.create_index([('adapter_list_length', pymongo.DESCENDING)], background=True)
