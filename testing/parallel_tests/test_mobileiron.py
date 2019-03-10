@@ -22,6 +22,10 @@ class TestMobileironAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @flaky(max_runs=2)
+    @pytest.mark.skip('AX-3506')
     def test_fetch_devices(self):
         super().test_fetch_devices()
+
+    @pytest.mark.skip('AX-3506')
+    def test_check_reachability(self):
+        pass
