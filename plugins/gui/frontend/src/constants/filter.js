@@ -59,7 +59,7 @@ export const compOps = {
     tag: {
         contains,
         equals,
-        exists: exists_str
+        exists: 'tags == match([label_value != "" and label_value == exists(true)])'
     },
     image: {
         exists: exists_str
