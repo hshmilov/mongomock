@@ -8,7 +8,7 @@ BYTES_LIMIT = 5 * 1024 * 1024  # 5MB
 VERBOSE_BYTES_LIMIT = 15 * 1024 * 1024  # 15MB
 
 
-def create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
+def create_logger(plugin_unique_name, log_level, log_directory):
     """ Creating Json logger.
 
     Creating a logging object to be used by the plugin. This object is the pythonic logger object
@@ -16,7 +16,6 @@ def create_logger(plugin_unique_name, log_level, logstash_host, log_directory):
     An ELK stack.
     :param str log_level: the log_level of the log.
     :param str plugin_unique_name: The unique name of the plugin.
-    :param str logstash_host: The address of logstash HTTP interface.
     :param str log_directory: The path for the log file.
     """
     regular_log_path = os.path.join(log_directory, f'{plugin_unique_name}.axonius.log')

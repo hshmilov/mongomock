@@ -27,7 +27,6 @@ from apscheduler.triggers.cron import CronTrigger
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
-from elasticsearch import Elasticsearch
 from flask import (after_this_request, jsonify, make_response, redirect,
                    request, send_file, session, has_request_context)
 from passlib.hash import bcrypt
@@ -365,8 +364,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
         self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
 
-        self._elk_addr = self.config['gui_specific']['elk_addr']
-        self._elk_auth = self.config['gui_specific']['elk_auth']
         self.__users_collection = self._get_collection(USERS_COLLECTION)
         self.__roles_collection = self._get_collection(ROLES_COLLECTION)
         self.__users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
@@ -2965,22 +2962,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'api_key': api_data['api_key'],
             'api_secret': api_data['api_secret']
         })
-
-    @gui_helpers.paginated()
-    @gui_add_rule_logged_in('logs')
-    def logs(self, limit, skip):
-        """
-        Maybe this should be datewise paginated, perhaps the whole scheme will change.
-        :param limit: pagination
-        :param skip:
-        :return:
-        """
-        es = Elasticsearch(hosts=[self._elk_addr], http_auth=self._elk_auth)
-        res = es.search(index='logstash-*', doc_type='logstash-log',
-                        body={'size': limit,
-                              'from': skip,
-                              'sort': [{'@timestamp': {'order': 'desc'}}]})
-        return jsonify(res['hits']['hits'])
 
     #############
     # DASHBOARD #

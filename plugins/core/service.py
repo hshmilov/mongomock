@@ -51,7 +51,6 @@ class CoreService(PluginBase, Configurable):
         db_addr = config['core_specific']['db_addr']
         db_user = config['core_specific']['db_user']
         db_password = config['core_specific']['db_password']
-        log_addr = config['core_specific']['log_addr']
 
         temp_config = configparser.ConfigParser()
         temp_config.read(VOLATILE_CONFIG_PATH)
@@ -76,7 +75,6 @@ class CoreService(PluginBase, Configurable):
                      "db_addr": db_addr,
                      "db_user": db_user,
                      "db_password": db_password,
-                     "log_addr": log_addr,
                      "api_key": api_key,
                      "node_id": node_id or '',
                      "status": "ok"}
@@ -418,7 +416,6 @@ class CoreService(PluginBase, Configurable):
                     'db_user': plugin_user,
                     'db_password': plugin_password,
                     'last_seen': datetime.utcnow(),
-                    'log_addr': self.logstash_host,
                     'status': 'ok',
                     NODE_ID: node_id or self.node_id
                 }

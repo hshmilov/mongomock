@@ -359,10 +359,8 @@ class PluginBase(Configurable, Feature):
         # Use the data we have from the core.
         try:
             self.db_host = self.config['DEBUG']['db_addr']
-            self.logstash_host = self.config['DEBUG']['log_addr']
         except KeyError:
             self.db_host = core_data['db_addr']
-            self.logstash_host = core_data['log_addr']
 
         self.db_user = core_data['db_user']
         self.db_password = core_data['db_password']
@@ -370,7 +368,7 @@ class PluginBase(Configurable, Feature):
         self.log_level = logging.INFO
 
         # Creating logger
-        create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, LOG_PATH)
+        create_logger(self.plugin_unique_name, self.log_level, LOG_PATH)
 
         # Adding rules to flask
         for routed in ROUTED_FUNCTIONS:
