@@ -55,6 +55,7 @@ import {
 	GET_DATA_BY_ID, getDataByID,
 	SINGLE_ADAPTER, singleAdapter
 } from './getters'
+
 import { adapters } from './modules/adapters'
 import { auth } from './modules/auth'
 import { constants } from './modules/constants'
@@ -138,23 +139,23 @@ export default new Vuex.Store({
         [ SAVE_CUSTOM_DATA ]: saveCustomData
     },
     modules: {
-        /*
-            System's controls resource, relevant for each component.
-            Module stores controls and manages the way of obtaining it.
-         */
-        devices,
-		users,
-		explorer,
-		adapters,
-        notifications,
-        auth,
-        constants,
-        dashboard,
-		reports,
-		settings,
-		onboarding,
-        enforcements,
-        tasks
+      /*
+          System's controls resource, relevant for each component.
+          Module stores controls and manages the way of obtaining it.
+       */
+      adapters,
+      auth,
+      constants,
+      dashboard,
+      devices,
+      enforcements,
+      explorer,
+      notifications,
+      onboarding,
+      reports,
+      settings,
+      tasks,
+      users
     }
 
 })

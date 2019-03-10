@@ -6,7 +6,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
     entry: {
-        app: './src/main.js'
+        main: path.resolve(__dirname, 'src/main.js')
     },
     module: {
         rules: [
@@ -26,7 +26,7 @@ module.exports = {
                 test: /\.(png|jpg|gif|svg|woff2?|eot|ttf)(\?v=[0-9\.]+)?$/,
                 loader: 'file-loader',
                 options: {
-                    name: '[name].[ext]?[hash]'
+                    name: '[name].[ext]'
                 }
             }
         ]
@@ -44,5 +44,10 @@ module.exports = {
         new HtmlWebpackPlugin({
             template: __dirname + '/index.html'
         })
-    ]
+    ],
+    stats: {
+        modules: true,
+        warnings: true,
+        children: false
+    }
 }

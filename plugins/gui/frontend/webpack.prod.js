@@ -41,13 +41,20 @@ module.exports = merge(common, {
         ]
     },
     optimization: {
-        runtimeChunk: 'single',
         splitChunks: {
+            chunks: 'all',
+            maxInitialRequests: Infinity,
+            minSize: 0,
             cacheGroups: {
                 vendor: {
                     test: /[\\/]node_modules[\\/]/,
-                    name: 'vendors',
-                    chunks: 'all'
+                    name(module) {
+                        // Extract name. E.g. node_modules/packageName/not/this/part.js
+                        const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+
+                        // npm package names are URL-safe, but some servers don't like @ symbols
+                        return `npm.${packageName.replace('@', '')}`;
+                    },
                 },
                 styles: {
                     name: 'styles',
@@ -56,7 +63,6 @@ module.exports = merge(common, {
                     enforce: true
                 }
             }
-
         }
     },
     plugins: [
@@ -66,7 +72,7 @@ module.exports = merge(common, {
         })
     ],
     output: {
-        filename: 'build.[contenthash].js',
+        filename: '[name].[contenthash].js',
         path: path.resolve(__dirname, 'dist'),
         publicPath: '/dist/'
     }

@@ -30,8 +30,8 @@ Vue.use(VmSelect)
 
 new Vue({
 	el: '#app',
-	template: '<App />',
 	components: {App},
+	template: '<App />',
 	router,
 	store
 })

@@ -1,27 +1,28 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import Account from '../components/pages/Account.vue'
-import Adapter from '../components/pages/Adapter.vue'
-import Adapters from '../components/pages/Adapters.vue'
-import Dashboard from '../components/pages/Dashboard.vue'
-import DashboardExplorer from '../components/pages/DashboardExplorer.vue'
-import Device from '../components/pages/Device.vue'
-import Devices from '../components/pages/Devices.vue'
-import DevicesQuery from '../components/pages/DevicesQuery.vue'
-import Enforcement from '../components/pages/Enforcement.vue'
-import Enforcements from '../components/pages/Enforcements.vue'
-import Tasks from '../components/pages/Tasks.vue'
-import Task from '../components/pages/Task.vue'
-import Instances from '../components/pages/Instances.vue'
-import Notification from '../components/pages/Notification.vue'
-import Notifications from '../components/pages/Notifications.vue'
-import Reports from '../components/pages/Reports.vue'
-import Settings from '../components/pages/Settings.vue'
-import User from '../components/pages/User.vue'
-import Users from '../components/pages/Users.vue'
-import UsersQuery from '../components/pages/UsersQuery.vue'
+const Account = () => import('../components/pages/Account.vue')
+const Adapter = () => import('../components/pages/Adapter.vue')
+const Adapters = () => import('../components/pages/Adapters.vue')
+const Dashboard = () => import('../components/pages/Dashboard.vue')
+const DashboardExplorer = () => import('../components/pages/DashboardExplorer.vue')
+const Device = () => import('../components/pages/Device.vue')
+const Devices = () => import('../components/pages/Devices.vue')
+const DevicesQuery = () => import('../components/pages/DevicesQuery.vue')
+const Enforcement = () => import('../components/pages/Enforcement.vue')
+const Enforcements = () => import('../components/pages/Enforcements.vue')
+const Tasks = () => import('../components/pages/Tasks.vue')
+const Task = () => import('../components/pages/Task.vue')
+const Instances = () => import('../components/pages/Instances.vue')
+const Notification = () => import('../components/pages/Notification.vue')
+const Notifications = () => import('../components/pages/Notifications.vue')
+const Reports = () => import('../components/pages/Reports.vue')
+const Settings = () => import('../components/pages/Settings.vue')
+const User = () => import('../components/pages/User.vue')
+const Users = () => import('../components/pages/Users.vue')
+const UsersQuery = () => import('../components/pages/UsersQuery.vue')
+
 import * as medicalConfig from '../constants/config.json'
-import ExternalViewComponent from "../components/pages/medical/ExternalViewComponent.vue";
+const ExternalViewComponent = () => import("../components/pages/medical/ExternalViewComponent.vue")
 
 Vue.use(Router)
 export default new Router({
