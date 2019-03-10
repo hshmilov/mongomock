@@ -630,6 +630,7 @@ def is_only_host_adapter_not_localhost(adapter_device):
     return (adapter_device.get('plugin_name') in ['deep_security_adapter',
                                                   'cisco_umbrella_adapter',
                                                   'carbonblack_defense_adapter',
+                                                  'azure_ad_adapter',
                                                   'carbonblack_protection_adapter',
                                                   'csv_adapter',
                                                   'code42_adapter',
@@ -666,6 +667,10 @@ def is_from_no_mac_adapters_with_empty_mac(adapter_device):
 
 def is_from_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter'
+
+
+def is_from_azure_ad(adapter_device):
+    return adapter_device.get('plugin_name') == 'azure_ad_adapter'
 
 
 def is_from_jamf(adapter_device):
@@ -840,7 +845,9 @@ def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
 
 
 def get_asset_name(adapter_device):
-    return adapter_device['data'].get('name')
+    if adapter_device['data'].get('name'):
+        return adapter_device['data'].get('name').upper()
+    return None
 
 
 def get_serial(adapter_device):
@@ -1131,6 +1138,8 @@ def normalize_adapter_device(adapter_device):
     adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_data)
     if adapter_device[NORMALIZED_HOSTNAME]:
         adapter_device[NORMALIZED_HOSTNAME_STRING] = '.'.join(adapter_device[NORMALIZED_HOSTNAME]) + '.'
+    if not adapter_device.get(NORMALIZED_HOSTNAME_STRING) and is_from_azure_ad(adapter_device):
+        adapter_device[NORMALIZED_HOSTNAME_STRING] = get_asset_name(adapter_device)
     if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
         adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
     return adapter_device

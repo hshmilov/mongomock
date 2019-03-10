@@ -24,6 +24,7 @@ class CiscoDevice(DeviceAdapter):
     auth_algo = Field(str, 'Authentication Algorithm')
     nac_state = Field(str, 'NAC State')
     wireless_vlan = Field(str, 'Wireless Vlan')
+    association_time = Field(datetime.datetime, 'Association Time')
 
 
 class AbstractCiscoClient:

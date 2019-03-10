@@ -192,14 +192,14 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_only_host_adapter(self, adapters_to_correlate):
-        logger.info('Starting to correlate on Hostname-DeepSecurity')
+        logger.info('Starting to correlate on Hostname-only')
         filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [is_only_host_adapter_not_localhost],
                                       [not_aruba_adapters],
-                                      {'Reason': 'They have the same hostname and one is DeepSecurity'},
+                                      {'Reason': 'They have the same hostname and from specifc adapters'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_serial(self, adapters_to_correlate):

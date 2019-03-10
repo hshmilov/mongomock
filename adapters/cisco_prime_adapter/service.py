@@ -8,6 +8,7 @@ from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
 from axonius.clients.cisco.snmp import CiscoSnmpClient
 from axonius.clients.rest.connection import RESTConnection
 from axonius.utils import json
+from axonius.utils.parsing import parse_unix_timestamp
 from axonius.utils.files import get_local_config_file
 from cisco_prime_adapter.client import CiscoPrimeClient
 
@@ -252,6 +253,7 @@ class CiscoPrimeAdapter(AdapterBase):
             device.last_used_users = (raw_device.get('userName') or '').split(',')
         except Exception:
             logger.exception(f'Problem getting users for {raw_device}')
+        device.association_time = parse_unix_timestamp(raw_device.get('associationTime'))
         device.set_raw(raw_device)
         return device
 

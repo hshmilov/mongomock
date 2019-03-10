@@ -696,14 +696,14 @@ def test_rule_correlate_asset_host():
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same Asset name', 1)
 
 
-def test_rule_correlate_hostname_deep_security():
+def test_rule_correlate_hostname_only():
     device1 = get_raw_device(plugin_name='deep_security_adapter', device_id='SomeDeviceId', hostname='ofir',
                              network_interfaces=[{IPS_FIELD: ['1.1.1.1']}],
                              more_params=[('name', 'Ofir')])
     device2 = get_raw_device(plugin_name='esx_adapter', device_id='SomeDeviceId', hostname='ofir',
                              more_params=[('name', 'Ofir'), ('device_type', 'Juniper Space Device')])
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname '
-                                                                      'and one is DeepSecurity', 1)
+                                                                      'and from specifc adapters', 1)
 
 
 def test_rule_correlate_splunk_vpn_hostname():
