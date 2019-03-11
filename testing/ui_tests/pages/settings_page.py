@@ -14,6 +14,7 @@ class SettingsPage(Page):
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     LIFECYCLE_SETTINGS_CSS = 'li#research-settings-tab'
     MANAGE_USERS_CSS = 'li#user-settings-tab'
+    FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_CHECKBOX_CSS = 'div.x-checkbox-container'
     SEND_EMAILS_LABEL = 'Send emails'
@@ -31,6 +32,7 @@ class SettingsPage(Page):
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     OKTA_LOGINS_LABEL = 'Allow Okta logins'
     SAML_LOGINS_LABEL = 'Allow SAML-Based logins'
+    TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
     SYSLOG_HOST = 'syslogHost'
@@ -119,6 +121,9 @@ class SettingsPage(Page):
 
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
+
+    def click_feature_flags(self):
+        self.driver.find_element_by_css_selector(self.FEATURE_FLAGS_CSS).click()
 
     def click_about(self):
         self.driver.find_element_by_css_selector(self.ABOUT_CSS).click()
@@ -469,3 +474,11 @@ class SettingsPage(Page):
 
     def fill_remote_access_timeout(self, timeout):
         self.fill_text_field_by_element_id('remote-access-timer', timeout)
+
+    def is_trial_mode(self):
+        toggle = self.find_checkbox_by_label(self.TRIAL_MODE_FLAG_LABEL)
+        return self.is_toggle_selected(toggle)
+
+    def set_set_trial_mode(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.TRIAL_MODE_FLAG_LABEL)
+        self.click_toggle_button(toggle, make_yes=make_yes)

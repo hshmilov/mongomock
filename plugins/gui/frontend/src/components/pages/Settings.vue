@@ -38,11 +38,11 @@
             </x-tab>
             <x-tab title="Feature flags" id="feature-flags-tab" v-if="isAxonius">
                 <div class="tab-settings">
-                    <template>
-                        <x-form :schema="featureFlags.schema" @validate="updateGuiValidity" :read-only="isReadOnly"
+                    <template v-if="featureFlags">
+                        <x-form :schema="featureFlags.schema" :read-only="isReadOnly"
                                 v-model="featureFlags.config" api-upload="plugins/gui"/>
                         <div class="place-right">
-                            <x-button :disabled="!guiComplete || isReadOnly" id="feature-flags-save" @click="saveFeatureFlags">Save</x-button>
+                            <x-button :disabled="isReadOnly" id="feature-flags-save" @click="saveFeatureFlags">Save</x-button>
                         </div>
                     </template>
                 </div>
