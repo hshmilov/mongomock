@@ -128,7 +128,7 @@ def test_ip_of_zeroes():
            'EPOComputerProperties.IPV6': 'FE80:0:0:0:ECC1:22FF:FED6:AAD4'}
     device = DeviceAdapter(set(), set())
     service.parse_network(raw, device)
-    assert sorted(device.network_interfaces[0].ips) == sorted(['fe80::ecc1:22ff:fed6:aad4', '0.0.0.0'])
+    assert device.network_interfaces[0].ips == ['fe80::ecc1:22ff:fed6:aad4']
 
 
 def test_escape_dict():

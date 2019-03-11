@@ -448,7 +448,7 @@ class DeviceAdapter(SmartJsonClass):
             else:
                 for ip in ips_iter:
                     try:
-                        if ip and isinstance(ip, str):
+                        if ip and isinstance(ip, str) and ip != '0.0.0.0':
                             obj.ips.append(ip)
                             obj.ips_raw.append(ip)
                     except (ValueError, TypeError):
