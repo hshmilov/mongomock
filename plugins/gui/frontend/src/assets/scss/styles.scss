@@ -179,6 +179,9 @@ ul {
   .indicator-border-#{$i} {
     border-color: nth($indicator-colours, $i);
   }
+  .indicator-color-#{$i} {
+    color: nth($indicator-colours, $i);
+  }
 }
 
 .indicator-bg-error {

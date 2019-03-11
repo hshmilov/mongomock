@@ -82,7 +82,7 @@ from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
 from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
     ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD, \
-    LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, LAST_UPDATE_FIELD
+    LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, LAST_UPDATE_FIELD, NOT_RAN_STATE
 
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
@@ -90,7 +90,7 @@ from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.fields import Field
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import Triggerable, TriggerStates
+from axonius.mixins.triggerable import Triggerable, TriggerStates, StoredJobStateCompletion
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.types.correlation import CorrelationResult, CorrelationReason, MAX_LINK_AMOUNT
@@ -1925,13 +1925,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @staticmethod
     def __tasks_query(mongo_filter):
+        """
+        General query for all Complete / In progress task that also answer given mongo_filter
+        """
         return {
             '$and': [{
                 'job_name': 'run',
-                'job_completed_state': 'Successful',
-                'result': {
-                    '$type': 'object'
-                }
+                '$or': [
+                    {
+                        'job_completed_state': StoredJobStateCompletion.Successful.name,
+                        'result': {
+                            '$ne': NOT_RAN_STATE
+                        }
+                    }, {
+                        'job_completed_state': StoredJobStateCompletion.Running.name
+                    }
+                ]
             }, mongo_filter]
         }
 
@@ -1946,25 +1955,40 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             """
             Extract needed fields to build task as represented in the Frontend
             """
-            main_results = task['result']['main']['action']['results']
+            task_basic = {
+                '_id': task['_id'],
+                'enforcement': task['post_json']['report_name'],
+                'started_at': task['started_at'] or '',
+                'finished_at': task['finished_at'] or ''
+            }
+            if task['result']:
+                main_results = task['result'][ACTIONS_MAIN_FIELD]['action']['results']
 
-            main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
-                                                      main_results['successful_entities'])
+                main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                          main_results['successful_entities'])
 
-            main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
-                                                        main_results['unsuccessful_entities'])
+                main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
+                                                            main_results['unsuccessful_entities'])
+                return gui_helpers.beautify_db_entry({
+                    **task_basic,
+                    'success_rate': f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}',
+                    ACTIONS_MAIN_FIELD: task['result']['main']['name'],
+                    'trigger_view': task['result']['metadata']['trigger']['view']['name'],
+                    'status': 'Complete'
+                })
+
+            enforcement = self.enforcements_collection.find_one({
+                'name': task['post_json']['report_name']
+            })
+            if not enforcement:
+                return gui_helpers.beautify_db_entry(task_basic)
 
             return gui_helpers.beautify_db_entry({
-                '_id': task['_id'],
-                'success_rate': f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}',
-                'enforcement': task['post_json']['report_name'],
-                ACTIONS_MAIN_FIELD: task['result']['main']['name'],
-                ACTIONS_SUCCESS_FIELD: [x['name'] for x in task['result'][ACTIONS_SUCCESS_FIELD]],
-                ACTIONS_FAILURE_FIELD: [x['name'] for x in task['result'][ACTIONS_FAILURE_FIELD]],
-                ACTIONS_POST_FIELD: [x['name'] for x in task['result'][ACTIONS_POST_FIELD]],
-                'trigger_view': task['result']['metadata']['trigger']['view']['name'],
-                'started_at': task['started_at'],
-                'finished_at': task['finished_at']
+                **task_basic,
+                'success_rate': '0 / 0',
+                ACTIONS_MAIN_FIELD: enforcement[ACTIONS_FIELD][ACTIONS_MAIN_FIELD],
+                'trigger_view': enforcement[TRIGGERS_FIELD][0]['view']['name'],
+                'status': 'In Progress'
             })
 
         sort = []

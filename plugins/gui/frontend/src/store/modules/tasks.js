@@ -10,13 +10,14 @@ export const tasks = {
         count: { data: 0, fetching: false, error: ''},
         view: {
             page: 0, pageSize: 20, fields: [
-                'success_rate', 'enforcement', 'main', 'success', 'failure', 'post',
-                'trigger_view', 'started_at', 'finished_at'
+                'status', 'success_rate', 'enforcement', 'main', 'trigger_view', 'started_at', 'finished_at'
             ], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
         },
         fields: {
             data: {
                 generic: [{
+                    name: 'status', title: 'Status', type: 'string', format: 'status'
+                }, {
                     name: 'success_rate', title: 'Successful / Total', type: 'string'
                 }, {
                     name: 'enforcement', title: 'Name', type: 'string'

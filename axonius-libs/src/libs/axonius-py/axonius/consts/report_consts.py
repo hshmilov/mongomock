@@ -66,3 +66,6 @@ LAST_TRIGGERED_FIELD = 'last_triggered'
 TIMES_TRIGGERED_FIELD = 'times_triggered'
 LAST_UPDATE_FIELD = 'last_updated'
 TRIGGERS_FIELD = 'triggers'
+
+
+NOT_RAN_STATE = 'Not ran'

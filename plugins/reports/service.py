@@ -21,7 +21,7 @@ from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.files import get_local_config_file
 from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, \
     ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, \
-    LAST_UPDATE_FIELD, TRIGGERS_FIELD, LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD
+    LAST_UPDATE_FIELD, TRIGGERS_FIELD, LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, NOT_RAN_STATE
 from axonius.types.enforcement_classes import ActionInRecipe, Recipe, TriggerPeriod, Trigger, \
     TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata, ActionRunResults, \
     DBActionRunResults, EntityResult, SavedActionType
@@ -174,7 +174,7 @@ class ReportsService(Triggerable, PluginBase):
             run_configuration = Trigger.from_dict(run_configuration[0])
             result = self.__process_run_configuration(report, run_configuration, post_json.get('manual', False))
             if not result:
-                return 'Not ran'
+                return NOT_RAN_STATE
 
             result.metadata.pretty_id = self.__get_pretty_id()
             result = json.loads(result.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
