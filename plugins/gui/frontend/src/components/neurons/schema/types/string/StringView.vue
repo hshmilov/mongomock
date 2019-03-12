@@ -48,7 +48,7 @@
           },
           value: {
             type: [String, Array],
-            required: true
+            default: ''
           }
         },
         computed: {

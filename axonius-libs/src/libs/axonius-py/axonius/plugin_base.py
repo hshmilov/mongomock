@@ -2256,6 +2256,26 @@ class PluginBase(Configurable, Feature):
             r = requests.post(url=url, data=message, proxies=proxies)
             r.raise_for_status()
 
+    def get_selected_entities(self, entity_type: EntityType, entities_selection: dict, mongo_filter: dict):
+        """
+
+        :param entities_selection: Represents the selection of entities.
+                If include is True, then ids is the list of selected internal axon ids
+                Otherwise, selected internal axon ids are all those fetched by the mongo filter excluding the ids list
+        :param entity_type: Type of entity to fetch
+        :param mongo_filter: Query to fetch entire data by
+        :return: List of internal axon ids that were meant to be selected, according to given selection and filter
+        """
+        if entities_selection['include']:
+            return entities_selection['ids']
+        return [entry['internal_axon_id'] for entry in self._entity_db_map[entity_type].find({
+            '$and': [
+                {'internal_axon_id': {
+                    '$nin': entities_selection['ids']
+                }}, mongo_filter
+            ]
+        }, projection={'internal_axon_id': 1})]
+
     def _adapters_with_feature(self, feature: str) -> Set[str]:
         """
         Returns all plugins unique names of plugins that have a specific feature

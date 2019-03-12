@@ -19,12 +19,14 @@ from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.files import get_local_config_file
-from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, \
-    ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, \
-    LAST_UPDATE_FIELD, TRIGGERS_FIELD, LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, NOT_RAN_STATE
-from axonius.types.enforcement_classes import ActionInRecipe, Recipe, TriggerPeriod, Trigger, \
-    TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata, ActionRunResults, \
-    DBActionRunResults, EntityResult, SavedActionType
+from axonius.utils.mongo_escaping import unescape_dict
+from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
+                                          ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD, TRIGGERS_FIELD,
+                                          LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, NOT_RAN_STATE,
+                                          CUSTOM_SELECTION_TRIGGER)
+from axonius.types.enforcement_classes import (ActionInRecipe, Recipe, TriggerPeriod, Trigger, TriggerView,
+                                               TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata,
+                                               ActionRunResults, DBActionRunResults, EntityResult, SavedActionType)
 from axonius.utils.mongo_chunked import insert_chunked, read_chunked, create_indexes_on_collection
 
 from reports.action_types.action_type_alert import ActionTypeAlert
@@ -167,12 +169,27 @@ class ReportsService(Triggerable, PluginBase):
             })
             if not report:
                 raise LookupError('Can not find such a report')
-            run_configuration = [x for x in report[TRIGGERS_FIELD]
-                                 if x['name'] == post_json['configuration_name']]
-            if not len(run_configuration) == 1:
-                raise LookupError(f'Found {len(run_configuration)} instances of the given configuration')
-            run_configuration = Trigger.from_dict(run_configuration[0])
-            result = self.__process_run_configuration(report, run_configuration, post_json.get('manual', False))
+            if post_json.get('configuration_name'):
+                run_configuration = [x for x in report[TRIGGERS_FIELD]
+                                     if x['name'] == post_json['configuration_name']]
+                if not len(run_configuration) == 1:
+                    raise LookupError(f'Found {len(run_configuration)} instances of the given configuration')
+                result = self.__process_run_configuration(report, Trigger.from_dict(run_configuration[0]),
+                                                          post_json.get('manual', False))
+            elif post_json.get('input'):
+                result = self.__process_run_configuration(report, Trigger(
+                    name=post_json['report_name'],
+                    view=TriggerView(name=CUSTOM_SELECTION_TRIGGER, entity=EntityType[post_json['input']['entity']]),
+                    conditions=TriggerConditions(new_entities=False, previous_entities=False, above=-1, below=-1),
+                    period=TriggerPeriod.never,
+                    last_triggered=None,
+                    result=None,
+                    result_count=0,
+                    times_triggered=0,
+                    run_on=RunOnEntities.AllEntities
+                ), manual=True, manual_input=post_json['input'])
+            else:
+                result = None
             if not result:
                 return NOT_RAN_STATE
 
@@ -520,7 +537,8 @@ class ReportsService(Triggerable, PluginBase):
             'i.name': run_configuration_name
         }])
 
-    def __process_run_configuration(self, report, trigger: Trigger, manual: bool = False) -> Recipe:
+    def __process_run_configuration(self, report, trigger: Trigger, manual: bool = False,
+                                    manual_input: dict = None) -> Recipe:
         """
         Processes a run configuration:
         Figures out if it is supposed to run;
@@ -530,6 +548,7 @@ class ReportsService(Triggerable, PluginBase):
         :param report: the relevant report with the recipe
         :param trigger: the specific run configuration to use
         :param manual: the specific run was triggered manually, so no need to check period or conditions
+        :param manual_input: A custom selection of entities to run on, instead of Trigger's query results
         :return: Updated Recipe in case the configuration has run
         """
         result = None
@@ -546,25 +565,31 @@ class ReportsService(Triggerable, PluginBase):
                 max_date = now - datetime.timedelta(days=31)
             if trigger.last_triggered > max_date:
                 return result
-        current_query_result = self.get_view_results(trigger.view.name, trigger.view.entity)
-        query_difference = query_result_diff(current_query_result, self.__get_internal_axon_ids(trigger.result))
-        triggered_reason = self._get_triggered_reports(current_query_result, query_difference,
+
+        if manual_input:
+            query_result = self.get_selected_entities(
+                EntityType[manual_input['entity']], manual_input['selection'], unescape_dict(manual_input['filter']))
+        else:
+            query_result = self.get_view_results(trigger.view.name, trigger.view.entity)
+
+        query_difference = query_result_diff(query_result, self.__get_internal_axon_ids(trigger.result))
+        triggered_reason = self._get_triggered_reports(query_result, query_difference,
                                                        trigger.conditions) if not manual else [TriggeredReason.manual]
 
         if not triggered_reason and trigger.result is None:
             # this means that this is the first run for a query that has specific conditions,
             # it is vital to update the run_configuration.result for future triggers
-            id_ = self.__insert_new_list_internal_axon_ids(current_query_result)
+            id_ = self.__insert_new_list_internal_axon_ids(query_result)
             self.__update_run_configuration(report['_id'], trigger.name,
                                             {
                                                 '$set': {
                                                     f'{TRIGGERS_FIELD}.$[i].result': id_,
-                                                    f'{TRIGGERS_FIELD}.$[i].result_count': len(current_query_result)
+                                                    f'{TRIGGERS_FIELD}.$[i].result_count': len(query_result)
                                                 }})
 
         logger.debug(f'Triggered with {triggered_reason} '
                      f'query_difference = {query_difference} '
-                     f'current_query_result = {current_query_result} ')
+                     f'current_query_result = {query_result} ')
 
         if triggered_reason:
             reasons = [reason.value.format(getattr(trigger.conditions, reason.name, '')) for reason in triggered_reason]
@@ -572,14 +597,14 @@ class ReportsService(Triggerable, PluginBase):
             result = self._call_actions(report, recipe, triggered_reason, trigger,
                                         query_difference.added
                                         if trigger.run_on == RunOnEntities.AddedEntities
-                                        else current_query_result,
+                                        else query_result,
                                         query_difference.added, query_difference.removed)
 
             # Update last triggered.
             self.__update_run_configuration(report['_id'], trigger.name, {
                 '$set': {
-                    f'{TRIGGERS_FIELD}.$[i].result': self.__insert_new_list_internal_axon_ids(current_query_result),
-                    f'{TRIGGERS_FIELD}.$[i].result_count': len(current_query_result),
+                    f'{TRIGGERS_FIELD}.$[i].result': self.__insert_new_list_internal_axon_ids(query_result),
+                    f'{TRIGGERS_FIELD}.$[i].result_count': len(query_result),
                     f'{TRIGGERS_FIELD}.$[i].{LAST_TRIGGERED_FIELD}': datetime.datetime.utcnow()
                 },
                 '$inc': {

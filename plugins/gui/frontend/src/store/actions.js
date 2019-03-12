@@ -363,13 +363,29 @@ export const linkData = ({state, dispatch}, payload) => {
 
 export const UNLINK_DATA = 'UNLINK_DATA'
 export const unlinkData = ({state, dispatch}, payload) => {
-    let moduleState = getModule(state, payload)
+	let moduleState = getModule(state, payload)
 	if (!moduleState || !payload.data) return
 
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}/manual_unlink?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
 		method: 'POST',
 		data: payload.data
+	})
+}
+
+export const ENFORCE_DATA = 'ENFORCE_DATA'
+export const enforceData = ({state, dispatch}, payload) => {
+	let moduleState = getModule(state, payload)
+	if (!moduleState || !payload.data) return
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/enforce?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+		method: 'POST',
+		data: payload.data
+	}).then(() => {
+		dispatch(FETCH_DATA_CONTENT, {
+			module: 'tasks', skip: 0
+		})
 	})
 }
 

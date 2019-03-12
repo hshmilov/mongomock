@@ -69,3 +69,4 @@ TRIGGERS_FIELD = 'triggers'
 
 
 NOT_RAN_STATE = 'Not ran'
+CUSTOM_SELECTION_TRIGGER = 'Custom Selection'

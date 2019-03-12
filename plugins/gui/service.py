@@ -80,9 +80,10 @@ from axonius.consts.metric_consts import (SystemMetric, ApiMetric, Query)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
-from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
-    ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD, \
-    LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, LAST_UPDATE_FIELD, NOT_RAN_STATE
+from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
+                                          ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD,
+                                          LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, LAST_UPDATE_FIELD,
+                                          NOT_RAN_STATE, CUSTOM_SELECTION_TRIGGER)
 
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
@@ -114,6 +115,7 @@ from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.mongo_chunked import get_chunks_length
 from axonius.utils.mongo_retries import mongo_retry
+from axonius.utils.mongo_escaping import escape_dict
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached
@@ -779,6 +781,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                    })]
         return entitydisabelables_adapters, entities_ids_by_adapters
 
+    def _enforce_entity(self, entity_type: EntityType, mongo_filter):
+        """
+        Trigger selected Enforcement with a static list of entities, as selected by user
+        """
+        post_data = request.get_json()
+        response = self.request_remote_plugin('trigger/run?blocking=False', 'reports', method='post', json={
+            'report_name': post_data['enforcement'],
+            'input': {
+                'entity': entity_type.name,
+                'filter': escape_dict(mongo_filter),
+                'selection': post_data['entities']
+            }
+        })
+        return response.text, response.status_code
+
     def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter):
         """
         Save or fetch views over the entities db
@@ -866,32 +883,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, entities_selection, mongo_filter):
         self._entity_db_map[entity_type].delete_many({'internal_axon_id': {
-            '$in': self.__get_selected_internal_axon_ids(entities_selection, entity_type, mongo_filter)
+            '$in': self.get_selected_entities(entity_type, entities_selection, mongo_filter)
         }})
         self._trigger('clear_dashboard_cache', blocking=False)
 
         return '', 200
-
-    def __get_selected_internal_axon_ids(self, entities_selection, entity_type: EntityType, mongo_filter):
-        """
-
-        :param entities_selection: Represents the selection of entities.
-                If include is True, then ids is the list of selected internal axon ids
-                Otherwise, selected internal axon ids are all those fetched by the mongo filter excluding the ids list
-        :param entity_type: Type of entity to fetch
-        :param mongo_filter: Query to fetch entire data by
-        :return: List of internal axon ids that were meant to be selected, according to given selection and filter
-        """
-        if entities_selection['include']:
-            return entities_selection['ids']
-        else:
-            return [entry['internal_axon_id'] for entry in self._entity_db_map[entity_type].find({
-                '$and': [
-                    {'internal_axon_id': {
-                        '$nin': entities_selection['ids']
-                    }}, mongo_filter
-                ]
-            }, projection={'internal_axon_id': 1})]
 
     def _save_query_to_history(self, entity_type: EntityType, view_filter, skip, limit, sort, projection):
         """
@@ -956,7 +952,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         post_data = request.get_json()
         entities = list(self._entity_db_map[entity_type].find(filter={
             'internal_axon_id': {
-                '$in': self.__get_selected_internal_axon_ids(post_data['selection'], entity_type, mongo_filter)
+                '$in': self.get_selected_entities(entity_type, post_data['selection'], mongo_filter)
             }
         }, projection={
             'internal_axon_id': True,
@@ -1023,7 +1019,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return: The internal_axon_id of the new entity
         """
         post_data = request.get_json()
-        internal_axon_ids = self.__get_selected_internal_axon_ids(post_data, entity_type, mongo_filter)
+        internal_axon_ids = self.get_selected_entities(entity_type, post_data, mongo_filter)
         if len(internal_axon_ids) > MAX_LINK_AMOUNT:
             return return_error(f'Maximal amount of entities to link at once is {MAX_LINK_AMOUNT}')
         if len(internal_axon_ids) < 2:
@@ -1160,6 +1156,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def disable_device(self, mongo_filter):
         return self._disable_entity(EntityType.Devices, mongo_filter)
 
+    @gui_helpers.filtered_entities()
+    @gui_add_rule_logged_in('devices/enforce', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadWrite)})
+    def enforce_device(self, mongo_filter):
+        return self._enforce_entity(EntityType.Devices, mongo_filter)
+
     @gui_add_rule_logged_in('devices/<device_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
     def device_notes(self, device_id):
@@ -1175,7 +1178,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('devices/custom', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
-    def devices_custom_Data(self, mongo_filter):
+    def devices_custom_data(self, mongo_filter):
         """
         See self._entity_custom_data
         """
@@ -1267,6 +1270,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                                                 PermissionLevel.ReadWrite)})
     def disable_user(self, mongo_filter):
         return self._disable_entity(EntityType.Users, mongo_filter)
+
+    @gui_helpers.filtered_entities()
+    @gui_add_rule_logged_in('users/enforce', methods=['POST'], required_permissions={Permission(PermissionType.Users,
+                                                                                                PermissionLevel.ReadWrite)})
+    def enforce_user(self, mongo_filter):
+        return self._enforce_entity(EntityType.Users, mongo_filter)
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
@@ -1725,16 +1734,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         def beautify_enforcement(enforcement):
             actions = enforcement[ACTIONS_FIELD]
-            trigger = enforcement[TRIGGERS_FIELD][0]
+            trigger = enforcement[TRIGGERS_FIELD][0] if enforcement[TRIGGERS_FIELD] else None
             return gui_helpers.beautify_db_entry({
                 '_id': enforcement['_id'], 'name': enforcement['name'],
                 ACTIONS_MAIN_FIELD: actions[ACTIONS_MAIN_FIELD],
                 ACTIONS_SUCCESS_FIELD: actions.get(ACTIONS_SUCCESS_FIELD) or [],
                 ACTIONS_FAILURE_FIELD: actions.get(ACTIONS_FAILURE_FIELD) or [],
                 ACTIONS_POST_FIELD: actions.get(ACTIONS_POST_FIELD) or [],
-                'trigger_view': trigger['view']['name'],
-                LAST_TRIGGERED_FIELD: trigger[LAST_TRIGGERED_FIELD],
-                TIMES_TRIGGERED_FIELD: trigger[TIMES_TRIGGERED_FIELD],
+                'trigger_view': trigger['view']['name'] if trigger else '',
+                LAST_TRIGGERED_FIELD: trigger[LAST_TRIGGERED_FIELD] if trigger else '',
+                TIMES_TRIGGERED_FIELD: trigger[TIMES_TRIGGERED_FIELD] if trigger else '',
                 LAST_UPDATE_FIELD: enforcement[LAST_UPDATE_FIELD]
             })
 
@@ -1764,10 +1773,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def put_enforcement(self, enforcement_to_add):
         self.__process_enforcement_actions(enforcement_to_add[ACTIONS_FIELD])
-        if not enforcement_to_add[TRIGGERS_FIELD]:
-            return return_error('Enforcement cannot be created without a trigger', 400)
 
-        if not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
+        if enforcement_to_add[TRIGGERS_FIELD] and not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
             enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
         response = self.request_remote_plugin('reports', 'reports', method='put', json=enforcement_to_add)
         return response.text, response.status_code
@@ -1890,6 +1897,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         Triggers a job for the requested enforcement with its first trigger
         """
+
         enforcement = self.enforcements_collection.find_one({
             '_id': ObjectId(enforcement_id)
         }, {
@@ -1987,7 +1995,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 **task_basic,
                 'success_rate': '0 / 0',
                 ACTIONS_MAIN_FIELD: enforcement[ACTIONS_FIELD][ACTIONS_MAIN_FIELD],
-                'trigger_view': enforcement[TRIGGERS_FIELD][0]['view']['name'],
+                'trigger_view': (enforcement[TRIGGERS_FIELD][0]['view']['name']
+                                 if enforcement[TRIGGERS_FIELD] else CUSTOM_SELECTION_TRIGGER),
                 'status': 'In Progress'
             })
 
