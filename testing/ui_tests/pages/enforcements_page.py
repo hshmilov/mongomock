@@ -237,6 +237,7 @@ class EnforcementsPage(EntitiesPage):
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         exe_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../uploaded_files/test_binary.exe'))
         self.upload_file_by_id('executable', open(exe_path, 'rb').read(), is_bytes=True)
+        self.wait_for_uploading_file()
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 

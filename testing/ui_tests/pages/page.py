@@ -90,6 +90,7 @@ class Page:
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_ROWS_CSS = 'tbody .x-row.clickable'
     TABLE_COUNTER = 'div.count'
+    UPLOADING_FILE_CSS = '//div[@class=\'name-placeholder\' and text()=\'Uploading...\']'
 
     JSON_ADAPTER_NAME = 'JSON File'
     CUSTOM_ADAPTER_NAME = 'Custom Data'
@@ -494,6 +495,9 @@ class Page:
 
     def safe_refresh(self):
         self.driver.get(self.driver.current_url)
+
+    def wait_for_uploading_file(self):
+        self.wait_for_element_absent_by_css(self.UPLOADING_FILE_CSS)
 
     @staticmethod
     def __upload_file_on_element(element, file_path):

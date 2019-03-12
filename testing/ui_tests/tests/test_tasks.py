@@ -27,6 +27,7 @@ class TestTasks(TestBase):
         self.enforcements_page.refresh()
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_table_to_load()
 
         # Check Enforcement's Task details in table
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_ENFORCEMENT)
