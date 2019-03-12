@@ -48,6 +48,42 @@ class TenableSecurityScannerConnection(RESTConnection):
             logger.exception('Couldn\'t delete token')
         super().close()
 
+    def add_ips_to_asset(self, tenable_sc_dict):
+        asset_name = tenable_sc_dict.get('asset_name')
+        ips = tenable_sc_dict.get('ips')
+        if not ips or not asset_name:
+            raise RESTException('Missing IPS or Asset ID')
+        asset_list = self._get('asset')
+        if not asset_list or not isinstance(asset_list, list):
+            raise RESTException('Bad list of assets')
+        asset_id = None
+        for asset_raw in asset_list:
+            if asset_raw.get('name') == asset_name:
+                asset_id = asset_raw.get('id')
+                break
+        if not asset_id:
+            raise RESTException('Couldn\'n find asset name')
+        asset_id_raw = self._get(f'asset/{asset_id}')
+        if not asset_id_raw or not isinstance(asset_id_raw, dict):
+            raise RESTException('Couldn\'n get asset id info')
+        if not (asset_id_raw.get('typeFields') or {}).get('definedIPs'):
+            raise RESTException('Device with no IPs')
+        ips_raw = (asset_id_raw.get('typeFields') or {}).get('definedIPs').split(',')
+        for ip in ips:
+            if ip not in ips_raw:
+                ips_raw.add(ip)
+        self._patch('asset',
+                    body_params={'definedIPs': ','.join(ips_raw), 'id': asset_id})
+        return True
+
+    def create_asset_with_ips(self, tenable_sc_dict):
+        asset_name = tenable_sc_dict.get('asset_name')
+        ips = tenable_sc_dict.get('ips')
+        if not ips or not asset_name:
+            raise RESTException('Missing IPS or Asset ID')
+        self._post('asset', body_params={'definedIPs': ','.join(ips), 'name': asset_name, 'type': 'static'})
+        return True
+
     def get_device_list(self):
         repositories = self._get('repository')
         repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]

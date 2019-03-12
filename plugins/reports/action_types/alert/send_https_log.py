@@ -17,12 +17,24 @@ class SendHttpsLogAction(ActionTypeAlert):
         return {
             'items': [
                 {
+                    'name': 'description',
+                    'title': 'Description',
+                    'type': 'string'
+                },
+                {
                     'name': 'send_device_data',
-                    'title': 'Send device data to syslog',
+                    'title': 'Send devices data',
                     'type': 'bool'
-                }
+                },
+                {
+                    'name': 'description_default',
+                    'title': 'Add Incident Description Default',
+                    'type': 'bool'
+                },
             ],
             'required': [
+                'description_default',
+                'send_device_data',
             ],
             'type': 'array'
         }
@@ -30,7 +42,9 @@ class SendHttpsLogAction(ActionTypeAlert):
     @staticmethod
     def default_config() -> dict:
         return {
-            'send_device_data': False
+            'send_device_data': False,
+            'description_default': False,
+            'description': None
         }
 
     def _run(self) -> AlertActionResult:
@@ -50,7 +64,10 @@ class SendHttpsLogAction(ActionTypeAlert):
                                                               num_of_current_devices=len(self._internal_axon_ids),
                                                               old_results_num_of_devices=prev_result_count,
                                                               query_link=query_link)
-            self._plugin_base.send_https_log_message(log_message)
+            log_message_full = self._config.get('description') or ''
+            if self._config.get('description_default') is True:
+                log_message_full += '\n' + log_message
+            self._plugin_base.send_https_log_message(log_message_full)
             return AlertActionResult(True, 'Sent Https message')
 
         query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(

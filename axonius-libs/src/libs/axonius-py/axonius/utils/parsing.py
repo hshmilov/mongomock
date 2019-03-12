@@ -891,6 +891,8 @@ def compare_snow_asset_hosts(adapter_device1, adapter_device2):
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
     if asset:
+        if is_valid_ip(asset):
+            return asset
         return asset.split('.')[0].lower().strip()
     return None
 
@@ -945,7 +947,10 @@ def normalize_hostname(adapter_data):
         final_hostname = final_hostname.replace('’', '')
         for extension in DEFAULT_DOMAIN_EXTENSIONS:
             final_hostname = remove_trailing(final_hostname, extension)
-        split_hostname = final_hostname.split('.')
+        if is_valid_ip(final_hostname):
+            split_hostname = [final_hostname]
+        else:
+            split_hostname = final_hostname.split('.')
 
         return split_hostname
 
@@ -1138,8 +1143,9 @@ def normalize_adapter_device(adapter_device):
     adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_data)
     if adapter_device[NORMALIZED_HOSTNAME]:
         adapter_device[NORMALIZED_HOSTNAME_STRING] = '.'.join(adapter_device[NORMALIZED_HOSTNAME]) + '.'
-    if not adapter_device.get(NORMALIZED_HOSTNAME_STRING) and is_from_azure_ad(adapter_device):
+    if not adapter_device.get(NORMALIZED_HOSTNAME_STRING) and is_from_azure_ad(adapter_device) and get_asset_name(adapter_device):
         adapter_device[NORMALIZED_HOSTNAME_STRING] = get_asset_name(adapter_device)
+        adapter_device[NORMALIZED_HOSTNAME] = [get_asset_name(adapter_device)]
     if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
         adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
     return adapter_device

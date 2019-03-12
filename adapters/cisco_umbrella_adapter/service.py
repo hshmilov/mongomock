@@ -10,6 +10,7 @@ from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from cisco_umbrella_adapter.connection import CiscoUmbrellaConnection
 from cisco_umbrella_adapter.client_id import get_client_id
+from cisco_umbrella_adapter.consts import DEFAULT_UMBRELLA_DOMAIN
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -33,7 +34,15 @@ class CiscoUmbrellaAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = CiscoUmbrellaConnection(domain=client_config['domain'],
+            if not client_config.get('domain'):
+                domain = DEFAULT_UMBRELLA_DOMAIN
+            else:
+                try:
+                    int(client_config['domain'])
+                    domain = DEFAULT_UMBRELLA_DOMAIN
+                except Exception:
+                    domain = client_config['domain']
+            connection = CiscoUmbrellaConnection(domain=domain,
                                                  verify_ssl=client_config.get('verify_ssl') or False,
                                                  network_api_key=client_config.get('network_api_key'),
                                                  network_api_secret=client_config.get('network_api_secret'),
@@ -72,7 +81,8 @@ class CiscoUmbrellaAdapter(AdapterBase):
                 {
                     'name': 'domain',
                     'title': 'CiscoUmbrella Domain',
-                    'type': 'string'
+                    'type': 'string',
+                    'default': DEFAULT_UMBRELLA_DOMAIN
                 },
                 {
                     'name': 'network_api_key',
@@ -108,7 +118,6 @@ class CiscoUmbrellaAdapter(AdapterBase):
                 }
             ],
             'required': [
-                'domain',
                 'api_key',
                 'api_secret',
                 'verify_ssl'

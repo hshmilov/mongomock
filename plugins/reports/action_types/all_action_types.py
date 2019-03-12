@@ -21,6 +21,7 @@ from reports.action_types.alert.send_slack_message import SlackSendMessageAction
 from reports.action_types.base.cybereason_isolate import CybereasonIsolateAction
 from reports.action_types.base.cybereason_unisolate import CybereasonUnisolateAction
 from reports.action_types.base.carbonblack_defense_change_policy import CarbonblackDefenseChangePolicyAction
+from reports.action_types.base.tenable_sc_add_ips_to_asset import TenableScAddIPsToAsset
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -43,5 +44,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'slack_send_message': SlackSendMessageAction,
     'carbonblack_defense_change_policy': CarbonblackDefenseChangePolicyAction,
     'cybereason_isolate': CybereasonIsolateAction,
-    'cybereason_unisolate': CybereasonUnisolateAction
+    'cybereason_unisolate': CybereasonUnisolateAction,
+    'tenable_sc_add_ips_to_asset': TenableScAddIPsToAsset
 }

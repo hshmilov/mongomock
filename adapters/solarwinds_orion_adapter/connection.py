@@ -68,10 +68,16 @@ class SolarwindsConnection(object):
 
         logger.info('Added mac address data to corresponding node')
 
-        node_results = self.client.query("""SELECT NodeID, IPAddress, Location, CPUCount, IPAddressGUID, 
-                                        NodeName, Uri, CPULoad, MemoryUsed, MemoryAvailable, PercentMemoryAvailable, 
-                                        PercentMemoryUsed, IPAddressType, Caption, NodeDescription, Description, 
-                                        SysObjectID FROM Orion.Nodes""")
+        try:
+            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, CPUCount, IPAddressGUID, 
+                                            NodeName, Uri, CPULoad, MemoryUsed, MemoryAvailable, PercentMemoryAvailable, 
+                                            PercentMemoryUsed, IPAddressType, Caption, NodeDescription, Description, 
+                                            SysObjectID FROM Orion.Nodes""")
+        except Exception:
+            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, IPAddressGUID, 
+                                            NodeName, Uri, CPULoad, MemoryUsed, MemoryAvailable, PercentMemoryAvailable, 
+                                            PercentMemoryUsed, IPAddressType, Caption, NodeDescription, Description, 
+                                            SysObjectID FROM Orion.Nodes""")
 
         for node in node_results.get('results') or []:
             try:

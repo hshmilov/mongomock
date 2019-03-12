@@ -29,6 +29,9 @@ export const actionsMeta = {
     scan_with_tenable: {
         title: 'Add to Tenable'
     },
+    tenable_sc_add_ips_to_asset: {
+        title: 'Add IPs to Tenable SC Asset'
+    },
     patch_device_windows: {
         title: 'Patch Windows Device'
     },
@@ -97,7 +100,7 @@ export const actionsMeta = {
     },
     scan_va: {
         title: 'Add Device to VA Scan',
-        items: ['scan_with_qualys', 'scan_with_tenable']
+        items: ['tenable_sc_add_ips_to_asset', 'scan_with_qualys', 'scan_with_tenable']
     },
     patch_device: {
         title: 'Patch Device',

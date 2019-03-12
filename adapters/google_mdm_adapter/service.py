@@ -35,7 +35,7 @@ class GoogleMdmAdapter(AdapterBase):
         developer_options_status = Field(bool, 'Developer Options Status')
 
     class MyUserAdapter(UserAdapter):
-        pass
+        alias_emails = ListField(str, 'Alias Emails')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -172,7 +172,11 @@ class GoogleMdmAdapter(AdapterBase):
             user.last_name = raw_name.get('familyName')
             user.username = raw_name.get('fullName')
         user.mail = raw_user_data.get('primaryEmail')
-
+        try:
+            if raw_user_data.get('aliases') and isinstance(raw_user_data.get('aliases'), list):
+                user.alias_emails = raw_user_data.get('aliases')
+        except Exception:
+            logger.exception(f'Problem getting aliasse for user {raw_user_data}')
         # getting user photo might be tricky, and might require more permissions
         # https://stackoverflow.com/questions/25467326/retrieving-google-user-photo
         return user

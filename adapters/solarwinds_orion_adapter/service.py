@@ -26,6 +26,7 @@ class SolarwindsOrionAdapter(AdapterBase):
         first_update = Field(datetime.datetime, 'First Update')
         last_update = Field(datetime.datetime, 'Last Update')
         instance_type = Field(str, 'Instance Type')
+        wifi_name = Field(str, 'WifiName')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -127,7 +128,7 @@ class SolarwindsOrionAdapter(AdapterBase):
         device.node_id = device_raw.get('NodeID')
         device.name = device_raw.get('DisplayName')
         device.ssid = device_raw.get('SSID')
-        device.hostname = device_raw.get('Name')
+        device.wifi_name = device_raw.get('Name')
         device.description = device_raw.get('Description')
         device.instance_type = device_raw.get('InstanceType')
         try:

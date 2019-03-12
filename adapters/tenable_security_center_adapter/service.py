@@ -7,6 +7,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.plugin_base import add_rule, return_error, EntityType
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
 from tenable_security_center_adapter.connection import \
@@ -36,25 +37,67 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
+    @add_rule('add_ips_to_asset', methods=['POST'])
+    def add_ips_to_asset(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tenable_sc_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status = conn.add_ips_to_asset(tenable_sc_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+        except Exception as e:
+            logger.exception('Got exception while adding to asset')
+            return str(e), 400
+        return 'Failure', 400
+
+    @add_rule('create_asset_with_ips', methods=['POST'])
+    def create_asset_with_ips(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tenable_sc_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status = conn.create_asset_with_ips(tenable_sc_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+        except Exception as e:
+            logger.exception(f'Got exception while creating an asset')
+            return str(e), 400
+        return 'Failure', 400
+
     def _get_client_id(self, client_config):
         return client_config['url']
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('url'))
 
+    @staticmethod
+    def get_connection(client_config):
+        verify_ssl = False
+        if 'verify_ssl' in client_config:
+            verify_ssl = bool(client_config['verify_ssl'])
+        connection = TenableSecurityScannerConnection(
+            domain=client_config['url'],
+            username=client_config['username'], password=client_config['password'],
+            url_base_prefix='/rest/', verify_ssl=verify_ssl,
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
+        with connection:
+            pass  # check that the connection credentials are valid
+        return connection
+
     def _connect_client(self, client_config):
         try:
-            verify_ssl = False
-            if 'verify_ssl' in client_config:
-                verify_ssl = bool(client_config['verify_ssl'])
-            connection = TenableSecurityScannerConnection(
-                domain=client_config['url'],
-                username=client_config['username'], password=client_config['password'],
-                url_base_prefix='/rest/', verify_ssl=verify_ssl,
-                headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
+            return self.get_connection(client_config)
         except Exception as e:
             logger.error('Failed to connect to client {0}'.format(
                 self._get_client_id(client_config)))

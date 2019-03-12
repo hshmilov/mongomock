@@ -76,7 +76,7 @@ class ArubaAdapter(AdapterBase):
         session, session_type = client_data
         with session:
             if session_type == 'basic_aruba':
-                for device_raw in list(client_data.cli('show arp').get('T1', []))[1:]:
+                for device_raw in list(session.cli('show arp').get('T1', []))[1:]:
                     yield device_raw, session_type
             if session_type == 'airwave':
                 for device_raw in session.get_device_list():
