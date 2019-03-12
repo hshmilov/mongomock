@@ -112,6 +112,7 @@ class GetUserLogons(GeneralInfoSubplugin):
 
         # Lets build the sids_to_users table. We get the base sids_to_users from the users db first.
         local_hostname = "local"    # will be changed in the following loop
+        nbns_to_dns_translation_table = self.plugin_base.get_global_keyval('ldap_nbns_to_dns') or {}
         sids_to_users = self.get_sid_to_users_db()
         for user in user_accounts_data:
             # a caption is domain + username.
@@ -132,6 +133,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                 self.logger.debug(f"sid {sid} already exists from the db we get in AD, bypassing")
             else:
                 local_hostname, local_username = caption.split("\\")
+                local_hostname = nbns_to_dns_translation_table.get(local_hostname.lower()) or local_hostname
                 user_object = {
                     "username": f"{local_username}@{local_hostname}",
                     "is_local": parse_bool_from_raw(user.get('LocalAccount')),
@@ -204,7 +206,8 @@ class GetUserLogons(GeneralInfoSubplugin):
                 is_disabled=u.get("is_disabled"),
                 origin_unique_adapter_name=executer_info["adapter_unique_name"],
                 origin_unique_adapter_data_id=executer_info["adapter_unique_id"],
-                origin_unique_adapter_client=executer_info["adapter_client_used"]
+                origin_unique_adapter_client=executer_info["adapter_client_used"],
+                should_create_if_not_exists=True
             )
 
         # Now sort the array.

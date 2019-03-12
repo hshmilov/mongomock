@@ -260,6 +260,15 @@ def test_get_all_domains_from_gc(ldap_gc_connection: LdapConnection, ldap_connec
     assert all([dn.lower() in ['west.testdomain.test', 'raindomain.test', 'testdomain.test'] for dn in result])
 
 
+def test_get_domain_prefix_to_dns_dict(ldap_connection: LdapConnection):
+    result = ldap_connection.get_domain_prefix_to_dns_dict()
+    assert result == {
+        'west': 'west.testdomain.test',
+        'raindomain': 'raindomain.test',
+        'testdomain': 'testdomain.test'
+    }
+
+
 def test_reconnect_after_disconnection(ldap_connection: LdapConnection):
     ldap_connection.disconnect()
     # Notice! An exception message (logger.exception) is expected to be printed to the screen here.

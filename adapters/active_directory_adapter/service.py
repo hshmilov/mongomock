@@ -37,12 +37,13 @@ from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.devicedisabelable import Devicedisabelable
 from axonius.mixins.userdisabelable import Userdisabelable
-from axonius.plugin_base import add_rule
+from axonius.plugin_base import add_rule, return_error
 from axonius.smart_json_class import SmartJsonClass
 from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date, is_date_real
 from axonius.utils.dns import query_dns
+from axonius.utils.entity_finder import EntityFinder
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import (ad_integer8_to_timedelta,
                                    bytes_image_to_base64,
@@ -426,6 +427,23 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         :return: iter(dict) with all the attributes returned from the DC per client
         """
         success_clients = self._resolve_clients(client_data_dict, should_verbose_notify=True)
+        try:
+            domain_nbns_to_dns = dict()
+            for client_name, client_data in success_clients.items():
+                try:
+                    domain_nbns_to_dns.update(client_data.get_domain_prefix_to_dns_dict())
+                except Exception:
+                    logger.exception(f'{client_name}: Error getting nbns to dns translation table, passing')
+
+            if domain_nbns_to_dns:
+                current_table = self.get_global_keyval('ldap_nbns_to_dns') or {}
+                current_table.update(domain_nbns_to_dns)
+                logger.info(f'Updating domain nbns to dns to: {current_table}')
+                self.set_global_keyval('ldap_nbns_to_dns', current_table)
+
+        except Exception:
+            logger.exception(f'Can not get nbns to dns translation table - generic! passing')
+
         for client_name, client_data in success_clients.items():
             try:
                 if self.__ldap_page_size is not None:
@@ -1563,6 +1581,33 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         dn = device_data['raw'].get('distinguishedName')
         assert client_data.get_session("device_disabler").change_entity_enabled_state(
             dn, False), "Failed disabling device"
+
+    @add_rule('change_ldap_attribute', methods=['POST'])
+    def change_ldap_attribute(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            ldap_entity_dict = self.get_request_data_as_object()
+            entity_id = ldap_entity_dict['device_id']
+            attribute_name = ldap_entity_dict['attribute_name']
+            attribute_value = ldap_entity_dict['attribute_value']
+
+            client_data_dict = None
+            try:
+                entity_finder = EntityFinder(self.devices_db, self._clients, self.plugin_unique_name)
+                entity_data, client_data_dict = entity_finder.get_data_and_client_data(entity_id)
+            except Exception:
+                # maybe its a user. try that.
+                entity_finder = EntityFinder(self.users_db, self._clients, self.plugin_unique_name)
+                entity_data, client_data_dict = entity_finder.get_data_and_client_data(entity_id)
+
+            client_data = self._resolve_client_from_client_dict_and_entity(client_data_dict, entity_data)
+            with client_data:
+                client_data.set_ldap_attribute(entity_id, attribute_name, attribute_value)
+        except Exception as e:
+            logger.exception(f'Problem during ldap change')
+            return return_error(str(e), 500)
+        return '', 200
 
     @classmethod
     def _db_config_schema(cls) -> dict:

@@ -426,6 +426,7 @@ class UsersCommand(LocalInfoCommand):
                 device.add_users(user_sid=user['userid'],
                                  username=user['name'],
                                  is_admin=user['userid'] == '0',
+                                 is_local=True,
                                  interpreter=user['interpreter'])
             except Exception as e:
                 logger.error('Failed to add user')

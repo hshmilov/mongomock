@@ -110,12 +110,9 @@ class GeneralInfoService(Triggerable, PluginBase):
 
         logger.info("Gathering General info started.")
 
-        # First, gather general info about devices
+        # gather general info about devices
         self._gather_windows_devices_general_info()
         self._save_field_names_to_db(EntityType.Devices)
-
-        # Second, go over all devices we have, and try to associate them with users.
-        self._associate_users_with_devices()
         self._save_field_names_to_db(EntityType.Users)
 
         logger.info("Finished gathering info & associating users for all devices")
@@ -290,130 +287,6 @@ class GeneralInfoService(Triggerable, PluginBase):
                 return False
 
         return True
-
-    def _associate_users_with_devices(self):
-        """
-        Assuming devices were associated with users, now we associate users with devices.
-        :return:
-        """
-        logger.info('Associating users with devices')
-
-        # 1. Get all devices which have users associations, and map all these devices to one global users object.
-        devices_with_users_association = self.devices_db.find({
-            '$or': [
-                {'tags.data.users': {'$exists': True}}
-            ]
-        })
-        users = {}
-        for device in devices_with_users_association:
-            # Get a list of all users associated for this device.
-            all_device_data = device.get('tags', [])
-            for sd_users in [d['data']['users'] for d in all_device_data
-                             if isinstance(d['data'], dict) and d['data'].get('users') is not None]:
-                # for each user associated, add a (device, user) tuple.
-                for user in sd_users:
-                    if 'username' not in user:
-                        logger.warning(f'Bad user {user}')
-                        continue
-                    if users.get(user['username']) is None:
-                        users[user['username']] = []
-
-                    # users, is a dict of all users, ordered by the key string 'username'.
-                    # the dict is a mapping of the username to a list of tuples (user, device).
-                    # (user, device) is a specific user + last_use_time + more info of that specific device.
-                    # so we might have user1 and user2 objects which have the same username, but have other data
-                    # different.
-                    users[user['username']].append((user, device))
-
-        # 2. Go over all users. whatever we don't have, we must create first.
-        for username in users.keys():
-            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == {username}'))
-            if len(user) == 0:
-                # user does not exists, create it.
-                user_dict = self._new_user_adapter()
-                user_dict.id = username  # Should be the unique identifier of that user.
-                try:
-                    user_dict.username, user_dict.domain = username.split('@')  # expecting username to be user@domain.
-                except ValueError:
-                    logger.exception(f'Bad user format! expected \'username@domain\' format, got {username}. bypassing')
-                    continue
-                user_dict.is_local = True
-                self._save_data_from_plugin(
-                    self.plugin_unique_name,
-                    {'raw': [], 'parsed': [user_dict.to_dict()]},
-                    EntityType.Users, False)
-
-        # 4. Now go over all users again. for each user, associate all known devices.
-        for username, linked_devices_and_users_list in users.items():
-            # Create the new adapterdata for that user
-            adapterdata_user = self._new_user_adapter()
-
-            # Find that user. It should be in the view new.
-            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == {username}'))
-
-            # Do we have it? or do we need to create it?
-            if len(user) > 1:
-                # Can't be! how can we have a user with the same id? should have been correlated.
-                logger.critical(f'Found a couple of users (expected one) with same id: {username} -> {user}')
-                continue
-            elif len(user) == 0:
-                logger.error(f'User {username} should have been created in the view but is not there! Continuing')
-                continue
-
-            # at this point the user exists, go over all associated devices and add them.
-            user = user[0]
-            client_used = None
-            for linked_user, linked_device in linked_devices_and_users_list:
-                try:
-                    def get_first_data(fd_d, fd_attr):
-                        # Gets the first 'hostname', for example, from a device object.
-                        for sd in fd_d.get('adapters', []) + fd_d.get('tags', []):
-                            if isinstance(sd.get('data'), dict):
-                                value = sd['data'].get(fd_attr)
-                                if value is not None:
-                                    return value
-                        return None
-
-                    device_caption = get_first_data(linked_device, 'hostname') or \
-                        get_first_data(linked_device, 'name') or get_first_data(linked_device, 'id')
-
-                    logger.debug(f'Associating {device_caption} with user {username}')
-                    try:
-                        adapterdata_user.last_seen_in_devices = \
-                            max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
-                    except Exception:
-                        if linked_user.get('last_use_date') is not None:
-                            adapterdata_user.last_seen_in_devices = linked_user.get('last_use_date')
-
-                    if linked_user.get('user_sid') is not None:
-                        adapterdata_user.user_sid = linked_user.get('user_sid')
-
-                    if linked_user.get('is_disabled') is not None:
-                        adapterdata_user.account_disabled = linked_user.get('is_disabled')
-
-                    is_admin_status = linked_user.get('is_admin')
-                    if isinstance(is_admin_status, bool):
-                        adapterdata_user.is_admin = is_admin_status
-
-                    client_used = linked_user.get('origin_unique_adapter_client')
-
-                    adapterdata_user.add_associated_device(
-                        device_caption=device_caption,
-                        last_use_date=linked_user.get('last_use_date'),
-                        adapter_unique_name=linked_user.get('origin_unique_adapter_name'),
-                        adapter_data_id=linked_user.get('origin_unique_adapter_data_id'),
-                        adapter_client_used=client_used
-                    )
-                except Exception:
-                    logger.exception(f'Cant associate user {linked_user}')
-
-            # we have a new adapterdata_user, lets add it. we do not give any specific identity
-            # since this tag isn't associated to a specific adapter.
-            adapterdata_user.id = username
-            user.add_adapterdata(adapterdata_user.to_dict(), client_used=client_used or '')
-            self._save_field_names_to_db(EntityType.Users)
-
-        logger.info('Finished associating users with devices')
 
     def _handle_wmi_execution_success(self, internal_axon_id, data):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1

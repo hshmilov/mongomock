@@ -370,6 +370,12 @@ def get_member_of_list_from_memberof(member_of) -> List[str]:
     return None
 
 
+def is_valid_user(username: str) -> bool:
+    if not isinstance(username, str):
+        return False
+    return username.strip().lower() not in ['n/a', '<none>', 'none', 'unknown']
+
+
 def is_valid_ip(ip):
     try:
         ipaddress.ip_address(ip)

@@ -188,6 +188,8 @@ class DeviceAdapterUser(SmartJsonClass):
     """ A definition for users known by this device"""
 
     user_sid = Field(str, "SID")
+    # This will be treated as an ID in the users screen. should be username@domain. If there is no domain, domain
+    # should be the hostname if the computer.
     username = Field(str, "Username")
     last_use_date = Field(datetime.datetime, 'Last Use Time')
     is_local = Field(bool, "Is Local")
@@ -197,10 +199,11 @@ class DeviceAdapterUser(SmartJsonClass):
     password_max_age = Field(int, "Password Max Age")
     interpreter = Field(str, "Interpreter")
 
-    # Where did this user really come from?
+    # Hidden data for internal usage
     origin_unique_adapter_name = Field(str)
     origin_unique_adapter_data_id = Field(str)
     origin_unique_adapter_client = Field(str)
+    should_create_if_not_exists = Field(bool)   # If true, will create this user in the 'users' screen.
 
 
 class DeviceAdapterConnectedHardware(SmartJsonClass):

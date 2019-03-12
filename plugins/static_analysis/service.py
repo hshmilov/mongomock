@@ -14,8 +14,10 @@ from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import is_valid_user
 
 from static_analysis.nvd_nist.nvd_search import NVDSearcher
 
@@ -48,6 +50,9 @@ def _get_id_and_associated_adapter(adapter_device) -> Tuple[str, object]:
 
 class StaticAnalysisService(Triggerable, PluginBase):
     class MyDeviceAdapter(DeviceAdapter):
+        pass
+
+    class MyUserAdapter(UserAdapter):
         pass
 
     def __init__(self, *args, **kwargs):
@@ -85,6 +90,13 @@ class StaticAnalysisService(Triggerable, PluginBase):
         except Exception:
             logger.exception('Exception while trying to analyze cves')
 
+        try:
+            self.__associate_users_with_devices()
+        except Exception:
+            logger.exception('Exception while trying to associate devices and users')
+
+    # CVE Analysis
+
     def __analyze_cves(self):
         """
         Analyses all devices that have some installed software on them and looks for software
@@ -103,15 +115,15 @@ class StaticAnalysisService(Triggerable, PluginBase):
             # mongodb throws 'cursor not found' . This happens if we did not fetch a page from mongodb within 10 minutes
             # and this is possible if a page takes at least 10 minutes to process. a page, by default, is 100 documents.
             # to handle this we save all candidates' internal_axon_ids and then fetch them only when needed.
-            for internal_axon_id_doc in self.devices_db.find(
+            for internal_axon_id_doc in list(self.devices_db.find(
                     parse_filter('specific_data.data.installed_software.name == exists(true)'),
                     projection={
                         '_id': False,
                         'internal_axon_id': True
                     }
-            ):
+            )):
                 device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
-                self.__process_devices(convert_db_entity_to_view_entity(device))
+                self.__analyze_cves_process_devices(convert_db_entity_to_view_entity(device))
 
         # find all devices that -
         # 1. are part of group (2)
@@ -122,7 +134,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # will never be untagged!
         # this loop will find those devices and search them :)
         with self.__nvd_lock:
-            for internal_axon_id_doc in self.devices_db.find(
+            for internal_axon_id_doc in list(self.devices_db.find(
                     parse_filter(
                         f'not (specific_data.data.installed_software.name == exists(true)) and '
                         f'adapters_data.{self.plugin_name}.software_cves == '
@@ -131,11 +143,11 @@ class StaticAnalysisService(Triggerable, PluginBase):
                         '_id': False,
                         'internal_axon_id': True
                     }
-            ):
+            )):
                 device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
-                self.__process_devices(convert_db_entity_to_view_entity(device))
+                self.__analyze_cves_process_devices(convert_db_entity_to_view_entity(device))
 
-    def __process_devices(self, device) -> None:
+    def __analyze_cves_process_devices(self, device) -> None:
         """
         Given an axonius devices, tag it with the appropriate CVEs.
         """
@@ -153,7 +165,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
                 installed_software = adapter_device['data'].get('installed_software', [])
 
-                for found_cve in self.__process_installed_software(installed_software):
+                for found_cve in self.__analyze_cves_process_installed_software(installed_software):
                     created_device.add_vulnerable_software(**found_cve)
 
                 # Add the final one
@@ -171,7 +183,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         except Exception:
             logger.exception(f'Exception while processing device {device}')
 
-    def __process_installed_software(self, installed_software: Iterable[Dict]) -> Iterable[dict]:
+    def __analyze_cves_process_installed_software(self, installed_software: Iterable[Dict]) -> Iterable[dict]:
         """
         Processes all installed softwares and returns all CVEs found in those softwares
         :param installed_software: Iterable of tuples from DB, the tuples represent DeviceAdapterInstalledSoftware
@@ -228,6 +240,193 @@ class StaticAnalysisService(Triggerable, PluginBase):
             except Exception:
                 logger.exception(
                     f'Exception while searching for vuln for {software_vendor}:{software_name}:{software_version}')
+
+    # Devices/Users association
+
+    def __try_convert_username_prefix_to_username_upn(self, username: str):
+        """
+        Tries to convert TestDomain\\Administrator to Administrator@testdomain.test
+        username: the username to convert
+        :return:
+        """
+        try:
+            prefix, name = username.split('\\')
+            prefix_to_dns = self.get_global_keyval('ldap_nbns_to_dns') or {}
+            dns_name = prefix_to_dns.get(prefix.lower())
+            if dns_name:
+                return f'{name}@{dns_name}'
+        except Exception:
+            pass
+        return username
+
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
+    def __associate_users_with_devices(self):
+        """
+        Assuming devices were associated with users, now we associate users with devices.
+        :return:
+        """
+        logger.info('Associating users with devices')
+
+        # 1. Get all devices which have users associations, and map all these devices to one global users object.
+        # Notice that we select by filter. we do this to include users that came both from adapters and plugins.
+        devices_with_users_association = self.devices_db.find(
+            parse_filter(
+                'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true)'),
+        )
+
+        users = {}
+        for device_raw in devices_with_users_association:
+            # Get a list of all users associated for this device.
+            device = convert_db_entity_to_view_entity(device_raw)
+            all_device_data = device.get('specific_data', [])
+            for sd_users in [d['data']['users'] for d in all_device_data
+                             if isinstance(d['data'], dict) and d['data'].get('users') is not None]:
+                # for each user associated, add a (device, user) tuple.
+                for user in sd_users:
+                    if 'username' not in user:
+                        logger.warning(f'Bad user {user}')
+                        continue
+
+                    current_username = self.__try_convert_username_prefix_to_username_upn(user['username'])
+
+                    if not is_valid_user(current_username):
+                        continue
+
+                    if users.get(current_username) is None:
+                        users[current_username] = {
+                            'should_create_if_not_exists': False,
+                            'associated_devices': []
+                        }
+
+                    # Users is a dict that maps between username (the user 'id') and a dict that represents
+                    # if this user should be created if it doesn't exist, and all of its associated users
+                    users[current_username]['associated_devices'].append((user, device))
+                    if user.get('should_create_if_not_exists'):
+                        users[current_username]['should_create_if_not_exists'] = True
+
+            # We also go over the last used user.
+            sd_last_used_users_list = [
+                d['data']['last_used_users'] for d in all_device_data
+                if isinstance(d['data'], dict) and isinstance(d['data'].get('last_used_users'), list)
+            ]
+            for sd_last_used_users in sd_last_used_users_list:
+                for sd_last_used_user in sd_last_used_users:
+                    sd_last_used_user = self.__try_convert_username_prefix_to_username_upn(sd_last_used_user)
+                    if users.get(sd_last_used_user) is None:
+                        users[sd_last_used_user] = {
+                            'should_create_if_not_exists': False,
+                            'associated_devices': []
+                        }
+
+                    users[sd_last_used_user]['associated_devices'].append((sd_last_used_user, device))
+
+        # 2. Go over all users. whatever we don't have, and should be created, we must create first.
+        for username, username_data in users.copy().items():
+            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == regex("^{username}$", "i")'))
+            if len(user) == 0 and username_data['should_create_if_not_exists']:
+                # user does not exists, create it.
+                user_dict = self._new_user_adapter()
+                user_dict.id = username  # Should be the unique identifier of that user.
+                try:
+                    user_dict.username, user_dict.domain = username.split('@')  # expecting username to be user@domain.
+                except ValueError:
+                    logger.exception(f'Bad user format! expected \'username@domain\' format, got {username}. bypassing')
+                    continue
+                self._save_data_from_plugin(
+                    self.plugin_unique_name,
+                    {'raw': [], 'parsed': [user_dict.to_dict()]},
+                    EntityType.Users, False)
+
+            if len(user) == 0 and not username_data['should_create_if_not_exists']:
+                # This user doesn't exist, and we should not create it. lets pop it out of our users dict.
+                users.pop(username)
+
+        # 4. Now go over all users again. for each user, associate all known devices.
+        for username, username_data in users.items():
+            linked_devices_and_users_list = username_data['associated_devices']
+            # Create the new adapterdata for that user
+            adapterdata_user = self._new_user_adapter()
+            number_of_associated_devices = 0
+
+            # Find that user. It should be in the view new.
+            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == regex("^{username}$", "i")'))
+
+            # Do we have it? or do we need to create it?
+            if len(user) > 1:
+                # Can't be! how can we have a user with the same id? should have been correlated.
+                logger.critical(f'Found a couple of users (expected one) with same id: {username} -> {user}')
+                continue
+            elif len(user) == 0:
+                logger.error(f'User {username} should have been created in the view but is not there! Continuing')
+                continue
+
+            # at this point the user exists, go over all associated devices and add them.
+            user = user[0]
+            client_used = None
+            for linked_user, linked_device in linked_devices_and_users_list:
+                if isinstance(linked_user, str):
+                    linked_user = {'username': linked_user}  # an only string is considered a user with only a username
+                try:
+                    def get_first_data(fd_d, fd_attr):
+                        # Gets the first 'hostname', for example, from a device object.
+                        for sd in fd_d.get('specific_data', []):
+                            if isinstance(sd.get('data'), dict):
+                                value = sd['data'].get(fd_attr)
+                                if value:
+                                    return value
+                        return None
+
+                    device_caption = get_first_data(linked_device, 'hostname') or \
+                        get_first_data(linked_device, 'name') or get_first_data(linked_device, 'id')
+
+                    logger.debug(f'Associating {device_caption} with user {username}')
+
+                    # Notice! except last_used_date, we do not handle situations where users have different
+                    # sid's, is_disabled / is_admin / is_local statuses. In that cases the last one wins..
+                    # otherwise we would have to create an 'adapters' mechanism for users.
+
+                    try:
+                        adapterdata_user.last_seen_in_devices = \
+                            max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
+                    except Exception:
+                        if linked_user.get('last_use_date') is not None:
+                            adapterdata_user.last_seen_in_devices = linked_user.get('last_use_date')
+
+                    if linked_user.get('user_sid') is not None:
+                        adapterdata_user.user_sid = linked_user.get('user_sid')
+
+                    if linked_user.get('is_disabled') is not None:
+                        adapterdata_user.account_disabled = linked_user.get('is_disabled')
+
+                    if linked_user.get('is_admin') is not None:
+                        adapterdata_user.is_admin = linked_user.get('is_admin')
+
+                    if linked_user.get('is_local') is not None:
+                        adapterdata_user.is_local = linked_user.get('is_local')
+
+                    client_used = linked_user.get('origin_unique_adapter_client')
+
+                    adapterdata_user.add_associated_device(
+                        device_caption=device_caption,
+                        last_use_date=linked_user.get('last_use_date'),
+                        adapter_unique_name=linked_user.get('origin_unique_adapter_name'),
+                        adapter_data_id=linked_user.get('origin_unique_adapter_data_id'),
+                        adapter_client_used=client_used
+                    )
+                    number_of_associated_devices += 1
+                    if number_of_associated_devices >= 1000:
+                        logger.error(f'Error! too many associated devices (>1000) for user {username}. breaking')
+                        break
+                except Exception:
+                    logger.exception(f'Cant associate user {linked_user}')
+
+            # we have a new adapterdata_user, lets add it. we do not give any specific identity
+            # since this tag isn't associated to a specific adapter.
+            adapterdata_user.id = username
+            user.add_adapterdata(adapterdata_user.to_dict(), client_used=client_used or '')
+            self._save_field_names_to_db(EntityType.Users)
+
+        logger.info('Finished associating users with devices')
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

@@ -9,6 +9,7 @@ from testing.services.plugins.aggregator_service import AggregatorService
 from testing.services.plugins.core_service import CoreService
 from testing.services.plugins.static_correlator_service import StaticCorrelatorService
 from testing.services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
+from testing.services.plugins.static_analysis_service import StaticAnalysisService
 
 
 def usage():
@@ -19,6 +20,7 @@ def usage():
     {name} sc - run static correlator & static users correlator
     {name} cd - run clean devices (clean db)
     {name} rr - run reports
+    {name} sa - run static analysis
     '''
 
 
@@ -40,6 +42,7 @@ def main():
     sc = StaticCorrelatorService()
     scu = StaticUsersCorrelatorService()
     rr = ReportsService()
+    sa = StaticAnalysisService()
 
     def get_all_running_adapters_and_scanners():
         result = dict()
@@ -76,6 +79,10 @@ def main():
     elif component == 'rr':
         print('Running reports (Blocking)...')
         rr.trigger_execute(True)
+
+    elif component == 'sa':
+        print('Running Static Analysis (Blocking)...')
+        sa.trigger_execute(True)
 
     else:
         print(usage())

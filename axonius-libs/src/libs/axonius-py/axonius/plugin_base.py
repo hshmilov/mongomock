@@ -73,7 +73,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           X_UI_USER,
                                           X_UI_USER_SOURCE,
                                           PROXY_VERIFY,
-                                          PROXY_FOR_ADAPTERS)
+                                          PROXY_FOR_ADAPTERS, GLOBAL_KEYVAL_COLLECTION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.devices import deep_merge_only_dict
@@ -2256,6 +2256,28 @@ class PluginBase(Configurable, Feature):
             r = requests.post(url=url, data=message, proxies=proxies)
             r.raise_for_status()
 
+    def set_global_keyval(self, key: str, val):
+        """
+        A global key value table that is accessible to everyone.
+        :param key: the name of the key
+        :param val: the value. can be anything that mongo accepts.
+        :return:
+        """
+        self._get_db_connection()[CORE_UNIQUE_NAME][GLOBAL_KEYVAL_COLLECTION].update_one(
+            {'key': key},
+            {'$set': {'key': key, 'val': val}},
+            upsert=True
+        )
+        return True
+
+    def get_global_keyval(self, key: str):
+        try:
+            doc = self._get_db_connection()[CORE_UNIQUE_NAME][GLOBAL_KEYVAL_COLLECTION].find_one({'key': key})
+            return doc['val'] if doc else None
+        except Exception:
+            logger.exception(f'Warning - could not get keyval {key}')
+            return None
+
     def get_selected_entities(self, entity_type: EntityType, entities_selection: dict, mongo_filter: dict):
         """
 
@@ -2282,7 +2304,7 @@ class PluginBase(Configurable, Feature):
         """
         return set(x[PLUGIN_UNIQUE_NAME]
                    for x in
-                   self._get_db_connection()['core']['configs'].find(
+                   self._get_db_connection()[CORE_UNIQUE_NAME]['configs'].find(
                        filter={
                            'supported_features': feature,
                        },

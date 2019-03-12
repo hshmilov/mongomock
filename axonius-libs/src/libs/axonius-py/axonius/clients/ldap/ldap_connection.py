@@ -420,6 +420,31 @@ class LdapConnection(object):
             logger.exception("Error while getting domains in forest")
             return []
 
+    def get_domain_prefix_to_dns_dict(self) -> dict:
+        result = {}
+
+        # This gets the translation table for all known domains by this DC
+        try:
+            for dom in self.get_domains_in_forest():
+                netbios_name = ldap_get(dom, 'nETBiosName', str, '')
+                dns_root = ldap_get(dom, 'dnsRoot', str, '')
+                if not netbios_name or not dns_root:
+                    logger.error(f'Bad domain {dom}! skipping')
+
+                result[netbios_name.lower()] = dns_root.lower()
+        except Exception:
+            pass
+
+        # If that did not succeed (this might be the case with non-GC DC's) we just apply the current domain
+        if not result:
+            result = {}
+            dns_root = convert_ldap_searchpath_to_domain_name(self.domain_name)
+            netbios_name = ldap_get(self.domain_properties, 'name', str, '')
+            if dns_root and netbios_name:
+                result[netbios_name.lower()] = dns_root.lower()
+
+        return result
+
     def get_global_catalogs(self):
         """
         returns a list of dnsHostName strings, representing the global catalogs of this forest.
@@ -860,6 +885,16 @@ class LdapConnection(object):
 
         return []
 
+    def set_ldap_attribute(self, distinguished_name: str, attribute_name: str, attribute_value):
+        """
+        Sets a specific ldap attribute
+        :param distinguished_name: the distinguished name of the entity
+        :param attribute_name: the attribute name
+        :param attribute_value: the attribute value
+        :return:
+        """
+        return self._ldap_modify(distinguished_name, {attribute_name: attribute_value})
+
     def change_entity_enabled_state(self, distinguished_name: str, enabled: bool) -> bool:
         """
         Enable or disable an AD entity
@@ -886,7 +921,7 @@ class LdapConnection(object):
         logger.info(
             f"Changing entity {distinguished_name} state from {user_account_control} to {new_user_account_control}")
 
-        return self._ldap_modify(distinguished_name, {"userAccountControl": new_user_account_control})
+        return self.set_ldap_attribute(distinguished_name, 'userAccountControl', new_user_account_control)
 
     def get_user(self, username: str) -> Tuple[dict, List[str]]:
         """
