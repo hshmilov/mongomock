@@ -71,6 +71,7 @@ class ResearchStatus(Enum):
 
 
 CONFIG_COLLECTION = 'GuiService'
+FEATURE_FLAGS_COLLECTION = 'FeatureFlags'
 
 USERS_CONFIG_COLLECTION = 'users_config'
 

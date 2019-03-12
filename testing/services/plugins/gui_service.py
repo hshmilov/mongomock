@@ -5,7 +5,8 @@ import secrets
 import requests
 
 from axonius.consts.gui_consts import (CONFIG_COLLECTION, ROLES_COLLECTION, USERS_COLLECTION,
-                                       PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY)
+                                       PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
+                                       FEATURE_FLAGS_COLLECTION)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -542,6 +543,9 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
     def get_saml_settings(self):
         return self.get_configurable_config(CONFIG_COLLECTION)
+
+    def get_feature_flags(self):
+        return self.get_configurable_config(FEATURE_FLAGS_COLLECTION)
 
     def get_maintenance_flags(self):
         flags = self.db.get_collection(self.plugin_name, GUI_SYSTEM_CONFIG_COLLECTION).find_one(MAINTENANCE_FILTER)
