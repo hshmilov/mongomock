@@ -6,8 +6,10 @@ import datetime
 
 from axonius.adapter_base import AdapterProperty
 from axonius.devices.device_adapter import (DeviceAdapter, Field,
-                                            DeviceAdapterNeighbor, DeviceAdapterNetworkInterface)
+                                            DeviceAdapterNeighbor, DeviceAdapterNetworkInterface,
+                                            ListField, JsonArrayFormat)
 
+from axonius.clients.cisco.port_security import PortSecurityInterface, SecureMacAddressEntry
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -24,6 +26,7 @@ class CiscoDevice(DeviceAdapter):
     auth_algo = Field(str, 'Authentication Algorithm')
     nac_state = Field(str, 'NAC State')
     wireless_vlan = Field(str, 'Wireless Vlan')
+    port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
     association_time = Field(datetime.datetime, 'Association Time')
 
 
@@ -164,6 +167,24 @@ class AbstractCiscoData:
                                operational_status=operational_status,
                                admin_status=admin_status, speed=speed, mtu=mtu,
                                ips=ip_list, subnets=netmask_list)
+
+            if 'port_security' in iface and iface['port_security'].get('enabled'):
+                port_security = iface['port_security']
+                entries = []
+                for mac, attributes in iface['port_security'].get('entries', {}).items():
+                    entry = SecureMacAddressEntry(mac_address=mac,
+                                                  type=attributes.get('type'),
+                                                  remaining_age_time=attributes.get('remaining_age'))
+                    entries.append(entry)
+
+                port_security_class = PortSecurityInterface(name=iface.get('description'),
+                                                            status=port_security.get('status'),
+                                                            sticky=port_security.get('sticky'),
+                                                            max_addr=port_security.get('max_addr'),
+                                                            violation_action=port_security.get('violation_action'),
+                                                            violation_count=port_security.get('violation_count'),
+                                                            entries=entries)
+                new_device.port_security.append(port_security_class)
 
     @staticmethod
     def _handle_connected(new_device, instance):

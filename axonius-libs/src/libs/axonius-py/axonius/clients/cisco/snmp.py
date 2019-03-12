@@ -24,8 +24,11 @@ CDP_OID = '1.3.6.1.4.1.9.9.23.1.2'
 
 
 SYSTEM_DESCRIPTION_OID = '1.3.6.1.2.1.1'
-INETFACE_OID = '1.3.6.1.2.1.2.2.1'
+INTERFACE_OID = '1.3.6.1.2.1.2.2.1'
 IP_OID = '1.3.6.1.2.1.4.20'
+
+PORT_SECURITY_OID = '1.3.6.1.4.1.9.9.315.1.2.1.1'
+PORT_SECURITY_ENTRIES_OID = '1.3.6.1.4.1.9.9.315.1.2.2.1'
 
 
 class SingletonEngine(metaclass=Singleton):
@@ -159,7 +162,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         errors = list(map(lambda x: x[0], data))
         results = [('info', list(map(lambda x: x[3], data)))]
 
-        data = await self._async_next_cmd(INETFACE_OID)
+        data = await self._async_next_cmd(INTERFACE_OID)
         errors += list(map(lambda x: x[0], data))
         results += [('iface', list(map(lambda x: x[3], data)))]
 
@@ -171,6 +174,13 @@ class CiscoSnmpClient(AbstractCiscoClient):
             logger.error(f'Unable to query basic info table for {self._ip} errors: {errors}')
             return None
 
+        data = await self._async_next_cmd(PORT_SECURITY_OID)
+        errors += list(map(lambda x: x[0], data))
+        results += [('port_security', list(map(lambda x: x[3], data)))]
+
+        data = await self._async_next_cmd(PORT_SECURITY_ENTRIES_OID)
+        errors += list(map(lambda x: x[0], data))
+        results += [('port_security_entries', list(map(lambda x: x[3], data)))]
         return SnmpBasicInfoCiscoData(results)
 
     # XXX: move to CdpCiscoData
@@ -244,6 +254,47 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             if iface.get('index'):
                 self.result['ifaces'][iface.get('index')] = iface
 
+    def _parse_port_security(self, entries):
+        for group in self._group_iface(entries):
+            port_security = {}
+            index = str(group[0][0][0][-1])
+            for entry in group:
+                try:
+                    oid, value = entry[0][0], entry[0][1]
+                    key, value = CpsIfConfigTable.parse_value(oid, value)
+                    if value is not None:
+                        port_security[key] = value
+                except Exception:
+                    logger.exception('Exception while parsing basic info port security')
+                    continue
+            if index not in self.result['ifaces']:
+                self.result['ifaces'] = {}
+            self.result['ifaces'][index]['port_security'] = port_security
+
+    def _parse_port_security_entries(self, entries):
+        port_security_entries = {}
+        for entry in entries:
+            try:
+                oid, value = entry[0][0], entry[0][1]
+                index = str(oid[-7])
+                mac = snmp_parser.unpack_mac(tuple(oid[-6:]))
+                key, value = CpsSecureMacAddressTable.parse_value(oid, value)
+                if value is not None:
+                    if index not in port_security_entries:
+                        port_security_entries[index] = {}
+                    if mac not in port_security_entries[index]:
+                        port_security_entries[index][mac] = {}
+                    port_security_entries[index][mac][key] = value
+            except Exception:
+                logger.exception('Exception while parsing basic info port security')
+                continue
+
+        for index, entry in port_security_entries.items():
+            if index in self.result['ifaces'].keys():
+                if 'port_security' not in self.result['ifaces'][index]:
+                    self.result['ifaces'][index]['port_security'] = {}
+                self.result['ifaces'][index]['port_security']['entries'] = entry
+
     def _parse_ip(self, entires):
         ips = defaultdict(dict)
         for entry in entires:
@@ -264,7 +315,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 self.result['ifaces'][index]['ips'].append(value)
 
     def _parse(self):
-        self.result = {'device_mode': 'cisco'}
+        self.result = {'device_model': 'cisco'}
         for type_, entries in self._raw_data:
             if type_ == 'info':
                 self._parse_basic_info(entries)
@@ -272,7 +323,10 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 self._parse_iface(entries)
             if type_ == 'ip':
                 self._parse_ip(entries)
-
+            if type_ == 'port_security':
+                self._parse_port_security(entries)
+            if type_ == 'port_security_entries':
+                self._parse_port_security_entries(entries)
         yield self.result
 
 
@@ -348,7 +402,30 @@ class IPTable(snmp_parser.SnmpTable):
     index = -1
 
 
-if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-    CLIENT = CiscoSnmpClient(host='XXX', community='public', port=161)
-    CLIENT.validate_connection()
+class CpsIfConfigTable(snmp_parser.SnmpTable):
+    table = {
+        1: (snmp_parser.parse_bool, 'enabled'),
+        2: (snmp_parser.parse_security_status, 'status'),
+        3: (snmp_parser.parse_int, 'max_addr'),
+        # 4: mac_addr count
+        # 5: aging time
+        # 6: aging type
+        # 7: aging enabled
+        8: (snmp_parser.parse_violation_action, 'violation_action'),
+        9: (snmp_parser.parse_int, 'violation_count'),
+        # 10: last mac address
+        # 11: clear address
+        # 14: clear mac address
+        15: (snmp_parser.parse_bool, 'sticky'),
+
+    }
+    index = -2
+
+
+class CpsSecureMacAddressTable(snmp_parser.SnmpTable):
+    table = {
+        2: (snmp_parser.parse_secure_mac_type, 'type'),
+        3: (snmp_parser.parse_int, 'remaining_age'),
+
+    }
+    index = 13
