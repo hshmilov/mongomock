@@ -751,6 +751,10 @@ class LdapConnection(object):
                 'member_of_full': member_of_full_for_user
             }
 
+            user['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
+            user['AXON_DC_ADDR'] = self.server_addr
+            user['AXON_DOMAIN_NAME'] = self.domain_name
+
             users_count = users_count + 1
             if users_count % 1000 == 0:
                 logger.info(f"Got {users_count} users so far")
