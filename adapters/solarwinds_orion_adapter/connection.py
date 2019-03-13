@@ -99,4 +99,13 @@ class SolarwindsConnection(object):
                     yield device_raw, 'wifi'
         except Exception:
             logger.exception(f'Problem getting wifi info')
+        try:
+            lan_results = self.client.query('Select ConnectedTo, ConnectionTypeName, HostName, IPAddress,'
+                                            ' MACAddress, PortNumber, PortName, '
+                                            'NodeID, VLAN, DisplayName, Description from Orion.UDT.AllEndpoints')
+            if lan_results and lan_results.get('results'):
+                for device_raw in lan_results.get('results'):
+                    yield device_raw, 'lan'
+        except Exception:
+            logger.exception(f'Problem getting lan info')
         logger.info('Parsed all of the device data from the Orion DB')

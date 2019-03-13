@@ -28,6 +28,13 @@ class SolarwindsOrionAdapter(AdapterBase):
         instance_type = Field(str, 'Instance Type')
         wifi_name = Field(str, 'Wifi Name')
         wifi_display_name = Field(str, 'Wifi Display Name')
+        lan_name = Field(str, 'Lan Name')
+        lan_display_name = Field(str, 'Lan Display Name')
+        connected_to = Field(str, 'Connected To')
+        connection_type_name = Field(str, 'Connection Type Name')
+        port_number = Field(str, 'Port Number')
+        port_name = Field(str, 'Port Name')
+        solar_vlan = Field(str, 'Solarwinds VLAN')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -140,6 +147,33 @@ class SolarwindsOrionAdapter(AdapterBase):
         device.set_raw(device_raw)
         return device
 
+    def _create_lan_device(self, device_raw):
+        device = self._new_device_adapter()
+        if not device_raw.get('NodeID') and not device_raw.get('MAC'):
+            logger.warning(f'Bad device with no ID {device_raw}')
+            return None
+        device.id = 'lan' + '_' + (str(device_raw.get('NodeID')) or '') + '_' + (device_raw.get('MAC') or '')
+        try:
+            mac = device_raw.get('MAC')
+            if not mac:
+                mac = None
+            ips = device_raw.get('IPAddress').split(',') if device_raw.get('IPAddress') else None
+            if mac or ips:
+                device.add_nic(mac, ips)
+        except Exception:
+            logger.exception(f'Problem getting nic for {device_raw}')
+        device.node_id = device_raw.get('NodeID')
+        device.lan_display_name = device_raw.get('DisplayName')
+        device.lan_name = device_raw.get('HostName')
+        device.description = device_raw.get('Description')
+        device.connected_to = device_raw.get('ConnectedTo')
+        device.connection_type_name = device_raw.get('ConnectionTypeName')
+        device.port_number = device_raw.get('PortNumber')
+        device.port_name = device_raw.get('PortName')
+        device.solar_vlan = device_raw.get('VLAN')
+        device.set_raw(device_raw)
+        return device
+
     def _create_node_device(self, raw_device_data):
         try:
             device = self._new_device_adapter()
@@ -218,6 +252,8 @@ class SolarwindsOrionAdapter(AdapterBase):
                 device = self._create_node_device(raw_device_data)
             elif device_type == 'wifi':
                 device = self._create_wifi_device(raw_device_data)
+            elif device_type == 'lan':
+                device = self._create_lan_device(raw_device_data)
             if device:
                 yield device
 
