@@ -502,14 +502,13 @@ class Page:
     @staticmethod
     def __upload_file_on_element(element, file_path):
         element.send_keys(file_path)
-        time.sleep(2)  # AX-3475
 
-    @staticmethod
-    def upload_file_on_element(element, file_content, is_bytes=False):
+    def upload_file_on_element(self, element, file_content, is_bytes=False):
         with NamedTemporaryFile(delete=False, prefix=TEMP_FILE_PREFIX) as temp_file:
             temp_file.write(file_content if is_bytes else bytes(file_content, 'ascii'))
             temp_file.file.flush()
             return Page.__upload_file_on_element(element, temp_file.name)
+        self.wait_for_uploading_file()
 
     def upload_file_by_id(self, input_id, file_content, is_bytes=False):
         element = self.driver.find_element_by_id(input_id)

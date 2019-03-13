@@ -1,5 +1,7 @@
 import re
+
 import pytest
+from flaky import flaky
 
 from axonius.consts import adapter_consts
 from axonius.utils.wait import wait_until
@@ -36,7 +38,7 @@ class TestEsxAdapter(AdapterTestBase):
             self.adapter_service.add_client(client)
             pattern = f'{NONE_USER_PATTERN}: {adapter_consts.LOG_CLIENT_SUCCESS_LINE}'
             wait_until(lambda: self.log_tester.is_pattern_in_log(re.escape(pattern), 10))
-            client_id = "{}/{}".format(client['host'], client['user'])
+            client_id = '{}/{}'.format(client['host'], client['user'])
             client_details_to_send.append((client_id, some_device_id))
         self.axonius_system.assert_device_aggregated(self.adapter_service, client_details_to_send)
         assert not self.axonius_system.get_device_by_id(self.adapter_service.unique_name, VERIFY_DEVICE_MISSING)
@@ -47,13 +49,14 @@ class TestEsxAdapter(AdapterTestBase):
         assert tags[0]['tag_key'] == TAG_KEY
         assert tags[0]['tag_value'] == TAG_VALUE
 
+    @flaky(max_runs=3)
     def test_folder_on_dc_level(self):
         self.drop_clients()
 
         client, _ = client_details[0]
         client = dict(client)
 
-        client_id = "{}/{}".format(client['host'], client['user'])
+        client_id = '{}/{}'.format(client['host'], client['user'])
         self.adapter_service.add_client(client)
 
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id, AGGREGATED_DEVICE_ID)])
