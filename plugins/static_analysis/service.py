@@ -6,6 +6,8 @@ from typing import Iterable, Tuple, Dict
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
+
+from axonius.consts import adapter_consts
 from axonius.entities import EntityType
 
 from axonius.consts.plugin_subtype import PluginSubtype
@@ -318,9 +320,14 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     users[current_username]['associated_devices'].append((user, device_caption))
                     if user.get('should_create_if_not_exists'):
                         try:
-                            creation_plugin_type = user['creation_source_plugin_type']
+                            # creation_plugin_type = user['creation_source_plugin_type']
                             creation_plugin_name = user['creation_source_plugin_name']
                             creation_plugin_unique_name = user['creation_source_plugin_unique_name']
+
+                            # Notice! plugin_type of types 'plugin' aren't shown in the gui. If this is a user
+                            # marked for creation we change ad-hoc the type to 'adapter' to make this be seen
+                            # as an 'adapter' in the gui user page
+                            creation_plugin_type = adapter_consts.ADAPTER_PLUGIN_TYPE
                         except Exception:
                             logger.exception(f'Exception - should create if not exists is True but there '
                                              f'is no creation identity tuple! bypassing')
@@ -345,7 +352,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
                             'associated_devices': []
                         }
 
-                    users[sd_last_used_user]['associated_devices'].append((sd_last_used_user, device))
+                    device_caption = \
+                        self.get_first_data(device, 'hostname') or self.get_first_data(device, 'name') or \
+                        self.get_first_data(device, 'id')
+                    users[sd_last_used_user]['associated_devices'].append((sd_last_used_user, device_caption))
 
         # 2. Go over all users. whatever we don't have, and should be created, we must create first.
         for username, username_data in users.copy().items():
