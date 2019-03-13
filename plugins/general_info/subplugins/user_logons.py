@@ -197,6 +197,7 @@ class GetUserLogons(GeneralInfoSubplugin):
             }
 
         # Update our adapterdata_device, add all users we have.
+        # Notice that we add users for creation, on behalf of the general info (wmi) plugin!
         for sid, u in users_on_this_device.items():
             adapterdata_device.add_users(
                 user_sid=sid,
@@ -204,10 +205,10 @@ class GetUserLogons(GeneralInfoSubplugin):
                 last_use_date=u.get("last_use_date"),
                 is_local=u.get("is_local"),
                 is_disabled=u.get("is_disabled"),
-                origin_unique_adapter_name=executer_info["adapter_unique_name"],
-                origin_unique_adapter_data_id=executer_info["adapter_unique_id"],
-                origin_unique_adapter_client=executer_info["adapter_client_used"],
-                should_create_if_not_exists=True
+                should_create_if_not_exists=True,
+                creation_source_plugin_type=self.plugin_base.plugin_type,
+                creation_source_plugin_name=self.plugin_base.plugin_name,
+                creation_source_plugin_unique_name=self.plugin_base.plugin_unique_name
             )
 
         # Now sort the array.

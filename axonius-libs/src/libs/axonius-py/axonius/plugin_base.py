@@ -1228,14 +1228,21 @@ class PluginBase(Configurable, Feature):
             raise adapter_exceptions.AdapterException(f"Fetching has timed out")
 
     def __do_save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType,
-                                   should_log_info=True) -> int:
+                                   should_log_info: bool = True, plugin_identity: Tuple[str, str, str] = None) -> int:
         """
         Saves all given data from adapter (devices, users) into the DB for the given client name
+        :param plugin_identity: tuple of (plugin_type, plugin_name, plguin_unique_name) from which these entity came.
+                                if none, we assume the current plugin name and unique name.
         :return: Device count saved
         """
         multilocker = LazyMultiLocker()
         db_to_use = self._entity_db_map.get(entity_type)
         assert db_to_use, f"got unexpected {entity_type}"
+        try:
+            plugin_type, plugin_name, plugin_unique_name = plugin_identity
+        except Exception:
+            plugin_type, plugin_name, plugin_unique_name = self.plugin_type, self.plugin_name, self.plugin_unique_name
+            plugin_identity = (plugin_type, plugin_name, plugin_unique_name)
 
         def insert_data_to_db(data_to_update, parsed_to_insert):
             """
@@ -1310,7 +1317,12 @@ class PluginBase(Configurable, Feature):
             promises = []
 
             def insert_quickpath_to_db(devices):
-                all_parsed = (self._create_axonius_entity(client_name, data, entity_type) for data in devices)
+                all_parsed = (self._create_axonius_entity(
+                    client_name,
+                    data,
+                    entity_type,
+                    plugin_identity
+                ) for data in devices)
                 db_to_use.insert_many(({
                     "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
                     "accurate_for_datetime": datetime.now(),
@@ -1327,7 +1339,7 @@ class PluginBase(Configurable, Feature):
             inserter = self.__first_time_inserter
             # quickest way to find if there are any devices from this plugin in the DB
             if inserter and db_to_use.find_one(
-                    {"adapters.plugin_unique_name": self.plugin_unique_name}) is None:
+                    {"adapters.plugin_unique_name": plugin_unique_name}) is None:
                 logger.info("Fast path! First run.")
                 # DB is empty! no need for slow path, can just bulk-insert all.
                 for devices in chunks(500, data_of_client['parsed']):
@@ -1343,7 +1355,12 @@ class PluginBase(Configurable, Feature):
                 # DB is not empty. Should go for slow path.
                 # Here we have all the devices a single client sees
                 for data in data_of_client['parsed']:
-                    parsed_to_insert = self._create_axonius_entity(client_name, data, entity_type)
+                    parsed_to_insert = self._create_axonius_entity(
+                        client_name,
+                        data,
+                        entity_type,
+                        plugin_identity
+                    )
 
                     # Note that this updates fields that are present. If some fields are not present but are present
                     # in the db they will stay there.
@@ -1380,7 +1397,7 @@ class PluginBase(Configurable, Feature):
 
             time_for_client = datetime.now() - time_before_client
             if self._notify_on_adapters is True and (time_for_client.seconds or inserted_data_count) \
-                    and not 'general_info' in self.plugin_name:
+                    and not 'general_info' in plugin_name and not should_log_info:
                 self.create_notification(
                     f"Finished aggregating {entity_type} for client {client_name}, "
                     f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
@@ -1405,24 +1422,29 @@ class PluginBase(Configurable, Feature):
 
         return inserted_data_count
 
-    def _create_axonius_entity(self, client_name, data, entity_type: EntityType) -> dict:
+    def _create_axonius_entity(
+            self, client_name, data, entity_type: EntityType, plugin_identity: Tuple[str, str, str]
+    ) -> dict:
         """
         Virtual.
         Creates an axonius entity ("Parsed data")
         :param client_name: the name of the client
         :param data: the parsed data
         :param entity_type: the type of the entity (see EntityType)
+        :param plugin_identity: a tuple of (plugin_type, plugin_name, plugin_unique_name) consisting the identity
         :return: dict
         """
 
+        plugin_type, plugin_name, plugin_unique_name = plugin_identity
+
         # Remove large ints from the data object, since mongodb can not handle integers that are larger than 8 bytes
-        data = remove_large_ints(data, data.get('id', f'{self.plugin_unique_name}_unidentified_device'))
+        data = remove_large_ints(data, data.get('id', f'{plugin_unique_name}_unidentified_device'))
 
         parsed_to_insert = {
             'client_used': client_name,
-            'plugin_type': self.plugin_type,
-            "plugin_name": self.plugin_name,
-            "plugin_unique_name": self.plugin_unique_name,
+            'plugin_type': plugin_type,
+            "plugin_name": plugin_name,
+            "plugin_unique_name": plugin_unique_name,
             "type": "entitydata",
             'accurate_for_datetime': datetime.now(),
             'data': data

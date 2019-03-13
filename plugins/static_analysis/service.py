@@ -1,4 +1,5 @@
 import logging
+import re
 import threading
 from datetime import datetime
 from typing import Iterable, Tuple, Dict
@@ -259,6 +260,16 @@ class StaticAnalysisService(Triggerable, PluginBase):
             pass
         return username
 
+    @staticmethod
+    def get_first_data(fd_d, fd_attr):
+        # Gets the first 'hostname', for example, from a device object.
+        for sd in fd_d.get('specific_data', []):
+            if isinstance(sd.get('data'), dict):
+                value = sd['data'].get(fd_attr)
+                if value:
+                    return value
+        return None
+
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def __associate_users_with_devices(self):
         """
@@ -277,7 +288,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         users = {}
         for device_raw in devices_with_users_association:
             # Get a list of all users associated for this device.
-            device = convert_db_entity_to_view_entity(device_raw)
+            device = convert_db_entity_to_view_entity(device_raw, ignore_errors=True)
             all_device_data = device.get('specific_data', [])
             for sd_users in [d['data']['users'] for d in all_device_data
                              if isinstance(d['data'], dict) and d['data'].get('users') is not None]:
@@ -295,13 +306,28 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     if users.get(current_username) is None:
                         users[current_username] = {
                             'should_create_if_not_exists': False,
+                            'creation_identity_tuple': None,
                             'associated_devices': []
                         }
 
                     # Users is a dict that maps between username (the user 'id') and a dict that represents
                     # if this user should be created if it doesn't exist, and all of its associated users
-                    users[current_username]['associated_devices'].append((user, device))
+                    device_caption = \
+                        self.get_first_data(device, 'hostname') or self.get_first_data(device, 'name') or \
+                        self.get_first_data(device, 'id')
+                    users[current_username]['associated_devices'].append((user, device_caption))
                     if user.get('should_create_if_not_exists'):
+                        try:
+                            creation_plugin_type = user['creation_source_plugin_type']
+                            creation_plugin_name = user['creation_source_plugin_name']
+                            creation_plugin_unique_name = user['creation_source_plugin_unique_name']
+                        except Exception:
+                            logger.exception(f'Exception - should create if not exists is True but there '
+                                             f'is no creation identity tuple! bypassing')
+                            continue
+                        users[current_username]['creation_identity_tuple'] = (
+                            creation_plugin_type, creation_plugin_name, creation_plugin_unique_name
+                        )
                         users[current_username]['should_create_if_not_exists'] = True
 
             # We also go over the last used user.
@@ -315,6 +341,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     if users.get(sd_last_used_user) is None:
                         users[sd_last_used_user] = {
                             'should_create_if_not_exists': False,
+                            'creation_identity_tuple': None,
                             'associated_devices': []
                         }
 
@@ -322,7 +349,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
         # 2. Go over all users. whatever we don't have, and should be created, we must create first.
         for username, username_data in users.copy().items():
-            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == regex("^{username}$", "i")'))
+            user = list(self.users.get(
+                axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")'))
             if len(user) == 0 and username_data['should_create_if_not_exists']:
                 # user does not exists, create it.
                 user_dict = self._new_user_adapter()
@@ -334,8 +362,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     continue
                 self._save_data_from_plugin(
                     self.plugin_unique_name,
-                    {'raw': [], 'parsed': [user_dict.to_dict()]},
-                    EntityType.Users, False)
+                    data_of_client={'raw': [], 'parsed': [user_dict.to_dict()]},
+                    entity_type=EntityType.Users,
+                    should_log_info=False,
+                    plugin_identity=username_data['creation_identity_tuple'])
 
             if len(user) == 0 and not username_data['should_create_if_not_exists']:
                 # This user doesn't exist, and we should not create it. lets pop it out of our users dict.
@@ -349,7 +379,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
             number_of_associated_devices = 0
 
             # Find that user. It should be in the view new.
-            user = list(self.users.get(axonius_query_language=f'specific_data.data.id == regex("^{username}$", "i")'))
+            user = list(self.users.get(
+                axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")'))
 
             # Do we have it? or do we need to create it?
             if len(user) > 1:
@@ -362,23 +393,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
             # at this point the user exists, go over all associated devices and add them.
             user = user[0]
-            client_used = None
-            for linked_user, linked_device in linked_devices_and_users_list:
+            for linked_user, device_caption in linked_devices_and_users_list:
                 if isinstance(linked_user, str):
                     linked_user = {'username': linked_user}  # an only string is considered a user with only a username
                 try:
-                    def get_first_data(fd_d, fd_attr):
-                        # Gets the first 'hostname', for example, from a device object.
-                        for sd in fd_d.get('specific_data', []):
-                            if isinstance(sd.get('data'), dict):
-                                value = sd['data'].get(fd_attr)
-                                if value:
-                                    return value
-                        return None
-
-                    device_caption = get_first_data(linked_device, 'hostname') or \
-                        get_first_data(linked_device, 'name') or get_first_data(linked_device, 'id')
-
                     logger.debug(f'Associating {device_caption} with user {username}')
 
                     # Notice! except last_used_date, we do not handle situations where users have different
@@ -404,14 +422,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     if linked_user.get('is_local') is not None:
                         adapterdata_user.is_local = linked_user.get('is_local')
 
-                    client_used = linked_user.get('origin_unique_adapter_client')
-
                     adapterdata_user.add_associated_device(
                         device_caption=device_caption,
-                        last_use_date=linked_user.get('last_use_date'),
-                        adapter_unique_name=linked_user.get('origin_unique_adapter_name'),
-                        adapter_data_id=linked_user.get('origin_unique_adapter_data_id'),
-                        adapter_client_used=client_used
+                        last_use_date=linked_user.get('last_use_date')
                     )
                     number_of_associated_devices += 1
                     if number_of_associated_devices >= 1000:
@@ -423,7 +436,12 @@ class StaticAnalysisService(Triggerable, PluginBase):
             # we have a new adapterdata_user, lets add it. we do not give any specific identity
             # since this tag isn't associated to a specific adapter.
             adapterdata_user.id = username
-            user.add_adapterdata(adapterdata_user.to_dict(), client_used=client_used or '')
+            user.add_adapterdata(
+                adapterdata_user.to_dict(),
+                additional_data={
+                    'hidden_for_gui': True
+                }
+            )
             self._save_field_names_to_db(EntityType.Users)
 
         logger.info('Finished associating users with devices')

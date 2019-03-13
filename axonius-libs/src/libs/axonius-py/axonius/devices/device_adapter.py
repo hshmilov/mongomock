@@ -200,10 +200,10 @@ class DeviceAdapterUser(SmartJsonClass):
     interpreter = Field(str, "Interpreter")
 
     # Hidden data for internal usage
-    origin_unique_adapter_name = Field(str)
-    origin_unique_adapter_data_id = Field(str)
-    origin_unique_adapter_client = Field(str)
-    should_create_if_not_exists = Field(bool)   # If true, will create this user in the 'users' screen.
+    should_create_if_not_exists = Field(bool)  # If true, will create this user in the 'users' screen.
+    creation_source_plugin_type = Field(str)
+    creation_source_plugin_name = Field(str)
+    creation_source_plugin_unique_name = Field(str)
 
 
 class DeviceAdapterConnectedHardware(SmartJsonClass):

@@ -1147,7 +1147,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                    'schema': schema},
                                upsert=True)
 
-    def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
+    def _create_axonius_entity(self, client_name, data, entity_type: EntityType,
+                               plugin_identity: Tuple[str, str, str]):
         """
         See doc for super class
         """
@@ -1155,7 +1156,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if not data.get('adapter_properties'):
                 data['adapter_properties'] = [x.name for x in self.adapter_properties()]
 
-        parsed_to_insert = super()._create_axonius_entity(client_name, data, entity_type)
+        parsed_to_insert = super()._create_axonius_entity(client_name, data, entity_type, plugin_identity)
         return parsed_to_insert
 
     @property

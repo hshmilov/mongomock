@@ -155,7 +155,8 @@ class AxoniusEntity(object):
         return self.plugin_base.add_data_to_entity(self.entity, identity_by_adapter, name, data,
                                                    action_if_exists=action_if_exists)
 
-    def add_adapterdata(self, data, identity_by_adapter=None, action_if_exists="replace", client_used=None):
+    def add_adapterdata(self, data, identity_by_adapter=None, action_if_exists="replace",
+                        client_used=None, additional_data={}):
         """
         adds an adapterdata to that device.
         :param str data: the adapterdata
@@ -171,7 +172,8 @@ class AxoniusEntity(object):
             identity_by_adapter = self.__get_all_identities()
 
         return self.plugin_base.add_adapterdata_to_entity(self.entity, identity_by_adapter, data,
-                                                          action_if_exists=action_if_exists, client_used=client_used)
+                                                          action_if_exists=action_if_exists, client_used=client_used,
+                                                          additional_data=additional_data)
 
     def get_first_data(self, name, plugin_unique_name=None):
         """

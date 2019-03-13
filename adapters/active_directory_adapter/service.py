@@ -1592,7 +1592,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             attribute_name = ldap_entity_dict['attribute_name']
             attribute_value = ldap_entity_dict['attribute_value']
 
-            client_data_dict = None
             try:
                 entity_finder = EntityFinder(self.devices_db, self._clients, self.plugin_unique_name)
                 entity_data, client_data_dict = entity_finder.get_data_and_client_data(entity_id)

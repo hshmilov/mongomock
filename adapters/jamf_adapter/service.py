@@ -273,8 +273,6 @@ class JamfAdapter(AdapterBase, Configurable):
                                                  user_sid=user_raw.get('uid'),
                                                  is_local=True,
                                                  is_admin=str(user_raw.get('administrator')).lower() == "true",
-                                                 origin_unique_adapter_name=self.plugin_unique_name,
-                                                 origin_unique_adapter_data_id=device.id,
                                                  user_department=user_raw.get("user_department"),
                                                  password_max_age=(int(user_inverntory_raw.get('password_max_age'))
                                                                    if user_inverntory_raw.get('password_max_age')

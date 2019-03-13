@@ -204,7 +204,7 @@
                     lastSeen.add(item.plugin_name)
                     return item
                 })
-                if (res[res.length - 1].plugin_name !== guiPluginName) {
+                if (res.length === 0 || res[res.length - 1].plugin_name !== guiPluginName) {
                     // Add initial gui adapters data
                     res.push({
                         ...initCustomData(this.module),

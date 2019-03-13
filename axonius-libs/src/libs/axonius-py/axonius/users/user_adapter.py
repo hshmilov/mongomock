@@ -13,10 +13,6 @@ from axonius.utils.mongo_escaping import escape_dict, unescape_dict
 class UserAdapterDevice(SmartJsonClass):
     """ A definition for the json-scheme for a device that is associated to a user. """
     device_caption = Field(str, 'Device Name')  # The name of the device to be shown in the gui
-
-    adapter_unique_name = Field(str)  # the adapter unique name of the device
-    adapter_data_id = Field(str)
-    adapter_client_used = Field(str)
     last_use_date = Field(datetime.datetime)
 
 
