@@ -26,10 +26,6 @@
   </div>
   <md-chip v-else-if="schema.format && schema.format === 'tag'">{{ processedData }}</md-chip>
   <div
-    v-else-if="status"
-    :class="`indicator-color-${status}`"
-  >{{ processedData }}</div>
-  <div
     v-else
     :title="completeData"
   >{{ processedData }}</div>
@@ -65,10 +61,6 @@
                     return this.value.map(item => this.format(item)).join(', ')
                 }
                 return this.format(this.value)
-            },
-            status() {
-              if (!this.schema.format || this.schema.format !== 'status') return ''
-              return (this.processedData === 'Complete') ? '4' : '2'
             }
         },
         methods: {

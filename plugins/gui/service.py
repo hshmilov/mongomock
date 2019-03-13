@@ -535,7 +535,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                  dashboard_metric=data['metric'],
                                                  dashboard_view=data['view'],
                                                  dashboard_data=json.loads(data['config']),
-                                                 hide_empty=data.get('hide_empty', False))
+                                                 hide_empty=bool(data.get('hide_empty', 0)))
                 except Exception as e:
                     logger.exception(f'Error adding default dashboard chart {name}. Reason: {repr(e)}')
         except Exception as e:

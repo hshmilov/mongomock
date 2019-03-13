@@ -15,7 +15,7 @@
                         :removable="!isReadOnly" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
                     <div class="card-history" v-if="chart.metric !== 'timeline'">
                         <x-historical-date v-model="chartsCurrentlyShowing[chart.uuid]" @clear="clearDate(chart.uuid)"
-                                           @input="confirmPickDate(chart.uuid, chart.name)" />card-history
+                                           @input="confirmPickDate(chart.uuid, chart.name)" />
                     </div>
                     <component :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" :id="getId(chart.name) + '_view'"/>
                 </x-card>
@@ -74,7 +74,7 @@
                     return state.dashboard
                 },
                 charts(state) {
-                    let charts = state.dashboard.charts.data.map(chart => {
+                    return state.dashboard.charts.data.map(chart => {
                         if (chart.metric === 'timeline') return chart
                         return {
                             ...chart, showingHistorical: this.dateChosen[chart.uuid],
@@ -94,8 +94,7 @@
                         }
                     })
                     // filter out charts without data or with hide_empty and remainder 100%
-                    charts = charts.filter(chart => chart && chart.data && ((!Boolean(chart.hide_empty)) || (chart.data.filter(data => data.remainder && data.value == 1).length == 0)))
-                    return charts
+                    .filter(chart => chart && chart.data && !(chart.hide_empty && [0, 1].includes(chart.data[0].value)))
                 },
                 devicesView(state) {
                     return state.devices.view

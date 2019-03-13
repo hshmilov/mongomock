@@ -16,7 +16,7 @@ export const tasks = {
         fields: {
             data: {
                 generic: [{
-                    name: 'status', title: 'Status', type: 'string', format: 'status'
+                    name: 'status', title: 'Status', type: 'string'
                 }, {
                     name: 'success_rate', title: 'Successful / Total', type: 'string'
                 }, {

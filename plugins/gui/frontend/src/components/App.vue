@@ -28,11 +28,10 @@
     import xAccessModal from './neurons/popover/AccessModal.vue'
 
     import {GET_USER, GET_OIDC_ID_TOKEN} from '../store/modules/auth'
-    import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG} from '../store/actions'
+    import {FETCH_SYSTEM_CONFIG} from '../store/actions'
     import {FETCH_CONSTANTS} from '../store/modules/constants'
     import {UPDATE_WINDOW_WIDTH} from '../store/mutations'
     import { mapState, mapMutations, mapActions } from 'vuex'
-    import { entities } from '../constants/entities'
 	import './axons/icons'
 
 
@@ -73,15 +72,11 @@
             ...mapMutations({ updateWindowWidth: UPDATE_WINDOW_WIDTH }),
             ...mapActions({
                 getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS,
-                fetchDataFields: FETCH_DATA_FIELDS, getOidcId: GET_OIDC_ID_TOKEN
+                getOidcId: GET_OIDC_ID_TOKEN
             }),
             fetchGlobalData() {
 				this.fetchConfig()
                 this.fetchConstants()
-                entities.forEach(entity => {
-                    if (this.entityRestricted(entity.title)) return
-                    this.fetchDataFields({module: entity.name})
-                })
                 if(this.medicalConfig){
                     this.getOidcId()
                 }
