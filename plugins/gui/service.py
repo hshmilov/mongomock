@@ -4301,7 +4301,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                  mongo_sort={},
                                                  skip=0)
             for enforcement in enforcements:
-                log_metric(logger, SystemMetric.ALERT_RAW, str(enforcement))
+                log_metric(logger, SystemMetric.ENFORCEMENT_RAW, str(enforcement))
 
             def dump_per_adapter(mapping, subtype):
                 counters = mapping['counters']

@@ -23,7 +23,6 @@ DUPLICATE_ACTION_NAME_ERROR = 'Name already taken by another saved Action'
 
 
 class TestEnforcementSanity(TestBase):
-
     FIELD_TIMES_TRIGGERED = 'Times Triggered'
     FIELD_NAME = 'Name'
     FIELD_MAIN_ACTION = 'Main Action'
@@ -152,7 +151,8 @@ class TestEnforcementSanity(TestBase):
 
             self.base_page.run_discovery()
             self.notification_page.verify_amount_of_notifications(0)
-            self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW, ENFORCEMENT_CHANGE_NAME)
+            assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
+                                                                       ENFORCEMENT_CHANGE_NAME)
         finally:
             json_service.start_and_wait()
 
@@ -248,7 +248,8 @@ class TestEnforcementSanity(TestBase):
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
-        self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW, COMMON_ENFORCEMENT_QUERY)
+        assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
+                                                                   COMMON_ENFORCEMENT_QUERY)
 
     def test_below_threshold(self):
         self.enforcements_page.create_outputting_notification_below('below 1',
@@ -264,7 +265,8 @@ class TestEnforcementSanity(TestBase):
 
         self.base_page.run_discovery()
         self.notification_page.verify_amount_of_notifications(1)
-        self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW, COMMON_ENFORCEMENT_QUERY)
+        assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
+                                                                   COMMON_ENFORCEMENT_QUERY)
 
     def test_no_scheduling(self):
         self.enforcements_page.create_basic_enforcement(
