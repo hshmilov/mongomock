@@ -6,8 +6,7 @@ import datetime
 
 from axonius.adapter_base import AdapterProperty
 from axonius.devices.device_adapter import (DeviceAdapter, Field,
-                                            DeviceAdapterNeighbor, DeviceAdapterNetworkInterface,
-                                            ListField, JsonArrayFormat)
+                                            DeviceAdapterNeighbor, DeviceAdapterNetworkInterface)
 
 from axonius.clients.cisco.port_security import PortSecurityInterface, SecureMacAddressEntry
 
@@ -26,7 +25,6 @@ class CiscoDevice(DeviceAdapter):
     auth_algo = Field(str, 'Authentication Algorithm')
     nac_state = Field(str, 'NAC State')
     wireless_vlan = Field(str, 'Wireless Vlan')
-    port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
     association_time = Field(datetime.datetime, 'Association Time')
 
 
@@ -230,8 +228,9 @@ class AbstractCiscoData:
         new_device.hostname = instance.get('hostname')
         new_device.device_model = instance.get('device_model')
 
-        new_device.figure_os(instance.get('device_model'))
+        new_device.figure_os('cisco')
         new_device.os.build = instance.get('version')
+        new_device.device_serial = instance.get('serial')
 
         if 'related_ips' in instance:
             new_device.set_related_ips(instance['related_ips'])

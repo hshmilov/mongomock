@@ -10,6 +10,7 @@ from axonius.utils.mongo_escaping import escape_dict, unescape_dict
 from axonius.utils.parsing import (figure_out_os, format_ip, format_ip_raw,
                                    format_mac, format_subnet,
                                    get_manufacturer_from_mac, normalize_mac)
+from axonius.clients.cisco.port_security import PortSecurityInterface
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -397,6 +398,7 @@ class DeviceAdapter(SmartJsonClass):
     services = ListField(ServiceData, 'Services', json_format=JsonArrayFormat.table)
     shares = ListField(ShareData, 'Shares', json_format=JsonArrayFormat.table)
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
+    port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
 

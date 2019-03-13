@@ -6,7 +6,7 @@ from pyasn1.type.univ import Null
 from pysnmp.hlapi.asyncio import (CommunityData, ContextData, ObjectIdentity,
                                   ObjectType, SnmpEngine)
 from pysnmp.hlapi.asyncio import UdpTransportTarget as AsyncUdpTransportTarget
-from pysnmp.hlapi.asyncio import bulkCmd
+from pysnmp.hlapi.asyncio import bulkCmd, getCmd
 from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
 
 from axonius.adapter_exceptions import ClientConnectionException
@@ -29,6 +29,9 @@ IP_OID = '1.3.6.1.2.1.4.20'
 
 PORT_SECURITY_OID = '1.3.6.1.4.1.9.9.315.1.2.1.1'
 PORT_SECURITY_ENTRIES_OID = '1.3.6.1.4.1.9.9.315.1.2.2.1'
+
+DEVICE_MODEL_OID = '.1.3.6.1.4.1.9.5.1.2.16.0'
+DEVICE_SERIAL_OID = '.1.3.6.1.4.1.9.5.1.2.19.0'
 
 
 class SingletonEngine(metaclass=Singleton):
@@ -106,6 +109,20 @@ async def asyncio_next(engine, community, ip, port, oid):
         varBinds = [ObjectType(ObjectIdentity(varBinds[0][0]))]
 
 
+async def asyncio_get(engine, community, ip, port, oid):
+    varBinds = [ObjectType(ObjectIdentity(oid))]
+    (errorIndication,
+     errorStatus,
+     errorIndex,
+     varBindTable) = await getCmd(engine,
+                                  CommunityData(community),
+                                  AsyncUdpTransportTarget((ip, port)),
+                                  ContextData(),
+                                  *varBinds,
+                                  lookupMib=False)
+    return (errorIndication, errorStatus, errorIndex, varBindTable)
+
+
 class CiscoSnmpClient(AbstractCiscoClient):
     def __init__(self, **kwargs):
         super().__init__()
@@ -131,6 +148,13 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
     def _next_cmd(self, oid):
         return run_event_loop([self._async_next_cmd(oid)])
+
+    async def _async_get_cmd(self, oid):
+        engine = SingletonEngine().get_instance()
+        data = await asyncio_get(engine, self._community,
+                                 self._ip, self._port,
+                                 oid)
+        return data
 
     async def _async_next_cmd(self, oid):
         engine = SingletonEngine().get_instance()
@@ -169,6 +193,22 @@ class CiscoSnmpClient(AbstractCiscoClient):
         data = await self._async_next_cmd(IP_OID)
         errors += list(map(lambda x: x[0], data))
         results += [('ip', list(map(lambda x: x[3], data)))]
+
+        data = await self._async_next_cmd(PORT_SECURITY_OID)
+        errors += list(map(lambda x: x[0], data))
+        results += [('port_security', list(map(lambda x: x[3], data)))]
+
+        data = await self._async_next_cmd(PORT_SECURITY_ENTRIES_OID)
+        errors += list(map(lambda x: x[0], data))
+        results += [('port_security_entries', list(map(lambda x: x[3], data)))]
+
+        data = await self._async_get_cmd(DEVICE_MODEL_OID)
+        errors.append(data[0])
+        results += [('device_model', data[3])]
+
+        data = await self._async_get_cmd(DEVICE_SERIAL_OID)
+        errors.append(data[0])
+        results += [('serial', data[3])]
 
         if any(errors):
             logger.error(f'Unable to query basic info table for {self._ip} errors: {errors}')
@@ -314,6 +354,12 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     self.result['ifaces'][index]['ips'] = []
                 self.result['ifaces'][index]['ips'].append(value)
 
+    def _parse_serial(self, entries):
+        self.result['serial'] = str(entries[0][1])
+
+    def _parse_device_model(self, entries):
+        self.result['device_model'] = str(entries[0][1])
+
     def _parse(self):
         self.result = {'device_model': 'cisco'}
         for type_, entries in self._raw_data:
@@ -327,6 +373,11 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 self._parse_port_security(entries)
             if type_ == 'port_security_entries':
                 self._parse_port_security_entries(entries)
+            if type_ == 'serial':
+                self._parse_serial(entries)
+            if type_ == 'device_model':
+                self._parse_device_model(entries)
+
         yield self.result
 
 
@@ -429,3 +480,10 @@ class CpsSecureMacAddressTable(snmp_parser.SnmpTable):
 
     }
     index = 13
+
+
+if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
+    CLIENT = CiscoSnmpClient(host='cisco-switch', community='public', port=161)
+    CLIENT.validate_connection()
+    RESULTS = list(filter(None, CLIENT.query_all()))

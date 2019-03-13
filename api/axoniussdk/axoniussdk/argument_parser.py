@@ -17,8 +17,8 @@ class ArgumentParser(argparse.ArgumentParser):
         self.formatter_class = ArgumentFormatter
         self.description = \
             '''Example:
-  %(prog)s -x https://axnoius.local --username admin -p password1 --no-verify-ssl
-  %(prog)s -x https://axnoius.local --api-key xxxx --api-secret yyyy'''
+  %(prog)s -x https://axonius.local --username admin -p password1 --no-verify-ssl
+  %(prog)s -x https://axonius.local --api-key xxxx --api-secret yyyy'''
 
         self.add_argument('--axonius-url', '-x', help='axonius gui url',
                           default=DEFAULT_AXONIUS_URL)
