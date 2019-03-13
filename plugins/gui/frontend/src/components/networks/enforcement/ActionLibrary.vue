@@ -104,7 +104,7 @@
                     })
                     .filter(action => action.title.toLowerCase().includes(this.searchValue.toLowerCase()))
           }
-        })
+        }).filter(category => category.items.length)
       }
     },
     mounted() {
