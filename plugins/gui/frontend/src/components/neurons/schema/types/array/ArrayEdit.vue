@@ -133,13 +133,15 @@
                 this.$refs.itemChild.forEach(item => item.validate(silent))
             },
             addNewItem() {
-                this.data[Object.keys(this.data).length] = this.schema.items.items.reduce((map, field) => {
-                    map[field.name] = field.default || null
-                    return map
-                }, {})
+                this.data = [...this.data,
+                  this.schema.items.items.reduce((map, field) => {
+                        map[field.name] = field.default || null
+                        return map
+                    }, {})
+                ]
             },
             removeItem(index) {
-                delete this.data[index]
+                this.data.splice(index, 1)
             }
         }
     }
