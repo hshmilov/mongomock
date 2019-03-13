@@ -26,7 +26,8 @@ class SolarwindsOrionAdapter(AdapterBase):
         first_update = Field(datetime.datetime, 'First Update')
         last_update = Field(datetime.datetime, 'Last Update')
         instance_type = Field(str, 'Instance Type')
-        wifi_name = Field(str, 'WifiName')
+        wifi_name = Field(str, 'Wifi Name')
+        wifi_display_name = Field(str, 'Wifi Display Name')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -126,7 +127,7 @@ class SolarwindsOrionAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Problem getting nic for {device_raw}')
         device.node_id = device_raw.get('NodeID')
-        device.name = device_raw.get('DisplayName')
+        device.wifi_display_name = device_raw.get('DisplayName')
         device.ssid = device_raw.get('SSID')
         device.wifi_name = device_raw.get('Name')
         device.description = device_raw.get('Description')

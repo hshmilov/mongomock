@@ -54,10 +54,10 @@ class TenableSecurityScannerConnection(RESTConnection):
         if not ips or not asset_name:
             raise RESTException('Missing IPS or Asset ID')
         asset_list = self._get('asset')
-        if not asset_list or not isinstance(asset_list, list):
+        if not asset_list or not isinstance(asset_list, dict):
             raise RESTException('Bad list of assets')
         asset_id = None
-        for asset_raw in asset_list:
+        for asset_raw in (asset_list.get('usable') or []) + (asset_list.get('manageable') or []):
             if asset_raw.get('name') == asset_name:
                 asset_id = asset_raw.get('id')
                 break

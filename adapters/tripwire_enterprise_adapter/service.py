@@ -185,4 +185,4 @@ class TripwireEnterpriseAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Assets]
+        return [AdapterProperty.Agent, AdapterProperty.Endpoint_Protection_Platform]
