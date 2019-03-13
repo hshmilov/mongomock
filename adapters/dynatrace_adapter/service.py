@@ -128,7 +128,7 @@ class DynatraceAdapter(AdapterBase):
                 if device_raw.get('firstSeenTimestamp') and isinstance(device_raw.get('firstSeenTimestamp'), int):
                     device.first_seen = parse_unix_timestamp(device_raw.get('firstSeenTimestamp'))
             except Exception:
-                logger.exception(f'Problem getting last seen for {device_raw}')
+                logger.exception(f'Problem getting first seen for {device_raw}')
             try:
                 if device_raw.get('ipAddresses') and isinstance(device_raw.get('ipAddresses'), list):
                     device.add_nic(None, device_raw.get('ipAddresses'))

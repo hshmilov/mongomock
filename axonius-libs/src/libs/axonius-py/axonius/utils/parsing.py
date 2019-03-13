@@ -1198,7 +1198,7 @@ def and_function(*functions) -> FunctionType:
 
 def make_dict_from_csv(csv_data):
     return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data.splitlines()[0],
-                                                                             delimiters=[',', '\t']))
+                                                                             delimiters=[';', ',', '\t']))
 
 
 def remove_duplicates_by_reference(seq):

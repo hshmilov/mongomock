@@ -149,10 +149,10 @@ class SolarwindsOrionAdapter(AdapterBase):
 
     def _create_lan_device(self, device_raw):
         device = self._new_device_adapter()
-        if not device_raw.get('NodeID') and not device_raw.get('MAC'):
+        if not device_raw.get('MACAddress'):
             logger.warning(f'Bad device with no ID {device_raw}')
             return None
-        device.id = 'lan' + '_' + (str(device_raw.get('NodeID')) or '') + '_' + (device_raw.get('MAC') or '')
+        device.id = 'lan' + '_' + (str(device_raw.get('NodeID')) or '') + '_' + (device_raw.get('MACAddress') or '')
         try:
             mac = device_raw.get('MAC')
             if not mac:

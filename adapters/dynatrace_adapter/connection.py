@@ -25,8 +25,7 @@ class DynatraceConnection(RESTConnection):
     def _connect(self):
         if not self._apikey:
             raise RESTException('No API Key')
-        self._get('entity/infrastructure/hosts',
-                  url_params={'startTimestamp': 1000 * 10})
+        self._get('entity/infrastructure/hosts')
 
     def get_device_list(self):
         yield from self._get('entity/infrastructure/hosts')

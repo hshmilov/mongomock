@@ -42,7 +42,7 @@ class CsvAdapter(AdapterBase):
         if client_config.get('csv_http'):
             r = requests.get(client_config.get('csv_http'),
                              verify=False,
-                             timeout=DEFAULT_TIMEOUT).content
+                             timeout=DEFAULT_TIMEOUT)
             r.raise_for_status()
         return client_config
 
@@ -53,9 +53,11 @@ class CsvAdapter(AdapterBase):
         csv_data = None
         if data.get('csv_http'):
             try:
-                csv_data = requests.get(data.get('csv_http'),
-                                        verify=False,
-                                        timeout=DEFAULT_TIMEOUT).content
+                csv_data_bytes = requests.get(data.get('csv_http'),
+                                              verify=False,
+                                              timeout=DEFAULT_TIMEOUT).content
+                encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+                csv_data = csv_data_bytes.decode(encoding)
             except Exception:
                 logger.exception(f'Couldn\'t get csv info from URL')
         if 'csv' in data and csv_data is None:
@@ -71,9 +73,11 @@ class CsvAdapter(AdapterBase):
         csv_data = None
         if client_data.get('csv_http'):
             try:
-                csv_data = requests.get(client_data.get('csv_http'),
-                                        verify=False,
-                                        timeout=DEFAULT_TIMEOUT).content
+                csv_data_bytes = requests.get(client_data.get('csv_http'),
+                                              verify=False,
+                                              timeout=DEFAULT_TIMEOUT).content
+                encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+                csv_data = csv_data_bytes.decode(encoding)
             except Exception:
                 logger.exception(f'Couldn\'t get csv info from URL')
 
