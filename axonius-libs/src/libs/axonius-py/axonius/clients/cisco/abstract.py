@@ -228,7 +228,7 @@ class AbstractCiscoData:
         new_device.hostname = instance.get('hostname')
         new_device.device_model = instance.get('device_model')
 
-        new_device.figure_os('cisco')
+        new_device.figure_os(instance.get('os', ''))
         new_device.os.build = instance.get('version')
         new_device.device_serial = instance.get('serial')
 

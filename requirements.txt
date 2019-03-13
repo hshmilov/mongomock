@@ -95,3 +95,4 @@ proxmoxer==1.0.3
 pip-licenses==1.10.0
 deepdiff==3.3.0
 jira==2.0.0
+pysnmp==4.4.4

@@ -15,23 +15,9 @@ from axonius.clients.cisco import snmp_parser
 from axonius.clients.cisco.abstract import (AbstractCiscoClient, ArpCiscoData,
                                             BasicInfoData, CdpCiscoData)
 
+from axonius.clients.cisco.constants import OIDS
+
 logger = logging.getLogger(f'axonius.{__name__}')
-
-
-# snmp OID (object identifires) we use to query data
-ARP_OID = '1.3.6.1.2.1.3.1.1.2'
-CDP_OID = '1.3.6.1.4.1.9.9.23.1.2'
-
-
-SYSTEM_DESCRIPTION_OID = '1.3.6.1.2.1.1'
-INTERFACE_OID = '1.3.6.1.2.1.2.2.1'
-IP_OID = '1.3.6.1.2.1.4.20'
-
-PORT_SECURITY_OID = '1.3.6.1.4.1.9.9.315.1.2.1.1'
-PORT_SECURITY_ENTRIES_OID = '1.3.6.1.4.1.9.9.315.1.2.2.1'
-
-DEVICE_MODEL_OID = '.1.3.6.1.4.1.9.5.1.2.16.0'
-DEVICE_SERIAL_OID = '.1.3.6.1.4.1.9.5.1.2.19.0'
 
 
 class SingletonEngine(metaclass=Singleton):
@@ -135,7 +121,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         self._port = kwargs['port']
 
     def validate_connection(self):
-        data = list(self._next_cmd(SYSTEM_DESCRIPTION_OID + '.1'))[0]
+        data = list(self._next_cmd(OIDS.system_description + '.1'))[0]
         if not data:
             raise ClientConnectionException(f'Unable to communicate with {self._ip} data: {data}')
 
@@ -169,7 +155,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
     async def _query_arp_table(self):
         results = []
-        for query_result in await self._async_next_cmd(ARP_OID):
+        for query_result in await self._async_next_cmd(OIDS.arp):
             try:
                 error, _, _, result = query_result
                 if error:
@@ -182,31 +168,31 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
     async def _query_basic_info(self):
         """ query basic information about the device itself """
-        data = await self._async_next_cmd(SYSTEM_DESCRIPTION_OID)
+        data = await self._async_next_cmd(OIDS.system_description)
         errors = list(map(lambda x: x[0], data))
         results = [('info', list(map(lambda x: x[3], data)))]
 
-        data = await self._async_next_cmd(INTERFACE_OID)
+        data = await self._async_next_cmd(OIDS.interface)
         errors += list(map(lambda x: x[0], data))
         results += [('iface', list(map(lambda x: x[3], data)))]
 
-        data = await self._async_next_cmd(IP_OID)
+        data = await self._async_next_cmd(OIDS.ip)
         errors += list(map(lambda x: x[0], data))
         results += [('ip', list(map(lambda x: x[3], data)))]
 
-        data = await self._async_next_cmd(PORT_SECURITY_OID)
+        data = await self._async_next_cmd(OIDS.port_security)
         errors += list(map(lambda x: x[0], data))
         results += [('port_security', list(map(lambda x: x[3], data)))]
 
-        data = await self._async_next_cmd(PORT_SECURITY_ENTRIES_OID)
+        data = await self._async_next_cmd(OIDS.port_security_entries)
         errors += list(map(lambda x: x[0], data))
         results += [('port_security_entries', list(map(lambda x: x[3], data)))]
 
-        data = await self._async_get_cmd(DEVICE_MODEL_OID)
+        data = await self._async_get_cmd(OIDS.device_model)
         errors.append(data[0])
         results += [('device_model', data[3])]
 
-        data = await self._async_get_cmd(DEVICE_SERIAL_OID)
+        data = await self._async_get_cmd(OIDS.device_serial)
         errors.append(data[0])
         results += [('serial', data[3])]
 
@@ -214,13 +200,6 @@ class CiscoSnmpClient(AbstractCiscoClient):
             logger.error(f'Unable to query basic info table for {self._ip} errors: {errors}')
             return None
 
-        data = await self._async_next_cmd(PORT_SECURITY_OID)
-        errors += list(map(lambda x: x[0], data))
-        results += [('port_security', list(map(lambda x: x[3], data)))]
-
-        data = await self._async_next_cmd(PORT_SECURITY_ENTRIES_OID)
-        errors += list(map(lambda x: x[0], data))
-        results += [('port_security_entries', list(map(lambda x: x[3], data)))]
         return SnmpBasicInfoCiscoData(results)
 
     # XXX: move to CdpCiscoData
@@ -233,7 +212,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         return groups.values()
 
     async def _query_cdp_table(self):
-        data = await self._async_next_cmd(CDP_OID)
+        data = await self._async_next_cmd(OIDS.cdp)
         errors = list(map(lambda x: x[0], data))
         results = list(map(lambda x: x[3], data))
         if any(errors):
@@ -361,7 +340,7 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
         self.result['device_model'] = str(entries[0][1])
 
     def _parse(self):
-        self.result = {'device_model': 'cisco'}
+        self.result = {'os': 'cisco'}
         for type_, entries in self._raw_data:
             if type_ == 'info':
                 self._parse_basic_info(entries)
