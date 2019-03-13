@@ -23,6 +23,8 @@
         .text {
             margin-left: 12px;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         &.disabled {
             .md-image {

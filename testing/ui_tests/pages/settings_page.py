@@ -79,6 +79,10 @@ class SettingsPage(Page):
                                         ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(7) > div > div' \
                                         ' > div:nth-child(5) > div > div > div.file-name '
 
+    FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
+    LOCKED_ACTION_OPTION_XPATH = '//div[contains(@class, \'md-select-menu\')]//div[contains(@class, \'md-list-item\')]'\
+                                 '//span[text()=\'{action_name}\']'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -236,7 +240,7 @@ class SettingsPage(Page):
         self.set_maintenance_toggle(make_yes, self.find_provision_toggle())
 
     def set_maintenance_toggle(self, make_yes, toggle):
-        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
         try:
             self.confirm_maintenance_removal()
         except (NoSuchElementException, TimeoutException):
@@ -372,6 +376,9 @@ class SettingsPage(Page):
     def find_checkbox_with_label_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))
 
+    def find_field_by_label(self, text):
+        return self.driver.find_element_by_xpath(self.FIELD_WITH_LABEL_XPATH.format(label_text=text))
+
     def click_start_remote_access(self):
         self.click_button('Start', scroll_into_view_container=X_BODY)
 
@@ -464,7 +471,7 @@ class SettingsPage(Page):
 
     def set_proxy_settings_enabled(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.USE_PROXY)
-        self.click_toggle_button(toggle, make_yes=make_yes)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
     def fill_proxy_address(self, proxy_addr):
         self.fill_text_field_by_element_id('proxy_addr', proxy_addr)
@@ -475,10 +482,10 @@ class SettingsPage(Page):
     def fill_remote_access_timeout(self, timeout):
         self.fill_text_field_by_element_id('remote-access-timer', timeout)
 
-    def is_trial_mode(self):
-        toggle = self.find_checkbox_by_label(self.TRIAL_MODE_FLAG_LABEL)
-        return self.is_toggle_selected(toggle)
+    def is_locked_action(self, action_name):
+        return action_name in self.driver.find_element_by_css_selector(
+            '.md-select .md-input.md-select-value').get_attribute('value')
 
-    def set_set_trial_mode(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.TRIAL_MODE_FLAG_LABEL)
-        self.click_toggle_button(toggle, make_yes=make_yes)
+    def set_locked_actions(self, action_name):
+        self.find_field_by_label('Actions Locked for Client').click()
+        self.driver.find_element_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(action_name=action_name)).click()

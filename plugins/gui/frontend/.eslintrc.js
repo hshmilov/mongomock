@@ -6,6 +6,7 @@ module.exports = {
     ],
     rules: {
         // override/add rules settings here, such as:
-        'vue/multiline-html-element-content-newline': 'valid'
+        'vue/multiline-html-element-content-newline': 'valid',
+        'vue/singleline-html-element-content-newline': 'valid'
     }
 }

@@ -153,6 +153,9 @@ class MongoService(WeaveService):
     def gui_users_collection(self):
         return self.client['gui']['users']
 
+    def gui_config_collection(self):
+        return self.client['gui']['configurable_configs']
+
     def get_gui_entity_fields(self, entity_type: EntityType):
         if entity_type == EntityType.Users:
             return self.client[GUI_NAME]['users_fields']

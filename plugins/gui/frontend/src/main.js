@@ -1,7 +1,7 @@
 import Vue from 'vue'
 
 import {
-	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips
+	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu
 } from 'vue-material/dist/components'
 Vue.use(MdSwitch)
 Vue.use(MdDatepicker)
@@ -12,6 +12,8 @@ Vue.use(MdDialog)
 Vue.use(MdCard)
 Vue.use(MdList)
 Vue.use(MdChips)
+Vue.use(MdCheckbox)
+Vue.use(MdMenu)
 
 import router from './router/index'
 import store from './store/index'

@@ -51,6 +51,8 @@
 
 <style lang="scss">
     .x-tabs {
+        width: 100%;
+        height: 100%;
         .header {
             list-style: none;
             display: flex;

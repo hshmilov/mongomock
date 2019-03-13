@@ -58,9 +58,8 @@ class EnforcementsPage(EntitiesPage):
     BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[@title=\'{enforcement_name}\']'
     SEND_AN_EMAIL = 'Send an Email'
-    DISABLED_ACTION_XPATH = '//div[contains(@class, \'md-list-item-content\')' \
-                            'and child::div[contains(@class, \'x-title\') and child::div[text()=\'{action_name}\']]' \
-                            'and child::div[@class=\'action-disabled\']]'
+    DISABLED_ACTION_XPATH = '//div[contains(@class, \'md-list-item-content\')]//div[@class=\'x-title disabled\' ' \
+                            'and .//text()=\'{action_name}\']'
     TASK_RESULT_CSS = '.x-action-result .x-summary div:nth-child({child_count})'
     TASK_RESULT_SUCCESS_CSS = TASK_RESULT_CSS.format(child_count=1)
     TASK_RESULT_FAILURE_CSS = TASK_RESULT_CSS.format(child_count=3)

@@ -8,7 +8,7 @@ class TestLDAPLogin(TestBase):
         self.settings_page.click_gui_settings()
         self.settings_page.wait_for_spinner_to_end()
         toggle = self.settings_page.find_allow_ldap_logins_toggle()
-        self.settings_page.click_toggle_button(toggle)
+        self.settings_page.click_toggle_button(toggle, scroll_to_toggle=False)
         self.settings_page.fill_dc_address(ad_client1_details['dc_name'])
         self.settings_page.click_save_button()
         self.settings_page.find_saved_successfully_toaster()

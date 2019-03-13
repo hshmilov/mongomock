@@ -13,7 +13,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
         toggle = self.settings_page.find_send_emails_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=True)
+        self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
 
         # Invalid host is not being tested, an open bug
         # self.settings_page.fill_email_host(INVALID_EMAIL_HOST)
@@ -33,7 +33,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
         toggle = self.settings_page.find_send_emails_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=True)
+        self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
 
         self.settings_page.fill_email_host(smtp_service.fqdn)
         self.settings_page.fill_email_port(smtp_service.port)
@@ -48,7 +48,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
         toggle = self.settings_page.find_send_emails_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=False)
+        self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
         self.settings_page.click_save_button()
 
     def test_maintenance_endpoints(self):

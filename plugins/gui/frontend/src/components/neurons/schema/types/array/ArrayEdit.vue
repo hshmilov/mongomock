@@ -1,23 +1,70 @@
 <template>
-    <div class="x-array-edit">
-        <template v-if="!isItemsString">
-            <h4 v-if="schema.title" :title="schema.description || ''" class="array-header"
-                :id="schema.name">{{ schema.title }}</h4>
-            <div v-for="(item, index) in shownSchemaItems" class="item">
-                <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
-                             :required="item.required">
-                    <component :is="item.type" :schema="item" v-model="data[item.name]" @validate="onValidate"
-                               :api-upload="apiUpload" ref="itemChild" :read-only="readOnly" />
-                </x-type-wrap>
-                <x-button link v-if="!isOrderedObject" @click.prevent="removeItem(index)">x</x-button>
-            </div>
-            <x-button v-if="!isOrderedObject" light @click.prevent="addNewItem">+</x-button>
-        </template>
-        <template v-else >
-            <label>{{schema.title}}</label>
-            <md-chips v-model="data" md-placeholder="Add..." />
-        </template>
-    </div>
+  <div class="x-array-edit">
+    <template v-if="!isItemsString">
+      <h4
+        v-if="schema.title"
+        :id="schema.name"
+        :title="schema.description || ''"
+        class="array-header"
+      >{{ schema.title }}</h4>
+      <div
+        v-for="(item, index) in shownSchemaItems"
+        :key="item.name"
+        class="item"
+      >
+        <x-type-wrap
+          :name="item.name"
+          :type="item.type"
+          :title="item.title"
+          :description="item.description"
+          :required="item.required"
+        >
+          <component
+            :is="item.type"
+            ref="itemChild"
+            v-model="data[item.name]"
+            :schema="item"
+            :api-upload="apiUpload"
+            :read-only="readOnly"
+            @validate="onValidate"
+          />
+        </x-type-wrap>
+        <x-button
+          v-if="!isOrderedObject"
+          link
+          @click.prevent="removeItem(index)"
+        >x</x-button>
+      </div>
+      <x-button
+        v-if="!isOrderedObject"
+        light
+        @click.prevent="addNewItem"
+      >+</x-button>
+    </template>
+    <template v-else-if="isItemsStringEnum">
+      <label>{{ schema.title }}</label>
+      <md-field>
+        <md-select
+          v-model="data"
+          placeholder="Select..."
+          multiple
+        >
+          <md-option
+            v-for="option in schema.items.enum"
+            :key="option.name"
+            :value="option.name"
+          >{{ option.title }}</md-option>
+        </md-select>
+      </md-field>
+    </template>
+    <template v-else>
+      <label>{{ schema.title }}</label>
+      <md-chips
+        v-model="data"
+        md-placeholder="Add..."
+      />
+    </template>
+  </div>
 </template>
 
 <script>
@@ -33,11 +80,16 @@
     import arrayMixin from './array'
 
     export default {
-        name: 'array',
-        mixins: [arrayMixin],
-        props: { readOnly: { default: false } },
+        name: 'Array',
         components: {
             xTypeWrap, string, number, integer, bool, file, range, xButton
+        },
+        mixins: [arrayMixin],
+        props: {
+          readOnly: {
+            type: Boolean,
+            default: false
+          }
         },
         data() {
         	return {
@@ -48,24 +100,9 @@
             isItemsString() {
                 if (this.isOrderedObject) return false
                 return this.schema.items.type === 'string'
-            }
-        },
-        methods: {
-            onValidate(validity) {
-                this.$emit('validate', validity)
             },
-            validate(silent) {
-            	if (!this.$refs.itemChild) return
-                this.$refs.itemChild.forEach(item => item.validate(silent))
-            },
-            addNewItem() {
-                this.data[Object.keys(this.data).length] = this.schema.items.items.reduce((map, field) => {
-                    map[field.name] = field.default || null
-                    return map
-                }, {})
-            },
-            removeItem(index) {
-                delete this.data[index]
+            isItemsStringEnum() {
+              return this.isItemsString && this.schema.items.enum
             }
         },
         watch: {
@@ -85,6 +122,24 @@
         		// Here the new children (after change of hidden) are updated in the DOM
 				this.validate(true)
                 this.needsValidation = false
+            }
+        },
+        methods: {
+            onValidate(validity) {
+                this.$emit('validate', validity)
+            },
+            validate(silent) {
+            	if (!this.$refs.itemChild) return
+                this.$refs.itemChild.forEach(item => item.validate(silent))
+            },
+            addNewItem() {
+                this.data[Object.keys(this.data).length] = this.schema.items.items.reduce((map, field) => {
+                    map[field.name] = field.default || null
+                    return map
+                }, {})
+            },
+            removeItem(index) {
+                delete this.data[index]
             }
         }
     }

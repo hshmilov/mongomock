@@ -3,9 +3,13 @@ from selenium.common.exceptions import NoSuchElementException
 
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from ui_tests.tests.ui_test_base import TestBase
+from axonius.utils.wait import wait_until
 
 
 class TestFeatureFlags(TestBase):
+
+    ACTION_TO_LOCK = 'Create Jira Issue'
+
     def test_feature_flags_axonius_user(self):
         self.devices_page.switch_to_page()
         self.login_page.logout()
@@ -15,14 +19,14 @@ class TestFeatureFlags(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_feature_flags()
 
-        self.settings_page.set_set_trial_mode()
+        self.settings_page.set_locked_actions(self.ACTION_TO_LOCK)
         self.settings_page.save_and_wait_for_toaster()
 
         self.settings_page.refresh()
         self.settings_page.switch_to_page()
 
         self.settings_page.click_feature_flags()
-        assert self.settings_page.is_trial_mode()
+        wait_until(lambda: self.settings_page.is_locked_action(self.ACTION_TO_LOCK))
 
     def test_feature_flags_regular_user(self):
         self.settings_page.switch_to_page()

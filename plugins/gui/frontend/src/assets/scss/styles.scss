@@ -290,24 +290,6 @@ ul {
   text-align: right;
 }
 
-.md-switch {
-  .md-switch-container {
-    background-color: rgba($grey-4,.4);
-    .md-switch-thumb {
-      background-color: $grey-4;
-    }
-  }
-  &.md-checked {
-    .md-switch-container {
-      background-color: rgba($theme-orange,.4);
-      .md-switch-thumb {
-        background-color: $theme-orange;
-      }
-    }
-  }
-}
-
-
 /* Basic Components */
 
 table {
@@ -468,6 +450,8 @@ table {
   }
 }
 
+/* Material Components */
+
 .md-datepicker {
   .md-date-icon {
     fill: $grey-4;
@@ -540,6 +524,46 @@ table {
       line-height: 24px;
     }
   }
+}
+.md-switch {
+  .md-switch-container {
+    background-color: rgba($grey-4,.4);
+    .md-switch-thumb {
+      background-color: $grey-4;
+    }
+  }
+  &.md-checked {
+    .md-switch-container {
+      background-color: rgba($theme-orange,.4);
+      .md-switch-thumb {
+        background-color: $theme-orange;
+      }
+    }
+  }
+}
+.md-select-menu {
+  background: $theme-white;
+}
+.md-checkbox {
+  .md-checkbox-container {
+    border-color: $grey-3;
+  }
+  &.md-checked {
+    .md-checkbox-container {
+      background-color: $grey-5;
+      border-color: $grey-5;
+
+      &:after {
+        border-color: $theme-white;
+      }
+    }
+  }
+  &:hover {
+    border-color: $grey-5;
+  }
+}
+.md-select {
+  border-bottom: 1px solid $grey-4;
 }
 
 /* Common Animations */

@@ -10,6 +10,7 @@ class FeatureFlags(Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    # pylint: disable=R0201
     def _on_config_update(self, config):
         logger.info(f'Loading FeatureFlags config: {config}')
 
@@ -18,14 +19,19 @@ class FeatureFlags(Configurable):
         return {
             'items': [
                 {
-                    'name': 'is_trial',
-                    'title': 'Is trial mode',
-                    'type': 'bool'
+                    'name': 'trial_end',
+                    'title': 'Date for Trial to End',
+                    'type': 'string',
+                    'format': 'date-time'
                 },
                 {
-                    'name': 'is_full_ec',
-                    'title': 'Is full EC allowed',
-                    'type': 'bool'
+                    'name': 'locked_actions',
+                    'title': 'Actions Locked for Client',
+                    'type': 'array',
+                    'items': {
+                        'type': 'string',
+                        'enum': []
+                    }
                 }
             ],
             'required': ['is_trial'],
@@ -37,6 +43,10 @@ class FeatureFlags(Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'is_poc': False,
-            'is_full_ec': False
+            'trial_end': None,
+            'locked_actions': [
+                'cybereason_isolate',
+                'cybereason_unisolate',
+                'carbonblack_defense_change_policy'
+            ]
         }
