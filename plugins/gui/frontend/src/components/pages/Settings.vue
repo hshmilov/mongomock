@@ -341,26 +341,11 @@
 <style lang="scss">
     .x-settings {
 
-        .tab-settings {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            overflow: hidden;
+        .x-tabs {
+            max-width: 840px;
 
-            .x-form {
-                max-height: calc(100% - 48px);
-                overflow: auto;
-
-                > .x-array-edit {
-                    grid-template-columns: 1fr;
-                    width: 80vw;
-                    min-width: 400px;
-                }
-            }
-
-            .footer {
-                min-height: 36px;
-                margin-top: 12px;
+            .tab-settings .x-form .x-array-edit {
+                grid-template-columns: 1fr;
             }
         }
 

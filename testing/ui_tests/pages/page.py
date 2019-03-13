@@ -49,7 +49,7 @@ return (function(el, container){
                 return true;
             }
         }
-        container.scrollBy(0, 10);
+        container.scrollBy(0, 40);
         if (old_scroll === (container === window ? container.scrollY : container.scrollTop)) {
             return false;
         }

@@ -12,7 +12,7 @@
       <div class="content">
         <template v-if="!action.implemented">
           <div><span class="title">{{ action.title }}</span> Action</div>
-          <div>is coming soon</div>
+          <div>coming soon</div>
         </template>
         <template v-if="action.locked">
           <div>Please reach out to your Account Manager</div>

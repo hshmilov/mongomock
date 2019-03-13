@@ -47,6 +47,7 @@ class FeatureFlags(Configurable):
             'locked_actions': [
                 'cybereason_isolate',
                 'cybereason_unisolate',
-                'carbonblack_defense_change_policy'
+                'carbonblack_defense_change_policy',
+                'tenable_sc_add_ips_to_asset'
             ]
         }

@@ -83,6 +83,8 @@ class SettingsPage(Page):
     LOCKED_ACTION_OPTION_XPATH = '//div[contains(@class, \'md-select-menu\')]//div[contains(@class, \'md-list-item\')]'\
                                  '//span[text()=\'{action_name}\']'
 
+    TABS_BODY_CSS = '.x-tabs .body'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -155,7 +157,7 @@ class SettingsPage(Page):
         self.click_generic_save_button('user-settings-save')
 
     def click_generic_save_button(self, button_id):
-        self.click_button_by_id(button_id, scroll_into_view_container=X_BODY)
+        self.click_button_by_id(button_id, scroll_into_view_container=self.TABS_BODY_CSS)
 
     def fill_schedule_rate(self, text):
         self.fill_text_field_by_element_id(self.SCHEDULE_RATE_ID, text)
@@ -187,8 +189,9 @@ class SettingsPage(Page):
         return cert, private
 
     def toggle_advanced_settings(self):
-        self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=X_BODY)
+        self.click_button('ADVANCED SETTINGS', partial_class=True, scroll_into_view_container=self.TABS_BODY_CSS)
         time.sleep(0.5)
+        self.scroll_into_view(self.driver.find_element_by_css_selector('.x-maintenance .x-content'), self.TABS_BODY_CSS)
 
     def find_remote_support_toggle(self):
         try:
