@@ -386,12 +386,19 @@ class RESTConnection(ABC):
     def __enter__(self):
         if self._session_lock.acquire(blocking=False) is False:
             raise RESTAlreadyConnected('Already Connected')
-        self.connect()
+        try:
+            self.connect()
+        except Exception:
+            self.__exit()
+            raise
         return self
 
-    # pylint: disable=C0103
-    def __exit__(self, _type, value, tb):
+    def __exit(self):
         try:
             self.close()
         finally:
             self._session_lock.release()
+
+    # pylint: disable=C0103
+    def __exit__(self, _type, value, tb):
+        self.__exit()
