@@ -62,6 +62,7 @@ BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-button'
 BUTTON_TYPE_A = 'a'
 X_BODY = '.x-body'
+BODY = '.body'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
@@ -409,13 +410,14 @@ class Page:
                             toggle,
                             make_yes=True,
                             ignore_exc=False,
-                            scroll_to_toggle=True):
+                            scroll_to_toggle=True,
+                            window=X_BODY):
         is_selected = self.is_toggle_selected(toggle)
 
         if (make_yes and not is_selected) or (not make_yes and is_selected):
             try:
                 if scroll_to_toggle:
-                    self.scroll_into_view(toggle, X_BODY)
+                    self.scroll_into_view(toggle, window)
                 toggle.click()
                 return True
             except WebDriverException:

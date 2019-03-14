@@ -5,6 +5,7 @@ from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import EmailSettings, FreshServiceSettings, Saml
+from ui_tests.pages.page import BODY
 
 
 class TestPrepareGlobalSettings(TestBase):
@@ -67,7 +68,7 @@ class TestPrepareGlobalSettings(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
 
-        self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True)
+        self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True, window=BODY)
         self.settings_page.save_and_wait_for_toaster()
 
     def test_scheduler_settings(self):
