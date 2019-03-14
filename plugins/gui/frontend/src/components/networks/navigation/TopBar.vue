@@ -185,7 +185,8 @@
             const updateLifecycle = () => {
                 this.fetchLifecycle().then(() => {
                     if (this._isDestroyed) return
-                    if (this.researchStatusLocal !== 'done' && this.researchStatus === 'done') {
+                    if ((this.researchStatusLocal !== 'done' && this.researchStatus === 'done')
+                      || (this.researchStatusLocal === '' && this.researchStatus === 'running')) {
                         entities.forEach(entity => {
                             if (this.entityRestricted(entity.title)) return
                           this.fetchDataFields({module: entity.name})
