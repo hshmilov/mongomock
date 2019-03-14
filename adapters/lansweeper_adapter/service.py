@@ -33,6 +33,7 @@ class LansweeperAdapter(AdapterBase):
         uptime = Field(int, 'Uptime')
         registry_information = ListField(RegistryInfomation, 'Registry Information',
                                          json_format=JsonArrayFormat.table)
+        lansweeper_type = Field(str, 'Lansweeper Type')
 
         def add_registry_information(self, **kwargs):
             self.registry_information.append(RegistryInfomation(**kwargs))
@@ -294,6 +295,14 @@ class LansweeperAdapter(AdapterBase):
                                 logger.exception(f'Problem getting asset reg data {asset_reg_data}')
                 except Exception:
                     logger.exception(f'Problem getting reg informaation for {device_raw}')
+                try:
+                    if device_raw.get('Assettype') is not None:
+                        lansweeper_type = consts.LANSWEEPER_TYPE_DICT.get(str(device_raw.get('Assettype')))
+                        if lansweeper_type in consts.BAD_TYPES:
+                            continue
+                        device.lansweeper_type = lansweeper_type
+                except Exception:
+                    logger.exception(f'Problem adding type')
                 raw_dict = dict()
                 for key in device_raw:
                     raw_dict[key] = str(device_raw[key])

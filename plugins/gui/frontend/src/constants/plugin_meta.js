@@ -1,7 +1,7 @@
 export const pluginMeta = {
     redcloack_adapter: {
         title: 'Secureworks Red Cloak - BETA',
-        description: 'Secureworks Red Cloak is Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity.'
+        description: 'Secureworks Red Cloak is an Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity.'
     },
     dynatrace_adapter: {
         title: 'Dynatrace - BETA',

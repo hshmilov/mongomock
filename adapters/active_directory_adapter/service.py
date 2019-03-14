@@ -208,6 +208,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self.__report_generation_interval = config['report_generation_interval']
         self.__fetch_users_image = config.get('fetch_users_image', True)
         self.__should_get_nested_groups_for_user = config.get('should_get_nested_groups_for_user', True)
+        self.__add_ip_conflict = config.get('add_ip_conflict', True)
         self.__ldap_page_size = config.get('ldap_page_size', DEFAULT_LDAP_PAGE_SIZE)
         self.__ldap_connection_timeout = config.get('ldap_connection_timeout', DEFAULT_LDAP_CONNECTION_TIMEOUT)
         self.__ldap_recieve_timeout = config.get('ldap_recieve_timeout', DEFAULT_LDAP_RECIEVE_TIMEOUT)
@@ -702,24 +703,25 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
             else:
                 try:
-                    available_ips = {ip: dns for ip, dns in ips_and_dns_servers}
-                    if len(available_ips) > 1:
-                        # If we have more than one key in available_ips that means
-                        # that this device got two different IP's
-                        # i.e duplicate! we need to tag this device
-                        logger.info(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
-                        self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts")
+                    if self.__add_ip_conflict:
+                        available_ips = {ip: dns for ip, dns in ips_and_dns_servers}
+                        if len(available_ips) > 1:
+                            # If we have more than one key in available_ips that means
+                            # that this device got two different IP's
+                            # i.e duplicate! we need to tag this device
+                            logger.info(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
+                            self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts")
 
-                        serialized_available_ips = AvailableIps(
-                            available_ips=[AvailableIp(ip=ip, source_dns=dns)
-                                           for ip, dns in available_ips.items()]
-                        )
-                        self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts",
-                                              serialized_available_ips.to_dict())
-                    else:
-                        # no conflicts - let's reflect that
-                        self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
-                        self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
+                            serialized_available_ips = AvailableIps(
+                                available_ips=[AvailableIp(ip=ip, source_dns=dns)
+                                               for ip, dns in available_ips.items()]
+                            )
+                            self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts",
+                                                  serialized_available_ips.to_dict())
+                        else:
+                            # no conflicts - let's reflect that
+                            self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
+                            self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
                 except TagDeviceError:
                     pass  # if the device wasn't yet inserted this will be raised
                 except Exception:
@@ -1643,6 +1645,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     'type': 'bool'
                 },
                 {
+                    'name': 'add_ip_conflict',
+                    'title': 'Should Add IP Conflict Tags',
+                    'type': 'bool'
+                },
+                {
                     'name': 'ldap_page_size',
                     'title': 'LDAP pagination (entries per page)',
                     'type': 'number'
@@ -1665,6 +1672,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 'fetch_users_image',
                 'should_get_nested_groups_for_user',
                 'ldap_page_size',
+                'add_ip_conflict',
                 'ldap_connection_timeout',
                 'ldap_receive_timeout',
                 'verbose_auth_notifications'
@@ -1680,6 +1688,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             "sync_resolving": False,
             "report_generation_interval": 30,
             'verbose_auth_notifications': False,
+            'add_ip_conflict': True,
             'fetch_users_image': True,
             'should_get_nested_groups_for_user': True,
             'ldap_page_size': DEFAULT_LDAP_PAGE_SIZE,
