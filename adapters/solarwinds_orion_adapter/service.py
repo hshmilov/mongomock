@@ -154,7 +154,7 @@ class SolarwindsOrionAdapter(AdapterBase):
             return None
         device.id = 'lan' + '_' + (str(device_raw.get('NodeID')) or '') + '_' + (device_raw.get('MACAddress') or '')
         try:
-            mac = device_raw.get('MAC')
+            mac = device_raw.get('MACAddress')
             if not mac:
                 mac = None
             ips = device_raw.get('IPAddress').split(',') if device_raw.get('IPAddress') else None
