@@ -3388,7 +3388,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
         }, 'module': entity.value}, *data]
 
-    # pylint: disable=R0914
+    # pylint: disable=R0914,R0912
     def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):
         """
         Perform aggregation which matching given view's filter and grouping by give field, in order to get the
@@ -3431,18 +3431,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         aggregate_results = data_collection.aggregate([
             {
-                '$match': {
-                    '$and': [base_query]
-                }
+                '$match': base_query
             },
             {
                 # TODO: We might need another $filter stage here for cases
                 # where two adapters have the same field name and the user *really* want to
                 # differentiate between the two cases.
-                # It's a bit complicated to do so I'm posponing this for later.
+                # It's a bit complicated to do so I'm postponing this for later.
                 '$project': {
                     'field': {
-                        '$concatArrays': [
+                        '$setUnion': [
                             '$' + adapter_field_name,
                             '$' + tags_field_name
                         ]
@@ -3451,18 +3449,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             },
             {
                 '$group': {
-                    '_id': {
-                        '$arrayElemAt': [
-                            {
-                                '$filter': {
-                                    'input': '$field',
-                                    'cond': {
-                                        '$ne': ['$$this', '']
-                                    }
-                                }
-                            }, 0
-                        ]
-                    },
+                    '_id': '$field',
                     'value': {
                         '$sum': 1
                     }
@@ -3472,9 +3459,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 '$project': {
                     'value': 1,
                     'name': {
-                        '$ifNull': [
-                            '$_id', 'No Value'
-                        ]
+                        '$cond': {
+                            'if': {
+                                '$eq': [
+                                    '$_id', []
+                                ]
+                            },
+                            'then': ['No Value'],
+                            'else': '$_id'
+                        }
                     }
                 }
             },
@@ -3486,9 +3479,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         ])
         base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
         data = []
+        all_values = defaultdict(int)
         for item in aggregate_results:
-            field_value = item['name']
+            for value in item['name']:
+                all_values[value] += item['value']
 
+        for field_value, field_count in all_values.items():
             if field_value == 'No Value':
                 value_filter = f'not ({field_name} == exists(true))'
             elif isinstance(field_value, str):
@@ -3505,7 +3501,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
             data.append({
                 'name': field_value,
-                'value': item['value'],
+                'value': field_count,
                 'module': entity.value,
                 'view': {
                     **base_view,
