@@ -18,6 +18,11 @@ tags:
     description: Actions to execute on Axonius entities.
 schemes:
   - https
+security:
+  - api_key: []
+    api_secret: []
+  - axonius_api_auth: []
+host: axonius
 paths:
   /adapters:
     get:
@@ -32,8 +37,6 @@ paths:
         '200': 
           description: >-
             Returns json containing the active adapters.
-      security:
-        - axonius_api_auth: []
   /adapters/{adapter_name}/clients:
     post:
       tags:
@@ -69,8 +72,6 @@ paths:
         '500':
           description: ->
             client unreachable
-      security:
-        - axonius_api_auth: []
     put:
       tags:
         - Adapters
@@ -95,8 +96,6 @@ paths:
       responses:
         '200':
           description: client added
-      security:
-        - axonius_api_auth: []
   /adapters/{adapter_name}/clients/{client_id}:
     delete:
       tags:
@@ -122,8 +121,6 @@ paths:
       responses:
         '200':
           description: client deleted
-      security:
-        - axonius_api_auth: []
   /devices:
     get:
       tags:
@@ -165,8 +162,6 @@ paths:
             amount of assets that were filtered, skipped, limited, and returned
             in the request. assets - The list of assets that were queried with
             the specified fields (if any).
-      security:
-        - axonius_api_auth: []
   /devices/count:
     get:
       tags:
@@ -184,8 +179,6 @@ paths:
       responses:
         '200':
           description: Returns the number of Devices that adhere to the given filter
-      security:
-        - axonius_api_auth: []
   '/devices/{device_id}':
     get:
       tags:
@@ -208,8 +201,6 @@ paths:
           description: Unauthorized
         '404':
           description: Entity ID wasn't found
-      security:
-        - axonius_api_auth: []
   /devices/labels:
     get:
       tags:
@@ -222,8 +213,6 @@ paths:
       responses:
         '200':
           description: List of distinct labels
-      security:
-        - axonius_api_auth: []
     post:
       tags:
         - Devices
@@ -242,8 +231,6 @@ paths:
       responses:
         '400':
           description: Invalid input supplied
-      security:
-        - axonius_api_auth: []
     delete:
       tags:
         - Devices
@@ -264,8 +251,6 @@ paths:
       responses:
         '400':
           description: Invalid input supplied
-      security:
-        - axonius_api_auth: []
   /users:
     get:
       tags:
@@ -309,8 +294,6 @@ paths:
             amount of assets that were filtered, skipped, limited, and returned
             in the request. assets - The list of assets that were queried with
             the specified fields (if any).
-      security:
-        - axonius_api_auth: []
   /users/count:
     get:
       tags:
@@ -329,8 +312,6 @@ paths:
       responses:
         '200':
           description: Returns the number of Users that adhere to the given filter
-      security:
-        - axonius_api_auth: []
   '/users/{user_id}':
     get:
       tags:
@@ -353,8 +334,6 @@ paths:
           description: Unauthorized
         '404':
           description: Entity ID wasn't found
-      security:
-        - axonius_api_auth: []
   /users/labels:
     get:
       tags:
@@ -367,8 +346,6 @@ paths:
       responses:
         '200':
           description: List of distinct labels
-      security:
-        - axonius_api_auth: []
     post:
       tags:
         - Users
@@ -387,8 +364,6 @@ paths:
       responses:
         '400':
           description: Invalid input supplied
-      security:
-        - axonius_api_auth: []
     delete:
       tags:
         - Users
@@ -407,8 +382,6 @@ paths:
       responses:
         '400':
           description: Invalid input supplied
-      security:
-        - axonius_api_auth: []
   /alerts:
     get:
       tags:
@@ -461,8 +434,6 @@ paths:
             the specified fields (if any).
         '405':
           description: Invalid input
-      security:
-        - axonius_api_auth: []
     put:
       tags:
         - Alerts
@@ -543,8 +514,6 @@ paths:
             the specified fields (if any).
         '405':
           description: Invalid input
-      security:
-        - axonius_api_auth: []
     post:
       tags:
         - Devices
@@ -625,8 +594,6 @@ paths:
             the specified fields (if any).
         '405':
           description: Invalid input
-      security:
-        - axonius_api_auth: []
     post:
       tags:
         - Users
@@ -647,8 +614,6 @@ paths:
           description: Invalid user supplied
         '404':
           description: User not found
-      security:
-        - axonius_api_auth: []
     delete:
       tags:
         - Users
@@ -681,8 +646,6 @@ paths:
       responses:
         '200':
           description: List of available actions
-      security:
-        - axonius_api_auth: []
   '/actions/{action_type}':
     post:
       tags:
@@ -710,6 +673,15 @@ paths:
 securityDefinitions:
   axonius_api_auth:
     type: basic
+  api_key:
+    type: apiKey
+    in: header
+    name: api-key
+  api_secret:
+    type: apiKey
+    in: header
+    name: api-secret
+
 definitions:
   Alert:
     type: object
