@@ -1,5 +1,6 @@
 import logging
 
+from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.mixins.configurable import Configurable
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -19,13 +20,13 @@ class FeatureFlags(Configurable):
         return {
             'items': [
                 {
-                    'name': 'trial_end',
+                    'name': FeatureFlagsNames.TrialEnd,
                     'title': 'Date for Trial to End',
                     'type': 'string',
                     'format': 'date-time'
                 },
                 {
-                    'name': 'locked_actions',
+                    'name': FeatureFlagsNames.LockedActions,
                     'title': 'Actions Locked for Client',
                     'type': 'array',
                     'items': {
@@ -43,8 +44,8 @@ class FeatureFlags(Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'trial_end': None,
-            'locked_actions': [
+            FeatureFlagsNames.TrialEnd: None,
+            FeatureFlagsNames.LockedActions: [
                 'cybereason_isolate',
                 'cybereason_unisolate',
                 'carbonblack_defense_change_policy',

@@ -4,6 +4,7 @@ import uuid
 import pytest
 from requests import HTTPError
 
+from axonius.consts.gui_consts import FeatureFlagsNames
 from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from services.axonius_service import get_service
 from test_credentials.test_gui_credentials import DEFAULT_USER
@@ -502,6 +503,14 @@ def test_api_key_change():
         'api-key': second_api_key['api_key'],
         'api-secret': second_api_key['api_secret']
     }).raise_for_status()
+
+
+def test_get_feature_flags():
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
+    flags = gui_service.get_feature_flags()
+    assert FeatureFlagsNames.LockedActions in flags
+    assert FeatureFlagsNames.TrialEnd in flags
 
 
 if __name__ == '__main__':
