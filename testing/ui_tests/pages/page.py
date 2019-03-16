@@ -4,6 +4,7 @@ import time
 import urllib.parse
 from tempfile import NamedTemporaryFile
 
+from retrying import retry
 from selenium.common.exceptions import (ElementNotVisibleException,
                                         NoSuchElementException,
                                         StaleElementReferenceException,
@@ -250,11 +251,12 @@ class Page:
 
         return self.handle_button(button, **kwargs)
 
+    @retry(stop_max_attempt_number=5, wait_fixed=500)
     def scroll_into_view(self, element, window=None):
         try:
             self.scroll_into_view_no_retry(element, window)
         except StaleElementReferenceException:
-            logger.info(f'Failed to scroll down into element {element}')
+            logger.exception(f'Failed to scroll down into element {element}')
             raise
 
     def scroll_into_view_no_retry(self, element, window=None):

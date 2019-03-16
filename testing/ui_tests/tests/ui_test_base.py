@@ -192,6 +192,8 @@ class TestBase:
 
         # Wait until scheduler finishes
         self.axonius_system.scheduler.wait_for_scheduler(True)
+        # wait again, in case something is racy
+        self.axonius_system.scheduler.wait_for_scheduler(True)
 
         self.axonius_system.get_devices_db().delete_many({})
         self.axonius_system.get_users_db().delete_many({})

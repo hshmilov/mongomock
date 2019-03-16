@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 from typing import List
 from urllib.parse import urljoin
 
@@ -67,6 +68,11 @@ class NotificationPage(Page):
     @retry(stop_max_attempt_number=100, wait_fixed=100)
     def wait_for_count(self, assert_count: int, msg='assertion failed'):
         assert self.get_count() == assert_count, msg
+
+        # The reason for the sleep here is because the count of notifications and the notifications
+        # themselves may arrive at different times, so we want to make sure they have actually arrived
+        # and there's no easy GUI way to do it
+        time.sleep(5)
 
     def get_peek_notifications(self):
         self.click_notification_peek()

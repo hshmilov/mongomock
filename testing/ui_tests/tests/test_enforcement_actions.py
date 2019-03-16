@@ -34,13 +34,20 @@ def _verify_in_syslog_data(syslog_service: SyslogService, text):
 class TestEnforcementActions(TestBase):
 
     def _create_notifications(self, count=1) -> List[str]:
-        result = []
-        for i in range(count):
-            enforcement_name = create_enforcement_name(i)
-            self.enforcements_page.create_notifying_enforcement(enforcement_name, COMMON_ENFORCEMENT_QUERY)
-            result.append(enforcement_name)
+        enforcement_names = [create_enforcement_name(i) for i in range(count)]
+        for name in enforcement_names:
+            self.enforcements_page.create_notifying_enforcement(name, COMMON_ENFORCEMENT_QUERY,
+                                                                False, False)
         self.base_page.run_discovery()
-        return result
+
+        # It's easier to delete the notifications from the DB
+        self.axonius_system.get_enforcements_db().delete_many({'name': {
+            '$in': enforcement_names
+        }})
+        self.axonius_system.get_actions_db().delete_many({'name': {
+            '$in': enforcement_names
+        }})
+        return enforcement_names
 
     def test_notification_sanity(self):
         self._create_notifications(2)
@@ -130,7 +137,7 @@ class TestEnforcementActions(TestBase):
             _verify_in_syslog_data(syslog_server, syslog_expected)
 
             # Verifying the multiple actions in enforcement worked
-            self.notification_page.verify_amount_of_notifications(1)
+            self.notification_page.wait_for_count(1)
 
             self.settings_page.switch_to_page()
             self.settings_page.click_global_settings()
