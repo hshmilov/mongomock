@@ -18,6 +18,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CarbonblackProtectionAdapter(AdapterBase, Configurable):
 
+    # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         connected = Field(bool, 'Connected')
         agent_version = Field(str, 'Agent Version')
@@ -37,7 +38,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
             connection = CarbonblackProtectionConnection(
                 domain=client_config['CarbonblackProtection_Domain'],
                 verify_ssl=client_config['verify_ssl'], https_proxy=client_config.get('https_proxy'),
-                apikey=client_config['apikey'])
+                apikey=client_config['apikey'], devices_per_page=self.__devices_per_page)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -57,7 +58,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the CarbonblackProtection Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(devices_per_page=self.__devices_per_page)
 
     def _clients_schema(self):
         """
@@ -123,7 +124,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
                 try:
                     ips = None
                     mac = device_raw.get('macAddress')
-                    if not mac or 'Unknown' == mac:
+                    if not mac or mac == 'Unknown':
                         mac = None
                     if device_raw.get('ipAddress') and isinstance(device_raw.get('ipAddress'), str):
                         ips = device_raw.get('ipAddress').split(',')
@@ -159,10 +160,16 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
                     'name': 'fetch_uninstall',
                     'title': 'Fetch Uninstall Devices',
                     'type': 'bool'
+                },
+                {
+                    'name': 'devices_per_page',
+                    'title': 'Fetch Devices Per Page',
+                    'type': 'integer'
                 }
             ],
             'required': [
                 'fetch_uninstall',
+                'devices_per_page'
             ],
             'pretty_name': 'Carbonblack Protection Configuration',
             'type': 'array'
@@ -172,7 +179,9 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'fetch_uninstall': True,
+            'devices_per_page': 10
         }
 
     def _on_config_update(self, config):
         self.__fetch_uninstall = config['fetch_uninstall']
+        self.__devices_per_page = config['devices_per_page']

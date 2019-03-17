@@ -26,7 +26,6 @@ class ChefAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         environment = Field(str, "Chef environment")
         instance_id = Field(str, "AWS instance ID")
-        public_ip = Field(str, 'Discovered public ip', converter=format_ip, json_format=JsonStringFormat.ip)
         chef_tags = ListField(str, 'Chef tags')
 
     def __init__(self):
@@ -217,7 +216,8 @@ class ChefAdapter(AdapterBase):
 
                 try:
                     device.chef_tags = device_raw_normal['tags']
-                    device.public_ip = device_raw_automatic['public_ip']['data']['ip']
+                    if device_raw_automatic['public_ip']['data']['ip']:
+                        device.add_public_ip(device_raw_automatic['public_ip']['data']['ip'])
                 except Exception:
                     logger.info(f"No axonius specific info found")
 

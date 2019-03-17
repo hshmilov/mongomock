@@ -21,7 +21,6 @@ class SentineloneAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         active_state = Field(str, 'Active State')
-        public_ip = Field(str, 'Public IP')
         is_active = Field(bool, 'Is Active')
 
     def __init__(self, *args, **kwargs):
@@ -132,7 +131,8 @@ class SentineloneAdapter(AdapterBase):
                 device.last_seen = parse_date(device_raw.get('last_active_date'))
             except Exception:
                 logger.exception(f'Problem getting last seen at {device_raw}')
-            device.public_ip = device_raw.get('external_ip')
+            if device_raw.get('external_ip'):
+                device.add_public_ip(device_raw.get('external_ip'))
             network_information = device_raw.get('network_information') or {}
             if not isinstance(network_information, dict):
                 network_information = dict()
@@ -211,7 +211,8 @@ class SentineloneAdapter(AdapterBase):
                 device.last_seen = parse_date(device_raw.get('lastActiveDate'))
             except Exception:
                 logger.exception(f'Problem getting last seen at {device_raw}')
-            device.public_ip = device_raw.get('externalIp')
+            if device_raw.get('externalIp'):
+                device.add_public_ip(device_raw.get('externalIp'))
             device.domain = device_raw.get('domain')
             ad_domain = ''
             try:

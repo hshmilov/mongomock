@@ -9,8 +9,6 @@ adapters/bigfix_adapter/service.py
 adapters/bomgar_adapter/client.py
 adapters/bomgar_adapter/exceptions.py
 adapters/bomgar_adapter/json_utils.py
-adapters/bomgar_adapter/service.py
-adapters/carbonblack_protection_adapter/service.py
 adapters/chef_adapter/connection.py
 adapters/chef_adapter/exceptions.py
 adapters/chef_adapter/service.py

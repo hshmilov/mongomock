@@ -197,6 +197,8 @@ class CsvAdapter(AdapterBase):
                 device.device_serial = vals.get('serial')
                 device.name = vals.get('name')
                 hostname = vals.get('hostname')
+                if hostname == 'unknown':
+                    hostname = None
                 hostname_domain = None
                 if hostname and '\\' in hostname:
                     hostname = hostname.split('\\')[1]

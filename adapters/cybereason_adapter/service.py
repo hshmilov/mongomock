@@ -20,7 +20,6 @@ class CybereasonAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         agent_status = Field(str, 'Agent Status')
         agent_version = Field(str, 'Agent Version')
-        public_ip = Field(str, 'Public IP')
         site_name = Field(str, 'Site Name')
         ransomware_status = Field(str, 'Ransomware Status')
         isolated = Field(bool, 'Isolated')
@@ -133,7 +132,8 @@ class CybereasonAdapter(AdapterBase):
             device.id = sensor_id + '_' + (device_raw.get('machineName') or '')
             device.name = device_raw.get('machineName')
             device.hostname = device_raw.get('fqdn') or device_raw.get('machineName')
-            device.public_ip = device_raw.get('externalIpAddress')
+            if device_raw.get('externalIpAddress'):
+                device.add_public_ip(device_raw.get('externalIpAddress'))
             if device_raw.get('internalIpAddress'):
                 device.add_nic(None, [device_raw.get('internalIpAddress')])
             device.site_name = device_raw.get('siteName')

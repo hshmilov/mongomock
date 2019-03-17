@@ -42,7 +42,6 @@ class GceTag(SmartJsonClass):
 class GceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         project_id = Field(str, 'Project ID')
-        public_ips = ListField(str, 'Public IPs')
         image = Field(str, 'Device image')
         size = Field(str, 'Google Device Size')
         creation_time_stamp = Field(datetime.datetime, 'Creation Time Stamp')
@@ -137,7 +136,7 @@ class GceAdapter(AdapterBase):
             if public_ips:
                 for ip in public_ips:
                     if ip:
-                        device.public_ips.append(ip)
+                        device.add_public_ip(ip)
         except Exception:
             logger.exception(f'Problem getting public IP for {str(raw_device_data)}')
         try:

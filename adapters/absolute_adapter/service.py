@@ -18,7 +18,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class AbsoluteAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        public_ip = Field(str, 'Public IP')
         is_stes_active = Field(bool, 'Is STES Active')
         is_stolen = Field(bool, 'Is Active')
         last_updated = Field(datetime.datetime, 'Last Updated')
@@ -183,7 +182,8 @@ class AbsoluteAdapter(AdapterBase):
                 device.device_origin = device_raw.get('origin')
                 device.is_stolen = device_raw.get('isStolen')
                 device.is_stes_active = device_raw.get('isCTESActive')
-                device.public_ip = device_raw.get('publicIp')
+                if device_raw.get('publicIp'):
+                    device.add_public_ip(device_raw.get('publicIp'))
                 nics = device_raw.get('networkAdapters')
                 if not isinstance(nics, list):
                     nics = []

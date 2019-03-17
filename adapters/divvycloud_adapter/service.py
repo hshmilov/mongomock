@@ -43,7 +43,6 @@ class DivvycloudAdapter(AdapterBase):
         divvycloud_network_resource_id = Field(str, "Network Resource ID")
         divvycloud_image_id = Field(str, "Image ID")
         divvycloud_key_name = Field(str, "Key name")
-        public_ip = Field(str, 'Public IP')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -135,7 +134,8 @@ class DivvycloudAdapter(AdapterBase):
         device.id = raw_device_data["instance_id"]
         device.cloud_id = raw_device_data["instance_id"]
         device.figure_os(raw_device_data.get("platform", ""))
-        device.public_ip = raw_device_data.get('public_ip_address')
+        if raw_device_data.get('public_ip_address'):
+            device.add_public_ip(raw_device_data.get('public_ip_address'))
 
         device.divvycloud_instance_type = raw_device_data.get("instance_type")
         device.divvycloud_tenancy = raw_device_data.get("tenancy")

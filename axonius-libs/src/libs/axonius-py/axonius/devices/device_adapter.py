@@ -324,6 +324,9 @@ class DeviceAdapter(SmartJsonClass):
     first_seen = Field(datetime.datetime, 'First Seen')
     last_seen = Field(datetime.datetime, 'Last Seen')
     fetch_time = Field(datetime.datetime, 'Fetch Time')
+    public_ips = ListField(str, 'Public IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    public_ips_raw = ListField(str, description='Number representation of the Public IP, useful for filtering by range',
+                               converter=format_ip_raw)
     network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces',
                                    json_format=JsonArrayFormat.table)
     os = Field(DeviceAdapterOS, 'OS')
@@ -410,6 +413,13 @@ class DeviceAdapter(SmartJsonClass):
         self._adapter_fields = adapter_fields
         self._adapter_raw_fields = adapter_raw_fields
         self._raw_data = {}  # will hold any extra raw fields that are associated with this device.
+
+    def add_public_ip(self, ip):
+        try:
+            self.public_ips.append(ip)
+            self.public_ips_raw.append(ip)
+        except Exception:
+            logger.exception(f'Bad public ip {ip}')
 
     def _define_new_name(self, name: str):
         if name.startswith('raw.'):

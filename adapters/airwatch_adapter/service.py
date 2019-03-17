@@ -162,7 +162,8 @@ class AirwatchAdapter(AdapterBase):
                     name = name.replace('’', '')
                     name = name.replace('(', '')
                     name = name.replace(')', '')
-                device.name = name
+                    name = name.replace('.', '-')
+                device.name = name + '_' + str(device_raw.get('MacAddress'))
                 device.friendly_name = device_raw.get('DeviceFriendlyName')
 
                 device.last_used_users = (device_raw.get('UserName') or '').split(',')

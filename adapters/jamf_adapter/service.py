@@ -45,7 +45,6 @@ class JamfProfile(SmartJsonClass):
 class JamfAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
-        public_ip = Field(str, 'Public IP', converter=format_ip, json_format=JsonStringFormat.ip)
         jamf_location = Field(JamfLocation, 'Jamf Location')
         policies = ListField(JamfPolicy, "Jamf Policies")
         is_managed = Field(bool, 'Is Managed')
@@ -187,7 +186,8 @@ class JamfAdapter(AdapterBase, Configurable):
                         host_no_spaces_list[1] = ''.join(char for char in host_no_spaces_list[1] if char.isalnum())
                     hostname = '-'.join(host_no_spaces_list).split(".")[0]
                     device.hostname = hostname
-                device.public_ip = general_info.get('ip_address')
+                if general_info.get('ip_address'):
+                    device.add_public_ip(general_info.get('ip_address'))
                 try:
                     site = general_info.get('site')
                     if site:

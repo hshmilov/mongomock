@@ -152,6 +152,7 @@ class ShodanAdapter(ScannerAdapterBase):
                 try:
                     device = self._new_device_adapter()
                     device.id = ip_str
+                    device.add_public_ip(ip_str)
                     device.add_nic(None, [ip_str])
                     hostname = None
                     city = None

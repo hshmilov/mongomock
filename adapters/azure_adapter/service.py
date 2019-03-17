@@ -31,7 +31,6 @@ class AzureAdapter(AdapterBase):
         image = Field(AzureImage, 'Image')
         admin_username = Field(str, 'Admin Username')
         vm_id = Field(str, 'VM ID')
-        public_ip = ListField(str, 'Public IPs')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -144,7 +143,7 @@ class AzureAdapter(AdapterBase):
                     public_ip = ip_config.get('public_ip_address', {}).get('ip_address')
                     if public_ip:
                         ips.append(public_ip)
-                        device.public_ip.append(public_ip)
+                        device.add_public_ip(public_ip)
                     subnets.append(ip_config.get('subnet', {}).get('address_prefix'))
                 device.add_nic(mac=iface.get('mac_address'), ips=[ip for ip in ips if ip is not None],
                                subnets=[subnet for subnet in subnets if subnet is not None], name=iface.get('name'))

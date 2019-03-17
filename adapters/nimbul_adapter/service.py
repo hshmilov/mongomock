@@ -19,7 +19,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class NimbulAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        public_ip = ListField(str, 'Public IPs')
         app_code = Field(str, 'Application Code')
         app_description = Field(str, 'Application Description')
         app_email = Field(str, 'Application Email')
@@ -188,7 +187,7 @@ class NimbulAdapter(AdapterBase):
             if public_ip and isinstance(public_ip, str):
                 public_ip = [public_ip]
             if public_ip:
-                device.public_ip = public_ip
+                device.add_public_ip(public_ip)
         except Exception:
             logger.exception(f'Problem getting ip for {device_raw}')
         self.__add_app_data(device, device_raw, cloud_id)
@@ -219,7 +218,7 @@ class NimbulAdapter(AdapterBase):
             if public_ip and isinstance(public_ip, str):
                 public_ip = [public_ip]
             if public_ip:
-                device.public_ip = public_ip
+                device.add_public_ip(public_ip)
         except Exception:
             logger.exception(f'Problem getting ip for {device_raw}')
         try:

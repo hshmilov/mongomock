@@ -22,7 +22,6 @@ class CarbonblackDefenseAdapter(AdapterBase):
         status = Field(str, 'Agent Status')
         sensor_version = Field(str, 'Sensor Version')
         policy_name = Field(str, 'Policy Name')
-        public_ip = Field(str, 'Public IP')
         email = Field(str, 'Email')
         basic_device_id = Field(str, 'Basic ID')
 
@@ -177,7 +176,8 @@ class CarbonblackDefenseAdapter(AdapterBase):
             device.email = device_raw.get('email')
             device.sensor_version = device_raw.get('sensorVersion')
             device.policy_name = device_raw.get('policyName')
-            device.public_ip = device_raw.get('lastExternalIpAddress')
+            if device_raw.get('lastExternalIpAddress'):
+                device.add_public_ip(device_raw.get('lastExternalIpAddress'))
             device.set_raw(device_raw)
             return device
         except Exception:

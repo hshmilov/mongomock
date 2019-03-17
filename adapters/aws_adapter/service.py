@@ -202,7 +202,6 @@ class AwsAdapter(AdapterBase, Configurable):
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
         # EC2-specific fields
-        public_ip = Field(str, 'Public IP')
         aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
         instance_type = Field(str, 'Instance Type')
         key_name = Field(str, 'Key Name')
@@ -1217,7 +1216,7 @@ class AwsAdapter(AdapterBase, Configurable):
                         if assoc is not None:
                             public_ip = assoc.get('PublicIp')
                             if public_ip:
-                                device.public_ip = public_ip
+                                device.add_public_ip(public_ip)
                                 ec2_ips.append(public_ip)
                                 shodan_info = assoc.get('shodan_info')
                                 if shodan_info:
