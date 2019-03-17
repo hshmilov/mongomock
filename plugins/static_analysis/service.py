@@ -15,7 +15,7 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
@@ -82,7 +82,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         except Exception:
             logger.exception('Exception while updating')
 
-    def _triggered(self, job_name: str, post_json: dict, *args):
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name != 'execute':
             raise ValueError('The only job name supported is execute')
         self.__start_analysis()

@@ -83,7 +83,7 @@ from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
                                           ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD,
                                           LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, LAST_UPDATE_FIELD,
-                                          NOT_RAN_STATE, CUSTOM_SELECTION_TRIGGER)
+                                          NOT_RAN_STATE)
 
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
@@ -91,7 +91,7 @@ from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.fields import Field
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import Triggerable, TriggerStates, StoredJobStateCompletion
+from axonius.mixins.triggerable import Triggerable, TriggerStates, StoredJobStateCompletion, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.types.correlation import CorrelationResult, CorrelationReason, MAX_LINK_AMOUNT
@@ -1737,13 +1737,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             trigger = enforcement[TRIGGERS_FIELD][0] if enforcement[TRIGGERS_FIELD] else None
             return gui_helpers.beautify_db_entry({
                 '_id': enforcement['_id'], 'name': enforcement['name'],
-                ACTIONS_MAIN_FIELD: actions[ACTIONS_MAIN_FIELD],
-                ACTIONS_SUCCESS_FIELD: actions.get(ACTIONS_SUCCESS_FIELD) or [],
-                ACTIONS_FAILURE_FIELD: actions.get(ACTIONS_FAILURE_FIELD) or [],
-                ACTIONS_POST_FIELD: actions.get(ACTIONS_POST_FIELD) or [],
-                'trigger_view': trigger['view']['name'] if trigger else '',
-                LAST_TRIGGERED_FIELD: trigger[LAST_TRIGGERED_FIELD] if trigger else '',
-                TIMES_TRIGGERED_FIELD: trigger[TIMES_TRIGGERED_FIELD] if trigger else '',
+                f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}': actions[ACTIONS_MAIN_FIELD],
+                f'{TRIGGERS_FIELD}.view.name': trigger['view']['name'] if trigger else '',
+                f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger[LAST_TRIGGERED_FIELD] if trigger else '',
+                f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger[TIMES_TRIGGERED_FIELD] if trigger else '',
                 LAST_UPDATE_FIELD: enforcement[LAST_UPDATE_FIELD]
             })
 
@@ -1963,13 +1960,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             """
             Extract needed fields to build task as represented in the Frontend
             """
-            task_basic = {
-                '_id': task['_id'],
-                'enforcement': task['post_json']['report_name'],
-                'started_at': task['started_at'] or '',
-                'finished_at': task['finished_at'] or ''
-            }
-            if task['result']:
+            success_rate = '0 / 0'
+            status = 'In Progress'
+            if task['job_completed_state'] == StoredJobStateCompletion.Successful.name:
                 main_results = task['result'][ACTIONS_MAIN_FIELD]['action']['results']
 
                 main_successful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
@@ -1977,42 +1970,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
                 main_unsuccessful_count = get_chunks_length(self.enforcement_tasks_action_results_id_lists,
                                                             main_results['unsuccessful_entities'])
-                return gui_helpers.beautify_db_entry({
-                    **task_basic,
-                    'success_rate': f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}',
-                    ACTIONS_MAIN_FIELD: task['result']['main']['name'],
-                    'trigger_view': task['result']['metadata']['trigger']['view']['name'],
-                    'status': 'Complete'
-                })
-
-            enforcement = self.enforcements_collection.find_one({
-                'name': task['post_json']['report_name']
-            })
-            if not enforcement:
-                return gui_helpers.beautify_db_entry(task_basic)
+                success_rate = f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}'
+                status = 'Completed'
 
             return gui_helpers.beautify_db_entry({
-                **task_basic,
-                'success_rate': '0 / 0',
-                ACTIONS_MAIN_FIELD: enforcement[ACTIONS_FIELD][ACTIONS_MAIN_FIELD],
-                'trigger_view': (enforcement[TRIGGERS_FIELD][0]['view']['name']
-                                 if enforcement[TRIGGERS_FIELD] else CUSTOM_SELECTION_TRIGGER),
-                'status': 'In Progress'
+                '_id': task['_id'],
+                'result.metadata.success_rate': success_rate,
+                'post_json.report_name': task['post_json']['report_name'],
+                'status': status,
+                f'result.{ACTIONS_MAIN_FIELD}.name': task['result']['main']['name'],
+                'result.metadata.trigger.view.name': task['result']['metadata']['trigger']['view']['name'],
+                'started_at': task['started_at'] or '',
+                'finished_at': task['finished_at'] or ''
             })
 
-        sort = []
-        for field, direction in mongo_sort.items():
-            if field in [ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
-                field = f'result.{field}.name'
-            elif field == 'enforcement':
-                field = 'post_json.report_name'
-            elif field == 'success_rate':
-                field = f'result.metadata.{field}'
-            sort.append((field, direction))
-        if not sort:
-            sort.append(('finished', pymongo.DESCENDING))
+        if not mongo_sort:
+            mongo_sort = [('finished_at', pymongo.DESCENDING)]
+
         return jsonify([beautify_task(x) for x in self.enforcement_tasks_runs_collection.find(
-            self.__tasks_query(mongo_filter)).sort(sort).skip(skip).limit(limit)])
+            self.__tasks_query(mongo_filter)).sort(mongo_sort).skip(skip).limit(limit)])
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('tasks/count', required_permissions={Permission(PermissionType.Enforcements,
@@ -3993,7 +3969,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     logger.exception(f'Problem with View {str(i)} ViewDoc {str(view_doc)}')
         return views_data
 
-    def _triggered(self, job_name: str, post_json: dict, *args):
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clear_dashboard_cache':
             self.__clear_dashboard_cache(clear_slow=post_json is not None and post_json.get('clear_slow') is True)
 

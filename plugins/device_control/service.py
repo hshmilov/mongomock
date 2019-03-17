@@ -8,7 +8,7 @@ from typing import Iterable, Tuple
 from promise import Promise
 
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
-from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule
 from axonius.utils.files import get_local_config_file, get_random_uploaded_path_name
 from axonius.utils.parsing import get_exception_string
@@ -25,7 +25,7 @@ class DeviceControlService(Triggerable, PluginBase):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=DEVICE_CONTROL_PLUGIN_NAME, *args, **kargs)
 
-    def _triggered(self, job_name: str, post_json: dict, *args):
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if not self._execution_enabled:
             raise RuntimeError('Execution is disabled')
         if job_name != 'execute':

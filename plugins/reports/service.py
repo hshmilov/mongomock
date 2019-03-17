@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.entities import EntityType
-from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.files import get_local_config_file
@@ -142,7 +142,7 @@ class ReportsService(Triggerable, PluginBase):
                       metadata=metadata
                       )
 
-    def _triggered(self, job_name: str, post_json: dict, *args):
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'execute':
             with ThreadPool(10) as pool:
                 def run_specific_configuration(report_name, configuration_name):
@@ -175,7 +175,7 @@ class ReportsService(Triggerable, PluginBase):
                 if not len(run_configuration) == 1:
                     raise LookupError(f'Found {len(run_configuration)} instances of the given configuration')
                 result = self.__process_run_configuration(report, Trigger.from_dict(run_configuration[0]),
-                                                          post_json.get('manual', False))
+                                                          run_identifier, post_json.get('manual', False))
             elif post_json.get('input'):
                 result = self.__process_run_configuration(report, Trigger(
                     name=post_json['report_name'],
@@ -187,13 +187,12 @@ class ReportsService(Triggerable, PluginBase):
                     result_count=0,
                     times_triggered=0,
                     run_on=RunOnEntities.AllEntities
-                ), manual=True, manual_input=post_json['input'])
+                ), run_identifier, manual=True, manual_input=post_json['input'])
             else:
                 result = None
             if not result:
                 return NOT_RAN_STATE
 
-            result.metadata.pretty_id = self.__get_pretty_id()
             result = json.loads(result.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
             return result
 
@@ -537,7 +536,7 @@ class ReportsService(Triggerable, PluginBase):
             'i.name': run_configuration_name
         }])
 
-    def __process_run_configuration(self, report, trigger: Trigger, manual: bool = False,
+    def __process_run_configuration(self, report, trigger: Trigger, run_id: RunIdentifier, manual: bool = False,
                                     manual_input: dict = None) -> Recipe:
         """
         Processes a run configuration:
@@ -547,6 +546,7 @@ class ReportsService(Triggerable, PluginBase):
             Updates metadata and last results
         :param report: the relevant report with the recipe
         :param trigger: the specific run configuration to use
+        :param run_id: the associated run id
         :param manual: the specific run was triggered manually, so no need to check period or conditions
         :param manual_input: A custom selection of entities to run on, instead of Trigger's query results
         :return: Updated Recipe in case the configuration has run
@@ -594,6 +594,10 @@ class ReportsService(Triggerable, PluginBase):
         if triggered_reason:
             reasons = [reason.value.format(getattr(trigger.conditions, reason.name, '')) for reason in triggered_reason]
             recipe = self.__recipe_from_db(report['actions'], RecipeRunMetadata(trigger, reasons, 0))
+            recipe.metadata.pretty_id = self.__get_pretty_id()
+            run_id.update_status(json.loads(recipe.to_json(
+                default=self.__default_for_trigger), object_hook=json_util.object_hook))
+
             result = self._call_actions(report, recipe, triggered_reason, trigger,
                                         query_difference.added
                                         if trigger.run_on == RunOnEntities.AddedEntities

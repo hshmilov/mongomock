@@ -48,8 +48,8 @@ export const enforcements = {
         count: { data: 0, fetching: false, error: ''},
         view: {
             page: 0, pageSize: 20, fields: [
-                'name', 'main', 'success', 'failure', 'post',
-                'trigger_view', 'last_triggered', 'times_triggered', 'last_updated'
+                'name', 'actions.main', 'triggers.view.name', 'triggers.last_triggered',
+                'triggers.times_triggered', 'last_updated'
             ], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
         },
         fields: {
@@ -59,15 +59,13 @@ export const enforcements = {
                 }, {
                     name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
                 }, {
-                    name: 'main', title: 'Main Action', type: 'string'
+                    name: 'actions.main', title: 'Main Action', type: 'string'
                 }, {
-                    name: 'trigger_view', title: 'Trigger Query Name', type: 'string'
+                    name: 'triggers.view.name', title: 'Trigger Query Name', type: 'string'
                 }, {
-                    name: 'last_triggered', title: 'Last Triggered', type: 'string', format: 'date-time'
+                    name: 'triggers.last_triggered', title: 'Last Triggered', type: 'string', format: 'date-time'
                 }, {
-                    name: 'times_triggered', title: 'Times Triggered', type: 'integer'
-                }, {
-                    name: 'user', title: 'User', type: 'string'
+                    name: 'triggers.times_triggered', title: 'Times Triggered', type: 'integer'
                 }]
             }
         },

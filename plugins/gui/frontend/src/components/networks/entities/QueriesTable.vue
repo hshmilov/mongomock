@@ -61,7 +61,7 @@
             return {
                 selected: [],
                 loading: true,
-                searchText: ''
+              searchText: ''
             }
         },
         methods: {

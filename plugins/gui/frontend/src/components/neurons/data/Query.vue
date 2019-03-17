@@ -325,7 +325,7 @@
                 if (this.ecFilter) {
                     let ec = this.ecFilter
                     // the only flow when the ecFilter can change is on creation
-                    if (filter.indexOf('exists_in(') != -1) {
+                    if (filter.indexOf('exists_in(') !== -1) {
                         filter = filter.slice(0, filter.indexOf('exists_in(')) + filter.slice(filter.indexOf(')') + 1).trim()
                     }
                     filter = `exists_in(${ec.pretty_id}, ${ec.condition}, ${ec.i}, ${ec.success}) ${filter}`

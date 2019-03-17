@@ -10,7 +10,7 @@ from axonius.devices.device_adapter import (MAC_FIELD,
                                             NETWORK_INTERFACES_FIELD, OS_FIELD)
 from axonius.entities import EntityType
 from axonius.mixins.feature import Feature
-from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.types.correlation import CorrelationResult
 
@@ -105,7 +105,7 @@ class CorrelatorBase(Triggerable, PluginBase, Feature, ABC):
     def specific_supported_features(cls) -> list:
         return ['Correlator']
 
-    def _triggered(self, job_name, post_json, *args):
+    def _triggered(self, job_name, post_json, run_identifier: RunIdentifier, *args):
         """
         Returns any errors as-is.
         Post data is a list of axon-ids. Otherwise, will query DB-wise.

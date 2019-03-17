@@ -1,46 +1,71 @@
 <template>
-    <div class="x-search-input" :class="{focus: focused}" @click="focus">
-        <div class="input-icon">
-            <svg-icon name="action/search" :original="true" height="18"></svg-icon>
-        </div>
-        <input type="text" v-model="searchValue" class="input-value" :disabled="disabled" :placeholder="placeholder"
-               @input="updateSearchValue()" @focusout="focused = false" @click.stop="focused = true" ref="input">
+  <div
+    class="x-search-input"
+    :class="{focus: focused}"
+    @click="focus"
+  >
+    <div class="input-icon">
+      <svg-icon
+        name="action/search"
+        :original="true"
+        height="18"
+      ></svg-icon>
     </div>
+    <input
+      ref="input"
+      v-model="searchValue"
+      type="text"
+      class="input-value"
+      :disabled="disabled"
+      :placeholder="placeholder"
+      @input="updateSearchValue"
+      @focusout="focused = false"
+      @click.stop="focused = true"
+    >
+  </div>
 </template>
 
 <script>
-    export default {
-        name: 'x-search-input',
-        props: {
-            value: {},
-            placeholder: {default: 'Search...'},
-            disabled: {default: false}
-        },
-        data() {
-            return {
-                searchValue: this.value,
-                focused: false
-            }
-        },
-        watch: {
-            value(newValue) {
-                this.searchValue = newValue
-            }
-        },
-        methods: {
-            updateSearchValue() {
-                this.$emit('input', this.searchValue)
-            },
-            focus() {
-                if (this.disabled) return
-                this.focused = true
-                this.$refs.input.focus()
-            }
-        },
-        mounted() {
-            this.focus()
-        }
+  export default {
+    name: 'XSearchInput',
+    props: {
+      value: {
+        type: String,
+        default: ''
+      },
+      placeholder: {
+        type: String,
+        default: 'Search...'
+      },
+      disabled: {
+        type: Boolean, default: false
+      }
+    },
+    data () {
+      return {
+        searchValue: this.value,
+        focused: false
+      }
+    },
+    watch: {
+      value (newValue) {
+        this.searchValue = newValue
+      }
+    },
+    mounted () {
+      this.focus()
+    },
+    methods: {
+      updateSearchValue () {
+        this.$emit('input', this.searchValue)
+      },
+      focus () {
+        if (this.disabled) return
+        this.focused = true
+        this.$refs.input.focus()
+      }
     }
+  }
 </script>
 
 <style lang="scss">

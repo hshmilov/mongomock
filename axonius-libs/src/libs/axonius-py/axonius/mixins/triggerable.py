@@ -8,6 +8,9 @@ from enum import Enum, auto
 from threading import RLock
 
 import pymongo
+from pymongo.collection import Collection
+from pymongo.results import UpdateResult
+from bson import ObjectId
 from flask import jsonify, request
 from namedlist import FACTORY, namedlist
 from promise import Promise
@@ -102,6 +105,26 @@ def _stored_job_state_serialize(self: StoredJobState):
 StoredJobState.serialize = _stored_job_state_serialize
 
 
+# The run identifier passed to _triggered implementors
+class RunIdentifier:
+    def __init__(self, triggerable_db: Collection, id_: ObjectId):
+        self.__triggerable_db = triggerable_db
+        self.__id_ = id_
+
+    def update_status(self, status: dict) -> UpdateResult:
+        """
+        Updates the current status in the db for the current run
+        :param status: the status to put in the DB
+        """
+        self.__triggerable_db.update_one({
+            '_id': self.__id_
+        }, update={
+            '$set': {
+                'result': status,
+            }
+        })
+
+
 class Triggerable(Feature, ABC):
     """
     Defined a plugin that may be 'triggered' to do something
@@ -139,12 +162,13 @@ class Triggerable(Feature, ABC):
         return ['Triggerable']
 
     @abstractmethod
-    def _triggered(self, job_name: str, post_json: dict, *args):
+    def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         """
         This is called when the plugin is triggered
         :param job_name: the name of the job to run, the guarantees made are on a job_name basis
         :param post_json: additional JSON data received from post
-        :return: ignored
+        :param run_identifier: An identifier used by the implementor to update or access the task in the DB
+        :return: Is saved to the DB
         """
 
     def _stopped(self, job_name: str):
@@ -270,7 +294,8 @@ class Triggerable(Feature, ABC):
         inserted_id = self.__triggerable_db.insert_one(state.serialize()).inserted_id
         failed = None
         try:
-            result = self._triggered(state.job_name, state.post_json) or ''
+            run_id = RunIdentifier(self.__triggerable_db, inserted_id)
+            result = self._triggered(state.job_name, state.post_json, run_id) or ''
         except Exception as e:
             failed = e
             tb = ''.join(traceback.format_tb(e.__traceback__))
@@ -365,7 +390,8 @@ class Triggerable(Feature, ABC):
                 db_state.started_at = job_state.last_started_time
                 job_state.associated_stored_job_state_id = self.__triggerable_db. \
                     insert_one(db_state.serialize()).inserted_id
-            return self._triggered(job_name, post_json, *args, **kwargs)
+            run_id = RunIdentifier(self.__triggerable_db, job_state.associated_stored_job_state_id)
+            return self._triggered(job_name, post_json, run_id, *args, **kwargs)
 
         if job_state.triggered:
             job_state.scheduled = True
