@@ -214,29 +214,32 @@ def testinstances():
 @authorize
 def instances():
     instance_type = request.args.get("instance_type")
+    config_code = ''
 
     """Return info about ec2."""
     if request.method == "GET":
         json_result = (bm.getInstances(vm_type=instance_type))
     elif request.method == "POST":
-        adapters = request.form["adapters"].split(',')
-        should_run_all = "ALL" in adapters
-        if should_run_all:
-            adapters.remove('ALL')
-        exclude = ','.join(adapters) if should_run_all else ''
-        include = ','.join(adapters) if not should_run_all else ''
+        image_id = request.form.get('image_id', None)
+        if image_id is None:
+            adapters = request.form["adapters"].split(',')
+            should_run_all = "ALL" in adapters
+            if should_run_all:
+                adapters.remove('ALL')
+            exclude = ','.join(adapters) if should_run_all else ''
+            include = ','.join(adapters) if not should_run_all else ''
 
-        if request.form.get("empty", False) == 'true':
-            config_code = INSTALL_DEMO_CONFIG.format(install_system_line='')
+            if request.form.get("empty", False) == 'true':
+                config_code = INSTALL_DEMO_CONFIG.format(install_system_line='')
 
-        else:
-            config_code = INSTALL_DEMO_CONFIG.format(
-                install_system_line=INSTALL_SYSTEM_LINE.format(fork=request.form["fork"], branch=request.form["branch"],
-                                                               set_credentials=request.form.get("set_credentials",
-                                                                                                'false'),
-                                                               include=include, exclude=exclude,
-                                                               run_cycle=instance_type == "Demo-VM",
-                                                               system_up_params='' if instance_type != "Demo-VM" else '--prod'))
+            else:
+                config_code = INSTALL_DEMO_CONFIG.format(
+                    install_system_line=INSTALL_SYSTEM_LINE.format(fork=request.form["fork"], branch=request.form["branch"],
+                                                                   set_credentials=request.form.get("set_credentials",
+                                                                                                    'false'),
+                                                                   include=include, exclude=exclude,
+                                                                   run_cycle=instance_type == "Demo-VM",
+                                                                   system_up_params='' if instance_type != "Demo-VM" else '--prod'))
 
         ec2_type = request.form["ec2_type"]
         if ec2_type == "normal":
@@ -247,16 +250,15 @@ def instances():
             raise ValueError("Got unsupported ec2 type")
 
         security_group = request.form['security_group']
-        image_id = request.form.get('image_id', None)
 
         json_result = (bm.add_instance(
             request.form["name"],
             (session['builds_user_full_name'], session['builds_user_id']),
             ec2_type,
-            config_code,
-            request.form["fork"],
-            request.form["branch"],
-            request.form["public"] == 'true',
+            request.form.get("fork"),
+            request.form.get("branch"),
+            request.form.get("public") == 'true',
+            configuration_code=config_code,
             vm_type=instance_type,
             security_group_id=security_group,
             image_id=image_id

@@ -251,7 +251,7 @@ class BuildsManager(object):
         if ec2_id is None:
             db_instances = self.db.instances.find({"vm_type": vm_type})
         else:
-            db_instances = self.db.instances.find({"ec2_id": ec2_id, "vm_type": vm_type})
+            db_instances = self.db.instances.find({"ec2_id": ec2_id})
 
         # Get a list of all subnets and vpc's so we can query much faster
         subnets = list(self.ec2.subnets.all())
@@ -360,8 +360,8 @@ class BuildsManager(object):
         #
         # return {"instance_id": instance_id}
 
-    def add_instance(self, name, owner, ec2_type, configuration_code, fork, branch,
-                     public=False, image_id=IMAGE_ID, key_name=KEY_NAME, subnet_id=PRIVATE_SUBNET_ID,
+    def add_instance(self, name, owner, ec2_type, fork, branch, public=False, configuration_code=None,
+                     image_id=IMAGE_ID, key_name=KEY_NAME, subnet_id=PRIVATE_SUBNET_ID,
                      vm_type=BUILDS_INSTANCE_VM_TYPE, security_group_id=DEFAULT_SECURITY_GROUP):
         """As the name suggests, make a new instance."""
 
