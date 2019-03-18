@@ -239,6 +239,10 @@ class ChefAdapter(AdapterBase):
                     device.set_dynamic_field('analytics', axonius_maintenance.get('analytics', ''))
                     device.set_dynamic_field('troubleshooting', axonius_maintenance.get('troubleshooting', ''))
 
+                axonius_internal = device_raw_automatic.get('axonius_internal', {}).get('data', {}).get('local')
+                if axonius_internal:
+                    device.set_dynamic_field('axonius_internal', axonius_internal)
+
                 axonius_features = device_raw_automatic.get('axonius_features', {})
                 if axonius_features:
                     features = axonius_features.get('data', {})
@@ -247,9 +251,6 @@ class ChefAdapter(AdapterBase):
 
                     for k, v in features.items():
                         device.set_dynamic_field(f'axonius_feature_{k}', str(v))
-
-                # seem like chef's raw is a bit too much for mongo, and the db fails to insert
-                # device.set_raw(device_raw)
 
                 yield device
             except Exception:
