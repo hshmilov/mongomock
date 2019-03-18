@@ -3437,6 +3437,20 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 '$match': base_query
             },
             {
+                '$project': {
+                    'tags': '$tags',
+                    'adapters': {
+                        '$filter': {
+                            'input': '$adapters',
+                            'as': 'i',
+                            'cond': {
+                                '$ne': ['$$i.data._old', True]
+                            }
+                        }
+                    }
+                }
+            },
+            {
                 # TODO: We might need another $filter stage here for cases
                 # where two adapters have the same field name and the user *really* want to
                 # differentiate between the two cases.
