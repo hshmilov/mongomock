@@ -31,6 +31,8 @@ import {
 } from './actions'
 import {
   TOGGLE_SIDEBAR, toggleSidebar,
+  UPDATE_LANGUAGE , updateLanguage,
+  UPDATE_BRANCH, updateBranch,
   UPDATE_WINDOW_WIDTH, updateWindowWidth,
   UPDATE_DATA_CONTENT, updateDataContent,
   UPDATE_DATA_COUNT, updateDataCount,
@@ -70,7 +72,6 @@ import { reports } from './modules/reports'
 import { settings } from './modules/settings'
 import { tasks } from './modules/tasks'
 import { users } from './modules/users'
-import * as medicalConfig from '../constants/config.json'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -79,11 +80,13 @@ export default new Vuex.Store({
         General controls that the system uses throughout pages
      */
     interaction: {
+      language: 'en',
+      branch: '',
       collapseSidebar: true,
       windowWidth: 0
     },
     configuration: { fetching: false, data: null, error: '' },
-    staticConfiguration: { medicalConfig: medicalConfig.medical }
+    staticConfiguration: { medicalConfig: ENV.medical }
   },
   getters: {
     [GET_DATA_FIELDS_BY_PLUGIN]: getDataFieldsByPlugin,
@@ -94,6 +97,8 @@ export default new Vuex.Store({
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,
+    [ UPDATE_LANGUAGE ]: updateLanguage,
+    [ UPDATE_BRANCH ]: updateBranch,
     [UPDATE_WINDOW_WIDTH]: updateWindowWidth,
     [UPDATE_DATA_CONTENT]: updateDataContent,
     [UPDATE_DATA_COUNT]: updateDataCount,

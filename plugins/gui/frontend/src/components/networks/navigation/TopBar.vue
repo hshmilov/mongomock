@@ -5,7 +5,7 @@
                 <svg-icon name="navigation/menu" :original="true" height="20"/>
             </a>
         </div>
-        <div class="bar-logo">
+        <div v-if="!medicalConfig" class="bar-logo">
             <svg-icon name="logo/logo" height="30" :original="true"/>
             <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
         </div>
@@ -62,13 +62,28 @@
                             v-if="activateTourTip" @dismiss="activateTourTip = false"/>
             </li>
         </ul>
+        <ul v-else class="bar-nav">
+            <li class="nav-item medical-menu">
+                <a class="item-link">
+                    <x-workspace-picker/>
+                </a>
+                <a class="item-link">
+                    <x-language-picker/>
+                </a>
+                <a class="item-link">
+                    <x-medical-user-profile/>
+                </a>
+            </li>
+        </ul>
     </header>
 </template>
 
 <script>
     import xNotificationPeek from '../NotificationsPeek.vue'
+    import xMedicalUserProfile from '../MedicalUserProfile.vue'
+    import xLanguagePicker from '../LanguagePicker.vue'
+    import xWorkspacePicker from '../WorkspacePicker.vue'
     import xTipInfo from '../onboard/TipInfo.vue'
-
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {FETCH_LIFECYCLE} from '../../../store/modules/dashboard'
     import {UPDATE_EMPTY_STATE, START_TOUR} from '../../../store/modules/onboarding'
@@ -77,7 +92,7 @@
     import {entities} from '../../../constants/entities'
 
     export default {
-        components: {xNotificationPeek, xTipInfo},
+        components: {xNotificationPeek, xTipInfo, xMedicalUserProfile, xLanguagePicker, xWorkspacePicker},
         name: 'x-top-bar',
         computed: {
             ...mapState({
@@ -108,11 +123,11 @@
                 },
                 medicalConfig(state) {
                     return state.staticConfiguration.medicalConfig
-                },
+                }
             }),
             anyEmptySettings() {
                 return Object.values(this.emptySettings).find(value => value)
-            }
+            },
         },
         data() {
             return {
@@ -130,7 +145,7 @@
         },
         methods: {
             ...mapMutations({
-                toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, startTour: START_TOUR
+                toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, startTour: START_TOUR,
             }),
             ...mapActions({
                 fetchLifecycle: FETCH_LIFECYCLE,
@@ -338,6 +353,16 @@
                     &.disabled {
                         cursor: default;
                     }
+                }
+            }
+            .medical-menu{
+                display: flex;
+                line-height: inherit;
+                .x-select{
+                    border-radius: 0;
+                    border: inherit;
+                    background: inherit;
+                    margin-top: 12px;
                 }
             }
         }

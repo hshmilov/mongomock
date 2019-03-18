@@ -62,7 +62,7 @@ class MongoService(WeaveService):
                 f'--wiredTigerCacheSizeGB={cache_size}'
                 ]
 
-    def get_dockerfile(self):
+    def get_dockerfile(self, *args, **kwargs):
         return f"""
     FROM mongo:4.0
     

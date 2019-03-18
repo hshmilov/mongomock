@@ -33,7 +33,7 @@ class SMTPService(WeaveService):
     def port(self):
         return DOCKER_PORTS[self.name]
 
-    def get_dockerfile(self):
+    def get_dockerfile(self, *args, **kwargs):
         return fr'''
         FROM golang:1.11.2
              

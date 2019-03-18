@@ -103,7 +103,7 @@ class DockerService(AxonService):
     def get_max_uwsgi_threads(self) -> int:
         return 100
 
-    def get_dockerfile(self):
+    def get_dockerfile(self, *args, **kwargs):
         return f'''
 FROM axonius/axonius-libs
 
@@ -287,11 +287,11 @@ else:
                 print(f'Container {self.container_name} already created - consider removing it and running again')
         if self.get_image_exists():
             if rebuild:
-                self.build(mode)
+                self.build(mode, docker_internal_env_vars=docker_internal_env_vars)
             elif show_print:
                 print(f'Container {self.container_name} already built - skipping build step')
         else:
-            self.build(mode)
+            self.build(mode, docker_internal_env_vars=docker_internal_env_vars)
 
         if hard:
             self.remove_volume()
@@ -313,7 +313,7 @@ else:
         else:  # good stuff
             os.system(f'docker logs -f {self.container_name} >> {logsfile} 2>&1 &')
 
-    def build(self, mode='', runner=None):
+    def build(self, mode='', runner=None, docker_internal_env_vars=None, **kwargs):
         docker_build = ['docker', 'build', '.']
 
         # If Dockerfile exists, use it, else use the provided Dockerfile from self.get_dockerfile
@@ -321,7 +321,7 @@ else:
         if os.path.isfile(dockerfile_path):
             dockerfile = open(dockerfile_path, 'r').read()
         else:
-            dockerfile = self.get_dockerfile()
+            dockerfile = self.get_dockerfile(docker_internal_env_vars=docker_internal_env_vars)
             assert dockerfile is not None
 
         # Append the main.py file creation

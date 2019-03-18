@@ -1,7 +1,7 @@
 import concurrent.futures
 import multiprocessing
 import queue
-from collections import defaultdict
+from collections import defaultdict, Callable
 from datetime import datetime
 from threading import RLock, Lock
 import logging
@@ -227,7 +227,7 @@ class LazyMultiLocker(object):
         return any(x.locked() for x in self.__locks.values())
 
 
-def singlethreaded():
+def singlethreaded(key_func: Callable = None):
     """
     Makes sure the inner function will only run once at any time, with respect to the arguments
     given to the function.
@@ -247,8 +247,12 @@ def singlethreaded():
 
         def actual_wrapper(*args, **kwargs):
             from axonius.utils.revving_cache import hashkey
+            if key_func:
+                key = key_func(*args, **kwargs)
+            else:
+                key = hashkey(func, *args, **kwargs)
 
-            with locker[hashkey(func, *args, **kwargs)]:
+            with locker[key]:
                 return func(*args, **kwargs)
 
         return actual_wrapper

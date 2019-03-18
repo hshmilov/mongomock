@@ -3,7 +3,7 @@
         App structure includes fixed navigation containing header and menu bars
         with changing content, according to chosen route
     -->
-    <div id="app">
+    <div id="app" v-if="fetchedLoginStatus">
         <!--Link for downloading files-->
         <a id="file-auto-download-link"></a>
         <!-- Nested navigation linking to routes defined in router/index.js -->
@@ -26,12 +26,13 @@
     import xLogin from './networks/navigation/Login.vue'
 	import xTourState from './networks/onboard/TourState.vue'
     import xAccessModal from './neurons/popover/AccessModal.vue'
-
-    import {GET_USER, GET_OIDC_ID_TOKEN} from '../store/modules/auth'
-    import {FETCH_SYSTEM_CONFIG} from '../store/actions'
+    import {GET_USER} from '../store/modules/auth'
+    import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG} from '../store/actions'
     import {FETCH_CONSTANTS} from '../store/modules/constants'
     import {UPDATE_WINDOW_WIDTH} from '../store/mutations'
     import { mapState, mapMutations, mapActions } from 'vuex'
+    import { entities } from '../constants/entities'
+
 	import './axons/icons'
 
 
@@ -42,17 +43,14 @@
         },
         computed: {
             ...mapState({
+                fetchedLoginStatus(state) {
+                    return Object.keys(state.auth.currentUser.data).length > 0 || state.auth.currentUser.error
+                },
                 userName(state) {
                 	return state.auth.currentUser.data.user_name
                 },
                 userPermissions(state) {
                     return state.auth.currentUser.data.permissions
-                },
-                medicalConfig(state) {
-                    return state.staticConfiguration.medicalConfig
-                },
-                oidcIdToken(state) {
-                    return state.auth.oidcIdToken.data
                 }
             })
 		},
@@ -72,14 +70,15 @@
             ...mapMutations({ updateWindowWidth: UPDATE_WINDOW_WIDTH }),
             ...mapActions({
                 getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS,
-                getOidcId: GET_OIDC_ID_TOKEN
+                fetchDataFields: FETCH_DATA_FIELDS,
             }),
             fetchGlobalData() {
 				this.fetchConfig()
                 this.fetchConstants()
-                if(this.medicalConfig){
-                    this.getOidcId()
-                }
+                entities.forEach(entity => {
+                    if (this.entityRestricted(entity.title)) return
+                    this.fetchDataFields({module: entity.name})
+                })
             },
             notifyAccess(name) {
                 this.blockedComponent = name

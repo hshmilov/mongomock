@@ -11,6 +11,16 @@ export const updateWindowWidth = (state) => {
 	state.interaction.windowWidth = document.documentElement.clientWidth
 }
 
+export const UPDATE_LANGUAGE = 'UPDATE_LANGUAGE'
+export const updateLanguage = (state, payload) => {
+	state.interaction.language = payload
+}
+
+export const UPDATE_BRANCH = 'UPDATE_BRANCH'
+export const updateBranch = (state, payload) => {
+	state.interaction.branch = payload
+}
+
 function clearUrlFromQuick(url) {
 	return url.replace('&quick=True', '').replace('&quick=False', '').
 	replace('quick=True', '').replace('quick=False', '')

@@ -1,11 +1,10 @@
 import { REQUEST_API } from '../actions'
 
 export const GET_USER = 'GET_USER'
-export const GET_OIDC_ID_TOKEN ='GET_OIDC_ID_TOKEN'
-export const SET_OIDC_ID_TOKEN = 'SET_OIDC_ID_TOKEN'
 export const LOGIN = 'LOGIN'
 export const LDAP_LOGIN = 'LDAP_LOGIN'
 export const SET_USER = 'SET_USER'
+export const SET_LOGIN_OPTIONS = 'SET_LOGIN_OPTIONS'
 export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
 export const INIT_ERROR = 'INIT_ERROR'
@@ -31,10 +30,10 @@ export const UPDATE_DEFAULT_ROLE = 'UPDATE_DEFAULT_ROLE'
 export const auth = {
 	state: {
 		currentUser: { fetching: false, data: { }, error: '' },
+		loginOptions: { fetching: false, data: null, error: '' },
 		allUsers: { fetching: false, data: [], error: '' },
         allRoles: { fetching: false, data: [], error: '' },
 		defaultRole: { fetching: false, data: '', error: '' },
-		oidcIdToken: { fetching: false, data: '', error: '' }
 	},
 	mutations: {
 		[ SET_USER ] (state, payload) {
@@ -44,11 +43,11 @@ export const auth = {
 				state.currentUser.data = { ...payload.data }
 			}
 		},
-		[ SET_OIDC_ID_TOKEN ] (state, payload) {
-			state.currentUser.fetching = payload.fetching
-			state.currentUser.error = payload.error
+        [ SET_LOGIN_OPTIONS ] (state, payload) {
+			state.loginOptions.fetching = payload.fetching
+			state.loginOptions.error = payload.error
 			if (payload.data) {
-				state.oidcIdToken.data = payload.data
+				state.loginOptions.data = { ...payload.data }
 			}
 		},
 		[ INIT_USER ] (state, payload) {
@@ -90,15 +89,10 @@ export const auth = {
 				type: SET_USER
 			})
 		} ,
-		[ GET_OIDC_ID_TOKEN ] ({dispatch}) {
-			return dispatch(REQUEST_API, {
-				rule: 'get_oidc_id_token',
-				type: SET_OIDC_ID_TOKEN
-			})
-		} ,
 		[ GET_LOGIN_OPTIONS ] ({dispatch}) {
 			return dispatch(REQUEST_API, {
 				rule: 'get_login_options',
+                type: SET_LOGIN_OPTIONS
 			})
 		} ,
 		[ LOGIN ] ({dispatch, commit}, payload) {

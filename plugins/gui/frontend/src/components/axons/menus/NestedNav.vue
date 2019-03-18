@@ -53,6 +53,7 @@
         text-transform: capitalize;
         list-style: none;
         position: relative;
+        margin-left: 2px;
         .item-link {
             transition: all ease-in 0.2s;
             color: $grey-4;

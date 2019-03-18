@@ -21,7 +21,7 @@ class SyslogService(WeaveService):
     def name(self):
         return 'syslog'
 
-    def get_dockerfile(self):
+    def get_dockerfile(self, *args, **kwargs):
         return r'''
     FROM balabit/syslog-ng:latest
     RUN apt-get update && apt-get install -y openssl

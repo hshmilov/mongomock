@@ -13,12 +13,12 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
-from typing import Iterable, Tuple, Dict
+from typing import Dict, Iterable, Tuple
 from uuid import uuid4
-from pathlib import Path
 
 import gridfs
 import ldap3
+import OpenSSL
 import pymongo
 import requests
 from apscheduler.executors.pool import \
@@ -27,20 +27,18 @@ from apscheduler.triggers.cron import CronTrigger
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
-from flask import (after_this_request, jsonify, make_response, redirect,
-                   request, send_file, session, has_request_context)
+from flask import (after_this_request, has_request_context, jsonify,
+                   make_response, redirect, request, send_file, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
-import OpenSSL
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import DASHBOARD_COLLECTION
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
+from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
                                        EXEC_REPORT_THREAD_ID,
@@ -50,33 +48,29 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        PREDEFINED_ROLE_READONLY,
                                        PREDEFINED_ROLE_RESTRICTED,
                                        RANGE_UNIT_DAYS, ROLES_COLLECTION,
+                                       SPECIFIC_DATA,
                                        TEMP_MAINTENANCE_THREAD_ID,
-                                       USERS_COLLECTION, ChartFuncs,
+                                       USERS_COLLECTION,
+                                       USERS_CONFIG_COLLECTION, ChartFuncs,
                                        ChartMetrics, ChartRangeTypes,
                                        ChartRangeUnits, ChartViews,
-                                       ResearchStatus, SPECIFIC_DATA,
-                                       ADAPTERS_DATA, PROXY_ERROR_MESSAGE,
-                                       USERS_CONFIG_COLLECTION)
+                                       ResearchStatus, PROXY_ERROR_MESSAGE)
+from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
-                                          STATIC_CORRELATOR_PLUGIN_NAME,
-                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
-                                          GUI_NAME,
+                                          DASHBOARD_COLLECTION,
+                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
-                                          METADATA_PATH,
-                                          NODE_ID,
-                                          NODE_NAME,
-                                          NODE_USER_PASSWORD,
-                                          NOTES_DATA_TAG,
-                                          PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME,
+                                          METADATA_PATH, NODE_ID, NODE_NAME,
+                                          NODE_USER_PASSWORD, NOTES_DATA_TAG,
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          STATIC_CORRELATOR_PLUGIN_NAME,
+                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           SYSTEM_SETTINGS,
-                                          DEVICE_CONTROL_PLUGIN_NAME,
                                           PROXY_SETTINGS)
-from axonius.consts.metric_consts import (SystemMetric, ApiMetric, Query)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
@@ -86,6 +80,7 @@ from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACT
                                           NOT_RAN_STATE)
 
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.distribution_config import MEDICAL_MODE
 from axonius.email_server import EmailServer
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.fields import Field
@@ -94,13 +89,16 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import Triggerable, TriggerStates, StoredJobStateCompletion, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.types.correlation import CorrelationResult, CorrelationReason, MAX_LINK_AMOUNT
+from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelationReason,
+                                       CorrelationResult)
+from axonius.types.enforcement_classes import TriggerPeriod
 from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils import gui_helpers
-from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
+from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity,
+                                                  parse_filter)
 from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.utils.files import create_temp_file, get_local_config_file
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
@@ -120,15 +118,16 @@ from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
-from axonius.types.enforcement_classes import TriggerPeriod
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
-from gui.gui_logic.get_ec_historical_data_for_entity import get_all_task_data, TaskData
-from gui.gui_logic.historical_dates import first_historical_date, all_historical_dates
-from gui.okta_login import try_connecting_using_okta
+from gui.gui_logic.get_ec_historical_data_for_entity import (TaskData,
+                                                             get_all_task_data)
+from gui.gui_logic.historical_dates import (all_historical_dates,
+                                            first_historical_date)
+from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
@@ -164,6 +163,15 @@ def session_connection(func, required_permissions: Iterable[Permission]):
         permissions = user.get('permissions')
         if not check_permissions(permissions, required_permissions, request.method) and not user.get('admin'):
             return return_error('You are lacking some permissions for this request', 401)
+
+        oidc_data: OidcData = session.get('oidc_data')
+        if oidc_data:
+            try:
+                oidc_data.beautify()
+            except Exception:
+                # TBD: Which exception exactly are raised
+                session['user'] = None
+                return return_error('You\'er OIDC sessions has expired', 401)
 
         if has_request_context():
             path = request.path
@@ -406,11 +414,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             user_db = self.__users_collection.find_one({'user_name': 'admin'})
             user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
             session = {'user': user_db}
-        self.config = {'medical': os.environ.get('MEDICAL', None) == 'true'}
-        try:
-            Path('gui/frontend/src/constants/config.json').write_text(json.dumps(self.config))
-        except Exception:
-            logger.exception(f'Problem with writing the config.json: {Exception}')
 
     @staticmethod
     def is_proxy_allows_web(config):
@@ -422,6 +425,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             logger.info(f'checking the following proxy config {config}')
             proxy_string = to_proxy_string(config)
             if proxy_string:
+                proxy_string = to_proxy_string(config)
                 proxies = {'https': f'https://{proxy_string}'}
 
             test_request = requests.get('https://manage.chef.io', proxies=proxies, timeout=7)
@@ -2353,11 +2357,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def get_login_options(self):
         return jsonify({
             'okta': {
-                'enabled': self.__okta['enabled'],
-                'client_id': self.__okta['client_id'],
-                'authorization_server': self.__okta.get('authorization_server', ''),
-                'url': self.__okta['url'],
-                'gui2_url': self.__okta['gui2_url']
+                'enabled': self._okta['enabled'],
+                'client_id': self._okta['client_id'],
+                'authorization_server': self._okta.get('authorization_server', ''),
+                'url': self._okta['url'],
+                'gui2_url': self._okta['gui2_url']
             },
             'ldap': {
                 'enabled': self.__ldap_login['enabled'],
@@ -2369,10 +2373,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             }
         })
 
-    @gui_add_rule_logged_in('get_oidc_id_token')
-    def get_oidc_id_token(self):
-        return session.get('id_token')
-
     @gui_helpers.add_rule_unauth('login', methods=['GET', 'POST'])
     def login(self):
         """
@@ -2382,7 +2382,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if request.method == 'GET':
             user = session.get('user')
             if user is None:
-                return return_error('', 401)
+                return return_error('Not logged in', 401)
             if 'pic_name' not in user:
                 user['pic_name'] = self.DEFAULT_AVATAR_PIC
             user = dict(user)
@@ -2394,7 +2394,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             source = user.get('source')
             if user_name != AXONIUS_USER_NAME:
                 self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
-            return jsonify(beautify_user_entry(user)), 200
+            beautiful_user = beautify_user_entry(user)
+            oidc_data: OidcData = session.get('oidc_data')
+
+            if oidc_data:
+                beautiful_user['oidc_data'] = oidc_data.beautify()
+
+            return jsonify(beautiful_user), 200
 
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
@@ -2442,7 +2448,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                     first_name: str = None,
                                     last_name: str = None,
                                     picname: str = None,
-                                    remember_me: bool = False):
+                                    remember_me: bool = False,
+                                    additional_userinfo: dict = None):
         """
         Our system supports external login systems, such as LDAP, and Okta.
         To generically support such systems with our permission model we must normalize the login mechanism.
@@ -2460,11 +2467,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         config_doc = self.__users_config_collection.find_one({})
         if config_doc and config_doc.get('external_default_role'):
             role_name = config_doc['external_default_role']
-        user = self.__create_user_if_doesnt_exist(username, first_name, last_name, picname, source, role_name=role_name)
+        user = self.__create_user_if_doesnt_exist(username, first_name, last_name, picname, source,
+                                                  role_name=role_name,
+                                                  additional_userinfo=additional_userinfo)
         self.__perform_login_with_user(user, remember_me)
 
     def __create_user_if_doesnt_exist(self, username, first_name, last_name, picname=None, source='internal',
-                                      password=None, role_name=None):
+                                      password=None, role_name=None, additional_userinfo=None):
         """
         Create a new user in the system if it does not exist already
         :return: Created user
@@ -2486,7 +2495,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'source': source,
                 'password': password,
                 'api_key': secrets.token_urlsafe(),
-                'api_secret': secrets.token_urlsafe()
+                'api_secret': secrets.token_urlsafe(),
+                'additional_userinfo': additional_userinfo or {}
             }
             if role_name:
                 # Take the permissions set from the defined role
@@ -2510,19 +2520,24 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.add_rule_unauth('okta-redirect')
     def okta_redirect(self):
-        okta_settings = self.__okta
+        okta_settings = self._okta
         if not okta_settings['enabled']:
             return return_error('Okta login is disabled', 400)
-        claims = try_connecting_using_okta(okta_settings)
-        if claims:
+        oidc = try_connecting_using_okta(okta_settings)
+        if oidc is not None:
+            session['oidc_data'] = oidc
             # Notice! If you change the first parameter, then our CURRENT customers will have their
             # users re-created next time they log in. This is bad! If you change this, please change
             # the upgrade script as well.
             self.__exteranl_login_successful(
                 'okta',  # Look at the comment above
-                claims['email'],
-                claims.get('given_name', ''),
-                claims.get('family_name', '')
+                oidc.claims['preferred_username'] if MEDICAL_MODE else oidc.claims['email'],
+                oidc.claims.get('given_name', ''),
+                oidc.claims.get('family_name', ''),
+                additional_userinfo={
+                    'language': oidc.claims.get('default_language'),
+                    'workspace': 'Account' if oidc.is_account_manager else oidc.claims.get('organic_branch')
+                }
             )
 
         return redirect('/', code=302)
@@ -2785,6 +2800,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                            role_name=post_data.get('role_name'))
         return ''
 
+    @gui_add_rule_logged_in('system/users/self/additional_userinfo', methods=['POST'])
+    def system_users_additional_userinfo(self):
+        """
+        Updates the userinfo for the current user
+        :return:
+        """
+        post_data = self.get_request_data_as_object()
+
+        self.__users_collection.update_one({'_id': ObjectId(session['user']['_id'])},
+                                           {'$set': {'additional_userinfo': post_data}})
+        return '', 200
+
     @gui_add_rule_logged_in('system/users/<user_id>/password', methods=['POST'])
     def system_users_password(self, user_id):
         """
@@ -2795,14 +2822,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         post_data = self.get_request_data_as_object()
-        user = session.get('user')
+        user = session['user']
         if str(user['_id']) != user_id:
             return return_error('Login to your user first')
+
         if not bcrypt.verify(post_data['old'], user['password']):
             return return_error('Given password is wrong')
 
-        self.__users_collection.update({'_id': ObjectId(user_id)},
-                                       {'$set': {'password': bcrypt.hash(post_data['new'])}})
+        self.__users_collection.update_one({'_id': ObjectId(user_id)},
+                                           {'$set': {'password': bcrypt.hash(post_data['new'])}})
         self.__invalidate_sessions(user_id)
         return '', 200
 
@@ -2818,8 +2846,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         post_data = self.get_request_data_as_object()
-        self.__users_collection.update({'_id': ObjectId(user_id)},
-                                       {'$set': post_data})
+        self.__users_collection.update_one({'_id': ObjectId(user_id)},
+                                           {'$set': post_data})
         self.__invalidate_sessions(user_id)
         return ''
 
@@ -2828,10 +2856,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                              PermissionLevel.ReadWrite)})
     def system_users_delete(self, user_id):
         """
-        Allows changing a users' permission set
+        Deletes a user
         """
-        self.__users_collection.update({'_id': ObjectId(user_id)},
-                                       {'$set': {'archived': True}})
+        self.__users_collection.update_one({'_id': ObjectId(user_id)},
+                                           {'$set': {'archived': True}})
         self.__invalidate_sessions(user_id)
         return ''
 
@@ -2934,8 +2962,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def __invalidate_sessions(self, user_id: str):
         """
         Invalidate all sessions for this user except the current one
-        :param user_name: username to invalidate all sessions for
-        :return:
         """
         for k, v in self.__all_sessions.items():
             if k == session.sid:
@@ -2943,7 +2969,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             d = v.get('d')
             if not d:
                 continue
-            if d.get('user') and str(d['user'].get('_id')) == user_id:
+            user = d.get('user')
+            if user and str(d['user'].get('_id')) == user_id:
                 d['user'] = None
 
     @gui_add_rule_logged_in('api_key', methods=['GET', 'POST'])
@@ -2954,7 +2981,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if request.method == 'POST':
             new_token = secrets.token_urlsafe()
             new_api_key = secrets.token_urlsafe()
-            self.__users_collection.update(
+            self.__users_collection.update_one(
                 {
                     '_id': session['user']['_id'],
                 },
@@ -3098,7 +3125,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_add_rule_logged_in('get_allowed_dates', required_permissions=[Permission(PermissionType.Dashboard,
                                                                                   PermissionLevel.ReadOnly)])
-    def get_all_historical_dates(self):
+    def all_historical_dates(self):
         return jsonify(all_historical_dates())
 
     @gui_helpers.paginated()
@@ -4341,7 +4368,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         :param entity_type:  Type of entity in subject
         :param entity_id:    ID of the entity to handle notes of
-        :param history_date: Date that the data should be fetched for
         :return:             GET, list of notes for the entity
         """
         entity_doc = self._fetch_historical_entity(entity_type, entity_id, None)
@@ -4354,10 +4380,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if notes_list is None:
             notes_list = []
 
-        current_user = session.get('user')
-        if not current_user:
-            logger.error('Login in order to update notes')
-            return return_error('Login in order to update notes', 400)
+        current_user = session['user']
         if request.method == 'PUT':
             note_obj = self.get_request_data_as_object()
             note_obj['user_id'] = current_user['_id']
@@ -4371,7 +4394,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         if request.method == 'DELETE':
             note_ids_list = self.get_request_data_as_object()
-            if not session.get('user').get('admin') and session.get('user').get('role_name') != PREDEFINED_ROLE_ADMIN:
+            if not session['user'].get('admin') and session['user'].get('role_name') != PREDEFINED_ROLE_ADMIN:
                 # Validate all notes requested to be removed belong to user
                 for note in notes_list:
                     if note['uuid'] in note_ids_list and note['user_id'] != current_user['_id']:
@@ -4407,12 +4430,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             logger.error(f'Entity with internal_axon_id = {entity_id} has no note at index = {note_id}')
             return return_error('Selected Note cannot be found for the Entity', 400)
 
-        current_user = session.get('user')
-        if not current_user:
-            logger.error('Login in order to update notes')
-            return return_error('Login in order to update notes', 400)
-        if current_user['_id'] != note_doc['user_id'] and not session.get('user').get('admin') and \
-                session.get('user').get('role_name') != PREDEFINED_ROLE_ADMIN:
+        current_user = session['user']
+        if current_user['_id'] != note_doc['user_id'] and not current_user.get('admin') and \
+                current_user.get('role_name') != PREDEFINED_ROLE_ADMIN:
             return return_error('Only Administrator can edit another user\'s Note', 400)
 
         note_doc['note'] = self.get_request_data_as_object()['note']
@@ -4471,9 +4491,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                  x['plugin_type'] == adapter_consts.ADAPTER_PLUGIN_TYPE and x[NODE_ID] == current_node]
 
                 for adapter in node_adapters:
-                    for current_client in self._get_collection('clients', adapter[PLUGIN_UNIQUE_NAME]).find({},
-                                                                                                            projection={
-                                                                                                                '_id': 1}):
+                    cursor = self._get_collection('clients', adapter[PLUGIN_UNIQUE_NAME]).find({},
+                                                                                               projection={'_id': 1})
+                    for current_client in cursor:
                         self.delete_client_data(adapter[PLUGIN_NAME], current_client['_id'],
                                                 current_node, delete_entities)
                         self.request_remote_plugin(
@@ -4510,7 +4530,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def _on_config_update(self, config):
         logger.info(f'Loading GuiService config: {config}')
-        self.__okta = config['okta_login_settings']
+        self._okta = config['okta_login_settings']
         self.__saml_login = config['saml_login_settings']
         self.__ldap_login = config['ldap_login_settings']
         self._system_settings = config[SYSTEM_SETTINGS]
@@ -4537,18 +4557,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.add_rule_unauth('provision')
     def get_provision(self):
-        return jsonify(
-            self._maintenance_config.get('provision', False) or self._maintenance_config.get('timeout') != None)
+        return jsonify(self._maintenance_config.get('provision', False) or
+                       self._maintenance_config.get('timeout') is not None)
 
     @gui_helpers.add_rule_unauth('analytics')
     def get_analytics(self):
-        return jsonify(
-            self._maintenance_config.get('analytics', False) or self._maintenance_config.get('timeout') != None)
+        return jsonify(self._maintenance_config.get('analytics', False) or
+                       self._maintenance_config.get('timeout') is not None)
 
     @gui_helpers.add_rule_unauth('troubleshooting')
     def get_troubleshooting(self):
-        return jsonify(
-            self._maintenance_config.get('troubleshooting', False) or self._maintenance_config.get('timeout') != None)
+        return jsonify(self._maintenance_config.get('troubleshooting', False) or
+                       self._maintenance_config.get('timeout') is not None)
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -4642,9 +4662,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             'name': 'gui2_url',
                             'title': 'The URL of Axonius GUI',
                             'type': 'string'
-                        }
+                        },
+                        *([{
+                            'name': 'api_token',
+                            'title': 'API token',
+                            'type': 'string'
+                        }] if MEDICAL_MODE else [])
                     ],
-                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url'],
+                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url',
+                                 *(['api_token'] if MEDICAL_MODE else [])],
                     'name': 'okta_login_settings',
                     'title': 'Okta Login Settings',
                     'type': 'array'
@@ -4734,7 +4760,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'client_secret': '',
                 'authorization_server': '',
                 'url': 'https://yourname.okta.com',
-                'gui2_url': 'https://127.0.0.1'
+                'gui2_url': 'https://127.0.0.1',
+                **({
+                    'api_token': ''
+                } if MEDICAL_MODE else {})
             },
             'ldap_login_settings': {
                 'enabled': False,

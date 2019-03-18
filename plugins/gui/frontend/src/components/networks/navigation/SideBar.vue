@@ -1,27 +1,31 @@
 <template>
     <aside class="x-side-bar" :class="{ collapse: collapseSidebar }">
         <div class="x-user">
-            <div class="x-user-profile">
+            <div v-if="medicalConfig" class="x-user-profile medical">
+                <svg-icon :name=logoSVG :height=logoSize :original="true"/>
+            </div>
+            <div v-else class="x-user-profile">
                 <img :src="userDetails.pic"/>
                 <h5>{{ userDetails.name }}</h5>
             </div>
-            <div class="x-user-actions">
+            <div  v-if="!medicalConfig" class="x-user-actions">
                 <a @click="onLogout" title="Logout">
                     <svg-icon name="navigation/logout" height="16" :original="true"/>
                 </a>
-                <router-link v-if="!medicalConfig" :to="{name: 'My Account'}" active-class="active" @click.native="$emit('click')"
+                <router-link :to="{name: 'My Account'}" active-class="active" @click.native="$emit('click')"
                              title="My Account">
                     <svg-icon name="navigation/settings" height="16" :original="true"/>
                 </router-link>
             </div>
         </div>
         <x-nav v-if="medicalConfig">
-            <x-nav-item v-bind="navigationProps('Infuser Manager')" icon="pairing" :exact="true" id="pairing"/>
-            <x-nested-nav name="Settings" icon="settings" childRoot="/infuser_settings">
-                <x-nav-item v-bind="navigationProps('Infuser')" id="infuser"/>
-                <x-nav-item v-bind="navigationProps('Treatments')" id="treatments"/>
-                <x-nav-item v-bind="navigationProps('Drug List')" id="drug-list"/>
-                <x-nav-item v-bind="navigationProps('Preset Programs')" id="preset-programs"/>
+            <x-nav-item v-bind="navigationProps('Fleet Viewer')" icon="reports" :exact="true" id="fleet"/>
+            <x-nav-item v-bind="navigationProps('Infuser Programing')" icon="pairing" id="pairing"/>
+            <x-nested-nav name="Infuser Manager" icon="settings" childRoot="/infuser_manager">
+                <x-nav-item v-bind="navigationProps('Infuser Settings')" id="infuser_settings"/>
+                <x-nav-item v-bind="navigationProps('Treatments Settings')" id="treatments_settings"/>
+                <x-nav-item v-bind="navigationProps('Drug List Settings')" id="drug_list_settings"/>
+                <x-nav-item v-bind="navigationProps('Preset Programs')" id="preset_programs"/>
             </x-nested-nav>
         </x-nav>
         <x-nav v-else>
@@ -47,7 +51,7 @@
     export default {
         name: 'x-side-bar',
         components: {xNav, xNavItem, xNestedNav},
-        computed: mapState({
+        computed: {...mapState({
             userDetails(state) {
                 return {
                     name: `${state.auth.currentUser.data.first_name} ${state.auth.currentUser.data.last_name}`,
@@ -64,6 +68,17 @@
                 return state.staticConfiguration.medicalConfig
             },
         }),
+        logoSize: {
+            get(){
+                return this.collapseSidebar ? '47' : '114'
+            }
+        },
+        logoSVG: {
+            get(){
+                return this.collapseSidebar ? 'logo/avoset-mini' : 'logo/avoset'
+            }
+        }
+        },
         methods: {
             ...mapActions({logout: LOGOUT}),
             navigationProps(name, id, title) {
@@ -205,6 +220,9 @@
                 h5 {
                     opacity: 0;
                 }
+            }
+            .medical {
+                padding-top: 18px;
             }
         }
     }

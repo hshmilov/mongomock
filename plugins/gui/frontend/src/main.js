@@ -1,5 +1,7 @@
 import Vue from 'vue'
-
+import router from './router/index'
+import store from './store/index'
+import App from './components/App.vue'
 import {
 	MdSwitch, MdDatepicker, MdField, MdIcon, MdButton, MdDialog, MdCard, MdList, MdChips, MdCheckbox, MdMenu
 } from 'vue-material/dist/components'
@@ -14,10 +16,6 @@ Vue.use(MdList)
 Vue.use(MdChips)
 Vue.use(MdCheckbox)
 Vue.use(MdMenu)
-
-import router from './router/index'
-import store from './store/index'
-import App from './components/App.vue'
 
 import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'

@@ -43,7 +43,7 @@ class DiagnosticsService(DockerService):
             raise RuntimeError("env file is missing")
         super().start(*args, **kwargs)
 
-    def get_dockerfile(self):
+    def get_dockerfile(self, *args, **kwargs):
         return ''
 
     def get_main_file(self):

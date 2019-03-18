@@ -353,7 +353,8 @@ def beautify_user_entry(user):
                                                    'permissions',
                                                    'role_name',
                                                    'admin',
-                                                   'source']}
+                                                   'source',
+                                                   'additional_userinfo']}
     return user
 
 

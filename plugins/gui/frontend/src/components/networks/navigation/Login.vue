@@ -1,5 +1,5 @@
 <template>
-    <div class="x-login" v-if="!auth.currentUser.data.user_name && !auth.currentUser.fetching">
+    <div class="x-login" v-if="!isConnected && !auth.currentUser.fetching && shouldShowLoginPage">
         <div class="login-container">
             <div class="header">
                 <svg-icon name="logo/logo" height="36" :original="true"></svg-icon>
@@ -7,10 +7,10 @@
             </div>
             <div class="body">
                 <h3 class="title">Login</h3>
-                <x-form :schema="schema" v-if="!staticConfiguration.medicalConfig" v-model="credentials" @input="initError"
-                        @validate="onValidate" @submit="onLogin" :error="auth.currentUser.error"/>
-                <x-button v-if="!staticConfiguration.medicalConfig" :disabled="!complete" @click="onLogin">Login</x-button>
-                <div v-if="(oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled) && !staticConfiguration.medicalConfig"
+                <x-form :schema="schema" v-model="credentials" @input="initError"
+                        @validate="onValidate" @submit="onLogin" :error="prettyUserError"/>
+                <x-button :disabled="!complete" @click="onLogin">Login</x-button>
+                <div v-if="oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled"
                      class="t-center mt-12">Or</div>
                 <div class="login-options">
                     <x-button v-if="oktaConfig.enabled" @click="onOktaLogin" id="okta_login_link" link
@@ -27,7 +27,7 @@
                 <div class="show-space">
                     <h2>Login with LDAP</h2>
                     <x-form :schema="ldapSchema" v-model="ldapData.credentials" @input="initError"
-                            @validate="onValidateLDAP" @submit="onLdapLogin" :error="auth.currentUser.error"/>
+                            @validate="onValidateLDAP" @submit="onLdapLogin" :error="prettyUserError"/>
                 </div>
             </div>
             <div slot="footer">
@@ -82,6 +82,19 @@
             },
             singleLoginMethod() {
                 return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled) === 1
+            },
+            isConnected() {
+                return this.auth && this.auth.currentUser && this.auth.currentUser.data &&
+                    this.auth.currentUser.data.user_name
+            },
+            shouldShowLoginPage() {
+                return !this.staticConfiguration.medicalConfig || this.$route.hash == '#maintenance'
+            },
+            prettyUserError() {
+                if (this.auth.currentUser.error == 'Not logged in') {
+                    return ''
+                }
+                return this.auth.currentUser.error
             }
         },
         data() {
@@ -144,10 +157,12 @@
                     url: this.oktaConfig.url,
                     issuer: authorization_server,
                     clientId: this.oktaConfig.client_id,
-                    redirectUri: `${gui2URL}/api/okta-redirect`,
-                    scope: 'openid'
+                    redirectUri: `${gui2URL}/api/okta-redirect`
                 })
-                x.token.getWithRedirect({responseType: 'code'})
+                x.token.getWithRedirect({
+                    scopes:['openid','profile','email','offline_access'],
+                    responseType: 'code'
+                })
             },
             onSamlLogin() {
                 window.location.href = '/api/login/saml'
@@ -160,6 +175,9 @@
             this.getLoginSettings().then(response => {
                 if (response.status === 200) {
                     this.oktaConfig = response.data.okta
+                    if (!this.shouldShowLoginPage) {
+                        this.onOktaLogin()
+                    }
                     this.samlConfig = response.data.saml
                     this.ldapConfig = response.data.ldap
                 }

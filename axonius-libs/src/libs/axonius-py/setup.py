@@ -14,6 +14,7 @@ setup(
               "axonius.clients.mssql",
               "axonius.clients.ldap",
               "axonius.clients.cisco",
+              "axonius.clients.sysaid",
               "axonius.async"],
     version="1.0.0",
     description="External libs for Axonius",
