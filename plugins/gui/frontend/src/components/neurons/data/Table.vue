@@ -168,7 +168,9 @@
                 this.fetchContentPages()
             },
             loading(newLoading) {
-                if (!newLoading) {
+                if (newLoading) {
+                  this.clearAllData()
+                } else {
                     if (this.content.data && this.content.data.length) {
                         this.$emit('data', this.content.data[0][this.idField])
                     } else {
