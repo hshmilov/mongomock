@@ -3443,10 +3443,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 # It's a bit complicated to do so I'm postponing this for later.
                 '$project': {
                     'field': {
-                        '$setUnion': [
-                            '$' + adapter_field_name,
-                            '$' + tags_field_name
-                        ]
+                        '$filter': {
+                            'input': {
+                                '$setUnion': [
+                                    '$' + adapter_field_name,
+                                    '$' + tags_field_name
+                                ]
+                            },
+                            'as': 'i',
+                            'cond': {
+                                '$ne': ['$$i', []]
+                            }
+                        }
                     }
                 }
             },
