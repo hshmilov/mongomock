@@ -358,7 +358,7 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
     # Lets generate a server name
     hostname = random.choice(['lab', 'infra', 'web', 'db', 'monitor', 'external'])
     hostname += random.choice(['nginx-', 'apache-', 'sql-', 'mongo-', 'lb-', '', '', ''])
-    hostname += str(random.randint(100, 999)) + '-' + random.choice(['prd', 'prod', 'dev', 'stg', 'beta'])
+    hostname += str(i + 17134) + '-' + random.choice(['prd', 'prod', 'dev', 'stg', 'beta'])
 
     device.name = hostname
     device.hostname = hostname + f'.{DOMAIN}'
