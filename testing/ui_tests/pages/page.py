@@ -500,8 +500,8 @@ class Page:
     def safe_refresh(self):
         self.driver.get(self.driver.current_url)
 
-    def wait_for_uploading_file(self):
-        self.wait_for_element_absent_by_css(self.UPLOADING_FILE_CSS)
+    def wait_for_uploading_file(self, file_name):
+        self.wait_for_element_present_by_text(file_name)
 
     @staticmethod
     def __upload_file_on_element(element, file_path):
@@ -511,8 +511,8 @@ class Page:
         with NamedTemporaryFile(delete=False, prefix=TEMP_FILE_PREFIX) as temp_file:
             temp_file.write(file_content if is_bytes else bytes(file_content, 'ascii'))
             temp_file.file.flush()
-            return Page.__upload_file_on_element(element, temp_file.name)
-        self.wait_for_uploading_file()
+            Page.__upload_file_on_element(element, temp_file.name)
+            self.wait_for_uploading_file(temp_file.name.split('/')[-1])
 
     def upload_file_by_id(self, input_id, file_content, is_bytes=False):
         element = self.driver.find_element_by_id(input_id)

@@ -66,7 +66,7 @@ export const actionsMeta = {
         title: 'Create Sysaid Incident'
     },
     send_emails: {
-        title: 'Send Mail'
+        title: 'Send Email'
     },
     notify_syslog: {
         title: 'Send to Syslog System'
