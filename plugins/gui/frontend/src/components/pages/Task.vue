@@ -31,12 +31,16 @@
     import xActionGroup from '../networks/enforcement/ActionGroup.vue'
     import xActionResult from '../networks/enforcement/ActionResult.vue'
 
-    import {mapState, mapActions, mapMutations} from 'vuex'
+    import {mapActions, mapMutations, mapState} from 'vuex'
     import {UPDATE_DATA_VIEW} from '../../store/mutations'
     import {FETCH_TASK} from '../../store/modules/tasks'
 
     import {
-        mainCondition, successCondition, failCondition, postCondition, actionsMeta
+        actionsMeta,
+        failCondition,
+        mainCondition,
+        postCondition,
+        successCondition
     } from '../../constants/enforcement'
 
     export default {
@@ -50,14 +54,20 @@
             ...mapState({
                 triggerPeriods(state) {
                     if (!state.constants.constants || !state.constants.constants.trigger_periods) {
-                        return {}
+                        return []
                     }
                     return state.constants.constants.trigger_periods
                 },
                 taskData(state) {
+                    let period = this.triggerPeriods.find((x) => {
+                        return x[state.tasks.current.data.period] !== undefined
+                    })
+                    if (period) {
+                        period = period[state.tasks.current.data.period]
+                    }
                     return {
                         ...state.tasks.current.data,
-                        period: this.triggerPeriods[state.tasks.current.data.period]
+                        period
                     }
                 }
             }),

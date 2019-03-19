@@ -147,7 +147,7 @@
     import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
 
     import viewsMixin from '../../../mixins/views'
-    import { validateInteger } from '../../../constants/utils'
+    import {validateInteger} from '../../../constants/utils'
     import {mapState} from 'vuex'
 
     export default {
@@ -182,11 +182,12 @@
               return this.config.view.entity
             },
             periodOptions() {
-                return Object.entries(this.triggerPeriods).map(([name, title]) => {
-                    return {
-                        name, title, id: `${name}_period`
-                    }
-                })
+                return this.triggerPeriods.map((x) => {
+                    return Object.entries(x).map(([name, title]) => {
+                        return {name, title, id: `${name}_period`}
+                    })
+                }).map((x) => x[0])
+
             },
             conditions() {
                 return this.config.conditions
