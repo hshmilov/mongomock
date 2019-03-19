@@ -275,7 +275,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text('Remove').click()
 
     def choose_period(self, period):
-        self.driver.find_element_by_id(period).click()
+        self.wait_for_element_present_by_id(period).click()
 
     def fill_above_value(self, value):
         self.fill_text_field_by_css_selector(self.ABOVE_INPUT_CSS, value)
