@@ -54,6 +54,7 @@
             padding: 8px 0;
             line-height: 24px;
             background: $grey-0;
+            align-items: flex-end;
 
             .title {
                 display: flex;

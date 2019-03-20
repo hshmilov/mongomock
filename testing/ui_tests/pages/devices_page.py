@@ -1,6 +1,8 @@
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.utils.wait import wait_until
+
 from ui_tests.pages.entities_page import EntitiesPage
 
 
@@ -42,6 +44,8 @@ class DevicesPage(EntitiesPage):
     TAGGING_X_DEVICE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
+
+    DELETE_DIALOG_TEXT = 'You are about to delete 1 devices.'
 
     @property
     def url(self):
@@ -106,3 +110,11 @@ class DevicesPage(EntitiesPage):
 
     def query_hostname_contains(self, string):
         self.run_filter_query(self.FILTER_HOSTNAME.format(filter_value=string))
+
+    def delete_json_device(self):
+        self.query_json_adapter()
+        self.click_row_checkbox()
+        self.open_delete_dialog()
+        wait_until(lambda: self.DELETE_DIALOG_TEXT in self.read_delete_dialog())
+        self.confirm_delete()
+        wait_until(lambda: not self.count_entities())

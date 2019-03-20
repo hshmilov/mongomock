@@ -26,6 +26,7 @@ class Action:
     DeployWindows = 'Deploy on Windows Device'
     ScanQualys = 'Add to Qualys'
     ScanTenable = 'Add to Tenable'
+    ChangePolicyCB = 'Change Carbonblack Defense Policy'
 
 
 class ActionCategory:
@@ -34,6 +35,9 @@ class ActionCategory:
     Isolate = 'Isolate Device in EDR'
     Utils = 'Axonius Utilities'
     Scan = 'Add Device to VA Scan'
+    Patch = 'Patch Device'
+    ManageAD = 'Manage Active Directory Services'
+    Incident = 'Create Incident'
 
 
 class EnforcementsPage(EntitiesPage):
@@ -60,6 +64,9 @@ class EnforcementsPage(EntitiesPage):
     SEND_AN_EMAIL = 'Send an Email'
     DISABLED_ACTION_XPATH = '//div[contains(@class, \'md-list-item-content\')]//div[@class=\'x-title disabled\' ' \
                             'and .//text()=\'{action_name}\']'
+    CATEGORY_ACTIONS_XPATH = '//div[contains(@class, \'md-list-item-container\') and child::div[' \
+                             './/text()=\'{category}\']]//div[@class=\'md-list-expand\']//div[@class=\'action-name\']'
+    CATEGORY_LIST_CSS = '.x-action-library > .md-list > .md-list-item > .md-list-item-container > .md-list-item-content'
     TASK_RESULT_CSS = '.x-action-result .x-summary div:nth-child({child_count})'
     TASK_RESULT_SUCCESS_CSS = TASK_RESULT_CSS.format(child_count=1)
     TASK_RESULT_FAILURE_CSS = TASK_RESULT_CSS.format(child_count=3)
@@ -88,11 +95,14 @@ class EnforcementsPage(EntitiesPage):
     def fill_enforcement_name(self, name):
         self.fill_text_field_by_element_id(self.ENFORCEMENT_NAME_ID, name)
 
-    def add_send_email(self):
-        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+    def wait_for_action_library(self):
         self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
+
+    def add_send_email(self):
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
         self.find_element_by_text(ActionCategory.Notify).click()
         # Opening animation time
         time.sleep(0.2)
@@ -110,9 +120,7 @@ class EnforcementsPage(EntitiesPage):
 
     def add_tag_entities(self, name='Special Tag Action', tag='Special', action_cond=MAIN_ACTION_TEXT):
         self.find_element_by_text(action_cond).click()
-        self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_library()
         self.find_element_by_text(ActionCategory.Utils).click()
         # Opening animation time
         time.sleep(0.2)
@@ -132,11 +140,12 @@ class EnforcementsPage(EntitiesPage):
     def add_cb_isolate(self, name='Special Isolate Action', action_cond=MAIN_ACTION_TEXT):
         self.add_generic_action(ActionCategory.Isolate, Action.IsolateCB, name, action_cond)
 
+    def add_push_notification(self, name='Special Push Action', action_cond=MAIN_ACTION_TEXT):
+        self.add_generic_action(ActionCategory.Notify, Action.PushNotification, name, action_cond)
+
     def add_generic_action(self, action_category, action_type, name, action_cond=MAIN_ACTION_TEXT):
         self.find_element_by_text(action_cond).click()
-        self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_library()
         self.find_element_by_text(action_category).click()
         # Opening animation time
         time.sleep(0.2)
@@ -148,8 +157,18 @@ class EnforcementsPage(EntitiesPage):
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
+    def get_action_categories(self):
+        return [el.text.strip() for el in self.driver.find_elements_by_css_selector(self.CATEGORY_LIST_CSS)]
+
     def open_action_category(self, category_name):
         self.find_element_by_text(category_name).click()
+        # Opening animation time
+        time.sleep(0.2)
+
+    def get_action_category_items(self, category_name):
+        self.open_action_category(category_name)
+        return [el.text.strip() for el in
+                self.find_elements_by_xpath(self.CATEGORY_ACTIONS_XPATH.format(category=category_name))]
 
     def find_disabled_action(self, action_name):
         return self.driver.find_element_by_xpath(self.DISABLED_ACTION_XPATH.format(action_name=action_name))
@@ -166,10 +185,10 @@ class EnforcementsPage(EntitiesPage):
     def check_conditions(self):
         self.check_enforcement_checkbox('Add Conditions')
 
-    def check_new(self):
+    def check_condition_added(self):
         self.check_enforcement_checkbox(Trigger.NewEntities)
 
-    def check_previous(self):
+    def check_condition_subracted(self):
         self.check_enforcement_checkbox(Trigger.PreviousEntities)
 
     def check_above(self):
@@ -183,9 +202,7 @@ class EnforcementsPage(EntitiesPage):
 
     def add_push_system_notification(self, name='Special Push Notification'):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
-        self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_library()
         self.find_element_by_text(ActionCategory.Notify).click()
         # Opening animation time
         time.sleep(0.2)
@@ -205,9 +222,7 @@ class EnforcementsPage(EntitiesPage):
         # It is an issue with our syslog's configuration, and it's not worth the time fixing
 
         self.find_element_by_text(action_cond).click()
-        self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_library()
         self.find_element_by_text(ActionCategory.Notify).click()
         # Opening animation time
         time.sleep(0.2)
@@ -223,9 +238,7 @@ class EnforcementsPage(EntitiesPage):
 
     def add_deploy_software(self, name='Deploy Special Software'):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
-        self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_library()
         self.find_element_by_text(ActionCategory.Deploy).click()
         # Opening animation time
         time.sleep(0.2)
@@ -297,7 +310,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text('You do not have permission to access the Enforcements screen')
         self.click_ok_button()
 
-    def create_basic_enforcement(self, enforcement_name, enforcement_view, schedule=True):
+    def create_basic_enforcement(self, enforcement_name, enforcement_view, schedule=True, enforce_added=False):
         self.switch_to_page()
         # for some reason, this switch_to_page doesn't work from here sometimes
         time.sleep(1)
@@ -305,6 +318,8 @@ class EnforcementsPage(EntitiesPage):
         self.click_new_enforcement()
         self.fill_enforcement_name(enforcement_name)
         self.select_trigger()
+        if enforce_added:
+            self.check_new_entities()
         if schedule:
             self.check_scheduling()
         self.select_saved_view(enforcement_view)
@@ -313,18 +328,18 @@ class EnforcementsPage(EntitiesPage):
     def create_notifying_enforcement(self,
                                      enforcement_name,
                                      enforcement_view,
-                                     new=True,
-                                     previous=True,
+                                     added=True,
+                                     subtracted=True,
                                      above=0,
                                      below=0):
 
         self.create_basic_enforcement(enforcement_name, enforcement_view)
         self.select_trigger()
         self.check_conditions()
-        if new:
-            self.check_new()
-        if previous:
-            self.check_previous()
+        if added:
+            self.check_condition_added()
+        if subtracted:
+            self.check_condition_subracted()
         if above:
             self.check_above()
             self.fill_above_value(above)
@@ -338,19 +353,19 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_spinner_to_end()
         self.wait_for_table_to_load()
 
-    def create_outputting_notification_above(self, alert_name, alert_query, above):
+    def create_notifying_enforcement_above(self, alert_name, alert_query, above):
         self.create_notifying_enforcement(alert_name,
                                           alert_query,
-                                          new=False,
-                                          previous=False,
+                                          added=False,
+                                          subtracted=False,
                                           above=above,
                                           below=0)
 
-    def create_outputting_notification_below(self, alert_name, alert_query, below):
+    def create_notifying_enforcement_below(self, alert_name, alert_query, below):
         self.create_notifying_enforcement(alert_name,
                                           alert_query,
-                                          new=False,
-                                          previous=False,
+                                          added=False,
+                                          subtracted=False,
                                           above=0,
                                           below=below)
 
@@ -400,3 +415,6 @@ class EnforcementsPage(EntitiesPage):
         self.select_task_action(name)
         assert self.find_element_by_text('Entities Failed')
         return self.driver.find_element_by_css_selector(self.TASK_RESULT_FAILURE_CSS)
+
+    def fill_action_library_search(self, text):
+        self.fill_text_field_by_css_selector('.x-action-library .x-search-input .input-value', text)

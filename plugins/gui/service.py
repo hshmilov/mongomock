@@ -1728,13 +1728,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     ################
 
     def get_enforcements(self, limit, mongo_filter, mongo_sort, skip):
-        sort = []
-        for field, direction in mongo_sort.items():
-            if field in [ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
-                field = f'actions.{field}'
-            sort.append((field, direction))
-        if not sort:
-            sort.append((LAST_UPDATE_FIELD, pymongo.DESCENDING))
+        sort = [(LAST_UPDATE_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
 
         def beautify_enforcement(enforcement):
             actions = enforcement[ACTIONS_FIELD]
@@ -1988,11 +1982,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'finished_at': task['finished_at'] or ''
             })
 
-        if not mongo_sort:
-            mongo_sort = [('finished_at', pymongo.DESCENDING)]
-
+        sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
         return jsonify([beautify_task(x) for x in self.enforcement_tasks_runs_collection.find(
-            self.__tasks_query(mongo_filter)).sort(mongo_sort).skip(skip).limit(limit)])
+            self.__tasks_query(mongo_filter)).sort(sort).skip(skip).limit(limit)])
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('tasks/count', required_permissions={Permission(PermissionType.Enforcements,

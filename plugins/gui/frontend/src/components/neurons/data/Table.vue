@@ -116,6 +116,7 @@
                 return this.pageData.map(item => item[this.idField])
             },
             pageCount() {
+                if (!this.count.data) return 1
                 return Math.ceil(this.count.data / this.view.pageSize) - 1
             },
             pageLinkNumbers() {
