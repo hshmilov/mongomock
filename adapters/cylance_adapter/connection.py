@@ -42,12 +42,13 @@ class CylanceConnection(RESTConnection):
     def _connect(self):
         """ Connects to the service """
         self._create_token_for_scopre('device:list')
+        self._create_token_for_scopre('policy:list')
 
-    def _get_ids_bulks(self):
+    def _get_ids_bulks(self, endpoint, scope):
         page_num = 1
-        self._session_headers['Authorization'] = 'Bearer ' + self._tokens['device:list']
+        self._session_headers['Authorization'] = 'Bearer ' + self._tokens[scope]
         devices_response_raw = self._get(
-            'devices/v2', url_params={'page_size': consts.DEVICE_PER_PAGE, 'page': str(page_num)})
+            f'{endpoint}/v2', url_params={'page_size': consts.DEVICE_PER_PAGE, 'page': str(page_num)})
         yield [basic_device.get('id') for basic_device in devices_response_raw.get('page_items', [])]
         total_pages = devices_response_raw.get('total_pages', 0)  # Waiting to know to right fields
         first_try_to_refresh = True
@@ -55,17 +56,35 @@ class CylanceConnection(RESTConnection):
             try:
                 page_num += 1
                 if page_num % 100 == 0:
-                    self._create_token_for_scopre('device:list')
-                self._session_headers['Authorization'] = 'Bearer ' + self._tokens['device:list']
+                    self._create_token_for_scopre(scope)
+                self._session_headers['Authorization'] = 'Bearer ' + self._tokens[scope]
                 yield [basic_device.get('id') for basic_device in
-                       self._get('devices/v2', url_params={'page_size': consts.DEVICE_PER_PAGE,
-                                                           'page': str(page_num)}).get('page_items', [])]
+                       self._get(f'{endpoint}/v2', url_params={'page_size': consts.DEVICE_PER_PAGE,
+                                                               'page': str(page_num)}).get('page_items', [])]
             except Exception as e:
                 if first_try_to_refresh and '401' in str(e):
-                    self._create_token_for_scopre('device:list')
+                    self._create_token_for_scopre(scope)
                     first_try_to_refresh = False
                     page_num -= 1
                 logger.exception(f'Problem fetching page number {str(page_num)}')
+
+    def _get_results_of_entity(self, endpoint, scope_list, scope_read):
+        # Now use asyncio to get all of these requests
+        for bulk_number, bulk_ids in enumerate(self._get_ids_bulks(endpoint, scope_list)):
+            # We must refresh the token sometimes so we won't get to token timeout
+            if bulk_number % 50 == 0:
+                self._create_token_for_scopre(scope_read)
+            async_requests = []
+            for device_id in bulk_ids:
+                try:
+                    if not device_id:
+                        logger.warning(f'Bad device')
+                        continue
+                    async_requests.append({'name': f'{endpoint}/v2/{device_id}'})
+                except Exception:
+                    logger.exception(f'Got problem with id {device_id}')
+            self._session_headers['Authorization'] = 'Bearer ' + self._tokens[scope_read]
+            yield from self._async_get_only_good_response(async_requests)
 
     def get_device_list(self):
         """ Returns a list of all agents
@@ -74,19 +93,13 @@ class CylanceConnection(RESTConnection):
         :return: the response
         :rtype: dict
         """
-        # Now use asyncio to get all of these requests
-        for bulk_number, bulk_ids in enumerate(self._get_ids_bulks()):
-            # We must refresh the token sometimes so we won't get to token timeout
-            if bulk_number % 50 == 0:
-                self._create_token_for_scopre('device:read')
-            async_requests = []
-            for device_id in bulk_ids:
-                try:
-                    if not device_id:
-                        logger.warning(f'Bad device')
-                        continue
-                    async_requests.append({'name': f'devices/v2/{device_id}'})
-                except Exception:
-                    logger.exception(f'Got problem with id {device_id}')
-            self._session_headers['Authorization'] = 'Bearer ' + self._tokens['device:read']
-            yield from self._async_get_only_good_response(async_requests)
+        policies_dict = {}
+        try:
+            policies_raw = self._get_results_of_entity('policies', 'policy:list', 'policy:read')
+            for policy_raw in policies_raw:
+                if policy_raw.get('policy_id'):
+                    policies_dict[policy_raw.get('policy_id')] = policy_raw
+        except Exception:
+            logger.exception(f'Problem getting policies')
+        for device_raw in self._get_results_of_entity('devices', 'device:list', 'device:read'):
+            yield device_raw, policies_dict

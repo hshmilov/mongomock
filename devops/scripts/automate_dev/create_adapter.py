@@ -200,7 +200,7 @@ def creds_action(filename: str, _):
     ''' Create creds file'''
     template = \
         """CLIENT_DETAILS = {
-} # AUTOADAPTER - insert client information to test
+}  # AUTOADAPTER - insert client information to test
 
 SOME_DEVICE_ID = 'AUTOADAPTER - give one device_id that should return from the above client'
 """
@@ -235,7 +235,7 @@ def {adapter_name}_fixture(request):
 def parallel_tests_action(filename: str, adapter_name: str):
     ''' Create parallel tests file'''
     template = \
-        f"""#pylint: disable=unused-import
+        f"""# pylint: disable=unused-import
 from services.adapters.{adapter_name}_service import {capitalize_adapter_name(adapter_name)}Service, {adapter_name}_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_{adapter_name}_credentials import CLIENT_DETAILS, SOME_DEVICE_ID

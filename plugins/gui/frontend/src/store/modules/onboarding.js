@@ -23,8 +23,6 @@ export const onboarding = {
 				mail: false,
 				syslog: false,
 				httpsLog: false,
-				serviceNow: false,
-				freshService: false,
 				jira: false
 			}
 		},

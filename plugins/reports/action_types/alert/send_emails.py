@@ -302,7 +302,7 @@ class SendEmailsAction(ActionTypeAlert):
         """
 
         parsed_query_filter = self.__create_query(trigger_data)
-        query = self.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
+        query = self._plugin_base._gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
             {
                 'name': self._run_configuration.view.name
             })

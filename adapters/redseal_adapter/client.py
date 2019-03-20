@@ -35,6 +35,7 @@ class RedSealClient:
         Disables ssl verify, adds url and creds.
         add accpet json header to tell the server that we want json
         """
+        url = ''
         try:
             if headers is None:
                 headers = {}
@@ -49,7 +50,7 @@ class RedSealClient:
                 response.raise_for_status()
                 return await response.json()
         except Exception:
-            logger.warning('exception while handling respones')
+            logger.exception(f'exception while handling respones {url}')
 
     def check_connection(self):
         """

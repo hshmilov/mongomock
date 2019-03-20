@@ -1,3 +1,4 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -48,6 +49,7 @@ class CiscoUmbrellaConnection(RESTConnection):
                                             'limit': DEVICE_PER_PAGE})
         yield from devices_raw
         page = 2
+        got_429 = False
         while devices_raw and page < MAX_PAGES_NUMBER:
             try:
                 devices_raw = self._get(f'organizations/{org_id}/roamingcomputers',
@@ -56,6 +58,10 @@ class CiscoUmbrellaConnection(RESTConnection):
                                                     'limit': DEVICE_PER_PAGE})
                 yield from devices_raw
                 page += 1
-            except Exception:
-                logger.exception(f'Problem getting page {page} breaking')
-                break
+                got_429 = False
+            except Exception as e:
+                logger.exception(f'Problem getting page {page}')
+                if '429' not in str(e) or got_429:
+                    break
+                got_429 = True
+                time.sleep(60)

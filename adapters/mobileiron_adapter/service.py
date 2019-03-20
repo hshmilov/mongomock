@@ -136,14 +136,23 @@ class MobileironAdapter(AdapterBase, Configurable):
                 try:
                     ips = device_raw.get('common.ip_address')
                     if not ips or 'null' in device_raw.get('common.ip_address'):
-                        ips = None
+                        ips = []
                     else:
                         ips = ips.split(',')
-                    mac = device_raw.get('common.ethernet_mac')
-                    if not mac or 'null' in mac:
-                        mac = None
-                    if mac or ips:
-                        device.add_nic(mac, ips)
+                    ether_mac = device_raw.get('common.ethernet_mac')
+                    wifi_mac = device_raw.get('common.wifi_mac_address')
+                    if not wifi_mac or 'null' in wifi_mac:
+                        wifi_mac = None
+                    if not ether_mac or 'null' in ether_mac:
+                        ether_mac = None
+                    if ether_mac and wifi_mac:
+                        macs = [ether_mac, wifi_mac]
+                    elif ether_mac or wifi_mac:
+                        macs = [ether_mac or wifi_mac]
+                    else:
+                        macs = []
+                    if macs or ips:
+                        device.add_ips_and_macs(macs, ips)
                 except Exception:
                     logger.exception(f'Problem adding nic to a device {device_raw}')
                 device.agent_version = device_raw.get('common.client_version')

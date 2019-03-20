@@ -1,6 +1,6 @@
 import datetime
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
+
 from collections import defaultdict
 from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
@@ -8,12 +8,16 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField, JsonArrayFormat
 from axonius.smart_json_class import SmartJsonClass
+from axonius.plugin_base import add_rule, return_error
 from axonius.clients.rest.exception import RESTException
-from tenable_io_adapter.connection import TenableIoConnection
 from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.clients.rest.connection import RESTConnection
 from axonius.mixins.configurable import Configurable
+from axonius.clients.tenable_io.connection import TenableIoConnection
+
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class TenableVulnerability(SmartJsonClass):
@@ -30,14 +34,14 @@ class TenableSource(SmartJsonClass):
 class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
-        has_agent = Field(bool, "Has Agent")
+        has_agent = Field(bool, 'Has Agent')
         agent_version = Field(str, 'Agent Version')
         status = Field(str, 'Status')
         plugin_and_severities = ListField(TenableVulnerability, 'Plugins and Severities',
                                           json_format=JsonArrayFormat.table)
         tenable_sources = ListField(TenableSource, 'Tenable Source',
                                     json_format=JsonArrayFormat.table)
-        risk_and_name_list = ListField(str, "CSV - Vulnerability Details")
+        risk_and_name_list = ListField(str, 'CSV - Vulnerability Details')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -48,26 +52,66 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
+    @add_rule('add_ips_to_target_group', methods=['POST'])
+    def add_ips_to_asset(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tenable_sc_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status = conn.add_ips_to_target_group(tenable_sc_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+        except Exception as e:
+            logger.exception('Got exception while adding to taget group')
+            return str(e), 400
+        return 'Failure', 400
+
+    @add_rule('create_target_group_with_ips', methods=['POST'])
+    def create_asset_with_ips(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tenable_sc_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status = conn.create_target_group_with_ips(tenable_sc_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+        except Exception as e:
+            logger.exception(f'Got exception while creating a target target group')
+            return str(e), 400
+        return 'Failure', 400
+
     def _get_client_id(self, client_config):
         return client_config['domain']
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get("domain"))
+        return RESTConnection.test_reachability(client_config.get('domain'))
+
+    @staticmethod
+    def get_connection(client_config):
+        return TenableIoConnection(domain=client_config['domain'],
+                                   verify_ssl=client_config['verify_ssl'],
+                                   access_key=client_config.get('access_key'),
+                                   secret_key=client_config.get('secret_key'),
+                                   https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
         try:
-            connection = TenableIoConnection(domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
-                                             url_base_prefix="/", headers={'Content-Type': 'application/json',
-                                                                           'Accept': 'application/json'},
-                                             access_key=client_config.get('access_key'),
-                                             secret_key=client_config.get('secret_key'),
-                                             https_proxy=client_config.get('https_proxy'))
-
+            connection = self.get_connection(client_config)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
         except RESTException as e:
-            message = "Error connecting to client with domain {0}, reason: {1}".format(
+            message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
@@ -99,16 +143,16 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         :return: JSON scheme
         """
         return {
-            "items": [
+            'items': [
                 {
-                    "name": "domain",
-                    "title": "TenableIO Domain",
-                    "type": "string"
+                    'name': 'domain',
+                    'title': 'TenableIO Domain',
+                    'type': 'string'
                 },
                 {
-                    "name": "verify_ssl",
-                    "title": "Verify SSL",
-                    "type": "bool"
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
                 },
                 {
                     'name': 'access_key',
@@ -123,62 +167,62 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
-                    "name": "https_proxy",
-                    "title": "HTTPS Proxy",
-                    "type": "string"
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
 
             ],
-            "required": [
-                "domain",
-                "verify_ssl",
-                "access_key",
-                "secret_key"
+            'required': [
+                'domain',
+                'verify_ssl',
+                'access_key',
+                'secret_key'
             ],
-            "type": "array"
+            'type': 'array'
         }
 
     def _parse_export_device(self, device_id, device_raw):
         device = self._new_device_adapter()
         device.id = device_id
-        device.has_agent = bool(device_raw.get("has_agent"))
+        device.has_agent = bool(device_raw.get('has_agent'))
         try:
-            device.last_seen = parse_date(device_raw.get("last_seen", ""))
+            device.last_seen = parse_date(device_raw.get('last_seen', ''))
         except Exception:
-            logger.exception(f"Problem with last seen for {device_raw}")
-        ipv4_raw = device_raw.get("ipv4s") or []
-        ipv6_raw = device_raw.get("ipv6s") or []
-        mac_addresses_raw = device_raw.get("mac_addresses") or []
+            logger.exception(f'Problem with last seen for {device_raw}')
+        ipv4_raw = device_raw.get('ipv4s') or []
+        ipv6_raw = device_raw.get('ipv6s') or []
+        mac_addresses_raw = device_raw.get('mac_addresses') or []
         try:
             device.add_ips_and_macs(mac_addresses_raw, ipv4_raw + ipv6_raw)
         except Exception:
             logger.exception(f'Failed to add ips and macs')
         try:
-            os_list = device_raw.get("operating_systems")
+            os_list = device_raw.get('operating_systems')
             if len(os_list) > 0:
                 device.figure_os(str(os_list[0]))
         except Exception:
-            logger.exception(f"Problem getting OS for {device_raw}")
-        fqdns = device_raw.get("fqdns", [])
-        hostnames = device_raw.get("hostnames", [])
-        netbios = device_raw.get("netbios_names", [])
-        if len(fqdns) > 0 and fqdns[0] != "":
+            logger.exception(f'Problem getting OS for {device_raw}')
+        fqdns = device_raw.get('fqdns', [])
+        hostnames = device_raw.get('hostnames', [])
+        netbios = device_raw.get('netbios_names', [])
+        if len(fqdns) > 0 and fqdns[0] != '':
             device.hostname = fqdns[0]
-        elif len(hostnames) > 0 and hostnames[0] != "":
+        elif len(hostnames) > 0 and hostnames[0] != '':
             device.hostname = hostnames[0]
-        elif len(netbios) > 0 and netbios[0] != "":
+        elif len(netbios) > 0 and netbios[0] != '':
             device.hostname = netbios[0]
         plugin_and_severity = []
-        vulns_info = device_raw.get("vulns_info", [])
+        vulns_info = device_raw.get('vulns_info', [])
         for vuln_raw in vulns_info:
             try:
-                severity = vuln_raw.get("severity", "")
-                plugin_name = vuln_raw.get("plugin", {}).get("name", "")
-                if f"{plugin_name}__{severity}" not in plugin_and_severity:
-                    plugin_and_severity.append(f"{plugin_name}__{severity}")
+                severity = vuln_raw.get('severity', '')
+                plugin_name = vuln_raw.get('plugin', {}).get('name', '')
+                if f'{plugin_name}__{severity}' not in plugin_and_severity:
+                    plugin_and_severity.append(f'{plugin_name}__{severity}')
                     device.add_tenable_vuln(plugin=plugin_name, severity=severity)
             except Exception:
-                logger.exception(f"Problem getting vuln raw {vuln_raw}")
+                logger.exception(f'Problem getting vuln raw {vuln_raw}')
 
         tenble_sources = device_raw.get('sources')
         if not isinstance(tenble_sources, list):
@@ -249,7 +293,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             try:
                 value = d.get(n)
                 if value is not None:
-                    if str(value).strip().lower() not in ["", "none", "0"]:
+                    if str(value).strip().lower() not in ['', 'none', '0']:
                         return str(value).strip()
             except Exception:
                 pass
@@ -258,17 +302,17 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
         for device_raw in devices_raw_data:
             try:
-                uuid = get_csv_value_filtered(device_raw, "Asset UUID")
-                host = get_csv_value_filtered(device_raw, "Host")
+                uuid = get_csv_value_filtered(device_raw, 'Asset UUID')
+                host = get_csv_value_filtered(device_raw, 'Host')
 
                 # This chars are false, we get bad csv sometimes
                 false_uuid = ['=', '|', ':']
                 if uuid is None or host is None or any(elem in uuid for elem in false_uuid):
-                    logger.debug(f"Bad asset {device_raw}, continuing")
+                    logger.debug(f'Bad asset {device_raw}, continuing')
                     continue
                 assets_dict[uuid].append(device_raw)
             except Exception:
-                logger.exception(f"Problem with fetching TenableIO Device {device_raw}")
+                logger.exception(f'Problem with fetching TenableIO Device {device_raw}')
         for asset_id, asset_id_values in assets_dict.items():
             try:
                 device = self._new_device_adapter()
@@ -276,15 +320,15 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
                 first_asset = asset_id_values[0]
                 try:
-                    device.last_seen = parse_date(get_csv_value_filtered(first_asset, "Host End"))
+                    device.last_seen = parse_date(get_csv_value_filtered(first_asset, 'Host End'))
                 except Exception:
-                    logger.exception(f"Problem getting last seen for {str(first_asset)}")
-                ip_addresses = get_csv_value_filtered(first_asset, "IP Address")
-                mac_addresses = get_csv_value_filtered(first_asset, "MAC Address")
+                    logger.exception(f'Problem getting last seen for {str(first_asset)}')
+                ip_addresses = get_csv_value_filtered(first_asset, 'IP Address')
+                mac_addresses = get_csv_value_filtered(first_asset, 'MAC Address')
 
                 # Turn to lists.
-                ip_addresses = ip_addresses.split(",") if ip_addresses is not None else []
-                mac_addresses = mac_addresses.split(",") if mac_addresses is not None else []
+                ip_addresses = ip_addresses.split(',') if ip_addresses is not None else []
+                mac_addresses = mac_addresses.split(',') if mac_addresses is not None else []
 
                 mac_address_to_use = []
                 for mac_address in mac_addresses:
@@ -295,31 +339,31 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                         mac_address_to_use.append(mac_address)
                 device.add_ips_and_macs(mac_address_to_use, ip_addresses)
 
-                fqdn = get_csv_value_filtered(first_asset, "FQDN")
-                netbios = get_csv_value_filtered(first_asset, "NetBios")
+                fqdn = get_csv_value_filtered(first_asset, 'FQDN')
+                netbios = get_csv_value_filtered(first_asset, 'NetBios')
 
                 if fqdn is not None:
                     device.hostname = fqdn
                 else:
                     device.hostname = netbios
 
-                os = get_csv_value_filtered(first_asset, "OS")
+                os = get_csv_value_filtered(first_asset, 'OS')
                 device.figure_os(os)
 
                 risk_and_name_list = []
                 for vuln_i in asset_id_values:
-                    vrisk = get_csv_value_filtered(vuln_i, "Risk")
-                    vname = get_csv_value_filtered(vuln_i, "Name")
+                    vrisk = get_csv_value_filtered(vuln_i, 'Risk')
+                    vname = get_csv_value_filtered(vuln_i, 'Name')
                     if vrisk and vname:
-                        risk_and_name_list.append(f"{vrisk} - {vname}")
+                        risk_and_name_list.append(f'{vrisk} - {vname}')
 
                 if len(risk_and_name_list) > 0:
                     device.risk_and_name_list = risk_and_name_list
-                first_asset["risk_and_name_list"] = risk_and_name_list
+                first_asset['risk_and_name_list'] = risk_and_name_list
                 device.set_raw(first_asset)
                 yield device
             except Exception:
-                logger.exception(f"Problem with asset id {asset_id} and values {asset_id_values}")
+                logger.exception(f'Problem with asset id {asset_id} and values {asset_id_values}')
 
     @classmethod
     def adapter_properties(cls):

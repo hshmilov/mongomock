@@ -52,8 +52,10 @@ class GuiService(PluginService):
             self._update_schema_version_8()
         if self.db_schema_version < 9:
             self._update_schema_version_9()
+        if self.db_schema_version < 10:
+            self._update_schema_version_10()
 
-        if self.db_schema_version != 9:
+        if self.db_schema_version != 10:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -331,6 +333,11 @@ class GuiService(PluginService):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 8. Details: {e}')
 
+    def _update_schema_version_10(self):
+        print('Upgrade to schema 10')
+        self._update_default_locked_actions(['tenable_io_add_ips_to_target_group'])
+        self.db_schema_version = 10
+
     def _update_schema_version_9(self):
         print('Upgrade to schema 9')
         try:
@@ -384,6 +391,19 @@ class GuiService(PluginService):
             self.db_schema_version = 9
         except Exception as e:
             print(f'Exception while upgrading gui db to version 9. Details: {e}')
+
+    def _update_default_locked_actions(self, new_actions):
+        """
+        Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
+        locked_actions
+        """
+        self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+            'config_name': FEATURE_FLAGS_COLLECTION
+        }, {
+            '$addToSet': {
+                'config.locked_actions': new_actions
+            }
+        })
 
     @property
     def exposed_ports(self):

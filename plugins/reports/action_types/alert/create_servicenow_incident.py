@@ -2,6 +2,7 @@ import logging
 
 from axonius.consts import report_consts
 from axonius.types.enforcement_classes import AlertActionResult
+from axonius.clients.service_now.connection import ServiceNowConnection
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -16,6 +17,37 @@ class ServiceNowIncidentAction(ActionTypeAlert):
     def config_schema() -> dict:
         return {
             'items': [
+                {
+                    'name': 'use_adapter',
+                    'title': 'Use ServiceNow Adapter',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'domain',
+                    'title': 'ServiceNow Domain',
+                    'type': 'string'
+                },
+                {
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                },
                 {
                     'name': 'incident_title',
                     'title': 'Incident Short Description',
@@ -55,8 +87,35 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'severity': 'info',
             'description_default': False,
             'incident_description': None,
-            'incident_title': None
+            'incident_title': None,
+            'use_adapter': False,
+            'domain': None,
+            'username': None,
+            'password': None,
+            'https_proxy': None,
+            'verify_ssl': True
         }
+
+    def _create_service_now_incident(self, short_description, description, impact):
+        service_now_dict = {'short_description': short_description, 'description': description, 'impact': impact}
+        try:
+            if self._config['use_adapter'] is True:
+                response = self._plugin_base.request_remote_plugin('create_incident', 'service_now_adapter', 'post',
+                                                                   json=service_now_dict)
+                return response.text
+            if not self._config.get('domain') or not self._config.get('username') or not self._config.get('password'):
+                return 'Missing Parameters For Connection'
+            service_now_connection = ServiceNowConnection(domain=self._config['domain'],
+                                                          verify_ssl=self._config.get('verify_ssl'),
+                                                          username=self._config.get('username'),
+                                                          password=self._config.get('password'),
+                                                          https_proxy=self._config.get('https_proxy'))
+            with service_now_connection:
+                service_now_connection.create_service_now_incident(service_now_dict)
+                return ''
+        except Exception as e:
+            logger.exception(f'Got exception creating ServiceNow incident wiht {service_now_dict}')
+            return f'Got exception creating ServiceNow incident: {str(e)}'
 
     def _run(self) -> AlertActionResult:
         query_name = self._run_configuration.view.name
@@ -74,5 +133,5 @@ class ServiceNowIncidentAction(ActionTypeAlert):
         log_message_full = self._config['incident_description']
         if self._config.get('description_default') is True:
             log_message_full += '\n' + log_message
-        message = self._plugin_base.create_service_now_incident(self._config['incident_title'], log_message, impact)
+        message = self._create_service_now_incident(self._config['incident_title'], log_message, impact)
         return AlertActionResult(not message, message or 'Success')

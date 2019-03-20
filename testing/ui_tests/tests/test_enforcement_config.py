@@ -310,4 +310,3 @@ class TestEnforcementSanity(TestBase):
         # Opening animation time
         time.sleep(0.2)
         assert self.enforcements_page.find_disabled_action(Action.ScanQualys)
-        assert self.enforcements_page.find_disabled_action(Action.ScanTenable)

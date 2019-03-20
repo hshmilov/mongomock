@@ -7,10 +7,10 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
-from axonius.plugin_base import add_rule, return_error, EntityType
+from axonius.plugin_base import add_rule, return_error
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
-from tenable_security_center_adapter.connection import \
+from axonius.clients.tenable_sc.connection import \
     TenableSecurityScannerConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -89,8 +89,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
         connection = TenableSecurityScannerConnection(
             domain=client_config['url'],
             username=client_config['username'], password=client_config['password'],
-            url_base_prefix='/rest/', verify_ssl=verify_ssl,
-            headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
+            verify_ssl=verify_ssl)
         with connection:
             pass  # check that the connection credentials are valid
         return connection

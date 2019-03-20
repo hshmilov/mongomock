@@ -123,13 +123,13 @@ class SymantecAdapter(AdapterBase):
 
     # pylint: disable=R0912,R0915
     def _parse_raw_data(self, devices_raw_data):
-        try:
-            for device_raw in devices_raw_data:
+        for device_raw in devices_raw_data:
+            try:
                 device = self._new_device_adapter()
                 domain_strip_upper = str(device_raw.get('domainOrWorkgroup', '')).strip().upper()
-                computer_name = device_raw.get('computerName', '')
+                computer_name = device_raw.get('computerName') or ''
                 if not any(elem in computer_name for elem in [' ', '.']) or \
-                        ('Mac' not in str(device_raw.get('operatingSystem', ''))):
+                        ('Mac' not in str(device_raw.get('operatingSystem'))):
                     device.hostname = computer_name
                     if domain_strip_upper in ['WORKGROUP', '', 'LOCAL']:
                         # Special case for workgroup
@@ -137,7 +137,7 @@ class SymantecAdapter(AdapterBase):
                             computer_name = computer_name[:-len('.LOCAL')]
                         device.hostname = computer_name
                     else:
-                        device.hostname = computer_name + '.' + device_raw.get('domainOrWorkgroup', '')
+                        device.hostname = computer_name + '.' + (device_raw.get('domainOrWorkgroup') or '')
                 else:
                     device.name = computer_name
                     host_no_spaces_list = device.name.replace(' ', '-').split('-')
@@ -176,8 +176,8 @@ class SymantecAdapter(AdapterBase):
                     logger.exception(f'Problem adding last scan date')
                 device.set_raw(device_raw)
                 yield device
-        except Exception:
-            logger.exception(f'Problem adding device to SEP {device_raw}')
+            except Exception:
+                logger.exception(f'Problem adding device to SEP {device_raw}')
 
     @classmethod
     def adapter_properties(cls):

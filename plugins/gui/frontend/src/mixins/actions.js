@@ -25,11 +25,9 @@ export default {
         },
         settingToActions() {
             return {
-                mail: ['send_emails'],
+                mail: ['send_emails', 'send_email_to_entities'],
                 syslog: ['notify_syslog'],
                 httpsLog: ['send_https_log'],
-                serviceNow: ['create_service_now_computer', 'create_service_now_incident'],
-                freshService: ['create_fresh_service_incident'],
                 jira: ['create_jira_ticket']
             }
         },

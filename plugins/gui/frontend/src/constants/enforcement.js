@@ -26,8 +26,8 @@ export const actionsMeta = {
     scan_with_qualys: {
         title: 'Add to Qualys'
     },
-    scan_with_tenable: {
-        title: 'Add to Tenable'
+    tenable_io_add_ips_to_target_group: {
+        title: 'Add IPs to Tenable IO Target Group'
     },
     tenable_sc_add_ips_to_asset: {
         title: 'Add IPs to Tenable SC Asset'
@@ -68,6 +68,9 @@ export const actionsMeta = {
     send_emails: {
         title: 'Send Email'
     },
+    send_email_to_entities: {
+        title: 'Send EMail To Entities'
+    },
     notify_syslog: {
         title: 'Send to Syslog System'
     },
@@ -100,7 +103,7 @@ export const actionsMeta = {
     },
     scan_va: {
         title: 'Add Device to VA Scan',
-        items: ['tenable_sc_add_ips_to_asset', 'scan_with_qualys', 'scan_with_tenable']
+        items: ['tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'scan_with_qualys']
     },
     patch_device: {
         title: 'Patch Device',
@@ -124,7 +127,7 @@ export const actionsMeta = {
     },
     notify: {
         title: 'Notify',
-        items: ['send_emails', 'notify_syslog', 'send_https_log', 'create_notification', 'slack_send_message']
+        items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'create_notification', 'slack_send_message', ]
     },
     axonius: {
         title: 'Axonius Utilities',

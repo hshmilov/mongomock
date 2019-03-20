@@ -57,13 +57,13 @@ class SentinelOneConnection(RESTConnection):
             connection_dict = {'username': self._username,
                                'password': self._password}
             response = self._post('web/api/v2.0/users/login', body_params=connection_dict)
-            if 'token' not in response:
+            if 'data' not in response or 'token' not in response['data']:
                 error = response.get('error', 'unknown connection error')
                 message = response.get('message', '')
                 if message:
                     error += ': ' + message
                 raise RESTException(error)
-            self._set_token_v2(response['token'])
+            self._set_token_v2(response['data']['token'])
         elif self._apikey:
             self._set_token_v2(self._apikey)
         else:

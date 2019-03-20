@@ -49,6 +49,7 @@ class FeatureFlags(Configurable):
                 'cybereason_isolate',
                 'cybereason_unisolate',
                 'carbonblack_defense_change_policy',
-                'tenable_sc_add_ips_to_asset'
+                'tenable_sc_add_ips_to_asset',
+                'tenable_io_add_ips_to_target_group'
             ]
         }

@@ -108,8 +108,6 @@ adapters/nexpose_adapter/clients/nexpose_base_client.py
 adapters/nexpose_adapter/clients/nexpose_v2_client.py
 adapters/nexpose_adapter/clients/nexpose_v3_client.py
 adapters/observeit_adapter/service.py
-adapters/okta_adapter/connection.py
-adapters/okta_adapter/service.py
 adapters/openstack_adapter/service.py
 adapters/oracle_vm_adapter/connection.py
 adapters/oracle_vm_adapter/service.py

@@ -5,7 +5,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.thread_stopper import StopThreadException
 from axonius.utils.parsing import make_dict_from_csv
-from tenable_io_adapter import consts
+from axonius.clients.tenable_io import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -13,7 +13,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class TenableIoConnection(RESTConnection):
 
     def __init__(self, *args, access_key: str = '',  secret_key: str = '', **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args,
+                         headers={'Content-Type': 'application/json',
+                                  'Accept': 'application/json'},
+                         **kwargs)
         self._access_key = access_key
         self._secret_key = secret_key
         self._epoch_last_run_time = 0
@@ -29,6 +32,47 @@ class TenableIoConnection(RESTConnection):
             self._set_api_headers()
         else:
             raise RESTException('Missing user/password or api keys')
+
+    def add_ips_to_target_group(self, tenable_io_dict):
+        target_group_name = tenable_io_dict.get('target_group_name')
+        ips = tenable_io_dict.get('ips')
+        if not ips or not target_group_name:
+            raise RESTException('Missing IPS or Target Group ID')
+        target_group_list = self._get('target-groups').get('target_groups')
+        if not target_group_list or not isinstance(target_group_list, list):
+            raise RESTException('Bad list of taget groups')
+        target_group_id = None
+        for target_group_raw in target_group_list:
+            if target_group_raw.get('name') == target_group_name:
+                target_group_id = target_group_raw.get('id')
+                break
+        if not target_group_id:
+            raise RESTException('Couldn\'n find target group name')
+        target_group_id_raw = self._get(f'target-groups/{target_group_id}')
+        if not target_group_id_raw or not isinstance(target_group_id_raw, dict):
+            raise RESTException('Couldn\'n get asset id info')
+        if not target_group_id_raw.get('members'):
+            raise RESTException('Device with no IPs')
+        ips_raw = target_group_id_raw.get('members').split(',')
+        for ip in ips:
+            if ip not in ips_raw:
+                ips_raw.append(ip)
+        self._patch(f'target-groups/{target_group_id}',
+                    body_params={'members': ','.join(ips_raw),
+                                 'type': 'user',
+                                 'name': target_group_name})
+        return True
+
+    def create_target_group_with_ips(self, tenable_io_dict):
+        target_group_name = tenable_io_dict.get('target_group_name')
+        ips = tenable_io_dict.get('ips')
+        if not ips or not target_group_name:
+            raise RESTException('Missing IPS or Tagret Group ID')
+        self._post(f'target-groups',
+                   body_params={'members': ','.join(ips),
+                                'type': 'user',
+                                'name': target_group_name})
+        return True
 
     def _set_token_headers(self, token):
         """ Sets the API token, in the appropriate header, for valid requests

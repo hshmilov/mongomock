@@ -45,10 +45,7 @@ import axonius.entities
 from axonius import adapter_exceptions, plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.service_now.connection import ServiceNowConnection
-from axonius.clients.sysaid.connection import SysaidConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATION_SETTINGS,
@@ -2110,127 +2107,6 @@ class PluginBase(Configurable, Feature):
         self.__renew_global_settings_from_db()
         return ""
 
-    def create_fresh_service_incident(self, subject, description, priority, email):
-        """
-        Create new incident on alerts page.
-        :param description: string - html content of the ticket
-        :param subject: string - subject of the ticket
-        :param email: string - email address of the requester
-        :param priority: integer - priority of the ticket (1 (low) - 4 (urgent))
-        :return:
-        """
-        fresh_service_settings = self._fresh_service_settings
-
-        if email:
-            ticket_email = email
-        else:
-            ticket_email = fresh_service_settings['admin_email']
-
-        # we make status = 2 because this denotes that the ticket must be opened. Also manually setting priority
-        # as medium to begin
-        fresh_service_dict = {'subject': subject,
-                              'description': description,
-                              'email': ticket_email,
-                              'priority': priority,
-                              'status': 2
-                              }
-
-        if not fresh_service_settings['enabled']:
-            return 'No FreshService settings'
-        try:
-            fresh_service_connection = FreshServiceConnection(domain=fresh_service_settings['domain'],
-                                                              apikey=fresh_service_settings['api_key'])
-
-            with fresh_service_connection:
-                fresh_service_connection.create_fresh_service_incident(dict_data=fresh_service_dict)
-                return ''
-        except Exception as e:
-            logger.exception(f'Got exception creating Fresh Service incident with {fresh_service_dict}')
-            return f'Got exception creating FreshService incident: {str(e)}'
-
-    def create_service_now_incident(self, short_description, description, impact):
-        service_now_dict = {'short_description': short_description, 'description': description, 'impact': impact}
-        service_now_settings = self._service_now_settings
-        if service_now_settings['enabled'] is True:
-            try:
-                if service_now_settings['use_adapter'] is True:
-                    response = self.request_remote_plugin('create_incident', 'service_now_adapter', 'post',
-                                                          json=service_now_dict)
-                    return response.text
-                else:
-                    service_now_connection = ServiceNowConnection(domain=service_now_settings['domain'],
-                                                                  verify_ssl=service_now_settings.get("verify_ssl"),
-                                                                  username=service_now_settings.get("username"),
-                                                                  password=service_now_settings.get("password"),
-                                                                  https_proxy=service_now_settings.get("https_proxy"))
-                    with service_now_connection:
-                        service_now_connection.create_service_now_incident(service_now_dict)
-                        return ''
-            except Exception as e:
-                logger.exception(f"Got exception creating ServiceNow incident wiht {service_now_dict}")
-                return f'Got exception creating ServiceNow incident: {str(e)}'
-
-    def create_sysaid_incident(self, description):
-        sysaid_dict = {'description': description}
-        sysaid_settings = self._sysaid_settings
-        if sysaid_settings['enabled'] is True:
-            try:
-                if sysaid_settings['use_adapter'] is True:
-                    response = self.request_remote_plugin('create_incident', 'sysaid_adapter', 'post',
-                                                          json=sysaid_dict)
-                    return response.text
-                else:
-                    sysaid_connection = SysaidConnection(domain=sysaid_settings['domain'],
-                                                         verify_ssl=sysaid_settings.get("verify_ssl"),
-                                                         username=sysaid_settings.get("username"),
-                                                         password=sysaid_settings.get("password"),
-                                                         https_proxy=sysaid_settings.get("https_proxy"))
-                    with sysaid_connection:
-                        sysaid_connection.create_sysaid_incident(sysaid_dict)
-                        return ''
-            except Exception as e:
-                logger.exception(f"Got exception creating Sysaid incident wiht {sysaid_dict}")
-                return f'Got exception creating Sysaid incident: {str(e)}'
-
-    def create_service_now_computer(self, name, mac_address=None, ip_address=None,
-                                    manufacturer=None, os=None, serial_number=None,
-                                    to_correlate_plugin_unique_name=None, to_correlate_device_id=None):
-        connection_dict = dict()
-        if name is None or name == "":
-            return
-        connection_dict["name"] = name
-        if mac_address is not None and mac_address != "":
-            connection_dict["mac_address"] = mac_address
-        if ip_address is not None and ip_address != "":
-            connection_dict["ip_address"] = ip_address
-        if manufacturer is not None and manufacturer != "":
-            connection_dict["manufacturer"] = manufacturer
-        if serial_number is not None and serial_number != "":
-            connection_dict["serial_number"] = serial_number
-        if os is not None and os != "":
-            connection_dict["os"] = os
-        request_json = {'snow': connection_dict,
-                        'to_ccorrelate': {'to_correlate_plugin_unique_name': to_correlate_plugin_unique_name,
-                                          'device_id': to_correlate_device_id}}
-        serive_now_settings = self._service_now_settings
-        if serive_now_settings['enabled'] is True:
-            if serive_now_settings['use_adapter'] is True:
-                response = self.request_remote_plugin('create_computer', 'service_now_adapter', 'post',
-                                                      json=request_json)
-                return response.text
-            try:
-                service_now_connection = ServiceNowConnection(domain=serive_now_settings['domain'],
-                                                              verify_ssl=serive_now_settings.get("verify_ssl"),
-                                                              username=serive_now_settings.get("username"),
-                                                              password=serive_now_settings.get("password"),
-                                                              https_proxy=serive_now_settings.get("https_proxy"))
-                with service_now_connection:
-                    service_now_connection.create_service_now_computer(connection_dict)
-                    return ''
-            except Exception as e:
-                logger.exception(f"Got exception creating ServiceNow computer with {name}")
-                return f'Got exception creating ServiceNow computer: {str(e)}'
-
     def create_jira_ticket(self, porject_key, summary, description, issue_type):
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
@@ -2419,10 +2295,6 @@ class PluginBase(Configurable, Feature):
         else:
             self._syslog_settings = current_syslog
 
-        self._service_now_settings = config['service_now_settings']
-        self._sysaid_settings = config['sysaid_settings']
-        self._fresh_service_settings = config['fresh_service_settings']
-
         global_ssl = config['global_ssl']
         if global_ssl.get('enabled'):
             config_cert = self._grab_file_contents(global_ssl.get('cert_file'), stored_locally=False)
@@ -2480,6 +2352,110 @@ class PluginBase(Configurable, Feature):
     def global_settings_schema():
         return {
             "items": [
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Override default SSL settings',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'hostname',
+                            'title': 'This site\'s hostname',
+                            'type': 'string'
+                        },
+                        *MANDATORY_SSL_CONFIG_SCHEMA,
+                    ],
+                    'name': 'global_ssl',
+                    'title': 'SSL Settings',
+                    'type': 'array',
+                    'required': ['enabled', 'hostname', 'cert_file', 'private_key']
+                },
+                {
+                    'name': PROXY_SETTINGS,
+                    'title': 'Proxy settings',
+                    'type': 'array',
+                    'required': ['proxy_addr', 'proxy_port'],
+                    'items': [
+                        {
+                            "name": "enabled",
+                            "title": "Proxy Enabled",
+                            "type": "bool",
+                            "required": True
+                        },
+                        {
+                            'name': PROXY_ADDR,
+                            'title': 'Proxy address',
+                            'type': 'string'
+                        },
+                        {
+                            'name': PROXY_PORT,
+                            'title': 'Proxy port',
+                            'type': 'number'
+                        },
+                        {
+                            'name': PROXY_USER,
+                            'title': 'Proxy username',
+                            'type': 'string'
+                        },
+                        {
+                            'name': PROXY_PASSW,
+                            'title': 'Proxy password',
+                            'type': 'string'
+                        },
+                        {
+                            'name': PROXY_VERIFY,
+                            'title': 'Verify ssl',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': PROXY_FOR_ADAPTERS,
+                            'title': 'Should adapters use this proxy?',
+                            'type': 'bool'
+                        }
+                    ]
+                },
+                {
+                    "items": [
+                        {
+                            "name": "enabled",
+                            "title": "Send emails",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "smtpHost",
+                            "title": "Email Host",
+                            "type": "string"
+                        },
+                        {
+                            "name": "smtpPort",
+                            "title": "Port",
+                            "type": "integer",
+                            "format": "port"
+                        },
+                        {
+                            "name": "smtpUser",
+                            "title": "User Name",
+                            "type": "string"
+                        },
+                        {
+                            "name": "smtpPassword",
+                            "title": "Password",
+                            "type": "string",
+                            "format": "password"
+                        },
+                        *COMMON_SSL_CONFIG_SCHEMA,
+                        {
+                            'name': 'sender_address',
+                            'title': 'Sender Address',
+                            'type': 'string'
+                        }
+                    ],
+                    "name": "email_settings",
+                    "title": "Email Settings",
+                    "type": "array",
+                    "required": ["smtpHost", "smtpPort"]
+                },
                 {
                     "items": [
                         {
@@ -2539,52 +2515,6 @@ class PluginBase(Configurable, Feature):
                     "required": ["https_log_server"]
                 },
                 {
-                    "items": [
-                        {
-                            "name": "enabled",
-                            "title": "Use ServiceNow",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "use_adapter",
-                            "title": "Use ServiceNow Adapter",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "domain",
-                            "title": "ServiceNow Domain",
-                            "type": "string"
-                        },
-                        {
-                            "name": "username",
-                            "title": "User Name",
-                            "type": "string"
-                        },
-                        {
-                            "name": "password",
-                            "title": "Password",
-                            "type": "string",
-                            "format": "password"
-                        },
-                        {
-                            "name": "verify_ssl",
-                            "title": "Verify SSL",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "https_proxy",
-                            "title": "HTTPS Proxy",
-                            "type": "string"
-                        }
-                    ],
-                    "required": [
-                        "enabled"
-                    ],
-                    "type": "array",
-                    "name": "service_now_settings",
-                    "title": "ServiceNow Settings",
-                },
-                {
                     'type': 'array',
                     'title': 'Jira Settings',
                     'name': 'jira_settings',
@@ -2618,146 +2548,6 @@ class PluginBase(Configurable, Feature):
                             "type": "bool"
                         }
                     ],
-                },
-                {
-                    "items": [
-                        {
-                            "name": "enabled",
-                            "title": "Use FreshService",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "domain",
-                            "title": "FreshService Domain",
-                            "type": "string"
-                        },
-                        {
-                            "name": "api_key",
-                            "title": "API Key",
-                            "type": "string",
-                            "format": "password"
-                        },
-                        {
-                            "name": "admin_email",
-                            "title": "Admin Email",
-                            "type": "string"
-                        }
-                    ],
-                    "required": [
-                        "enabled",
-                        "domain",
-                        "api_key",
-                        "admin_email"
-                    ],
-                    "type": "array",
-                    "name": "fresh_service_settings",
-                    "title": "FreshService Settings",
-                },
-                {
-                    "items": [
-                        {
-                            "name": "enabled",
-                            "title": "Send emails",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "smtpHost",
-                            "title": "Email Host",
-                            "type": "string"
-                        },
-                        {
-                            "name": "smtpPort",
-                            "title": "Port",
-                            "type": "integer",
-                            "format": "port"
-                        },
-                        {
-                            "name": "smtpUser",
-                            "title": "User Name",
-                            "type": "string"
-                        },
-                        {
-                            "name": "smtpPassword",
-                            "title": "Password",
-                            "type": "string",
-                            "format": "password"
-                        },
-                        *COMMON_SSL_CONFIG_SCHEMA,
-                        {
-                            'name': 'sender_address',
-                            'title': 'Sender Address',
-                            'type': 'string'
-                        }
-                    ],
-                    "name": "email_settings",
-                    "title": "Email Settings",
-                    "type": "array",
-                    "required": ["smtpHost", "smtpPort"]
-                },
-                {
-                    'items': [
-                        {
-                            'name': 'enabled',
-                            'title': 'Override default SSL settings',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'hostname',
-                            'title': 'This site\'s hostname',
-                            'type': 'string'
-                        },
-                        *MANDATORY_SSL_CONFIG_SCHEMA,
-                    ],
-                    'name': 'global_ssl',
-                    'title': 'SSL Settings',
-                    'type': 'array',
-                    'required': ['enabled', 'hostname', 'cert_file', 'private_key']
-                },
-                {
-                    "items": [
-                        {
-                            "name": "enabled",
-                            "title": "Use Sysaid",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "use_adapter",
-                            "title": "Use Sysaid Adapter",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "domain",
-                            "title": "Sysaid Domain",
-                            "type": "string"
-                        },
-                        {
-                            "name": "username",
-                            "title": "User Name",
-                            "type": "string"
-                        },
-                        {
-                            "name": "password",
-                            "title": "Password",
-                            "type": "string",
-                            "format": "password"
-                        },
-                        {
-                            "name": "verify_ssl",
-                            "title": "Verify SSL",
-                            "type": "bool"
-                        },
-                        {
-                            "name": "https_proxy",
-                            "title": "HTTPS Proxy",
-                            "type": "string"
-                        }
-                    ],
-                    "required": [
-                        "enabled"
-                    ],
-                    "type": "array",
-                    "name": "sysaid_settings",
-                    "title": "Sysaid Settings",
                 },
                 {
                     "items": [
@@ -2807,50 +2597,6 @@ class PluginBase(Configurable, Feature):
                     "type": "array"
                 },
                 {
-                    'name': PROXY_SETTINGS,
-                    'title': 'Proxy settings',
-                    'type': 'array',
-                    'required': ['proxy_addr', 'proxy_port'],
-                    'items': [
-                        {
-                            "name": "enabled",
-                            "title": "Proxy Enabled",
-                            "type": "bool",
-                            "required": True
-                        },
-                        {
-                            'name': PROXY_ADDR,
-                            'title': 'Proxy address',
-                            'type': 'string'
-                        },
-                        {
-                            'name': PROXY_PORT,
-                            'title': 'Proxy port',
-                            'type': 'number'
-                        },
-                        {
-                            'name': PROXY_USER,
-                            'title': 'Proxy username',
-                            'type': 'string'
-                        },
-                        {
-                            'name': PROXY_PASSW,
-                            'title': 'Proxy password',
-                            'type': 'string'
-                        },
-                        {
-                            'name': PROXY_VERIFY,
-                            'title': 'Verify ssl',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': PROXY_FOR_ADAPTERS,
-                            'title': 'Should adapters use this proxy?',
-                            'type': 'bool'
-                        }
-                    ]
-                },
-                {
                     "items": [
                         {
                             "name": NOTIFY_ADAPTERS_FETCH,
@@ -2897,30 +2643,6 @@ class PluginBase(Configurable, Feature):
     @staticmethod
     def global_settings_defaults():
         return {
-            "service_now_settings": {
-                "enabled": False,
-                "use_adapter": False,
-                "domain": None,
-                "username": None,
-                "password": None,
-                "https_proxy": None,
-                "verify_ssl": True
-            },
-            "sysaid_settings": {
-                "enabled": False,
-                "use_adapter": False,
-                "domain": None,
-                "username": None,
-                "password": None,
-                "https_proxy": None,
-                "verify_ssl": True
-            },
-            'fresh_service_settings': {
-                'enabled': False,
-                'domain': None,
-                'api_key': None,
-                'admin_email': None
-            },
             'jira_settings': {
                 'enabled': False,
                 'domain': None,

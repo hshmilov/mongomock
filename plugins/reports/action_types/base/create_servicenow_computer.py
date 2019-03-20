@@ -1,6 +1,7 @@
 import logging
 
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
+from axonius.clients.service_now.connection import ServiceNowConnection
 from reports.action_types.action_type_base import ActionTypeBase
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -14,15 +15,99 @@ class ServiceNowComputerAction(ActionTypeBase):
     @staticmethod
     def config_schema() -> dict:
         return {
+            'items': [
+                {
+                    'name': 'use_adapter',
+                    'title': 'Use ServiceNow Adapter',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'domain',
+                    'title': 'ServiceNow Domain',
+                    'type': 'string'
+                },
+                {
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+                'use_adapter'
+            ],
+            'type': 'array'
         }
 
     @staticmethod
     def default_config() -> dict:
         return {
+            'use_adapter': False,
+            'domain': None,
+            'username': None,
+            'password': None,
+            'https_proxy': None,
+            'verify_ssl': True
         }
+
+    def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
+                                     manufacturer=None, os_type=None, serial_number=None,
+                                     to_correlate_plugin_unique_name=None, to_correlate_device_id=None):
+        connection_dict = dict()
+        if not name:
+            return None
+        connection_dict['name'] = name
+        if mac_address:
+            connection_dict['mac_address'] = mac_address
+        if ip_address:
+            connection_dict['ip_address'] = ip_address
+        if manufacturer:
+            connection_dict['manufacturer'] = manufacturer
+        if serial_number:
+            connection_dict['serial_number'] = serial_number
+        if os_type:
+            connection_dict['os'] = os_type
+        request_json = {'snow': connection_dict,
+                        'to_ccorrelate': {'to_correlate_plugin_unique_name': to_correlate_plugin_unique_name,
+                                          'device_id': to_correlate_device_id}}
+
+        if self._config['use_adapter'] is True:
+            response = self._plugin_base.request_remote_plugin('create_computer', 'service_now_adapter', 'post',
+                                                               json=request_json)
+            return response.text
+        try:
+            if not self._config.get('domain') or not self._config.get('username') or not self._config.get('password'):
+                return 'Missing Parameters For Connection'
+            service_now_connection = ServiceNowConnection(domain=self._config['domain'],
+                                                          verify_ssl=self._config.get('verify_ssl'),
+                                                          username=self._config.get('username'),
+                                                          password=self._config.get('password'),
+                                                          https_proxy=self._config.get('https_proxy'))
+            with service_now_connection:
+                service_now_connection.create_service_now_computer(connection_dict)
+                return ''
+        except Exception as e:
+            logger.exception(f'Got exception creating ServiceNow computer with {name}')
+            return f'Got exception creating ServiceNow computer: {str(e)}'
 
     # pylint: disable=R0912,R0914,R0915,R1702
     def _run(self) -> EntitiesResult:
+
         service_now_projection = {
             'internal_axon_id': 1,
             'adapters.plugin_unique_name': 1,
@@ -91,14 +176,14 @@ class ServiceNowComputerAction(ActionTypeBase):
                 # If we don't have hostname we use asset name
                 name_raw = name_raw if name_raw else asset_name_raw
 
-                message = self._plugin_base.create_service_now_computer(name=name_raw,
-                                                                        mac_address=mac_address_raw,
-                                                                        ip_address=ip_address_raw,
-                                                                        manufacturer=manufacturer_raw,
-                                                                        os=os_raw,
-                                                                        serial_number=serial_number_raw,
-                                                                        to_correlate_plugin_unique_name=corre_plugin_id,
-                                                                        to_correlate_device_id=to_correlate_device_id)
+                message = self._create_service_now_computer(name=name_raw,
+                                                            mac_address=mac_address_raw,
+                                                            ip_address=ip_address_raw,
+                                                            manufacturer=manufacturer_raw,
+                                                            os_type=os_raw,
+                                                            serial_number=serial_number_raw,
+                                                            to_correlate_plugin_unique_name=corre_plugin_id,
+                                                            to_correlate_device_id=to_correlate_device_id)
 
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:

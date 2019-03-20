@@ -1,0 +1,3 @@
+DEVICE_PER_PAGE = 100
+MAX_NUMBER_OF_DEVICES = 1000000
+DEFAULT_DOMAIN_NAME = 'https://api.cloudpassage.com'

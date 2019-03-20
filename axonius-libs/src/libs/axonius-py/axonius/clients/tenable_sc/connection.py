@@ -2,7 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from tenable_security_center_adapter import consts
+from axonius.clients.tenable_sc import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -10,6 +10,12 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class TenableSecurityScannerConnection(RESTConnection):
     # This code heavily relies on pyTenable https://github.com/tenable/pyTenable/blob/
     # 24e0fbd6191907b46c4e2e1b6cee176e93ad6d4d/tenable/securitycenter/securitycenter.py
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, url_base_prefix='/rest/',
+                         headers={'Content-Type': 'application/json',
+                                  'Accept': 'application/json'}, **kwargs)
+
     def _connect(self):
         if self._username is not None and self._password is not None:
             # Based on Tenable SCCV Documentation (https://docs.tenable.com/sccv/api/index.html)
@@ -71,7 +77,7 @@ class TenableSecurityScannerConnection(RESTConnection):
         ips_raw = (asset_id_raw.get('typeFields') or {}).get('definedIPs').split(',')
         for ip in ips:
             if ip not in ips_raw:
-                ips_raw.add(ip)
+                ips_raw.append(ip)
         self._patch('asset',
                     body_params={'definedIPs': ','.join(ips_raw), 'id': asset_id})
         return True

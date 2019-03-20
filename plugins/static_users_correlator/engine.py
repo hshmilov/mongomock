@@ -19,10 +19,45 @@ def get_ad_upn(adapter_data):
     return None
 
 
+def get_username(adapter_data):
+    username = adapter_data['data'].get('username')
+    if username:
+        return username.lower().strip()
+    return None
+
+
 def get_ad_display_name(adapter_data):
     ad_display_name = adapter_data['data'].get('ad_display_name')
     if ad_display_name:
         return ad_display_name.lower().strip()
+    return None
+
+
+def get_ad_display_name_username(adapter_data):
+    ad_display_name = get_ad_display_name(adapter_data)
+    if ad_display_name:
+        return ad_display_name
+    username = get_username(adapter_data)
+    if username:
+        return username
+    return None
+
+
+def compare_ad_display_name_username(adapter_data1, adapter_data2):
+    ad_display_name_username1 = get_ad_display_name_username(adapter_data1)
+    ad_display_name_username2 = get_ad_display_name_username(adapter_data2)
+    if ad_display_name_username1 and ad_display_name_username2:
+        return ad_display_name_username1 == ad_display_name_username2
+    return False
+
+
+def get_ad_upn_mail(adapter_data):
+    ad_upn = get_ad_upn(adapter_data)
+    if ad_upn:
+        return ad_upn
+    email = adapter_data.get(NORMALIZED_MAIL)
+    if email:
+        return email
     return None
 
 
@@ -38,6 +73,14 @@ def compare_ad_upn(adapter_data1, adapter_data2):
     ad_upn_1 = get_ad_upn(adapter_data1)
     ad_upn_2 = get_ad_upn(adapter_data2)
     if ad_upn_1 and ad_upn_2 and ad_upn_1 == ad_upn_2:
+        return True
+    return False
+
+
+def compare_ad_upn_mail(adapter_data1, adapter_data2):
+    ad_upn_1_mail = get_ad_upn_mail(adapter_data1)
+    ad_upn_2_mail = get_ad_upn_mail(adapter_data2)
+    if ad_upn_1_mail and ad_upn_2_mail and ad_upn_1_mail == ad_upn_2_mail:
         return True
     return False
 
@@ -122,6 +165,17 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                           {'Reason': 'They have the same ad upn'},
                                           CorrelationReason.StaticAnalysis)
 
+    def _correlate_ad_upn_mail(self, entities):
+        logger.info('Starting to correlate on ad upn mail')
+        filtered_adapters_list = filter(get_ad_upn_mail, entities)
+        yield from self._bucket_correlate(list(filtered_adapters_list),
+                                          [get_ad_upn_mail],
+                                          [compare_ad_upn_mail],
+                                          [],
+                                          [],
+                                          {'Reason': 'They have the same ad upn mail'},
+                                          CorrelationReason.StaticAnalysis)
+
     def _correlate_email_prefix(self, entities):
         logger.info('Starting to correlate on mail prefix')
         mails_indexed = {}
@@ -171,9 +225,25 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same AD display name'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_ad_display_name_username(self, entities):
+        """
+        Correlate Azure AD and AD
+        """
+        logger.info('Starting to correlate on AD Display + username')
+        filtered_adapters_list = filter(get_ad_display_name_username, entities)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_ad_display_name_username],
+                                      [compare_ad_display_name_username],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same AD display name- username'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         yield from self._correlate_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_upn(normalize_adapter_users(entities))
+        yield from self._correlate_ad_upn_mail(normalize_adapter_users(entities))
         yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
+        yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:
             yield from self._correlate_email_prefix(normalize_adapter_users(entities))

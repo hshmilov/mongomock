@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    cloudpassage_adapter: {
+        title: 'CloudPassage Halo - BETA',
+        description: 'CloudPassage Halo is a security automation platform that delivers comprehensive visibility, protection, and continuous compliance monitoring to reduce cyber security risks.'
+    },
     redcloack_adapter: {
         title: 'Secureworks Red Cloak - BETA',
         description: 'Secureworks Red Cloak is an Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity.'

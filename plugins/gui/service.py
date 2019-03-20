@@ -2200,8 +2200,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'mail': self._email_settings['enabled'] if self._email_settings else False,
                 'syslog': self._syslog_settings['enabled'] if self._system_settings else False,
                 'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
-                'serviceNow': self._service_now_settings['enabled'] if self._service_now_settings else False,
-                'freshService': self._fresh_service_settings['enabled'] if self._fresh_service_settings else False,
                 'jira': self._jira_settings['enabled'] if self._jira_settings else False
             }
         })
