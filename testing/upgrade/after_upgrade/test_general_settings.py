@@ -2,7 +2,7 @@ from services.standalone_services.syslog_server import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import EmailSettings, FreshServiceSettings, Saml, TEMP_FILE_PREFIX
+from ui_tests.tests.ui_consts import EmailSettings, Saml, TEMP_FILE_PREFIX
 
 
 class TestGeneralSettings(TestBase):
@@ -33,16 +33,6 @@ class TestGeneralSettings(TestBase):
         assert self.settings_page.is_toggle_selected(self.settings_page.find_syslog_toggle())
         assert self.settings_page.get_syslog_host() == syslog_server.name
         assert int(self.settings_page.get_syslog_port()) == syslog_server.tcp_port
-
-    def test_fresh_service_settings(self):
-        self.settings_page.switch_to_page()
-        self.settings_page.click_global_settings()
-        self.settings_page.wait_for_spinner_to_end()
-
-        assert self.settings_page.is_toggle_selected(self.settings_page.find_fresh_service_toggle())
-        assert self.settings_page.get_fresh_service_domain() == FreshServiceSettings.domain
-        assert self.settings_page.get_fresh_service_api_key() == FreshServiceSettings.apikey
-        assert self.settings_page.get_fresh_service_email() == FreshServiceSettings.email
 
     def test_execution_settings(self):
         self.settings_page.switch_to_page()

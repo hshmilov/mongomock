@@ -39,7 +39,6 @@ class SettingsPage(Page):
     SYSLOG_PORT = 'syslogPort'
     SYSLOG_SSL_CSS_DROPBOX = '[for=use_ssl]+div'
     SYSLOG_SSL_CSS_DROPBOX_OPTIONS = '[for=use_ssl]+div>.expand>div>.x-select-options>div'
-    USE_FRESH_SERVICE = 'Use FreshService'
     FRESH_SERVICE_DOMAIN = 'domain'
     FRESH_SERVICE_API_KEY = 'api_key'
     FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'
@@ -219,9 +218,6 @@ class SettingsPage(Page):
         self.select_option_without_search(self.SYSLOG_SSL_CSS_DROPBOX,
                                           self.SYSLOG_SSL_CSS_DROPBOX_OPTIONS,
                                           text)
-
-    def find_fresh_service_toggle(self):
-        return self.find_checkbox_by_label(self.USE_FRESH_SERVICE)
 
     def find_execution_toggle(self):
         return self.find_checkbox_by_label(self.USE_EXECUTION)
