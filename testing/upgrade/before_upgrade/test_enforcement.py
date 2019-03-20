@@ -1,3 +1,5 @@
+import time
+
 from ui_tests.pages.enforcements_page import Period
 from ui_tests.tests.ui_consts import Enforcements
 from ui_tests.tests.ui_test_base import TestBase
@@ -9,6 +11,8 @@ class TestPrepareEnforcement(TestBase):
                                                         Enforcements.enforcement_query_1)
 
         self.enforcements_page.select_trigger()
+        # Sometimes the page triggers are rendered too slow and it caused us to click another element (label)
+        time.sleep(2)
         self.enforcements_page.choose_period(Period.Daily)  # Period
         self.enforcements_page.save_trigger()
         self.enforcements_page.add_push_system_notification()  # Action
