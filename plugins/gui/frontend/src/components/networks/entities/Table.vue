@@ -1,17 +1,18 @@
 <template>
   <div class="x-entity-table">
-    <span
-      v-if="ecFilter"
-      class="ec_results"
-      style="float:left"
+    <span class="table-results-title"
     >
-      <i>Showing results of action {{ ecFilter.details.action }} from enforcement {{ ecFilter.details.enforcement }}</i>
-      <x-button
-        link
-        @click="clearEc"
-      >clear</x-button>
-    </span>
-    <span class="historical">
+      <template v-if="ecFilter">
+        <i class="text">{{ecResultsMessage}}</i>
+        <x-button
+          link
+          @click="clearEc"
+        >Clear</x-button>
+        <x-button
+          link
+          @click="navigateFilteredTask"
+        >Go to Task</x-button>
+      </template>
       <x-historical-date
         v-model="historical"
         :module="module"
@@ -103,6 +104,9 @@
       },
       hasSelection () {
         return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
+      },
+      ecResultsMessage() {
+        return `Showing ${this.ecFilter.success.split('_')[0]} results of action ${this.ecFilter.details.action} of enforcement ${this.ecFilter.details.enforcement}, Task ${this.ecFilter.pretty_id}`
       }
     },
     data () {
@@ -143,6 +147,9 @@
           }
         })
       },
+      navigateFilteredTask() {
+        this.$router.push({path: `/enforcements/tasks/${this.ecFilter.details.id}`})
+      },
       onTableData (dataId) {
         this.$emit('data', dataId)
       }
@@ -154,12 +161,12 @@
     .x-entity-table {
         height: calc(100% - 36px);
     }
+    .table-results-title {
+        display: flex;
+        align-items: center;
+        .x-historical-date {
+            flex: 1 0 auto;
+        }
 
-    .historical {
-        float: right;
-    }
-
-    .ec_results {
-        float: left;
     }
 </style>

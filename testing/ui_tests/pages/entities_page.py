@@ -107,7 +107,7 @@ class EntitiesPage(Page):
     CUSTOM_DATA_ERROR_CSS = '.footer .error-text'
     CUSTOM_DATA_BULK_CONTAINER_CSS = '.actions'
 
-    ENFORCEMENT_RESULTS_HEADER = 'Showing results of action {action_name} from enforcement {enforcement_name}'
+    ENFORCEMENT_RESULTS_HEADER = 'results of action {action_name} of enforcement {enforcement_name}, Task'
 
     @property
     def url(self):
@@ -654,6 +654,6 @@ class EntitiesPage(Page):
         self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
         self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data...')).click()
 
-    def find_enforcement_results_header(self, enforcement_name, action_name):
-        return self.find_element_by_text(
-            self.ENFORCEMENT_RESULTS_HEADER.format(enforcement_name=enforcement_name, action_name=action_name))
+    def is_enforcement_results_header(self, enforcement_name, action_name):
+        return self.ENFORCEMENT_RESULTS_HEADER.format(enforcement_name=enforcement_name, action_name=action_name) \
+            in self.driver.find_element_by_css_selector('.table-results-title .text').text

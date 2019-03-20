@@ -69,6 +69,10 @@
                         ...state.tasks.current.data,
                         period
                     }
+                },
+                ecFilter(state) {
+                    if (!this.triggerView) return null
+                    return state[this.triggerView.entity].view.ecFilter
                 }
             }),
             id() {
@@ -142,6 +146,8 @@
                 }
             },
             triggerView() {
+                if (!this.taskResult || !this.taskResult.metadata || !this.taskResult.metadata.trigger) return null
+
                 return this.taskResult.metadata.trigger.view
             }
         },
@@ -159,6 +165,13 @@
             ...mapMutations({
                 updateView: UPDATE_DATA_VIEW
             }),
+            initData() {
+                if (this.ecFilter && this.ecFilter.condition && this.ecFilter.condition !== mainCondition) {
+                    this.selectAction(this.ecFilter.condition, this.ecFilter.i)
+                } else {
+                    this.selectActionMain()
+                }
+            },
             getStatus(action) {
                 if (!action.results) return 'disabled'
                 if (typeof (action.results) === 'string') return 'error'
@@ -200,7 +213,7 @@
                             i,
                             success,
                             details: {
-                                enforcement: this.name, action: this.actionInView.definition.name
+                                enforcement: this.name, action: this.actionInView.definition.name, id: this.id
                             }
                         }
                     }
@@ -211,11 +224,12 @@
         created() {
             if (!this.taskData.name || this.taskData.uuid !== this.id) {
                 this.fetchTask(this.id).then(() => {
-                    this.selectActionMain()
+                    this.initData()
                 })
             } else {
-                this.selectActionMain()
+                this.initData()
             }
+
         }
     }
 </script>

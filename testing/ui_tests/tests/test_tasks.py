@@ -43,7 +43,7 @@ class TestTasks(TestBase):
         result_element.click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == entities_count
-        assert self.devices_page.find_enforcement_results_header(ENFORCEMENT_NAME, action_name)
+        assert self.devices_page.is_enforcement_results_header(ENFORCEMENT_NAME, action_name)
         assert 'exists_in(' in self.devices_page.find_search_value()
         self.devices_page.page_back()
 
@@ -100,12 +100,14 @@ class TestTasks(TestBase):
 
             self.settings_page.switch_to_page()
             self.settings_page.click_global_settings()
-            self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True)
+            self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True,
+                                                   scroll_to_toggle=False)
             self.settings_page.save_and_wait_for_toaster()
             self.base_page.run_discovery()
 
             self.enforcements_page.switch_to_page()
             self.enforcements_page.click_tasks_button()
+            self.enforcements_page.wait_for_table_to_load()
             self.enforcements_page.click_row()
 
             self._check_action_results(12, 8)
