@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    redcanary_adapter: {
+        title: 'Red Canary - BETA',
+        description: 'Red Canary is an outcome-focused security operations partner for modern teams, deployed in minutes to reduce risk and improve security.'
+    },
     cloudpassage_adapter: {
         title: 'CloudPassage Halo - BETA',
         description: 'CloudPassage Halo is a security automation platform that delivers comprehensive visibility, protection, and continuous compliance monitoring to reduce cyber security risks.'
