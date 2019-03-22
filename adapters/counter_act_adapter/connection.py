@@ -15,7 +15,7 @@ class CounterActConnection(RESTConnection):
                          **kwargs)
 
     def _refresh_token(self):
-        auth_data = f'username={self._username}&password={self._password}'
+        auth_data = {'username': self._username, 'password': self._password}
         self._session_headers['Content-Type'] = 'application/x-www-form-urlencoded'
         response = self._post('login',
                               use_json_in_body=False,

@@ -67,11 +67,15 @@ class AbstractCommand:
         raise NotImplementedError()
 
     @classmethod
-    def _get_command(cls):
+    def _get_command(cls, dynamic_cmd: str = None):
         """ we delete HISTFILE to make sure that we don't write passwords to history.
             In some distros such as redhat, non-interactive path is limited so we prepend
             default path. Add magic logic"""
-        command = f'echo -n {cls.START_MAGIC} && {cls.COMMAND} && echo -n {cls.END_MAGIC}'
+        if not dynamic_cmd:
+            commad_str = cls.COMMAND
+        else:
+            commad_str = dynamic_cmd
+        command = f'echo -n {cls.START_MAGIC} && {commad_str} && echo -n {cls.END_MAGIC}'
         command = f'HISTFILE=/dev/null PATH={cls.STATIC_PATH}:$PATH {command}'
         return command
 
@@ -93,9 +97,9 @@ class AbstractCommand:
     @classmethod
     def from_shell_execute(cls,
                            shell_execute: Callable[[str], str],
-                           password: str = None):
+                           password: str = None, dynamic_cmd: str = None):
         """ factory to create the class given shell_execute function """
-        shell_cmdline = cls._get_command()
+        shell_cmdline = cls._get_command(dynamic_cmd)
 
         # If we have password and the command require root privilege add sudo
         # if not, just try to execute it - maybe it will work
@@ -141,6 +145,20 @@ class LocalInfoCommand(AbstractCommand):
 class ForeignInfoCommand(AbstractCommand):
     def create_axonius_devices(self, create_device_callback):
         raise NotImplementedError()
+
+
+class MD5FilesCommand(LocalInfoCommand):
+
+    @staticmethod
+    def _parse(raw_data):
+        if 'md5sum:' in raw_data or len(raw_data.split('  ')) == 1:
+            return None
+        return raw_data.split('  ')[1] + ':' + raw_data.split('  ')[0]
+
+    @staticmethod
+    def _to_axonius(device, parsed_data):
+        if parsed_data:
+            device.md5_files_list.append(parsed_data)
 
 
 class HostnameCommand(LocalInfoCommand):
@@ -643,10 +661,10 @@ class CommandExecutor:
 
         return parsed
 
-    def yield_command(self, command_cls):
+    def yield_command(self, command_cls, dynamic_cmd=None):
         result = False
         try:
-            command = command_cls.from_shell_execute(self._shell_execute, self._password)
+            command = command_cls.from_shell_execute(self._shell_execute, self._password, dynamic_cmd=dynamic_cmd)
             if command.parse():
                 result = True
             yield command
@@ -654,7 +672,7 @@ class CommandExecutor:
             logger.exception(f'Failed to execute command {command_cls}')
         return result
 
-    def get_commands(self):
+    def get_commands(self, md5_files_list=None):
         for command_cls in self.ALL_COMMANDS:
             try:
                 if isinstance(command_cls, ConcateCommands):
@@ -663,3 +681,9 @@ class CommandExecutor:
                     yield from self.yield_command(command_cls)
             except Exception as e:
                 logger.exception(f'get_devices {command_cls} failed')
+        if md5_files_list:
+            for md5_file in md5_files_list:
+                try:
+                    yield from self.yield_command(MD5FilesCommand, f'md5sum {md5_file}')
+                except Exception:
+                    logger.exception(f'Problem with file {md5_file}')

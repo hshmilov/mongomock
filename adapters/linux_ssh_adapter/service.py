@@ -5,6 +5,8 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
+from axonius.fields import ListField
 from linux_ssh_adapter.client_id import get_client_id
 from linux_ssh_adapter.connection import LinuxSshConnection
 from linux_ssh_adapter.consts import (DEFAULT_PORT, HOSTNAME, IS_SUDOER,
@@ -13,9 +15,9 @@ from linux_ssh_adapter.consts import (DEFAULT_PORT, HOSTNAME, IS_SUDOER,
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class LinuxSshAdapter(AdapterBase):
+class LinuxSshAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        md5_files_list = ListField(str, 'MD5 Files List')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -54,8 +56,7 @@ class LinuxSshAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific host_name
 
@@ -65,7 +66,7 @@ class LinuxSshAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from ((client_name, x) for x in client_data.get_commands())
+            yield from ((client_name, x) for x in client_data.get_commands(self.__md5_files_list))
 
     @staticmethod
     def _clients_schema():
@@ -136,3 +137,32 @@ class LinuxSshAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Manager, AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'md5_files_list',
+                    'title': 'MD5 Files List',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+            ],
+            'pretty_name': 'Linux SSH Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'md5_files_list': None
+        }
+
+    def _on_config_update(self, config):
+        md5_files_list = config['md5_files_list']
+        if md5_files_list:
+            self.__md5_files_list = md5_files_list.split(',')
+        else:
+            self.__md5_files_list = None

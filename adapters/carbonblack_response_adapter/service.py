@@ -125,7 +125,7 @@ class CarbonblackResponseAdapter(AdapterBase):
             if not device_id:
                 logger.warning(f'Bad device id {device_raw}')
                 return None
-            device.id = str(device_id)
+            device.id = str(device_id) + '_' + (device_raw.get('computer_name') or '')
             device.sensor_health_message = device_raw.get('sensor_health_message')
             device.build_version_string = device_raw.get('build_version_string')
             device.sensor_status = device_raw.get('status')

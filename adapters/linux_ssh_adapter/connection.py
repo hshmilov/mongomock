@@ -69,10 +69,10 @@ class LinuxSshConnection:
         output = output.strip().decode('utf-8')
         return output
 
-    def get_commands(self):
+    def get_commands(self, md5_files_list):
         # Pass password if only if sudoer
         password = self._password if self._is_sudoer else None
-        yield from CommandExecutor(self._execute_ssh_cmdline, password).get_commands()
+        yield from CommandExecutor(self._execute_ssh_cmdline, password).get_commands(md5_files_list)
 
     @staticmethod
     def test_reachability(hostname, port):

@@ -8,4 +8,4 @@ client_details = {
     'verify_ssl': False
 }
 
-SOME_DEVICE_ID = '1'
+SOME_DEVICE_ID = '1_EC2AMAZ-V8E9DHF'
