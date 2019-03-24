@@ -71,6 +71,7 @@ class ReportsService(Triggerable, PluginBase):
 
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
         self.__reports_collection = self._get_collection('reports')
+        self.__reports_collection.create_index([('name', pymongo.DESCENDING)], unique=True)
         self.__saved_actions_collection = self._get_collection('saved_actions')
         self.__saved_actions_collection.create_index([('name', pymongo.DESCENDING)], unique=True)
 

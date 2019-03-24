@@ -20,7 +20,10 @@ class ReportsService(PluginService):
         if self.db_schema_version < 2:
             self._update_to_schema(2, self.__update_schema_version_2)
 
-        if self.db_schema_version != 2:
+        if self.db_schema_version < 3:
+            self._update_to_schema(3, self.__update_schema_version_3)
+
+        if self.db_schema_version != 3:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
@@ -153,6 +156,40 @@ class ReportsService(PluginService):
             }
 
             reports_collection.replace_one({'_id': report_data['_id']}, new_report)
+
+    @staticmethod
+    def __update_schema_version_3(db):
+        # Search for duplicate names in the reports collection
+        reports_collection = db['reports']
+        dup_names = reports_collection.aggregate([{
+            '$project': {
+                'name': 1
+            },
+        }, {
+            '$group': {
+                '_id': '$name',
+                'count': {
+                    '$sum': 1
+                }
+            }
+        }, {
+            '$match': {
+                'count': {
+                    '$gt': 1
+                }
+            }
+        }])
+        # For each found, update name to the name + counter, making them unique
+        for dup_name in dup_names:
+            name = dup_name['_id']
+            for i in range(dup_name['count']):
+                reports_collection.update_one({
+                    'name': name
+                }, {
+                    '$set': {
+                        'name': f'{name} {i + 1}'
+                    }
+                })
 
     def _update_to_schema(self, version, to_call):
         print(f'upgrade to schema {version}')

@@ -48,22 +48,27 @@
           </div>
         </div>
         <div class="footer">
-          <x-button
-            v-if="isReadOnly"
-            @click="exit"
-          >Exit</x-button>
-          <template v-else>
+          <div class="error-text">
+            {{ error }}
+          </div>
+          <div>
             <x-button
-              emphasize
-              :disabled="disableRun"
-              @click="saveRun"
-            >Save & Run</x-button>
-            <x-button
-              id="enforcement_save"
-              :disabled="disableSave"
-              @click="saveExit"
-            >Save & Exit</x-button>
-          </template>
+              v-if="isReadOnly"
+              @click="exit"
+            >Exit</x-button>
+            <template v-else>
+              <x-button
+                emphasize
+                :disabled="disableRun"
+                @click="saveRun"
+              >Save & Run</x-button>
+              <x-button
+                id="enforcement_save"
+                :disabled="disableSave"
+                @click="saveExit"
+              >Save & Exit</x-button>
+            </template>
+          </div>
         </div>
       </template>
       <x-card
@@ -127,7 +132,9 @@
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
   import {
-    initRecipe, initAction, initTrigger, FETCH_ENFORCEMENT, SAVE_ENFORCEMENT, RUN_ENFORCEMENT
+    initRecipe, initAction, initTrigger,
+    FETCH_ENFORCEMENT, SAVE_ENFORCEMENT, RUN_ENFORCEMENT,
+    FETCH_SAVED_ENFORCEMENTS
   } from '../../store/modules/enforcements'
 
   import {
@@ -153,6 +160,9 @@
           let user = state.auth.currentUser.data
           if (!user || !user.permissions) return true
           return user.permissions.Enforcements === 'ReadOnly'
+        },
+        enforcementNames(state) {
+          return state.enforcements.savedEnforcements.data
         }
       }),
       id () {
@@ -163,8 +173,20 @@
 
         return this.enforcementData.name
       },
+      error() {
+        if (!this.enforcement.name) {
+          return 'Enforcement Name is a required field'
+        }
+        if (!this.enforcementData.name && this.enforcementNames.includes(this.enforcement.name)) {
+          return 'Name already taken by another Enforcement'
+        }
+        if (!this.mainAction.name) {
+          return 'A Main Action is required for Enforcement'
+        }
+        return ''
+      },
       disableSave () {
-        return !this.enforcement.name || !this.mainAction.name
+        return Boolean(this.error)
       },
       disableRun () {
         return this.disableSave || !this.trigger || !this.trigger.view || !this.trigger.view.name
@@ -280,7 +302,7 @@
       }),
       ...mapActions({
         fetchEnforcement: FETCH_ENFORCEMENT, saveEnforcement: SAVE_ENFORCEMENT,
-        runEnforcement: RUN_ENFORCEMENT
+        runEnforcement: RUN_ENFORCEMENT, fetchSavedEnforcements: FETCH_SAVED_ENFORCEMENTS
       }),
       initData () {
         this.enforcement = { ...this.enforcementData }
@@ -427,50 +449,62 @@
         this.$refs.name.focus()
       }
       this.tour({ name: 'enforcementName' })
+      if (!this.enforcementNames || !this.enforcementNames.length) {
+        this.fetchSavedEnforcements()
+      }
     }
   }
 </script>
 
 <style lang="scss">
-    .x-enforcement {
-        .x-split-box {
-            > .main {
-                display: grid;
-                grid-template-rows: 48px auto 48px;
-                align-items: flex-start;
-                .header {
-                    display: grid;
-                    grid-template-columns: 1fr 2fr;
-                    grid-gap: 8px;
-                    align-items: center;
-                }
-                > .body {
-                    overflow: auto;
-                    max-height: 100%;
-                    .body-flow {
-                        display: grid;
-                        grid-template-rows: min-content;
-                        grid-gap: 24px 0;
-                    }
-                }
-                > .footer {
-                    text-align: right;
-                    align-self: end;
-                }
-            }
-            .details {
-                .x-card {
-                    > .header {
-                        padding-bottom: 12px;
-                        border-bottom: 1px solid $grey-2;
-                    }
-                    height: 100%;
-                    .x-action-library, .x-action-config, .x-trigger-config {
-                        height: calc(100% - 72px);
-                        overflow: auto;
-                    }
-                }
-            }
+  .x-enforcement {
+    .x-split-box {
+      > .main {
+        display: grid;
+        grid-template-rows: 48px auto 48px;
+        align-items: flex-start;
+
+        .header {
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          grid-gap: 8px;
+          align-items: center;
         }
+
+        > .body {
+          overflow: auto;
+          max-height: 100%;
+
+          .body-flow {
+            display: grid;
+            grid-template-rows: min-content;
+            grid-gap: 24px 0;
+          }
+        }
+
+        > .footer {
+          text-align: right;
+          align-self: end;
+          display: flex;
+          flex-direction: column;
+        }
+      }
+
+      .details {
+        .x-card {
+          > .header {
+            padding-bottom: 12px;
+            border-bottom: 1px solid $grey-2;
+          }
+
+          height: 100%;
+
+          .x-action-library, .x-action-config, .x-trigger-config {
+            height: calc(100% - 72px);
+            overflow: auto;
+          }
+        }
+      }
     }
+  }
 </style>

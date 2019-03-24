@@ -18,7 +18,6 @@ from uuid import uuid4
 
 import gridfs
 import ldap3
-import OpenSSL
 import pymongo
 import requests
 from apscheduler.executors.pool import \
@@ -31,6 +30,7 @@ from flask import (after_this_request, has_request_context, jsonify,
                    make_response, redirect, request, send_file, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
+import OpenSSL
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
@@ -1830,6 +1830,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def enforcements_count(self, mongo_filter):
         return jsonify(self.enforcements_collection.count_documents(mongo_filter))
 
+    @gui_add_rule_logged_in('enforcements/saved', required_permissions={Permission(PermissionType.Enforcements,
+                                                                                   PermissionLevel.ReadOnly)})
+    def saved_enforcements(self):
+        """
+        Returns a list of all existing Saved Enforcement names, in order to check duplicates
+        """
+        return jsonify([x['name'] for x in self.enforcements_collection.find({}, {
+            'name': 1
+        })])
+
     @gui_add_rule_logged_in('enforcements/<enforcement_id>', methods=['GET', 'POST'],
                             required_permissions={Permission(PermissionType.Enforcements,
                                                              ReadOnlyJustForGet)})
@@ -1932,7 +1942,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         Returns a list of all existing Saved Action names, in order to check duplicates
         """
-        return jsonify([x['name'] for x in self.enforcements_saved_actions_collection.find({})])
+        return jsonify([x['name'] for x in self.enforcements_saved_actions_collection.find({}, {
+            'name': 1
+        })])
 
     @staticmethod
     def __tasks_query(mongo_filter):
