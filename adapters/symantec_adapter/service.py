@@ -59,11 +59,8 @@ class SymantecAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Symantec Server
         """
-        try:
-            client_data.connect()
+        with client_data:
             yield from client_data.get_device_list()
-        finally:
-            client_data.close()
 
     def _clients_schema(self):
         """

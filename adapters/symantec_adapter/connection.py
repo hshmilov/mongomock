@@ -11,6 +11,8 @@ class SymantecConnection(RESTConnection):
     def __init__(self, *args, username_domain: str = '', **kwargs):
         super().__init__(*args, **kwargs)
         self._username_domain = username_domain
+        self.__token = None
+        self.__adminId = None
 
     def __set_token(self, token, adminId):
         """ Sets the API token (as the connection credentials)
@@ -42,8 +44,9 @@ class SymantecConnection(RESTConnection):
 
     def close(self):
         """ Closes the connection """
-        self._post('identity/logout', body_params={'token': self.__token,
-                                                   'adminId': self.__adminId}, use_json_in_response=False)
+        if self.__token:
+            self._post('identity/logout', body_params={'token': self.__token,
+                                                       'adminId': self.__adminId}, use_json_in_response=False)
         super().close()
 
     def get_device_list(self):

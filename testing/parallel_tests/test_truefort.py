@@ -1,20 +1,20 @@
 import pytest
 
 # pylint: disable=unused-import
-from services.adapters.saltstack_service import SaltstackService, saltstack_fixture
+from services.adapters.truefort_service import TruefortService, truefort_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_saltstack_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
-from saltstack_adapter.client_id import get_client_id
+from test_credentials.test_truefort_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
+from truefort_adapter.client_id import get_client_id
 
 
-class TestSaltstackAdapter(AdapterTestBase):
+class TestTruefortAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return SaltstackService()
+        return TruefortService()
 
     @property
     def adapter_name(self):
-        return 'saltstack_adapter'
+        return 'truefort_adapter'
 
     @property
     def some_client_id(self):

@@ -118,8 +118,10 @@ class CiscoUmbrellaAdapter(AdapterBase):
                 }
             ],
             'required': [
-                'api_key',
-                'api_secret',
+                'network_api_key',
+                'network_api_secret',
+                'management_api_key',
+                'management_api_secret',
                 'verify_ssl'
             ],
             'type': 'array'

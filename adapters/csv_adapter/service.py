@@ -1,7 +1,9 @@
 import datetime
 import logging
+import urllib
 import requests
 import chardet
+from smb.SMBHandler import SMBHandler
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import GetDevicesError
@@ -16,6 +18,9 @@ from axonius.utils.parsing import make_dict_from_csv, normalize_var_name
 from axonius.consts.csv_consts import get_csv_field_names
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+DEVICES_NEEDED_FIELDS = ['id', 'serial', 'mac_address', 'hostname', 'name']
+USERS_NEEDED_FIELDS = ['id', 'username', 'mail', 'name']
 
 
 # pylint: disable=R1702,R0201,R0912,R0915,R0914
@@ -37,55 +42,70 @@ class CsvAdapter(AdapterBase):
         raise NotImplementedError()
 
     def _connect_client(self, client_config):
-        if not client_config.get('csv_http') and 'csv' not in client_config:
-            raise ClientConnectionException('Bad params. No File or URL for CSV')
-        if client_config.get('csv_http'):
-            r = requests.get(client_config.get('csv_http'),
-                             verify=False,
-                             timeout=DEFAULT_TIMEOUT)
-            r.raise_for_status()
+        if not client_config.get('csv_http') and 'csv' not in client_config and not client_config.get('csv_share'):
+            raise ClientConnectionException('Bad params. No File or URL or Share for CSV')
+        self.create_csv_info_from_client_config(client_config)
         return client_config
+
+    def create_csv_info_from_client_config(self, client_config):
+        csv_data_bytes = None
+        if client_config.get('csv_http'):
+            try:
+                csv_data_bytes = requests.get(client_config.get('csv_http'),
+                                              verify=False,
+                                              timeout=DEFAULT_TIMEOUT).content
+            except Exception:
+                logger.exception(f'Couldn\'t get csv info from URL')
+        elif client_config.get('csv_share'):
+            try:
+                share_username = client_config.get('csv_share_username')
+                share_password = client_config.get('csv_share_password')
+                if not share_password or not share_username:
+                    share_password = None
+                    share_username = None
+                share_path = client_config.get('csv_share')
+                if not share_path.startswith('\\\\'):
+                    raise Exception('Bad Share Format')
+                share_path = share_path[2:]
+                share_path = share_path.replace('\\', '/')
+                if share_username and share_password:
+                    share_path = f'{urllib.parse.quote(share_username)}:' \
+                                 f'{urllib.parse.quote(share_password)}@{share_path}'
+                share_path = 'smb://' + share_path
+                opener = urllib.request.build_opener(SMBHandler)
+                with opener.open(share_path) as fh:
+                    csv_data_bytes = fh.read()
+            except Exception:
+                logger.exception(f'Couldn\'t get csv info from share')
+        elif 'csv' in client_config:
+            csv_data_bytes = self._grab_file_contents(client_config['csv'])
+        if csv_data_bytes is None:
+            raise Exception('Bad CSV, could not parse the data')
+        encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+        csv_data = csv_data_bytes.decode(encoding)
+        csv_dict = make_dict_from_csv(csv_data)
+        fields = get_csv_field_names(csv_dict.fieldnames)
+        is_users_csv = client_config.get('is_users_csv', False)
+        if is_users_csv:
+            csv_needed_fields = USERS_NEEDED_FIELDS
+        else:
+            csv_needed_fields = DEVICES_NEEDED_FIELDS
+        if not any(id_field in fields for id_field in csv_needed_fields):
+            logger.error(f'Bad fields names {str(csv_dict.fieldnames)}')
+            raise Exception(f'Strong identifier is missing')
+        return csv_dict, True, client_config.get('user_id')
 
     def _query_users_by_client(self, key, data):
         is_users_csv = data.get('is_users_csv', False)
         if not is_users_csv:
             return None
-        csv_data = None
-        if data.get('csv_http'):
-            try:
-                csv_data_bytes = requests.get(data.get('csv_http'),
-                                              verify=False,
-                                              timeout=DEFAULT_TIMEOUT).content
-                encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
-                csv_data = csv_data_bytes.decode(encoding)
-            except Exception:
-                logger.exception(f'Couldn\'t get csv info from URL')
-        if 'csv' in data and csv_data is None:
-            csv_data_bytes = self._grab_file_contents(data['csv'])
-            encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
-            csv_data = csv_data_bytes.decode(encoding)
-        return make_dict_from_csv(csv_data), True, data.get('user_id')
+        return self.create_csv_info_from_client_config(data)
 
     def _query_devices_by_client(self, client_name, client_data):
         is_users_csv = client_data.get('is_users_csv', False)
         if is_users_csv:
             return None
-        csv_data = None
-        if client_data.get('csv_http'):
-            try:
-                csv_data_bytes = requests.get(client_data.get('csv_http'),
-                                              verify=False,
-                                              timeout=DEFAULT_TIMEOUT).content
-                encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
-                csv_data = csv_data_bytes.decode(encoding)
-            except Exception:
-                logger.exception(f'Couldn\'t get csv info from URL')
-
-        if 'csv' in client_data and csv_data is None:
-            csv_data_bytes = self._grab_file_contents(client_data['csv'])
-            encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
-            csv_data = csv_data_bytes.decode(encoding)
-        return make_dict_from_csv(csv_data), True, client_data.get('user_id')
+        return self.create_csv_info_from_client_config(client_data)
 
     def _clients_schema(self):
         return {
@@ -110,7 +130,23 @@ class CsvAdapter(AdapterBase):
                     'name': 'csv_http',
                     'title': 'CSV URL Path',
                     'type': 'string'
-                }
+                },
+                {
+                    'name': 'csv_share',
+                    'title': 'CSV Share Path',
+                    'type': 'string'
+                },
+                {
+                    'name': 'csv_share_username',
+                    'title': 'CSV Share Username',
+                    'type': 'string'
+                },
+                {
+                    'name': 'csv_share_password',
+                    'title': 'CSV Share Password',
+                    'type': 'string',
+                    'format': 'password'
+                },
             ],
             'required': [
                 'user_id',
@@ -124,8 +160,7 @@ class CsvAdapter(AdapterBase):
 
         csv_data, should_parse_all_columns, file_name = user
         fields = get_csv_field_names(csv_data.fieldnames)
-
-        if not any(id_field in fields for id_field in ['id', 'username', 'mail', 'name']):
+        if not any(id_field in fields for id_field in USERS_NEEDED_FIELDS):
             logger.error(f'Bad user fields names {str(csv_data.fieldnames)}')
             raise GetDevicesError(f'Strong user identifier is missing for users')
 
@@ -173,8 +208,7 @@ class CsvAdapter(AdapterBase):
             return
         csv_data, should_parse_all_columns, file_name = devices_raw_data
         fields = get_csv_field_names(csv_data.fieldnames)
-
-        if not any(id_field in fields for id_field in ['id', 'serial', 'mac_address', 'hostname', 'name']):
+        if not any(id_field in fields for id_field in DEVICES_NEEDED_FIELDS):
             logger.error(f'Bad devices fields names {str(csv_data.fieldnames)}')
             raise GetDevicesError(f'Strong identifier is missing for devices')
 

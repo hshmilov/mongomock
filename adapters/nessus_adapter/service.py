@@ -33,6 +33,8 @@ class NessusAdapter(ScannerAdapterBase):
     """ An adapter for Tenable's Nessus Vulnerability scanning platform. """
 
     class MyDeviceAdapter(DeviceAdapter):
+        nessus_no_scan_id = Field(str, description='This field is only for correlation purposes')
+        scan_id = Field(str, 'Scan ID')
         vulnerabilities = ListField(NessusVulnerability, "Vulnerability")
 
     def __init__(self, *args, **kwargs):
@@ -111,7 +113,7 @@ class NessusAdapter(ScannerAdapterBase):
                                 device_dict[host_id] = host_details
                             # Add current scan info to the host, by scan id
                             device_dict[host_id]['scans'][scan['id']] = host
-                            yield device_dict[host_id]
+                            yield device_dict[host_id], scan.get('id')
                         except Exception:
                             logger.exception(f"Got problems getting host {str(host)}")
                 except Exception:
@@ -181,9 +183,11 @@ class NessusAdapter(ScannerAdapterBase):
         :param devices_raw_data: Data as originally retrieved from Nessus
         :return: Data structured as expected by adapters
         """
-        for device_raw in devices_raw_data:
+        for device_raw, scan_id in devices_raw_data:
             try:
                 device = self._new_device_adapter()
+                device_id = ''
+                device.scan_id = scan_id
                 try:
                     device.figure_os(str(device_raw.get('info', {}).get('operating-system', '')))
                 except Exception:
@@ -191,6 +195,7 @@ class NessusAdapter(ScannerAdapterBase):
                 try:
                     macs = (device_raw.get('info', {}).get('mac-address') or '').split('\n')
                     device.add_ips_and_macs(macs, device_raw.get('info', {}).get('host-ip'))
+                    device_id += str(macs) + '_' + str(device_raw.get('info', {}).get('host-ip')) + '_'
                 except Exception:
                     logger.exception(f"Problems with add nic at device {device_raw}")
                 try:
@@ -205,6 +210,7 @@ class NessusAdapter(ScannerAdapterBase):
                         else:
                             hostname = netbios_name
                         device.hostname = hostname
+                        device_id += str(hostname)
                 except Exception:
                     logger.warning(f"Couldn't parse hostname from netbios name {netbios_name}")
                 vulnerabilities_raw = device_raw.get("vulnerabilities", [])
@@ -220,6 +226,11 @@ class NessusAdapter(ScannerAdapterBase):
                         device.vulnerabilities.append(new_vulnerability)
                     except Exception:
                         logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
+                if not device_id:
+                    logger.warning(f'Bad device with no id {device_raw}')
+                    continue
+                device.nessus_no_scan_id = device_id
+                device.id = str(scan_id) + '_' + device_id
                 device.set_raw(device_raw)
                 yield device
             except Exception:

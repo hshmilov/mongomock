@@ -1,0 +1,10 @@
+PASSWORD = 'password'
+USER = 'username'
+PROMISEC_HOST = 'server'
+PROMISEC_PORT = 'port'
+PROMISEC_DATABASE = 'database'
+DRIVER = 'driver'
+DEFAULT_PROMISEC_PORT = 1433
+DEFAULT_PROMISEC_DATABASE = 'PROMISEC'
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+PROMISEC_QUERY = 'Select * from v_scanned_hosts'

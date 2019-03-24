@@ -25,7 +25,8 @@ class CrowdStrikeConnection(RESTConnection):
         else:
             raise RESTException('No user name or API key')
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, async_chunk_size):
         # pylint: disable=R0912
         ids_list = []
         offset = 0
@@ -72,7 +73,7 @@ class CrowdStrikeConnection(RESTConnection):
                     logger.exception(f'Problem getting async response {str(response)}')
         async_requests_first = async_requests[:480]
         async_requests = async_requests[480:]
-        for response in self._async_get_only_good_response(async_requests_first, chunks=1):
+        for response in self._async_get_only_good_response(async_requests_first, chunks=async_chunk_size):
             try:
                 yield response['resources'][0]
             except Exception:
@@ -80,7 +81,7 @@ class CrowdStrikeConnection(RESTConnection):
         time.sleep(5)
         while async_requests:
             async_requests_first = async_requests[:500]
-            for response in self._async_get_only_good_response(async_requests_first, chunks=1):
+            for response in self._async_get_only_good_response(async_requests_first, chunks=async_chunk_size):
                 try:
                     yield response['resources'][0]
                 except Exception:

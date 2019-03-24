@@ -1,4 +1,12 @@
 export const pluginMeta = {
+    promisec_adapter: {
+        title: 'Promisec - BETA',
+        description: 'Promisec provides clientless end-point management software that secures and optimizes PCs and servers in enterprise computer networks.'
+    },
+    truefort_adapter: {
+        title: 'TrueFort - BETA',
+        description: 'TrueFort offers comprehensive application protection. Real-time application behavior analytics, control, and protection.'
+    },
     redcanary_adapter: {
         title: 'Red Canary - BETA',
         description: 'Red Canary is an outcome-focused security operations partner for modern teams, deployed in minutes to reduce risk and improve security.'
@@ -12,7 +20,7 @@ export const pluginMeta = {
         description: 'Secureworks Red Cloak is an Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity.'
     },
     dynatrace_adapter: {
-        title: 'Dynatrace - BETA',
+        title: 'Dynatrace',
         description: 'The Dynatrace software intelligence platform provides application performance management, cloud infrastructure monitoring, AI-based analytics, and digital experience management.'
     },
     code42_adapter: {
@@ -317,7 +325,7 @@ export const pluginMeta = {
     },
     fortigate_adapter: {
         title: 'Fortinet FortiGate',
-        description: 'Fortniet FortiGate Next-Generation firewall provides high performance, multilayered validated security and visibility for end-to-end protection across the entire enterprise network'
+        description: 'Fortinet FortiGate Next-Generation firewall provides high performance, multilayered validated security and visibility for end-to-end protection across the entire enterprise network'
     },
     qcore_adapter: {
         title: 'Qcore',

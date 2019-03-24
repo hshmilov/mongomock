@@ -136,6 +136,8 @@ DOCKER_PORTS = {
     'redcloack-adapter':                6669,
     'cloudpassage-adapter':             6670,
     'redcanary-adapter':                6671,
+    'truefort-adapter':                 6672,
+    'promisec-adapter':                 6673,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

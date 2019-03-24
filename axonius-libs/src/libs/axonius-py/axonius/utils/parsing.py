@@ -732,6 +732,21 @@ def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
 
 
+def get_nessus_no_scan_id(adapter_device):
+    nessus_no_scan_id = adapter_device['data'].get('nessus_no_scan_id')
+    if nessus_no_scan_id:
+        return nessus_no_scan_id.lower()
+    return None
+
+
+def compare_nessus_no_scan_id(adapter_device1, adapter_device2):
+    nessus_no_scan_id_1 = get_nessus_no_scan_id(adapter_device1)
+    nessus_no_scan_id_2 = get_nessus_no_scan_id(adapter_device2)
+    if nessus_no_scan_id_1 and nessus_no_scan_id_2 and nessus_no_scan_id_1 == nessus_no_scan_id_2:
+        return True
+    return False
+
+
 def get_domain(adapter_device):
     domain = adapter_device['data'].get('domain')
     if domain:

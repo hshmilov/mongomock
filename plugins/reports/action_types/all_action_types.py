@@ -24,6 +24,7 @@ from reports.action_types.base.carbonblack_defense_change_policy import Carbonbl
 from reports.action_types.base.tenable_sc_add_ips_to_asset import TenableScAddIPsToAsset
 from reports.action_types.base.tenable_io_add_ips_to_asset import TenableIoAddIPsToTargetGroup
 from reports.action_types.base.send_email_to_entities import SendEmailToEntities
+from reports.action_types.alert.send_csv_to_share import SendCsvToShare
 
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
@@ -49,5 +50,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'cybereason_unisolate': CybereasonUnisolateAction,
     'tenable_sc_add_ips_to_asset': TenableScAddIPsToAsset,
     'tenable_io_add_ips_to_target_group': TenableIoAddIPsToTargetGroup,
-    'send_email_to_entities': SendEmailToEntities
+    'send_email_to_entities': SendEmailToEntities,
+    'send_csv_to_share': SendCsvToShare
 }

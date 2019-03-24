@@ -20,7 +20,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use ServiceNow Adapter',
+                    'title': 'Use Tenable IO Adapter',
                     'type': 'bool'
                 },
                 {

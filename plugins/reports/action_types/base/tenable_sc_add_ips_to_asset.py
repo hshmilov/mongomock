@@ -21,7 +21,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use ServiceNow Adapter',
+                    'title': 'Use Tenable SC Adapter',
                     'type': 'bool'
                 },
                 {

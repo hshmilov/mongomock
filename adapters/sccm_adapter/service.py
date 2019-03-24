@@ -7,6 +7,7 @@ from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_organizational_units_from_dn, get_exception_string
 from axonius.clients.mssql.connection import MSSQLConnection
@@ -41,6 +42,16 @@ CHASIS_VALUE_FULL_DICT = {'1': 'Virtual Machine',
                           '24': 'Sealed-Case PC'}
 
 
+class SccmVm(SmartJsonClass):
+    vm_dns_name = Field(str, 'VM DNS Name')
+    vm_ip = Field(str, 'VM IP Address')
+    vm_state = Field(str, 'VM State')
+    vm_name = Field(str, 'VM Name')
+    vm_path = Field(str, 'VM Path')
+    vm_type = Field(str, 'VM Type')
+    vm_timestamp = Field(str, 'VM Timestamp')
+
+
 class SccmAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
@@ -57,6 +68,13 @@ class SccmAdapter(AdapterBase):
         malware_enabled = Field(str, 'Malware Protecion Enabled Status')
         desktop_or_laptop = Field(str, 'Desktop Or Laptop', enum=['Desktop', 'Laptop'])
         chasis_value = Field(str, 'Chasis Value')
+        sccm_vms = ListField(SccmVm, 'SCCM VMs')
+
+        def add_sccm_vm(self, **kwargs):
+            try:
+                self.sccm_vms.append(SccmVm(**kwargs))
+            except Exception:
+                logger.exception(f'Problem adding sccm vm')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -100,6 +118,18 @@ class SccmAdapter(AdapterBase):
                     asset_encryption_dict[asset_id].append(asset_encryption_data)
             except Exception:
                 logger.exception(f'Problem getting query asset_encryption_dict')
+
+            asset_vm_dict = dict()
+            try:
+                for asset_vm_data in client_data.query(consts.VM_QUERY):
+                    asset_id = asset_vm_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_vm_dict:
+                        asset_vm_dict[asset_id] = []
+                    asset_vm_dict[asset_id].append(asset_vm_data)
+            except Exception:
+                logger.exception(f'Problem getting vm')
 
             asset_chasis_dict = dict()
             try:
@@ -214,12 +244,12 @@ class SccmAdapter(AdapterBase):
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
                         asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
                         asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict
         finally:
             client_data.logout()
 
@@ -266,7 +296,7 @@ class SccmAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
             asset_bios_dict, asset_users_dict, asset_top_dict, \
-            asset_malware_dict, asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict in\
+            asset_malware_dict, asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict in\
                 devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -383,6 +413,28 @@ class SccmAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting top user data dor {device_raw}')
 
+                try:
+                    if isinstance(asset_vm_dict.get(device_raw.get('ResourceID')), list):
+                        for vm_data in asset_vm_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                vm_dns_name = vm_data.get('DNSName0')
+                                vm_ip = vm_data.get('IPAddress0')
+                                vm_state = vm_data.get('State0')
+                                vm_name = vm_data.get('VMName0')
+                                vm_path = vm_data.get('Path0')
+                                vm_type = vm_data.get('Type0')
+                                vm_timestamp = vm_data.get('TimeStamp')
+                                device.add_sccm_vm(vm_dns_name=vm_dns_name,
+                                                   vm_ip=vm_ip,
+                                                   vm_state=vm_state,
+                                                   vm_name=vm_name,
+                                                   vm_path=vm_path,
+                                                   vm_type=vm_type,
+                                                   vm_timestamp=vm_timestamp)
+                            except Exception:
+                                logger.exception(f'Problem with vm_data {vm_data}')
+                except Exception:
+                    logger.exception(f'Problem getting vm data dor {device_raw}')
                 try:
                     if isinstance(asset_chasis_dict.get(device_raw.get('ResourceID')), dict):
                         chasis_data = asset_chasis_dict.get(device_raw.get('ResourceID'))

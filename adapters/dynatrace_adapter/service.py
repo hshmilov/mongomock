@@ -19,6 +19,8 @@ class DynatraceAdapter(AdapterBase):
         discoverd_name = Field(str, 'Discoverd Name')
         management_zones = ListField(str, 'Management Zone')
         consumed_host_units = Field(float, 'Consumed Host Units')
+        from_relation_client_hosts = ListField(str, 'From Relationship Client Hosts')
+        to_relation_client_hosts = ListField(str, 'To Relationship Client Hosts')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -108,7 +110,7 @@ class DynatraceAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-statements
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -155,6 +157,19 @@ class DynatraceAdapter(AdapterBase):
                     device.consumed_host_units = device_raw.get('consumedHostUnits')
             except Exception:
                 logger.exception(f'Problem getting consumed host units for {device_raw}')
+            try:
+                from_relation_client_hosts = (device_raw.get('fromRelationships') or {}).get('isNetworkClientOfHost')
+                if from_relation_client_hosts:
+                    device.from_relation_client_hosts = from_relation_client_hosts
+            except Exception:
+                logger.exception(f'Problem with relation from {device_raw}')
+            try:
+                to_relation_client_hosts = (device_raw.get('toRelationships') or {}).get('isNetworkClientOfHost')
+                if to_relation_client_hosts:
+                    device.to_relation_client_hosts = to_relation_client_hosts
+            except Exception:
+                logger.exception(f'Problem with relation to {device_raw}')
+
             device.set_raw(device_raw)
             return device
         except Exception:

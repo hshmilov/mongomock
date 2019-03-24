@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.mixins.configurable import Configurable
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
@@ -14,7 +15,7 @@ from crowd_strike_adapter.connection import CrowdStrikeConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CrowdStrikeAdapter(AdapterBase):
+class CrowdStrikeAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
@@ -52,8 +53,7 @@ class CrowdStrikeAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -62,11 +62,8 @@ class CrowdStrikeAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        try:
-            client_data.connect()
-            yield from client_data.get_device_list()
-        finally:
-            client_data.close()
+        with client_data:
+            yield from client_data.get_device_list(self.__async_chunk_size)
 
     @staticmethod
     def _clients_schema():
@@ -158,3 +155,29 @@ class CrowdStrikeAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent, AdapterProperty.Endpoint_Protection_Platform]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'async_chunk_size',
+                    'title': 'Async Requests Chunk Size',
+                    'type': 'integer'
+                }
+            ],
+            'required': [
+                'async_chunk_size'
+            ],
+            'pretty_name': 'CrowdStrike Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'async_chunk_size': 1
+        }
+
+    def _on_config_update(self, config):
+        self.__async_chunk_size = config['async_chunk_size']

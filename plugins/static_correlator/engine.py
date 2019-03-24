@@ -5,8 +5,9 @@ from axonius.blacklists import ALL_BLACKLIST, FROM_FIELDS_BLACK_LIST_REG, compar
 from axonius.consts.plugin_consts import PLUGIN_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME
 from axonius.correlator_base import (has_ad_or_azure_name, has_cloud_id,
                                      has_hostname, has_last_used_users,
-                                     has_mac, has_name, has_serial)
+                                     has_mac, has_name, has_serial, has_nessus_scan_no_id)
 from axonius.correlator_engine_base import (CorrelatorEngineBase, CorrelationMarker)
+from axonius.plugin_base import PluginBase
 from axonius.types.correlation import CorrelationReason
 from axonius.utils.parsing import (NORMALIZED_MACS,
                                    asset_hostnames_do_not_contradict,
@@ -14,13 +15,13 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_asset_hosts, compare_asset_name,
                                    compare_bios_serial_serial, compare_clouds,
                                    compare_device_normalized_hostname,
-                                   compare_domain, compare_hostname,
+                                   compare_hostname,
                                    compare_id, compare_last_used_users,
                                    get_ad_name_or_azure_display_name,
                                    get_asset_name, get_asset_or_host,
                                    get_asset_snow_or_host, compare_snow_asset_hosts,
                                    get_bios_serial_or_serial, get_cloud_data,
-                                   get_domain, get_hostname, get_id,
+                                   get_hostname, get_id,
                                    get_last_used_users,
                                    get_normalized_hostname_str,
                                    get_normalized_ip, get_serial,
@@ -40,9 +41,46 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
                                    get_hostname_or_serial, compare_hostname_serial,
-                                   is_from_twistlock_or_aws)
+                                   is_from_twistlock_or_aws, get_nessus_no_scan_id, compare_nessus_no_scan_id)
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+ALLOW_OLD_MAC_LIST = ['clearpass_adapter']
+
+DOMAIN_TO_DNS_DICT = dict()
+
+
+# pylint: disable=global-statement
+def _refresh_domain_to_dns_dict():
+    try:
+        global DOMAIN_TO_DNS_DICT
+        DOMAIN_TO_DNS_DICT = PluginBase.Instance.get_global_keyval('ldap_nbns_to_dns') or {}
+    except Exception:
+        logger.exception(f'Warning - could not refresh domain dns dict')
+
+
+def get_domain_for_correlation(adapter_device):
+    domain = adapter_device['data'].get('domain')
+    if domain:
+        try:
+            domain_dns_name = DOMAIN_TO_DNS_DICT.get(domain.lower())
+            if domain_dns_name:
+                return domain_dns_name.upper()
+        except Exception:
+            pass
+        return domain.upper()
+    return None
+
+
+def compare_domain_for_correlation(adapter_device1, adapter_device2):
+    domain1 = get_domain_for_correlation(adapter_device1)
+    domain2 = get_domain_for_correlation(adapter_device2)
+    if domain1 and domain2:
+        if domain1 in domain2 or domain2 in domain1:
+            return True
+    return False
 
 
 class StaticCorrelatorEngine(CorrelatorEngineBase):
@@ -74,7 +112,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users]
+        return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users,
+                has_nessus_scan_no_id]
 
     # pylint: disable=R0912
     def _correlate_mac(self, adapters_to_correlate):
@@ -106,7 +145,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         mac_indexed = {}
         for adapter in adapters_to_correlate:
             # Don't add to the MAC comparisons devices that haven't seen for more than 30 days
-            if is_old_device(adapter, number_of_days=5):
+            if is_old_device(adapter, number_of_days=5) and adapter.get('plugin_name') not in ALLOW_OLD_MAC_LIST:
                 continue
             macs = adapter.get(NORMALIZED_MACS)
             if macs:
@@ -131,7 +170,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 if not hostnames_do_not_contradict(x, y):
                     if mac not in mac_blacklist:
                         logger.info(f'This could be bad mac {mac}')
-                        if not is_different_plugin(x, y) or (get_domain(x) and get_domain(y) and compare_domain(x, y)):
+                        if not is_different_plugin(x, y) or (get_domain_for_correlation(x) and
+                                                             get_domain_for_correlation(y) and
+                                                             compare_domain_for_correlation(x, y)):
                             logger.info(f'Added to blacklist {mac} for X {x} and Y {y}')
                             mac_blacklist.add(mac)
                             break
@@ -180,12 +221,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
     def _correlate_hostname_domain(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname-Domain')
-        filtered_adapters_list = filter(get_normalized_hostname_str, filter(get_domain, adapters_to_correlate))
+        filtered_adapters_list = filter(get_normalized_hostname_str, filter(get_domain_for_correlation,
+                                                                            adapters_to_correlate))
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
                                       [],
-                                      [compare_domain,
+                                      [compare_domain_for_correlation,
                                        not_aruba_adapters,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname and domain'},
@@ -223,6 +265,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [asset_hostnames_do_not_contradict],
                                       {'Reason': 'They have the same serial even with S at the beginning'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_nessus_no_scan_id(self, adapters_to_correlate):
+        logger.info('Starting to correlate on nessus id')
+        filtered_adapters_list = filter(get_nessus_no_scan_id, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_nessus_no_scan_id],
+                                      [compare_nessus_no_scan_id],
+                                      [],
+                                      [],
+                                      {'Reason': 'They are the same nessus id no scan'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_cloud_instances(self, adapters_to_correlate):
@@ -417,6 +470,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         #    of all the NICs
         # 2. uppering every field we might sort by - currently hostname and os type
         # 3. splitting the hostname into a list in order to be able to compare hostnames without depending on the domain
+        _refresh_domain_to_dns_dict()
         adapters_to_correlate = list(normalize_adapter_devices(entities))
 
         # let's find devices by, hostname, and ip:
@@ -460,6 +514,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial_with_bios_serial_no_s(adapters_to_correlate)
         yield from self._correlate_serial_no_s(adapters_to_correlate)
         yield from self._correlate_serial_with_hostname(adapters_to_correlate)
+        yield from self._correlate_nessus_no_scan_id(adapters_to_correlate)
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
 
