@@ -51,10 +51,15 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        SPECIFIC_DATA,
                                        TEMP_MAINTENANCE_THREAD_ID,
                                        USERS_COLLECTION,
-                                       USERS_CONFIG_COLLECTION, ChartFuncs,
-                                       ChartMetrics, ChartRangeTypes,
-                                       ChartRangeUnits, ChartViews,
-                                       ResearchStatus, PROXY_ERROR_MESSAGE)
+                                       USERS_CONFIG_COLLECTION,
+                                       ChartFuncs,
+                                       ChartMetrics,
+                                       ChartRangeTypes,
+                                       ChartRangeUnits,
+                                       ChartViews,
+                                       Signup,
+                                       ResearchStatus,
+                                       PROXY_ERROR_MESSAGE)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -148,6 +153,10 @@ DEVICE_ADVANCED_FILEDS = ['installed_software', 'software_cves',
                           'services', 'shares', 'port_security']
 
 USER_ADVANCED_FILEDS = ['associated_devices']
+
+
+def has_customer_login_happened():
+    return LOGGED_IN_MARKER_PATH.is_file()
 
 
 def session_connection(func, required_permissions: Iterable[Permission]):
@@ -401,7 +410,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                         max_instances=1)
 
         self.metadata = self.load_metadata()
-        self.never_logged_in = True
         self.encryption_key = self.load_encryption_key()
         self.__aggregate_thread_pool = ThreadPool(processes=cpu_count())
         self._set_first_time_use()
@@ -2425,10 +2433,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         Given a user, mark the current session as associated with it
         """
-        if self.never_logged_in:
-            logger.info('First login occurred.')
-            LOGGED_IN_MARKER_PATH.touch()
         user = dict(user)
+        user_name = user.get('user_name')
+        if not has_customer_login_happened() and user_name != AXONIUS_USER_NAME:
+            logger.info('First customer login occurred.')
+            LOGGED_IN_MARKER_PATH.touch()
+
         user['permissions'] = deserialize_db_permissions(user['permissions'])
         session['user'] = user
         session.permanent = remember_me
@@ -3202,7 +3212,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         logger.info('Getting dashboard')
-        for dashboard in self._get_collection(DASHBOARD_COLLECTION).find(filter=filter_archived(), skip=skip, limit=limit):
+        for dashboard in self._get_collection(DASHBOARD_COLLECTION).find(filter=filter_archived(), skip=skip,
+                                                                         limit=limit):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
@@ -4567,6 +4578,38 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return self.system_collection.find_one({
             'type': 'maintenance'
         })
+
+    @gui_helpers.add_rule_unauth('signup', methods=['POST', 'GET'])
+    def process_signup(self):
+        signup_collection = self._get_collection(Signup.SignupCollection)
+        signup = signup_collection.find_one({})
+
+        if request.method == 'GET':
+            # remove the or True when we finish fixing tests
+            return jsonify({'signup': True or signup or has_customer_login_happened()})
+
+        # POST from here
+        if signup:
+            return return_error('Signup already completed', 400)
+
+        signup_data = self.get_request_data_as_object().get('payload', {})
+
+        new_password = signup_data[Signup.NewPassword] if \
+            signup_data[Signup.ConfirmNewPassword] == signup_data[Signup.NewPassword] \
+            else ''
+
+        if not new_password:
+            return return_error('Passwords do not match', 400)
+
+        self.__users_collection.update_one({'user_name': 'admin'},
+                                           {'$set': {'password': bcrypt.hash(new_password)}})
+
+        # we don't want to store creds openly
+        signup_data[Signup.NewPassword] = ''
+        signup_data[Signup.ConfirmNewPassword] = ''
+
+        signup_collection.insert_one(signup_data)
+        return jsonify({})
 
     @gui_helpers.add_rule_unauth('provision')
     def get_provision(self):

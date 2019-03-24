@@ -9,7 +9,7 @@ class MyAccountPage(Page):
     CONFIRM_PASSWORD_ID = 'confirmNewPassword'
     PASSWORD_CHANGED_TOASTER = 'Password changed'
     GIVEN_PASSWORD_IS_WRONG_TOASTER = 'Given password is wrong'
-    PASSWORDS_DONT_MATCH_TOASTER = 'Passwords don\'t match'
+    PASSWORDS_DONT_MATCH_TOASTER = 'Passwords do not match'
 
     @property
     def url(self):

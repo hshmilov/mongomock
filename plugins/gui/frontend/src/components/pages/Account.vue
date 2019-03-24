@@ -106,7 +106,7 @@
             },
             savePassword() {
                 if (this.passwordForm.newPassword !== this.passwordForm.confirmNewPassword) {
-                    this.message = 'Passwords don\'t match'
+                    this.message = 'Passwords do not match'
                     return
                 }
                 this.changePassword({

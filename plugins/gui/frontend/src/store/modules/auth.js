@@ -12,6 +12,9 @@ export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS'
 export const GET_ALL_USERS = 'GET_ALL_USERS'
 export const UPDATE_ALL_USERS = 'UPDATE_ALL_USERS'
 export const CHANGE_PASSWORD = 'CHANGE_PASSWORD'
+export const SUBMIT_SIGNUP = 'SUBMIT_SIGNUP'
+export const GET_SIGNUP = 'GET_SIGNUP'
+export const UPDATE_SIGNUP = 'UPDATE_SIGNUP'
 export const CHANGE_PERMISSIONS = 'CHANGE_PERMISSIONS'
 export const CREATE_USER = 'CREATE_USER'
 export const REMOVE_USER = 'REMOVE_USER'
@@ -29,12 +32,13 @@ export const UPDATE_DEFAULT_ROLE = 'UPDATE_DEFAULT_ROLE'
 
 export const auth = {
 	state: {
-		currentUser: { fetching: false, data: { }, error: '' },
-		loginOptions: { fetching: false, data: null, error: '' },
-		allUsers: { fetching: false, data: [], error: '' },
-        allRoles: { fetching: false, data: [], error: '' },
-		defaultRole: { fetching: false, data: '', error: '' },
-	},
+        currentUser: {fetching: false, data: {}, error: ''},
+        loginOptions: {fetching: false, data: null, error: ''},
+        allUsers: {fetching: false, data: [], error: ''},
+        allRoles: {fetching: false, data: [], error: ''},
+        defaultRole: {fetching: false, data: '', error: ''},
+        signup: {data: false}
+    },
 	mutations: {
 		[ SET_USER ] (state, payload) {
 			state.currentUser.fetching = payload.fetching
@@ -80,6 +84,11 @@ export const auth = {
             if (payload.data) {
                 state.defaultRole.data = payload.data
             }
+		},
+		[ UPDATE_SIGNUP ] (state, payload) {
+			if (payload.data) {
+				state.signup.data = payload.data.signup
+			}
 		}
 	},
 	actions: {
@@ -182,6 +191,27 @@ export const auth = {
                 }
 			})
 		},
+		[ SUBMIT_SIGNUP ] ({dispatch}, payload) {
+			if (!payload) {
+				return
+			}
+			return dispatch(REQUEST_API, {
+				rule: `signup`,
+				method: 'POST',
+				data: {
+					payload
+				}
+			})
+		},
+
+		[ GET_SIGNUP ] ({dispatch}) {
+			return dispatch(REQUEST_API, {
+				rule: `signup`,
+				method: 'GET',
+				type: UPDATE_SIGNUP
+			})
+		},
+
 		[ CHANGE_PERMISSIONS ] ({ dispatch }, payload) {
 			/*
 				Request from server to change permissions for an existing user

@@ -30,10 +30,10 @@ from ui_tests.pages.my_account_page import MyAccountPage
 from ui_tests.pages.notification_page import NotificationPage
 from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
+from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
 from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.tests.ui_consts import ROOT_DIR
-
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(ROOT_DIR, 'logs', 'ui_logger')
@@ -56,6 +56,7 @@ def create_ui_tests_logger():
 
 
 logger = create_ui_tests_logger()
+
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=no-value-for-parameter
@@ -236,6 +237,10 @@ class TestBase:
         self.axonius_system = get_service()
 
         self.register_pages()
+        if self.signup_page.is_signup_present():
+            self.signup_page.fill_signup_and_save('test_company', 'a@b.com', DEFAULT_USER['password'],
+                                                  DEFAULT_USER['password'])
+            self.signup_page.wait_for_signup_completed_toaster()
         self.login()
         logger.info(f'finishing setup_method {method.__name__}')
 
@@ -265,6 +270,7 @@ class TestBase:
         self.dashboard_page = DashboardPage(**params)
         self.account_page = AccountPage(**params)
         self.instances_page = InstancesPage(**params)
+        self.signup_page = SignupPage(**params)
 
     def get_all_screens(self):
         screens = (self.devices_page,

@@ -15,6 +15,7 @@
             <x-access-modal v-model="blockedComponent" />
         </template>
         <template v-else>
+            <x-signup />
             <x-login />
         </template>
     </div>
@@ -26,6 +27,7 @@
     import xLogin from './networks/navigation/Login.vue'
 	import xTourState from './networks/onboard/TourState.vue'
     import xAccessModal from './neurons/popover/AccessModal.vue'
+    import xSignup from './pages/Signup.vue'
     import {GET_USER} from '../store/modules/auth'
     import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG} from '../store/actions'
     import {FETCH_CONSTANTS} from '../store/modules/constants'
@@ -39,7 +41,7 @@
 	export default {
         name: 'app',
         components: {
-            xLogin, xTopBar, xSideBar, xTourState, xAccessModal
+            xSignup, xLogin, xTopBar, xSideBar, xTourState, xAccessModal
         },
         computed: {
             ...mapState({

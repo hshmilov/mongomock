@@ -119,3 +119,9 @@ PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 class FeatureFlagsNames:
     TrialEnd = 'trial_end'
     LockedActions = 'locked_actions'
+
+
+class Signup:
+    SignupCollection = 'signup'
+    NewPassword = 'newPassword'
+    ConfirmNewPassword = 'confirmNewPassword'
