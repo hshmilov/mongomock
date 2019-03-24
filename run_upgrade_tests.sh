@@ -56,6 +56,11 @@ timeout 3600 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/before_
 cd ..
 echo "#### Before upgrade setups done"
 
+
+# Block pypi
+sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 pypi.python.org &> logs/upgrade_to_${version}.log
+sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 files.pythonhosted.org &> logs/upgrade_to_${version}.log
+
 echo "#### Upgrading to ${version}"
 cd ${install_dir}
 chmod +x ${installer_name}

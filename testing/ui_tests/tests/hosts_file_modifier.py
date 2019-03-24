@@ -1,4 +1,5 @@
 import os
+import sys
 
 HOSTS_FILE_URL = '/etc/hosts'
 HOSTS_FILE_URL_FOR_WINDOWS = 'C:\\Windows\\System32\\drivers\\etc\\hosts'
@@ -24,8 +25,20 @@ class HostsFileModifier:
                 hosts_file.writelines([f'\n{ip} {url}', f'\n{ip} www.{url}'])
         else:
             with open(file_path, 'r') as f:
-                s = f'{f.read()} \n {ip} {url}\n {ip} www.{url}\n'
+                s = f'{f.read()} \n{ip}\t{url}\n{ip}\twww.{url}\n'
             with open(TEMP_HOSTS_FILE_URL, 'w') as outf:
                 outf.write(s)
 
             os.system(f'sudo mv {TEMP_HOSTS_FILE_URL} {file_path}')
+
+
+def main():
+    ip, url = sys.argv[1], sys.argv[2]
+    print(f'setting {ip} {url} pair')
+    HostsFileModifier.add_url_if_not_exist(ip, url)
+    print(f'set {ip} {url} pair')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
