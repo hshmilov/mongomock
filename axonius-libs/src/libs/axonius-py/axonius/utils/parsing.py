@@ -1058,6 +1058,12 @@ def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     return compare_device_normalized_hostname(adapter_device1, adapter_device2)
 
 
+def os_do_not_contradict(adapter_device1, adapter_device2):
+    if not get_os_type(adapter_device1) or not get_os_type(adapter_device2):
+        return True
+    return get_os_type(adapter_device1) == get_os_type(adapter_device2)
+
+
 def not_contain_generic_jamf_names(adapter_device1, adapter_device2):
     return not contain_jamf_generic_names(adapter_device1) or not contain_jamf_generic_names(adapter_device2)
 
