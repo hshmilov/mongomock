@@ -37,7 +37,7 @@ export const auth = {
         allUsers: {fetching: false, data: [], error: ''},
         allRoles: {fetching: false, data: [], error: ''},
         defaultRole: {fetching: false, data: '', error: ''},
-        signup: {data: false}
+        signup: {data: true}
     },
 	mutations: {
 		[ SET_USER ] (state, payload) {
