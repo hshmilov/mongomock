@@ -798,7 +798,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Trigger selected Enforcement with a static list of entities, as selected by user
         """
         post_data = request.get_json()
-        response = self.request_remote_plugin('trigger/run?blocking=False', 'reports', method='post', json={
+        response = self._trigger_remote_plugin('reports', 'run', blocking=False, data={
             'report_name': post_data['enforcement'],
             'input': {
                 'entity': entity_type.name,
@@ -806,7 +806,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'selection': post_data['entities']
             }
         })
-        return response.text, response.status_code
+        return '', 200
 
     def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter):
         """
@@ -1484,23 +1484,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             def inserted_to_db(*_):
                 logger.info(f'{adapter_unique_name} finished fetching data for {client_id}')
                 self._trigger('clear_dashboard_cache', blocking=False)
-                self.request_remote_plugin('trigger/execute?blocking=True',
-                                           STATIC_CORRELATOR_PLUGIN_NAME,
-                                           method='POST')
-                self.request_remote_plugin('trigger/execute?blocking=True',
-                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
-                                           method='POST')
+                self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
+                self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)
                 self._trigger('clear_dashboard_cache', blocking=False)
 
             def rejected(err):
                 logger.exception(f'Failed fetching from {adapter_unique_name} for {client_to_add}', exc_info=err)
 
-            self.async_request_remote_plugin(f'trigger/insert_to_db?blocking=True',
-                                             adapter_unique_name, method='POST',
-                                             json={
-                                                 'client_name': client_id
-                                             }).then(did_fulfill=inserted_to_db,
-                                                     did_reject=rejected)
+            self._async_trigger_remote_plugin(adapter_unique_name,
+                                              'insert_to_db',
+                                              data={
+                                                  'client_name': client_id
+                                              }).then(did_fulfill=inserted_to_db,
+                                                      did_reject=rejected)
 
         except Exception:
             # if there's no aggregator, there's nothing we can do
@@ -1708,10 +1704,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if 'action_name' not in action_data or ('command' not in action_data and 'binary' not in action_data):
                 return return_error('Some data is missing')
 
-            self.request_remote_plugin('trigger/execute?priority=True&blocking=False',
-                                       DEVICE_CONTROL_PLUGIN_NAME,
-                                       'post',
-                                       json=action_data)
+            self._trigger_remote_plugin(DEVICE_CONTROL_PLUGIN_NAME, priority=True, blocking=False,
+                                        data=action_data)
             return '', 200
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
@@ -1917,7 +1911,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'name': 1,
             TRIGGERS_FIELD: 1
         })
-        response = self.request_remote_plugin('trigger/run', 'reports', method='post', json={
+        response = self._trigger_remote_plugin('reports', 'run', data={
             'report_name': enforcement['name'],
             'configuration_name': enforcement[TRIGGERS_FIELD][0]['name'],
             'manual': True
@@ -3900,11 +3894,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
-        response = self.request_remote_plugin('trigger/execute?blocking=False', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
-
-        if response.status_code != 200:
-            logger.error('Error in running research phase')
-            return return_error('Error in running research phase', response.status_code)
+        self._trigger_remote_plugin(SYSTEM_SCHEDULER_PLUGIN_NAME, blocking=False)
 
         self.__lifecycle.clean_cache()
         return ''

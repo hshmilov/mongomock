@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum, auto
 from threading import RLock
 
+import func_timeout
 import pymongo
 from pymongo.collection import Collection
 from pymongo.results import UpdateResult
@@ -216,13 +217,20 @@ class Triggerable(Feature, ABC):
         # if ?priority=True than this request will run immediately, ignoring any internal lock mechanism
         # use with caution!
         priority = request.args.get('priority', 'False') == 'True'
+        timeout = request.args.get('timeout')
+        if timeout:
+            timeout = int(timeout)
+        else:
+            timeout = None
+
         message = f'Triggered {job_name} ' + ('blocking' if blocking else 'unblocked') + ' with ' + \
-                  ('prioritized' if priority else 'unprioritized') + f' from {self.get_caller_plugin_name()}'
+                  ('prioritized' if priority else 'unprioritized') + f' from {self.get_caller_plugin_name()}' + \
+                  f'with timeout {timeout}'
         if blocking:
             logger.debug(message)
         else:
             logger.info(message)
-        return self._trigger(job_name, blocking, priority, request.get_json(silent=True))
+        return self._trigger(job_name, blocking, priority, request.get_json(silent=True), timeout)
 
     @add_rule('wait/<job_name>', methods=['GET'])
     def wait_for_job(self, job_name):
@@ -230,12 +238,24 @@ class Triggerable(Feature, ABC):
         If a certain job is running, this waits for it to finish, and returns the last return value
         :param job_name: The job to wait for
         """
-        logger.debug(f'Waiting for {job_name} from {self.get_caller_plugin_name()}')
+        timeout = request.args.get('timeout')
+        if timeout:
+            timeout = int(timeout)
+        else:
+            timeout = None
+
+        logger.debug(f'Waiting for {job_name} from {self.get_caller_plugin_name()}, timeout = {timeout}')
         job_state = self.__state[job_name]
 
         promise = job_state.promise
         if promise:
-            Promise.wait(promise)
+            try:
+                Promise.wait(promise, timeout=timeout)
+            except Exception as e:
+                if e.args == ('Timeout', ):
+                    logger.info(f'Timeout on {job_state}')
+                    return 'Timeout', 408
+                raise
             if promise.is_rejected or isinstance(promise.value, Exception):
                 logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
                 return 'Error has occurred', 500
@@ -285,7 +305,7 @@ class Triggerable(Feature, ABC):
                 self.__perform_stop_job(job_name, job_state)
         return ''
 
-    def __trigger_prioritized(self, state: StoredJobState):
+    def __trigger_prioritized(self, state: StoredJobState, timeout: int = None):
         """
         Implements a trigger that is prioritized, i.e. runs without respect to the queue
         :param state: The stored state object for the job
@@ -295,11 +315,21 @@ class Triggerable(Feature, ABC):
         failed = None
         try:
             run_id = RunIdentifier(self.__triggerable_db, inserted_id)
-            result = self._triggered(state.job_name, state.post_json, run_id) or ''
+            if timeout:
+                result = func_timeout.func_timeout(
+                    timeout=timeout,
+                    func=self._triggered,
+                    args=(state.job_name, state.post_json, run_id)) or ''
+            else:
+                result = self._triggered(state.job_name, state.post_json, run_id) or ''
         except Exception as e:
             failed = e
             tb = ''.join(traceback.format_tb(e.__traceback__))
             state.result = f'{e} at {tb}'
+            state.job_completed_state = StoredJobStateCompletion.Failure
+        except func_timeout.FunctionTimedOut as e:
+            failed = e
+            state.result = 'Timed out'
             state.job_completed_state = StoredJobStateCompletion.Failure
         else:
             state.result = result
@@ -326,15 +356,18 @@ class Triggerable(Feature, ABC):
 
         return normalize_triggerable_request_result(result)
 
-    def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None):
-        state = StoredJobState(job_name=job_name, blocking=blocking, priority=priority, post_json=post_json)
+    def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None, timeout=None):
+        state = StoredJobState(job_name=job_name,
+                               blocking=blocking,
+                               priority=priority,
+                               post_json=post_json)
 
         if priority:
             if blocking:
-                return self.__trigger_prioritized(state)
+                return self.__trigger_prioritized(state, timeout)
 
             # if not blocking, just continue
-            run_and_forget(lambda: self.__trigger_prioritized(state))
+            run_and_forget(lambda: self.__trigger_prioritized(state, timeout))
             return ''
 
         job_state = self.__state[job_name]
@@ -344,7 +377,13 @@ class Triggerable(Feature, ABC):
             promise = self.__perform_trigger(job_name, job_state, post_json, state)
 
         if blocking:
-            Promise.wait(promise)
+            try:
+                Promise.wait(promise, timeout)
+            except Exception as e:
+                if e.args == ('Timeout',):
+                    logger.info(f'Timeout on {job_state}')
+                    return 'Timeout', 408
+                raise
             if promise.is_rejected or isinstance(promise.value, Exception):
                 logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
                 return 'Error has occurred', 500

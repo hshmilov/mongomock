@@ -164,11 +164,10 @@ class AggregatorService(Triggerable, PluginBase):
         check_fetch_time = True
         for client_name in clients:
             try:
-                data = self.request_remote_plugin(f'trigger/insert_to_db', adapter, method='POST',
-                                                  json={
-                                                      'client_name': client_name,
-                                                      'check_fetch_time': check_fetch_time
-                                                  })
+                data = self._trigger_remote_plugin(adapter, 'insert_to_db', data={
+                    'client_name': client_name,
+                    'check_fetch_time': check_fetch_time
+                })
                 check_fetch_time = False
             except Exception as e:
                 # request failed
@@ -271,7 +270,7 @@ class AggregatorService(Triggerable, PluginBase):
         calls /clean_devices on the given adapter unique name
         :return:
         """
-        response = self.request_remote_plugin(f'trigger/clean_devices', plugin_unique_name, method='POST')
+        response = self._trigger_remote_plugin(plugin_unique_name, 'clean_devices')
         if response.status_code != 200:
             logger.warning(f"Failed cleaning db with adapter {plugin_unique_name}. " +
                            f"Reason: {str(response.content)}")

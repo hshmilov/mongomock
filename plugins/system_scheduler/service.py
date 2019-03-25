@@ -321,13 +321,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
                     for adapter_to_call in adapters_to_call:
                         logger.info(f'Fetching from rt adapter {adapter_to_call[PLUGIN_UNIQUE_NAME]}')
-                        try:
-                            self.request_remote_plugin(
-                                'trigger/insert_to_db?blocking=False',
-                                adapter_to_call[PLUGIN_UNIQUE_NAME],
-                                'post')
-                        except Exception as e:
-                            logger.exception(f'Failed triggering {plugin_unique_name} as part of realtime - {e}')
+                        self._trigger_remote_plugin(adapter_to_call[PLUGIN_UNIQUE_NAME],
+                                                    'insert_to_db',
+                                                    blocking=False)
 
                 if should_trigger_plugins:
                     plugins_to_call = [STATIC_CORRELATOR_PLUGIN_NAME]
@@ -337,13 +333,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
                     for plugin_unique_name in plugins_to_call:
                         logger.info(f'Executing plugin {plugin_unique_name}')
-                        try:
-                            self.request_remote_plugin(
-                                'trigger/execute?blocking=False',
-                                plugin_unique_name,
-                                'post')
-                        except Exception as e:
-                            logger.exception(f'Failed triggering {plugin_unique_name} as part of realtime - {e}')
+                        self._trigger_remote_plugin(plugin_unique_name, blocking=False)
             finally:
                 logger.info('Finished RT cycle')
 
@@ -370,10 +360,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             :param plugin: the plugin dict as returned from /register
             """
             blocking = plugin[PLUGIN_NAME] not in ALWAYS_ASYNC_PLUGINS
-            self._run_blocking_request(
-                f'trigger/execute?blocking={blocking}',
-                plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
-                'post')
+            self._trigger_remote_plugin(plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
+                                        blocking=blocking,
+                                        timeout=24 * 3600, stop_on_timeout=True)
 
         plugins_to_run = self._get_plugins(plugin_subtype)
         with ThreadPoolExecutor() as executor:
@@ -395,14 +384,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Trigger cleaning all devices from all adapters
         :return:
         """
-        self._run_blocking_request('trigger/clean_db', plugin_consts.AGGREGATOR_PLUGIN_NAME, 'post')
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600)
 
     def _run_historical_phase(self):
         """
         Trigger saving history
         :return:
         """
-        self._run_blocking_request('trigger/save_history', plugin_consts.AGGREGATOR_PLUGIN_NAME, 'post')
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'save_history', timeout=3600)
 
     def _run_aggregator_phase(self, plugin_subtype: PluginSubtype):
         """
@@ -410,24 +399,26 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :param plugin_subtype: A plugin_subtype to filter as a white list.
         :return:
         """
-        self._run_blocking_request('trigger/fetch_filtered_adapters', plugin_consts.AGGREGATOR_PLUGIN_NAME, 'post',
-                                   json={'plugin_subtype': plugin_subtype.value})
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'fetch_filtered_adapters',
+                                   data={'plugin_subtype': plugin_subtype.value}, timeout=48 * 3600)
 
-    def _run_blocking_request(self, *args, **kwargs):
+    def _run_blocking_request(self, plugin_name: str, job_name: str, data: dict = None, timeout: int = None):
         """
-        Runs a blocking http request and examines it's status_code response for failures.
-        :param args:
-        :param kwargs:
-        :return:
+        Runs a blocking trigger
         """
-        response = self.request_remote_plugin(*args, **kwargs)
+        response = self._trigger_remote_plugin(plugin_name, job_name, data=data,
+                                               timeout=timeout, stop_on_timeout=True)
+        if response.status_code == 408:
+            logger.exception(f'Timeout out on {plugin_name}')
+            raise PhaseExecutionException(f'Timeout out on {plugin_name}')
+
         # 403 is a disabled plugin.
         if response.status_code not in (200, 403):
             logger.exception(
-                f'Executing {args[1]} failed as part of '
+                f'Executing {plugin_name} failed as part of '
                 f'{self.state.SubPhase} subphase failed.')
             raise PhaseExecutionException(
-                f'Executing {args[1]} failed as part of '
+                f'Executing {plugin_name} failed as part of '
                 f'{self.state.SubPhase} subphase failed.')
 
     @property

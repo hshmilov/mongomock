@@ -52,10 +52,9 @@ class RunExecutable(ActionTypeBase):
             'binary': self._config['executable'],
             'params': self._config.get('params', '')
         }
-        result = self._plugin_base.request_remote_plugin('trigger/execute?priority=True&blocking=True',
-                                                         DEVICE_CONTROL_PLUGIN_NAME,
-                                                         'post',
-                                                         json=action_data).json()
+        result = self._plugin_base._trigger_remote_plugin(DEVICE_CONTROL_PLUGIN_NAME,
+                                                          priority=True, blocking=True,
+                                                          data=action_data).json()
         if result.get('status') == 'error':
             return generic_fail(self._internal_axon_ids, result)
 

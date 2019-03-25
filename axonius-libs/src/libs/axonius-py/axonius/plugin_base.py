@@ -844,7 +844,7 @@ class PluginBase(Configurable, Feature):
         """
         return request.headers.get('x-unique-plugin-name'), request.headers.get('x-plugin-name')
 
-    def request_remote_plugin(self, resource, plugin_unique_name=None, method='get', **kwargs):
+    def request_remote_plugin(self, resource, plugin_unique_name=None, method='get', **kwargs) -> requests.Response:
         """
         Provides an interface to access other plugins, with the current plugin's API key.
         :type resource: str
@@ -911,19 +911,79 @@ class PluginBase(Configurable, Feature):
         """
         return self.get_available_plugins_from_core_uncached()
 
+    def _stop_triggerable_plugin(self, plugin_name: str, job_name: str) -> requests.Response:
+        """
+        Stops a running job in a triggerable plugin
+        :param plugin_name: the plugin name to address
+        :param job_name: the job name to stop
+        """
+        return self.request_remote_plugin(f'stop/{job_name}', plugin_name, method='post')
+
+    def _trigger_remote_plugin(self, plugin_name: str, job_name: str = 'execute',
+                               blocking: bool = True, priority: bool = False,
+                               data: dict = None,
+                               timeout: int = None, stop_on_timeout: bool = False) -> requests.Response:
+        """
+        Triggers a triggerable plugin
+        :param plugin_name: The plugin name to trigger
+        :param job_name: The job name to invoke
+        :param blocking: Whether to wait until the operation finishes
+        :param priority: Whether to force the operation to take place irrespective of job queue
+        :param data: POST data to the job
+        :param timeout: How long to wait for a response, only relevant if blocking=True
+        :param stop_on_timeout: If true, and timed out, then a 'stop' operation will be triggered
+        :return: Either the response from the invocation or None for async operations
+        """
+        timeout = timeout or ''
+
+        def inner():
+            try:
+                res = self.request_remote_plugin(f'trigger/{job_name}?blocking={blocking}&priority={priority}'
+                                                 f'&timeout={timeout}',
+                                                 plugin_name, method='post',
+                                                 json=data)
+                if res.status_code == 408:  # timeout:
+                    logger.info(f'Timeout on {plugin_name}, {job_name}')
+                    if stop_on_timeout:
+                        logger.info(f'Stopping task...')
+                        self._stop_triggerable_plugin(plugin_name, job_name)
+                return res
+            except Exception:
+                logger.exception(f'Trigger failed on {plugin_name}, {job_name}, {data}')
+                raise
+
+        if not blocking:
+            run_and_forget(inner)
+            return None
+        return inner()
+
+    def _async_trigger_remote_plugin(self, plugin_name: str, job_name: str = 'execute',
+                                     priority: bool = False, data: dict = None,
+                                     timeout: int = None, stop_on_timeout: bool = False) -> Promise:
+        """
+        Triggers a triggerable plugin in an async fashion, see async_request_remote_plugin and _trigger_remote_plugin
+        """
+
+        def inner():
+            res = self._trigger_remote_plugin(plugin_name, job_name, blocking=True,
+                                              priority=priority, data=data,
+                                              timeout=timeout, stop_on_timeout=stop_on_timeout)
+            res.raise_for_status()
+            return res
+
+        return Promise(functools.partial(run_in_executor_helper,
+                                         self._common_executor,
+                                         inner))
+
     def _request_gui_dashboard_cache_clear(self, clear_slow: bool = False):
         """
         Sometimes the system will make changes that will need to trigger a dashboard change
         :param clear_slow: Whether or not to also clear cache for historical dashboards that rarely change
         """
-
-        def _inner():
-            self.request_remote_plugin(f'trigger/clear_dashboard_cache?blocking=False', GUI_NAME, method='post',
-                                       json={
-                                           'clear_slow': clear_slow
-                                       })
-
-        run_and_forget(_inner)
+        self._trigger_remote_plugin(GUI_NAME, 'clear_dashboard_cache', blocking=False,
+                                    data={
+                                        'clear_slow': clear_slow
+                                    })
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
         db = self._get_db_connection()
