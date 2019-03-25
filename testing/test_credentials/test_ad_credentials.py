@@ -18,6 +18,12 @@ ad_client2_details = {
     "fetch_disabled_users": True
 }
 
+GROUPS_USERS = {
+    'group': 'ESX Admins.Security Branch.TestDomain.test',
+    'user': 'TestDomain\\avidor',
+    'password': 'Password2'
+}
+
 # These devices has been configured to never sleep, so that we could try to execute code through them.
 DEVICE_ID_FOR_CLIENT_1 = 'CN=DCNY1,OU=Domain Controllers,DC=TestDomain,DC=test'
 CLIENT1_DEVICE_ID_BLACKLIST = 'CN=DC4,OU=Domain Controllers,DC=TestDomain,DC=test'

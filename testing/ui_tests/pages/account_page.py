@@ -19,3 +19,4 @@ class AccountPage(EntitiesPage):
         self.click_button('Reset Key', should_scroll_into_view=False)
         self.wait_for_element_present_by_id('approve-reset-api-key')
         self.click_button_by_id('approve-reset-api-key', should_scroll_into_view=False)
+        self.wait_for_toaster('a new secret key has been generated, the old one is no longer valid')

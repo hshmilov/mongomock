@@ -7,6 +7,7 @@ from retrying import retry
 
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
+from axonius.clients.ldap.ldap_group_cache import get_ldap_groups
 from axonius.profiling.memory import asizeof
 from axonius.utils.datetime import parse_date
 from axonius.utils.retrying import retry_generator
@@ -967,24 +968,7 @@ class LdapConnection(object):
                 return set()
 
             if not self.__ldap_groups:
-                logger.info(f'Initializing LDAP groups for the first time')
-                groups = self._ldap_search("(objectClass=group)", attributes=["memberOf", "distinguishedName"])
-                for group in groups:
-                    init_group_dn = group.get('distinguishedName')
-                    group_member_of = group.get('memberOf')
-
-                    if not init_group_dn:
-                        logger.error(f'Error, found group with no DN, continuing')
-                        continue
-
-                    if isinstance(group_member_of, str):
-                        group_member_of = [group_member_of]
-
-                    self.__ldap_groups[init_group_dn] = {'search_mode': False}
-                    if group_member_of:
-                        self.__ldap_groups[init_group_dn]['member_of'] = group_member_of
-
-                logger.info(f'Initiated LDAP groups successfully. number of groups: {len(self.__ldap_groups)}')
+                self.__ldap_groups = get_ldap_groups(self)
 
             group_object = self.__ldap_groups.get(group_dn)
             if not group_object:

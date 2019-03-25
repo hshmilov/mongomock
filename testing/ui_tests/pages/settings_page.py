@@ -46,6 +46,7 @@ class SettingsPage(Page):
     USE_EXECUTION = 'Execution Enabled'
     HISTORY_GATHERED = 'Should history be gathered'
     DC_ADDRESS = 'dc_address'
+    GROUP_CN = 'group_cn'
     SINGLE_ADAPTER_VIEW = 'Use Single Adapter View'
     TABLE_MULTI_LINE_VIEW = 'Use Table Multi Line View'
     ALLOW_GOOGLE_LOGINS = 'Allow Google logins'
@@ -326,6 +327,9 @@ class SettingsPage(Page):
 
     def fill_dc_address(self, dc_address):
         self.fill_text_field_by_element_id(self.DC_ADDRESS, dc_address)
+
+    def fill_group_ldap(self, group):
+        self.fill_text_field_by_element_id(self.GROUP_CN, group)
 
     def fill_okta_login_details(self, client_id, client_secret, url, gui2_url=None, gui_url=None):
         self.fill_text_field_by_element_id('client_id', client_id)
