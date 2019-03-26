@@ -49,8 +49,8 @@ def create_device():
     return CiscoDevice(set(), set())
 
 
-def print_mocks(ip):
-    with CiscoTelnetClient(host=ip, port=23, username='cisco', password='cisco') as c:
+def print_mocks(host, port=23, username='cisco', password='cisco'):
+    with CiscoTelnetClient(host=host, port=port, username=username, password=password) as c:
         print(f'arp = {repr(c.query_arp_table()._raw_data)}')
         print(f'dhcp = {repr(c.query_dhcp_leases()._raw_data)}')
         print(f'cdp = {repr(c.query_cdp_table()._raw_data)}')
@@ -472,3 +472,58 @@ def test_instance_parser(client):
         devices = list(InstanceParser(results).get_devices(create_device))
     devices = sorted(list(map(lambda device: set(device.to_dict()), devices)))
     assert devices == expected
+
+
+def test_parse_entry_block():
+    variant1 = '''Device ID: dhcp-slave
+Entry address(es): 
+  IP address: 10.0.0.1
+Platform: Cisco 2691,  Capabilities: Switch IGMP 
+Interface: FastEthernet0/1,  Port ID (outgoing port): FastEthernet0/0
+Holdtime : 138 sec
+
+Version :
+Cisco IOS Software, 2600 Software (C2691-ENTSERVICESK9-M), Version 12.4(13b), RELEASE SOFTWARE (fc3)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2007 by Cisco Systems, Inc.
+Compiled Tue 24-Apr-07 15:33 by prod_rel_team
+
+advertisement version: 2
+VTP Management Domain: 
+Duplex: half
+
+'''
+    expected_result1 = {
+        'ip': '10.0.0.1',
+        'version': 'Cisco IOS Software, 2600 Software (C2691-ENTSERVICESK9-M), Version 12.4(13b), RELEASE SOFTWARE (fc3)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c) 1986-2007 by Cisco Systems, Inc.\nCompiled Tue 24-Apr-07 15:33 by prod_rel_team',
+        'hostname': 'dhcp-slave',
+        'remote_iface': 'FastEthernet0/1',
+        'iface': 'FastEthernet0/0',
+        'device_model': 'Cisco 2691',
+    }
+    variant2 = '''Device ID:
+Entry address(es): 
+  IPv6 address: FE80::2C8:8BFF:FE9A:17A5  (link-local)
+Platform: AIR-CT5520-K9,  Capabilities: Host 
+Interface: TenGigabitEthernet1/1/4,  Port ID (outgoing port): TenGigabitEthernet0/0/1
+Holdtime : 152 sec
+
+Version :
+Manufacturer's Name: Cisco Systems Inc.  Product Name: Cisco Controller  Product Version: 8.1.102.0  RTOS Version: 8.1.102.0  Bootloader Version: 8.1.102.0  Build Type: DATA + WPS
+
+advertisement version: 2
+Duplex: full
+
+
+'''
+    expected_result2 = {
+        'remote_iface': 'TenGigabitEthernet1/1/4',
+        'iface': 'TenGigabitEthernet0/0/1',
+        'device_model': 'AIR-CT5520-K9',
+        'ip': 'FE80::2C8:8BFF:FE9A:17A5',
+        'version': 'Manufacturer\'s Name: Cisco Systems Inc.  Product Name: Cisco Controller  Product Version: 8.1.102.0  RTOS Version: 8.1.102.0  Bootloader Version: 8.1.102.0  Build Type: DATA + WPS',
+    }
+    result = ConsoleCdpCiscoData.parse_entry(variant1)
+    assert result == expected_result1
+    result = ConsoleCdpCiscoData.parse_entry(variant2)
+    assert result == expected_result2

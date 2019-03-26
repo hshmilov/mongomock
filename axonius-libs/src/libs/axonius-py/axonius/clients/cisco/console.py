@@ -2,6 +2,7 @@ import logging
 import re
 import socket
 from datetime import timedelta
+from collections import namedtuple
 
 import func_timeout
 import paramiko
@@ -168,6 +169,20 @@ class CiscoTelnetClient(CiscoConsoleClient):
 
 
 class ConsoleCdpCiscoData(CdpCiscoData):
+    @staticmethod
+    def parse_word(title, entry):
+        match = re.findall(r'{}:[^\n]\s?(\S.*?)[,\s\(]'.format(re.escape(title)), entry, re.MULTILINE)
+        return match[0] if match else None
+
+    @staticmethod
+    def parse_til_comma(title, entry):
+        match = re.findall(r'{}:[^\n]\s?(\S.*?)[,\n\(]'.format(re.escape(title)), entry, re.MULTILINE)
+        return match[0] if match else None
+
+    @staticmethod
+    def parse_version(title, entry):
+        match = re.findall(r'{} :\s+(.*?)\n\n'.format(re.escape(title)), entry, re.DOTALL)
+        return match[0] if match else None
 
     @staticmethod
     def _parse_cdp_table(text):
@@ -175,28 +190,8 @@ class ConsoleCdpCiscoData(CdpCiscoData):
 
         # Split to entries, skip the header
         entries = text.split('-------------------------')[1:]
-        logger.info(f'got {len(entries)} entries')
+        logger.debug(f'got {len(entries)} entries')
         return entries
-
-    @staticmethod
-    def parse_entry_block(block):
-        block = block.strip()
-        if block.splitlines()[0].strip().endswith(':'):
-            assert block.splitlines()[0].count(':') == 1
-            return [tuple(map(str.strip, block.split(':', 1)))]
-        lines = sum(list(line.split(',  ') for line in block.splitlines()), [])
-        return list(map(lambda line: tuple(map(str.strip, line.split(':', 1))), lines))
-
-    @staticmethod
-    def translate_entry(entry):
-        result = {}
-        for key, value in [('IP address', 'ip'), ('Version', 'version'), ('Device ID', 'hostname'),
-                           ('Interface', 'remote_iface'), ('Port ID (outgoing port)', 'iface'),
-                           ('Platform', 'device_model')]:
-            if key in entry:
-                logger.debug(f'entry = {entry}')
-                result[value] = entry[key]
-        return result
 
     @staticmethod
     def parse_entry(entry):
@@ -204,8 +199,12 @@ class ConsoleCdpCiscoData(CdpCiscoData):
         # XXX: We are converting the data to dict, but it may appear more then once,
         # (For example IP address) . I wasn't able to achive this state so for now
         # we'll throw anything that appear more then once.
-        data = dict(sum(map(ConsoleCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
-        return ConsoleCdpCiscoData.translate_entry(data)
+        result = {}
+        for index, title in enumerate(TITLES):
+            parsed = PARSERS[index](title, entry)
+            if parsed:
+                result[CONVERTERS[index]] = parsed
+        return result
 
     def _parse(self):
         try:
@@ -220,6 +219,36 @@ class ConsoleCdpCiscoData(CdpCiscoData):
                 yield self.parse_entry(line)
             except Exception:
                 logger.exception('Exception while paring cdp line')
+
+
+KEYS = ('ipv4',
+        'ipv6',
+        'version',
+        'hostname',
+        'remote_iface',
+        'iface',
+        'device_model')
+Keys = namedtuple('CdpKeys', KEYS)
+TITLES = Keys(
+    ipv6='IPv6 address',
+    ipv4='IP address',
+    version='Version',
+    hostname='Device ID',
+    remote_iface='Interface',
+    iface='Port ID (outgoing port)',
+    device_model='Platform',
+)
+PARSERS = Keys(
+    ipv6=ConsoleCdpCiscoData.parse_word,
+    ipv4=ConsoleCdpCiscoData.parse_word,
+    version=ConsoleCdpCiscoData.parse_version,
+    hostname=ConsoleCdpCiscoData.parse_word,
+    remote_iface=ConsoleCdpCiscoData.parse_word,
+    iface=ConsoleCdpCiscoData.parse_word,
+    device_model=ConsoleCdpCiscoData.parse_til_comma,
+)
+CONVERTERS = Keys(*(key.replace('ipv6', 'ip').replace('ipv4', 'ip') for key in KEYS))
+
 
 # XXX: pylint thinks that iterator table_row is not iterable - AX-1898
 # pylint: disable=E1133
