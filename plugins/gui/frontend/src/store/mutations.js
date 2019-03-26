@@ -278,3 +278,13 @@ export const updateSystemConfig = (state, payload) => {
 		state.configuration.data = {...state.configuration.data, ...payload.data}
 	}
 }
+
+export const UPDATE_SYSTEM_EXPIRED = 'UPDATE_SYSTEM_EXPIRED'
+export const updateSystemExpired = (state, payload) => {
+	state.expired.fetching = payload.fetching
+	state.expired.error = payload.error
+	if (payload.data !== undefined) {
+		state.expired.data = payload.data
+	}
+}
+

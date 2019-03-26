@@ -29,7 +29,7 @@
                     <x-button link :disabled="isReadOnly" @click="createNewDashboard" id="dashboard_wizard">+</x-button>
                 </x-card>
             </div>
-            <x-wizard ref="wizard"/>
+            <x-wizard v-if="wizardActivated" @done="wizardActivated = false" />
         </template>
         <x-toast v-if="message" :message="message" @done="removeToast"/>
     </x-page>
@@ -124,6 +124,9 @@
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
                     return user.permissions.Users === 'Restricted'
+                },
+                isExpired(state) {
+                    return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
                 }
             }),
             lifecycle() {
@@ -207,9 +210,7 @@
                 this.$router.push({path: module})
             },
             createNewDashboard() {
-                if (!this.$refs.wizard) return
                 this.wizardActivated = true
-                this.$refs.wizard.activate()
             },
             getId(name) {
                 return name.split(' ').join('_').toLowerCase()
@@ -257,7 +258,7 @@
                 })
             }
             getDashboardData().then(() => {
-                if (this._isDestroyed) return
+                if (this._isDestroyed || this.isExpired) return
                 if (!this.isEmptySystem) this.nextState('dashboard')
                 if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count

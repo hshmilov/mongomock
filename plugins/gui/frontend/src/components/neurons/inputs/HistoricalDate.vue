@@ -33,6 +33,9 @@
                 },
                 allowedDates(state) {
                     return state.constants.allowedDates[this.module]
+                },
+                isExpired(state) {
+                  return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
                 }
             }),
             currentDate() {
@@ -54,9 +57,11 @@
                 this.$emit('input', historical)
             }
         },
-        created() {
-            this.fetchFirstHistoricalDate()
-            this.fetchAllowedDates()
+        mounted() {
+            if (!this.isExpired) {
+                this.fetchFirstHistoricalDate()
+                this.fetchAllowedDates()
+            }
         }
     }
 </script>

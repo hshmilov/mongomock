@@ -159,10 +159,11 @@ def has_customer_login_happened():
     return LOGGED_IN_MARKER_PATH.is_file()
 
 
-def session_connection(func, required_permissions: Iterable[Permission]):
+def session_connection(func, required_permissions: Iterable[Permission], enforce_trial=True):
     """
     Decorator stating that the view requires the user to be connected
     :param required_permissions: The set (or list...) of Permission required for this api call or none
+    :param enforce_trial: Restrict if system has a trial expiration date configure and it has passed
     """
 
     def wrapper(self, *args, **kwargs):
@@ -170,7 +171,8 @@ def session_connection(func, required_permissions: Iterable[Permission]):
         if user is None:
             return return_error('You are not connected', 401)
         permissions = user.get('permissions')
-        if not check_permissions(permissions, required_permissions, request.method) and not user.get('admin'):
+        if ((not check_permissions(permissions, required_permissions, request.method) and not user.get('admin')) or
+                (enforce_trial and PluginBase.Instance.trial_expired() and user.get('user_name') != AXONIUS_USER_NAME)):
             return return_error('You are lacking some permissions for this request', 401)
 
         oidc_data: OidcData = session.get('oidc_data')
@@ -180,7 +182,7 @@ def session_connection(func, required_permissions: Iterable[Permission]):
             except Exception:
                 # TBD: Which exception exactly are raised
                 session['user'] = None
-                return return_error('You\'er OIDC sessions has expired', 401)
+                return return_error('Your OIDC sessions has expired', 401)
 
         if has_request_context():
             path = request.path
@@ -197,7 +199,8 @@ def session_connection(func, required_permissions: Iterable[Permission]):
 
 
 # Caution! These decorators must come BEFORE @add_rule
-def gui_add_rule_logged_in(rule, required_permissions: Iterable[Permission] = None, *args, **kwargs):
+def gui_add_rule_logged_in(rule, required_permissions: Iterable[Permission] = None, enforce_trial=True,
+                           *args, **kwargs):
     """
     A URL mapping for GUI endpoints that use the browser session for authentication,
     see add_rule_custom_authentication for more information.
@@ -206,7 +209,8 @@ def gui_add_rule_logged_in(rule, required_permissions: Iterable[Permission] = No
     required_permissions = set(required_permissions or [])
 
     def session_connection_permissions(*args, **kwargs):
-        return session_connection(*args, **kwargs, required_permissions=required_permissions)
+        return session_connection(*args, **kwargs, required_permissions=required_permissions,
+                                  enforce_trial=enforce_trial)
 
     return gui_helpers.add_rule_custom_authentication(rule, session_connection_permissions, *args, **kwargs)
 
@@ -1137,16 +1141,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
                                                   history_date=history, quick=quick))
 
-    @gui_add_rule_logged_in('devices/fields', required_permissions={Permission(PermissionType.Devices,
-                                                                               PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('devices/fields', required_permissions={
+        Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
     def device_fields(self):
         return jsonify(gui_helpers.entity_fields(EntityType.Devices))
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('devices/views', methods=['GET', 'POST', 'DELETE'],
-                            required_permissions={Permission(PermissionType.Devices,
-                                                             ReadOnlyJustForGet)})
+                            required_permissions={Permission(PermissionType.Devices, ReadOnlyJustForGet)})
     def device_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the devices db
@@ -1156,8 +1159,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/labels', methods=['GET', 'POST', 'DELETE'],
-                            required_permissions={Permission(PermissionType.Devices,
-                                                             ReadOnlyJustForGet)})
+                            required_permissions={Permission(PermissionType.Devices, ReadOnlyJustForGet)})
     def device_labels(self, mongo_filter):
         return self._entity_labels(self.devices_db, self.devices, mongo_filter)
 
@@ -1272,8 +1274,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Users),
                                                   history_date=history, quick=quick))
 
-    @gui_add_rule_logged_in('users/fields', required_permissions={Permission(PermissionType.Users,
-                                                                             PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('users/fields', required_permissions={
+        Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
     def user_fields(self):
         return jsonify(gui_helpers.entity_fields(EntityType.Users))
 
@@ -1292,8 +1294,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.paginated()
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('users/views', methods=['GET', 'POST', 'DELETE'],
-                            required_permissions={Permission(PermissionType.Users,
-                                                             ReadOnlyJustForGet)})
+                            required_permissions={Permission(PermissionType.Users, ReadOnlyJustForGet)})
     def user_views(self, limit, skip, mongo_filter):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
 
@@ -2129,8 +2130,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return plugin_data
 
     @gui_add_rule_logged_in('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             ReadOnlyJustForGet)})
+                            required_permissions={Permission(PermissionType.Settings, ReadOnlyJustForGet)},
+                            enforce_trial=False)
     def plugins_configs_set(self, plugin_name, config_name):
         """
         Set a specific config on a specific plugin
@@ -2151,8 +2152,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         config_to_set = request.get_json(silent=True)
         if config_to_set is None:
             return return_error('Invalid config', 400)
-        if plugin_name == 'core' and config_name == CORE_CONFIG_NAME:
 
+        if plugin_name == 'core' and config_name == CORE_CONFIG_NAME:
             email_settings = config_to_set.get('email_settings')
             if email_settings and email_settings.get('enabled') is True:
                 if not email_settings.get('smtpHost') or not email_settings.get('smtpPort'):
@@ -2190,6 +2191,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                         f'hostname in given cert is {cn}', 400)
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
+
+        if config_name == FeatureFlags.__name__:
+            self.__invalidate_sessions()
         return ''
 
     @gui_add_rule_logged_in('configuration', methods=['GET'])
@@ -2202,7 +2206,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return: Settings for the system and Global settings, indicating if Mail and Syslog are enabled
         """
         return jsonify({
-            'system': self._system_settings, 'global': {
+            'system': self._system_settings,
+            'global': {
                 'mail': self._email_settings['enabled'] if self._email_settings else False,
                 'syslog': self._syslog_settings['enabled'] if self._system_settings else False,
                 'httpsLog': self._https_logs_settings['enabled'] if self._https_logs_settings else False,
@@ -2281,8 +2286,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.sorted_endpoint()
     @gui_add_rule_logged_in('notifications', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             ReadOnlyJustForGet)})
+                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)})
     def notifications(self, limit, skip, mongo_filter, mongo_sort):
         """
         Get all notifications
@@ -2330,8 +2334,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('notifications/count', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
     def notifications_count(self, mongo_filter):
         """
         Fetches from core's notification collection, according to given mongo_filter,
@@ -2770,8 +2773,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.paginated()
     @gui_add_rule_logged_in('system/users', methods=['GET', 'PUT'],
-                            required_permissions={Permission(PermissionType.Settings,
-                                                             PermissionLevel.ReadWrite)})
+                            required_permissions={Permission(PermissionType.Settings, PermissionLevel.ReadWrite)})
     def system_users(self, limit, skip):
         """
         GET Returns all users of the system
@@ -2966,7 +2968,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         constants['trigger_periods'] = [{x.name: x.value} for x in order]
         return jsonify(constants)
 
-    def __invalidate_sessions(self, user_id: str):
+    @gui_helpers.add_rule_unauth('system/expired')
+    def get_trial_expired(self):
+        """
+        Whether system has currently expired it's trial. If no trial expiration date, answer will be false.
+        """
+        return jsonify(self.trial_expired())
+
+    def __invalidate_sessions(self, user_id: str = None):
         """
         Invalidate all sessions for this user except the current one
         """
@@ -2977,7 +2986,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if not d:
                 continue
             user = d.get('user')
-            if user and str(d['user'].get('_id')) == user_id:
+            if user and (not user_id or str(d['user'].get('_id')) == user_id):
                 d['user'] = None
 
     @gui_add_rule_logged_in('api_key', methods=['GET', 'POST'])
@@ -3011,7 +3020,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     # DASHBOARD #
     #############
 
-    @gui_add_rule_logged_in('dashboard/first_use', methods=['GET'])
+    @gui_add_rule_logged_in('dashboard/first_use', methods=['GET'], enforce_trial=False)
     def dashboard_first(self):
         """
         __is_first_time_use maintains whether any adapter was connected with a client.
@@ -3124,21 +3133,20 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         return jsonify({x['name']: x for x in res})
 
-    @gui_add_rule_logged_in('first_historical_date', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('first_historical_date', methods=['GET'], required_permissions={
+        Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
     def get_first_historical_date(self):
         return jsonify(first_historical_date())
 
-    @gui_add_rule_logged_in('get_allowed_dates', required_permissions=[Permission(PermissionType.Dashboard,
-                                                                                  PermissionLevel.ReadOnly)])
+    @gui_add_rule_logged_in('get_allowed_dates', required_permissions={
+        Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)})
     def all_historical_dates(self):
         return jsonify(all_historical_dates())
 
     @gui_helpers.paginated()
     @gui_add_rule_logged_in('dashboard', methods=['POST', 'GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             ReadOnlyJustForGet)})
+                            required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)},
+                            enforce_trial=False)
     def get_dashboard(self, skip, limit):
         if request.method == 'GET':
             return jsonify(self._get_dashboard(skip, limit))
@@ -3806,7 +3814,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
         return ''
 
-    @rev_cached(ttl=10, key_func=lambda self: 1)
+    @rev_cached(ttl=3, key_func=lambda self: 1)
     def __lifecycle(self):
         is_running = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME). \
             json()['state'] == TriggerStates.Triggered.name
@@ -3849,8 +3857,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         }
 
     @gui_add_rule_logged_in('dashboard/lifecycle', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
+                            enforce_trial=False)
     def get_system_lifecycle(self):
         """
         Fetches and build data needed for presenting current status of the system's lifecycle in a graph
@@ -3864,8 +3872,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return jsonify(self.__lifecycle())
 
     @gui_add_rule_logged_in('dashboard/adapter_data/<entity_name>', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadOnly)})
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
+                            enforce_trial=False)
     def get_adapter_data(self, entity_name):
         try:
             return jsonify(adapter_data(EntityType(entity_name)))
@@ -4221,6 +4229,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return self._schedule_exec_report(self.exec_report_collection, exec_report_data)
 
     def _send_report_thread(self, recipients=None):
+        if self.trial_expired():
+            logger.error('Report email not sent - system trial has expired')
+            return
+
         with self.exec_report_lock:
             if not recipients:
                 exec_report = self.exec_report_collection.find_one()
@@ -4237,6 +4249,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 raise RuntimeWarning('No email server configured')
 
     def _stop_temp_maintenance(self):
+        if self.trial_expired():
+            logger.error('Support access not stopped - system trial has expired')
+            return
+
         logger.info('Stopping Support Access')
         self._update_temp_maintenance(None)
         temp_maintenance_job = self._job_scheduler.get_job(TEMP_MAINTENANCE_THREAD_ID)
@@ -4339,8 +4355,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         except Exception:
             logger.exception('Failed to dump metrics')
 
-    @gui_add_rule_logged_in('metadata', methods=['GET'], required_permissions={Permission(PermissionType.Settings,
-                                                                                          PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('metadata', methods=['GET'], required_permissions={
+        Permission(PermissionType.Settings, PermissionLevel.ReadOnly)})
     def get_metadata(self):
         """
         Gets the system metadata.
@@ -4615,16 +4631,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.add_rule_unauth('provision')
     def get_provision(self):
+        if self.trial_expired():
+            return jsonify(True)
+
         return jsonify(self._maintenance_config.get('provision', False) or
                        self._maintenance_config.get('timeout') is not None)
 
     @gui_helpers.add_rule_unauth('analytics')
     def get_analytics(self):
+        if self.trial_expired():
+            return jsonify(True)
+
         return jsonify(self._maintenance_config.get('analytics', False) or
                        self._maintenance_config.get('timeout') is not None)
 
     @gui_helpers.add_rule_unauth('troubleshooting')
     def get_troubleshooting(self):
+        if self.trial_expired():
+            return jsonify(True)
+
         return jsonify(self._maintenance_config.get('troubleshooting', False) or
                        self._maintenance_config.get('timeout') is not None)
 

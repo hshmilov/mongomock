@@ -4,9 +4,9 @@ import secrets
 
 import requests
 
-from axonius.consts.gui_consts import (CONFIG_COLLECTION, ROLES_COLLECTION, USERS_COLLECTION,
+from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
-                                       FEATURE_FLAGS_COLLECTION, Signup)
+                                       FEATURE_FLAGS_CONFIG, Signup)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -212,7 +212,7 @@ class GuiService(PluginService):
 
             # Fix the Google Login Settings - Rename 'client_id' field to 'client'
             config_match = {
-                'config_name': CONFIG_COLLECTION
+                'config_name': CONFIG_CONFIG
             }
             current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
             if current_config:
@@ -283,7 +283,7 @@ class GuiService(PluginService):
         try:
             # Fix the Okta Login Settings - Rename 'gui_url' field to 'gui2_url'
             config_match = {
-                'config_name': CONFIG_COLLECTION
+                'config_name': CONFIG_CONFIG
             }
             current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
             if current_config:
@@ -332,11 +332,6 @@ class GuiService(PluginService):
             self.db_schema_version = 8
         except Exception as e:
             print(f'Exception while upgrading gui db to version 8. Details: {e}')
-
-    def _update_schema_version_10(self):
-        print('Upgrade to schema 10')
-        self._update_default_locked_actions(['tenable_io_add_ips_to_target_group'])
-        self.db_schema_version = 10
 
     def _update_schema_version_9(self):
         print('Upgrade to schema 9')
@@ -392,16 +387,23 @@ class GuiService(PluginService):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 9. Details: {e}')
 
+    def _update_schema_version_10(self):
+        print('Upgrade to schema 10')
+        self._update_default_locked_actions(['tenable_io_add_ips_to_target_group'])
+        self.db_schema_version = 10
+
     def _update_default_locked_actions(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
         locked_actions
         """
         self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
-            'config_name': FEATURE_FLAGS_COLLECTION
+            'config_name': FEATURE_FLAGS_CONFIG
         }, {
             '$addToSet': {
-                'config.locked_actions': new_actions
+                'config.locked_actions': {
+                    '$each': new_actions
+                }
             }
         })
 
@@ -568,10 +570,10 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         return self.put(f'V{self.get_api_version()}/reports', report_data, *vargs, **kwargs)
 
     def get_saml_settings(self):
-        return self.get_configurable_config(CONFIG_COLLECTION)
+        return self.get_configurable_config(CONFIG_CONFIG)
 
     def get_feature_flags(self):
-        return self.get_configurable_config(FEATURE_FLAGS_COLLECTION)
+        return self.get_configurable_config(FEATURE_FLAGS_CONFIG)
 
     def get_maintenance_flags(self):
         flags = self.db.get_collection(self.plugin_name, GUI_SYSTEM_CONFIG_COLLECTION).find_one(MAINTENANCE_FILTER)

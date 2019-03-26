@@ -155,15 +155,17 @@ export const auth = {
 		},
 		[ LOGOUT ] ({dispatch}) {
 			try {
-                const auth2 = window.gapi.auth2.getAuthInstance()
-                auth2.signOut()
-            }
-			catch (err) {
+					const auth2 = window.gapi.auth2.getAuthInstance()
+					auth2.signOut()
+			} catch (err) {
 			}
 
 			dispatch(REQUEST_API, {
 				rule: 'logout',
-				type: INIT_USER
+				type: INIT_USER,
+				payload: {
+					error: 'Not logged in'
+				}
 			})
 		},
 		[ GET_ALL_USERS ] ({dispatch}) {

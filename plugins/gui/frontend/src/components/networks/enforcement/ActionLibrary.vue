@@ -58,17 +58,16 @@
   import xSearchInput from '../../neurons/inputs/SearchInput.vue'
   import xActionLibraryTip from './ActionLibraryTip.vue'
   import actionsMixin from '../../../mixins/actions'
+  import featureFlagsMixin from '../../../mixins/feature_flags'
   import { actionsMeta } from '../../../constants/enforcement'
 
-  import {mapState, mapActions} from 'vuex'
-  import {LOAD_PLUGIN_CONFIG} from '../../../store/modules/settings'
 
   export default {
     name: 'XActionLibrary',
     components: {
       xTitle, xSearchInput, xActionLibraryTip
     },
-    mixins: [actionsMixin],
+    mixins: [actionsMixin, featureFlagsMixin],
     props: {
       categories: {
         type: Array,
@@ -82,12 +81,9 @@
       }
     },
     computed: {
-      ...mapState({
-        lockedActions(state) {
-          if (!state.settings.configurable.gui || !state.settings.configurable.gui.FeatureFlags) return null
-          return state.settings.configurable.gui.FeatureFlags.config.locked_actions
-        }
-      }),
+      lockedActions() {
+        return this.featureFlags ? this.featureFlags.locked_actions : null
+      },
       processedCategories () {
         return this.categories.map(category => {
           return {
@@ -107,18 +103,7 @@
         }).filter(category => category.items.length)
       }
     },
-    mounted() {
-      if (!this.lockedActions || !this.lockedActions.length) {
-        this.loadPluginConfig({
-          pluginId: 'gui',
-          configName: 'FeatureFlags'
-        })
-      }
-    },
     methods: {
-      ...mapActions({
-        loadPluginConfig: LOAD_PLUGIN_CONFIG
-      }),
       disabled (action) {
         return !this.actionsDef[action]
       },

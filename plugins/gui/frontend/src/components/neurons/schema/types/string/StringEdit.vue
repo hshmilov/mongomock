@@ -1,11 +1,35 @@
 <template>
-    <input v-if="inputType" :id="schema.name" :type="inputType" v-model="processedData" :class="{'error-border': error}"
-       @input="input" @focusout.stop="focusout" :disabled="readOnly" />
-    <!-- Date Picker -->
-    <x-date-edit v-else-if="isDate" v-model="data" @input="input" :read-only="readOnly" :clearable="false" :minimal="true" />
-    <!-- Select from enum values -->
-    <x-select v-else-if="enumOptions" :options="enumOptions" v-model="data" placeholder="value..." :searchable="true"
-              @input="input" @focusout.stop="validate" :class="{'error-border': error}" :read-only="readOnly" />
+  <input
+    v-if="inputType"
+    :id="schema.name"
+    v-model="processedData"
+    :type="inputType"
+    :class="{'error-border': error}"
+    :disabled="readOnly"
+    @input="input"
+    @focusout.stop="focusout"
+  >
+  <!-- Date Picker -->
+  <x-date-edit
+    v-else-if="isDate"
+    v-model="data"
+    :read-only="readOnly"
+    :minimal="true"
+    :clearable="clearable"
+    @input="input"
+  />
+  <!-- Select from enum values -->
+  <x-select
+    v-else-if="enumOptions"
+    v-model="data"
+    :options="enumOptions"
+    placeholder="value..."
+    :searchable="true"
+    :class="{'error-border': error}"
+    :read-only="readOnly"
+    @input="input"
+    @focusout.stop="validate"
+  />
 </template>
 
 <script>
@@ -14,9 +38,15 @@
     import xDateEdit from './DateEdit.vue'
 
 	export default {
-		name: 'x-string-edit',
-        mixins: [primitiveMixin],
+		name: 'XStringEdit',
         components: { xSelect, xDateEdit },
+        mixins: [primitiveMixin],
+        props: {
+		  clearable: {
+		    type: Boolean,
+            default: true
+          }
+        },
         data() {
             return {
                 data: '',

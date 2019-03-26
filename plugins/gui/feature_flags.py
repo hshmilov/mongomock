@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 
 from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.mixins.configurable import Configurable
@@ -44,7 +45,7 @@ class FeatureFlags(Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            FeatureFlagsNames.TrialEnd: None,
+            FeatureFlagsNames.TrialEnd: (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/'),
             FeatureFlagsNames.LockedActions: [
                 'cybereason_isolate',
                 'cybereason_unisolate',

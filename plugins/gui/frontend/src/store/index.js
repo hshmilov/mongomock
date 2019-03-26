@@ -27,6 +27,7 @@ import {
   RUN_ACTION, runAction,
   STOP_RESEARCH_PHASE, stopResearch,
   FETCH_SYSTEM_CONFIG, fetchSystemConfig,
+  FETCH_SYSTEM_EXPIRED, fetchSystemExpired,
   SAVE_CUSTOM_DATA, saveCustomData
 } from './actions'
 import {
@@ -49,7 +50,8 @@ import {
   UPDATE_DATA_BY_ID, updateDataByID,
   UPDATE_SAVED_DATA_NOTE, updateSavedDataNote,
   UPDATE_REMOVED_DATA_NOTE, updateRemovedDataNote,
-  UPDATE_SYSTEM_CONFIG, updateSystemConfig
+  UPDATE_SYSTEM_CONFIG, updateSystemConfig,
+  UPDATE_SYSTEM_EXPIRED, updateSystemExpired
 } from './mutations'
 import {
   GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
@@ -86,7 +88,8 @@ export default new Vuex.Store({
       windowWidth: 0
     },
     configuration: { fetching: false, data: null, error: '' },
-    staticConfiguration: { medicalConfig: ENV.medical }
+    staticConfiguration: { medicalConfig: ENV.medical },
+    expired: { fetching: false, data: false, error: '' }
   },
   getters: {
     [GET_DATA_FIELDS_BY_PLUGIN]: getDataFieldsByPlugin,
@@ -115,7 +118,8 @@ export default new Vuex.Store({
     [UPDATE_DATA_BY_ID]: updateDataByID,
     [UPDATE_SAVED_DATA_NOTE]: updateSavedDataNote,
     [UPDATE_REMOVED_DATA_NOTE]: updateRemovedDataNote,
-    [UPDATE_SYSTEM_CONFIG]: updateSystemConfig
+    [UPDATE_SYSTEM_CONFIG]: updateSystemConfig,
+    [UPDATE_SYSTEM_EXPIRED]: updateSystemExpired
   },
   actions: {
     [REQUEST_API]: requestApi,
@@ -143,6 +147,7 @@ export default new Vuex.Store({
     [RUN_ACTION]: runAction,
     [STOP_RESEARCH_PHASE]: stopResearch,
     [FETCH_SYSTEM_CONFIG]: fetchSystemConfig,
+    [FETCH_SYSTEM_EXPIRED]: fetchSystemExpired,
     [SAVE_CUSTOM_DATA]: saveCustomData
   },
   modules: {

@@ -163,6 +163,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.error(f'Got bad trigger request for non-existent job: {job_name}')
             return return_error('Got bad trigger request for non-existent job', 400)
 
+        if self.trial_expired():
+            logger.error('Job not ran - system trial has expired')
+            return return_error('Job not ran - system trial has expired', 400)
+
         logger.info(f'Started system scheduler')
         self.__start_research()
 

@@ -7,7 +7,7 @@ import {
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
     UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
-	UPDATE_REMOVED_DATA_VIEW, UPDATE_SYSTEM_CONFIG,
+	UPDATE_REMOVED_DATA_VIEW, UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED,
 	UPDATE_DATA_HYPERLINKS
 } from './mutations'
 
@@ -461,6 +461,14 @@ export const fetchSystemConfig =({dispatch}) => {
         rule: 'configuration',
         type: UPDATE_SYSTEM_CONFIG
     })
+}
+
+export const FETCH_SYSTEM_EXPIRED = 'FETCH_SYSTEM_EXPIRED'
+export const fetchSystemExpired =({dispatch}) => {
+	return dispatch(REQUEST_API, {
+		rule: 'system/expired',
+		type: UPDATE_SYSTEM_EXPIRED
+	})
 }
 
 export const SAVE_CUSTOM_DATA = 'SAVE_CUSTOM_DATA'

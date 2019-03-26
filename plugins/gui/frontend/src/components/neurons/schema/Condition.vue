@@ -4,7 +4,7 @@
         <x-select v-if="!isParent && opsList.length" :options="opsList" v-model="condition.compOp"
                   placeholder="func..." :id="first? 'query_op': undefined" class="expression-comp"/>
         <component v-if="showValue" :is="valueSchema.type" :schema="valueSchema" v-model="condition.value"
-                   class="expression-value" :class="{'grid-span2': !opsList.length}"
+                   class="expression-value" :class="{'grid-span2': !opsList.length}" :clearable="false"
                    :id="first? 'query_value': undefined"/>
         <div v-else></div>
     </div>

@@ -1,5 +1,5 @@
 <template>
-    <x-feedback-modal :launch="isActive" :handle-save="saveNewDashboard" :disabled="isDisabled" approve-id="chart_save"
+    <x-feedback-modal :launch="true" :handle-save="saveNewDashboard" :disabled="isDisabled" approve-id="chart_save"
                       @change="finishNewDashboard" @enter="nextWizardState">
         <h3>Create a Dashboard Chart</h3>
         <div class="x-chart-wizard">
@@ -94,7 +94,6 @@
         },
         data() {
             return {
-                isActive: false,
                 dashboard: {...dashboard},
                 message: '',
                 advanceState: false,
@@ -114,10 +113,6 @@
             ...mapActions({
                 saveDashboard: SAVE_DASHBOARD
             }),
-            activate() {
-                this.isActive = true
-                this.message = ''
-            },
             nameDashboard() {
                 this.message = ''
                 this.changeTourState('wizardSave')
@@ -126,8 +121,7 @@
                 return this.saveDashboard(this.dashboard)
             },
             finishNewDashboard() {
-                this.isActive = false
-                this.dashboard = {...dashboard}
+                this.$emit('done')
             },
             nextWizardState() {
                 this.nextState('dashboardWizard')

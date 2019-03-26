@@ -1,222 +1,338 @@
 <template>
-    <header class="x-top-bar" :class="{ 'minimize': collapseSidebar }">
-        <div class="bar-toggle">
-            <a class="toggle-link" @click="toggleSidebar">
-                <svg-icon name="navigation/menu" :original="true" height="20"/>
-            </a>
-        </div>
-        <div v-if="!medicalConfig" class="bar-logo">
-            <svg-icon name="logo/logo" height="30" :original="true"/>
-            <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
-        </div>
-        <ul class="bar-nav" v-if="!medicalConfig">
-            <li class="nav-item">
-                <button v-if="researchStatusLocal === 'starting'" class="item-link research-link" disabled>
-                    <svg-icon name="symbol/running" class="rotating" :original="true" height="20"/>
-                    <div>Initiating...</div>
-                </button>
-                <button v-else-if="researchStatusLocal === 'stopping'" @click="stopResearchNow"
-                        class="item-link research-link" disabled>
-                    <svg-icon name="symbol/running" class="rotating" :original="true" height="20"/>
-                    <div>Stopping...</div>
-                </button>
-                <button v-else-if="researchStatusLocal !== 'running'" @click="startResearchNow" id="run_research"
-                        class="item-link research-link" :disabled="!isDashboardWrite">
-                    <svg-icon name="action/start" :original="true" height="20" />
-                    <div>Discover Now</div>
-                </button>
-                <button v-else-if="researchStatusLocal === 'running'" @click="stopResearchNow" id="stop_research"
-                        class="item-link research-link" :disabled="!isDashboardWrite">
-                    <svg-icon name="action/stop" :original="true" height="20" />
-                    <div>Stop Discovery</div>
-                </button>
-            </li>
-            <li class="nav-item">
-                <a class="item-link">
-                    <x-notification-peek/>
-                </a>
-            </li>
-            <li class="nav-item" :class="{ disabled: isSettingsRestricted}">
-                <a class="item-link" @click="navigateSettings" id="settings">
-                    <svg-icon name="navigation/settings" :original="true" height="20"/>
-                </a>
-                <x-tip-info content="In order to send alerts through mail, configure it under settings"
-                            v-if="isEmptySetting('mail')" @dismiss="dismissEmptySetting('mail')"/>
-                <x-tip-info content="In order to send alerts through a syslog system, configure it under settings"
-                            v-if="isEmptySetting('syslog')" @dismiss="dismissEmptySetting('syslog')"/>
-                <x-tip-info content="In order to send alerts through an HTTPS log system, configure it under settings"
-                            v-if="isEmptySetting('httpsLog')" @dismiss="dismissEmptySetting('httpsLog')"/>
-                <x-tip-info content="In order to create a ServiceNow computer or incident, configure it under settings"
-                            v-if="isEmptySetting('serviceNow')" @dismiss="dismissEmptySetting('serviceNow')"/>
-                <x-tip-info content="In order to create a FreshService incident, configure it under settings"
-                            v-if="isEmptySetting('freshService')" @dismiss="dismissEmptySetting('freshService')"/>
-                <x-tip-info content="In order to create a Jira incident, configure it under settings"
-                            v-if="isEmptySetting('jira')" @dismiss="dismissEmptySetting('jira')"/>
+  <header
+    class="x-top-bar"
+    :class="{ 'minimize': collapseSidebar }"
+  >
+    <div class="bar-toggle">
+      <a
+        class="toggle-link"
+        @click="toggleSidebar"
+      >
+        <svg-icon
+          name="navigation/menu"
+          :original="true"
+          height="20"
+        />
+      </a>
+    </div>
+    <div
+      v-if="!medicalConfig"
+      class="bar-logo"
+    >
+      <svg-icon
+        name="logo/logo"
+        height="30"
+        :original="true"
+      />
+      <svg-icon
+        name="logo/axonius"
+        height="16"
+        :original="true"
+        class="logo-text"
+      />
+    </div>
+    <x-trial-banner v-if="!isSettingsRestricted" />
+    <ul
+      v-if="!medicalConfig"
+      class="bar-nav"
+    >
+      <li class="nav-item">
+        <button
+          v-if="researchStatusLocal === 'starting'"
+          class="item-link research-link"
+          disabled
+        >
+          <svg-icon
+            name="symbol/running"
+            class="rotating"
+            :original="true"
+            height="20"
+          />
+          <div>Initiating...</div>
+        </button>
+        <button
+          v-else-if="researchStatusLocal === 'stopping'"
+          class="item-link research-link"
+          disabled
+          @click="stopResearchNow"
+        >
+          <svg-icon
+            name="symbol/running"
+            class="rotating"
+            :original="true"
+            height="20"
+          />
+          <div>Stopping...</div>
+        </button>
+        <button
+          v-else-if="researchStatusLocal !== 'running'"
+          id="run_research"
+          class="item-link research-link"
+          :disabled="!isDashboardWrite"
+          @click="startResearchNow"
+        >
+          <svg-icon
+            name="action/start"
+            :original="true"
+            height="20"
+          />
+          <div>Discover Now</div>
+        </button>
+        <button
+          v-else-if="researchStatusLocal === 'running'"
+          id="stop_research"
+          class="item-link research-link"
+          :disabled="!isDashboardWrite"
+          @click="stopResearchNow"
+        >
+          <svg-icon
+            name="action/stop"
+            :original="true"
+            height="20"
+          />
+          <div>Stop Discovery</div>
+        </button>
+      </li>
+      <li class="nav-item">
+        <a class="item-link">
+          <x-notification-peek v-if="!isExpired" />
+          <svg-icon
+            v-else
+            name="navigation/notifications"
+            :original="true"
+            height="20"></svg-icon>
+        </a>
+      </li>
+      <li
+        class="nav-item"
+        :class="{ disabled: isSettingsRestricted}"
+      >
+        <a
+          id="settings"
+          class="item-link"
+          @click="navigateSettings"
+        >
+          <svg-icon
+            name="navigation/settings"
+            :original="true"
+            height="20"
+          />
+        </a>
+        <x-tip-info
+          v-if="isEmptySetting('mail')"
+          content="In order to send alerts through mail, configure it under settings"
+          @dismiss="dismissEmptySetting('mail')"
+        />
+        <x-tip-info
+          v-if="isEmptySetting('syslog')"
+          content="In order to send alerts through a syslog system, configure it under settings"
+          @dismiss="dismissEmptySetting('syslog')"
+        />
+        <x-tip-info
+          v-if="isEmptySetting('httpsLog')"
+          content="In order to send alerts through an HTTPS log system, configure it under settings"
+          @dismiss="dismissEmptySetting('httpsLog')"
+        />
+        <x-tip-info
+          v-if="isEmptySetting('serviceNow')"
+          content="In order to create a ServiceNow computer or incident, configure it under settings"
+          @dismiss="dismissEmptySetting('serviceNow')"
+        />
+        <x-tip-info
+          v-if="isEmptySetting('freshService')"
+          content="In order to create a FreshService incident, configure it under settings"
+          @dismiss="dismissEmptySetting('freshService')"
+        />
+        <x-tip-info
+          v-if="isEmptySetting('jira')"
+          content="In order to create a Jira incident, configure it under settings"
+          @dismiss="dismissEmptySetting('jira')"
+        />
 
-            </li>
-            <li class="nav-item">
-                <a @click="startTour" class="item-link">
-                    <svg-icon name="action/help" :original="true" height="20"/>
-                </a>
-                <x-tip-info content="You can always start the tour again here"
-                            v-if="activateTourTip" @dismiss="activateTourTip = false"/>
-            </li>
-        </ul>
-        <ul v-else class="bar-nav">
-            <li class="nav-item medical-menu">
-                <a class="item-link">
-                    <x-workspace-picker/>
-                </a>
-                <a class="item-link">
-                    <x-language-picker/>
-                </a>
-                <a class="item-link">
-                    <x-medical-user-profile/>
-                </a>
-            </li>
-        </ul>
-    </header>
+      </li>
+      <li class="nav-item">
+        <a
+          class="item-link"
+          @click="startTour"
+        >
+          <svg-icon
+            name="action/help"
+            :original="true"
+            height="20"
+          />
+        </a>
+        <x-tip-info
+          v-if="activateTourTip"
+          content="You can always start the tour again here"
+          @dismiss="activateTourTip = false"
+        />
+      </li>
+    </ul>
+    <ul
+      v-else
+      class="bar-nav"
+    >
+      <li class="nav-item medical-menu">
+        <a class="item-link">
+          <x-workspace-picker />
+        </a>
+        <a class="item-link">
+          <x-language-picker />
+        </a>
+        <a class="item-link">
+          <x-medical-user-profile />
+        </a>
+      </li>
+    </ul>
+  </header>
 </template>
 
 <script>
-    import xNotificationPeek from '../NotificationsPeek.vue'
-    import xMedicalUserProfile from '../MedicalUserProfile.vue'
-    import xLanguagePicker from '../LanguagePicker.vue'
-    import xWorkspacePicker from '../WorkspacePicker.vue'
-    import xTipInfo from '../onboard/TipInfo.vue'
-    import {mapState, mapMutations, mapActions} from 'vuex'
-    import {FETCH_LIFECYCLE} from '../../../store/modules/dashboard'
-    import {UPDATE_EMPTY_STATE, START_TOUR} from '../../../store/modules/onboarding'
-    import {TOGGLE_SIDEBAR} from '../../../store/mutations'
-    import {START_RESEARCH_PHASE, STOP_RESEARCH_PHASE, FETCH_DATA_FIELDS} from '../../../store/actions'
-    import {entities} from '../../../constants/entities'
+  import xNotificationPeek from '../NotificationsPeek.vue'
+  import xMedicalUserProfile from '../MedicalUserProfile.vue'
+  import xLanguagePicker from '../LanguagePicker.vue'
+  import xWorkspacePicker from '../WorkspacePicker.vue'
+  import xTipInfo from '../onboard/TipInfo.vue'
+  import xTrialBanner from '../onboard/TrialBanner.vue'
 
-    export default {
-        components: {xNotificationPeek, xTipInfo, xMedicalUserProfile, xLanguagePicker, xWorkspacePicker},
-        name: 'x-top-bar',
-        computed: {
-            ...mapState({
-                collapseSidebar(state) {
-                    return state.interaction.collapseSidebar
-                },
-                emptySettings(state) {
-                    return state.onboarding.emptyStates.settings
-                },
-                researchStatus(state) {
-                    return state.dashboard.lifecycle.data.status
-                },
-                tourActive(state) {
-                    return state.onboarding.tourStates.active
-                },
-                isSettingsRestricted(state) {
-                    let user = state.auth.currentUser.data
-                    if (!user || !user.permissions) return true
-                    return user.permissions.Settings === 'Restricted'
-                },
-                isDashboardWrite(state) {
-                    let user = state.auth.currentUser.data
-                    if (!user || !user.permissions) return true
-                    return user.permissions.Dashboard === 'ReadWrite' || user.admin
-                },
-                userPermissions(state) {
-                    return state.auth.currentUser.data.permissions
-                },
-                medicalConfig(state) {
-                    return state.staticConfiguration.medicalConfig
-                }
-            }),
-            anyEmptySettings() {
-                return Object.values(this.emptySettings).find(value => value)
-            },
-        },
-        data() {
-            return {
-                isDown: false,
-                activateTourTip: false,
-                researchStatusLocal: ''
-            }
-        },
-        watch: {
-            tourActive(isActiveNow) {
-                if (!isActiveNow) {
-                    this.activateTourTip = true
-                }
-            }
-        },
-        methods: {
-            ...mapMutations({
-                toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, startTour: START_TOUR,
-            }),
-            ...mapActions({
-                fetchLifecycle: FETCH_LIFECYCLE,
-                startResearch: START_RESEARCH_PHASE,
-                stopResearch: STOP_RESEARCH_PHASE,
-                fetchDataFields: FETCH_DATA_FIELDS
+  import { mapState, mapMutations, mapActions } from 'vuex'
+  import { FETCH_LIFECYCLE } from '../../../store/modules/dashboard'
+  import { UPDATE_EMPTY_STATE, START_TOUR } from '../../../store/modules/onboarding'
+  import { TOGGLE_SIDEBAR } from '../../../store/mutations'
+  import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE, FETCH_DATA_FIELDS } from '../../../store/actions'
+  import { entities } from '../../../constants/entities'
 
-            }),
-            startResearchNow() {
-                this.researchStatusLocal = 'starting'
-                this.startResearch().catch(() => this.researchStatusLocal = '')
-            },
-            stopResearchNow() {
-                this.researchStatusLocal = 'stopping'
-                this.stopResearch().catch(() => this.researchStatusLocal = 'running')
-            },
-            navigateSettings() {
-                if (this.isSettingsRestricted) {
-                    this.$emit('access-violation', name)
-                    return
-                }
-                if (this.anyEmptySettings) {
-                    this.$router.push({path: '/settings#global-settings-tab'})
-                    this.dismissAllSettings()
-                } else {
-                    this.$router.push({name: 'Settings'})
-                }
-            },
-            entityRestricted(entity) {
-                return this.userPermissions[entity] === 'Restricted'
-            },
-            isEmptySetting(name) {
-                return this.emptySettings[name]
-            },
-            dismissEmptySetting(name) {
-                this.updateEmptyState({
-                    settings: {
-                        [name]: false
-                    }
-                })
-            },
-            dismissAllSettings() {
-                this.updateEmptyState({
-                    settings: Object.keys(this.emptySettings).reduce((map, setting) => {
-                        map[setting] = false
-                        return map
-                    }, {})
-                })
-            }
+  export default {
+    name: 'XTopBar',
+    components: {
+      xNotificationPeek, xTipInfo, xMedicalUserProfile, xLanguagePicker, xWorkspacePicker, xTrialBanner
+    },
+    data () {
+      return {
+        isDown: false,
+        activateTourTip: false,
+        researchStatusLocal: ''
+      }
+    },
+    computed: {
+      ...mapState({
+        collapseSidebar (state) {
+          return state.interaction.collapseSidebar
         },
-        created() {
-            const updateLifecycle = () => {
-                this.fetchLifecycle().then(() => {
-                    if (this._isDestroyed) return
-                    if ((this.researchStatusLocal !== 'done' && this.researchStatus === 'done')
-                      || (this.researchStatusLocal === '' && this.researchStatus === 'running')) {
-                        entities.forEach(entity => {
-                            if (this.entityRestricted(entity.title)) return
-                          this.fetchDataFields({module: entity.name})
-                        })
-                    }
-                    this.researchStatusLocal = this.researchStatus
-                    this.timer = setTimeout(updateLifecycle, 3000)
-                })
-            }
-            updateLifecycle()
+        emptySettings (state) {
+          return state.onboarding.emptyStates.settings
         },
-        beforeDestroy() {
-            clearTimeout(this.timer)
+        researchStatus (state) {
+          return state.dashboard.lifecycle.data.status
+        },
+        tourActive (state) {
+          return state.onboarding.tourStates.active
+        },
+        isSettingsRestricted (state) {
+          let user = state.auth.currentUser.data
+          if (!user || !user.permissions) return true
+          return user.permissions.Settings === 'Restricted'
+        },
+        isDashboardWrite (state) {
+          let user = state.auth.currentUser.data
+          if (!user || !user.permissions) return true
+          return user.permissions.Dashboard === 'ReadWrite' || user.admin
+        },
+        userPermissions (state) {
+          return state.auth.currentUser.data.permissions
+        },
+        medicalConfig (state) {
+          return state.staticConfiguration.medicalConfig
+        },
+        isExpired(state) {
+          return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
         }
+      }),
+      anyEmptySettings () {
+        return Object.values(this.emptySettings).find(value => value)
+      }
+    },
+    watch: {
+      tourActive (isActiveNow) {
+        if (!isActiveNow) {
+          this.activateTourTip = true
+        }
+      }
+    },
+    mounted () {
+      const updateLifecycle = () => {
+        this.fetchLifecycle().then(() => {
+          if (this._isDestroyed) return
+          if (!this.isExpired && ((this.researchStatusLocal !== 'done' && this.researchStatus === 'done')
+            || (this.researchStatusLocal === '' && this.researchStatus === 'running'))) {
+            entities.forEach(entity => {
+              if (this.entityRestricted(entity.title)) return
+              this.fetchDataFields({ module: entity.name })
+            })
+          }
+          this.researchStatusLocal = this.researchStatus
+          this.timer = setTimeout(updateLifecycle, 3000)
+        })
+      }
+      updateLifecycle()
+    },
+    beforeDestroy () {
+      clearTimeout(this.timer)
+    },
+    methods: {
+      ...mapMutations({
+        toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, startTour: START_TOUR
+      }),
+      ...mapActions({
+        fetchLifecycle: FETCH_LIFECYCLE,
+        startResearch: START_RESEARCH_PHASE,
+        stopResearch: STOP_RESEARCH_PHASE,
+        fetchDataFields: FETCH_DATA_FIELDS
+
+      }),
+      startResearchNow () {
+        this.researchStatusLocal = 'starting'
+        this.startResearch().catch(() => this.researchStatusLocal = '')
+      },
+      stopResearchNow () {
+        this.researchStatusLocal = 'stopping'
+        this.stopResearch().catch(() => this.researchStatusLocal = 'running')
+      },
+      navigateSettings () {
+        if (this.isSettingsRestricted) {
+          this.$emit('access-violation', name)
+          return
+        }
+        if (this.anyEmptySettings) {
+          this.$router.push({ path: '/settings#global-settings-tab' })
+          this.dismissAllSettings()
+        } else {
+          this.$router.push({ name: 'Settings' })
+        }
+      },
+      entityRestricted (entity) {
+        return this.userPermissions[entity] === 'Restricted'
+      },
+      isEmptySetting (name) {
+        return this.emptySettings[name]
+      },
+      dismissEmptySetting (name) {
+        this.updateEmptyState({
+          settings: {
+            [name]: false
+          }
+        })
+      },
+      dismissAllSettings () {
+        this.updateEmptyState({
+          settings: Object.keys(this.emptySettings).reduce((map, setting) => {
+            map[setting] = false
+            return map
+          }, {})
+        })
+      }
     }
+  }
 </script>
 
 <style lang="scss">
@@ -344,6 +460,7 @@
                         &:disabled {
                             cursor: default;
                             background-color: rgba($theme-black, 0.4);
+
                             &:hover .svg-fill {
                                 fill: $grey-1;
                             }
@@ -355,16 +472,29 @@
                     }
                 }
             }
-            .medical-menu{
+
+            .medical-menu {
                 display: flex;
                 line-height: inherit;
-                .x-select{
+
+                .x-select {
                     border-radius: 0;
                     border: inherit;
                     background: inherit;
                     margin-top: 12px;
                 }
             }
+        }
+
+        .banner-overlay {
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, .6);
+            transition: opacity .3s ease;
         }
     }
 

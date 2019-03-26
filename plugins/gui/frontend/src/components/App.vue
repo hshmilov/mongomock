@@ -29,7 +29,7 @@
     import xAccessModal from './neurons/popover/AccessModal.vue'
     import xSignup from './pages/Signup.vue'
     import {GET_USER} from '../store/modules/auth'
-    import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG} from '../store/actions'
+    import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG, FETCH_SYSTEM_EXPIRED} from '../store/actions'
     import {FETCH_CONSTANTS} from '../store/modules/constants'
     import {UPDATE_WINDOW_WIDTH} from '../store/mutations'
     import { mapState, mapMutations, mapActions } from 'vuex'
@@ -53,6 +53,9 @@
                 },
                 userPermissions(state) {
                     return state.auth.currentUser.data.permissions
+                },
+                isExpired(state) {
+                    return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
                 }
             })
 		},
@@ -65,34 +68,43 @@
         	userName(newUserName) {
                 if (newUserName) {
                 	this.fetchGlobalData()
+                } else {
+                  this.handleExpiration()
                 }
             }
         },
         methods: {
             ...mapMutations({ updateWindowWidth: UPDATE_WINDOW_WIDTH }),
             ...mapActions({
-                getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchConstants: FETCH_CONSTANTS,
-                fetchDataFields: FETCH_DATA_FIELDS,
+                getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchExpired: FETCH_SYSTEM_EXPIRED,
+                fetchConstants: FETCH_CONSTANTS, fetchDataFields: FETCH_DATA_FIELDS,
             }),
             fetchGlobalData() {
-				this.fetchConfig()
                 this.fetchConstants()
-                entities.forEach(entity => {
-                    if (this.entityRestricted(entity.title)) return
-                    this.fetchDataFields({module: entity.name})
-                })
+                if (!this.isExpired) {
+                    entities.forEach(entity => {
+                        if (this.entityRestricted(entity.title)) return
+                        this.fetchDataFields({module: entity.name})
+                    })
+				    this.fetchConfig()
+                }
             },
             notifyAccess(name) {
                 this.blockedComponent = name
             },
             entityRestricted(entity) {
                 return this.userPermissions[entity] === 'Restricted'
+            },
+            async handleExpiration() {
+                const res = await this.fetchExpired()
+                if (res.data) {
+                    this.$router.push('/')
+                }
             }
 		},
-        created() {
-        	this.getUser()
-        },
         mounted() {
+            this.handleExpiration()
+        	this.getUser()
             this.$nextTick(function() {
                 window.addEventListener('resize', this.updateWindowWidth)
                 //Init

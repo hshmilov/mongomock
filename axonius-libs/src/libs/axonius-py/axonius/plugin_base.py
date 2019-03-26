@@ -73,6 +73,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PROXY_FOR_ADAPTERS, GLOBAL_KEYVAL_COLLECTION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.distribution_config import MEDICAL_MODE
@@ -97,6 +98,7 @@ from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
+from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -2407,6 +2409,17 @@ class PluginBase(Configurable, Feature):
             syslog_logger.addHandler(syslog_handler)
         except Exception:
             logger.exception('Failed setting up syslog handler, no syslog handler has been set up')
+
+    def trial_expired(self):
+        """
+        Check whether system has a trial expiration that has passed
+        """
+        feature_flags_config = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_NAME).find_one({
+            'config_name': FEATURE_FLAGS_CONFIG
+        })
+        if not feature_flags_config['config'].get('trial_end'):
+            return False
+        return parse_date(feature_flags_config['config']['trial_end']) < parse_date(datetime.now())
 
     @staticmethod
     def global_settings_schema():

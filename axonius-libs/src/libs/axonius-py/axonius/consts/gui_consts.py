@@ -70,8 +70,8 @@ class ResearchStatus(Enum):
     done = auto()
 
 
-CONFIG_COLLECTION = 'GuiService'
-FEATURE_FLAGS_COLLECTION = 'FeatureFlags'
+CONFIG_CONFIG = 'GuiService'
+FEATURE_FLAGS_CONFIG = 'FeatureFlags'
 
 USERS_CONFIG_COLLECTION = 'users_config'
 

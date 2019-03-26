@@ -6,9 +6,9 @@ from flask import jsonify, request, has_request_context
 from passlib.hash import bcrypt
 
 from axonius.consts.metric_consts import ApiMetric
-from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
+from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME, AXONIUS_USER_NAME
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import EntityType, return_error
+from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils import gui_helpers
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
@@ -45,6 +45,8 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
                 return False
             if not bcrypt.verify(password, user_from_db['password']):
                 return False
+            if PluginBase.Instance.trial_expired() and username != AXONIUS_USER_NAME:
+                return False
             if user_from_db.get('admin'):
                 return True
             if not check_permissions(deserialize_db_permissions(user_from_db['permissions']),
@@ -63,6 +65,8 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
             })
 
             if not user_from_db:
+                return False
+            if PluginBase.Instance.trial_expired() and user_from_db['user_name'] != AXONIUS_USER_NAME:
                 return False
             if user_from_db.get('admin'):
                 return True
