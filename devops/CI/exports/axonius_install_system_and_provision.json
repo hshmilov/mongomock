@@ -12,7 +12,7 @@
       "format": "ova",
       "type": "vmware-iso",
       "boot_wait": "20s",
-      "disk_size": 200000,
+      "disk_size": 500000,
       "headless": true,
       "iso_url": "/home/ubuntu/ubuntu-16.04.5-server-amd64.iso",
       "iso_checksum": "ee32c555567dd5407c58a1cfc7e668ab37a99d99",
@@ -87,7 +87,7 @@
     {
       "type": "shell",
       "script": "init_host.sh",
-      "remote_folder": "/home/ubuntu/cortex",
+      "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
       "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
@@ -144,20 +144,26 @@
     {
       "type": "shell",
       "inline": [
-        "rm -f /home/ubuntu/axonius_{{user `build_name`}}.py",
-        "cat /dev/null > /home/ubuntu/.bash_history"
+        "rm -f /home/ubuntu/axonius_{{user `build_name`}}.py"
       ]
     },
     {
       "type": "file",
-      "source": "./interfaces",
-      "direction": "upload",
-      "destination": "/home/ubuntu/interfaces"
+      "source": "setup_network_cron.py",
+      "destination": "/home/ubuntu/cortex/setup_network_cron.py"
+    },
+    {
+      "type": "file",
+      "source": "setup_network.sh",
+      "destination": "/home/ubuntu/cortex/setup_network.sh"
     },
     {
       "type": "shell",
+      "remote_folder": "/home/ubuntu/cortex",
       "inline": [
-        "mv /home/ubuntu/interfaces /etc/network/interfaces"
+        "/home/ubuntu/cortex/venv/bin/python /home/ubuntu/cortex/setup_network_cron.py",
+        "rm -f setup_network.sh setup_network_cron.py",
+        "cat /dev/null > /home/ubuntu/.bash_history"
       ],
       "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     }

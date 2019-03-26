@@ -13,7 +13,7 @@
       "format": "ova",
       "type": "vmware-iso",
       "boot_wait": "20s",
-      "disk_size": 200000,
+      "disk_size": 500000,
       "headless": true,
       "iso_url": "/home/ubuntu/ubuntu-16.04.5-server-amd64.iso",
       "iso_checksum": "ee32c555567dd5407c58a1cfc7e668ab37a99d99",
@@ -87,7 +87,7 @@
     {
       "type": "shell",
       "script": "init_host.sh",
-      "remote_folder": "/home/ubuntu/cortex",
+      "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
       "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
