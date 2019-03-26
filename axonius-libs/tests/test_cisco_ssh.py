@@ -316,7 +316,7 @@ def test_dhcp(client):
 
 
 def test_instance_parser(client):
-    expected = [
+    expected = sorted(map(set, [
         {
             'connected_devices': [
                 {'connection_type': 'Indirect', 'remote_ifaces': [{'name': 'Fa0/0'}], 'remote_name': 'mock'}
@@ -465,10 +465,10 @@ def test_instance_parser(client):
             },
             'related_ips': {'ips': ['192.168.20.1'], 'ips_raw': [3_232_240_641]},
         },
-    ]
+    ]))
 
     with client:
         results = client.query_all()
         devices = list(InstanceParser(results).get_devices(create_device))
-    devices = list(map(lambda device: device.to_dict(), devices))
+    devices = sorted(list(map(lambda device: set(device.to_dict()), devices)))
     assert devices == expected
