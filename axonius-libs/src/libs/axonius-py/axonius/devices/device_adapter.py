@@ -1,16 +1,23 @@
 import datetime
 import logging
 import typing
+import copy
 from enum import Enum, auto
 
 from axonius.blacklists import ALL_BLACKLIST
+from axonius.clients.cisco.port_security import PortSecurityInterface
 from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict, unescape_dict
-from axonius.utils.parsing import (figure_out_os, format_ip, format_ip_raw,
-                                   format_mac, format_subnet,
-                                   get_manufacturer_from_mac, normalize_mac)
-from axonius.clients.cisco.port_security import PortSecurityInterface
+from axonius.utils.parsing import (
+    figure_out_os,
+    format_ip,
+    format_ip_raw,
+    format_mac,
+    format_subnet,
+    get_manufacturer_from_mac,
+    normalize_mac,
+)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -89,8 +96,10 @@ class DeviceRunningState(Enum):
 
 class DeviceAdapterOS(SmartJsonClass):
     """ A definition for the json-scheme for an OS (of a device) """
-    type = Field(str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS',
-                                    'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik'])
+
+    type = Field(
+        str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik']
+    )
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
     sp = Field(str, 'Service Pack')
@@ -105,6 +114,7 @@ class DeviceAdapterOS(SmartJsonClass):
 
 class DeviceAdapterVlan(SmartJsonClass):
     """ A definition for the json-scheme for a vlan """
+
     name = Field(str, 'Vlan Name')
     tagid = Field(int, 'Tag ID')
     tagness = Field(str, 'Vlan Tagness', enum=['Tagged', 'Untagged'])
@@ -112,20 +122,28 @@ class DeviceAdapterVlan(SmartJsonClass):
 
 class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
+
     name = Field(str, 'Iface Name')
     mac = Field(str, 'Mac', converter=format_mac)
     manufacturer = Field(str, 'Manufacturer')
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
-    subnets = ListField(str, 'Subnets', converter=format_subnet, json_format=JsonStringFormat.subnet,
-                        description='A list of subnets in ip format, that correspond the IPs')
-    ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
-                        converter=format_ip_raw)
+    subnets = ListField(
+        str,
+        'Subnets',
+        converter=format_subnet,
+        json_format=JsonStringFormat.subnet,
+        description='A list of subnets in ip format, that correspond the IPs',
+    )
+    ips_raw = ListField(
+        str, description='Number representation of the IP, useful for filtering by range', converter=format_ip_raw
+    )
 
     vlan_list = ListField(DeviceAdapterVlan, 'Vlans', description='A list of vlans in this interface')
 
     # Operational status enum from cisco reference, which is industry standart.
-    operational_status = Field(str, "Operational Status", enum=["Up", "Down", "Testing", "Unknown",
-                                                                "Dormant", "Nonpresent", "LowerLayerDown"])
+    operational_status = Field(
+        str, "Operational Status", enum=["Up", "Down", "Testing", "Unknown", "Dormant", "Nonpresent", "LowerLayerDown"]
+    )
     admin_status = Field(str, "Admin Status", enum=["Up", "Down"])
 
     speed = Field(str, "Interface Speed", description="Interface max speed per Second")
@@ -133,16 +151,23 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     mtu = Field(str, "MTU", description="Interface Maximum transmission unit")
 
 
+class ConnectionType(Enum):
+    Direct = auto()
+    Indirect = auto()
+
+
 class DeviceAdapterNeighbor(SmartJsonClass):
     """ A definition for the json-scheme for an connected device """
+
     remote_name = Field(str, 'Remote Device Name')
     local_ifaces = ListField(DeviceAdapterNetworkInterface, 'Local Interface')
     remote_ifaces = ListField(DeviceAdapterNetworkInterface, 'Remote Device Iface')
-    connection_type = Field(str, 'Connection Type', enum=['Direct', 'Indirect'])
+    connection_type = Field(str, 'Connection Type', enum=ConnectionType)
 
 
 class DeviceAdapterRelatedIps(DeviceAdapterNetworkInterface):
     """ A definition for the json-scheme for a related ips """
+
     pass
 
 
@@ -177,9 +202,23 @@ class DeviceAdapterBattery(SmartJsonClass):
     """ A definition for a battery"""
 
     percentage = Field(int, "Percentage")
-    status = Field(str, "Status", enum=["Not Charging", "Connected to AC", "Fully Charged", "Low", "Critical",
-                                        "Charging", "Charging and High", "Charging and Low",
-                                        "Charging and Critical", "Undefined", "Partially Charged"])
+    status = Field(
+        str,
+        "Status",
+        enum=[
+            "Not Charging",
+            "Connected to AC",
+            "Fully Charged",
+            "Low",
+            "Critical",
+            "Charging",
+            "Charging and High",
+            "Charging and Low",
+            "Charging and Critical",
+            "Undefined",
+            "Partially Charged",
+        ],
+    )
     manufacturer = Field(str, "Manufacturer")
     model = Field(str, "Model")
     capacity = Field(str, "Capacity (mWh)")
@@ -225,6 +264,7 @@ class DeviceAdapterSecurityPatch(SmartJsonClass):
 
 class DeviceAdapterMsrcAvailablePatch(SmartJsonClass):
     """ A definition for the json-schema for an available msrc patch"""
+
     title = Field(str, "Title")
     security_bulletin_ids = ListField(str, "Security Bulletin ID's")
     kb_article_ids = ListField(str, "KB Article ID's")
@@ -246,8 +286,9 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
 
     name = Field(str, "Software Name")
     version = Field(str, "Software Version")
-    architecture = Field(str, "Software Architecture", enum=[
-                         "x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all"])
+    architecture = Field(
+        str, "Software Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all"]
+    )
     description = Field(str, "Software Description")
     vendor = Field(str, "Software Vendor")
     # This is not the same as Vendor in many cases. This is why I added it. OS
@@ -258,6 +299,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
 
 class DeviceAdapterSoftwareCVE(SmartJsonClass):
     """ A definition for a CVE that is available for a software"""
+
     software_vendor = Field(str, "Software Vendor")
     software_name = Field(str, "Software Name")
     software_version = Field(str, "Software Version")
@@ -275,6 +317,7 @@ class ShareData(SmartJsonClass):
 
 class DeviceTagKeyValue(SmartJsonClass):
     """ A Definition for a key-value tag """
+
     tag_key = Field(str, "Tag Key")
     tag_value = Field(str, "Tag Value")
 
@@ -303,6 +346,7 @@ class ShodanData(SmartJsonClass):
 
 class DeviceSwapFile(SmartJsonClass):
     """ A Definition for a key-value tag """
+
     name = Field(str, 'Name')
     size_in_gb = Field(int, 'Size (GB)')
 
@@ -325,25 +369,31 @@ class DeviceAdapter(SmartJsonClass):
     last_seen = Field(datetime.datetime, 'Last Seen')
     fetch_time = Field(datetime.datetime, 'Fetch Time')
     public_ips = ListField(str, 'Public IPs', converter=format_ip, json_format=JsonStringFormat.ip)
-    public_ips_raw = ListField(str, description='Number representation of the Public IP, useful for filtering by range',
-                               converter=format_ip_raw)
-    network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces',
-                                   json_format=JsonArrayFormat.table)
+    public_ips_raw = ListField(
+        str,
+        description='Number representation of the Public IP, useful for filtering by range',
+        converter=format_ip_raw,
+    )
+    network_interfaces = ListField(
+        DeviceAdapterNetworkInterface, 'Network Interfaces', json_format=JsonArrayFormat.table
+    )
     os = Field(DeviceAdapterOS, 'OS')
     last_used_users = ListField(str, "Last Used User")
-    installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software",
-                                   json_format=JsonArrayFormat.table)
-    software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software",
-                              json_format=JsonArrayFormat.table)
-    security_patches = ListField(DeviceAdapterSecurityPatch, "OS Installed Security Patches",
-                                 json_format=JsonArrayFormat.table)
-    available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches",
-                                           json_format=JsonArrayFormat.table)
-    connected_hardware = ListField(DeviceAdapterConnectedHardware, "Connected Hardware",
-                                   json_format=JsonArrayFormat.table)
+    installed_software = ListField(
+        DeviceAdapterInstalledSoftware, "Installed Software", json_format=JsonArrayFormat.table
+    )
+    software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software", json_format=JsonArrayFormat.table)
+    security_patches = ListField(
+        DeviceAdapterSecurityPatch, "OS Installed Security Patches", json_format=JsonArrayFormat.table
+    )
+    available_security_patches = ListField(
+        DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches", json_format=JsonArrayFormat.table
+    )
+    connected_hardware = ListField(
+        DeviceAdapterConnectedHardware, "Connected Hardware", json_format=JsonArrayFormat.table
+    )
 
-    connected_devices = ListField(DeviceAdapterNeighbor, "Connected Devices",
-                                  json_format=JsonArrayFormat.table)
+    connected_devices = ListField(DeviceAdapterNeighbor, "Connected Devices", json_format=JsonArrayFormat.table)
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
@@ -352,15 +402,29 @@ class DeviceAdapter(SmartJsonClass):
     pretty_id = Field(str, 'Axonius Name')
 
     related_ips = Field(DeviceAdapterRelatedIps, "Related Ips")
-    pc_type = Field(str, "PC Type", enum=["Unspecified", "Desktop", "Laptop or Tablet", "Workstation",
-                                          "Enterprise Server", "SOHO Server", "Appliance PC", "Performance Server",
-                                          "Maximum", "Mobile"])
+    pc_type = Field(
+        str,
+        "PC Type",
+        enum=[
+            "Unspecified",
+            "Desktop",
+            "Laptop or Tablet",
+            "Workstation",
+            "Enterprise Server",
+            "SOHO Server",
+            "Appliance PC",
+            "Performance Server",
+            "Maximum",
+            "Mobile",
+        ],
+    )
     physical_location = Field(str, 'Physical Location')
     number_of_processes = Field(int, "Number Of Processes")
     hard_drives = ListField(DeviceAdapterHD, "Hard Drives", json_format=JsonArrayFormat.table)
     cpus = ListField(DeviceAdapterCPU, "CPUs")
-    boot_time = Field(datetime.datetime, 'Boot Time')
     time_zone = Field(str, 'Time Zone')
+    boot_time = Field(datetime.datetime, 'Boot Time')
+    uptime = Field(int, 'Uptime (Days)')
 
     # hardware related
     device_manufacturer = Field(str, "Device Manufacturer")
@@ -429,10 +493,32 @@ class DeviceAdapter(SmartJsonClass):
         target_field_list.add(name)
 
     def declare_new_field(self, *args, **kwargs):
-        assert self.__class__ != DeviceAdapter, \
-            'Can not change DeviceAdapter, its generic! ' \
+        assert self.__class__ != DeviceAdapter, (
+            'Can not change DeviceAdapter, its generic! '
             'see test_smart_json_class.py::test_schema_change_for_special_classes'
+        )
         super().declare_new_field(*args, **kwargs)
+
+    def set_boot_time(self, *, boot_time: datetime.datetime = None, uptime: datetime.timedelta = None):
+        """ set boot time and uptime using one of them """
+        try:
+            if not any([boot_time, uptime]):
+                raise RuntimeError("Missing required parameters")
+
+            current_time = datetime.datetime.now()
+
+            if boot_time:
+                self.boot_time = boot_time
+                self.uptime = (current_time - boot_time).days
+                return
+
+            if uptime:
+                self.uptime = uptime.days
+                self.boot_time = current_time - uptime
+                return
+
+        except Exception:
+            logger.exception("Failed to set boot time {time} {delta}")
 
     def set_raw(self, raw_data: dict):
         """ Sets the raw fields associated with this device and also updates adapter_raw_fields.
@@ -541,9 +627,19 @@ class DeviceAdapter(SmartJsonClass):
             except Exception:
                 logger.exception(f'Failed to add ip {ip}')
 
-    def add_nic(self, mac=None, ips=None, subnets=None, name=None,
-                speed=None, mtu=None, operational_status=None, admin_status=None,
-                vlans=None, port_type=None):
+    def add_nic(
+        self,
+        mac=None,
+        ips=None,
+        subnets=None,
+        name=None,
+        speed=None,
+        mtu=None,
+        operational_status=None,
+        admin_status=None,
+        vlans=None,
+        port_type=None,
+    ):
         """
         Add a new network interface card to this device.
         :param mac: the mac
@@ -622,9 +718,19 @@ class DeviceAdapter(SmartJsonClass):
         self.network_interfaces.append(nic)
 
     def figure_os(self, os_string):
+
         os_dict = figure_out_os(str(os_string))
         if os_dict is None:
             return
+
+        try:
+            old_dict = copy.copy(self.os.to_dict())
+            for key, value in os_dict.items():
+                if value:
+                    old_dict[key] = value
+            os_dict = old_dict
+        except Exception:
+            pass
         self.os = DeviceAdapterOS(**os_dict)
 
     def add_battery(self, **kwargs):

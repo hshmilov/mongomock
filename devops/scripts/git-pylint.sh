@@ -17,6 +17,7 @@ EXIT=1
 PARALLEL=0
 DELETE=0
 ADDED_ONLY=0
+BEAUTIFY=0
 
 function usage {
     echo "usage: git-pylint [-a] [-p] [-d] [P] [-r] [-h]"
@@ -26,8 +27,11 @@ function usage {
     echo "-P --pep              Run autopep8 before checking with pylint"
     echo "-r --all-flags        Use all flags"
     echo "-o --only-added       Only check added file, ignore modified, re-add them when done"
+    echo "-b --beautify         Beautify files using isort and black"
+    echo "--file=FILE           work on specific file"
     exit 0
 }
+
 for i in "$@"
 do
 case $i in
@@ -51,19 +55,28 @@ case $i in
     PEP=1
     shift
     ;;
+    --file=*)
+    GIT_FILES="${i#*=}"
+    shift
+    ;;
     -o|--only-added)
     ADDED_ONLY=1
     shift
     ;;
-    -r|--all-falgs)
+    -b|--beautify)
+    BEAUTIFY=1
+    shift
+    ;;
+    -r|--all-flags)
     PEP=1
     EXIT=0
     DELETE=1
     PARALLEL=1
+    BEAUTIFY=1
     shift
     ;;
     *)
-    echo "usage: git-pylint [-a] [-p] [-d] [P] [-r] [-h]"
+    echo "usage: git-pylint [-a] [-p] [-d] [P] [-r] [-h] [-b] [--file=FILE]"
     exit 0
     ;;
 esac
@@ -94,16 +107,21 @@ if [ $PARALLEL -eq 1 ]; then
     fi
 fi
 
-if [ $ADDED_ONLY -eq 1 ]; then
-    GIT_FILES=`git diff --cached --name-only --diff-filter=d`
-else
-    GIT_FILES=`git diff --cached --name-only --diff-filter=d; git diff --name-only --diff-filter=d; git ls-files --other --exclude-standard`
+if [ ! $GIT_FILES ]; then
+    if [ $ADDED_ONLY -eq 1 ]; then
+        GIT_FILES=`git diff --cached --name-only --diff-filter=d`
+    else
+        GIT_FILES=`git diff --cached --name-only --diff-filter=d; git diff --name-only --diff-filter=d; git ls-files --other --exclude-standard`
+    fi
 fi
 
 for file in $GIT_FILES; do
     skip=false
     if  [ ${#file} -gt 3 ] && [ ${file: -3} == ".py" ]; then
-
+        if [ $BEAUTIFY -eq 1 ]; then
+            isort $file 1>/dev/null 2>/dev/null
+            black --py36 --line-length=120 -S $file 2>/dev/null
+        fi
         # handle pep
         if [ $PEP -eq 1 ]; then
             autopep8 --max-line-length 120 --in-place $file

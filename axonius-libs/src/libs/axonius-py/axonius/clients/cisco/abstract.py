@@ -1,22 +1,36 @@
-import logging
-import itertools
-from functools import reduce
-from collections import defaultdict
 import datetime
+import itertools
+import logging
+from collections import defaultdict
+from enum import Enum, auto
+from functools import reduce
 
-from axonius.adapter_base import AdapterProperty
-from axonius.devices.device_adapter import (DeviceAdapter, Field,
-                                            DeviceAdapterNeighbor, DeviceAdapterNetworkInterface)
-
+from axonius.clients.cisco.constants import OIDS, get_oid_name
 from axonius.clients.cisco.port_security import PortSecurityInterface, SecureMacAddressEntry
+from axonius.devices.device_adapter import (
+    AdapterProperty,
+    ConnectionType,
+    DeviceAdapter,
+    DeviceAdapterNeighbor,
+    DeviceAdapterNetworkInterface,
+    Field,
+)
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class FetchProto(Enum):
+    ARP = auto()
+    CDP = auto()
+    DHCP = auto()
+    CLIENT = auto()
+    PRIME_CLIENT = auto()
 
 
 class CiscoDevice(DeviceAdapter):
     # Fetch protocol refers to the way we discover new devices
     # (by querying arp, cdp, dhcp tables, or by adding the client itself).
-    fetch_proto = Field(str, 'Fetch Protocol', enum=['ARP', 'CDP', 'DHCP', 'CLIENT', 'PRIME_CLIENT'])
+    fetch_proto = Field(str, 'Fetch Protocol', enum=FetchProto)
     reachability = Field(str, 'Reachability')
     ad_domainName = Field(str, 'AD Domain Name')
     ap_ip_address = Field(str, 'AP IP Address')
@@ -26,6 +40,7 @@ class CiscoDevice(DeviceAdapter):
     nac_state = Field(str, 'NAC State')
     wireless_vlan = Field(str, 'Wireless Vlan')
     association_time = Field(datetime.datetime, 'Association Time')
+    device_type = Field(str, 'Device Type')
 
 
 class AbstractCiscoClient:
@@ -43,6 +58,14 @@ class AbstractCiscoClient:
     def __exit__(self, exc_type, exc_value, traceback):
         """ exit that to the cisco device. """
         self._in_context = False
+
+    @staticmethod
+    def get_device_type():
+        raise NotImplementedError()
+
+    @staticmethod
+    def test_reachability(host, port):
+        raise NotImplementedError()
 
     def is_valid(self, should_log_exception=True):
         """
@@ -131,10 +154,13 @@ class AbstractCiscoData:
             for instance in instances:
                 # XXX: Kinda hacky fix the remote_iface
                 if self.received_from and self.get_protocol_type():
-                    instance['connected_devices'] = [{'name': self.received_from,
-                                                      'iface': instance.get('remote_iface', ''),
-                                                      'type': self.get_protocol_type(),
-                                                      }]
+                    instance['connected_devices'] = [
+                        {
+                            'name': self.received_from,
+                            'iface': instance.get('remote_iface', ''),
+                            'type': self.get_protocol_type(),
+                        }
+                    ]
             self.parsed_data = instances
         return self.parsed_data
 
@@ -144,13 +170,17 @@ class AbstractCiscoData:
 
     @staticmethod
     def _handle_ifaces(new_device, instance):
-        for iface in instance['ifaces'].values():
+        interface_field = get_oid_name(OIDS.interface)
+        port_security_field = get_oid_name(OIDS.port_security)
+
+        ip_field = get_oid_name(OIDS.ip)
+        for iface in instance[interface_field].values():
             ip_list = []
             netmask_list = []
 
-            if 'ips' in iface:
-                ip_list = [x.get('address') for x in iface['ips'] if x.get('address')]
-                netmask_list = [x.get('net-mask') for x in iface['ips'] if x.get('net-mask')]
+            if ip_field in iface:
+                ip_list = [x.get('address') for x in iface[ip_field] if x.get('address')]
+                netmask_list = [x.get('net-mask') for x in iface[ip_field] if x.get('net-mask')]
                 netmask_list = list(map('/'.join, zip(ip_list, netmask_list)))
 
             name = iface.get('description')
@@ -160,28 +190,35 @@ class AbstractCiscoData:
             speed = iface.get('speed')
             mtu = iface.get('mtu')
 
-            new_device.add_nic(mac=iface.get('mac'),
-                               name=iface.get('description'),
-                               operational_status=operational_status,
-                               admin_status=admin_status, speed=speed, mtu=mtu,
-                               ips=ip_list, subnets=netmask_list)
+            new_device.add_nic(
+                mac=iface.get('mac'),
+                name=iface.get('description'),
+                operational_status=operational_status,
+                admin_status=admin_status,
+                speed=speed,
+                mtu=mtu,
+                ips=ip_list,
+                subnets=netmask_list,
+            )
 
-            if 'port_security' in iface and iface['port_security'].get('enabled'):
-                port_security = iface['port_security']
+            if port_security_field in iface and iface[port_security_field].get('enabled'):
+                port_security = iface[port_security_field]
                 entries = []
-                for mac, attributes in iface['port_security'].get('entries', {}).items():
-                    entry = SecureMacAddressEntry(mac_address=mac,
-                                                  type=attributes.get('type'),
-                                                  remaining_age_time=attributes.get('remaining_age'))
+                for mac, attributes in iface[port_security_field].get('entries', {}).items():
+                    entry = SecureMacAddressEntry(
+                        mac_address=mac, type=attributes.get('type'), remaining_age_time=attributes.get('remaining_age')
+                    )
                     entries.append(entry)
 
-                port_security_class = PortSecurityInterface(name=iface.get('description'),
-                                                            status=port_security.get('status'),
-                                                            sticky=port_security.get('sticky'),
-                                                            max_addr=port_security.get('max_addr'),
-                                                            violation_action=port_security.get('violation_action'),
-                                                            violation_count=port_security.get('violation_count'),
-                                                            entries=entries)
+                port_security_class = PortSecurityInterface(
+                    name=iface.get('description'),
+                    status=port_security.get('status'),
+                    sticky=port_security.get('sticky'),
+                    max_addr=port_security.get('max_addr'),
+                    violation_action=port_security.get('violation_action'),
+                    violation_count=port_security.get('violation_count'),
+                    entries=entries,
+                )
                 new_device.port_security.append(port_security_class)
 
     @staticmethod
@@ -204,7 +241,7 @@ class AbstractCiscoData:
             so we assume that some or all fields might be missing.
             This function defines the instance structure.
         """
-
+        interface_field = get_oid_name(OIDS.interface)
         id_ = self._get_id(instance)
         if id_ is None:
             logger.warning(f'Unable to create id_ for instace {instance}')
@@ -219,7 +256,7 @@ class AbstractCiscoData:
             ips = [instance.get('ip')] if instance.get('ip') else []
             new_device.add_nic(mac=instance.get('mac'), name=instance.get('iface'), ips=ips)
 
-        if 'ifaces' in instance:
+        if interface_field in instance:
             self._handle_ifaces(new_device, instance)
 
         if 'connected_devices' in instance:
@@ -228,12 +265,17 @@ class AbstractCiscoData:
         new_device.hostname = instance.get('hostname')
         new_device.device_model = instance.get('device_model')
 
-        new_device.figure_os(instance.get('os', ''))
+        new_device.figure_os(instance.get('device_model'))
+        new_device.figure_os(instance.get('version'))
+        new_device.figure_os(instance.get('os'))
         new_device.os.build = instance.get('version')
-        new_device.device_serial = instance.get('serial')
+        new_device.device_serial = instance.get('device_serial')
 
         if 'related_ips' in instance:
             new_device.set_related_ips(instance['related_ips'])
+
+        if 'uptime' in instance:
+            new_device.set_boot_time(uptime=datetime.timedelta(seconds=int(instance['uptime']) / 100.0))
 
         # XXX: the real raw data is self._raw_data
         # but it isn't a dict so for now we only save the instance - which must be a dict
@@ -268,10 +310,10 @@ class BasicInfoData(AbstractCiscoData):
     def _get_devices(self, instance, create_device_callback):
         device = super()._get_devices(instance, create_device_callback)
         if device:
-            device.fetch_proto = 'CLIENT'
+            device.fetch_proto = FetchProto.CLIENT.name
             device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
             # we are running on the endpoint, so the last seen is right now
-            device.last_seen = datetime.datetime.now()
+            device.last_seen = datetime.datetime.utcnow()
         return device
 
     def get_protocol_type(self):
@@ -289,13 +331,13 @@ class ArpCiscoData(AbstractCiscoData):
     def _get_devices(self, instance, create_device_callback):
         device = super()._get_devices(instance, create_device_callback)
         if device:
-            device.fetch_proto = 'ARP'
+            device.fetch_proto = FetchProto.ARP.name
             device.adapter_properties = [AdapterProperty.Network.name]
 
         return device
 
     def get_protocol_type(self):
-        return 'Indirect'
+        return ConnectionType.Indirect.name
 
 
 class DhcpCiscoData(AbstractCiscoData):
@@ -320,11 +362,11 @@ class DhcpCiscoData(AbstractCiscoData):
     def _get_devices(self, instance, create_device_callback):
         device = super()._get_devices(instance, create_device_callback)
         if device:
-            device.fetch_proto = 'DHCP'
+            device.fetch_proto = FetchProto.DHCP.name
         return device
 
     def get_protocol_type(self):
-        return 'Indirect'
+        return ConnectionType.Indirect.name
 
 
 class CdpCiscoData(AbstractCiscoData):
@@ -345,12 +387,12 @@ class CdpCiscoData(AbstractCiscoData):
     def _get_devices(self, instance, create_device_callback):
         device = super()._get_devices(instance, create_device_callback)
         if device:
-            device.fetch_proto = 'CDP'
+            device.fetch_proto = FetchProto.CDP.name
             device.adapter_properties = [AdapterProperty.Network.name]
         return device
 
     def get_protocol_type(self):
-        return 'Direct'
+        return ConnectionType.Direct.name
 
 
 class InstanceParser:
@@ -414,6 +456,7 @@ class InstanceParser:
     def _merge_cdps(cdps: list):
         assert len(cdps) >= 1, f'cdps must have at least one instance in list, got {cdps}'
 
+        interface_field = get_oid_name(OIDS.interface)
         result = CdpCiscoData(raw_data='')
         counter = itertools.count()
 
@@ -423,7 +466,7 @@ class InstanceParser:
         parsed_data['hostname'] = first_cdp.get('hostname')
         parsed_data['version'] = first_cdp.get('version')
         parsed_data['device_model'] = first_cdp.get('device_model')
-        parsed_data['ifaces'] = {}
+        parsed_data[interface_field] = {}
         parsed_data['connected_devices'] = []
 
         for cdp in cdps:
@@ -433,7 +476,7 @@ class InstanceParser:
                     interface['mac'] = cdp.get('mac')
                     if 'ip' in cdp:
                         interface['ips'] = [{'address': cdp['ip']}]
-                    parsed_data['ifaces'][next(counter)] = interface
+                    parsed_data[interface_field][next(counter)] = interface
 
                 if 'connected_devices' in cdp:
                     parsed_data['connected_devices'] += cdp['connected_devices']
@@ -469,7 +512,8 @@ class InstanceParser:
                 parsed_data['related_ips'].append(arp.get('ip'))
 
             if 'connected_devices' in arp:
-                parsed_data['connected_devices'] += arp['connected_devices']
+                if arp['connected_devices'] not in parsed_data['connected_devices']:
+                    parsed_data['connected_devices'] += arp['connected_devices']
 
         result.parsed_data = [parsed_data]
         return result
@@ -486,11 +530,7 @@ class InstanceParser:
 
     def get_devices(self, create_device_callback):
         # first we want to fix cdp, then merge cdp, then merge arps
-        funcs = (
-            self._correlate_cdp_arp,
-            self._correlate_cdp_cdp,
-            self._correlate_arp_arp,
-        )
+        funcs = (self._correlate_cdp_arp, self._correlate_cdp_cdp, self._correlate_arp_arp)
 
         # apply each function on instances
         self._instances = reduce(lambda instances, func: func(instances), funcs, self._instances)

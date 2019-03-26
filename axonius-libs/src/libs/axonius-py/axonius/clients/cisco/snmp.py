@@ -1,21 +1,19 @@
 import asyncio
 import logging
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from pyasn1.type.univ import Null
-from pysnmp.hlapi.asyncio import (CommunityData, ContextData, ObjectIdentity,
-                                  ObjectType, SnmpEngine)
+from pysnmp.hlapi.asyncio import CommunityData, ContextData, ObjectIdentity, ObjectType, SnmpEngine
 from pysnmp.hlapi.asyncio import UdpTransportTarget as AsyncUdpTransportTarget
 from pysnmp.hlapi.asyncio import bulkCmd, getCmd
 from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
+from pysnmp.proto.rfc1905 import NoSuchInstance
 
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.utils.singleton import Singleton
 from axonius.clients.cisco import snmp_parser
-from axonius.clients.cisco.abstract import (AbstractCiscoClient, ArpCiscoData,
-                                            BasicInfoData, CdpCiscoData)
-
-from axonius.clients.cisco.constants import OIDS
+from axonius.clients.cisco.abstract import AbstractCiscoClient, ArpCiscoData, BasicInfoData, CdpCiscoData
+from axonius.clients.cisco.constants import ARGUMENTS, BASIC_INFO_OID_KEYS, OIDS, SNMP_ARGUMENTS_KEYS, get_oid_name
+from axonius.utils.singleton import Singleton
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -57,17 +55,16 @@ async def asyncio_next(engine, community, ip, port, oid):
 
     while True:
         # XXX: fallback to nextCmd
-        (errorIndication,
-         errorStatus,
-         errorIndex,
-         varBindTable) = await bulkCmd(
-             engine,
-             CommunityData(community),
-             AsyncUdpTransportTarget((ip, port)),
-             ContextData(),
-             0, 500,
-             *varBinds,
-             lookupMib=False)
+        (errorIndication, errorStatus, errorIndex, varBindTable) = await bulkCmd(
+            engine,
+            CommunityData(community),
+            AsyncUdpTransportTarget((ip, port)),
+            ContextData(),
+            0,
+            500,
+            *varBinds,
+            lookupMib=False,
+        )
 
         if errorIndication:
             results.append((errorIndication, errorStatus, errorIndex, varBindTable))
@@ -97,109 +94,103 @@ async def asyncio_next(engine, community, ip, port, oid):
 
 async def asyncio_get(engine, community, ip, port, oid):
     varBinds = [ObjectType(ObjectIdentity(oid))]
-    (errorIndication,
-     errorStatus,
-     errorIndex,
-     varBindTable) = await getCmd(engine,
-                                  CommunityData(community),
-                                  AsyncUdpTransportTarget((ip, port)),
-                                  ContextData(),
-                                  *varBinds,
-                                  lookupMib=False)
+    (errorIndication, errorStatus, errorIndex, varBindTable) = await getCmd(
+        engine, CommunityData(community), AsyncUdpTransportTarget((ip, port)), ContextData(), *varBinds, lookupMib=False
+    )
     return (errorIndication, errorStatus, errorIndex, varBindTable)
 
 
 class CiscoSnmpClient(AbstractCiscoClient):
     def __init__(self, **kwargs):
         super().__init__()
-        for required_arg in ('host', 'community', 'port'):
+        for required_arg in SNMP_ARGUMENTS_KEYS:
             if required_arg not in kwargs:
                 raise ClientConnectionException(f'SNMP - missing required parmeter "{required_arg}"')
 
-        self._community = kwargs['community']
-        self._ip = kwargs['host']
-        self._port = kwargs['port']
+        self._community = kwargs[ARGUMENTS.community]
+        self._ip = kwargs[ARGUMENTS.host]
+        self._port = kwargs[ARGUMENTS.port]
+
+    @staticmethod
+    def get_device_type():
+        return 'cisco_ios_snmp'
+
+    @staticmethod
+    def test_rechability(host, port):
+        raise NotImplementedError()
 
     def validate_connection(self):
-        data = list(self._next_cmd(OIDS.system_description + '.1'))[0]
+        data = list(self._get_cmd(OIDS.system_description + '.1.0', oid_name='description'))[0]
         if not data:
-            raise ClientConnectionException(f'Unable to communicate with {self._ip} data: {data}')
+            raise ClientConnectionException(f'Unable to communicate with {self._ip}')
 
-        errors = [x[0] for x in data]
-        results = [x[3] for x in data]
+    def _next_cmd(self, oid, oid_name=None):
+        return run_event_loop([self._async_next_cmd(oid, oid_name)])
 
-        if any(errors) or not results:
-            raise ClientConnectionException(f'Unable to communicate with {self._ip}' +
-                                            f' errors: {errors}, results: {results}')
+    def _get_cmd(self, oid, oid_name=None):
+        return run_event_loop([self._async_get_cmd(oid, oid_name)])
 
-    def _next_cmd(self, oid):
-        return run_event_loop([self._async_next_cmd(oid)])
+    async def _async_get_cmd(self, oid, oid_name=None):
+        if oid_name is None:
+            oid_name = get_oid_name(oid)
+        try:
+            engine = SingletonEngine().get_instance()
+            data = await asyncio_get(engine, self._community, self._ip, self._port, oid)
+            error = data[0]
+            data = data[3]
+            if error:
+                logger.error(f'{oid_name} returned error: {error}')
+                return None
+            if isinstance(data[0][1], NoSuchInstance):
+                return None
+            result = oid_name, data
+            return result
+        except Exception:
+            logger.exception(f'Failed to query {oid_name}')
+            return None
 
-    async def _async_get_cmd(self, oid):
-        engine = SingletonEngine().get_instance()
-        data = await asyncio_get(engine, self._community,
-                                 self._ip, self._port,
-                                 oid)
-        return data
+    async def _async_next_cmd(self, oid, oid_name=None):
+        if oid_name is None:
+            oid_name = get_oid_name(oid)
+        try:
+            engine = SingletonEngine().get_instance()
+            data = await asyncio_next(engine, self._community, self._ip, self._port, oid)
 
-    async def _async_next_cmd(self, oid):
-        engine = SingletonEngine().get_instance()
-        data = await asyncio_next(engine, self._community,
-                                  self._ip, self._port,
-                                  oid)
-        return data
+            errors = list(filter(None, map(lambda x: x[0], data)))
+            result = oid_name, list(map(lambda x: x[3], data))
+            if not errors:
+                return result
+            logger.error(f'{oid_name} returned errors: {errors}')
+        except Exception:
+            logger.exception(f'Failed to query {oid_name}')
+        return None
 
     async def _query_dhcp_leases(self):
         logger.debug('dhcp isn\'t implemented yet - skipping')
         return None
 
     async def _query_arp_table(self):
-        results = []
-        for query_result in await self._async_next_cmd(OIDS.arp):
-            try:
-                error, _, _, result = query_result
-                if error:
-                    logger.error(f'Unable to query arp table for {self._ip} error: {error}')
-                    continue
-                results.append(result)
-            except Exception as e:
-                logger.exception('Exception while quering arp table')
+        results = await self._async_next_cmd(OIDS.arp)
+        if results:
+            name, results = results
+        else:
+            results = []
         return SnmpArpCiscoData(results, received_from=self._ip)
 
     async def _query_basic_info(self):
         """ query basic information about the device itself """
-        data = await self._async_next_cmd(OIDS.system_description)
-        errors = list(map(lambda x: x[0], data))
-        results = [('info', list(map(lambda x: x[3], data)))]
-
-        data = await self._async_next_cmd(OIDS.interface)
-        errors += list(map(lambda x: x[0], data))
-        results += [('iface', list(map(lambda x: x[3], data)))]
-
-        data = await self._async_next_cmd(OIDS.ip)
-        errors += list(map(lambda x: x[0], data))
-        results += [('ip', list(map(lambda x: x[3], data)))]
-
-        data = await self._async_next_cmd(OIDS.port_security)
-        errors += list(map(lambda x: x[0], data))
-        results += [('port_security', list(map(lambda x: x[3], data)))]
-
-        data = await self._async_next_cmd(OIDS.port_security_entries)
-        errors += list(map(lambda x: x[0], data))
-        results += [('port_security_entries', list(map(lambda x: x[3], data)))]
-
-        data = await self._async_get_cmd(OIDS.device_model)
-        errors.append(data[0])
-        results += [('device_model', data[3])]
-
-        data = await self._async_get_cmd(OIDS.device_serial)
-        errors.append(data[0])
-        results += [('serial', data[3])]
-
-        if any(errors):
-            logger.error(f'Unable to query basic info table for {self._ip} errors: {errors}')
-            return None
-
+        basic_info_routines = [
+            self._async_next_cmd(OIDS.system_description),
+            self._async_next_cmd(OIDS.interface),
+            self._async_next_cmd(OIDS.ip),
+            self._async_next_cmd(OIDS.port_security),
+            self._async_next_cmd(OIDS.port_security_entries),
+            self._async_get_cmd(OIDS.device_model),
+            self._async_get_cmd(OIDS.device_model2),
+            self._async_get_cmd(OIDS.device_serial),
+            self._async_get_cmd(OIDS.device_serial2),
+        ]
+        results = list(filter(None, [await routine for routine in basic_info_routines]))
         return SnmpBasicInfoCiscoData(results)
 
     # XXX: move to CdpCiscoData
@@ -209,27 +200,20 @@ class CiscoSnmpClient(AbstractCiscoClient):
         for result in results:
             oid = result[0][0]
             groups[(oid[-1], oid[-2])].append(result)
-        return groups.values()
+        return list(groups.values())
 
     async def _query_cdp_table(self):
-        data = await self._async_next_cmd(OIDS.cdp)
-        errors = list(map(lambda x: x[0], data))
-        results = list(map(lambda x: x[3], data))
-        if any(errors):
-            logger.error(f'Unable to query cdp table for {self._ip} errors: {errors}')
-            return None
-
+        results = await self._async_next_cmd(OIDS.cdp)
+        if results:
+            name, results = results
+        else:
+            results = []
         results = self._group_cdp(results)
         return SnmpCdpCiscoData(results, received_from=self._ip)
 
     def get_tasks(self):
         """ return all tasks """
-        return [
-            self._query_basic_info(),
-            self._query_cdp_table(),
-            self._query_arp_table(),
-            self._query_dhcp_leases()
-        ]
+        return [self._query_basic_info(), self._query_cdp_table(), self._query_arp_table(), self._query_dhcp_leases()]
 
     def query_all(self):
         """ since snmp queries are async, we must handle them differently """
@@ -238,11 +222,13 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
 
 class SnmpBasicInfoCiscoData(BasicInfoData):
-
     def _parse_basic_info(self, entries):
         for entry in entries:
             try:
                 oid, value = entry[0][0], entry[0][1]
+                if oid[-1] != 0:
+                    # we only want zero index
+                    continue
                 key, value = SystemDescriptionTable.parse_value(oid, value)
                 if value is not None:
                     self.result[key] = value
@@ -258,7 +244,8 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
         return groups.values()
 
     def _parse_iface(self, entries):
-        self.result['ifaces'] = {}
+        interface = get_oid_name(OIDS.interface)
+        self.result[interface] = {}
         for group in self._group_iface(entries):
             iface = {}
             for entry in group:
@@ -271,9 +258,12 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     logger.exception('Exception while parsing basic info iface')
                     continue
             if iface.get('index'):
-                self.result['ifaces'][iface.get('index')] = iface
+                self.result[interface][iface.get('index')] = iface
 
     def _parse_port_security(self, entries):
+        interface_field = get_oid_name(OIDS.interface)
+        port_security_field = get_oid_name(OIDS.port_security)
+
         for group in self._group_iface(entries):
             port_security = {}
             index = str(group[0][0][0][-1])
@@ -286,11 +276,13 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 except Exception:
                     logger.exception('Exception while parsing basic info port security')
                     continue
-            if index not in self.result['ifaces']:
-                self.result['ifaces'] = {}
-            self.result['ifaces'][index]['port_security'] = port_security
+            if index not in self.result[interface_field]:
+                self.result[interface_field] = {}
+            self.result[interface_field][index][port_security_field] = port_security
 
     def _parse_port_security_entries(self, entries):
+        interface = get_oid_name(OIDS.interface)
+        port_security = get_oid_name(OIDS.port_security)
         port_security_entries = {}
         for entry in entries:
             try:
@@ -309,12 +301,14 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 continue
 
         for index, entry in port_security_entries.items():
-            if index in self.result['ifaces'].keys():
-                if 'port_security' not in self.result['ifaces'][index]:
-                    self.result['ifaces'][index]['port_security'] = {}
-                self.result['ifaces'][index]['port_security']['entries'] = entry
+            if index in self.result[interface].keys():
+                if port_security not in self.result[interface][index]:
+                    self.result[interface][index][port_security] = {}
+                self.result[interface][index][port_security]['entries'] = entry
 
     def _parse_ip(self, entires):
+        interface_field = get_oid_name(OIDS.interface)
+        ip_field = get_oid_name(OIDS.ip)
         ips = defaultdict(dict)
         for entry in entires:
             try:
@@ -328,35 +322,33 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                 continue
         for value in ips.values():
             index = value.get('index')
-            if index in self.result['ifaces'].keys():
-                if 'ips' not in self.result['ifaces'][index]:
-                    self.result['ifaces'][index]['ips'] = []
-                self.result['ifaces'][index]['ips'].append(value)
+            if index in self.result[interface_field].keys():
+                if ip_field not in self.result[interface_field][index]:
+                    self.result[interface_field][index][ip_field] = []
+                self.result[interface_field][index][ip_field].append(value)
 
     def _parse_serial(self, entries):
-        self.result['serial'] = str(entries[0][1])
+        self.result[get_oid_name(OIDS.device_serial)] = str(entries[0][1])
 
     def _parse_device_model(self, entries):
-        self.result['device_model'] = str(entries[0][1])
+        self.result[get_oid_name(OIDS.device_model)] = str(entries[0][1])
 
     def _parse(self):
+        parse_table = namedtuple('parse_table', BASIC_INFO_OID_KEYS)(
+            system_description=self._parse_basic_info,
+            interface=self._parse_iface,
+            ip=self._parse_ip,
+            port_security=self._parse_port_security,
+            port_security_entries=self._parse_port_security_entries,
+            device_model=self._parse_device_model,
+            device_model2=self._parse_device_model,
+            device_serial=self._parse_serial,
+            device_serial2=self._parse_serial,
+        )
+
         self.result = {'os': 'cisco'}
         for type_, entries in self._raw_data:
-            if type_ == 'info':
-                self._parse_basic_info(entries)
-            if type_ == 'iface':
-                self._parse_iface(entries)
-            if type_ == 'ip':
-                self._parse_ip(entries)
-            if type_ == 'port_security':
-                self._parse_port_security(entries)
-            if type_ == 'port_security_entries':
-                self._parse_port_security_entries(entries)
-            if type_ == 'serial':
-                self._parse_serial(entries)
-            if type_ == 'device_model':
-                self._parse_device_model(entries)
-
+            parse_table._asdict()[type_](entries)
         yield self.result
 
 
@@ -372,7 +364,6 @@ class SnmpArpCiscoData(ArpCiscoData):
 
 
 class SnmpCdpCiscoData(CdpCiscoData):
-
     def _parse(self):
         for entries in self._raw_data:
             result = {}
@@ -447,17 +438,12 @@ class CpsIfConfigTable(snmp_parser.SnmpTable):
         # 11: clear address
         # 14: clear mac address
         15: (snmp_parser.parse_bool, 'sticky'),
-
     }
     index = -2
 
 
 class CpsSecureMacAddressTable(snmp_parser.SnmpTable):
-    table = {
-        2: (snmp_parser.parse_secure_mac_type, 'type'),
-        3: (snmp_parser.parse_int, 'remaining_age'),
-
-    }
+    table = {2: (snmp_parser.parse_secure_mac_type, 'type'), 3: (snmp_parser.parse_int, 'remaining_age')}
     index = 13
 
 

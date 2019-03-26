@@ -8,8 +8,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field
-from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.files import get_local_config_file
 from esx_adapter.vcenter_api import rawify_vcenter_data, vCenterApi
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -53,10 +53,13 @@ class EsxAdapter(AdapterBase):
         client_id = self._get_client_id(client_config)
         try:
             host = client_config['host']
-            return vCenterApi(host=host, user=client_config['user'],
-                              password=client_config['password'],
-                              verify_ssl=client_config['verify_ssl'],
-                              restful_api_url=client_config.get('rest_api', f'https://{host}/api'))
+            return vCenterApi(
+                host=host,
+                user=client_config['user'],
+                password=client_config['password'],
+                verify_ssl=client_config['verify_ssl'],
+                restful_api_url=client_config.get('rest_api', f'https://{host}/api'),
+            )
         except vim.fault.InvalidLogin as e:
             message = 'Credentials invalid for ESX client for account {0}'.format(client_id)
             logger.exception(message)
@@ -76,41 +79,18 @@ class EsxAdapter(AdapterBase):
         """
         return {
             'items': [
-                {
-                    'name': 'host',
-                    'title': 'Host',
-                    'type': 'string'
-                },
-                {
-                    'name': 'user',
-                    'title': 'User',
-                    'type': 'string'
-                },
-                {
-                    'name': 'password',
-                    'title': 'Password',
-                    'type': 'string',
-                    'format': 'password'
-                },
+                {'name': 'host', 'title': 'Host', 'type': 'string'},
+                {'name': 'user', 'title': 'User', 'type': 'string'},
+                {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
-                    'type': 'bool'
+                    'type': 'bool',
                 },
-                {
-                    'name': 'rest_api',
-                    'title': 'vCenter RESTful API URL',
-                    'default': None,
-                    'type': 'string'
-                }
+                {'name': 'rest_api', 'title': 'vCenter RESTful API URL', 'default': None, 'type': 'string'},
             ],
-            'required': [
-                'host',
-                'user',
-                'password',
-                'verify_ssl'
-            ],
-            'type': 'array'
+            'required': ['host', 'user', 'password', 'verify_ssl'],
+            'type': 'array',
         }
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -160,11 +140,12 @@ class EsxAdapter(AdapterBase):
         device.hostname = guest.get('hostName', '')
         device.vm_tools_status = guest.get('toolsStatus', '')
         device.vm_physical_path = _curr_path + '/' + node.get('Name', '')
-        device.power_state = POWER_STATE_MAP.get(details.get('runtime', {}).get('powerState'),
-                                                 DeviceRunningState.Unknown)
+        device.power_state = POWER_STATE_MAP.get(
+            details.get('runtime', {}).get('powerState'), DeviceRunningState.Unknown
+        )
         boot_time = details.get('runtime', {}).get('bootTime')
         if boot_time is not None:
-            device.boot_time = parse_date(boot_time)
+            device.set_boot_time(boot_time=parse_date(boot_time))
 
         memory_size_mb = config.get('memorySizeMB')
         if memory_size_mb is not None:
@@ -216,8 +197,10 @@ class EsxAdapter(AdapterBase):
             device.device_type = ESXDeviceType.ESXHost
             node_hardware = node.get('Hardware')
             if node_hardware:
-                device.add_cpu(cores=node_hardware['numCpuThreads'],
-                               ghz=node_hardware['totalCpu'] / node_hardware['numCpuCores'] / 1024)
+                device.add_cpu(
+                    cores=node_hardware['numCpuThreads'],
+                    ghz=node_hardware['totalCpu'] / node_hardware['numCpuCores'] / 1024,
+                )
                 device.total_physical_memory = node_hardware['totalMemory'] / (1024.0 * 1024 * 1024)
             yield device
         elif node_type in ('Datacenter', 'Folder', 'Root', 'Cluster'):

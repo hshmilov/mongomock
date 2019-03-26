@@ -99,8 +99,8 @@ class CiscoAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         yield from InstanceParser(devices_raw_data).get_devices(self._new_device_adapter)
 
-    def _get_client_id(self, client_config):
-        # XXX: is there a better place to set default values for client_config?
+    @staticmethod
+    def _prepare_client_config(client_config):
         # XXX: require and default doesn't so we must hack the protocol here
         if client_config.get('protocol') not in PROTOCOLS:
             client_config['protocol'] = 'snmp'
@@ -110,11 +110,16 @@ class CiscoAdapter(AdapterBase):
         # we use if not so '' and 0 and None will get default port
         if not client_config.get('port'):
             client_config['port'] = default_port
+        return client_config
 
+    def _get_client_id(self, client_config):
+        client_config = self._prepare_client_config(client_config)
         return client_config['host']
 
     def _test_reachability(self, client_config):
-        raise NotImplementedError()
+        client_config = self._prepare_client_config(client_config)
+        client, _ = PROTOCOLS[client_config['protocol']]
+        return client.test_reachability(client_config['host'], client_config['port'])
 
     @classmethod
     def adapter_properties(cls):

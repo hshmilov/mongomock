@@ -2,15 +2,17 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import parse_bool_from_raw
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
-from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, \
-    smb_shell_commands, is_wmi_answer_ok, reg_view_output_to_dict, \
-    reg_view_parse_int, is_wmi_answer_invalid_query
+from general_info.subplugins.wmi_utils import (
+    is_wmi_answer_invalid_query,
+    is_wmi_answer_ok,
+    reg_view_output_to_dict,
+    reg_view_parse_int,
+    smb_shell_commands,
+    wmi_date_to_datetime,
+    wmi_query_commands,
+)
 
-
-BAD_CONFIGURATIONS_COMMANDS = [
-    r'reg query HKLM\SYSTEM\CurrentControlSet\Control\Lsa\ '
-
-]
+BAD_CONFIGURATIONS_COMMANDS = [r'reg query HKLM\SYSTEM\CurrentControlSet\Control\Lsa\ ']
 
 
 class GetBasicComputerInfo(GeneralInfoSubplugin):
@@ -24,25 +26,24 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
     @staticmethod
     def get_wmi_smb_commands():
-        return wmi_query_commands([
-            "select Name, AddressWidth, NumberOfCores, LoadPercentage, Architecture, "
-            "MaxClockSpeed from Win32_Processor",
-
-            "select SMBIOSBIOSVersion, SerialNumber from Win32_BIOS",
-            "select Caption, Description, Version, BuildNumber, InstallDate, TotalVisibleMemorySize, "
-            "FreePhysicalMemory, NumberOfProcesses, LastBootUpTime from Win32_OperatingSystem",
-
-            "select Name, FileSystem, Size, FreeSpace from Win32_LogicalDisk",
-            "select HotFixID, InstalledOn from Win32_QuickFixEngineering",
-            "select * from Win32_ComputerSystem",
-            "select Description, EstimatedChargeRemaining, BatteryStatus from Win32_Battery",
-            "select Caption from Win32_TimeZone",
-            "select SerialNumber from Win32_BaseBoard",
-            "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration",
-            'select Name from Win32_Process',
-            'select Name from Win32_Service',
-            'select Name, Description, Path from Win32_Share'
-        ]
+        return wmi_query_commands(
+            [
+                "select Name, AddressWidth, NumberOfCores, LoadPercentage, Architecture, "
+                "MaxClockSpeed from Win32_Processor",
+                "select SMBIOSBIOSVersion, SerialNumber from Win32_BIOS",
+                "select Caption, Description, Version, BuildNumber, InstallDate, TotalVisibleMemorySize, "
+                "FreePhysicalMemory, NumberOfProcesses, LastBootUpTime from Win32_OperatingSystem",
+                "select Name, FileSystem, Size, FreeSpace from Win32_LogicalDisk",
+                "select HotFixID, InstalledOn from Win32_QuickFixEngineering",
+                "select * from Win32_ComputerSystem",
+                "select Description, EstimatedChargeRemaining, BatteryStatus from Win32_Battery",
+                "select Caption from Win32_TimeZone",
+                "select SerialNumber from Win32_BaseBoard",
+                "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration",
+                'select Name from Win32_Process',
+                'select Name from Win32_Service',
+                'select Name, Description, Path from Win32_Share',
+            ]
         ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS)
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
@@ -69,8 +70,9 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             for cpu in win32_processor["data"]:
                 architecture = cpu.get('Architecture')
                 if architecture is not None:
-                    architecture = {0: "x86", 1: "MIPS", 2: "Alpha", 3: "PowerPC",
-                                    5: "ARM", 6: "ia64", 9: "x64"}.get(architecture)
+                    architecture = {0: "x86", 1: "MIPS", 2: "Alpha", 3: "PowerPC", 5: "ARM", 6: "ia64", 9: "x64"}.get(
+                        architecture
+                    )
 
                 max_clock_speed_ghz = cpu.get('MaxClockSpeed')
                 if max_clock_speed_ghz is not None:
@@ -82,13 +84,15 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                     cores=cpu.get('NumberOfCores'),
                     load_percentage=cpu.get('LoadPercentage'),
                     architecture=architecture,
-                    ghz=max_clock_speed_ghz
+                    ghz=max_clock_speed_ghz,
                 )
         except Exception:
             # This tends to fail a lot since win32_processor isn't supported on everything.
             if is_wmi_answer_invalid_query(win32_processor):
-                self.logger.warning(f"win32_processor query answer returned WBEM_E_INVALID_QUERY - might "
-                                    f"be unsupported on this device")
+                self.logger.warning(
+                    f"win32_processor query answer returned WBEM_E_INVALID_QUERY - might "
+                    f"be unsupported on this device"
+                )
             else:
                 self.logger.exception(f"Couldn't handle Win32_Processor: {win32_processor}")
 
@@ -134,9 +138,17 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             # Type of system
             pc_system_type = win32_computersystem.get("PCSystemType")
             if pc_system_type is not None:
-                adapterdata_device.pc_type = {0: "Unspecified", 1: "Desktop", 2: "Laptop or Tablet", 3: "Workstation",
-                                              4: "Enterprise Server", 5: "SOHO Server", 6: "Appliance PC",
-                                              7: "Performance Server", 8: "Maximum"}.get(pc_system_type)
+                adapterdata_device.pc_type = {
+                    0: "Unspecified",
+                    1: "Desktop",
+                    2: "Laptop or Tablet",
+                    3: "Workstation",
+                    4: "Enterprise Server",
+                    5: "SOHO Server",
+                    6: "Appliance PC",
+                    7: "Performance Server",
+                    8: "Maximum",
+                }.get(pc_system_type)
         except Exception:
             self.logger.exception(f"Win32_ComputerSystem {win32_computersystem}")
 
@@ -174,7 +186,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             try:
                 boot_time = win32_operatingsystem.get("LastBootUpTime")
                 if boot_time is not None and boot_time != "0":
-                    adapterdata_device.boot_time = wmi_date_to_datetime(boot_time)
+                    boot_time = wmi_date_to_datetime(boot_time)
+                    adapterdata_device.set_boot_time(boot_time=boot_time)
             except Exception:
                 self.logger.exception(f"Exception inserting LastBootUpTime {boot_time}")
 
@@ -230,10 +243,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                     free_size = float(free_size / (1024 ** 3))
 
                 adapterdata_device.add_hd(
-                    path=ld.get("Name"),
-                    total_size=total_size,
-                    free_size=free_size,
-                    file_system=ld.get("FileSystem")
+                    path=ld.get("Name"), total_size=total_size, free_size=free_size, file_system=ld.get("FileSystem")
                 )
 
         except Exception:
@@ -259,10 +269,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                     # This is a phenomena that happens on some windows devices, we need to ignore it.
                     # https://social.technet.microsoft.com/Forums/exchange/en-US/ac717bfa-8ca4-474e-806c-e0a21e67482d/wh
                     # at-does-it-mean-when-win32quickfixengineeringhotfixid-is-set-to-file-1?forum=winserverManagement
-                    adapterdata_device.add_security_patch(
-                        security_patch_id=hotfix_id,
-                        installed_on=installed_on
-                    )
+                    adapterdata_device.add_security_patch(security_patch_id=hotfix_id, installed_on=installed_on)
         except Exception:
             self.logger.exception(f"Win32_QuickFixEngineering {win32_quickfixengineering}")
 
@@ -282,16 +289,14 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                         8: "Charging and Low",
                         9: "Charging and Critical",
                         10: "Undefined",
-                        11: "Partially Charged"}.get(battery_status)
+                        11: "Partially Charged",
+                    }.get(battery_status)
 
                 battery_percentage = battery.get("EstimatedChargeRemaining")
                 if battery_percentage is not None:
                     battery_percentage = int(battery_percentage)
 
-                adapterdata_device.add_battery(
-                    status=battery_status,
-                    percentage=battery_percentage
-                )
+                adapterdata_device.add_battery(status=battery_status, percentage=battery_percentage)
         except Exception:
             self.logger.exception(f"Win32_Battery {win32_battery}")
 
@@ -308,10 +313,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             for nic in win32_networkadapterconfiguration["data"]:
                 ip_enabled = nic.get("IPEnabled")
                 if ip_enabled is not None and parse_bool_from_raw(ip_enabled) is True:
-                    adapterdata_device.add_nic(
-                        mac=nic.get("MACAddress"),
-                        ips=nic.get("IPAddress")
-                    )
+                    adapterdata_device.add_nic(mac=nic.get("MACAddress"), ips=nic.get("IPAddress"))
         except Exception:
             self.logger.exception(f"Win32_NetworkAdapterConfiguration {win32_networkadapterconfiguration}")
         try:
@@ -341,9 +343,11 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             for share_data in win32_shares['data']:
                 try:
                     if share_data.get('Name'):
-                        adapterdata_device.add_share(name=share_data.get('Name'),
-                                                     description=share_data.get('Description'),
-                                                     path=share_data.get('Path'))
+                        adapterdata_device.add_share(
+                            name=share_data.get('Name'),
+                            description=share_data.get('Description'),
+                            path=share_data.get('Path'),
+                        )
                 except Exception:
                     self.logger.exception(f'Problem with share data {share_data}')
         except Exception:
@@ -358,7 +362,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             adapterdata_device.ad_bad_config_force_guest = reg_view_parse_int(data.get("forceguest"))
             adapterdata_device.ad_bad_config_authentication_packages = data.get("authentication packages")
             adapterdata_device.ad_bad_config_lm_compatibility_level = reg_view_parse_int(
-                data.get("lmcompatibilitylevel"))
+                data.get("lmcompatibilitylevel")
+            )
             adapterdata_device.ad_bad_config_disabled_domain_creds = reg_view_parse_int(data.get("disableddomaincreds"))
             adapterdata_device.ad_bad_config_secure_boot = reg_view_parse_int(data.get("secureboot"))
 

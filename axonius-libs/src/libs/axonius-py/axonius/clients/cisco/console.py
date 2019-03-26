@@ -1,8 +1,10 @@
 import logging
 import re
+import socket
 from datetime import timedelta
 
 import func_timeout
+import paramiko
 from netmiko import ConnectHandler
 
 from axonius import adapter_exceptions
@@ -36,7 +38,8 @@ class CiscoConsoleClient(AbstractCiscoClient):
         self.port = kwargs['port']
         self._sess = None
 
-    def get_device_type(self):
+    @staticmethod
+    def get_device_type():
         raise NotImplementedError()
 
     def _validate_connection(self):
@@ -125,37 +128,49 @@ class CiscoConsoleClient(AbstractCiscoClient):
 
 
 class CiscoSshClient(CiscoConsoleClient):
-    def get_device_type(self):
+    @staticmethod
+    def get_device_type():
         return 'cisco_ios'
+
+    @staticmethod
+    def test_reachability(host, port):
+        test_client = None
+        try:
+            sock = socket.socket()
+            sock.settimeout(DEFAULT_VALIDATE_TIMEOUT)
+            sock.connect((host, port))
+            test_client = paramiko.Transport(sock)
+            test_client.connect()
+        except Exception as e:
+            logger.exception('test_reachability exception')
+            return False
+        finally:
+            if test_client:
+                test_client.close()
+        return True
 
 
 class CiscoTelnetClient(CiscoConsoleClient):
-    def get_device_type(self):
+    @staticmethod
+    def get_device_type():
         return 'cisco_ios_telnet'
+
+    @staticmethod
+    def test_reachability(host, port):
+        test_client = None
+        try:
+            sock = socket.create_connection((host, port), DEFAULT_VALIDATE_TIMEOUT)
+            sock.close()
+        except Exception as e:
+            logger.exception('test_reachability exception')
+            return False
+        return True
 
 
 class ConsoleCdpCiscoData(CdpCiscoData):
 
     @staticmethod
     def _parse_cdp_table(text):
-        """-------------------------
-    Device ID: dhcp-slave
-    Entry address(es):
-      IP address: 10.0.0.3
-    Platform: Cisco 2691,  Capabilities: Switch IGMP
-    Interface: FastEthernet0/1,  Port ID (outgoing port): FastEthernet0/0
-    Holdtime : 136 sec
-
-    Version :
-    Cisco IOS Software, 2600 Software (C2691-ENTSERVICESK9-M), Version 12.4(13b), RELEASE SOFTWARE (fc3)
-    Technical Support: http://www.cisco.com/techsupport
-    Copyright (c) 1986-2007 by Cisco Systems, Inc.
-    Compiled Tue 24-Apr-07 15:33 by prod_rel_team
-
-    advertisement version: 2
-    VTP Management Domain: ''
-    Duplex: half
-        """
         text = text.expandtabs(tabsize=8)
 
         # Split to entries, skip the header
@@ -214,22 +229,6 @@ class ConsoleDhcpCiscoData(DhcpCiscoData):
 
     @staticmethod
     def _parse_dhcp_table(text):
-        """ Data Example:
-            CiscoEmuRouter# show ip dhcp binding
-            Bindings from all pools not associated with VRF:
-            IP address          Client-ID/              Lease expiration        Type
-                                Hardware address/
-                                User name
-            10.0.0.3            0063.6973.636f.2d31.    Mar 13 2002 01:56 AM    Automatic
-                                3133.332e.3333.3737.
-                                2e64.6561.642d.4661.
-                                302f.30
-            10.0.0.2            0063.6973.636f.2d31.    Mar 13 2002 01:57 AM    Automatic
-                                3133.332e.3333.3737.
-                                2e64.6561.642d.4661.
-                                302f.30
-        """
-
         text = text[text.index('IP address'):]
         text = text.expandtabs(tabsize=8)
 

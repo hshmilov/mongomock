@@ -8,8 +8,8 @@ from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
 from axonius.clients.cisco.snmp import CiscoSnmpClient
 from axonius.clients.rest.connection import RESTConnection
 from axonius.utils import json
-from axonius.utils.parsing import parse_unix_timestamp
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_unix_timestamp
 from cisco_prime_adapter.client import CiscoPrimeClient
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -35,7 +35,8 @@ class CiscoPrimeAdapter(AdapterBase):
             return client
         except ClientConnectionException as err:
             error_message = 'Failed to connect to client {0} using config: {1}'.format(
-                self._get_client_id(client_config), client_config)
+                self._get_client_id(client_config), client_config
+            )
             logger.error(error_message)
             raise
 
@@ -56,8 +57,10 @@ class CiscoPrimeAdapter(AdapterBase):
 
     @staticmethod
     def _get_console_client(creds):
-        if not json.is_valid(creds, 'cli_port',
-                             'MANAGEMENT_ADDRESS', 'cli_login_password', 'cli_login_username', 'cli_transport'):
+        is_valid = json.is_valid(
+            creds, 'cli_port', 'MANAGEMENT_ADDRESS', 'cli_login_password', 'cli_login_username', 'cli_transport'
+        )
+        if not is_valid:
             logger.debug(f'No console creds in {creds}')
             return None
 
@@ -143,31 +146,12 @@ class CiscoPrimeAdapter(AdapterBase):
     def _clients_schema(self):
         return {
             'items': [
-                {
-                    'name': 'url',
-                    'title': 'url',
-                    'type': 'string',
-                    'description': 'Cisco Prime Infrastructure url'
-                },
-                {
-                    'name': 'username',
-                    'title': 'User Name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'password',
-                    'title': 'Password',
-                    'type': 'string',
-                    'format': 'password'
-                },
-
+                {'name': 'url', 'title': 'url', 'type': 'string', 'description': 'Cisco Prime Infrastructure url'},
+                {'name': 'username', 'title': 'User Name', 'type': 'string'},
+                {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
             ],
-            'required': [
-                'url',
-                'username',
-                'password',
-            ],
-            'type': 'array'
+            'required': ['url', 'username', 'password'],
+            'type': 'array',
         }
 
     def create_cisco_device(self, raw_device):
@@ -184,9 +168,22 @@ class CiscoPrimeAdapter(AdapterBase):
         # add basic info
         device = self._new_device_adapter()
 
+        device_model = ''
+        device_serial = ''
+
+        udi_detail = raw_device.get('udiDetails', {}).get('udiDetail', [])
+        if udi_detail:
+            device_model = udi_detail[0].get('modelNr', '')
+            device_serial = udi_detail[0].get('udiSerialNr', '')
+            if device_serial == 'XXXXXXXXXXX':
+                device_serial = ''
+                device_model = ''
+
         device.id = str(raw_device['summary']['deviceId'])
         device.hostname = raw_device['summary'].get('deviceName', '')
-        device.device_model = raw_device['summary'].get('deviceType', '')
+        device.device_type = raw_device['summary'].get('deviceType', '')
+        device.device_model = device_model
+        device.device_serial = device_serial
         device.device_model_family = raw_device['summary'].get('ProductFamily', '')
         device.reachability = raw_device['summary'].get('reachability', '')
         device.fetch_proto = 'PRIME_CLIENT'
@@ -206,8 +203,12 @@ class CiscoPrimeAdapter(AdapterBase):
         # iterate the nics and add them
         for mac_name, iplist in CiscoPrimeClient.get_nics(raw_device).items():
             name, mac = mac_name
-            device.add_nic(mac, ips=map(lambda ipsubnet: ipsubnet[0], iplist), subnets=map(
-                lambda ipsubnet: f'{ipsubnet[0]}/{ipsubnet[1]}', iplist), name=name)
+            device.add_nic(
+                mac,
+                ips=map(lambda ipsubnet: ipsubnet[0], iplist),
+                subnets=map(lambda ipsubnet: f'{ipsubnet[0]}/{ipsubnet[1]}', iplist),
+                name=name,
+            )
 
             # save mac address to prevent neighbors from adding managed cisco
             self._macs.add(mac)
@@ -227,7 +228,7 @@ class CiscoPrimeAdapter(AdapterBase):
         mac_address = raw_device.get('macAddress')
         device.id = '_'.join([item or '' for item in [device_id, device_uuid, mac_address]])
         try:
-            ip_address = (raw_device.get('ipAddress') or {})
+            ip_address = raw_device.get('ipAddress') or {}
             if isinstance(ip_address, dict):
                 ip_address = ip_address.get('address')
             else:

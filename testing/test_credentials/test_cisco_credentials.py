@@ -1,3 +1,5 @@
+from axonius.clients.cisco.constants import ARGUMENTS
+
 cisco_ssh_creds = {
     'host': '192.168.10.6',
     'protocol': 'ssh',
@@ -6,8 +8,8 @@ cisco_ssh_creds = {
 }
 
 cisco_creds = {
-    'host': '192.168.10.6',
-    'community': 'public',
+    ARGUMENTS.host: '192.168.10.6',
+    ARGUMENTS.community: 'public',
 }
 
 SOME_DEVICE_ID = 'arp_90:6C:AC:FE:5B:BC'

@@ -1,8 +1,9 @@
-# pylint: disable=wildcard-import,too-many-lines
+# pylint: disable=wildcard-import,too-many-lines,line-too-long
 
 import datetime
 import os
 import pickle
+from collections import namedtuple
 
 import pytest
 
@@ -11,9 +12,13 @@ from axonius.clients.cisco.constants import *
 from axonius.clients.cisco.snmp import *
 from axonius.clients.cisco.snmp import SnmpArpCiscoData
 
-
 CISCO_ARP_PICKLE = 'cisco_arp.pkl'
+CISCO_CDP_PICKLE = 'cisco_cdp.pkl'
 CISCO_BASIC_PICKLE = 'cisco_basic.pkl'
+
+IP_FIELD = get_oid_name(OIDS.ip)
+IFACE_FIELD = get_oid_name(OIDS.interface)
+PORT_SECURITY_FIELD = get_oid_name(OIDS.port_security)
 
 
 def create_device():
@@ -46,6 +51,10 @@ def get_mock(path):
         return pickle.loads(file_.read())
 
 
+def get_cdp_mock():
+    return get_mock(CISCO_CDP_PICKLE)
+
+
 def get_arp_mock():
     return get_mock(CISCO_ARP_PICKLE)
 
@@ -56,12 +65,76 @@ def get_basic_info_mock():
 
 # pylint: disable=redefined-outer-name
 @pytest.fixture(scope='session')
-def alldata():
-    return [get_arp_mock(), get_basic_info_mock()]
+def mocks():
+    Mocks = namedtuple('mocks', ('arp', 'cdp', 'basic'))
+    return Mocks(arp=get_arp_mock(), cdp=get_cdp_mock(), basic=get_basic_info_mock())
 
 
-def test_arp_data(alldata):
-    arp = alldata[0]
+def test_cdp_data(mocks):
+    cdp = mocks.cdp
+    parsed_data = cdp.get_parsed_data()
+    assert parsed_data == [
+        {
+            'ip': '192.168.2.3',
+            'version': 'Cisco IOS Software, C2960S Software (C2960S-UNIVERSALK9-M), Version 15.2(2a)E1, RELEASE SOFTWARE (fc1)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c) 1986-2014 by Cisco Systems, Inc.\nCompiled Wed 10-Dec-14 03:54 by prod_rel_team',
+            'hostname': 'MAG.mag-stack.praxis.local',
+            'iface': 'GigabitEthernet2/0/42',
+            'device_model': 'cisco WS-C2960S-F48FPS-L',
+            'connected_devices': [{'name': '194.1.146.0', 'iface': '', 'type': 'Direct'}],
+        },
+        {
+            'ip': '192.168.2.3',
+            'version': 'Cisco IOS Software, C2960S Software (C2960S-UNIVERSALK9-M), Version 15.2(2a)E1, RELEASE SOFTWARE (fc1)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c) 1986-2014 by Cisco Systems, Inc.\nCompiled Wed 10-Dec-14 03:54 by prod_rel_team',
+            'hostname': 'MAG.mag-stack.praxis.local',
+            'iface': 'GigabitEthernet3/0/46',
+            'device_model': 'cisco WS-C2960S-F48FPS-L',
+            'connected_devices': [{'name': '194.1.146.0', 'iface': '', 'type': 'Direct'}],
+        },
+        {
+            'ip': '192.168.3.3',
+            'version': 'Cisco IOS Software, C2960S Software (C2960S-UNIVERSALK9-M), Version 15.2(2a)E1, RELEASE SOFTWARE (fc1)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c) 1986-2014 by Cisco Systems, Inc.\nCompiled Wed 10-Dec-14 03:54 by prod_rel_team',
+            'hostname': 'MAG.mag-stack.praxis.local',
+            'iface': 'GigabitEthernet2/0/47',
+            'device_model': 'cisco WS-C2960S-F48FPS-L',
+            'connected_devices': [{'name': '194.1.146.0', 'iface': '', 'type': 'Direct'}],
+        },
+    ]
+    devices = list(cdp.get_devices(create_device))
+    assert len(devices) == 3
+    assert devices[0].to_dict() == {
+        'adapter_properties': ['Network'],
+        'connected_devices': [{'connection_type': 'Direct', 'remote_name': '194.1.146.0'}],
+        'device_model': 'cisco WS-C2960S-F48FPS-L',
+        'fetch_proto': 'CDP',
+        'hostname': 'MAG.mag-stack.praxis.local',
+        'id': 'cdp_MAG.mag-stack.praxis.local',
+        'network_interfaces': [{'ips': ['192.168.2.3'], 'ips_raw': [3_232_236_035], 'name': 'GigabitEthernet2/0/42'}],
+        'os': {
+            'build': 'Cisco IOS Software, C2960S Software (C2960S-UNIVERSALK9-M), '
+                     + 'Version 15.2(2a)E1, RELEASE SOFTWARE (fc1)\n'
+                     + 'Technical Support: http://www.cisco.com/techsupport\n'
+                     + 'Copyright (c) 1986-2014 by Cisco Systems, Inc.\n'
+                     + 'Compiled Wed 10-Dec-14 03:54 by prod_rel_team',
+            'type': 'Cisco',
+        },
+        'raw': {
+            'connected_devices': [{'iface': '', 'name': '194.1.146.0', 'type': 'Direct'}],
+            'device_model': 'cisco WS-C2960S-F48FPS-L',
+            'hostname': 'MAG.mag-stack.praxis.local',
+            'iface': 'GigabitEthernet2/0/42',
+            'ip': '192.168.2.3',
+            'version': 'Cisco IOS Software, C2960S Software '
+                       + '(C2960S-UNIVERSALK9-M), Version 15.2(2a)E1, RELEASE '
+                       + 'SOFTWARE (fc1)\n'
+                       + 'Technical Support: http://www.cisco.com/techsupport\n'
+                       + 'Copyright (c) 1986-2014 by Cisco Systems, Inc.\n'
+                       + 'Compiled Wed 10-Dec-14 03:54 by prod_rel_team',
+        },
+    }
+
+
+def test_arp_data(mocks):
+    arp = mocks.arp
     parsed_data = arp.get_parsed_data()
     assert parsed_data == [
         {
@@ -110,19 +183,18 @@ def test_arp_data(alldata):
 
 
 # pylint: disable=line-too-long
-def test_basic_info_parsed_data(alldata):
-    basic = alldata[1]
+def test_basic_info_parsed_data(mocks):
+    basic = mocks.basic
     parsed_data = basic.get_parsed_data()
     assert parsed_data == [
         {
             'os': 'cisco',
             'device_model': 'WS-C2960G-48TC-L',
             'version': 'Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 12.2(55)SE10, RELEASE SOFTWARE (fc2)\r\nTechnical Support: http://www.cisco.com/techsupport\r\nCopyright (c) 1986-2015 by Cisco Systems, Inc.\r\nCompiled Wed 11-Feb-15 11:46 by prod_rel_team',
-            'serial': 'FOC1115Z2Y5',
-            'uptime': '\n        Agent capabilities for OLD-CISCO-XNS-MIB\n        LAST-UPDATED 9408180000Z \n        oldCiscoXnsCapabilityV10R02 AGENT-CAPABILITIES\n        SUPPORTS OLD-CISCO-XNS-MIB\n        File name: sys        ',
+            'device_serial': 'FOC1115Z2Y5',
+            'uptime': '301177616',
             'hostname': 'cisco-switch.axonius.lan',
-            'contact': '0',
-            'ifaces': {
+            IFACE_FIELD: {
                 '1': {
                     'index': '1',
                     'description': 'Vlan1',
@@ -132,7 +204,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:40',
                     'admin-status': 'Up',
                     'operation-status': 'Up',
-                    'ips': [{'address': '192.168.10.6', 'index': '1', 'net-mask': '255.255.255.0'}],
+                    IP_FIELD: [{'address': '192.168.10.6', 'index': '1', 'net-mask': '255.255.255.0'}],
                 },
                 '10101': {
                     'index': '10101',
@@ -143,7 +215,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:01',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -161,7 +233,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:02',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -179,7 +251,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:03',
                     'admin-status': 'Up',
                     'operation-status': 'Up',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -197,7 +269,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:04',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -215,7 +287,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:05',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -233,7 +305,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:06',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -251,7 +323,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:07',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -269,7 +341,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:08',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -287,7 +359,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:09',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -305,7 +377,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:0A',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -323,7 +395,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:0B',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -341,7 +413,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:0C',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -359,7 +431,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:0D',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -377,7 +449,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:0E',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -395,7 +467,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:0F',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -413,7 +485,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:10',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -431,7 +503,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:11',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -449,7 +521,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:12',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -467,7 +539,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:13',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -485,7 +557,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:14',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -503,7 +575,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:15',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -521,7 +593,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:16',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -539,7 +611,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:17',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -557,7 +629,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:18',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -575,7 +647,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:19',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -593,7 +665,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:1A',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -611,7 +683,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:1B',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -629,7 +701,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:1C',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -647,7 +719,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:1D',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -665,7 +737,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:1E',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -683,7 +755,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:1F',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -701,7 +773,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:20',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -719,7 +791,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:21',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -737,7 +809,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:22',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -755,7 +827,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:23',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -773,7 +845,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:24',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -791,7 +863,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:25',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -809,7 +881,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:26',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -827,7 +899,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:27',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -845,7 +917,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:28',
                     'admin-status': 'Up',
                     'operation-status': 'Up',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': True,
                         'status': 'secureup',
                         'max_addr': 5,
@@ -867,7 +939,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:29',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -885,7 +957,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:2A',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -903,7 +975,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:2B',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -921,7 +993,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:2C',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -939,7 +1011,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:2D',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -957,7 +1029,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:2E',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -975,7 +1047,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:2F',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -993,7 +1065,7 @@ def test_basic_info_parsed_data(alldata):
                     'mac': '00:1B:8F:DF:DF:30',
                     'admin-status': 'Up',
                     'operation-status': 'Down',
-                    'port_security': {
+                    PORT_SECURITY_FIELD: {
                         'enabled': False,
                         'status': 'securedown',
                         'max_addr': 1,
@@ -1016,14 +1088,16 @@ def test_basic_info_parsed_data(alldata):
     ]
 
 
-def test_basic_info_devices(alldata):
-    basic = alldata[1]
+def test_basic_info_devices(mocks):
+    basic = mocks.basic
     devices = list(basic.get_devices(create_device))
     assert len(devices) == 1
 
     # pickle datetime bug
     assert isinstance(devices[0].last_seen, datetime.datetime)
     devices[0].last_seen = datetime.datetime(2019, 3, 13, 16, 40, 53, 180_058)
+    if devices[0].boot_time:
+        devices[0].boot_time = datetime.datetime(2019, 2, 12, 20, 24, 18, 14110)
     dict_ = devices[0].to_dict()
     del dict_['raw']
     assert dict_ == {
@@ -1475,7 +1549,7 @@ def test_basic_info_devices(alldata):
             },
             {'name': 'Null0', 'mtu': '1500', 'speed': '4294967295', 'operational_status': 'Up', 'admin_status': 'Up'},
         ],
-        'port_security': [
+        PORT_SECURITY_FIELD: [
             {
                 'name': 'GigabitEthernet0/40',
                 'status': 'secureup',
@@ -1490,6 +1564,7 @@ def test_basic_info_devices(alldata):
             }
         ],
         'hostname': 'cisco-switch.axonius.lan',
+        'boot_time': datetime.datetime(2019, 2, 12, 20, 24, 18, 14110),
         'device_model': 'WS-C2960G-48TC-L',
         'os': {
             'type': 'Cisco',
@@ -1497,6 +1572,7 @@ def test_basic_info_devices(alldata):
         },
         'adapter_properties': ['Network', 'Manager'],
         'device_serial': 'FOC1115Z2Y5',
+        'uptime': 34,
         'fetch_proto': 'CLIENT',
-        'last_seen': datetime.datetime(2019, 3, 13, 16, 40, 53, 180058)
+        'last_seen': datetime.datetime(2019, 3, 13, 16, 40, 53, 180_058),
     }

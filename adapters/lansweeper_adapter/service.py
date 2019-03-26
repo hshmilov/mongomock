@@ -1,16 +1,16 @@
-import logging
 import datetime
+import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
+from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field, ListField, JsonArrayFormat
-from axonius.utils.files import get_local_config_file
+from axonius.fields import Field, JsonArrayFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
+from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string, is_domain_valid
-from axonius.clients.rest.connection import RESTConnection
 from lansweeper_adapter import consts
 from lansweeper_adapter.client_id import get_client_id
 
@@ -30,9 +30,9 @@ class LansweeperAdapter(AdapterBase):
         agent_version = Field(str, 'Agent Version')
         last_active_scan = Field(datetime.datetime, 'Last Active Scan')
         lsat_ls_agent = Field(datetime.datetime, 'Last Ls Agent')
-        uptime = Field(int, 'Uptime')
-        registry_information = ListField(RegistryInfomation, 'Registry Information',
-                                         json_format=JsonArrayFormat.table)
+        registry_information = ListField(
+            RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
+        )
         lansweeper_type = Field(str, 'Lansweeper Type')
 
         def add_registry_information(self, **kwargs):
@@ -40,33 +40,40 @@ class LansweeperAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
-        self.__devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
+        self.__devices_fetched_at_a_time = int(
+            self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME]
+        )
 
     @staticmethod
     def _get_client_id(client_config):
         return get_client_id(client_config)
 
     def _test_reachability(self, client_config):
-        RESTConnection.test_reachability(client_config.get(consts.LANSWEEPER_HOST),
-                                         port=client_config.get(consts.LANSWEEPER_PORT,
-                                                                consts.DEFAULT_LANSWEEPER_PORT))
+        RESTConnection.test_reachability(
+            client_config.get(consts.LANSWEEPER_HOST),
+            port=client_config.get(consts.LANSWEEPER_PORT, consts.DEFAULT_LANSWEEPER_PORT),
+        )
 
     def _connect_client(self, client_config):
         try:
-            connection = MSSQLConnection(database=client_config.get(consts.LANSWEEPER_DATABASE),
-                                         server=client_config[consts.LANSWEEPER_HOST],
-                                         port=client_config.get(consts.LANSWEEPER_PORT,
-                                                                consts.DEFAULT_LANSWEEPER_PORT),
-                                         devices_paging=self.__devices_fetched_at_a_time)
-            connection.set_credentials(username=client_config[consts.USER],
-                                       password=client_config[consts.PASSWORD])
+            connection = MSSQLConnection(
+                database=client_config.get(consts.LANSWEEPER_DATABASE),
+                server=client_config[consts.LANSWEEPER_HOST],
+                port=client_config.get(consts.LANSWEEPER_PORT, consts.DEFAULT_LANSWEEPER_PORT),
+                devices_paging=self.__devices_fetched_at_a_time,
+            )
+            connection.set_credentials(
+                username=client_config[consts.USER], password=client_config[consts.PASSWORD]
+            )
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
         except Exception as err:
-            message = f'Error connecting to client host: {client_config[consts.LANSWEEPER_HOST]}  ' \
-                      f'database: ' \
-                      f'{client_config.get(consts.LANSWEEPER_DATABASE)}'
+            message = (
+                f'Error connecting to client host: {client_config[consts.LANSWEEPER_HOST]}  '
+                f'database: '
+                f'{client_config.get(consts.LANSWEEPER_DATABASE)}'
+            )
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
@@ -129,58 +136,54 @@ class LansweeperAdapter(AdapterBase):
                 logger.exception(f'Problem getting query software')
 
             for device_raw in client_data.query(consts.LANSWEEPER_QUERY_DEVICES):
-                yield device_raw, asset_software_dict, soft_id_to_soft_data_dict,\
-                    asset_hotfix_dict, hotfix_id_to_hotfix_data_dict, asset_reg_dict, bios_data_dict
+                yield (device_raw,
+                       asset_software_dict,
+                       soft_id_to_soft_data_dict,
+                       asset_hotfix_dict,
+                       hotfix_id_to_hotfix_data_dict,
+                       asset_reg_dict, bios_data_dict)
 
     def _clients_schema(self):
         return {
             'items': [
-                {
-                    'name': consts.LANSWEEPER_HOST,
-                    'title': 'MSSQL Server',
-                    'type': 'string'
-                },
+                {'name': consts.LANSWEEPER_HOST, 'title': 'MSSQL Server', 'type': 'string'},
                 {
                     'name': consts.LANSWEEPER_PORT,
                     'title': 'Port',
                     'type': 'integer',
                     'default': consts.DEFAULT_LANSWEEPER_PORT,
-                    'format': 'port'
+                    'format': 'port',
                 },
-                {
-                    'name': consts.LANSWEEPER_DATABASE,
-                    'title': 'Database',
-                    'type': 'string'
-                },
-                {
-                    'name': consts.USER,
-                    'title': 'User Name',
-                    'type': 'string'
-                },
+                {'name': consts.LANSWEEPER_DATABASE, 'title': 'Database', 'type': 'string'},
+                {'name': consts.USER, 'title': 'User Name', 'type': 'string'},
                 {
                     'name': consts.PASSWORD,
                     'title': 'Password',
                     'type': 'string',
-                    'format': 'password'
-                }
+                    'format': 'password',
+                },
             ],
             'required': [
                 consts.LANSWEEPER_HOST,
                 consts.USER,
                 consts.PASSWORD,
-                consts.LANSWEEPER_DATABASE
+                consts.LANSWEEPER_DATABASE,
             ],
-            'type': 'array'
+            'type': 'array',
         }
 
     # pylint: disable=R0912,R0915,R0914
     def _parse_raw_data(self, devices_raw_data):
         # pylint: disable=R1702
-        for device_raw, \
-                asset_software_dict,\
-                soft_id_to_soft_data_dict,\
-                asset_hotfix_dict,\
-                hotfix_id_to_hotfix_data_dict, asset_reg_dict, bios_data_dict in devices_raw_data:
+        for (
+                device_raw,
+                asset_software_dict,
+                soft_id_to_soft_data_dict,
+                asset_hotfix_dict,
+                hotfix_id_to_hotfix_data_dict,
+                asset_reg_dict,
+                bios_data_dict,
+        ) in devices_raw_data:
             try:
                 device = self._new_device_adapter()
                 device_id = device_raw.get('AssetUnique')
@@ -200,11 +203,15 @@ class LansweeperAdapter(AdapterBase):
                     if isinstance(asset_software_list, list):
                         for asset_software in asset_software_list:
                             if asset_software.get('softID'):
-                                software_data = soft_id_to_soft_data_dict.get(asset_software.get('softID'))
+                                software_data = soft_id_to_soft_data_dict.get(
+                                    asset_software.get('softID')
+                                )
                                 if software_data:
-                                    device.add_installed_software(name=software_data.get('softwareName'),
-                                                                  vendor=software_data.get('SoftwarePublisher'),
-                                                                  version=asset_software.get('softwareVersion'))
+                                    device.add_installed_software(
+                                        name=software_data.get('softwareName'),
+                                        vendor=software_data.get('SoftwarePublisher'),
+                                        version=asset_software.get('softwareVersion'),
+                                    )
                 except Exception:
                     logger.exception(f'Problem adding software to {device_raw}')
 
@@ -213,21 +220,29 @@ class LansweeperAdapter(AdapterBase):
                     if isinstance(asset_hotfix_list, list):
                         for asset_hotfix in asset_hotfix_list:
                             if asset_hotfix.get('QFEID'):
-                                hotfix_data = hotfix_id_to_hotfix_data_dict.get(asset_hotfix.get('QFEID'))
+                                hotfix_data = hotfix_id_to_hotfix_data_dict.get(
+                                    asset_hotfix.get('QFEID')
+                                )
                                 if hotfix_data:
                                     patch_description = hotfix_data.get('Description') or ''
                                     if hotfix_data.get('FixComments'):
-                                        patch_description += ' Hotfix Comments:' + hotfix_data.get('FixComments')
+                                        patch_description += ' Hotfix Comments:' + hotfix_data.get(
+                                            'FixComments'
+                                        )
                                     if not patch_description:
                                         patch_description = None
                                     installed_on = None
                                     try:
                                         installed_on = parse_date(asset_hotfix.get('InstalledOn'))
                                     except Exception:
-                                        logger.exception(f'Problem getting installed on for patch {asset_hotfix}')
-                                    device.add_security_patch(security_patch_id=hotfix_data.get('HotFixID'),
-                                                              installed_on=installed_on,
-                                                              patch_description=patch_description)
+                                        logger.exception(
+                                            f'Problem getting installed on for patch {asset_hotfix}'
+                                        )
+                                    device.add_security_patch(
+                                        security_patch_id=hotfix_data.get('HotFixID'),
+                                        installed_on=installed_on,
+                                        patch_description=patch_description,
+                                    )
                 except Exception:
                     logger.exception(f'Problem adding patch to {device_raw}')
                 domain = device_raw.get('Domain')
@@ -247,14 +262,19 @@ class LansweeperAdapter(AdapterBase):
                     logger.exception(f'Problem adding NIC to {device_raw}')
                 try:
                     if device_raw.get('Uptime'):
-                        device.uptime = int(device_raw.get('Uptime'))
-                        device.boot_time = datetime.datetime.now() - \
-                            datetime.timedelta(seconds=int(device_raw.get('Uptime')))
+                        try:
+                            device.set_boot_time(
+                                uptime=datetime.timedelta(seconds=int(device_raw.get('Uptime')))
+                            )
+                        except Exception:
+                            logger.exception('uptime failed')
                 except Exception:
                     logger.exception(f'Problem adding boot time to {device_raw}')
                 device.last_seen = parse_date(device_raw.get('Lastseen'))
                 try:
-                    device.total_physical_memory = device_raw.get('Memory') / 1024 if device_raw.get('Memory') else None
+                    device.total_physical_memory = (
+                        device_raw.get('Memory') / 1024 if device_raw.get('Memory') else None
+                    )
                 except Exception:
                     logger.exception(f'Problem getting memory for {device_raw}')
                 device.agent_version = device_raw.get('LsAgentVersion')
@@ -286,18 +306,24 @@ class LansweeperAdapter(AdapterBase):
                                 try:
                                     last_changed = parse_date(asset_reg_data.get('Lastchanged'))
                                 except Exception:
-                                    logger.exception(f'Problem getting last_changed for {asset_reg_data}')
-                                device.add_registry_information(reg_key=reg_key,
-                                                                value_name=value_name,
-                                                                value_data=value_data,
-                                                                last_changed=last_changed)
+                                    logger.exception(
+                                        f'Problem getting last_changed for {asset_reg_data}'
+                                    )
+                                device.add_registry_information(
+                                    reg_key=reg_key,
+                                    value_name=value_name,
+                                    value_data=value_data,
+                                    last_changed=last_changed,
+                                )
                             except Exception:
                                 logger.exception(f'Problem getting asset reg data {asset_reg_data}')
                 except Exception:
                     logger.exception(f'Problem getting reg informaation for {device_raw}')
                 try:
                     if device_raw.get('Assettype') is not None:
-                        lansweeper_type = consts.LANSWEEPER_TYPE_DICT.get(str(device_raw.get('Assettype')))
+                        lansweeper_type = consts.LANSWEEPER_TYPE_DICT.get(
+                            str(device_raw.get('Assettype'))
+                        )
                         if lansweeper_type in consts.BAD_TYPES:
                             continue
                         device.lansweeper_type = lansweeper_type

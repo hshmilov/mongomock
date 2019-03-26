@@ -1,5 +1,5 @@
-import logging
 import datetime
+import logging
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -8,8 +8,8 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
-from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.files import get_local_config_file
 from qualys_scans_adapter import consts
 from qualys_scans_adapter.connection import QualysScansConnection
 
@@ -59,16 +59,19 @@ class QualysScansAdapter(ScannerAdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = QualysScansConnection(domain=client_config[consts.QUALYS_SCANS_DOMAIN],
-                                               username=client_config[consts.USERNAME],
-                                               password=client_config[consts.PASSWORD],
-                                               verify_ssl=client_config.get('verify_ssl') or False)
+            connection = QualysScansConnection(
+                domain=client_config[consts.QUALYS_SCANS_DOMAIN],
+                username=client_config[consts.USERNAME],
+                password=client_config[consts.PASSWORD],
+                verify_ssl=client_config.get('verify_ssl') or False,
+            )
             with connection:
                 pass
             return connection
         except Exception as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                client_config[consts.QUALYS_SCANS_DOMAIN], str(e))
+                client_config[consts.QUALYS_SCANS_DOMAIN], str(e)
+            )
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -84,35 +87,13 @@ class QualysScansAdapter(ScannerAdapterBase):
         """
         return {
             'items': [
-                {
-                    'name': consts.QUALYS_SCANS_DOMAIN,
-                    'title': 'Qualys Scanner Domain',
-                    'type': 'string'
-                },
-                {
-                    'name': consts.USERNAME,
-                    'title': 'User Name',
-                    'type': 'string'
-                },
-                {
-                    'name': consts.PASSWORD,
-                    'title': 'Password',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
-                    'name': consts.VERIFY_SSL,
-                    'title': 'Verify SSL',
-                    'type': 'bool'
-                }
+                {'name': consts.QUALYS_SCANS_DOMAIN, 'title': 'Qualys Scanner Domain', 'type': 'string'},
+                {'name': consts.USERNAME, 'title': 'User Name', 'type': 'string'},
+                {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
+                {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
             ],
-            'required': [
-                consts.QUALYS_SCANS_DOMAIN,
-                consts.USERNAME,
-                consts.PASSWORD,
-                consts.VERIFY_SSL
-            ],
-            'type': 'array'
+            'required': [consts.QUALYS_SCANS_DOMAIN, consts.USERNAME, consts.PASSWORD, consts.VERIFY_SSL],
+            'type': 'array',
         }
 
     def _parse_raw_data(self, devices_raw_data):
@@ -136,8 +117,9 @@ class QualysScansAdapter(ScannerAdapterBase):
             # Parsing the timestamp.
             last_seen = parse_date(last_seen)
         except Exception:
-            logger.exception(f'An Exception was raised while getting and parsing '
-                             f'the last_seen field for device {device_raw}')
+            logger.exception(
+                f'An Exception was raised while getting and parsing ' f'the last_seen field for device {device_raw}'
+            )
             return None
         try:
             device = self._new_device_adapter()
@@ -192,7 +174,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                 logger.exception(f'Problem getting last seen for {device_raw}')
             device.agent_version = (device_raw.get('agentInfo') or {}).get('agentVersion')
             device.physical_location = (device_raw.get('agentInfo') or {}).get('location')
-            device.boot_time = parse_date(str(device_raw.get('lastSystemBoot')))
+            device.set_boot_time(boot_time=parse_date(str(device_raw.get('lastSystemBoot'))))
             device.agent_status = (device_raw.get('agentInfo') or {}).get('status')
             try:
                 for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:
@@ -233,10 +215,10 @@ class QualysScansAdapter(ScannerAdapterBase):
             try:
                 for software_raw in (device_raw.get('software') or {}).get('list') or []:
                     try:
-                        device.add_installed_software(name=(software_raw.get('HostAssetSoftware')
-                                                            or {}).get('name'),
-                                                      version=(software_raw.get('HostAssetSoftware')
-                                                               or {}).get('version'))
+                        device.add_installed_software(
+                            name=(software_raw.get('HostAssetSoftware') or {}).get('name'),
+                            version=(software_raw.get('HostAssetSoftware') or {}).get('version'),
+                        )
                     except Exception:
                         logger.exception(f'Problem with software {software_raw}')
             except Exception:
@@ -244,12 +226,12 @@ class QualysScansAdapter(ScannerAdapterBase):
             try:
                 for vuln_raw in (device_raw.get('vuln') or {}).get('list') or []:
                     try:
-                        device.add_qualys_vuln(vuln_id=(vuln_raw.get('HostAssetVuln') or {}).get('hostInstanceVulnId'),
-                                               last_found=parse_date((vuln_raw.get('HostAssetVuln') or
-                                                                      {}).get('lastFound')),
-                                               qid=(vuln_raw.get('HostAssetVuln') or {}).get('qid'),
-                                               first_found=parse_date((vuln_raw.get('HostAssetVuln') or
-                                                                       {}).get('firstFound')))
+                        device.add_qualys_vuln(
+                            vuln_id=(vuln_raw.get('HostAssetVuln') or {}).get('hostInstanceVulnId'),
+                            last_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('lastFound')),
+                            qid=(vuln_raw.get('HostAssetVuln') or {}).get('qid'),
+                            first_found=parse_date((vuln_raw.get('HostAssetVuln') or {}).get('firstFound')),
+                        )
                     except Exception:
                         logger.exception(f'Problem with vuln {vuln_raw}')
             except Exception:
@@ -258,11 +240,11 @@ class QualysScansAdapter(ScannerAdapterBase):
             try:
                 for port_raw in (device_raw.get('openPort') or {}).get('list') or []:
                     try:
-                        device.add_qualys_port(port=(port_raw.get('HostAssetOpenPort') or {}).get('port'),
-                                               protocol=(port_raw.get('HostAssetOpenPort') or {}).get('protocol'),
-                                               service_name=(port_raw.get('HostAssetOpenPort') or
-                                                             {}).get('serviceName'),
-                                               )
+                        device.add_qualys_port(
+                            port=(port_raw.get('HostAssetOpenPort') or {}).get('port'),
+                            protocol=(port_raw.get('HostAssetOpenPort') or {}).get('protocol'),
+                            service_name=(port_raw.get('HostAssetOpenPort') or {}).get('serviceName'),
+                        )
                     except Exception:
                         logger.exception(f'Problem with port {port_raw}')
             except Exception:

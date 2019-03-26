@@ -1,10 +1,9 @@
 import datetime
 import logging
 
-logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.smart_json_class import SmartJsonClass
@@ -13,33 +12,40 @@ from axonius.utils.parsing import get_organizational_units_from_dn, get_exceptio
 from axonius.clients.mssql.connection import MSSQLConnection
 import sccm_adapter.consts as consts
 from axonius.fields import Field, ListField
+from axonius.utils.datetime import parse_date
+from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import get_exception_string, get_organizational_units_from_dn
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 DESKTOP_CHASIS_VALUE = ['3', '4', '6', '7', '15']
 LAPTOP_CHASIS_VALUE = ['8', '9', '10', '21']
-CHASIS_VALUE_FULL_DICT = {'1': 'Virtual Machine',
-                          '2': 'Blade Server',
-                          '3': 'Desktop',
-                          '4': 'Low-Profile Desktop',
-                          '5': 'Pizza Box',
-                          '6': 'Mini Tower',
-                          '7': 'Tower',
-                          '8': 'Portable',
-                          '9': 'Laptop',
-                          '10': 'Notebook',
-                          '11': 'Hand Held',
-                          '12': 'Docking Station',
-                          '13': 'All-in-One',
-                          '14': 'Sub Notebook',
-                          '15': 'Space Saving Chassis',
-                          '16': 'Ultra Small Form Factor',
-                          '17': 'Server Tower Chassis',
-                          '18': 'Mobile Device in Docking Station',
-                          '19': 'Sub-Chassis',
-                          '20': 'Bus-Expansion Chassis',
-                          '21': 'Peripheral Chassis',
-                          '22': 'Storage Chassis',
-                          '23': 'Rack Mount Unit',
-                          '24': 'Sealed-Case PC'}
+CHASIS_VALUE_FULL_DICT = {
+    '1': 'Virtual Machine',
+    '2': 'Blade Server',
+    '3': 'Desktop',
+    '4': 'Low-Profile Desktop',
+    '5': 'Pizza Box',
+    '6': 'Mini Tower',
+    '7': 'Tower',
+    '8': 'Portable',
+    '9': 'Laptop',
+    '10': 'Notebook',
+    '11': 'Hand Held',
+    '12': 'Docking Station',
+    '13': 'All-in-One',
+    '14': 'Sub Notebook',
+    '15': 'Space Saving Chassis',
+    '16': 'Ultra Small Form Factor',
+    '17': 'Server Tower Chassis',
+    '18': 'Mobile Device in Docking Station',
+    '19': 'Sub-Chassis',
+    '20': 'Bus-Expansion Chassis',
+    '21': 'Peripheral Chassis',
+    '22': 'Storage Chassis',
+    '23': 'Rack Mount Unit',
+    '24': 'Sealed-Case PC',
+}
 
 
 class SccmVm(SmartJsonClass):
@@ -53,7 +59,6 @@ class SccmVm(SmartJsonClass):
 
 
 class SccmAdapter(AdapterBase):
-
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         resource_id = Field(str, 'Resource ID')
         top_user = Field(str, 'Top Console User')
@@ -88,18 +93,21 @@ class SccmAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = MSSQLConnection(database=client_config[consts.SCCM_DATABASE],
-                                         server=client_config[consts.SCCM_HOST],
-                                         port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
-                                         devices_paging=self.devices_fetched_at_a_time)
-            connection.set_credentials(username=client_config[consts.USER],
-                                       password=client_config[consts.PASSWORD])
+            connection = MSSQLConnection(
+                database=client_config[consts.SCCM_DATABASE],
+                server=client_config[consts.SCCM_HOST],
+                port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
+                devices_paging=self.devices_fetched_at_a_time,
+            )
+            connection.set_credentials(username=client_config[consts.USER], password=client_config[consts.PASSWORD])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
         except Exception as err:
-            message = f"Error connecting to client host: {str(client_config[consts.SCCM_HOST])}  " \
-                      f"database: {str(client_config[consts.SCCM_DATABASE])}"
+            message = (
+                f"Error connecting to client host: {str(client_config[consts.SCCM_HOST])}  "
+                f"database: {str(client_config[consts.SCCM_DATABASE])}"
+            )
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
@@ -256,48 +264,31 @@ class SccmAdapter(AdapterBase):
     def _clients_schema(self):
         return {
             "items": [
-                {
-                    "name": consts.SCCM_HOST,
-                    "title": "SCCM/MSSQL Server",
-                    "type": "string"
-                },
-                {
-                    "name": consts.SCCM_PORT,
-                    "title": "Port",
-                    "type": "integer",
-                    "default": consts.DEFAULT_SCCM_PORT
-                },
-                {
-                    "name": consts.SCCM_DATABASE,
-                    "title": "Database",
-                    "type": "string"
-                },
-                {
-                    "name": consts.USER,
-                    "title": "User Name",
-                    "type": "string"
-                },
-                {
-                    "name": consts.PASSWORD,
-                    "title": "Password",
-                    "type": "string",
-                    "format": "password"
-                }
+                {"name": consts.SCCM_HOST, "title": "SCCM/MSSQL Server", "type": "string"},
+                {"name": consts.SCCM_PORT, "title": "Port", "type": "integer", "default": consts.DEFAULT_SCCM_PORT},
+                {"name": consts.SCCM_DATABASE, "title": "Database", "type": "string"},
+                {"name": consts.USER, "title": "User Name", "type": "string"},
+                {"name": consts.PASSWORD, "title": "Password", "type": "string", "format": "password"},
             ],
-            "required": [
-                consts.SCCM_HOST,
-                consts.USER,
-                consts.PASSWORD,
-                consts.SCCM_DATABASE
-            ],
-            "type": "array"
+            "required": [consts.SCCM_HOST, consts.USER, consts.PASSWORD, consts.SCCM_DATABASE],
+            "type": "array",
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
-            asset_bios_dict, asset_users_dict, asset_top_dict, \
-            asset_malware_dict, asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict in\
-                devices_raw_data:
+        for (
+            device_raw,
+            asset_software_dict,
+            asset_patch_dict,
+            asset_program_dict,
+            asset_bios_dict,
+            asset_users_dict,
+            asset_top_dict,
+            asset_malware_dict,
+            asset_lenovo_dict,
+            asset_chasis_dict,
+            asset_encryption_dict,
+            asset_vm_dict,
+        ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
                 if not device_id:
@@ -312,8 +303,9 @@ class SccmAdapter(AdapterBase):
                 try:
                     users_raw = asset_users_dict.get(device_raw.get('ResourceID'))
                     if users_raw and isinstance(users_raw, list):
-                        device.last_used_users = [user_raw.get('UniqueUserName') for user_raw in users_raw
-                                                  if user_raw.get('UniqueUserName')]
+                        device.last_used_users = [
+                            user_raw.get('UniqueUserName') for user_raw in users_raw if user_raw.get('UniqueUserName')
+                        ]
                 except Exception:
                     logger.exception(f'Problem adding users to {device_raw}')
 
@@ -328,8 +320,7 @@ class SccmAdapter(AdapterBase):
                                 elif str(drive_enc_data.get('ProtectionStatus0')) == '0':
                                     is_encrypted = False
 
-                                device.add_hd(path=drive_enc_data.get('DriveLetter0'),
-                                              is_encrypted=is_encrypted)
+                                device.add_hd(path=drive_enc_data.get('DriveLetter0'), is_encrypted=is_encrypted)
                             except Exception:
                                 logger.exception(f'Problem getting enc data for {drive_enc_data}')
                 except Exception:
@@ -342,8 +333,9 @@ class SccmAdapter(AdapterBase):
                     device.hostname += '.' + domain
                     device.part_of_domain = True
                     device.domain = domain
-                device.figure_os((device_raw.get('Caption0') or '') +
-                                 (device_raw.get("Operating_System_Name_and0") or ''))
+                device.figure_os(
+                    (device_raw.get('Caption0') or '') + (device_raw.get("Operating_System_Name_and0") or '')
+                )
                 mac_total = []
                 ips_total = []
                 for nic in (device_raw.get('Network Interfaces') or '').split(';'):
@@ -384,14 +376,17 @@ class SccmAdapter(AdapterBase):
                     logger.exception(f'Problem getting IP for {device_raw}')
                 try:
                     free_physical_memory = device_raw.get('FreePhysicalMemory0')
-                    device.free_physical_memory = float(free_physical_memory) / \
-                        (1024**2) if free_physical_memory else None
+                    device.free_physical_memory = (
+                        float(free_physical_memory) / (1024 ** 2) if free_physical_memory else None
+                    )
                     total_physical_memory = device_raw.get('TotalPhysicalMemory0')
-                    device.total_physical_memory = float(device_raw.get('TotalPhysicalMemory0')) / (1024**2) \
-                        if total_physical_memory else None
+                    device.total_physical_memory = (
+                        float(device_raw.get('TotalPhysicalMemory0')) / (1024 ** 2) if total_physical_memory else None
+                    )
                     if total_physical_memory and free_physical_memory:
-                        device.physical_memory_percentage = 100 * \
-                            (1 - device.free_physical_memory / device.total_physical_memory)
+                        device.physical_memory_percentage = 100 * (
+                            1 - device.free_physical_memory / device.total_physical_memory
+                        )
                 except Exception:
                     logger.exception(f'problem adding memory stuff to {device_raw}')
                 device_manufacturer = None
@@ -471,7 +466,7 @@ class SccmAdapter(AdapterBase):
                 device.total_number_of_physical_processors = int(processors) if processors else None
                 device.current_logged_user = device_raw.get('UserName0') or device_raw.get('User_Name0')
                 device.time_zone = device_raw.get('CurrentTimeZone0')
-                device.boot_time = device_raw.get('LastBootUpTime0')
+                device.set_boot_time(boot_time=device_raw.get('LastBootUpTime0'))
                 last_seen = device_raw.get('Last Seen')
                 try:
                     if last_seen:
@@ -482,8 +477,9 @@ class SccmAdapter(AdapterBase):
                     if isinstance(asset_software_dict.get(device_raw.get('ResourceID')), list):
                         for asset_data in asset_software_dict.get(device_raw.get('ResourceID')):
                             try:
-                                device.add_installed_software(name=asset_data.get('ProductName0'),
-                                                              version=asset_data.get('ProductVersion0'))
+                                device.add_installed_software(
+                                    name=asset_data.get('ProductName0'), version=asset_data.get('ProductVersion0')
+                                )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')
                 except Exception:
@@ -493,8 +489,9 @@ class SccmAdapter(AdapterBase):
                     if isinstance(asset_program_dict.get(device_raw.get('ResourceID')), list):
                         for asset_data in asset_program_dict.get(device_raw.get('ResourceID')):
                             try:
-                                device.add_installed_software(name=asset_data.get('DisplayName0'),
-                                                              version=asset_data.get('Version0'))
+                                device.add_installed_software(
+                                    name=asset_data.get('DisplayName0'), version=asset_data.get('Version0')
+                                )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')
                 except Exception:
@@ -510,9 +507,11 @@ class SccmAdapter(AdapterBase):
                                 if not patch_description:
                                     patch_description = None
                                 installed_on = parse_date(patch_data.get('InstallDate0'))
-                                device.add_security_patch(security_patch_id=patch_data.get('HotFixID0'),
-                                                          patch_description=patch_description,
-                                                          installed_on=installed_on)
+                                device.add_security_patch(
+                                    security_patch_id=patch_data.get('HotFixID0'),
+                                    patch_description=patch_description,
+                                    installed_on=installed_on,
+                                )
                             except Exception:
                                 logger.exception(f'Problem adding patch {patch_data}')
                 except Exception:
