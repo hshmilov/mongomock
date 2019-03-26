@@ -263,9 +263,16 @@ def clear_passwords_fields(data, schema):
     if schema.get('format') == 'password':
         return UNCHANGED_MAGIC_FOR_GUI
     if schema['type'] == 'array':
-        for item in schema['items']:
-            if item['name'] in data:
-                data[item['name']] = clear_passwords_fields(data[item['name']], item)
+        items = schema['items']
+        if isinstance(items, list):
+            for item in schema['items']:
+                if item['name'] in data:
+                    data[item['name']] = clear_passwords_fields(data[item['name']], item)
+        elif isinstance(items, dict):
+            for index, date_item in enumerate(data):
+                data[index] = clear_passwords_fields(data[index], items)
+        else:
+            raise TypeError('Weird schema')
         return data
     return data
 
@@ -276,13 +283,13 @@ def refill_passwords_fields(data, data_from_db):
     """
     if data == UNCHANGED_MAGIC_FOR_GUI:
         return data_from_db
+    if data_from_db is None:
+        return data
     if isinstance(data, dict):
         for key in data.keys():
             if key in data_from_db:
                 data[key] = refill_passwords_fields(data[key], data_from_db[key])
         return data
-    if isinstance(data, list):
-        raise RuntimeError('We shouldn\'t have lists in schemas')
 
     return data
 
@@ -2136,12 +2143,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         Set a specific config on a specific plugin
         """
+        db_connection = self._get_db_connection()
+        config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
         if request.method == 'GET':
-            db_connection = self._get_db_connection()
-            config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
             schema_collection = db_connection[plugin_name]['config_schemas']
-            return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
-                            'schema': schema_collection.find_one({'config_name': config_name})['schema']})
+            schema = schema_collection.find_one({'config_name': config_name})['schema']
+            config = clear_passwords_fields(config_collection.find_one({'config_name': config_name})['config'],
+                                            schema)
+            return jsonify({
+                'config': config,
+                'schema': schema
+            })
 
         # Otherwise, handle POST
 
@@ -2152,6 +2164,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         config_to_set = request.get_json(silent=True)
         if config_to_set is None:
             return return_error('Invalid config', 400)
+
+        config_from_db = config_collection.find_one({
+            'config_name': config_name
+        })
+
+        if config_from_db:
+            config_to_set = refill_passwords_fields(config_to_set, config_from_db['config'])
 
         if plugin_name == 'core' and config_name == CORE_CONFIG_NAME:
             email_settings = config_to_set.get('email_settings')
