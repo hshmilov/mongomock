@@ -1,4 +1,5 @@
 from ui_tests.pages.page import Page
+from ui_tests.tests.ui_consts import SIGNUP_TEST_CREDS
 
 
 class SignupPage(Page):
@@ -17,6 +18,12 @@ class SignupPage(Page):
     @property
     def root_page_css(self):
         return 'a[href="/"]'
+
+    def fill_signup_with_defaults_and_save(self):
+        self.fill_signup_and_save(company=SIGNUP_TEST_CREDS['company'],
+                                  email=SIGNUP_TEST_CREDS['email'],
+                                  passw=SIGNUP_TEST_CREDS['password'],
+                                  confirm_passw=SIGNUP_TEST_CREDS['password'])
 
     def fill_signup_and_save(self, company, email, passw, confirm_passw):
         self.fill_text_field_by_element_id(self.COMPANY_NAME, company)

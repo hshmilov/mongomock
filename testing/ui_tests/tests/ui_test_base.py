@@ -2,8 +2,8 @@ import json
 import logging
 import logging.handlers
 import os
-import sys
 import re
+import sys
 from datetime import datetime, timedelta
 
 import pytest
@@ -20,11 +20,12 @@ from services.ports import DOCKER_PORTS
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
-from ui_tests.pages.enforcements_page import EnforcementsPage
 from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.dashboard_page import DashboardPage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
+from ui_tests.pages.enforcements_page import EnforcementsPage
+from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.my_account_page import MyAccountPage
 from ui_tests.pages.notification_page import NotificationPage
@@ -32,8 +33,7 @@ from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
-from ui_tests.pages.instances_page import InstancesPage
-from ui_tests.tests.ui_consts import ROOT_DIR, SIGNUP_TEST_CREDS
+from ui_tests.tests.ui_consts import ROOT_DIR
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(ROOT_DIR, 'logs', 'ui_logger')
@@ -286,10 +286,7 @@ class TestBase:
     def fill_signup_screen(self):
         if self.axonius_system.gui.get_signup_status() is False:
             self.signup_page.wait_for_signup_page_to_load()
-            self.signup_page.fill_signup_and_save(company=SIGNUP_TEST_CREDS['company'],
-                                                  email=SIGNUP_TEST_CREDS['email'],
-                                                  passw=SIGNUP_TEST_CREDS['password'],
-                                                  confirm_passw=SIGNUP_TEST_CREDS['password'])
+            self.signup_page.fill_signup_with_defaults_and_save()
 
     def _create_history(self, entity_type: EntityType, update_field=None, days_to_fill=30):
         history_db = self.axonius_system.db.get_historical_entity_db_view(entity_type)

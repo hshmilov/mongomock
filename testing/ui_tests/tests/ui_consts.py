@@ -1,4 +1,9 @@
 import os
+from pathlib import Path
+
+from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
+
+from test_credentials.test_gui_credentials import DEFAULT_USER
 
 INCORRECT_PASSWORD = 'Incorrect!'
 UNMATCHED_PASSWORD1 = 'Unmatched!'
@@ -9,6 +14,7 @@ BAD_PASSWORD = 'BadPassword'
 VALID_EMAIL = 'lalala@lalala.com'
 
 ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..')
+LOGGED_IN_MARKER = Path(ROOT_DIR) / AXONIUS_SETTINGS_DIR_NAME / '.logged_in'
 GUI_LOG_PATH = os.path.join(ROOT_DIR, 'logs', 'gui', 'gui.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
@@ -68,4 +74,4 @@ class Account:
     file_path = 'account_data.tmp'
 
 
-SIGNUP_TEST_CREDS = {'company': 'test_company', 'password': 'bringorder', 'email': 'a@b.com'}
+SIGNUP_TEST_CREDS = {'company': 'test_company', 'password': DEFAULT_USER['password'], 'email': 'a@b.com'}

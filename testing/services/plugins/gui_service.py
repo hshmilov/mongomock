@@ -585,3 +585,6 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
     def get_signup_status(self):
         return self.get(Signup.SignupEndpoint).json()[Signup.SignupField]
+
+    def get_signup_collection(self):
+        return self.db.client[self.plugin_name][Signup.SignupCollection]
