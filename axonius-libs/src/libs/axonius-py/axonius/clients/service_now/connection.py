@@ -122,12 +122,18 @@ class ServiceNowConnection(RESTConnection):
         impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
         short_description = service_now_dict.get('short_description', '')
         description = service_now_dict.get('description', '')
+        u_incident_type = service_now_dict.get('u_incident_type')
         self.__number_of_incidents += 1
         logger.info(f'Creating servicenow incident num {self.__number_of_incidents}: impact={impact}, '
                     f'short_description={short_description}, description={description}')
         try:
-            self.__add_dict_to_table('incident', {'impact': impact, 'urgency': impact,
-                                                  'short_description': short_description, 'description': description})
+            final_dict = {'impact': impact,
+                          'urgency': impact,
+                          'short_description': short_description,
+                          'description': description}
+            if u_incident_type:
+                final_dict['u_incident_type'] = u_incident_type
+            self.__add_dict_to_table('incident', final_dict)
             return True
         except Exception:
             logger.exception(f'Exception while creating incident for num {self.__number_of_incidents}')

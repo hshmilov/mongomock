@@ -71,6 +71,11 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'title': 'Add Incident Description Default',
                     'type': 'bool'
                 },
+                {
+                    'name': 'u_incident_type',
+                    'type': 'string',
+                    'title': 'Incident Type'
+                },
             ],
             'required': [
                 'description_default',
@@ -96,8 +101,11 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'verify_ssl': True
         }
 
-    def _create_service_now_incident(self, short_description, description, impact):
-        service_now_dict = {'short_description': short_description, 'description': description, 'impact': impact}
+    def _create_service_now_incident(self, short_description, description, impact, u_incident_type):
+        service_now_dict = {'short_description': short_description,
+                            'description': description,
+                            'impact': impact,
+                            'u_incident_type': u_incident_type}
         try:
             if self._config['use_adapter'] is True:
                 response = self._plugin_base.request_remote_plugin('create_incident', 'service_now_adapter', 'post',
@@ -133,5 +141,8 @@ class ServiceNowIncidentAction(ActionTypeAlert):
         log_message_full = self._config['incident_description']
         if self._config.get('description_default') is True:
             log_message_full += '\n' + log_message
-        message = self._create_service_now_incident(self._config['incident_title'], log_message, impact)
+        message = self._create_service_now_incident(short_description=self._config['incident_title'],
+                                                    description=log_message,
+                                                    impact=impact,
+                                                    u_incident_type=self._config.get('u_incident_type'))
         return AlertActionResult(not message, message or 'Success')

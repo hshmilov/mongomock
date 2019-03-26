@@ -33,10 +33,10 @@ export const pluginMeta = {
     },
     armis_adapter: {
         title: 'Armis',
-        description: 'Armis provides device discovery, behavioral analytics to identify risks or attacks, and automatic protection.'
+        description: 'Armis is an agentless IoT security solution that lets enterprises see and control any device or network.'
     },
     bluecat_adapter: {
-        title: 'BlueCat',
+        title: 'BlueCat Enterprise DNS',
         description: 'BlueCat Enterprise DNS connects all disparate DNS and DHCP with centralized management of all clients and critical assets.'
     },
     logrhythm_adapter: {
@@ -52,8 +52,8 @@ export const pluginMeta = {
         description: 'The SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges.'
     },
     checkpoint_r80_adapter: {
-        title: 'CheckPoint R80',
-        description: 'Check Point is a provider of hardware and software products for IT security, including network security, endpoint security, mobile security, data security and security management.'
+        title: 'Check Point Infinity',
+        description: 'Check Point Infinity protects against cyber threats across networks, endpoint, cloud and mobile devices.'
     },
     sysaid_adapter: {
         title: 'Sysaid',
@@ -101,7 +101,7 @@ export const pluginMeta = {
     },
     absolute_adapter: {
         title: 'Absolute',
-        description: 'Absolute® Software specializes in software and services for the management and security of computers and smartphones.'
+        description: 'Absolute specializes in software to manage and secure Windows computers and Android smartphones.'
     },
     landesk_adapter: {
         title: 'Ivanti Landesk - BETA',
@@ -129,7 +129,7 @@ export const pluginMeta = {
     },
     cisco_umbrella_adapter: {
         title: 'Cisco Umbrella',
-        description: 'Cisco Umbrella is a secure internet gateway in the cloud, and includes capabilities from the Cloud Web Security proxy, and Advanced Malware Protection (AMP) for file inspection.'
+        description: 'Cisco Umbrella is a secure internet gateway in the cloud, including DNS and IP layer enforcement and command and control callback blocking.'
     },
     clearpass_adapter: {
         title: 'Aruba ClearPass',
@@ -164,12 +164,12 @@ export const pluginMeta = {
         description: 'Zabbix is an open source monitoring software tool for networks, servers, virtual machines and cloud services.'
     },
     cisco_amp_adapter: {
-        title: 'Cisco Advanced Malware Protection',
-        description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'
+        title: 'Cisco Advanced Malware Protection (AMP)',
+        description: 'Cisco Advanced Malware Protection (AMP) includes threat intelligence, sandboxing, and malware blocking to detect, contain, and remove malware.'
     },
     claroty_adapter: {
         title: 'Claroty',
-        description: 'Claroty’s integrated ICS suite protects the safety of people, assets, and critical processes from cyberattacks.'
+        description: 'Claroty discovers assets and monitors communication patterns for ICS networks. '
     },
     solarwinds_orion_adapter: {
         title: 'Solarwinds Network Performance Manager',
@@ -237,23 +237,23 @@ export const pluginMeta = {
     },
     aws_adapter: {
         title: 'Amazon Web Services (AWS)',
-        description: 'The ECS/EKS/EC2 adapters includes the high-performance container orchestration service that supports Docker containers and containerized applications on AWS, Kubernetes Management Infrastructure Across Multiple AWS Zones, as well as the EC2 instances themselves.'
+        description: 'The Amazon Web Services Adapters (ECS/EKS/EC2) includes the high-performance container orchestration service that supports Docker containers and containerized applications on AWS, Kubernetes Management Infrastructure across Multiple AWS Zones, as well as the EC2 instances themselves.'
     },
     jamf_adapter: {
         title: 'Jamf Pro',
         description: 'Jamf Pro is an enterprise mobility management (EMM) tool that provides unified endpoint management for Apple devices.'
     },
     carbonblack_defense_adapter: {
-        title: 'Carbon Black Cb Defense',
-        description: 'Carbon Black Cb Defense includes next-generation antivirus + EDR in a cloud-delivered platform to stop commodity malware, molecules malware, non-malware attacks, and ransomware.'
+        title: 'Carbon Black CB Defense',
+        description: 'Carbon Black CB Defense includes antivirus and EDR in a cloud-delivered platform to stop malware, non-malware attacks, and ransomware.'
     },
     carbonblack_protection_adapter: {
-        title: 'Carbon Black Cb Protection',
-        description: 'Carbon Black Cb Protection includes application control and critical infrastructure protection for critical systems and fixed-function devices in highly regulated environments.'
+        title: 'Carbon Black CB Protection',
+        description: 'Carbon Black CB Protection includes application control and critical infrastructure protection for critical systems and fixed-function devices in highly regulated environments.'
     },
     carbonblack_response_adapter: {
-        title: 'Carbon Black Cb Response',
-        description: 'Carbon Black Cb Response includes scalable, real-time EDR with unfiltered visibility for security operations centers and incident response teams.'
+        title: 'Carbon Black CB Response',
+        description: 'Carbon Black CB Response includes EDR and threat hunting for security operations centers and incident response teams.'
     },
     epo_adapter: {
         title: 'McAfee ePO',
@@ -364,12 +364,12 @@ export const pluginMeta = {
         description: 'The Juniper Junos Adapter connects to Juniper switches and routers.'
     },
     bitdefender_adapter: {
-        title: 'Bitdefender GravityZone',
-        description: 'Bitdefender GravityZone Business Security uses machine learning and heuristics to offer protection against malware, phishing, ransomware, exploits and zero-days.'
+        title: 'Bitdefender GravityZone Business Security',
+        description: 'Bitdefender GravityZone Business Security uses machine learning and heuristics to protect against malware, phishing, ransomware, exploits and zero-days.'
     },
     bomgar_adapter: {
-        title: 'Bomgar Remote Support',
-        description: 'Bomgar Remote Support allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile devices.'
+        title: 'BeyondTrust Remote Support',
+        description: 'BeyondTrust Remote Support (formerly Bomgar) allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile devices.'
     },
     bigfix_adapter: {
         title: 'IBM Bigfix',
@@ -409,19 +409,19 @@ export const pluginMeta = {
     },
     chef_adapter: {
         title: 'Chef',
-        description: 'Chef provides continuous automation for building, deploying, and managing infrastructure, compliance, and applications in modern, legacy, and hybrid environments.'
+        description: 'Chef provides continuous automation for building, deploying, and managing infrastructure, compliance, and applications in legacy and hybrid environments.'
     },
     cisco_prime_adapter: {
         title: 'Cisco Prime',
-        description: 'Cisco Prime is a network management software suite consisting of different software applications by Cisco Systems.'
+        description: 'Cisco Prime offers a suite of tools to automate the management of wired and wireless Cisco networks.'
     },
     observeit_adapter: {
         title: 'ObserveIT',
         description: 'ObserveIT provides insider threat security solutions, including employee monitoring, user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
     },
     blackberry_uem_adapter: {
-        title: 'Blackberry UEM',
-        description: 'BlackBerry Unified Endpoint Manager (UEM) delivers endpoint management and policy control for devices and apps on-premise or in the cloud.'
+        title: 'BlackBerry Unified Endpoint Management (UEM)',
+        description: 'BlackBerry Unified Endpoint Management (UEM) delivers endpoint management and policy control for devices and apps on-premise or in the cloud.'
     },
     oracle_vm_adapter: {
         title: 'OracleVM',
@@ -473,6 +473,6 @@ export const pluginMeta = {
     },
     alibaba_adapter: {
         title: 'Alibaba Cloud',
-        description: 'Alibaba Cloud provides cloud computing services to online businesses and Alibaba Group\'s own e-commerce ecosystem'
+        description: 'Alibaba Cloud provides cloud computing services and cloud Infrastructure as a service.'
     }
 }

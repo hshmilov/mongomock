@@ -639,6 +639,7 @@ def is_only_host_adapter_not_localhost(adapter_device):
                                                   'azure_ad_adapter',
                                                   'carbonblack_protection_adapter',
                                                   'csv_adapter',
+                                                  'mssql_adapter',
                                                   'code42_adapter',
                                                   'sysaid_adapter',
                                                   'logrhythm_adapter']) and \

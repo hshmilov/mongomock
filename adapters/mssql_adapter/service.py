@@ -165,8 +165,8 @@ class MssqlAdapter(AdapterBase):
 
                 # OS is a special case, instead of getting the first found column we take all of them and combine them
                 if 'os' in fields:
-                    os_raw = '_'.join([device_raw.get(os_column) for os_column in fields['os']])
                     try:
+                        os_raw = '_'.join([device_raw.get(os_column) for os_column in fields['os']])
                         device.figure_os(os_raw)
                     except Exception:
                         logger.error(f'Can not parse os {os_raw}')
@@ -185,11 +185,12 @@ class MssqlAdapter(AdapterBase):
                         device.add_cpu(ghz=cpu_speed / (1024 ** 3), architecture=architecture)
                 except Exception:
                     logger.exception(f'Problem setting cpu')
-
-                ips = (vals.get('ip') or '').split(',')
-                ips = [ip.strip() for ip in ips if ip.strip()]
-
-                device.add_ips_and_macs(macs=macs, ips=ips)
+                try:
+                    ips = (vals.get('ip') or '').split(',')
+                    ips = [ip.strip() for ip in ips if ip.strip()]
+                    device.add_ips_and_macs(macs=macs, ips=ips)
+                except Exception:
+                    logger.exception(f'Problem getting nic and ips for {device_raw}')
 
                 device.set_raw(device_raw)
 
