@@ -123,5 +123,7 @@ class FeatureFlagsNames:
 
 class Signup:
     SignupCollection = 'signup'
+    SignupField = 'signup'
+    SignupEndpoint = 'signup'
     NewPassword = 'newPassword'
     ConfirmNewPassword = 'confirmNewPassword'

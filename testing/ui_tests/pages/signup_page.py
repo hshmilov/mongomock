@@ -7,7 +7,8 @@ class SignupPage(Page):
     NEW_PASSWORD = 'newPassword'
     CONFIRM_PASSWORD = 'confirmNewPassword'
     SIGNUP_COMPLETED_TOASTER = 'Sign up completed'
-    PASSWORDS_DONT_MATCH_TOASTER = 'Passwords don\'t match'
+    PASSWORDS_DONT_MATCH_TOASTER = 'Passwords do not match'
+    SAVE_BUTTON_ID = 'signup-save'
 
     @property
     def url(self):
@@ -38,3 +39,6 @@ class SignupPage(Page):
 
     def wait_for_passwords_dont_match_toaster(self):
         self.wait_for_toaster(self.PASSWORDS_DONT_MATCH_TOASTER)
+
+    def wait_for_signup_page_to_load(self):
+        self.wait_for_element_present_by_id(self.SAVE_BUTTON_ID)

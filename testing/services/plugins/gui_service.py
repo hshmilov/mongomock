@@ -6,7 +6,7 @@ import requests
 
 from axonius.consts.gui_consts import (CONFIG_COLLECTION, ROLES_COLLECTION, USERS_COLLECTION,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
-                                       FEATURE_FLAGS_COLLECTION)
+                                       FEATURE_FLAGS_COLLECTION, Signup)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -582,3 +582,6 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         self.db.get_collection(self.plugin_name, GUI_SYSTEM_CONFIG_COLLECTION).update_one(MAINTENANCE_FILTER, {
             '$set': flags
         })
+
+    def get_signup_status(self):
+        return self.get(Signup.SignupEndpoint).json()[Signup.SignupField]

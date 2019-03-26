@@ -1,4 +1,5 @@
 import os
+
 INCORRECT_PASSWORD = 'Incorrect!'
 UNMATCHED_PASSWORD1 = 'Unmatched!'
 UNMATCHED_PASSWORD2 = 'Unmatched!2'
@@ -65,3 +66,6 @@ class Tags:
 
 class Account:
     file_path = 'account_data.tmp'
+
+
+SIGNUP_TEST_CREDS = {'company': 'test_company', 'password': 'bringorder', 'email': 'a@b.com'}

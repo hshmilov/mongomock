@@ -8,7 +8,7 @@
                         <x-form :schema="signupFormSchema" v-model="signupForm"/>
                     </div>
                     <div class="place-right">
-                        <x-button id="research-settings-save" @click="onSave">Save</x-button>
+                        <x-button id="signup-save" @click="onSave">Save</x-button>
                     </div>
                 </div>
                 <div slot="footer">

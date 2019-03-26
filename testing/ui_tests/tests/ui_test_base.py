@@ -33,7 +33,7 @@ from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
 from ui_tests.pages.instances_page import InstancesPage
-from ui_tests.tests.ui_consts import ROOT_DIR
+from ui_tests.tests.ui_consts import ROOT_DIR, SIGNUP_TEST_CREDS
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(ROOT_DIR, 'logs', 'ui_logger')
@@ -237,10 +237,6 @@ class TestBase:
         self.axonius_system = get_service()
 
         self.register_pages()
-        if self.signup_page.is_signup_present():
-            self.signup_page.fill_signup_and_save('test_company', 'a@b.com', DEFAULT_USER['password'],
-                                                  DEFAULT_USER['password'])
-            self.signup_page.wait_for_signup_completed_toaster()
         self.login()
         logger.info(f'finishing setup_method {method.__name__}')
 
@@ -283,8 +279,17 @@ class TestBase:
 
     def login(self):
         self.driver.get(self.base_url)
+        self.fill_signup_screen()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=self.username, password=self.password, remember_me=True)
+
+    def fill_signup_screen(self):
+        if self.axonius_system.gui.get_signup_status() is False:
+            self.signup_page.wait_for_signup_page_to_load()
+            self.signup_page.fill_signup_and_save(company=SIGNUP_TEST_CREDS['company'],
+                                                  email=SIGNUP_TEST_CREDS['email'],
+                                                  passw=SIGNUP_TEST_CREDS['password'],
+                                                  confirm_passw=SIGNUP_TEST_CREDS['password'])
 
     def _create_history(self, entity_type: EntityType, update_field=None, days_to_fill=30):
         history_db = self.axonius_system.db.get_historical_entity_db_view(entity_type)

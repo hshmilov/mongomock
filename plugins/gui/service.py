@@ -4581,14 +4581,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'type': 'maintenance'
         })
 
-    @gui_helpers.add_rule_unauth('signup', methods=['POST', 'GET'])
+    @gui_helpers.add_rule_unauth(Signup.SignupEndpoint, methods=['POST', 'GET'])
     def process_signup(self):
         signup_collection = self._get_collection(Signup.SignupCollection)
         signup = signup_collection.find_one({})
 
         if request.method == 'GET':
             # remove the or True when we finish fixing tests
-            return jsonify({'signup': True or signup or has_customer_login_happened()})
+            return jsonify({Signup.SignupField: signup or has_customer_login_happened()})
 
         # POST from here
         if signup:
