@@ -299,7 +299,6 @@ plugins/gui/okta_login.py
 plugins/gui/report_generator.py
 plugins/gui/frontend/tests/mocks/main.py
 plugins/gui/frontend/tests/mocks/database/CreateFakeData.py
-plugins/pm_status/service.py
 plugins/system_scheduler/service.py
 testing/run_parallel_tests.py
 testing/run_tests.py
@@ -435,7 +434,6 @@ testing/services/plugins/diagnostics_service.py
 testing/services/plugins/execution_service.py
 testing/services/plugins/general_info_service.py
 testing/services/plugins/mongo_service.py
-testing/services/plugins/pm_status_service.py
 testing/services/plugins/system_scheduler_service.py
 testing/tests/test_reports.py
 testing/tests/test_system.py

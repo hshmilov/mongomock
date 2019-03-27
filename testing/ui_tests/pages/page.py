@@ -77,6 +77,8 @@ class Page:
     LOADING_SPINNER_CSS2 = '.v-spinner'
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
     CHECKBOX_WITH_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and child::label[text()=\'{label_text}\']]'
+    CHECKBOX_WITH_SIBLING_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and ' \
+                                        'preceding-sibling::label[text()=\'{label_text}\']]'
     CHECKBOX_CSS = 'div.x-checkbox-container'
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'

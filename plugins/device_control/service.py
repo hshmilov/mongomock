@@ -26,8 +26,6 @@ class DeviceControlService(Triggerable, PluginBase):
                          requested_unique_plugin_name=DEVICE_CONTROL_PLUGIN_NAME, *args, **kargs)
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
-        if not self._execution_enabled:
-            raise RuntimeError('Execution is disabled')
         if job_name != 'execute':
             raise RuntimeError('Job name is wrong')
 
@@ -123,15 +121,8 @@ class DeviceControlService(Triggerable, PluginBase):
         # Run the command.
         logger.info(f'Got {len(devices)} devices to run action {action_name} on. Sending commands..')
         for device in devices:
-            # We might already have such action_name so clean the latest tags.
-            device.add_label(f'Action \'{action_name}\' Error', False)
-            device.add_label(f'Action \'{action_name}\' In Progress', False)
-            device.add_label(f'Action \'{action_name}\' Success', False)
-            device.add_label(f'Action \'{action_name}\' Failure', False)
-
             yield self.__request_action_from_device(device, action_name, action_type, action_params, 1), \
                 device.internal_axon_id
-            device.add_label(f'Action \'{action_name}\' In Progress')
 
     def __request_action_from_device(self, device: AxoniusDevice, action_name, action_type,
                                      action_params, attempt_number, sleep_time=0) -> Promise:
@@ -222,12 +213,9 @@ class DeviceControlService(Triggerable, PluginBase):
             data = output['data']
             data_label += f'\nResult:\n{data}'
             device.add_data(f'Action \'{action_name}\'', data_label)
-            device.add_label(f'Action \'{action_name}\' Success')
-            device.add_label(f'Action \'{action_name}\' In Progress', False)
 
         except Exception:
             logger.exception(f'Exception in run_action_success')
-            device.add_label(f'Action \'{action_name}\' Error')
             device.add_data(f'Action \'{action_name}\' Last Error', get_exception_string())
 
         return data
@@ -248,13 +236,10 @@ class DeviceControlService(Triggerable, PluginBase):
                     f'device {device.internal_axon_id}. retrying in {SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS}. '
                     f'exc is {str(exc)}')
         try:
-            # Do not retry if the device is blacklisted
-            if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST or '[BLACKLIST]' in str(exc):
+            if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST:
                 logger.error(f'Failed ({attempt_number}) with action {action_name}: '
                              f'attempts: {attempt_number}, exc: {exc}')
                 device.add_data(f'Action \'{action_name}\' Last Error', str(exc))
-                device.add_label(f'Action \'{action_name}\' Failure')
-                device.add_label(f'Action \'{action_name}\' In Progress', False)
             else:
                 # sleep and rerun
                 self.execution_promises.submit(self.__request_action_from_device,
@@ -267,7 +252,6 @@ class DeviceControlService(Triggerable, PluginBase):
 
         except Exception:
             logger.exception('Exception in run_action_failure')
-            device.add_label(f'Action \'{action_name}\' Error')
             device.add_data(f'Action \'{action_name}\' Last Error', get_exception_string())
 
     @add_rule('test_run_action', methods=['POST'], should_authenticate=False)

@@ -296,11 +296,13 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 all_domains[dc_details['dc_name'].lower()] = dc_details
             return all_domains
         except LdapException as e:
-            additional_msg = ''
             if "socket connection error while opening: timed out" in str(e):
-                additional_msg = ": connection timed out"
-
-            message = f'Error in ldap process for dc {dc_details["dc_name"]}{additional_msg}.'
+                additional_msg = "connection timed out"
+            elif 'ldapinvalidcredentialsresult' in str(e).lower():
+                additional_msg = 'Invalid credentials'
+            else:
+                additional_msg = 'connection error, please check the settings'
+            message = f'Error: {additional_msg}.'
             logger.exception(message)
         except Exception:
             logger.exception(f'Error in _connect_client: {get_exception_string()}')
@@ -327,17 +329,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 {
                     "name": "password",
                     "title": "Password",
-                    "type": "string",
-                    "format": "password"
-                },
-                {
-                    "name": "wmi_smb_user",
-                    "title": "WMI/SMB User",
-                    "type": "string"
-                },
-                {
-                    "name": "wmi_smb_password",
-                    "title": "WMI/SMB Password",
                     "type": "string",
                     "format": "password"
                 },
@@ -1210,7 +1201,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         raise IpResolveError(err)
 
-    def _get_basic_wmi_smb_command(self, device_data):
+    def _get_basic_wmi_smb_command(self, device_data, custom_credentials: dict = None):
         """ Function for formatting the base wmiqery command.
 
         :param dict device_data: The device_data used to create this command
@@ -1222,12 +1213,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             client_config = client_config['client_config']
             if client_config["dc_name"] == wanted_client:
                 # If wmi/smb user was not supplied, use the default one.
-                client_username = client_config.get("wmi_smb_user")
+                client_username = custom_credentials.get("username") if custom_credentials else None
                 if client_username is None or client_username == "":
                     client_username = client_config['user']
 
                 # If wmi/smb password was not supplied, use the default one.
-                client_password = client_config.get("wmi_smb_password")
+                client_password = custom_credentials.get("password") if custom_credentials else None
                 if client_password is None or client_password == "":
                     client_password = client_config['password']
 
@@ -1374,7 +1365,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         return command_stdout.strip()
 
-    def execute_axr(self, device_data, axr_commands):
+    def execute_axr(self, device_data, axr_commands, custom_credentials=None):
         """
         Executes commands through the AXR exe. This means that we send the axr exe and send the list of
         commands to it as a parameter.
@@ -1395,7 +1386,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # run code on device Y which has the same ip.
         # we see if the hostname we know this machine has is the same as what returned.
 
-        command_list = self._get_basic_wmi_smb_command(device_data) + [json.dumps(commands)]
+        command_list = self._get_basic_wmi_smb_command(
+            device_data, custom_credentials=custom_credentials) + [json.dumps(commands)]
         logger.debug("running axr {0}".format(command_list))
 
         # Running the command.
@@ -1459,7 +1451,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product['data']}
 
-    def execute_wmi_smb(self, device_data, wmi_smb_commands):
+    def execute_wmi_smb(self, device_data, wmi_smb_commands, custom_credentials=None):
         """
         executes a list of wmi + smb possible queries. (look at wmi_smb_runner.py)
         :param device_data: the device data.
@@ -1484,7 +1476,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         if hostname_validation is True:
             wmi_smb_commands.append({"type": "query", "args": ["select Name from Win32_ComputerSystem"]})
 
-        command_list = self._get_basic_wmi_smb_command(device_data) + [json.dumps(wmi_smb_commands)]
+        command_list = self._get_basic_wmi_smb_command(
+            device_data, custom_credentials=custom_credentials) + [json.dumps(wmi_smb_commands)]
         logger.debug("running wmi {0}".format(command_list))
 
         # Running the command.
@@ -1688,7 +1681,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             "sync_resolving": False,
             "report_generation_interval": 30,
             'verbose_auth_notifications': False,
-            'add_ip_conflict': True,
+            'add_ip_conflict': False,
             'fetch_users_image': True,
             'should_get_nested_groups_for_user': True,
             'ldap_page_size': DEFAULT_LDAP_PAGE_SIZE,

@@ -26,14 +26,6 @@ def test_api(axonius_fixture, general_info_fixture, device_control_fixture, ad_f
     wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10),
                total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
 
-    axonius_system.core.set_config(
-        {
-            'config.execution_settings.enabled': True,
-            'config.execution_settings.pm_rpc_enabled': True,
-            'config.execution_settings.pm_smb_enabled': True,
-        }
-    )
-
     client = RESTExample('https://127.0.0.1',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
                          verify=False)

@@ -39,9 +39,8 @@ class CarefulExecutionCorrelatorService(CorrelatorBase):
         }))
 
     def _correlate(self, entities: list):
-        if not self._execution_enabled:
-            return []
-        return self._correlation_engine.correlate(entities)
+        return []
+        # return self._correlation_engine.correlate(entities)
 
     @property
     def _entity_to_correlate(self) -> EntityType:

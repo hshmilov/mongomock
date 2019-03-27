@@ -22,8 +22,6 @@ class ExecutionCorrelatorService(CorrelatorBase):
                                                              parse_correlation_results)
 
     def _correlate(self, entities: list):
-        if not self._execution_enabled:
-            return []
         return self._correlation_engine.correlate(entities)
 
     @property

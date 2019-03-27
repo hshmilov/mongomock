@@ -7,8 +7,8 @@ import sys
 from datetime import datetime, timedelta
 
 import pytest
-from passlib.hash import bcrypt
 from retrying import retry
+from passlib.hash import bcrypt
 from selenium import webdriver
 
 import conftest
@@ -25,7 +25,6 @@ from ui_tests.pages.dashboard_page import DashboardPage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
 from ui_tests.pages.enforcements_page import EnforcementsPage
-from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.my_account_page import MyAccountPage
 from ui_tests.pages.notification_page import NotificationPage
@@ -33,6 +32,7 @@ from ui_tests.pages.report_page import ReportPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
+from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.tests.ui_consts import ROOT_DIR
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
@@ -317,3 +317,6 @@ class TestBase:
         self.axonius_system.db.get_historical_entity_db_view(entity_type).drop()
         self.base_page.run_discovery()
         self._create_history(entity_type)
+
+    def create_run_wmi_scan_on_each_cycle_enforcement(self):
+        self.enforcements_page.create_run_wmi_enforcement()

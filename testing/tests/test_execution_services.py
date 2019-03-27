@@ -7,11 +7,10 @@ import logging
 import dateutil.parser
 import pytest
 
-from services.axonius_service import get_service, BLACKLIST_LABEL
+from services.axonius_service import get_service
 from services.adapters.ad_service import ad_fixture
 from services.adapters.esx_service import esx_fixture
 from services.plugins.general_info_service import general_info_fixture
-from services.plugins.pm_status_service import pm_status_fixture
 from services.plugins.device_control_service import device_control_fixture
 from services.plugins.static_analysis_service import static_analysis_fixture
 from test_credentials.test_ad_credentials import ad_client1_details, \
@@ -33,7 +32,7 @@ TESTDOMAIN_USER_DUPLICATION_SID = 'S-1-5-21-3246437399-2412088855-2625664447-110
 
 @pytest.mark.skip('Skipped because of multiple failures.')
 def test_execution_modules(
-        axonius_fixture, ad_fixture, esx_fixture, general_info_fixture, pm_status_fixture, device_control_fixture,
+        axonius_fixture, ad_fixture, esx_fixture, general_info_fixture, device_control_fixture,
         static_analysis_fixture):
     # Step 1, Run a cycle without execution to check how it acts.
     # We set execution to disabled while enabling pm. pm should not work in that case.
@@ -63,11 +62,9 @@ def test_execution_modules(
 
     # Assert general info & pm status are async
     assert general_info_fixture.log_tester.is_str_in_log('Triggered execute unblocked', 5)
-    assert pm_status_fixture.log_tester.is_str_in_log('Triggered execute unblocked', 5)
 
     # Assert general info & pm status do not work when execution is off
     assert general_info_fixture.log_tester.is_str_in_log('Execution is disabled, not continuing', 5)
-    assert pm_status_fixture.log_tester.is_str_in_log('Execution is disabled, not continuing', 5)
 
     # Step 2, Run a cycle with general info & pm status, and blacklist an ad device beforehand.
     axonius_system.core.set_config(
@@ -84,7 +81,6 @@ def test_execution_modules(
     )
 
     axonius_system.gui.login_user(DEFAULT_USER)
-    axonius_system.blacklist_device(ad_fixture.unique_name, CLIENT1_DEVICE_ID_BLACKLIST)
 
     # Run a research phase and wait for general info and pm status to finish.
     execution_start = time.time()
@@ -111,26 +107,8 @@ def test_execution_modules(
             'Finished gathering info & associating users for all devices', 10),
         total_timeout=EXECUTION_TIMEOUT - int(time.time() - execution_start)
     )
-    wait_until(
-        lambda: pm_status_fixture.log_tester.is_str_in_log(
-            'Finished gathering pm status', 10),
-        total_timeout=EXECUTION_TIMEOUT - int(time.time() - execution_start)
-    )
 
     logger.info(f'Finished execution after {time.time() - execution_start} seconds')
-    blacklisted_device = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DEVICE_ID_BLACKLIST)[0]
-    # Assert we did not run on the blacklisted device. It should have a blacklist label and not have any
-    # adapterdata tags.
-    blacklist_label_exists = False
-    for tag in blacklisted_device['tags']:
-        assert tag['type'] != 'adapterdata', f'found unexpected adapterdata tag {tag}'
-        if tag['type'] == 'label' and tag['data'] is True and tag['name'] == BLACKLIST_LABEL:
-            blacklist_label_exists = True
-    assert blacklist_label_exists, 'Did not find a blacklist label!'
-    assert general_info_fixture.log_tester.is_str_in_log(
-        f'Failure because of blacklist in device {blacklisted_device["internal_axon_id"]}', 100)
-    assert pm_status_fixture.log_tester.is_str_in_log(
-        f'Failure because of blacklist in device {blacklisted_device["internal_axon_id"]}', 100)
 
     # Step 3, Run a cycle with execution on but pm set to False.
     # A second discovery cycle also identifies vulnerabilities using the static analyzer regardless if we
@@ -151,28 +129,8 @@ def test_execution_modules(
                total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
     wait_until(lambda: static_analysis_fixture.log_tester.is_str_in_log('Successfully triggered', 10))
 
-    # PM Status should immediately not work.
-    assert pm_status_fixture.log_tester.is_str_in_log(
-        'PM Status Failure: rpc and smb settings are false (Global Settings)', 5)
-
     # No need for general info to work. we just wanted it to run in order to see if pm runs as well or not.
     axonius_system.scheduler.stop_research()
-
-    # Check once again the blacklisted device is blacklisted (nothing should have changed)
-    # Notice that the device should be correlated with ESX so this check also validates that it is
-    # blacklisted afterwards.
-    blacklisted_device = axonius_system.get_device_by_id(ad_fixture.unique_name, CLIENT1_DEVICE_ID_BLACKLIST)[0]
-    blacklist_label_exists = False
-    assert len(blacklisted_device['adapters']) == 2, 'Device should have AD and ESX but does not have them!'
-    for tag in blacklisted_device['tags']:
-        assert tag['type'] != 'adapterdata', f'found unexpected adapterdata tag {tag}'
-        if tag['type'] == 'label' and tag['data'] is True and tag['name'] == BLACKLIST_LABEL:
-            blacklist_label_exists = True
-    assert blacklist_label_exists, 'Did not find a blacklist label!'
-    assert any(tag['name'] == 'Action \'dir\' Failure' and tag['data'] is True for tag in blacklisted_device['tags']), \
-        'Device control shell should have failed on blacklisted device!'
-    assert any(tag['name'] == 'Action \'dir\' Last Error' and '[BLACKLIST]' in tag['data']
-               for tag in blacklisted_device['tags']), 'Device control shell should have failed because of blacklist!'
 
     # At this moment we have all devices after general info & pm & static analysis succeeded, we conduct a lot of tests
     # to see that everything was successful. This mainly checks for all data tabs to see that we got a lot of info.

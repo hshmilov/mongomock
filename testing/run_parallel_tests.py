@@ -34,10 +34,6 @@ def main():
         axonius_system.take_process_ownership()
         axonius_system.start_and_wait()
 
-        # Set up testing configurations
-        axonius_system.core.set_execution_config(True)
-        axonius_system.execution.post('update_config')
-
         # Run all parallel tests
         runner = ParallelTestsRunner()
         extra_flags = []

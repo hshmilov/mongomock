@@ -72,6 +72,3 @@ class CoreService(PluginService):
             {'$set': config}
         )
         self.post('update_config')
-
-    def set_execution_config(self, enabled):
-        return self.set_config({'config.execution_settings.enabled': enabled})

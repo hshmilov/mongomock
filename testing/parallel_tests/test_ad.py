@@ -146,6 +146,7 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_report_generated)
 
+    @pytest.mark.skip('This feature is irrelevant, we still keep it for future purposes')
     def test_dns_conflicts(self):
         @retry(wait_fixed=10000, stop_max_attempt_number=6 * 5)  # it can take up to 5 minutes for the tag to appear
         def has_ip_conflict_tag():
@@ -286,17 +287,6 @@ class TestAdAdapter(AdapterTestBase):
                 {
                     "tags": {
                         '$elemMatch': {
-                            "name": "Action 'Test Action' Success",
-                            "type": "label",
-                            "data": {"$ne": "False"}
-                        }
-                    }
-                })
-            assert len(result) > 0, str(result)
-            result = self.axonius_system.get_devices_with_condition(
-                {
-                    "tags": {
-                        '$elemMatch': {
                             "name": "Action 'Test Action'",
                             "type": "data",
                             "data": {"$regex": ".*lmhosts\.sam.*"}
@@ -399,16 +389,3 @@ class TestAdAdapter(AdapterTestBase):
             assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[1]["data"]
 
         try_until_not_thrown(15, 10, check_get_files_after_delete_results)
-
-    def test_different_wmi_credentials(self):
-        """
-        the current wmi credentials are good for execution, hence we are going to change them to some invalid ones
-        and check if execution works.
-        :return:
-        """
-        client = self.some_client_details
-        client['wmi_smb_user'] = 'some_nonexisting_user'
-        client['wmi_smb_password'] = 'some_nonexisting_password'
-        self.adapter_service.add_client(client)
-        with pytest.raises(AssertionError):
-            self.test_ad_execute_shell()

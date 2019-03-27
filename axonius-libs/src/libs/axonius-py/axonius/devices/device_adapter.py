@@ -8,6 +8,7 @@ from axonius.blacklists import ALL_BLACKLIST
 from axonius.clients.cisco.port_security import PortSecurityInterface
 from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
+from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_escaping import escape_dict, unescape_dict
 from axonius.utils.parsing import (
     figure_out_os,
@@ -505,7 +506,7 @@ class DeviceAdapter(SmartJsonClass):
             if not any([boot_time, uptime]):
                 raise RuntimeError("Missing required parameters")
 
-            current_time = datetime.datetime.now()
+            current_time = parse_date(datetime.datetime.now())
 
             if boot_time:
                 self.boot_time = boot_time

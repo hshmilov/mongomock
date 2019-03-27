@@ -11,6 +11,9 @@ export const actionsMeta = {
     run_command_linux: {
         title: 'Run Linux Shell Command'
     },
+    run_wmi_scan: {
+        title: 'Run WMI Scan'
+    },
     carbonblack_isolate: {
         title: 'Isolate in CarbonBlack'
     },
@@ -98,7 +101,7 @@ export const actionsMeta = {
     },
     run_command: {
         title: 'Run Command',
-        items: ['run_command_windows', 'run_command_linux']
+        items: ['run_command_windows', 'run_command_linux', 'run_wmi_scan']
     },
     isolate_edr: {
         title: 'Isolate Device in EDR',

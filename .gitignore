@@ -344,3 +344,9 @@ cscope.files
 tags
 api.tar.xz
 .axonius_settings/
+
+# builds website db
+devops/CI/builds_website/app/db/*
+devops/CI/builds_website/secrets/*
+devops/CI/builds_website/app/test.py
+devops/CI/builds_website/.idea/*

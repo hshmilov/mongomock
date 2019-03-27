@@ -9,7 +9,7 @@ import pymongo
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.plugin_base import PluginBase, add_rule
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.files import get_local_config_file
 from axonius.utils.threading import run_and_forget
@@ -107,9 +107,6 @@ class ExecutionService(PluginBase):
         if result is None:
             logger.error('could not find device. Are you sure the device exists?')
             raise ValueError('could not find device. Are you sure the device exists?')
-        if any(tag['name'] == 'do_not_execute' and tag['data'] is True for tag in result['tags']):
-            logger.debug(f'Device {device_id} skipped from execution due to blacklist')
-            return
         try:
             for adapter_data in result['adapters']:
                 adapter_name = adapter_data[PLUGIN_NAME]
@@ -342,8 +339,7 @@ class ExecutionService(PluginBase):
                 adapters_count += 1
 
             if len(adapters_tuple) == 0:
-                accumulated_error = '[BLACKLIST] Couldn\'t find any adapters to execute code with. ' \
-                                    'This usually means the device is blacklisted.'
+                accumulated_error = 'Couldn\'t find any adapters to execute code with.'
 
             # Inform issuer.
             self.request_remote_plugin('action_update/{0}'.format(action_id),
@@ -412,9 +408,6 @@ class ExecutionService(PluginBase):
 
         :param str action_type: The type of the action we want to run. For example: 'put_file'
         """
-        if not self._execution_enabled:
-            return return_error('Execution is disabled', 400)
-
         # Getting the wanted device axon_id
         device_id = self.get_url_param('axon_id')
 

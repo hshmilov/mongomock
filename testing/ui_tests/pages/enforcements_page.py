@@ -3,6 +3,9 @@ import os
 
 from ui_tests.pages.entities_page import EntitiesPage
 
+ENFORCEMENT_WMI_EVERY_CYCLE = 'Run WMI on every cycle'
+ENFORCEMENT_WMI_QUERY_NAME = 'Enabled AD Devices'
+
 
 class Period:
     EveryDiscovery = 'all_period'
@@ -24,6 +27,7 @@ class Action:
     Syslog = 'Send to Syslog System'
     Tag = 'Add Tag'
     DeployWindows = 'Deploy on Windows Device'
+    RunWMI = 'Run WMI Scan'
     ScanQualys = 'Add to Qualys'
     ScanTenable = 'Add to Tenable'
     ChangePolicyCB = 'Change Carbonblack Defense Policy'
@@ -31,6 +35,7 @@ class Action:
 
 class ActionCategory:
     Deploy = 'Deploy Software'
+    Run = 'Run Command'
     Notify = 'Notify'
     Isolate = 'Isolate Device in EDR'
     Utils = 'Axonius Utilities'
@@ -81,6 +86,9 @@ class EnforcementsPage(EntitiesPage):
 
     def find_checkbox_by_label(self, text):
         return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
+
+    def find_checkbox_with_label_before(self, text):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_SIBLING_LABEL_XPATH.format(label_text=text))
 
     def click_new_enforcement(self):
         self.wait_for_spinner_to_end()
@@ -210,6 +218,21 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
+        self.fill_action_name(name)
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_present_by_text(name)
+
+    def add_run_wmi_scan(self, name='Run WMI Scan'):
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
+        self.find_element_by_text(ActionCategory.Run).click()
+        # Opening animation time
+        time.sleep(0.2)
+        self.find_element_by_text(Action.RunWMI).click()
+        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
+        # Appearance animation time
+        time.sleep(0.6)
+        self.find_checkbox_with_label_before('Use credentials from Active Directory').click()
         self.fill_action_name(name)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
@@ -372,6 +395,23 @@ class EnforcementsPage(EntitiesPage):
     def create_deploying_enforcement(self, enforcement_name, enforcement_view):
         self.create_basic_enforcement(enforcement_name, enforcement_view)
         self.add_deploy_software(enforcement_name)
+        self.click_save_button()
+        self.wait_for_table_to_load()
+
+    def create_run_wmi_enforcement(self):
+        self.switch_to_page()
+        # for some reason, this switch_to_page doesn't work from here sometimes
+        time.sleep(1)
+        self.switch_to_page()
+        try:
+            self.find_element_by_text(ENFORCEMENT_WMI_EVERY_CYCLE)
+            # no need to re-create it.
+            return
+        except Exception:
+            pass
+
+        self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_QUERY_NAME, enforce_added=False)
+        self.add_run_wmi_scan(ENFORCEMENT_WMI_EVERY_CYCLE)
         self.click_save_button()
         self.wait_for_table_to_load()
 

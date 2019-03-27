@@ -48,10 +48,7 @@ class TestDevicesTable(TestEntitiesTable):
 
     def test_devices_config(self):
         with GeneralInfoService().contextmanager(take_ownership=True):
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-            self.settings_page.click_toggle_button(self.settings_page.find_execution_toggle(), make_yes=True)
-            self.settings_page.save_and_wait_for_toaster()
+            self.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
 
             # Testing regular Adapter

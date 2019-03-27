@@ -4,17 +4,6 @@
     :entities="entities"
     @done="$emit('done')"
   >
-    <template v-if="module === 'devices'">
-      <x-action-menu-item
-        :handle-save="saveBlacklist"
-        message="Blacklist saved"
-        title="Blacklist..."
-        action-text="Blacklist"
-      >
-        <div>Add {{ selectionCount }} devices to Blacklist?</div>
-        <div>These devices will be prevented from executing code on.</div>
-      </x-action-menu-item>
-    </template>
     <x-action-menu-item
       :title="`Link ${module}...`"
       :handle-save="linkEntities"
@@ -120,17 +109,6 @@
           enforceData: ENFORCE_DATA,
           fetchContent: FETCH_DATA_CONTENT
         }),
-      saveBlacklist () {
-        /*
-        Blacklist is currently implemented by checking for a designated tag,
-        Therefore, adding this tag to selected devices
-         */
-        return this.addLabels({
-          module: 'devices', data: {
-            entities: this.entities, labels: ['do_not_execute']
-          }
-        })
-      },
       linkEntities () {
         return this.linkData({
           module: this.module, data: this.entities

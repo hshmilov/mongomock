@@ -43,7 +43,6 @@ class SettingsPage(Page):
     FRESH_SERVICE_API_KEY = 'api_key'
     FRESH_SERVICE_ADMIN_EMAIL = 'admin_email'
     SAML_IDP = 'idp_name'
-    USE_EXECUTION = 'Execution Enabled'
     HISTORY_GATHERED = 'Should history be gathered'
     DC_ADDRESS = 'dc_address'
     GROUP_CN = 'group_cn'
@@ -219,9 +218,6 @@ class SettingsPage(Page):
         self.select_option_without_search(self.SYSLOG_SSL_CSS_DROPBOX,
                                           self.SYSLOG_SSL_CSS_DROPBOX_OPTIONS,
                                           text)
-
-    def find_execution_toggle(self):
-        return self.find_checkbox_by_label(self.USE_EXECUTION)
 
     def find_should_history_be_gathered_toggle(self):
         return self.find_checkbox_by_label(self.HISTORY_GATHERED)

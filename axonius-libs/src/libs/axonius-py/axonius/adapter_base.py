@@ -694,7 +694,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         needed_action_function = getattr(self, action_type)
 
-        logger.info("Got action type {0}. Request data is {1}".format(action_type, request_data))
+        logger.debug("Got action type {0}. Request data is {1}".format(action_type, request_data))
 
         self._thread_pool.submit(self._run_action_thread,
                                  needed_action_function,

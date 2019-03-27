@@ -109,10 +109,6 @@ def main():
             selenium_service.take_process_ownership()
             selenium_service.start_and_wait()
 
-        # Set up testing configurations
-        axonius_system.core.set_execution_config(True)
-        axonius_system.execution.post('update_config')
-
         ad_service.take_process_ownership()
         ad_service.start_and_wait()
 

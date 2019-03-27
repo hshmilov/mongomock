@@ -1147,9 +1147,6 @@ class PluginBase(Configurable, Feature):
 
         :return Promise result: A promise of the action
         """
-        if action_type in ('execute_wmi_smb', 'execute_shell', 'execute_binary') and not self._execution_enabled:
-            logger.critical("Plugins decided to execute even though execution is disabled")
-            raise ValueError("Execution Is Disabled")
         data = {}
         if data_for_action:
             data = data_for_action.copy()
@@ -2335,11 +2332,6 @@ class PluginBase(Configurable, Feature):
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
         self._jira_settings = config['jira_settings']
-        self._execution_enabled = config['execution_settings']['enabled']
-        self._should_use_axr = config['execution_settings']['should_use_axr']
-        self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
-        self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
-        self._reg_check_exists = config['execution_settings'].get('reg_check_exists')
 
         self._aggregation_max_workers = None
         try:
@@ -2625,53 +2617,6 @@ class PluginBase(Configurable, Feature):
                 {
                     "items": [
                         {
-                            "name": "enabled",
-                            "title": "Execution Enabled",
-                            "type": "bool",
-                            "required": True
-                        },
-                        {
-                            "name": "should_use_axr",
-                            "title": "Use Fast Execution Method (BETA)",
-                            "type": "bool",
-                            "required": True
-                        },
-                        {
-                            "name": "pm_rpc_enabled",
-                            "title": "Patch Management Using RPC (Online)",
-                            "type": "bool",
-                            "required": True
-                        },
-                        {
-                            "name": "pm_smb_enabled",
-                            "title": "Patch Management Using SMB (Online)",
-                            "type": "bool",
-                            "required": True
-                        },
-                        {
-                            'name': 'reg_check_exists',
-                            "title": "Validated Registry Keys",
-                            "type": "array",
-                            "required": True,
-                            'items': {
-                                'type': 'array',
-                                'items': [
-                                    {
-                                        'type': 'string',
-                                        'name': 'key_name',
-                                        'title': 'Reg Key Name'
-                                    }
-                                ]
-                            }
-                        }
-                    ],
-                    "name": "execution_settings",
-                    "title": "Execution Settings",
-                    "type": "array"
-                },
-                {
-                    "items": [
-                        {
                             "name": NOTIFY_ADAPTERS_FETCH,
                             "title": "Notify On Adapters Fetch",
                             "type": "bool"
@@ -2731,13 +2676,6 @@ class PluginBase(Configurable, Feature):
                 "smtpPassword": None,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
                 'sender_address': None
-            },
-            "execution_settings": {
-                "enabled": False,
-                "should_use_axr": False,
-                "pm_rpc_enabled": False,
-                "pm_smb_enabled": False,
-                'reg_check_exists': None,
             },
             "syslog_settings": {
                 "enabled": False,

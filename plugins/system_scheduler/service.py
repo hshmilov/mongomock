@@ -28,7 +28,7 @@ from flask import jsonify
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # Plugins that should always run async
-ALWAYS_ASYNC_PLUGINS = ['static_analysis', 'general_info', 'pm_status']
+ALWAYS_ASYNC_PLUGINS = ['static_analysis', 'general_info']
 
 
 class SystemSchedulerService(Triggerable, PluginBase, Configurable):

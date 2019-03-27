@@ -36,7 +36,6 @@ from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
 SUBNET_IP_RANGE = '171.17.0.0/16'
-BLACKLIST_LABEL = 'do_not_execute'
 
 
 def get_service():
@@ -178,18 +177,6 @@ class AxoniusService:
         # wait for all
         for service in services_to_start:
             service.wait_for_service()
-
-    def blacklist_device(self, plugin_unique_name, device_id):
-        device_to_blacklist = self.get_device_by_id(plugin_unique_name, device_id)
-        assert len(device_to_blacklist) == 1
-        device_to_blacklist = device_to_blacklist[0]
-        result = self.gui.add_labels_to_device({
-            'entities': {
-                'ids': [device_to_blacklist['internal_axon_id']], 'include': True
-            }, 'labels': [BLACKLIST_LABEL]
-        })
-        assert result.status_code == 200, f'Failed adding label. reason: ' \
-            f'{str(result.status_code)}, {str(result.content)}'
 
     def get_devices_db(self):
         return self.db.get_entity_db(EntityType.Devices)
