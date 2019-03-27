@@ -48,7 +48,9 @@ class TestGeneralSettings(TestBase):
         self.settings_page.wait_for_spinner_to_end()
 
         assert self.settings_page.get_single_adapter_checkbox()
-        assert self.settings_page.get_okta_login_details() == OKTA_LOGIN_DETAILS
+        okta_no_secret = OKTA_LOGIN_DETAILS.copy()
+        okta_no_secret['client_secret'] = '********'
+        assert self.settings_page.get_okta_login_details() == okta_no_secret
 
         assert self.settings_page.get_dc_address() == ad_client1_details['dc_name']
 

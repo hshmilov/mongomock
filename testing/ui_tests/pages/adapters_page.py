@@ -65,7 +65,10 @@ class AdaptersPage(EntitiesPage):
         return result
 
     def click_adapter(self, adapter_name):
-        self.click_button(adapter_name, button_class='x-title', button_type='div', call_space=False)
+        self.click_button(adapter_name,
+                          button_class='x-title',
+                          button_type='div',
+                          call_space=False)
         self.wait_for_table_to_load()
 
     def click_save(self):
