@@ -68,7 +68,8 @@ class AdaptersPage(EntitiesPage):
         self.click_button(adapter_name,
                           button_class='x-title',
                           button_type='div',
-                          call_space=False)
+                          call_space=False,
+                          scroll_into_view_container='.adapters-table')
         self.wait_for_table_to_load()
 
     def click_save(self):
