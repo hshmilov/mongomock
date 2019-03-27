@@ -856,7 +856,11 @@ def entity_fields(entity_type: EntityType):
                 ]
             }
         }, {
-            'plugin_name': 'gui'
+            'plugin_name': {
+                '$in': [
+                    'gui', 'general_info'
+                ]
+            }
         }]
     }, {
         PLUGIN_UNIQUE_NAME: 1, PLUGIN_NAME: 1
