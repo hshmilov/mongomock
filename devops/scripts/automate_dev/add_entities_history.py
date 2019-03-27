@@ -9,7 +9,7 @@ def main():
     ax = AxoniusService()
     entity_type = sys.argv[1] if len(sys.argv) > 1 else 'devices'
     history_db = ax.db.client['aggregator'][f'historical_{entity_type}_db_view']
-    entity_count = ax.db.client['aggregator'][f'{entity_type}_db_view'].count_documents({})
+    entity_count = ax.db.client['aggregator'][f'{entity_type}_db'].count_documents({})
     for day in range(1, 60):
         try:
             entities_limit = randint(entity_count - 8, entity_count)

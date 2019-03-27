@@ -28,7 +28,7 @@ export default {
                 mail: ['send_emails', 'send_email_to_entities'],
                 syslog: ['notify_syslog'],
                 httpsLog: ['send_https_log'],
-                jira: ['create_jira_ticket']
+                jira: ['create_jira_incident']
             }
         },
         anyEmptySettings() {

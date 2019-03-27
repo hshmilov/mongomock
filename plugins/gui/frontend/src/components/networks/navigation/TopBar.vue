@@ -153,7 +153,7 @@
       <li class="nav-item">
         <a
           class="item-link"
-          @click="startTour"
+          @click="initTourState"
         >
           <svg-icon
             name="action/help"
@@ -281,7 +281,7 @@
     },
     methods: {
       ...mapMutations({
-        toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, startTour: START_TOUR
+        toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, initTourState: START_TOUR
       }),
       ...mapActions({
         fetchLifecycle: FETCH_LIFECYCLE,

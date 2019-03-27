@@ -25,10 +25,10 @@
             }
         },
         methods: {
-            ...mapMutations({startTour: START_TOUR, changeState: CHANGE_TOUR_STATE, stopTour: STOP_TOUR}),
+            ...mapMutations({initTourState: START_TOUR, changeState: CHANGE_TOUR_STATE, stopTour: STOP_TOUR}),
             onClickTour() {
                 this.isActive = false
-                this.startTour()
+                this.initTourState()
             }
         },
         created() {

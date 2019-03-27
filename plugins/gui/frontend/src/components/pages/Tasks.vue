@@ -6,7 +6,12 @@
       { title: 'enforcement tasks' }]"
     beta
   >
-    <div class="tasks-search">
+    <x-search
+      v-model="searchValue"
+      placeholder="Search Tasks..."
+      @keyup.enter.native="onSearchConfirm"
+    />
+    <!--div class="tasks-search">
       <x-search
         v-model="searchValue"
         placeholder="Search Tasks..."
@@ -18,7 +23,7 @@
         :options="statusOptions"
         @input="onSearchConfirm"
       />
-    </div>
+    </div-->
     <x-table
       module="tasks"
       title="Enforcement Tasks"

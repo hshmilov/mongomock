@@ -2004,6 +2004,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'finished_at': task['finished_at'] or ''
             })
 
+        if mongo_sort.get('status'):
+            mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
+            del mongo_sort['status']
         sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
         return jsonify([beautify_task(x) for x in self.enforcement_tasks_runs_collection.find(
             self.__tasks_query(mongo_filter)).sort(sort).skip(skip).limit(limit)])

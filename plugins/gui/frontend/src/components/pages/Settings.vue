@@ -6,6 +6,7 @@
     <x-tabs
       ref="tabs"
       @click="determineState"
+      @updated="initTourState"
     >
       <x-tab
         id="research-settings-tab"
@@ -204,7 +205,8 @@
           first_name: '',
           last_name: ''
         },
-        userToRemove: null
+        userToRemove: null,
+        delayInitTourState: false
       }
     },
     created () {
@@ -225,7 +227,7 @@
       this.loadPluginConfig({
         pluginId: 'system_scheduler',
         configName: 'SystemSchedulerService'
-      })
+      }).then(() => this.delayInitTourState = true)
       this.fetchData({
         rule: 'metadata'
       }).then((response) => {
@@ -233,7 +235,6 @@
           this.systemInfo = response.data
         }
       })
-      this.changeState({ name: 'lifecycleRate' })
     },
     mounted () {
       if (this.$route.hash) {
@@ -251,6 +252,12 @@
         startResearch: START_RESEARCH_PHASE, stopResearch: STOP_RESEARCH_PHASE,
         updatePluginConfig: SAVE_PLUGIN_CONFIG, loadPluginConfig: LOAD_PLUGIN_CONFIG
       }),
+      initTourState() {
+        if (!this.delayInitTourState) return
+
+        this.changeState({ name: 'lifecycleRate' })
+        this.delayInitTourState = false
+      },
       validNumber (value) {
         return !(value === undefined || isNaN(value) || value <= 0)
 

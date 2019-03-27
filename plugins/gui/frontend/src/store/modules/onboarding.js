@@ -552,26 +552,12 @@ export const onboarding = {
 					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'top',
 					content: 'Enable and provide syslog credentials here for enforcements.',
 					actions: [
-						{ title: 'Next', state: 'serviceNow' }
-					]
-				},
-				'serviceNow': {
-					id: 'service_now_settings', title: 'ServiceNow SERVER CONFIG', align: 'top',
-					content: 'Enable and provide ServiceNow credentials here, or use the Adapter (if it is connected) for enforcements.',
-					actions: [
 						{ title: 'Next', state: 'mail' }
 					]
 				},
 				'mail': {
 					id: 'email_settings', title: 'MAIL SERVER CONFIG', align: 'top',
 					content: 'Enable and provide mail server credentials for enforcements.',
-					actions: [
-						{ title: 'Next', state: 'execution' }
-					]
-				},
-				'execution': {
-					id: 'execution_settings', title: 'EXECUTION CONFIG', align: 'top',
-					content: 'Enable Axonius to collect information directly from devices in addition to what is collected from Adapters.',
 					actions: [
 						{ title: 'Next', state: 'maintenance' }
 					]
