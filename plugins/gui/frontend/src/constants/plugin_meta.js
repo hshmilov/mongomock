@@ -16,7 +16,7 @@ export const pluginMeta = {
         description: 'CloudPassage Halo is a security automation platform providing visibility, protection, and continuous compliance monitoring for AWS and Azure deployments.'
     },
     redcloack_adapter: {
-        title: 'Secureworks Red Cloak - BETA',
+        title: 'Secureworks Red Cloak',
         description: 'Secureworks Red Cloak is an Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity.'
     },
     dynatrace_adapter: {
