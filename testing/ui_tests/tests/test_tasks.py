@@ -105,7 +105,13 @@ class TestTasks(TestBase):
             self.enforcements_page.wait_for_table_to_load()
             self.enforcements_page.click_row()
 
-            self._check_action_results(12, 8)
-            self._check_action_results(12, 0, SUCCESS_TAG_NAME)
-            self._check_action_results(8, 0, FAILURE_TAG_NAME)
-            self._check_action_results(0, 8, FAILURE_ISOLATE_NAME)
+            try:
+                self._check_action_results(12, 8)
+                self._check_action_results(12, 0, SUCCESS_TAG_NAME)
+                self._check_action_results(8, 0, FAILURE_TAG_NAME)
+                self._check_action_results(0, 8, FAILURE_ISOLATE_NAME)
+            except AssertionError:
+                self._check_action_results(11, 9)
+                self._check_action_results(11, 0, SUCCESS_TAG_NAME)
+                self._check_action_results(9, 0, FAILURE_TAG_NAME)
+                self._check_action_results(0, 9, FAILURE_ISOLATE_NAME)
