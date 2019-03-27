@@ -5,7 +5,7 @@ export const pluginMeta = {
     },
     truefort_adapter: {
         title: 'TrueFort - BETA',
-        description: 'TrueFort offers comprehensive application protection. Real-time application behavior analytics, control, and protection.'
+        description: 'TrueFort offers application behavior analytics, control, and protection.'
     },
     redcanary_adapter: {
         title: 'Red Canary - BETA',
@@ -13,7 +13,7 @@ export const pluginMeta = {
     },
     cloudpassage_adapter: {
         title: 'CloudPassage Halo - BETA',
-        description: 'CloudPassage Halo is a security automation platform that delivers comprehensive visibility, protection, and continuous compliance monitoring to reduce cyber security risks.'
+        description: 'CloudPassage Halo is a security automation platform providing visibility, protection, and continuous compliance monitoring for AWS and Azure deployments.'
     },
     redcloack_adapter: {
         title: 'Secureworks Red Cloak - BETA',
@@ -21,15 +21,15 @@ export const pluginMeta = {
     },
     dynatrace_adapter: {
         title: 'Dynatrace',
-        description: 'The Dynatrace software intelligence platform provides application performance management, cloud infrastructure monitoring, AI-based analytics, and digital experience management.'
+        description: 'Dynatrace is a software intelligence platform providing application performance management and cloud infrastructure monitoring.'
     },
     code42_adapter: {
         title: 'Code42',
-        description: 'Code42 provides data protection and visibility for data at rest and in motion on both endpoints and the cloud.'
+        description: 'Code42 is a next-gen DLP solution used to detect insider threats, satisfy regulatory compliance, and accelerate incident response investigations.'
     },
     counter_act_adapter: {
         title: 'Forescout CounterACT',
-        description: 'The Forescout CounterACT platform provides insight into numerous types of network-connected devices.'
+        description: 'The Forescout CounterACT platform provides insight into network-connected devices.'
     },
     armis_adapter: {
         title: 'Armis',
@@ -41,15 +41,15 @@ export const pluginMeta = {
     },
     logrhythm_adapter: {
         title: 'LogRhythm - BETA',
-        description: 'The LogRhythm platform combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation & orchestration in a single solution.'
+        description: 'LogRhythm platform combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation and orchestration.'
     },
     twistlock_adapter: {
         title: 'Twistlock',
         description: 'Twistlock provides container and cloud native cybersecurity for teams using Docker, Kubernetes, serverless, and other cloud native technologies.'
     },
     riverbed_adapter: {
-        title: 'Riverbed - BETA',
-        description: 'The SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges.'
+        title: 'Riverbed SteelCentral Controller (SCC) - BETA',
+        description: 'Riverbed SteelCentral Controller SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges.'
     },
     checkpoint_r80_adapter: {
         title: 'Check Point Infinity',
@@ -60,44 +60,44 @@ export const pluginMeta = {
         description: 'SysAid is an integrated ITSM, Service Desk and Help Desk software solution.'
     },
     mssql_adapter: {
-        title: 'MSSQL Adapter',
-        description: 'The MSSQL adapter allows you to import devices information from arbitrary SQL servers.'
+        title: 'Microsoft SQL Server Adapter',
+        description: 'The Microsoft SQL Server Adapter imports device information from arbitrary SQL servers.'
     },
     quest_kace_adapter: {
-        title: 'Quest KACE - BETA',
+        title: 'Quest KACE Endpoint Systems Management Appliances - BETA',
         description: 'Quest KACE Endpoint Systems Management Appliances provision, manage, secure, and service network-connected devices.'
     },
     shodan_adapter: {
         title: 'Shodan',
-        description: 'Shodan is the world\'s first search engine for Internet-connected devices.'
+        description: 'Shodan is a search engine for Internet-connected devices.'
     },
     samange_adapter: {
         title: 'Samanage',
-        description: 'The Samanage application is a unified, cloud-based IT service desk and asset management platform.'
+        description: 'Samanage is a unified, cloud-based IT service desk and asset management platform.'
     },
     paloalto_panorama_adapter: {
         title: 'Palo Alto Networks Panorama',
-        description: 'The Panorama™ management server provides centralized monitoring and management of multiple Palo Alto Networks next-generation firewalls and of WildFire appliances and appliance clusters.'
+        description: 'The Palo Alto Panorama management server provides centralized monitoring and management of multiple next-generation firewalls and appliance clusters.'
     },
     proxmox_adapter: {
-        title: 'Proxmox VE',
-        description: 'Proxmox Virtual Environment is an open source server virtualization management solution based on QEMU/KVM and LXC.'
+        title: 'Proxmox Virtual Environment (VE)',
+        description: 'Proxmox Virtual Environment (VE) is an open source server virtualization management solution based on QEMU/KVM and LXC.'
     },
     foreman_adapter: {
         title: 'Foreman',
-        description: 'Foreman is a free open source project that gives you the power to easily automate repetitive tasks, quickly deploy applications, and proactively manage your servers lifecyle, on-premises or in the cloud.'
+        description: 'Foreman is a free open source project that automates repetitive tasks, quickly deploys applications, and proactively manages server lifecyle, on-premises or in the cloud.'
     },
     saltstack_adapter: {
         title: 'SaltStack',
-        description: 'SaltStack intelligent automation delivers, event-driven security, cloud and configuration management for the complexity and scale of a software-defined world.'
+        description: 'SaltStack intelligent automation delivers, event-driven security, cloud and configuration management,'
     },
     snipeit_adapter: {
         title: 'Snipe-IT',
         description: 'Snipe-IT is a free, open source IT asset management system written in PHP.'
     },
     mobi_control_adapter: {
-        title: 'Soti Mobi Control - BETA',
-        description: 'MobiControl is a software system for managing mobile devices in the enterprise.'
+        title: 'Soti MobiControl - BETA',
+        description: 'SOTI MobiControl is a software system for managing mobile devices in the enterprise.'
     },
     absolute_adapter: {
         title: 'Absolute',
@@ -113,18 +113,18 @@ export const pluginMeta = {
     },
     linux_ssh_adapter: {
         title: 'Linux SSH Adapter',
-        description: 'Linux Secure Shell Adapter uses remote command execution over the SSH protocol in order to gather information about the endpoint Linux machine.'
+        description: 'The Linux Secure Shell Adapter uses remote command execution over the SSH protocol to gather information about the endpoint Linux machine.'
     },
     malwarebytes_adapter: {
         title: 'Malwarebytes - BETA',
         description: 'Malwarebytes protects endpoints from ransomware, automates endpoint remediation, and provides continuous visibility and monitoring.'
     },
     cybereason_adapter: {
-        title: 'Cybereason',
-        description: 'The Cybereason Deep Hunting Platform delivers endpoint detection and response (EDR), next-generation antivirus (NGAV), managed threat hunting, and threat intelligence.'
+        title: 'Cybereason Deep Detect & Respond',
+        description: 'Cybereason Deep Detect & Respond (EDR) defends against advanced attacks by collecting and analyzing behavioral data to identify suspicious activities.'
     },
     oracle_cloud_adapter: {
-        title: 'Oracle Cloud Infrastructure',
+        title: 'Oracle Cloud',
         description: 'Oracle Cloud is a computing service providing servers, storage, network, applications and services.'
     },
     cisco_umbrella_adapter: {
@@ -136,8 +136,8 @@ export const pluginMeta = {
         description: 'Aruba ClearPass is a network access control (NAC) solution that allows enterprises to identify devices, enforce policies, and remediate threats.'
     },
     ibm_tivoli_taddm_adapter: {
-        title: 'IBM Tivoli TADDM',
-        description: 'IBM® Tivoli Application Dependency Discovery Manager (TADDM) is a configuration management tool that helps IT operations personnel ensure and improve application availability in application environments.'
+        title: 'IBM Tivoli Application Dependency Discovery Manager (TADDM)',
+        description: 'IBM Tivoli Application Dependency Discovery Manager (TADDM) is a configuration management tool that helps IT operations personnel ensure and improve application availability in application environments.'
     },
     nimbul_adapter: {
         title: 'Nimbul',
@@ -145,14 +145,14 @@ export const pluginMeta = {
     },
     tripwire_enterprise_adapter: {
         title: 'Tripwire Enterprise',
-        description: 'Tripwire® Enterprise is a security configuration management (SCM) suite that provides fully integrated solutions for policy, file integrity and remediation management.'
+        description: 'Tripwire Enterprise is a security configuration management (SCM) suite that provides fully integrated solutions for policy, file integrity and remediation management.'
     },
     dropbox_adapter: {
         title: 'Dropbox',
-        description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud and client software.'
+        description: 'Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud, and client software.'
     },
     azure_ad_adapter: {
-        title: 'Microsoft Azure AD',
+        title: 'Microsoft Azure Active Directory (Azure AD)',
         description: 'Microsoft Azure Active Directory (Azure AD) is Microsoft\'s multi-tenant, cloud-based directory, and identity management service.'
     },
     divvycloud_adapter: {
@@ -169,11 +169,11 @@ export const pluginMeta = {
     },
     claroty_adapter: {
         title: 'Claroty',
-        description: 'Claroty discovers assets and monitors communication patterns for ICS networks. '
+        description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'
     },
     solarwinds_orion_adapter: {
         title: 'Solarwinds Network Performance Manager',
-        description: 'Solarwinds is a unified IT systems management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hybrid environment, or in the cloud.'
+        description: 'Solarwinds Network Performance Manager is a unified IT systems management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hybrid environment, or in the cloud.'
     },
     pingidentity_adapter: {
         title: 'Ping Identity',
@@ -185,7 +185,7 @@ export const pluginMeta = {
     },
     crowd_strike_adapter: {
         title: 'CrowdStrike Falcon',
-        description: 'The CrowdStrike Falcon platform is delivers next-generation antivirus, endpoint detection and response (EDR), managed threat hunting, and threat intelligence.'
+        description: 'CrowdStrike Falcon delivers next-generation antivirus, endpoint detection and response (EDR), managed threat hunting, and threat intelligence.'
     },
     deep_security_adapter: {
         title: 'Trend Micro Deep Security',
@@ -193,11 +193,11 @@ export const pluginMeta = {
     },
     gce_adapter: {
         title: 'Google Compute/Kubernetes Engine',
-        description: 'The Google Compute/Kubernetes Engine adapters supports both GCE\'s virtual machines as well as the GKE environment for deploying containerized applications.'
+        description: 'The Google Compute/Kubernetes Engine Adapter supports both GCE\'s virtual machines as well as the GKE environment for deploying containerized applications.'
     },
     duo_adapter: {
         title: 'Duo Beyond',
-        description: 'Duo Beyond is a zero-trust security platform that bases application access decisions on the trust of user identities and their devices.'
+        description: 'Duo Beyond identifies corporate vs. personal devices, blocks untrusted devices, and give users secure access to internal applications.'
     },
     datadog_adapter: {
         title: 'Datadog',
@@ -205,35 +205,35 @@ export const pluginMeta = {
     },
     redseal_adapter: {
         title: 'RedSeal',
-        description: 'RedSeal provides companies with a simple metric for how effectively their current security measures are working to protect their network.'
+        description: 'RedSeal’s network modeling and risk scoring platform models customers\' entire hybrid data center of public cloud, private cloud and physical network.'
     },
     google_mdm_adapter: {
-        title: 'G-Suite MDM',
+        title: 'Google Mobile Management',
         description: 'Google Mobile Management is an MDM solution for G Suite customers for Android, iOS, Windows and other smartphones.'
     },
     tenable_security_center_adapter: {
-        title: 'Tenable SecurityCenter',
-        description: 'SecurityCenter consolidates and evaluates vulnerability data across your organization, prioritizing security risks and providing a clear view of your security posture.'
+        title: 'Tenable.sc (formerly SecurityCenter)',
+        description: 'Tenable.sc (formerly SecurityCenter)  consolidates and evaluates vulnerability data, prioritizing security risks.'
     },
     active_directory_adapter: {
-        title: 'Active Directory',
-        description: 'Active Directory (AD) is a directory service for Windows domain networks that authenticates and authorizes all users and computers.'
+        title: 'Microsoft Active Directory (AD)',
+        description: 'Microsoft Active Directory (AD) is a directory service for Windows domain networks that authenticates and authorizes all users and computers.'
     },
     gui: {
         title: 'Custom Data',
         description: 'Generic fields with values given by the user, that can be edited in the entity configuration page'
     },
     gotoassist_adapter: {
-        title: 'GoToAssist',
-        description: 'GoToAssist is a cloud-based toolset for IT and customer support teams an includes remote support, IT monitoring and service desk management.'
+        title: 'RescueAssist',
+        description: 'RescueAssist (formerly GoToAssist) is a cloud-based toolset for IT and customer support teams including remote support, IT monitoring, and service desk management.'
     },
     airwatch_adapter: {
         title: 'VMWare AirWatch',
         description: 'VMWare AirWatch provides of enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
     },
     fireeye_hx_adapter: {
-        title: 'FireEye Endpoint Security (HX)',
-        description: 'FireEye Endpoint Security (HX) proactively inspects, analyzes, and contains known and unknown threats at any endpoint.'
+        title: 'FireEye Helix Security Platform',
+        description: 'FireEye Helix Security Platform proactively inspects, analyzes, and contains known and unknown threats on endpoints.'
     },
     aws_adapter: {
         title: 'Amazon Web Services (AWS)',
@@ -256,12 +256,12 @@ export const pluginMeta = {
         description: 'Carbon Black CB Response includes EDR and threat hunting for security operations centers and incident response teams.'
     },
     epo_adapter: {
-        title: 'McAfee ePO',
+        title: 'McAfee ePolicy Orchestrator (ePO)',
         description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides real-time monitoring of security solutions.'
     },
     cylance_adapter: {
         title: "CylancePROTECT",
-        description: "CylancePROTECT uses artificial intelligence to detect and protect against ransomware, molecules threats, fileless malware and malicious documents."
+        description: "CylancePROTECT uses artificial intelligence to detect and protect against ransomware, advanced threats, fileless malware, and malicious documents."
     },
     kaseya_adapter: {
         title: 'Kaseya VSA',
@@ -271,17 +271,13 @@ export const pluginMeta = {
         title: 'Puppet',
         description: 'Puppet is an open-source software configuration management tool.'
     },
-    qualys_adapter: {
-        title: 'Qualys Cloud Agent',
-        description: 'Qualys Cloud Agents scan assets like dynamic IP client machines, remote/roaming users, static and ephemeral cloud instances, and systems sensitive to external scanning.'
-    },
     qualys_scans_adapter: {
         title: 'Qualys Cloud Platform',
         description: 'Qualys Cloud Platform monitors customers\' global security and compliance posture using sensors.'
     },
     nexpose_adapter: {
         title: 'Rapid7 Nexpose',
-        description: 'Rapid7 Nexpose is a vulnerability management solution, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'
+        description: 'Rapid7 Nexpose is an on-premise vulnerability management solution, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'
     },
     sentinelone_adapter: {
         title: 'SentinelOne',
@@ -289,11 +285,11 @@ export const pluginMeta = {
     },
     splunk_adapter: {
         title: 'Splunk',
-        description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository from which it can generate graphs, reports, alerts, dashboards, and visualizations.'
+        description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository.'
     },
     symantec_adapter: {
-        title: 'Symantec Endpoint Protection Manager',
-        description: 'Symantec Endpoint Protection Manager manages events, policies, and registration for the client computers that connect to customer networks.'
+        title: 'Symantec Endpoint Management Suite',
+        description: 'Symantec Endpoint Management Suite (formerly Altiris) manages, patches, and remediates application and OS configurations on desktops, laptops and servers to strengthen endpoint security and maximize user productivity. '
     },
     nessus_adapter: {
         title: 'Tenable Nessus',
@@ -305,7 +301,7 @@ export const pluginMeta = {
     },
     nessus_csv_adapter: {
         title: 'Tenable Nessus CSV File',
-        description: 'Tenable Nessus CSV File '
+        description: 'The Tehable Nessus CSV File Adapter imports device information from vulnerability scan data.'
     },
     esx_adapter: {
         title: 'VMware ESXi',
@@ -317,7 +313,7 @@ export const pluginMeta = {
     },
     eset_adapter: {
         title: 'ESET Endpoint Security',
-        description: 'ESET Endpoint Security is an anti-malware suite for Windows with web filter, firewall, and USB drive and botnet protection.'
+        description: 'ESET Endpoint Security is an anti-malware suite for Windows including web filtering, firewall, USB drive and botnet protection.'
     },
     traiana_lab_machines_adapter: {
         title: 'Traiana Lab Machines',
@@ -325,15 +321,15 @@ export const pluginMeta = {
     },
     fortigate_adapter: {
         title: 'Fortinet FortiGate',
-        description: 'Fortinet FortiGate Next-Generation firewall provides high performance, multilayered validated security and visibility for end-to-end protection across the entire enterprise network'
+        description: 'Fortinet FortiGate is a next-generation firewall providing security and visibility for end-to-end protection across the entire enterprise network.'
     },
     qcore_adapter: {
         title: 'Qcore',
         description: 'Qcore medical pumps adapters (Saphire+ 14.5)'
     },
     sccm_adapter: {
-        title: 'Microsoft SCCM',
-        description: 'Microsoft System Center Configuration Manager (SCCM) uses on-premises Configuration Manager or Microsoft Exchange to manage PCs, servers, and devices.'
+        title: 'Microsoft System Center Configuration Manager (SCCM)',
+        description: 'Microsoft System Center Configuration Manager (SCCM) is a systems management software product for managing large groups of computers running Windows NT, Windows Embedded, macOS (OS X), Linux or UNIX, as well as Windows Phone, Symbian, iOS and Android mobile operating systems'
     },
     desktop_central_adapter: {
         title: 'ManageEngine Desktop Central',
@@ -349,7 +345,7 @@ export const pluginMeta = {
     },
     mobileiron_adapter: {
         title: 'MobileIron EMM',
-        description: 'The MobileIron EMM platform enables enterprises to secure and manage modern operating systems in a world of mixed-use mobile devices and desktops.'
+        description: 'MobileIron EMM enables enterprises to secure and manage modern operating systems on mobile devices and desktops.'
     },
     minerva_adapter: {
         title: 'Minerva Labs Endpoint Malware Vaccination',
@@ -372,16 +368,16 @@ export const pluginMeta = {
         description: 'BeyondTrust Remote Support (formerly Bomgar) allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile devices.'
     },
     bigfix_adapter: {
-        title: 'IBM Bigfix',
+        title: 'IBM BigFix',
         description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
     },
     ensilo_adapter: {
-        title: 'enSilo Endpoint Protection',
-        description: 'enSilo Endpoint Protection automates and orchestrates detection, prevention and response against molecules malware and ransomware.'
+        title: 'enSilo',
+        description: 'enSilo automates and orchestrates detection, prevention, and response against advanced malware and ransomware.'
     },
     secdo_adapter: {
         title: 'Secdo Endpoint Protection',
-        description: 'The SECDO Next Generation IR Platform automates endpoint forensic analysis and cyber investigations for security teams.'
+        description: 'Secdo Endpoing Protection automates endpoint forensic analysis and cyber investigations for security teams.'
     },
     openstack_adapter: {
         title: 'OpenStack',
@@ -389,7 +385,7 @@ export const pluginMeta = {
     },
     tanium_adapter: {
         title: 'Tanium',
-        description: 'Tanium for IT Asset Visibility discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+        description: 'Tanium for discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
     },
     aruba_adapter: {
         title: 'Aruba',
@@ -405,7 +401,7 @@ export const pluginMeta = {
     },
     illusive_adapter: {
         title: 'Illusive Networks',
-        description: 'Illusive Networks produces technology that deceives cyber attackers by planting false information about given network\'s resources.'
+        description: 'Illusive Networks deceives cyber attackers by planting false information about a given network\'s resources.'
     },
     chef_adapter: {
         title: 'Chef',
@@ -424,8 +420,8 @@ export const pluginMeta = {
         description: 'BlackBerry Unified Endpoint Management (UEM) delivers endpoint management and policy control for devices and apps on-premise or in the cloud.'
     },
     oracle_vm_adapter: {
-        title: 'OracleVM',
-        description: 'Oracle\'s server virtualization products support x86 and SPARC architectures and a variety of workloads such as Linux, Windows and Oracle Solaris.'
+        title: 'Oracle VM',
+        description: 'Oracle VM\'s server virtualization products support x86 and SPARC architectures and a variety of workloads such as Linux, Windows and Oracle Solaris. '
     },
     cisco_meraki_adapter: {
         title: 'Cisco Meraki',
@@ -456,7 +452,7 @@ export const pluginMeta = {
         description: 'Stresstest can be configured with any amount of devices and it creates that number of random devices.'
     },
     hyper_v_adapter: {
-        title: 'Microsoft HyperV',
+        title: 'Microsoft Hyper-V',
         description: 'Microsoft Hyper-V is a native hypervisor; it can create virtual machines on x86-64 systems running Windows.'
     },
     symantec_altiris_adapter: {
@@ -464,7 +460,7 @@ export const pluginMeta = {
         description: 'The Symantec Asset Management Suite enables organizations to take control, uncover savings, and ensure compliance of IT assets, by giving a picture of assets throughout their lifecycle.'
     },
     azure_adapter: {
-        title: 'Microsoft Azure Compute',
+        title: 'Microsoft Azure',
         description: 'Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers.'
     },
     okta_adapter: {

@@ -108,6 +108,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_printers = ListField(ADPrinter, "AD Attached Printers")
         ad_dfsr_shares = ListField(ADDfsrShare, "AD DFSR Shares")
         ad_dc_source = Field(str, 'AD DC Source')
+        ms_mcs_adm_pwd = Field(str, 'Mc Mcs Admin Pwd')
+        ms_mcs_adm_pwd_expiration_time = Field(datetime, 'Mc Mcs Admin Pwd Expiration Time')
 
     class MyUserAdapter(UserAdapter, ADEntity):
         user_managed_objects = ListField(str, "AD User Managed Objects")
@@ -956,6 +958,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 device = self._new_device_adapter()
                 device.ad_dc_source = device_raw.get('AXON_DC_ADDR')
                 self._parse_generic_ad_raw_data(device, device_raw)
+                try:
+                    device.ms_mcs_adm_pwd = device_raw.get('msMcsAdmPwd')
+                    device.ms_mcs_adm_pwd_expiration_time = parse_date(device_raw.get('msMcsAdmPwdExpirationTime'))
+                except Exception:
+                    logger.exception(f'Problem adding msmcs stuff')
                 device.description = device_raw.get('description')
                 device.network_interfaces = []
                 device.last_seen = last_seen

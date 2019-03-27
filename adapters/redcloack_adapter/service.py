@@ -27,7 +27,7 @@ class RedcloackAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability('https://api.secureworks.com/')
 
     @staticmethod
     def get_connection(client_config):
@@ -44,7 +44,7 @@ class RedcloackAdapter(AdapterBase):
             return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                client_config['domain'], str(e))
+                'https://api.secureworks.com/', str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -103,12 +103,12 @@ class RedcloackAdapter(AdapterBase):
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
-            device_id = device_raw.get('id')
+            device_id = device_raw.get('host_id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
-            device.name = device_raw.get('name')
+            device.id = device_id + '_' + (device_raw.get('host_name') or '')
+            device.name = device_raw.get('host_name')
             try:
                 device.last_seen = parse_date(device_raw.get('last_connect_time'))
             except Exception:
@@ -116,11 +116,10 @@ class RedcloackAdapter(AdapterBase):
             try:
                 system_info = device_raw.get('system_information')
                 if system_info:
-                    device.hostname = system_info.get('hostname')
+                    device.hostname = system_info.get('host_name')
                     device.bios_serial = system_info.get('bios_serial')
-                    macs = system_info.get('ethernet_address')
                     ips = system_info.get('ip_address')
-                    device.add_ips_and_macs(macs, ips)
+                    device.add_ips_and_macs(None, ips)
                     device.agent_version = system_info.get('redcloak_version')
                     if system_info.get('logon_user') and isinstance(system_info.get('logon_user'), list):
                         device.last_used_users = system_info.get('logon_user')

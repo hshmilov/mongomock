@@ -10,7 +10,7 @@ from ui_tests.pages.page import X_BODY
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
 Adapter = namedtuple('Adapter', 'name description')
-AD_NAME = 'Active Directory'
+AD_NAME = 'Microsoft Active Directory (AD)'
 
 
 class AdaptersPage(EntitiesPage):

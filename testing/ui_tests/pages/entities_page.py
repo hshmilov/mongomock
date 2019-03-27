@@ -56,7 +56,7 @@ class EntitiesPage(Page):
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_HEADER_XPATH = '//div[@class=\'table-container\']/table/thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
-    VALUE_ADAPTERS_AD = 'Active Directory'
+    VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
     TABLE_HEADER_CELLS_CSS = 'th'
     TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'

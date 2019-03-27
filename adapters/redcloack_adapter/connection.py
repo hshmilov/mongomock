@@ -11,7 +11,7 @@ class RedcloackConnection(RESTConnection):
     """ rest client for Redcloack adapter """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, url_base_prefix='api/redcloak.', domain='https://api.secureworks.com/',
+        super().__init__(*args, url_base_prefix='api/redcloak', domain='https://api.secureworks.com/',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
@@ -31,7 +31,7 @@ class RedcloackConnection(RESTConnection):
                                      url_params={'offset': offset, 'count': DEVICE_PER_PAGE})
                 if not response:
                     break
-                yield from response
+                yield from response['hosts']
                 offset += DEVICE_PER_PAGE
             except Exception:
                 logger.exception(f'Bad offset {offset}')

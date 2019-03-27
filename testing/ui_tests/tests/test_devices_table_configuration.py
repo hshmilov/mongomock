@@ -85,9 +85,11 @@ class TestDevicesTable(TestEntitiesTable):
             assert f'devices/{first_id}' in self.driver.current_url
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_tab('Adapters Data')
-            assert self.devices_page.find_vertical_tabs() == ['WMI Info', 'Active Directory', 'Custom Data']
+            assert self.devices_page.find_vertical_tabs() == ['WMI Info',
+                                                              'Microsoft Active Directory (AD)',
+                                                              'Custom Data']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
-            self.devices_page.click_tab('Active Directory')
+            self.devices_page.click_tab('Microsoft Active Directory (AD)')
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AD_NAME)
 
             def _check_installed_software():
