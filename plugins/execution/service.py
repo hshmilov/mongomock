@@ -356,6 +356,11 @@ class ExecutionService(PluginBase):
             self._save_action_data({'status': 'failed',
                                     'product': 'General error happened: {0}'.format(str(e))},
                                    action_id)
+            # Inform issuer.
+            self.request_remote_plugin('action_update/{0}'.format(action_id),
+                                       plugin_unique_name=issuer,
+                                       method='POST',
+                                       data=json.dumps({'status': 'failed', 'output': str(e)}))
             raise
         return None
 

@@ -84,6 +84,7 @@ class DeviceControlService(Triggerable, PluginBase):
             internal_axon_ids = request_content['internal_axon_ids']    # a list of internal axon id's
             action_type = request_content['action_type']
             action_name = request_content['action_name']
+            credentials = request_content.get('custom_credentials') or {}
             action_params = {}
 
             if action_type == 'shell':
@@ -121,17 +122,18 @@ class DeviceControlService(Triggerable, PluginBase):
         # Run the command.
         logger.info(f'Got {len(devices)} devices to run action {action_name} on. Sending commands..')
         for device in devices:
-            yield self.__request_action_from_device(device, action_name, action_type, action_params, 1), \
+            yield self.__request_action_from_device(device, action_name, action_type, action_params, credentials, 1), \
                 device.internal_axon_id
 
     def __request_action_from_device(self, device: AxoniusDevice, action_name, action_type,
-                                     action_params, attempt_number, sleep_time=0) -> Promise:
+                                     action_params, credentials, attempt_number, sleep_time=0) -> Promise:
         """
         Requests action from a device.
         :param device: an AxoniusDevice object.
         :param action_name: string representing the name of the action.
         :param action_type: string representing the type of the action.
         :param action_params: a dict representing the parameters for the action.
+        :param credentials: optional credentials
         :param attempt_number: an int representing what attempt is that.
         :param sleep_time: time to sleep before requesting, in seconds.
         :return: the execution promise.
@@ -142,8 +144,12 @@ class DeviceControlService(Triggerable, PluginBase):
         if action_type == 'shell':
             p = device.request_action(
                 'execute_shell',
-                {'shell_commands':
-                 {os: [action_params['command']] for os in ['Windows', 'Linux', 'Mac', 'iOS', 'Android']}}
+                {
+                    'shell_commands': {
+                        os: [action_params['command']] for os in ['Windows', 'Linux', 'Mac', 'iOS', 'Android']
+                    },
+                    'custom_credentials': credentials
+                }
             )
         elif action_type == 'deploy':
             # we need to store the binary file.
@@ -160,27 +166,29 @@ class DeviceControlService(Triggerable, PluginBase):
                 'execute_binary',
                 {
                     'binary_file_path': random_filepath,
-                    'binary_params': action_params['params']
+                    'binary_params': action_params['params'],
+                    'custom_credentials': credentials
                 }
             )
         else:
             raise ValueError(f'expected action type to be shell/deploy but got {action_type}')
 
         p.then(did_fulfill=functools.partial(self.run_action_success, device, action_name,
-                                             action_type, action_params, attempt_number),
+                                             action_type, action_params, credentials, attempt_number),
                did_reject=functools.partial(self.run_action_failure, device, action_name,
-                                            action_type, action_params, attempt_number))
+                                            action_type, action_params, credentials, attempt_number))
 
         return p
 
     def run_action_success(self, device: AxoniusDevice, action_name, action_type,
-                           action_params, attempt_number, data):
+                           action_params, credentials, attempt_number, data):
         """
         Success function for run shell.
         :param device: an AxoniusDevice object on which the command was run.
         :param action_name: the name of the action
         :param action_type: the type of the action
         :param action_params: the parameters of the action
+        :param credentials: optional credentials
         :param attempt_number: an int representing the current attempt number to run the command.
         :param data: the result of the execution.
         :return:
@@ -190,8 +198,10 @@ class DeviceControlService(Triggerable, PluginBase):
             output = data['output']['product'][0]
             if output['status'] != 'ok':
                 # Its actually a failure!
-                return self.run_action_failure(device, action_name, action_type, action_params, attempt_number,
-                                               Exception(f'data status is not ok: {output}'))
+                return self.run_action_failure(
+                    device, action_name, action_type, action_params, credentials, attempt_number,
+                    Exception(f'data status is not ok: {output}')
+                )
         except Exception:
             logger.exception('Error in run shell success beginning')
             raise
@@ -221,13 +231,14 @@ class DeviceControlService(Triggerable, PluginBase):
         return data
 
     def run_action_failure(self, device: AxoniusDevice, action_name, action_type,
-                           action_params, attempt_number, exc):
+                           action_params, credentials, attempt_number, exc):
         """
         Failure function for run shell.
         :param device: an AxoniusDevice object on which the command was run.
         :param action_name: the name of the action
         :param action_type: the type of the action
         :param action_params: the parameters of the action
+        :param credentials: optional credentials
         :param attempt_number: an int representing the current attempt number to run the command.
         :param exc: a string representing the error.
         :return:
@@ -247,6 +258,7 @@ class DeviceControlService(Triggerable, PluginBase):
                                                action_name,
                                                action_type,
                                                action_params,
+                                               credentials,
                                                attempt_number + 1,
                                                SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS)
 

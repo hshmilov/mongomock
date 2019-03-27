@@ -433,11 +433,13 @@ def linux_servers_creator(i: int, network: MockNetwork, device: MockNetworkDevic
 
     # specific
     chef_specific = ChefAdapterParser.new_device_adapter()
-    chef_specific.public_ip = public_ip
+    if public_ip:
+        chef_specific.add_public_ip(public_ip)
 
     aws_specific = AwsAdapterParser.new_device_adapter()
     aws_specific.aws_region = random.choice(['us-east-1', 'us-east-2'])
-    aws_specific.public_ip = public_ip
+    if public_ip:
+        aws_specific.add_public_ip(public_ip)
     aws_specific.instance_type = {
         4: 't2.medium',  # 4gb 2cores. we have 1
         8: random.choice(['t2.large', 'm4.large']),

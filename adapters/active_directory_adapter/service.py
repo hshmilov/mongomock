@@ -1261,7 +1261,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         "//./root/cimv2"]
         raise NoClientError()  # Couldn't find an appropriate client
 
-    def put_files(self, device_data, files_path, files_content):
+    def put_files(self, device_data, files_path, files_content, custom_credentials=None):
         """
         puts a list of files.
         :param device_data: the device data.
@@ -1274,9 +1274,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         for fp, fc in zip(files_path, files_content):
             commands_list.append({"type": "putfile", "args": [fp, fc]})
 
-        return self.execute_wmi_smb(device_data, commands_list)
+        return self.execute_wmi_smb(device_data, commands_list, custom_credentials=custom_credentials)
 
-    def get_files(self, device_data, files_path):
+    def get_files(self, device_data, files_path, custom_credentials=None):
         """
         gets a list of files.
         :param device_data: the device data.
@@ -1288,9 +1288,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         for fp in files_path:
             commands_list.append({"type": "getfile", "args": [fp]})
 
-        return self.execute_wmi_smb(device_data, commands_list)
+        return self.execute_wmi_smb(device_data, commands_list, custom_credentials=custom_credentials)
 
-    def delete_files(self, device_data, files_path):
+    def delete_files(self, device_data, files_path, custom_credentials=None):
         """
         deletes a list of files.
         :param device_data: the device data.
@@ -1302,9 +1302,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         for fp in files_path:
             commands_list.append({"type": "deletefile", "args": [fp]})
 
-        return self.execute_wmi_smb(device_data, commands_list)
+        return self.execute_wmi_smb(device_data, commands_list, custom_credentials=custom_credentials)
 
-    def execute_binary(self, device_data, binary_file_path, binary_params):
+    def execute_binary(self, device_data, binary_file_path, binary_params, custom_credentials=None):
         """
         Executes a binary file. We do not get the contents of this file, but rather the absolute path
         of this file on the machine that runs the current execution code (not the target).
@@ -1324,7 +1324,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         if type(binary_params) != str:
             raise ValueError(f"Error, type of binary_params should be string, but instead got {type(binary_params)}")
 
-        return self.execute_wmi_smb(device_data, [{"type": "execbinary", "args": [binary_file_path, binary_params]}])
+        return self.execute_wmi_smb(
+            device_data,
+            [{"type": "execbinary", "args": [binary_file_path, binary_params]}],
+            custom_credentials=custom_credentials
+        )
 
     def _execute_subprocess_generically(self, subprocess_arguments):
         """
@@ -1535,7 +1539,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
 
-    def execute_shell(self, device_data, shell_commands):
+    def execute_shell(self, device_data, shell_commands, custom_credentials=None):
         """
         Shell commands is a dict of which keys are operation systems and values are lists of cmd commands.
         The commands will be run *in parallel* and not consequently.
@@ -1552,7 +1556,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         for command in shell_command_windows:
             commands_list.append({"type": "shell", "args": [command]})
 
-        return self.execute_wmi_smb(device_data, commands_list)
+        return self.execute_wmi_smb(device_data, commands_list, custom_credentials=custom_credentials)
 
     def supported_execution_features(self):
         """

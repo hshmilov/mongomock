@@ -225,13 +225,7 @@ class GeneralInfoService(Triggerable, PluginBase):
 
             logger.debug(f'Going to request action on {internal_axon_id}')
 
-            if request_content['command'].get('wmi_user') and request_content['command'].get('wmi_password'):
-                custom_credentials = {
-                    'username': request_content['command']['wmi_user'],
-                    'password': request_content['command']['wmi_password']
-                }
-            else:
-                custom_credentials = {}
+            custom_credentials = request_content.get('custom_credentials') or {}
 
             # Get all wmi queries from all subadapters.
             wmi_smb_commands = []
@@ -408,7 +402,7 @@ class GeneralInfoService(Triggerable, PluginBase):
 
             if str(exc) == '{\'status\': \'failed\', \'output\': \'\'}':
                 logger.debug(f'No executing adapters for device {device_hostname}, continuing')
-                state_promise.do_resolve(True)
+                state_promise.do_resolve('Can not find adapter to execute with (wmi)')
                 return
 
             logger.info('Failed running wmi query on device {0}! error: {1}'
@@ -568,12 +562,12 @@ class GeneralInfoService(Triggerable, PluginBase):
     def _handle_pm_failure(self, internal_axon_id, state_promise: Promise, exc):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
         device = self.devices_db.find_one({"internal_axon_id": internal_axon_id})
-        device_hostname = self.get_first_data(device, 'hostname')
         if device is None:
             logger.critical(f"Did not find document containing internal_axon_id {internal_axon_id}. "
                             f"Did we have correlation in place?")
             state_promise.do_resolve(False)
             return
+        device_hostname = self.get_first_data(device, 'hostname')
 
         try:
             # Avidor: Someone decided that on failure we get an exception object, and not a real object.
@@ -582,7 +576,7 @@ class GeneralInfoService(Triggerable, PluginBase):
 
             if "{'status': 'failed', 'output': ''}" == str(exc):
                 logger.debug(f"No executing adapters for device {device['internal_axon_id']}, continuing")
-                state_promise.do_resolve(True)
+                state_promise.do_resolve('Can not find adapter to execute with (pm)')
                 return
 
             logger.info("Failed running pm status on device {0}! error: {1}"

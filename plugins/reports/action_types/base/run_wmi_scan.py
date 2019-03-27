@@ -23,7 +23,7 @@ class RunWMIScan(ActionTypeBase):
                     'type': 'bool'
                 },
                 {
-                    'name': 'wmi_user',
+                    'name': 'wmi_username',
                     'title': 'WMI User',
                     'type': 'string'
                 },
@@ -55,7 +55,7 @@ class RunWMIScan(ActionTypeBase):
         }
 
     def _run(self) -> EntitiesResult:
-        credentials_exist = self._config.get('wmi_username') or self._config.get('wmi_password')
+        credentials_exist = self._config.get('wmi_username') and self._config.get('wmi_password')
         use_adapter = self._config.get('use_adapter')
 
         if not credentials_exist and not use_adapter:
@@ -63,16 +63,21 @@ class RunWMIScan(ActionTypeBase):
                 self._internal_axon_ids,
                 reason=f'Please use the adapter credentials or specify custom credentials'
             )
-        if credentials_exist and use_adapter:
-            return generic_fail(
-                self._internal_axon_ids,
-                reason=f'Please choose to use the adapter credentials or custom credentials, but not both'
-            )
+
+        if use_adapter:
+            credentials = {}
+        else:
+            credentials = {
+                'username': self._config.get('wmi_username'),
+                'password': self._config.get('wmi_password')
+            }
+
         action_data = {
             'internal_axon_ids': self._internal_axon_ids,
             'action_type': 'shell',
             'action_name': self._action_saved_name,
-            'command': self._config
+            'command': self._config,
+            'custom_credentials': credentials
         }
         # pylint: disable=protected-access
         logger.info(f'Sending wmi scan request to {len(self._internal_axon_ids)} devices using general info')
