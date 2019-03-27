@@ -32,6 +32,7 @@ class StresstestAdapter(AdapterBase):
         test_hyperlinks_int = Field(int, 'Test External Link Int Hyperlink')
         test2_hyperlinks_str = Field(str, 'Test Query Link String Hyperlink')
         test2_hyperlinks_int = Field(int, 'Test Query Link Int Hyperlink')
+        random_text_for_love_and_prosperity = Field(str, 'Lovely number')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -181,6 +182,7 @@ class StresstestAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
+            device.random_text_for_love_and_prosperity = str(random.randint(10, 100))
             device.id = f"{device_raw['sa_name']}-{device_raw['index']}"
             device.part_of_domain = True
             device.name = f"avigdor no# {device_raw['index']}"

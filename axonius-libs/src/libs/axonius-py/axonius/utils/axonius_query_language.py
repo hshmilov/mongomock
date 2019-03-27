@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from collections import defaultdict
 
 from typing import List
 from bson.json_util import default
@@ -370,6 +371,7 @@ def translate_filter_not(filter_obj):
     return filter_obj
 
 
+# pylint: disable=R0912
 def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) -> dict:
     """
     Following https://axonius.atlassian.net/browse/AX-2730 we have to have to changes
@@ -402,18 +404,16 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
     specific_data.extend(tag
                          for tag in entity['tags']
                          if (ignore_errors and 'type' not in tag) or tag['type'] == 'adapterdata')
-
+    adapters_data = defaultdict(list)
     try:
-        adapters_data = {
-            adapter[PLUGIN_NAME]: adapter.get('data')
-            for adapter
-            in specific_data
-        }
+        for adapter in specific_data:
+            adapters_data[adapter[PLUGIN_NAME]].append(adapter.get('data'))
     except Exception:
         if ignore_errors:
             adapters_data = {}
         else:
             raise
+    adapters_data = dict(adapters_data)
 
     try:
         generic_data = [tag
