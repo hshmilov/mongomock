@@ -14,7 +14,7 @@ from axonius.utils import gui_helpers
 
 from axonius.consts import report_consts
 from axonius.utils.axonius_query_language import parse_filter
-from axonius.types.enforcement_classes import AlertActionResult, TriggeredReason
+from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -137,9 +137,9 @@ class SendEmailsAction(ActionTypeAlert):
 
         added_result_count = 0
         removed_result_count = 0
-        if TriggeredReason.new_entities in self._triggered_set:
+        if self._added_axon_ids:
             added_result_count = len(self._added_axon_ids)
-        if TriggeredReason.previous_entities in self._triggered_set:
+        if self._removed_axon_ids:
             removed_result_count = len(self._removed_axon_ids)
 
         if self._config.get('sendDevicesChangesCSV', False):
