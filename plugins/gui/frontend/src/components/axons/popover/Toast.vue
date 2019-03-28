@@ -56,7 +56,7 @@
     .x-toast {
         position: fixed;
         z-index: 10000000000;
-        bottom: 0;
+        top: 20px;
 
         &.slide-fade-enter, &.slide-fade-leave-to {
             transform: translateY(-100%);
