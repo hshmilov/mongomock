@@ -27,7 +27,7 @@ class NessusConnection(object):
         self.token = None
         self.should_use_token = True  # Setting a default of true
         self.host = host
-        self.port = port if port is not None else DEFAULT_NESSUS_PORT
+        self.port = port if port else DEFAULT_NESSUS_PORT
         self.url = host + ':' + str(self.port)
         if not self.url.lower().startswith(HTTP_PREFIX):
             self.url = HTTP_PREFIX + self.url
