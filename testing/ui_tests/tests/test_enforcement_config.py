@@ -308,6 +308,7 @@ class TestEnforcementSanity(TestBase):
         assert '1' in self.enforcements_page.get_column_data(self.FIELD_TIMES_TRIGGERED)
 
     def test_enforcement_table_sort(self):
+        self._create_enforcement_change_query()
         self.enforcements_page.switch_to_page()
         enforcement_names = ['Test 3', 'Test 2', 'Test 5', 'Test 1', 'Test 4']
         enforcement_queries = [COMMON_ENFORCEMENT_QUERY, ENFORCEMENT_CHANGE_NAME, COMMON_ENFORCEMENT_QUERY,
@@ -342,6 +343,25 @@ class TestEnforcementSanity(TestBase):
             self.enforcements_page.click_save_button()
             self.enforcements_page.wait_for_table_to_load()
         assert self.enforcements_page.get_column_data(self.FIELD_NAME) == sorted(enforcement_names, reverse=True)
+
+    def test_enforcement_table_search(self):
+        self._create_enforcement_change_query()
+        self.enforcements_page.switch_to_page()
+        enforcement_names = ['Test 3', 'Test 2', 'Test 5', 'Test 1', 'Test 4']
+        enforcement_queries = [COMMON_ENFORCEMENT_QUERY, ENFORCEMENT_CHANGE_NAME, COMMON_ENFORCEMENT_QUERY,
+                               ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_NAME]
+        for i, name in enumerate(enforcement_names):
+            self.enforcements_page.create_notifying_enforcement(name, enforcement_queries[i])
+
+        self.enforcements_page.fill_enter_table_search('Test')
+        self.enforcements_page.wait_for_table_to_load()
+        assert len(self.enforcements_page.get_column_data(self.FIELD_NAME)) == 5
+        self.enforcements_page.fill_enter_table_search('1')
+        self.enforcements_page.wait_for_table_to_load()
+        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == ['Test 1']
+        self.enforcements_page.fill_enter_table_search(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.wait_for_table_to_load()
+        assert self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME) == 3 * [ENFORCEMENT_CHANGE_NAME]
 
     def test_coming_soon(self):
         self.enforcements_page.switch_to_page()

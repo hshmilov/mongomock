@@ -76,6 +76,8 @@ class EnforcementsPage(EntitiesPage):
     TASK_RESULT_SUCCESS_CSS = TASK_RESULT_CSS.format(child_count=1)
     TASK_RESULT_FAILURE_CSS = TASK_RESULT_CSS.format(child_count=3)
 
+    TABLE_SEARCH_INPUT = '.x-search-input .input-value'
+
     @property
     def url(self):
         return f'{self.base_url}/enforcements'
@@ -459,3 +461,7 @@ class EnforcementsPage(EntitiesPage):
 
     def fill_action_library_search(self, text):
         self.fill_text_field_by_css_selector('.x-action-library .x-search-input .input-value', text)
+
+    def fill_enter_table_search(self, text):
+        self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)
+        self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))

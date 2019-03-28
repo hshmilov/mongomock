@@ -20,6 +20,7 @@ class TestTasks(TestBase):
     FIELD_MAIN_ACTION = 'Main Action'
     FIELD_QUERY_NAME = 'Trigger Query Name'
     FIELD_COMPLETED = 'Completed'
+    FIELD_STATUS = 'Status'
 
     def test_tasks_table_content(self):
         self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_QUERY)
@@ -91,6 +92,39 @@ class TestTasks(TestBase):
         self.enforcements_page.click_sort_column(self.FIELD_QUERY_NAME)
         self.enforcements_page.wait_for_table_to_load()
         assert self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME) == original_order
+
+    def test_tasks_table_search(self):
+        self.devices_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_FILTER)
+
+        self.enforcements_page.switch_to_page()
+        enforcement_names = ['Test 3', 'Test 2', 'Test 5', 'Test 1', 'Test 4']
+        query_names = [ENFORCEMENT_QUERY, ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_QUERY,
+                       ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_NAME]
+        for i, name in enumerate(enforcement_names):
+            self.enforcements_page.create_notifying_enforcement(name, query_names[i],
+                                                                added=False, subtracted=False)
+        self.base_page.run_discovery()
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_spinner_to_end()
+        self.enforcements_page.wait_for_table_to_load()
+
+        self.enforcements_page.fill_enter_table_search('Test')
+        self.enforcements_page.wait_for_table_to_load()
+        assert len(self.enforcements_page.get_column_data(self.FIELD_NAME)) == 5
+
+        self.enforcements_page.fill_enter_table_search('1')
+        self.enforcements_page.wait_for_table_to_load()
+        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == ['Test 1']
+
+        self.enforcements_page.fill_enter_table_search(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.wait_for_table_to_load()
+        assert self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME) == 3 * [ENFORCEMENT_CHANGE_NAME]
+
+        self.enforcements_page.fill_enter_table_search('In Progress')
+        self.enforcements_page.wait_for_table_to_load()
+        assert len(self.enforcements_page.get_column_data(self.FIELD_NAME)) == 0
 
     def test_task_results(self):
         with DeviceControlService().contextmanager(take_ownership=True):
