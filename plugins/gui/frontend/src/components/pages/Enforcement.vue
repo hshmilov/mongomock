@@ -58,6 +58,11 @@
             >Exit</x-button>
             <template v-else>
               <x-button
+                v-if="saved"
+                emphasize
+                @click="viewTasks"
+              >View Tasks</x-button>
+              <x-button
                 emphasize
                 :disabled="disableRun"
                 @click="saveRun"
@@ -131,6 +136,7 @@
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
+  import { UPDATE_DATA_VIEW } from '../../store/mutations'
   import {
     initRecipe, initAction, initTrigger,
     FETCH_ENFORCEMENT, SAVE_ENFORCEMENT, RUN_ENFORCEMENT,
@@ -147,6 +153,18 @@
       xPage, xSplitBox, xCard, xButton,
       xTrigger, xTriggerConfig,
       xAction, xActionGroup, xActionConfig, xActionLibrary
+    },
+    data () {
+      return {
+        enforcement: {},
+        actionInProcess: {
+          position: null, definition: null
+        },
+        triggerInProcess: {
+          position: null, definition: null
+        },
+        allowedActionNames: []
+      }
     },
     computed: {
       ...mapState({
@@ -269,18 +287,9 @@
         if (!position) return false
         return (this.mainActionSelected && !Boolean(this.mainAction.name)) ||
                 (!this.mainActionSelected && this.actions[position.condition].length === position.i)
-      }
-    },
-    data () {
-      return {
-        enforcement: {},
-        actionInProcess: {
-          position: null, definition: null
-        },
-        triggerInProcess: {
-          position: null, definition: null
-        },
-        allowedActionNames: []
+      },
+      saved() {
+        return this.enforcement.uuid !== undefined
       }
     },
     created () {
@@ -293,12 +302,17 @@
       }
     },
     mounted () {
-      this.$refs.name.focus()
+      if (this.$refs.name) {
+        this.$refs.name.focus()
+      }
       this.tour({ name: 'enforcementName' })
+      if (!this.enforcementNames || !this.enforcementNames.length) {
+        this.fetchSavedEnforcements()
+      }
     },
     methods: {
       ...mapMutations({
-        tour: CHANGE_TOUR_STATE
+        tour: CHANGE_TOUR_STATE, updateView: UPDATE_DATA_VIEW
       }),
       ...mapActions({
         fetchEnforcement: FETCH_ENFORCEMENT, saveEnforcement: SAVE_ENFORCEMENT,
@@ -316,6 +330,17 @@
       },
       saveExit () {
         this.saveEnforcement(this.enforcement).then(() => this.exit())
+      },
+      viewTasks() {
+        this.updateView({
+          module: 'tasks',
+          view: {
+            query: {
+              filter: `post_json.report_name == "${this.enforcement.name}"`
+            }
+          }
+        })
+        this.$router.push({ name: 'Tasks' })
       },
       exit () {
         this.$router.push({ name: 'Enforcements' })
@@ -433,24 +458,6 @@
       },
       onNameInput () {
         this.tour({ name: 'actionMain' })
-      }
-    },
-    created () {
-      if (!this.enforcementFetching && (!this.enforcementData.uuid || this.enforcementData.uuid !== this.id)) {
-        this.fetchEnforcement(this.id).then(() => {
-          this.initData()
-        })
-      } else {
-        this.initData()
-      }
-    },
-    mounted () {
-      if (this.$refs.name) {
-        this.$refs.name.focus()
-      }
-      this.tour({ name: 'enforcementName' })
-      if (!this.enforcementNames || !this.enforcementNames.length) {
-        this.fetchSavedEnforcements()
       }
     }
   }
