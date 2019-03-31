@@ -6,6 +6,8 @@ import subprocess
 import json
 import functools
 import datetime
+from enum import Enum, auto
+from typing import Dict
 
 import boto3
 import kubernetes
@@ -61,6 +63,26 @@ POWER_STATE_MAP = {
     'shutting-down': DeviceRunningState.ShuttingDown,
     'stopping': DeviceRunningState.ShuttingDown,
 }
+
+
+class AwsRawDataTypes(Enum):
+    Regular = auto()
+    SSM = auto()
+
+
+class AwsSSMSchemas(Enum):
+    Application = 'AWS:Application'
+    ComplianceItems = 'AWS:ComplianceItem'
+    File = 'AWS:File'
+    InstanceDetailedInformation = 'AWS:InstanceDetailedInformation'
+    Network = 'AWS:Network'
+    PatchSummary = 'AWS:PatchSummary'
+    PatchCompliance = 'AWS:PatchCompliance'
+    ResourceGroup = 'AWS:ResourceGroup'
+    Service = 'AWS:Service'
+    WindowsRegistry = 'AWS:WindowsRegistry'
+    WindowsRole = 'AWS:WindowsRole'
+    WindowsUpdate = 'AWS:WindowsUpdate'
 
 
 def get_paginated_next_token_api(func):
@@ -192,13 +214,25 @@ class AWSLoadBalancer(SmartJsonClass):
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
 
 
+class SSMInfo(SmartJsonClass):
+    ping_status = Field(str, 'Ping Status')
+    last_ping_date = Field(datetime.datetime, 'Last Ping Date')
+    agent_version = Field(str, 'Agent Version')
+    is_latest_version = Field(bool, 'Is Latest Version')
+    activation_id = Field(str, 'Activation Id')
+    registration_date = Field(datetime.datetime, 'Registration Date')
+    association_status = Field(str, 'Association Status')
+    last_association_execution_date = Field(datetime.datetime, 'Last Association Execution Date')
+    last_successful_association_execution_date = Field(datetime.datetime, 'Last Successful Association Execution Date')
+
+
 class AwsAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceOrContainerAdapter):
         account_tag = Field(str, 'Account Tag')
         aws_region = Field(str, 'Region')
         aws_source = Field(str, 'Source')    # Specifiy if it is from a user, a role, or what.
         aws_availability_zone = Field(str, 'Availability Zone')
-        aws_device_type = Field(str, 'Device Type (EC2/ECS/EKS)', enum=['EC2', 'ECS', 'EKS'])
+        aws_device_type = Field(str, 'Device Type (EC2/ECS/EKS/Managed)', enum=['EC2', 'ECS', 'EKS', 'Managed'])
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
         # EC2-specific fields
@@ -221,6 +255,9 @@ class AwsAdapter(AdapterBase, Configurable):
         container_instance_arn = Field(str, 'Task ContainerInstance ID/ARN')
         ecs_device_type = Field(str, 'ECS Launch Type', enum=['Fargate', 'EC2'])
         ecs_ec2_instance_id = Field(str, "ECS EC2 Instance ID")
+
+        # SSM specific fields
+        ssm_data = Field(SSMInfo, 'SSM Information')
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -445,6 +482,13 @@ class AwsAdapter(AdapterBase, Configurable):
         except Exception as e:
             errors['elbv2'] = str(e)
 
+        try:
+            c = boto3.client('ssm', **params)
+            c.get_inventory_schema()
+            clients['ssm'] = c
+        except Exception as e:
+            errors['ssm'] = str(e)
+
         # the only service we truely need is ec2. all the rest are optional.
         # If this has failed we raise an exception
         if not clients.get('ec2'):
@@ -510,9 +554,63 @@ class AwsAdapter(AdapterBase, Configurable):
                     parse_data_for_source = self._query_devices_by_client_by_source(client_data_by_region,
                                                                                     https_proxy=https_proxy)
                     parse_data_for_source.update(parsed_data_for_all_regions)
-                    yield source_name, parse_data_for_source
+                    yield source_name, parse_data_for_source, AwsRawDataTypes.Regular
+
+                    for parse_data_for_source in self._query_devices_by_client_by_source_ssm(
+                            client_data_by_region):
+                        yield source_name, parse_data_for_source, AwsRawDataTypes.SSM
                 except Exception:
                     logger.exception(f'Problem querying source {source_name}')
+
+    def _query_devices_by_client_by_source_ssm(self, client_data):
+        if client_data.get('ssm') is not None and self.__fetch_ssm is True:
+            try:
+                all_instances = dict()
+                ssm = client_data['ssm']
+                # First, get all instance_id id's that have ssm
+                for ssm_page in get_paginated_next_token_api(ssm.describe_instance_information):
+                    for instance_information in (ssm_page.get('InstanceInformationList') or []):
+                        unique_instance_id = instance_information.get('InstanceId')
+                        if unique_instance_id:
+                            all_instances[unique_instance_id] = instance_information
+
+                # Next, get all schemas.
+                schemas_names = []
+                for schema_page in get_paginated_next_token_api(ssm.get_inventory_schema):
+                    for schema_raw in schema_page['Schemas']:
+                        schema_name = schema_raw.get('TypeName')
+                        if schema_name:
+                            schemas_names.append(schema_name)
+
+                for iid, iid_basic_data in all_instances.items():
+                    raw_instance = dict()
+                    raw_instance['basic_data'] = iid_basic_data
+                    # Next, pull the following schemas
+                    for schema in AwsSSMSchemas:
+                        try:
+                            entries = []
+                            for schema_page in get_paginated_next_token_api(
+                                    functools.partial(ssm.list_inventory_entries, InstanceId=iid, TypeName=schema.value)
+                            ):
+                                entries.extend(schema_page.get('Entries') or [])
+
+                            if entries:
+                                raw_instance[schema.value] = entries
+                        except Exception:
+                            logger.exception(f'Problem querying info of schema {schema.value} for device {iid}')
+
+                    # Also, pull the patches for ths instance
+                    all_patches = []
+                    for patch_page in get_paginated_next_token_api(
+                        functools.partial(ssm.describe_instance_patches, InstanceId=iid)
+                    ):
+                        all_patches.extend(patch_page.get('Patches') or [])
+
+                    if all_patches:
+                        raw_instance['patches'] = all_patches
+                    yield raw_instance
+            except Exception:
+                logger.exception(f'Problem fetching data for ssm')
 
     def _query_devices_by_client_for_all_sources(self, client_data):
         """
@@ -591,7 +689,7 @@ class AwsAdapter(AdapterBase, Configurable):
                                 if instance_profile_id:
                                     if instance_profile_id in raw_data['instance_profiles']:
                                         logger.error(f'Error! instance profile {instance_profile_id} for '
-                                                     f'role {role_arn} is already in raw data! continuing')
+                                                     f'role {role_name} is already in raw data! continuing')
                                         continue
                                     raw_data['instance_profiles'][instance_profile_id] = role_data
             except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
@@ -1108,13 +1206,24 @@ class AwsAdapter(AdapterBase, Configurable):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for aws_source, devices_raw_data_by_source in devices_raw_data:
+        for aws_source, devices_raw_data_by_source, raw_data_type in devices_raw_data:
             try:
-                yield from self._parse_raw_data_inner(devices_raw_data_by_source, aws_source)
+                if raw_data_type == AwsRawDataTypes.Regular:
+                    yield from self._parse_raw_data_inner_regular(devices_raw_data_by_source, aws_source)
+                elif raw_data_type == AwsRawDataTypes.SSM:
+                    try:
+                        device = self._parse_raw_data_inner_ssm(devices_raw_data_by_source, aws_source)
+                        if device:
+                            yield device
+                    except Exception:
+                        logger.exception(f'Problem parsing device from ssm')
+                else:
+                    logger.critical(f'Can not parse data for aws source {aws_source}, '
+                                    f'unknown type {raw_data_type.name}')
             except Exception:
                 logger.exception(f'Problem parsing data from source {aws_source}')
 
-    def _parse_raw_data_inner(self, devices_raw_data, aws_source):
+    def _parse_raw_data_inner_regular(self, devices_raw_data, aws_source):
         aws_region = devices_raw_data.get('region')
         account_tag = devices_raw_data.get('account_tag')
         subnets_by_id = devices_raw_data.get('subnets') or {}
@@ -1666,7 +1775,7 @@ class AwsAdapter(AdapterBase, Configurable):
                                     device_vpc_id = vpc_id
                         if device_vpc_id:
                             device.vpc_id = device_vpc_id
-                            device.vpc_name = vpcs_by_id.get(vpc_id)
+                            device.vpc_name = vpcs_by_id.get(device_vpc_id)
 
                         device.set_raw(
                             {
@@ -1679,6 +1788,133 @@ class AwsAdapter(AdapterBase, Configurable):
                         yield device
         except Exception:
             logger.exception(f'Problem parsing ecs data {devices_raw_data.get("ecs")}')
+
+    def _parse_raw_data_inner_ssm(self, device_raw_data: Dict[str, Dict], aws_source):
+
+        basic_data = device_raw_data.get('basic_data')
+        if not basic_data:
+            logger.warning('Wierd device, no basic data!')
+            return None
+        device = self._new_device_adapter()
+        device.id = 'ssm-' + basic_data['InstanceId']
+        device.aws_source = aws_source
+        device.cloud_provider = 'AWS'
+        device.cloud_id = basic_data['InstanceId']
+
+        # Parse ssm data
+        ssm_data = SSMInfo()
+        ssm_data.ping_status = basic_data.get('PingStatus')
+        ssm_data.last_ping_date = parse_date(basic_data.get('LastPingDateTime'))
+        device.last_seen = parse_date(basic_data.get('LastPingDateTime'))
+        ssm_data.agent_version = basic_data.get('AgentVersion')
+        try:
+            ssm_data.is_latest_version = bool(basic_data.get('IsLatestVersion'))
+        except Exception:
+            logger.exception(f'Problem parsing if ssm agent is latest version')
+
+        device.figure_os(basic_data.get('PlatformName') + ' ' + basic_data.get('PlatformVersion'))
+        ssm_data.activation_id = basic_data.get('ActivationId')
+        ssm_data.registration_date = parse_date(basic_data.get('RegistrationDate'))
+        resource_type = basic_data.get('ResourceType') or ''
+        if 'ec2' in resource_type.lower():
+            device.aws_device_type = 'EC2'
+        elif 'managed' in resource_type.lower():
+            device.aws_device_type = 'Managed'
+
+        hostname = basic_data.get('ComputerName') or ''
+        device.hostname = basic_data.get('ComputerName')
+        ssm_data.association_status = basic_data.get('AssociationStatus')
+        ssm_data.last_association_execution_date = parse_date(
+            basic_data.get('LastAssociationExecutionDate'))
+        ssm_data.last_successful_association_execution_date = parse_date(
+            basic_data.get('LastSuccessfulAssociationExecutionDate'))
+
+        applications = device_raw_data.get(AwsSSMSchemas.Application.value)
+        if isinstance(applications, list):
+            for app_data in applications:
+                try:
+                    device.add_installed_software(
+                        architecture=app_data.get('Architecture'),
+                        name=app_data.get('Name'),
+                        version=app_data.get('Version'),
+                        vendor=app_data.get('Publisher'),
+                        publisher=app_data.get('Publisher')
+                    )
+                except Exception:
+                    logger.exception(f'Failed to add application {app_data} for host {hostname}')
+
+        network = device_raw_data.get(AwsSSMSchemas.Network.value)
+        dns_servers = set()
+        dhcp_servers = set()
+        if isinstance(network, list):
+            for network_interface in network:
+                try:
+                    ips = []
+                    ipv4_raw = network_interface.get('IPV4')
+                    ipv6_raw = network_interface.get('IPV6')
+                    if ipv4_raw:
+                        if isinstance(ipv4_raw, list):
+                            ips.extend(ipv4_raw)
+                        elif isinstance(ipv4_raw, str):
+                            ips.append(ipv4_raw)
+
+                    if ipv6_raw:
+                        if isinstance(ipv6_raw, list):
+                            ips.extend(ipv6_raw)
+                        elif isinstance(ipv6_raw, str):
+                            ips.append(ipv6_raw)
+                    device.add_nic(
+                        mac=network_interface.get('MacAddress'),
+                        ips=ips,
+                        name=network_interface.get('Name'),
+                        gateway=network_interface.get('Gateway')
+                    )
+
+                    dns_s = network_interface.get('DNSServer')
+                    if isinstance(dns_s, str):
+                        dns_servers.add(dns_s)
+
+                    dhcp_s = network_interface.get('DHCPServer')
+                    if isinstance(dhcp_s, str):
+                        dhcp_servers.add(dhcp_s)
+                except Exception:
+                    logger.exception(f'Failed to add network interface {network_interface} for host {hostname}')
+
+        if dns_servers:
+            device.dns_servers = list(dns_servers)
+
+        if dhcp_servers:
+            device.dhcp_servers = list(dhcp_servers)
+
+        services = device_raw_data.get(AwsSSMSchemas.Service.value)
+        if isinstance(services, list):
+            for service_raw in services:
+                try:
+                    device.add_service(
+                        name=service_raw.get('Name'),
+                        display_name=service_raw.get('DisplayName'),
+                        status=service_raw.get('Status')
+                    )
+                except Exception:
+                    logger.exception(f'Failed to add service {service_raw} for host {hostname}')
+
+        all_patches = device_raw_data.get('patches')
+        if isinstance(all_patches, list):
+            for pc_raw in all_patches:
+                try:
+                    device.add_security_patch(
+                        security_patch_id=pc_raw.get('Title') + ' ' + pc_raw.get('KBId'),
+                        classification=pc_raw.get('Classification'),
+                        severity=pc_raw.get('Severity'),
+                        state=pc_raw.get('State'),
+                        installed_on=parse_date(pc_raw.get('InstalledTime'))
+                    )
+                except Exception:
+                    logger.exception(f'Failed to add patch compliance {pc_raw} for host {hostname}')
+
+        device.ssm_data = ssm_data
+        device.set_raw(device_raw_data)
+        return device
 
     def _correlation_cmds(self):
         """
@@ -1715,6 +1951,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__correlate_eks_ec2 = config.get('correlate_eks_ec2') or False
         self.__fetch_instance_roles = config.get('fetch_instance_roles') or False
         self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
+        self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
 
@@ -1743,6 +1980,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_ssm',
+                    'title': 'Fetch information about SSM (System Manager)',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -1759,6 +2001,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'correlate_eks_ec2',
                 'fetch_instance_roles',
                 'fetch_load_balancers',
+                'fetch_ssm',
                 'verbose_auth_notifications'
             ],
             "pretty_name": "AWS Configuration",
@@ -1772,6 +2015,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'correlate_eks_ec2': False,
             'fetch_instance_roles': False,
             'fetch_load_balancers': False,
+            'fetch_ssm': False,
             'verbose_auth_notifications': False,
             'shodan_key': None
         }

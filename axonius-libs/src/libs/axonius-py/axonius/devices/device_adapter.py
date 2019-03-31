@@ -150,6 +150,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     speed = Field(str, "Interface Speed", description="Interface max speed per Second")
     port_type = Field(str, "Port Type", enum=["Access", "Trunk"])
     mtu = Field(str, "MTU", description="Interface Maximum transmission unit")
+    gateway = Field(str, 'Gateway')
 
 
 class ConnectionType(Enum):
@@ -261,6 +262,9 @@ class DeviceAdapterSecurityPatch(SmartJsonClass):
     security_patch_id = Field(str, "Security Patch Name")
     installed_on = Field(datetime.datetime)
     patch_description = Field(str, 'Patch Description')
+    classification = Field(str, 'Classification')
+    state = Field(str, 'State')
+    severity = Field(str, 'Severity')
 
 
 class DeviceAdapterMsrcAvailablePatch(SmartJsonClass):
@@ -358,6 +362,8 @@ class ProcessData(SmartJsonClass):
 
 class ServiceData(SmartJsonClass):
     name = Field(str, 'Name')
+    display_name = Field(str, 'Display Name')
+    status = Field(str, 'Status')
 
 
 class DeviceAdapter(SmartJsonClass):
@@ -385,7 +391,7 @@ class DeviceAdapter(SmartJsonClass):
     )
     software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software", json_format=JsonArrayFormat.table)
     security_patches = ListField(
-        DeviceAdapterSecurityPatch, "OS Installed Security Patches", json_format=JsonArrayFormat.table
+        DeviceAdapterSecurityPatch, "OS Security Patches", json_format=JsonArrayFormat.table
     )
     available_security_patches = ListField(
         DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches", json_format=JsonArrayFormat.table
@@ -467,6 +473,8 @@ class DeviceAdapter(SmartJsonClass):
     shares = ListField(ShareData, 'Shares', json_format=JsonArrayFormat.table)
     adapter_properties = ListField(str, 'Adapter Properties', enum=AdapterProperty)
     port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
+    dns_servers = ListField(str, 'DNS Servers')
+    dhcp_servers = ListField(str, 'DHCP Servers')
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
@@ -640,6 +648,7 @@ class DeviceAdapter(SmartJsonClass):
         admin_status=None,
         vlans=None,
         port_type=None,
+        gateway=None
     ):
         """
         Add a new network interface card to this device.
@@ -715,6 +724,14 @@ class DeviceAdapter(SmartJsonClass):
                 if logger is None:
                     raise
                 logger.exception(f'Invalid vlans: {repr(vlans)}')
+
+        if gateway is not None:
+            try:
+                nic.gateway = gateway
+            except Exception:
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid gateway: {repr(vlans)}')
 
         self.network_interfaces.append(nic)
 
