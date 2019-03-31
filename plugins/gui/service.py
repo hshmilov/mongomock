@@ -4626,7 +4626,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         if request.method == 'GET':
             # remove the or True when we finish fixing tests
-            return jsonify({Signup.SignupField: True or signup or has_customer_login_happened()})
+            return jsonify({Signup.SignupField: signup or has_customer_login_happened()})
 
         # POST from here
         if signup:
