@@ -130,7 +130,8 @@ DOCKER_PORTS = {
     'bluecat-adapter':                  6051,
     'armis-adapter':                    6052,
     'counter-act-adapter':              6053,
-    'diag':                             6666,  # reserved
+    'diag-w':                           6665,  # reserved
+    'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,
     'dynatrace-adapter':                6668,
     'redcloack-adapter':                6669,
