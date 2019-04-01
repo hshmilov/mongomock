@@ -1353,7 +1353,7 @@ class PluginBase(Configurable, Feature):
                             '$inc': {
                                 ADAPTERS_LIST_LENGTH: 1
                             }
-                        })
+                        }).modified_count
                         if modified_count == 0:
                             logger.error("No devices update for case B for scanner device "
                                          f"{parsed_to_insert['data']['id']} from "
