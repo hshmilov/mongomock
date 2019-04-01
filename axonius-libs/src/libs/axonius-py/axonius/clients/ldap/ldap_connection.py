@@ -967,8 +967,7 @@ class LdapConnection(object):
                              f'stopping to prevent stack exhausiton.')
                 return set()
 
-            if not self.__ldap_groups:
-                self.__ldap_groups = get_ldap_groups(self)
+            self.__ldap_groups = get_ldap_groups(self)
 
             group_object = self.__ldap_groups.get(group_dn)
             if not group_object:
