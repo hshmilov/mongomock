@@ -38,6 +38,8 @@ def dump_pickles():
     arp = list(filter(lambda x: isinstance(x, SnmpArpCiscoData), results))[0]
     basic = list(filter(lambda x: isinstance(x, SnmpBasicInfoCiscoData), results))[0]
 
+    basic.get_parsed_data()
+
     with open(file_relative(CISCO_ARP_PICKLE), 'wb') as f:
         f.write(pickle.dumps(arp))
 
@@ -143,11 +145,6 @@ def test_arp_data(mocks):
             'connected_devices': [{'name': 'cisco-switch', 'iface': '', 'type': 'Indirect'}],
         },
         {
-            'mac': '00:23:24:F1:0D:FA',
-            'ip': '192.168.10.4',
-            'connected_devices': [{'name': 'cisco-switch', 'iface': '', 'type': 'Indirect'}],
-        },
-        {
             'mac': '00:1B:8F:DF:DF:40',
             'ip': '192.168.10.6',
             'connected_devices': [{'name': 'cisco-switch', 'iface': '', 'type': 'Indirect'}],
@@ -159,7 +156,7 @@ def test_arp_data(mocks):
         },
     ]
     devices = list(arp.get_devices(create_device))
-    assert len(devices) == 4
+    assert len(devices) == 3
     assert devices[0].to_dict() == {
         'id': 'arp_90:6C:AC:FE:5B:BC',
         'network_interfaces': [
@@ -186,9 +183,12 @@ def test_arp_data(mocks):
 def test_basic_info_parsed_data(mocks):
     basic = mocks.basic
     parsed_data = basic.get_parsed_data()
+    if 'uptime' in parsed_data[0]:
+        parsed_data[0]['uptime'] = '301177616'
     assert parsed_data == [
         {
             'os': 'cisco',
+            'base_mac': '001b8fdfdf00',
             'device_model': 'WS-C2960G-48TC-L',
             'version': 'Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 12.2(55)SE10, RELEASE SOFTWARE (fc2)\r\nTechnical Support: http://www.cisco.com/techsupport\r\nCopyright (c) 1986-2015 by Cisco Systems, Inc.\r\nCompiled Wed 11-Feb-15 11:46 by prod_rel_team',
             'device_serial': 'FOC1115Z2Y5',
@@ -1548,6 +1548,11 @@ def test_basic_info_devices(mocks):
                 'admin_status': 'Up',
             },
             {'name': 'Null0', 'mtu': '1500', 'speed': '4294967295', 'operational_status': 'Up', 'admin_status': 'Up'},
+            {
+                'name': 'base-mac',
+                'mac': '00:1B:8F:DF:DF:00',
+                'manufacturer': 'Cisco Systems, Inc (80 West Tasman Drive San Jose CA US 94568 )'
+            },
         ],
         PORT_SECURITY_FIELD: [
             {

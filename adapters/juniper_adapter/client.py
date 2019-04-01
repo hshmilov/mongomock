@@ -70,7 +70,7 @@ class JuniperClient:
             pu_list = tm.wait_for_tasks(task_ids)
 
             juniper_device_actions = [
-                'interface list', 'hardware', 'version', 'vlans']
+                'interface list', 'hardware', 'version', 'vlans', 'base-mac']
             juniper_devices = defaultdict(list)
             for pu in pu_list:
                 try:
@@ -121,6 +121,7 @@ class JuniperClient:
             ('vlans', '<get-ethernet-switching-interface-information>'
                       '<detail/>'
                       '</get-ethernet-switching-interface-information>'),
+            ('base-mac', '<get-chassis-mac-addresses/>'),
         ]
 
         yield from self._do_junus_space_command(devices, 'get_info_q', actions)

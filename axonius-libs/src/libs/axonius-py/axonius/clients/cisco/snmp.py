@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import binascii
+
 from collections import defaultdict, namedtuple
 
 from pyasn1.type.univ import Null
@@ -189,6 +191,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
             self._async_get_cmd(OIDS.device_model2),
             self._async_get_cmd(OIDS.device_serial),
             self._async_get_cmd(OIDS.device_serial2),
+            self._async_get_cmd(OIDS.base_mac),
         ]
         results = list(filter(None, [await routine for routine in basic_info_routines]))
         return SnmpBasicInfoCiscoData(results)
@@ -327,6 +330,9 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
                     self.result[interface_field][index][ip_field] = []
                 self.result[interface_field][index][ip_field].append(value)
 
+    def _parse_base_mac(self, entries):
+        self.result[get_oid_name(OIDS.base_mac)] = binascii.hexlify(bytes(entries[0][1])).decode()
+
     def _parse_serial(self, entries):
         self.result[get_oid_name(OIDS.device_serial)] = str(entries[0][1])
 
@@ -344,11 +350,15 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             device_model2=self._parse_device_model,
             device_serial=self._parse_serial,
             device_serial2=self._parse_serial,
+            base_mac=self._parse_base_mac,
         )
 
         self.result = {'os': 'cisco'}
         for type_, entries in self._raw_data:
-            parse_table._asdict()[type_](entries)
+            try:
+                parse_table._asdict()[type_](entries)
+            except Exception:
+                logger.exception(f'Failed to parse {type_} {entries}')
         yield self.result
 
 

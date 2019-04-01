@@ -4,11 +4,11 @@ import pytest
 from axonius.clients.juniper.device import JuniperDeviceAdapter, create_device, update_connected
 from axonius.clients.juniper.rpc import (parse_device, parse_hardware,
                                          parse_interface_list, parse_version,
-                                         parse_vlans, prepare, parse_lldp)
+                                         parse_vlans, prepare, parse_lldp, parse_base_mac)
 
 from axonius.clients.juniper.rpc.mock import (HARDWARE_MOCK, INTERFACE_MOCK,
                                               VERSION_MOCK, VLAN_MOCK,
-                                              VLAN_MOCK2, VERSION_MOCK2,
+                                              VLAN_MOCK2, VERSION_MOCK2, BASE_MAC_MOCK,
                                               mock_query_basic_info, LLDP_MOCK, LLDP_MOCK2)
 
 logging.basicConfig()
@@ -83,6 +83,12 @@ def test_parse_vlans():
     assert len(result) == 4
 
 
+def test_parse_base_mac():
+    data = prepare(BASE_MAC_MOCK)
+    result = parse_base_mac(data)
+    assert len(result) == 1
+
+
 @pytest.mark.skip(reason='not supported yet')
 def test_parse_vlans2():
     data = prepare(VLAN_MOCK2)
@@ -103,6 +109,9 @@ def test_create_juniper_device():
     assert result
     assert len(em0['vlan_list']) == 1
     assert em0['port_type'] == 'Access'
+
+    base_mac0 = list(filter(lambda iface: iface['name'] == 'base-mac0', result2[0].network_interfaces))[0].to_dict()
+    assert base_mac0
 
 
 def test_update_connected():

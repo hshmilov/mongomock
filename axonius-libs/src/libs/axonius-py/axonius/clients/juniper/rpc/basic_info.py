@@ -203,9 +203,22 @@ def parse_vlans(xml):
     return result
 
 
+def parse_base_mac(xml):
+    result = []
+    if gettag(xml.tag) != 'chassis-mac-information':
+        raise ValueError(f'base mac not found got {gettag(xml.tag)}')
+    for field in xml:
+        if gettag(field.tag) == 'fpc-mac-information':
+            for fpc in field:
+                if gettag(fpc.tag) == 'mac-address':
+                    result.append(gettext(fpc.text))
+    return result
+
+
 BASIC_INFO_TYPES = {
     'interface list': parse_interface_list,  # show interfaces
     'hardware': parse_hardware,              # show chassis hardware
     'version': parse_version,                # show version
     'vlans': parse_vlans,                    # show ethernet-switching interfaces detail
+    'base-mac': parse_base_mac,
 }

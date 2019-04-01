@@ -25,6 +25,7 @@ class FetchProto(Enum):
     DHCP = auto()
     CLIENT = auto()
     PRIME_CLIENT = auto()
+    PRIME_WIFI_CLIENT = auto()
 
 
 class CiscoDevice(DeviceAdapter):
@@ -270,6 +271,9 @@ class AbstractCiscoData:
         new_device.figure_os(instance.get('os'))
         new_device.os.build = instance.get('version')
         new_device.device_serial = instance.get('device_serial')
+
+        if 'base_mac' in instance:
+            new_device.add_nic(name='base-mac', mac=instance.get('base_mac'))
 
         if 'related_ips' in instance:
             new_device.set_related_ips(instance['related_ips'])

@@ -18,6 +18,7 @@ BASIC_INFO_OID_KEYS = (
     'device_model2',
     'device_serial',
     'device_serial2',
+    'base_mac',
 )
 
 OID_KEYS = ('arp', 'cdp') + BASIC_INFO_OID_KEYS
@@ -34,6 +35,7 @@ OIDS = namedtuple('oids', OID_KEYS)(
     device_model2='.1.3.6.1.2.1.47.1.1.1.1.13.1',
     device_serial='1.3.6.1.4.1.9.5.1.2.19.0',
     device_serial2='1.3.6.1.2.1.47.1.1.1.1.11.1',
+    base_mac='1.3.6.1.2.1.17.1.1.0',
 )
 
 

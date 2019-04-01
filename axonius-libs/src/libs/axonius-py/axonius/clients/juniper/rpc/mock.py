@@ -4101,6 +4101,16 @@ LLDP_MOCK2 = '''<rpc-reply xmlns:junos="http://xml.juniper.net/junos/13.3R6/juno
     </cli>
 </rpc-reply>'''
 
+BASE_MAC_MOCK = '''
+        <chassis-mac-information xmlns:junos="http://xml.juniper.net/junos/12.3R12/junos">
+          <fpc-mac-information>
+            <slot>0</slot>
+            <mac-address>ec:13:db:04:b4:00</mac-address>
+            <count>64</count>
+          </fpc-mac-information>
+        </chassis-mac-information>
+'''
+
 
 def mock_query_basic_info():
     return ('Juniper-R1', [
@@ -4108,4 +4118,5 @@ def mock_query_basic_info():
         ('hardware', HARDWARE_MOCK),
         ('version', VERSION_MOCK),
         ('vlans', VLAN_MOCK),
+        ('base-mac', BASE_MAC_MOCK),
     ])

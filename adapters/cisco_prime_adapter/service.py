@@ -3,7 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco import snmp
-from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
+from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser, FetchProto
 from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
 from axonius.clients.cisco.snmp import CiscoSnmpClient
 from axonius.clients.rest.connection import RESTConnection
@@ -186,7 +186,7 @@ class CiscoPrimeAdapter(AdapterBase):
         device.device_serial = device_serial
         device.device_model_family = raw_device['summary'].get('ProductFamily', '')
         device.reachability = raw_device['summary'].get('reachability', '')
-        device.fetch_proto = 'PRIME_CLIENT'
+        device.fetch_proto = FetchProto.PRIME_CLIENT.name
 
         ip_address = raw_device['summary'].get('ipAddress', '')
         try:
@@ -255,6 +255,7 @@ class CiscoPrimeAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Problem getting users for {raw_device}')
         device.association_time = parse_unix_timestamp(raw_device.get('associationTime'))
+        device.fetch_proto = FetchProto.PRIME_WIFI_CLIENT.name
         device.set_raw(raw_device)
         return device
 

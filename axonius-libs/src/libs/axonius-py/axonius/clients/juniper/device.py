@@ -271,6 +271,12 @@ def _juniper_add_nic(device, raw_device):
     if 'interface list' not in raw_device:
         return
 
+    for index, base_mac in enumerate(raw_device.get('base-mac', [])):
+        try:
+            device.add_nic(name=f'base-mac{index}', mac=base_mac)
+        except Exception:
+            logger.exception('Unable to add basic-mac')
+
     raw, rr = raw_device['interface list']
     for interface in raw:
         try:
