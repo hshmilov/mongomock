@@ -101,6 +101,7 @@ FUNCTIONALITY_WINDOWS_VERSIONS = {
     6: "Windows 2012 R2",
     7: "Windows 2016"
 }
+LDAP_MINIMUM_PSO_DOMAIN_FUNCTIONALITY_LEVEL = 3
 
 TRUST_ATTRIBUTES_DICT = {
     0x1: "NON_TRANSITIVE",
@@ -282,6 +283,11 @@ class LdapConnection(object):
 
             # Get the domain properties (usually contains its policy)
             self.domain_properties = self.get_domain_properties()
+            try:
+                self.domain_version = ldap_get(self.domain_properties, 'msDS-Behavior-Version', int) or 0
+            except Exception:
+                logger.exception(f'Failed to get domain version')
+                self.domain_version = 0
         except ldap3.core.exceptions.LDAPException:
             raise LdapException(get_exception_string())
 
@@ -674,6 +680,13 @@ class LdapConnection(object):
 
             yield dict(printer)
 
+    def get_password_settings_objects_by_dn(self):
+        pso_dict = {}
+        for pso in self._ldap_search('(objectClass=msDS-PasswordSettings)'):
+            pso_dict[pso['distinguishedName']] = pso
+
+        return pso_dict
+
     @retry_generator(wait_fixed=DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS, stop_max_attempt_number=LDAP_MAX_TRIES)
     def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
@@ -733,7 +746,16 @@ class LdapConnection(object):
             search_filter = '(&(objectCategory=person)(|(objectClass=user)(objectClass=inetOrgPerson))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
 
         logger.info(f'LDAP - Starting to get users list')
-        users_generator = self._ldap_search(search_filter)
+        if self.domain_version >= LDAP_MINIMUM_PSO_DOMAIN_FUNCTIONALITY_LEVEL:
+            attributes = ['*', 'msDS-ResultantPSO']  # We have to specify it since this is calculated upon request.
+            try:
+                psos = self.get_password_settings_objects_by_dn()
+            except Exception:
+                psos = dict()
+        else:
+            attributes = None
+            psos = dict()
+        users_generator = self._ldap_search(search_filter, attributes=attributes)
         users_count = 0
         get_users_start = time.time()
         for user in users_generator:
@@ -747,8 +769,27 @@ class LdapConnection(object):
                 logger.exception(f'Problem getting nested groups for object, passing and reconnecting')
                 member_of_full_for_user = None
 
+            if self.domain_version >= LDAP_MINIMUM_PSO_DOMAIN_FUNCTIONALITY_LEVEL:
+                try:
+                    user_pso_dn = ldap_get(user, 'msDS-ResultantPSO', str)
+                    user_pso = psos.get(user_pso_dn)
+                    # If we have a pso, get the maximum password age if it exists (if not - there is no limit)
+                    # if not - the max password age is the domain's level max password age
+                    if user_pso:
+                        if user_pso.get('msDS-MaximumPasswordAge'):
+                            maximum_password_age = ldap_get(user_pso, 'msDS-MaximumPasswordAge', int) or None
+                        else:
+                            maximum_password_age = None
+                    else:
+                        maximum_password_age = self.domain_properties.get('maxPwdAge')
+                except Exception:
+                    logger.exception(f'Problem parsing maximum password age')
+                    maximum_password_age = None
+            else:
+                maximum_password_age = self.domain_properties.get('maxPwdAge')
+
             user['axonius_extended'] = {
-                "maxPwdAge": self.domain_properties['maxPwdAge'],
+                "maxPwdAge": maximum_password_age,
                 'member_of_full': member_of_full_for_user
             }
 

@@ -73,6 +73,7 @@ class ADEntity(object):
     ad_msds_allowed_to_delegate_to = ListField(str, "AD msDS-AllowedToDelegateTo")
     ad_delegation_policy = Field(str, "AD Delegation Policy", enum=AD_DELEGATION_POLICY)
     ad_pwd_must_change = Field(bool, "AD Password Must Change")
+    ad_msds_resultant_pso = Field(str, 'AD Resultant Password Settings Object')
 
     # User Account Control
     ad_uac_logon_script = Field(bool, "AD logon script will be run (SCRIPT)")

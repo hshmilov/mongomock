@@ -13,6 +13,7 @@ PASSWORD = ad_client1_details['password']
 ADDRESS = ad_client1_details['dc_name']
 
 ACCOUNTDISABLE = 0x0002
+EXAMPLE_PSO = 'CN=password-policy-for-disabled-user,CN=Password Settings Container,CN=System,DC=TestDomain,DC=test'
 
 
 @pytest.fixture(scope='module')
@@ -41,6 +42,7 @@ def test_users_and_full_memberof(ldap_connection: LdapConnection):
 
     assert len(users_dict) > 0
     assert users_dict['avidor']['cn'] == 'Avidor Bartov'
+    assert users_dict['disableduser']['msDS-ResultantPSO'] == EXAMPLE_PSO
     assert users_dict['Administrator']['adminCount'] == 1
     assert 'maxPwdAge' in users_dict['avidor']['axonius_extended']
 
@@ -54,6 +56,12 @@ def test_users_and_full_memberof(ldap_connection: LdapConnection):
     assert any('Israel' in group for group in groups)
     assert any('Cloud Team' in group for group in groups)
     assert not any('VA Team' in group for group in groups)
+
+
+def test_get_password_settings_object(ldap_connection: LdapConnection):
+    pso_dict = ldap_connection.get_password_settings_objects_by_dn()
+    assert EXAMPLE_PSO in pso_dict
+    assert ad_integer8_to_timedelta(pso_dict[EXAMPLE_PSO]['msDS-MaximumPasswordAge']) == timedelta(days=24)
 
 
 def test_devices(ldap_connection: LdapConnection):

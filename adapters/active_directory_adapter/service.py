@@ -510,6 +510,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_entity.figure_out_delegation_policy(raw_data.get("userAccountControl"),
                                                raw_data.get("msDS-AllowedToDelegateTo"))
 
+        if raw_data.get('msDS-ResultantPSO'):
+            ad_entity.ad_msds_resultant_pso = raw_data.get('msDS-ResultantPSO')
+
         # full member of
         try:
             ad_entity.ad_member_of_full = get_member_of_list_from_memberof(
