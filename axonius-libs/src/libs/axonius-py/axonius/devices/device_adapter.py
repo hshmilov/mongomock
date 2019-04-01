@@ -145,7 +145,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     operational_status = Field(
         str, "Operational Status", enum=["Up", "Down", "Testing", "Unknown", "Dormant", "Nonpresent", "LowerLayerDown"]
     )
-    admin_status = Field(str, "Admin Status", enum=["Up", "Down"])
+    admin_status = Field(str, "Admin Status", enum=["Up", "Down", "Testing"])
 
     speed = Field(str, "Interface Speed", description="Interface max speed per Second")
     port_type = Field(str, "Port Type", enum=["Access", "Trunk"])
