@@ -91,7 +91,8 @@ class OidcData:
         :raises: Various exceptions if the token fails the refresh, TBD the exceptions themselves
         """
         with self.lock:
-            self.perform_refresh()
+            if MEDICAL_MODE:
+                self.perform_refresh()
             return {
                 'id_token': self.id_token,
                 'groups': self.groups,
@@ -245,7 +246,7 @@ def try_connecting_using_okta(okta_config) -> OidcData:
 
     id_token = return_value['id_token']
     access_token = return_value['access_token']
-    refresh_token = return_value['refresh_token']
+    refresh_token = return_value.get('refresh_token')
 
     leeway = 60 * 5  # 5 minutes
 
