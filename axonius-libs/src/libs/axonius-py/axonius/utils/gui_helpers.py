@@ -843,7 +843,10 @@ def entity_fields(entity_type: EntityType):
     }
 
     fields = {
-        'schema': {'generic': generic_fields, 'specific': {}},
+        'schema': {
+            'generic': generic_fields,
+            'specific': {}
+        },
         'generic': [adapters_json] + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [tags_json],
         'specific': {},
     }
@@ -881,16 +884,18 @@ def entity_fields(entity_type: EntityType):
             # https://axonius.atlassian.net/browse/AX-3113
             _filter_out_nonexisting_fields(plugin_fields_record['schema'], set(plugin_fields_existing['fields']))
 
-        fields['schema']['specific'][plugin_name] = {
-            'type': plugin_fields_record['schema']['type'],
-            'required': plugin_fields_record['schema'].get('required', []),
-            'items': [x
-                      for x
-                      in plugin_fields_record['schema'].get('items', [])
-                      if x['name'] not in exclude_specific_schema]
-        }
-        fields['specific'][plugin_name] = flatten_fields(
-            plugin_fields_record['schema'], f'adapters_data.{plugin_name}', ['scanner'])
+        items = [x
+                 for x
+                 in plugin_fields_record['schema'].get('items', [])
+                 if x['name'] not in exclude_specific_schema]
+        specific_items = flatten_fields(plugin_fields_record['schema'], f'adapters_data.{plugin_name}', ['scanner'])
+        if items or specific_items:
+            fields['schema']['specific'][plugin_name] = {
+                'type': plugin_fields_record['schema']['type'],
+                'required': plugin_fields_record['schema'].get('required', []),
+                'items': items
+            }
+            fields['specific'][plugin_name] = specific_items
 
     return fields
 
