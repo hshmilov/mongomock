@@ -39,6 +39,7 @@ AWS_SESSION_TOKEN = 'aws_session_token'
 AWS_CONFIG = 'config'
 ACCOUNT_TAG = 'account_tag'
 ROLES_TO_ASSUME_LIST = 'roles_to_assume_list'
+USE_ATTACHED_IAM_ROLE = 'use_attached_iam_role'
 PROXY = 'proxy'
 GET_ALL_REGIONS = 'get_all_regions'
 REGIONS_NAMES = ['us-west-2', 'us-west-1', 'us-east-2', 'us-east-1', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1',
@@ -272,15 +273,28 @@ class AwsAdapter(AdapterBase, Configurable):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config[AWS_ACCESS_KEY_ID] + client_config.get(REGION_NAME, GET_ALL_REGIONS)
+        return (client_config.get(AWS_ACCESS_KEY_ID) or '') + (client_config.get(REGION_NAME) or GET_ALL_REGIONS)
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(AWS_ENDPOINT_FOR_REACHABILITY_TEST)
 
-    def _connect_client(self, client_config):
+    def _connect_client(self, original_client_config):
         # Credentials to some of the clients are temporary so we have to re-create them every cycle.
         # So here we must try to connect (if an exception occurs this will change the status of the adapter)
         # but this must occur every cycle.
+        client_config = original_client_config.copy()
+
+        has_iam_credentials = client_config.get(AWS_ACCESS_KEY_ID) and client_config.get(AWS_SECRET_ACCESS_KEY)
+        has_attached_iam_instance_role = client_config.get(USE_ATTACHED_IAM_ROLE)
+
+        if not has_iam_credentials and not has_attached_iam_instance_role:
+            raise ClientConnectionException(f'Please specify credentials or select use attached instance role')
+
+        if has_attached_iam_instance_role:
+            # If the user requested to use the attached instance role, ignore the iam credentials.
+            client_config.pop(AWS_ACCESS_KEY_ID, None)
+            client_config.pop(AWS_SECRET_ACCESS_KEY, None)
+
         self._connect_client_once(client_config, True)
         return client_config
 
@@ -334,8 +348,8 @@ class AwsAdapter(AdapterBase, Configurable):
                 # for each role, we have to create a new session in which we are logged in with the current IAM
                 # user. if we try to assume two roles one after the other we would have a mixed set of privileges.
                 current_session = boto3.Session(
-                    aws_access_key_id=client_config[AWS_ACCESS_KEY_ID],
-                    aws_secret_access_key=client_config[AWS_SECRET_ACCESS_KEY],
+                    aws_access_key_id=client_config.get(AWS_ACCESS_KEY_ID),
+                    aws_secret_access_key=client_config.get(AWS_SECRET_ACCESS_KEY),
                 )
                 sts_client = current_session.client('sts', config=client_config.get(AWS_CONFIG))
                 assumed_role_object = sts_client.assume_role(
@@ -365,7 +379,7 @@ class AwsAdapter(AdapterBase, Configurable):
 
         # We want to fail only if we failed connecting to everything we can. So what we do is we try to connect
         # and query the ec2 service which is mendatory for us.
-        aws_access_key_id = client_config[AWS_ACCESS_KEY_ID]
+        aws_access_key_id = client_config.get(AWS_ACCESS_KEY_ID) or 'attached_instance_iam_role'
         clients_dict[aws_access_key_id] = dict()
         failed_connections = []
         for region in regions_to_pull_from:
@@ -418,10 +432,15 @@ class AwsAdapter(AdapterBase, Configurable):
     def _get_boto3_config_from_client_config(client_config):
         params = dict()
         params[REGION_NAME] = client_config[REGION_NAME]
-        params[AWS_ACCESS_KEY_ID] = client_config[AWS_ACCESS_KEY_ID]
-        params[AWS_SECRET_ACCESS_KEY] = client_config[AWS_SECRET_ACCESS_KEY]
         params[AWS_CONFIG] = client_config.get(AWS_CONFIG)
         params[AWS_SESSION_TOKEN] = client_config.get(AWS_SESSION_TOKEN)
+
+        # If the user does not provide credentials boto3 tries to search for other paths, such as the attached iam
+        # role
+        if client_config.get(AWS_ACCESS_KEY_ID):
+            params[AWS_ACCESS_KEY_ID] = client_config.get(AWS_ACCESS_KEY_ID)
+            params[AWS_SECRET_ACCESS_KEY] = client_config.get(AWS_SECRET_ACCESS_KEY)
+
         return params
 
     def _test_ec2_connection(self, client_config):
@@ -921,8 +940,9 @@ class AwsAdapter(AdapterBase, Configurable):
 
                         # We must get the token from the aws-iam-authenticator binary
                         my_env = os.environ.copy()
-                        my_env['AWS_ACCESS_KEY_ID'] = client_data['credentials'][AWS_ACCESS_KEY_ID]
-                        my_env['AWS_SECRET_ACCESS_KEY'] = client_data['credentials'][AWS_SECRET_ACCESS_KEY]
+                        if client_data['credentials'].get(AWS_ACCESS_KEY_ID):
+                            my_env['AWS_ACCESS_KEY_ID'] = client_data['credentials'][AWS_ACCESS_KEY_ID]
+                            my_env['AWS_SECRET_ACCESS_KEY'] = client_data['credentials'][AWS_SECRET_ACCESS_KEY]
 
                         aws_iam_authenticator_process = subprocess.Popen(
                             ['aws-iam-authenticator', 'token', '-i', cluster_name],
@@ -1195,12 +1215,16 @@ class AwsAdapter(AdapterBase, Configurable):
                     "title": "Roles to assume",
                     "description": "A list of roles to assume",
                     "type": "file"
+                },
+                {
+                    'name': USE_ATTACHED_IAM_ROLE,
+                    'title': 'Use attached IAM role',
+                    'description': 'Use the IAM role attached to this instance instead of using the credentials',
+                    'type': 'bool'
                 }
             ],
             'required': [
-                GET_ALL_REGIONS,
-                AWS_ACCESS_KEY_ID,
-                AWS_SECRET_ACCESS_KEY
+                GET_ALL_REGIONS
             ],
             'type': 'array'
         }
