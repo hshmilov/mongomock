@@ -5,8 +5,11 @@ import pytest
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.utils.wait import wait_until
-from axonius_system import (CUSTOMER_CONF_PATH, NODE_CONF_PATH,
-                            NODE_MARKER_PATH, SYSTEM_CONF_PATH)
+from axonius_system import (CUSTOMER_CONF_PATH,
+                            NODE_CONF_PATH,
+                            NODE_MARKER_PATH,
+                            SYSTEM_CONF_PATH,
+                            process_exclude_from_config)
 from devops.axonius_system import main as system_main
 from exclude_helper import ExcludeHelper
 from services.adapters.infinite_sleep_service import (InfiniteSleepService,
@@ -20,7 +23,7 @@ from test_credentials.test_gui_credentials import DEFAULT_USER
 from services.axonius_service import get_service
 
 pytestmark = pytest.mark.sanity
-MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3   # the amount of time we expect a cycle to end, without async plugins in bg
+MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3  # the amount of time we expect a cycle to end, without async plugins in bg
 
 
 def test_aggregator_in_configs(axonius_fixture):
@@ -157,3 +160,25 @@ def test_exclude_config(is_node_mode_test_on):
     finally:
         if is_node_mode_test_on and NODE_MARKER_PATH.exists():
             NODE_MARKER_PATH.unlink()
+
+
+def test_exclude_config_quick():
+    try:
+        customer_conf = '''
+        {
+            "exclude-list":
+            {
+                "add-to-exclude": [], 
+                "remove-from-exclude": [ "nimbul" ] 
+            }
+
+        }
+        '''
+
+        CUSTOMER_CONF_PATH.write_text(customer_conf)
+        result = process_exclude_from_config([])
+        assert 'nimbul' not in result
+
+    finally:
+        if CUSTOMER_CONF_PATH.is_file():
+            CUSTOMER_CONF_PATH.unlink()
