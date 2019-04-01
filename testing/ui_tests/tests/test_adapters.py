@@ -165,13 +165,14 @@ class TestAdapters(TestBase):
                 self.devices_page.fill_query_wizard_date_picker(QUERY_WIZARD_CSV_DATE_PICKER_VALUE)
                 # Sleep through the time it takes the date picker to react to the filled date
                 time.sleep(0.5)
-                self.devices_page.wait_for_table_to_load()
                 self.devices_page.close_showing_results()
                 self.devices_page.click_search()
+                self.devices_page.wait_for_table_to_load()
                 assert self.devices_page.count_entities() == 1
                 self.devices_page.click_query_wizard()
                 self.devices_page.click_wizard_outdated_toggle()
                 self.devices_page.click_search()
+                self.devices_page.wait_for_table_to_load()
                 assert self.devices_page.count_entities() == 2
                 self.adapters_page.switch_to_page()
                 self.adapters_page.clean_adapter_servers(CSV_NAME, True)

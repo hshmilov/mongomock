@@ -5,9 +5,9 @@
     import { validateInteger } from '../../../../../constants/utils'
 
     export default {
-		name: 'x-integer-edit',
-        mixins: [primitiveMixin, numericalMixin],
+		name: 'XIntegerEdit',
         components: { xSelect },
+        mixins: [primitiveMixin, numericalMixin],
         methods: {
 		    validateNumber: validateInteger,
 			formatData() {
