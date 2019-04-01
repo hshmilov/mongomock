@@ -55,6 +55,7 @@ class JamfAdapter(AdapterBase, Configurable):
         imei = Field(str, 'IMEI')
         disable_automatic_login = Field(str, 'Disable Automatic Login')
         alternative_mac = Field(str, 'Alternative MAC Address')
+        common_users = ListField(str, 'Common Users')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -158,6 +159,8 @@ class JamfAdapter(AdapterBase, Configurable):
                 try:
                     jamf_location_raw = device_raw.get('location')
                     if isinstance(jamf_location_raw, dict):
+                        device.last_used_users = [jamf_location_raw.get('username')]\
+                            if jamf_location_raw.get('username') else None
                         device.jamf_location = JamfLocation(
                             building=jamf_location_raw.get('building') if jamf_location_raw.get('building') else None,
                             department=jamf_location_raw.get(
@@ -173,7 +176,8 @@ class JamfAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting Jamf Location for {device_raw}')
                 hostname = None
-                # Ofri: Sometimes name is also the hostname. I saw that if we have one of these fields it can't be the host name.
+                # Ofri: Sometimes name is also the hostname.
+                #  I saw that if we have one of these fields it can't be the host name.
                 if not any(elem in device.name for elem in [' ', '.']):
                     asset_is_host = True
                     hostname = device.name
@@ -262,13 +266,12 @@ class JamfAdapter(AdapterBase, Configurable):
                                 inventory_users_dict[user_inventory.get('username') or 'UNKNOWN'] = user_inventory
                         except Exception:
                             logger.exception(f'Problem getting inventory list')
-                        device.last_used_users = []
                         for user_raw in users_raw:
                             try:
                                 user_name_raw = user_raw.get('name')
                                 user_inverntory_raw = inventory_users_dict.get(user_name_raw) or {}
                                 if user_name_raw:
-                                    device.last_used_users.append(user_name_raw)
+                                    device.common_users.append(user_name_raw)
                                 device.add_users(username=user_raw.get('realname') + "@" + str(hostname),
                                                  user_sid=user_raw.get('uid'),
                                                  is_local=True,

@@ -36,6 +36,7 @@ class TenableIoConnection(RESTConnection):
     def add_ips_to_target_group(self, tenable_io_dict):
         target_group_name = tenable_io_dict.get('target_group_name')
         ips = tenable_io_dict.get('ips')
+        override = tenable_io_dict.get('override')
         if not ips or not target_group_name:
             raise RESTException('Missing IPS or Target Group ID')
         target_group_list = self._get('target-groups').get('target_groups')
@@ -54,6 +55,8 @@ class TenableIoConnection(RESTConnection):
         if not target_group_id_raw.get('members'):
             raise RESTException('Device with no IPs')
         ips_raw = target_group_id_raw.get('members').split(',')
+        if override:
+            ips_raw = []
         for ip in ips:
             if ip not in ips_raw:
                 ips_raw.append(ip)

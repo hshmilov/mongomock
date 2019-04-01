@@ -219,6 +219,8 @@ def figure_out_os(s):
     if 'cisco' in s or ('IOS' in orig_s and not any(x in s for x in ios_devices)):
         # If it has 'cisco', or it has 'IOS' (upper letters) and it doesn't have 'iphone', 'ipad', etc.
         os_type = 'Cisco'
+    elif 'vxworks' in s:
+        os_type = 'VxWorks'
     elif 'windows' in s or ('win' in s and 'darwin' not in s):
         os_type = 'Windows'
         # XP must reamin the last item in the list because there is a chance it will be found in "s" by chacne

@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from axonius.fields import Field
 from redcanary_adapter.connection import RedcanaryConnection
 from redcanary_adapter.client_id import get_client_id
@@ -17,6 +18,7 @@ class RedcanaryAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         is_decommissioned = Field(bool, 'Is Decommissioned')
         is_isolated = Field(bool, 'Is Isolated')
+        monitoring_status = Field(str, 'Monitoring Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -100,6 +102,7 @@ class RedcanaryAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-nested-blocks,too-many-branches
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -108,8 +111,9 @@ class RedcanaryAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device_attributes = device_raw['attributes']
-            device.id = device_id + '_' + (device_attributes.get('hostname') or '')
+            device.id = str(device_id) + '_' + (device_attributes.get('hostname') or '')
             device.hostname = device_attributes.get('hostname')
+            device.monitoring_status = device_attributes.get('monitoring_status')
             try:
                 device.figure_os((device_attributes.get('platform') or '') + ' ' +
                                  (device_attributes.get('operating_system') or ''))
@@ -117,6 +121,10 @@ class RedcanaryAdapter(AdapterBase):
                 logger.exception(f'Problem getting os for {device_raw}')
             device.is_isolated = device_attributes.get('is_isolated')
             device.is_decommissioned = device_attributes.get('is_decommissioned')
+            try:
+                device.last_seen = parse_date(device_attributes.get('last_checkin_time'))
+            except Exception:
+                logger.exception(f'Problem getting last seen for {device_raw}')
             if device_attributes.get('username'):
                 device.last_used_users = [device_attributes.get('username')]
             nics = device_attributes.get('endpoint_network_addresses')
@@ -125,9 +133,13 @@ class RedcanaryAdapter(AdapterBase):
                     mac = None
                     ips = None
                     try:
-                        mac = nic['attributes']['mac_address']['attributes']['address']
+                        mac = nic['attributes']['mac_address']
                         if not mac:
                             mac = None
+                        else:
+                            mac = mac['attributes']['address']
+                            if not mac:
+                                mac = None
                     except Exception:
                         logger.exception(f'Problem getting mac in {nic}')
                     try:

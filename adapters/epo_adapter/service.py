@@ -231,13 +231,17 @@ class EpoAdapter(AdapterBase):
             raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
         except Exception as e:
             try:
-                logger.warning(f"Failed to query all linked tables - {e}")
+                logger.exception(f"Failed to query all linked tables - {e}")
                 raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
                              joinTables="EPOComputerProperties, EPOProductPropertyProducts")
             except Exception as e:
-                logger.warning(f"Failed to query EPOComputerProperties, EPOProductPropertyProducts - {e}. \
+                logger.exception(f"Failed to query EPOComputerProperties, EPOProductPropertyProducts - {e}. \
                                         Will fetch only basic info from EPOComputerProperties")
-                raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables="EPOComputerProperties")
+                try:
+                    raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables="EPOComputerProperties")
+                except Exception:
+                    logger.exception('Exception also in here')
+                    raise
         return json.dumps(raw)
 
     def _get_client_id(self, client_config):

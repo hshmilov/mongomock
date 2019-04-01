@@ -169,11 +169,11 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             for x, y in combinations(matches, 2):
                 if not hostnames_do_not_contradict(x, y):
                     if mac not in mac_blacklist:
-                        logger.info(f'This could be bad mac {mac}')
+                        logger.debug(f'This could be bad mac {mac}')
                         if not is_different_plugin(x, y) or (get_domain_for_correlation(x) and
                                                              get_domain_for_correlation(y) and
                                                              compare_domain_for_correlation(x, y)):
-                            logger.info(f'Added to blacklist {mac} for X {x} and Y {y}')
+                            logger.debug(f'Added to blacklist {mac} for X {x} and Y {y}')
                             mac_blacklist.add(mac)
                             break
 

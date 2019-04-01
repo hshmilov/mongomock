@@ -25,6 +25,7 @@ class IBMTivoliTaddmConnection(RESTConnection):
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
+            session_timeout=(30, 1200),
             **kwargs
         )
 

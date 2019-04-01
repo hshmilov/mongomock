@@ -264,8 +264,7 @@ class SplunkConnection(object):
                               'Landesk')
         fetch_hours = fetch_plugins_dict.get('win_logs_fetch_hours') or 3
         yield from self.fetch('search "SourceName=Microsoft Windows security auditing" AND '
-                              '"Audit Success"AND NOT "Acount_Name=SYSTEM" AND '
-                              '"A logon was attempted using explicit credentials" |dedup ComputerName',
+                              '"Audit Success"AND NOT "Acount_Name=SYSTEM" |dedup ComputerName',
                               SplunkConnection.parse_win_events,
                               f'-{fetch_hours}h',  # This log can be huge, please avoid changing this number
                               maximum_records_per_search,

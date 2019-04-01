@@ -42,9 +42,9 @@ class CylanceConnection(RESTConnection):
     def _connect(self):
         """ Connects to the service """
         self._create_token_for_scopre('device:list')
-        self._create_token_for_scopre('policy:list')
 
     def _get_ids_bulks(self, endpoint, scope):
+        self._create_token_for_scopre(scope)
         page_num = 1
         self._session_headers['Authorization'] = 'Bearer ' + self._tokens[scope]
         devices_response_raw = self._get(

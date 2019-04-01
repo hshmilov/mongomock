@@ -57,6 +57,7 @@ class TenableSecurityScannerConnection(RESTConnection):
     def add_ips_to_asset(self, tenable_sc_dict):
         asset_name = tenable_sc_dict.get('asset_name')
         ips = tenable_sc_dict.get('ips')
+        override = tenable_sc_dict.get('override')
         if not ips or not asset_name:
             raise RESTException('Missing IPS or Asset ID')
         asset_list = self._get('asset')
@@ -75,6 +76,8 @@ class TenableSecurityScannerConnection(RESTConnection):
         if not (asset_id_raw.get('typeFields') or {}).get('definedIPs'):
             raise RESTException('Device with no IPs')
         ips_raw = (asset_id_raw.get('typeFields') or {}).get('definedIPs').split(',')
+        if override:
+            ips_raw = []
         for ip in ips:
             if ip not in ips_raw:
                 ips_raw.append(ip)

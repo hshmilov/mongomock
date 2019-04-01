@@ -8,7 +8,7 @@ export const pluginMeta = {
         description: 'TrueFort offers application behavior analytics, control, and protection.'
     },
     redcanary_adapter: {
-        title: 'Red Canary - BETA',
+        title: 'Red Canary',
         description: 'Red Canary is an outcome-focused security operations partner for modern teams, deployed in minutes to reduce risk and improve security.'
     },
     cloudpassage_adapter: {

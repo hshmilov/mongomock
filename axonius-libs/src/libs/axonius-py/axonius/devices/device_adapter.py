@@ -99,7 +99,8 @@ class DeviceAdapterOS(SmartJsonClass):
     """ A definition for the json-scheme for an OS (of a device) """
 
     type = Field(
-        str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik']
+        str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS',
+                           'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks']
     )
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
@@ -520,8 +521,11 @@ class DeviceAdapter(SmartJsonClass):
 
             if boot_time:
                 self.boot_time = boot_time
-                current_time = parse_date(datetime.datetime.now())
-                self.uptime = (current_time - boot_time).days
+                try:
+                    current_time = parse_date(datetime.datetime.now())
+                    self.uptime = (current_time - boot_time).days
+                except Exception:
+                    logger.debug(f'Problem getting uptime from boot time')
                 return
 
             if uptime:

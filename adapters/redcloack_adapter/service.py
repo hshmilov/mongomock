@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from redcloack_adapter.connection import RedcloackConnection
 from redcloack_adapter.client_id import get_client_id
 
@@ -17,6 +17,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class RedcloackAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
+        color = Field(str, 'Color')
+        red_tag = ListField(str, 'Redcloak Tag')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -109,6 +111,11 @@ class RedcloackAdapter(AdapterBase):
                 return None
             device.id = device_id + '_' + (device_raw.get('host_name') or '')
             device.name = device_raw.get('host_name')
+            device.color = device_raw.get('color')
+            try:
+                device.red_tag = device_raw.get('tag')
+            except Exception:
+                logger.exception(f'Problem with tag at {device_raw}')
             try:
                 device.last_seen = parse_date(device_raw.get('last_connect_time'))
             except Exception:

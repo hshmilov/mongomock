@@ -68,6 +68,11 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                     'name': 'use_private_ips',
                     'title': 'Use Private IPS',
                     'type': 'bool'
+                },
+                {
+                    'name': 'override',
+                    'type': 'bool',
+                    'title': 'Override Current IPs List'
                 }
             ],
             'required': [
@@ -75,7 +80,8 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                 'create_new_asset',
                 'use_private_ips',
                 'use_public_ips',
-                'use_adapter'
+                'use_adapter',
+                'override'
 
             ],
             'type': 'array'
@@ -107,8 +113,9 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                                          self._config['use_private_ips'])
         asset_name = self._config['asset_name']
         create_new_asset = self._config['create_new_asset']
+        override = self._config.get('override') or False
         action_name = 'create_asset_with_ips' if create_new_asset else 'add_ips_to_asset'
-        tenable_sc_dict = {'ips': list(ips), 'asset_name': asset_name}
+        tenable_sc_dict = {'ips': list(ips), 'asset_name': asset_name, override: override}
         if self._config['use_adapter'] is True:
             response = PluginBase.Instance.request_remote_plugin(action_name, 'tenable_security_center_adapter',
                                                                  'post', json=tenable_sc_dict)

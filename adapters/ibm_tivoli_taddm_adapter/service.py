@@ -230,8 +230,8 @@ class IbmTivoliTaddmAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_size': 25,
-            'depth_size': 5
+            'fetch_size': 1,
+            'depth_size': 2
         }
 
     @classmethod
