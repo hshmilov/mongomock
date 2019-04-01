@@ -511,23 +511,27 @@ class DeviceAdapter(SmartJsonClass):
     def set_boot_time(self, *, boot_time: datetime.datetime = None, uptime: datetime.timedelta = None):
         """ set boot time and uptime using one of them """
         try:
-            if not any([boot_time, uptime]):
-                raise RuntimeError("Missing required parameters")
+            if boot_time is None and uptime is None:
+                raise RuntimeError('Missing required parameters')
 
-            current_time = parse_date(datetime.datetime.now())
+            if not any([boot_time, uptime]):
+                logger.debug(f'empty time {boot_time} {uptime}')
+                return
 
             if boot_time:
                 self.boot_time = boot_time
+                current_time = parse_date(datetime.datetime.now())
                 self.uptime = (current_time - boot_time).days
                 return
 
             if uptime:
                 self.uptime = uptime.days
+                current_time = parse_date(datetime.datetime.now())
                 self.boot_time = current_time - uptime
                 return
 
         except Exception:
-            logger.exception("Failed to set boot time {time} {delta}")
+            logger.exception(f'Failed to set boot time {boot_time} {uptime}')
 
     def set_raw(self, raw_data: dict):
         """ Sets the raw fields associated with this device and also updates adapter_raw_fields.
