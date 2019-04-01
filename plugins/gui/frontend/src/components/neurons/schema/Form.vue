@@ -88,7 +88,7 @@
             .object {
                 width: 100%;
 
-                input, select {
+                input, select, textarea {
                     width: 100%;
 
                     &.error-border {

@@ -35,6 +35,7 @@ REPORTS_TEMPLATES = {
     'calc_area': __get_template('report_calc_area'),
     'header': __get_template('report_header'),
     'second_header': __get_template('report_second_header'),
+    'custom_body': __get_template('report_custom_body'),
     'table_section': __get_template('report_tables_section'),
     'adapter_image': __get_template('adapter_image'),
     'entity_name_url': __get_template('entity_name_url'),
@@ -65,6 +66,13 @@ class SendEmailsAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
+                    'name': 'emailBody',
+                    'title': 'Custom Message (up to 200 characters)',
+                    'type': 'string',
+                    'format': 'text',
+                    'limit': 200
+                },
+                {
                     'name': 'emailList',
                     'title': 'Recipients',
                     'type': 'array',
@@ -89,7 +97,7 @@ class SendEmailsAction(ActionTypeAlert):
                     'name': 'sendDevicesChangesCSV',
                     'title': 'Attach CSV with Changes in Query results',
                     'type': 'bool'
-                },
+                }
             ],
             'required': [
                 'emailList'
@@ -104,7 +112,8 @@ class SendEmailsAction(ActionTypeAlert):
             'emailList': [],
             'emailListCC': [],
             'sendDevicesCSV': False,
-            'sendDevicesChangesCSV': False
+            'sendDevicesChangesCSV': False,
+            'emailBody': ''
         }
 
     def _run(self) -> AlertActionResult:
@@ -171,6 +180,10 @@ class SendEmailsAction(ActionTypeAlert):
         html_sections.append(REPORTS_TEMPLATES['header'].render({'subject': self._report_data['name']}))
         html_sections.append(REPORTS_TEMPLATES['second_header'].render(
             {'query_link': query_link, 'reason': reason, 'period': period, 'query': query_name}))
+        if self._config['emailBody']:
+            html_sections.append(REPORTS_TEMPLATES['custom_body'].render({
+                'body_text': self._config['emailBody']
+            }))
         html_sections.append(REPORTS_TEMPLATES['calc_area'].render({
             'prev': prev_result_count,
             'added': added_result_count,

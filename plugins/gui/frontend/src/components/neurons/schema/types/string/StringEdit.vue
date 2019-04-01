@@ -1,6 +1,22 @@
 <template>
+  <!-- Date Picker -->
+  <x-date-edit
+    v-if="isDate"
+    v-model="data"
+    :read-only="readOnly"
+    :minimal="true"
+    :clearable="clearable"
+    @input="input"
+  />
+  <textarea
+    v-else-if="isText"
+    v-model="data"
+    :maxlength="schema.limit"
+    rows="3"
+    @input="input"
+  ></textarea>
   <input
-    v-if="inputType"
+    v-else-if="inputType"
     :id="schema.name"
     v-model="processedData"
     :type="inputType"
@@ -9,15 +25,6 @@
     @input="input"
     @focusout.stop="focusout"
   >
-  <!-- Date Picker -->
-  <x-date-edit
-    v-else-if="isDate"
-    v-model="data"
-    :read-only="readOnly"
-    :minimal="true"
-    :clearable="clearable"
-    @input="input"
-  />
   <!-- Select from enum values -->
   <x-select
     v-else-if="enumOptions"
@@ -66,13 +73,16 @@
             isDate() {
 		        return (this.schema.format === 'date-time' || this.schema.format === 'date')
             },
+            isText() {
+                return this.schema.format === 'text'
+            },
 		    isUnchangedPassword() {
 		        return this.inputType === 'password' && this.data && this.data[0] === 'unchanged'
             },
             inputType() {
 				if (this.schema.format && this.schema.format === 'password') {
 					return 'password'
-                } else if (this.isDate || this.schema.enum) {
+                } else if (this.schema.enum) {
 					return ''
                 }
                 return 'text'
