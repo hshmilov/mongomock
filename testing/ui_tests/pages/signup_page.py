@@ -9,7 +9,7 @@ class SignupPage(Page):
     CONFIRM_PASSWORD = 'confirmNewPassword'
     SIGNUP_COMPLETED_TOASTER = 'Sign up completed'
     PASSWORDS_DONT_MATCH_TOASTER = 'Passwords do not match'
-    SAVE_BUTTON_ID = 'signup-save'
+    SIGNUP_FORM_CSS = '.x-signup-form'
 
     @property
     def url(self):
@@ -33,7 +33,7 @@ class SignupPage(Page):
         self.click_save_button()
 
     def get_save_button(self):
-        return self.get_special_button('Save')
+        return self.get_special_button('Get Started')
 
     def is_signup_present(self):
         return self.get_save_button() is not None
@@ -48,4 +48,4 @@ class SignupPage(Page):
         self.wait_for_toaster(self.PASSWORDS_DONT_MATCH_TOASTER)
 
     def wait_for_signup_page_to_load(self):
-        self.wait_for_element_present_by_id(self.SAVE_BUTTON_ID)
+        self.wait_for_element_present_by_css(self.SIGNUP_FORM_CSS)

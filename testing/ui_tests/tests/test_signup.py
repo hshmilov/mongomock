@@ -1,4 +1,3 @@
-import pytest
 from ui_tests.tests.ui_consts import LOGGED_IN_MARKER
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -10,7 +9,6 @@ class TestSignup(TestBase):
             LOGGED_IN_MARKER.unlink()
         self.axonius_system.gui.get_signup_collection().drop()
 
-    @pytest.mark.skip('signup screen disabled')
     def test_signup(self):
         self.settings_page.switch_to_page()
         self.login_page.logout()

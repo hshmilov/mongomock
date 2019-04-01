@@ -21,7 +21,7 @@
     v-model="processedData"
     :type="inputType"
     :class="{'error-border': error}"
-    :disabled="readOnly"
+    :disabled="readOnly || schema.readOnly"
     @input="input"
     @focusout.stop="focusout"
   >

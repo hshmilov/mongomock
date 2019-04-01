@@ -200,9 +200,7 @@ export const auth = {
 			return dispatch(REQUEST_API, {
 				rule: `signup`,
 				method: 'POST',
-				data: {
-					payload
-				}
+				data: payload
 			})
 		},
 

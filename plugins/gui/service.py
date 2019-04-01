@@ -4625,14 +4625,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         signup = signup_collection.find_one({})
 
         if request.method == 'GET':
-            # remove the or True when we finish fixing tests
             return jsonify({Signup.SignupField: signup or has_customer_login_happened()})
 
         # POST from here
         if signup:
             return return_error('Signup already completed', 400)
 
-        signup_data = self.get_request_data_as_object().get('payload', {})
+        signup_data = self.get_request_data_as_object() or {}
 
         new_password = signup_data[Signup.NewPassword] if \
             signup_data[Signup.ConfirmNewPassword] == signup_data[Signup.NewPassword] \
