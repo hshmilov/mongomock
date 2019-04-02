@@ -1942,10 +1942,6 @@ class PluginBase(Configurable, Feature):
                                        ][0]
             update_internal_axon_id = get_preferred_internal_axon_id_from_dict(selected_adapter_entity, entity_type)
 
-        # figure out which adapters should stay on the current entity (axonius_entity_to_split - remaining adapters)
-        # and those that should move to the new axonius entity
-        remaining_adapters = set(x[PLUGIN_UNIQUE_NAME] for x in entity_to_split['adapters']) - \
-            {adapter_to_extract[PLUGIN_UNIQUE_NAME]}
         # figure out for each tag G (in the current entity, i.e. axonius_entity_to_split)
         # whether any of G.associated_adapters is in the `associated_adapters`, i.e.
         # whether G should be a part of the new axonius entity.
@@ -2006,7 +2002,7 @@ class PluginBase(Configurable, Feature):
                              for assoc_adapter
                              in tag_from_old['associated_adapters'])]
         set_query = {
-            ADAPTERS_LIST_LENGTH: len(set(remaining_adapters))
+            ADAPTERS_LIST_LENGTH: len(set(x[PLUGIN_NAME] for x in adapter_entities_left))
         }
         if pull_those:
             pull_query = {
@@ -2033,8 +2029,7 @@ class PluginBase(Configurable, Feature):
         session.update_one({
             'internal_axon_id': entity_to_split['internal_axon_id']
         }, full_query)
-        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(
-            set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
+        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
 
         recalculate_adapter_oldness(new_axonius_entity['adapters'])
         session.insert_one(new_axonius_entity)

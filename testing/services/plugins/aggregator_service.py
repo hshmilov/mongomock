@@ -1,3 +1,4 @@
+import pymongo
 import shutil
 import traceback
 from collections import defaultdict
@@ -11,7 +12,7 @@ from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.entities import EntityType
 from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
 from services.plugin_service import API_KEY_HEADER, PluginService
-from axonius.consts.plugin_consts import GUI_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import GUI_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ADAPTERS_LIST_LENGTH
 from axonius.consts.gui_consts import USERS_COLLECTION
 import requests
 
@@ -43,8 +44,10 @@ class AggregatorService(PluginService):
             self._update_schema_version_8()
         if self.db_schema_version < 9:
             self._update_schema_version_9()
+        if self.db_schema_version < 10:
+            self._update_schema_version_10()
 
-        if self.db_schema_version != 9:
+        if self.db_schema_version != 10:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -432,6 +435,37 @@ class AggregatorService(PluginService):
             self.db_schema_version = 9
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 9. Details: {e}')
+            traceback.print_exc()
+
+    def _update_schema_version_10(self):
+        """
+        AX-3649 - fix adapter list length
+        """
+        try:
+            for entity_type in EntityType:
+                entities_db = self._entity_db_map[entity_type]
+                to_fix = []
+                for entity in entities_db.find({}, projection={
+                    '_id': 1,
+                    f'adapters.{PLUGIN_NAME}': 1,
+                    ADAPTERS_LIST_LENGTH: 1
+                }):
+                    calculated_length = len(set(x[PLUGIN_NAME] for x in entity['adapters']))
+                    if entity[ADAPTERS_LIST_LENGTH] != calculated_length:
+                        to_fix.append(pymongo.operations.UpdateOne({
+                            '_id': entity['_id']
+                        }, {
+                            '$set': {
+                                ADAPTERS_LIST_LENGTH: calculated_length
+                            }
+                        }))
+
+                if to_fix:
+                    entities_db.bulk_write(to_fix, ordered=False)
+
+            self.db_schema_version = 10
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 10. Details: {e}')
             traceback.print_exc()
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)

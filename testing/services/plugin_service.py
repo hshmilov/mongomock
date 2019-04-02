@@ -1,10 +1,12 @@
 import json
 import os
 import time
+from typing import Dict
 
 import gridfs
 import requests
 from bson import ObjectId
+from pymongo.collection import Collection
 
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
@@ -43,12 +45,12 @@ class PluginService(WeaveService):
         self.db = MongoService()
         self.__cached_api_key = None
 
-        self._historical_entity_views_db_map = {
+        self._historical_entity_views_db_map: Dict[EntityType, Collection] = {
             EntityType.Users: self.db.client['aggregator']['historical_users_db_view'],
             EntityType.Devices: self.db.client['aggregator']['historical_devices_db_view'],
         }
 
-        self._entity_db_map = {
+        self._entity_db_map: Dict[EntityType, Collection] = {
             EntityType.Users: self.db.client['aggregator']['users_db'],
             EntityType.Devices: self.db.client['aggregator']['devices_db'],
         }
