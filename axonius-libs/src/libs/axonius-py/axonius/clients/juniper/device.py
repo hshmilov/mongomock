@@ -401,6 +401,8 @@ def update_connected(devices):
 
                         if remote_iface.name == iface.name and remote_iface.port_type:
                             iface.port_type = remote_iface.port_type
+                            if iface.port_type == 'Access':
+                                connected_device.connection_type = 'Direct'
         except Exception:
             logger.exception('Failed to update connected')
 

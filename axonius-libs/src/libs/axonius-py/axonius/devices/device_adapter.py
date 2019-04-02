@@ -402,6 +402,9 @@ class DeviceAdapter(SmartJsonClass):
     )
 
     connected_devices = ListField(DeviceAdapterNeighbor, "Connected Devices", json_format=JsonArrayFormat.table)
+    direct_connected_devices = ListField(
+        DeviceAdapterNeighbor, "Direct Connected Devices", json_format=JsonArrayFormat.table)
+
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
@@ -478,6 +481,14 @@ class DeviceAdapter(SmartJsonClass):
     dhcp_servers = ListField(str, 'DHCP Servers')
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
+
+    def generate_direct_connected_devices(self):
+        try:
+            for connected_device in self.connected_devices:
+                if connected_device.connection_type == ConnectionType.Direct.name():
+                    self.direct_connected_devices.append(connected_device)
+        except Exception:
+            logger.exception('Failed to generate direct connected devices')
 
     def __init__(self, adapter_fields: typing.MutableSet[str], adapter_raw_fields: typing.MutableSet[str]):
         """ The adapter_fields and adapter_raw_fields will be auto-populated when new fields are set. """

@@ -316,7 +316,7 @@ def historical():
                     history = dateutil.parser.parse(history)
                 except Exception:
                     return return_error('Specified date is invalid')
-            logger.info(f"historical for {history}")
+                logger.info(f"historical for {history}")
             return func(self, history=history, *args, **kwargs)
 
         return actual_wrapper

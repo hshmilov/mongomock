@@ -897,6 +897,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         for parsed_device in self._route_parse_raw_data()(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
+            parsed_device.generate_direct_connected_devices()
             parsed_device.fetch_time = datetime.now()
 
             # All scanners should have this automatically
