@@ -2047,7 +2047,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     '_id': saved_action_results['unsuccessful_entities']
                 }
 
+            def clear_saved_action_passwords(action):
+                response = self.request_remote_plugin('reports/actions', 'reports', method='get')
+                if not response:
+                    return
+                clear_passwords_fields(action['config'], response.json()[action['action_name']]['schema'])
+
             normalize_saved_action_results(task['result']['main']['action']['results'])
+            clear_saved_action_passwords(task['result']['main']['action'])
             for key in [ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
                 arr = task['result'][key]
                 for x in arr:

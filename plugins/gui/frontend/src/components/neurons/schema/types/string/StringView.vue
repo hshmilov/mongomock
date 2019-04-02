@@ -81,6 +81,9 @@
 					}
 					return dateParts.join(' ')
                 }
+				if (this.schema.format === 'password') {
+				  return '********'
+                }
 				return value
             }
         }
