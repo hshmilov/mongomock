@@ -163,8 +163,6 @@ class TestAdapters(TestBase):
                 self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN)
                 self.devices_page.select_query_comp_op('<')
                 self.devices_page.fill_query_wizard_date_picker(QUERY_WIZARD_CSV_DATE_PICKER_VALUE)
-                # Sleep through the time it takes the date picker to react to the filled date
-                time.sleep(0.5)
                 self.devices_page.close_showing_results()
                 self.devices_page.click_search()
                 self.devices_page.wait_for_table_to_load()

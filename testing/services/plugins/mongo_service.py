@@ -5,7 +5,8 @@ import psutil
 import pymongo
 
 from axonius.plugin_base import EntityType
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_NAME
+from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_NAME,
+                                          CONFIGURABLE_CONFIGS_COLLECTION)
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
@@ -151,10 +152,10 @@ class MongoService(WeaveService):
             return self.client[AGGREGATOR_PLUGIN_NAME]['historical_devices_db_view']
 
     def gui_users_collection(self):
-        return self.client['gui']['users']
+        return self.client[GUI_NAME]['users']
 
     def gui_config_collection(self):
-        return self.client['gui']['configurable_configs']
+        return self.client[GUI_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
 
     def get_gui_entity_fields(self, entity_type: EntityType):
         if entity_type == EntityType.Users:

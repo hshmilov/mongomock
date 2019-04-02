@@ -214,12 +214,6 @@
         pluginId: 'gui',
         configName: 'GuiService'
       })
-      if (this.isAdmin) {
-        this.loadPluginConfig({
-          pluginId: 'gui',
-          configName: 'FeatureFlags'
-        })
-      }
       this.loadPluginConfig({
         pluginId: 'core',
         configName: 'CoreService'

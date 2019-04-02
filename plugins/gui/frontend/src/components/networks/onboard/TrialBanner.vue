@@ -1,7 +1,7 @@
 <template>
   <div
-    class="x-trial-banner"
     v-if="inTrial"
+    class="x-trial-banner"
   >
     <template
       v-if="trialDaysRemaining <= 0"
@@ -46,7 +46,10 @@
       }),
       trialDaysRemaining () {
         if (!this.featureFlags || !this.featureFlags.trial_end) return null
-        return Math.ceil((new Date(this.featureFlags.trial_end) - new Date()) / 1000 / 60 / 60 / 24)
+        
+        let expirationDate = new Date(this.featureFlags.trial_end)
+        expirationDate.setMinutes(expirationDate.getMinutes() - expirationDate.getTimezoneOffset())
+        return Math.ceil((expirationDate - new Date()) / 1000 / 60 / 60 / 24)
       },
       inTrial() {
         return this.trialDaysRemaining !== null && !this.isAxonius

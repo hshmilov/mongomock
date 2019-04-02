@@ -1,5 +1,6 @@
 import time
 import os
+from enum import Enum
 
 from ui_tests.pages.entities_page import EntitiesPage
 
@@ -20,17 +21,22 @@ class Trigger:
     Below = 'The number of results is below...'
 
 
-class Action:
-    SendMail = 'Send Email'
-    PushNotification = 'Push System Notification'
-    IsolateCB = 'Isolate in CarbonBlack'
-    Syslog = 'Send to Syslog System'
-    Tag = 'Add Tag'
-    DeployWindows = 'Deploy on Windows Device'
-    RunWMI = 'Run WMI Scan'
-    ScanQualys = 'Add to Qualys'
+class Action(Enum):
+    send_emails = 'Send Email'
+    create_notification = 'Push System Notification'
+    carbonblack_isolate = 'Isolate in CarbonBlack'
+    cybereason_isolate = 'Isolate in Cybereason'
+    cybereason_unisolate = 'Unisolate in Cybereason'
+    notify_syslog = 'Send to Syslog System'
+    tag = 'Add Tag'
+    run_executable_windows = 'Deploy on Windows Device'
+    run_wmi_scan = 'Run WMI Scan'
+    scan_with_qualys = 'Add to Qualys'
     ScanTenable = 'Add to Tenable'
-    ChangePolicyCB = 'Change Carbonblack Defense Policy'
+    carbonblack_defense_change_policy = 'Change Carbonblack Defense Policy'
+    tenable_sc_add_ips_to_asset = 'Add IPs to Tenable SC Asset'
+    tenable_io_add_ips_to_target_group = 'Add IPs to Tenable IO Target Group'
+    create_jira_incident = 'Create Jira Issue'
 
 
 class ActionCategory:
@@ -116,7 +122,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(ActionCategory.Notify).click()
         # Opening animation time
         time.sleep(0.2)
-        self.find_element_by_text(Action.SendMail).click()
+        self.find_element_by_text(Action.send_emails.value).click()
 
     def tag_entities(self, name, tag, new=False):
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
@@ -134,7 +140,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(ActionCategory.Utils).click()
         # Opening animation time
         time.sleep(0.2)
-        self.find_element_by_text(Action.Tag).click()
+        self.find_element_by_text(Action.tag.value).click()
         self.tag_entities(name, tag, new=True)
 
     def change_tag_entities(self, name='Special Tag Action', tag='Special'):
@@ -148,10 +154,10 @@ class EnforcementsPage(EntitiesPage):
         self.fill_text_field_by_element_id('tagNew', tag_text)
 
     def add_cb_isolate(self, name='Special Isolate Action', action_cond=MAIN_ACTION_TEXT):
-        self.add_generic_action(ActionCategory.Isolate, Action.IsolateCB, name, action_cond)
+        self.add_generic_action(ActionCategory.Isolate, Action.carbonblack_isolate.value, name, action_cond)
 
     def add_push_notification(self, name='Special Push Action', action_cond=MAIN_ACTION_TEXT):
-        self.add_generic_action(ActionCategory.Notify, Action.PushNotification, name, action_cond)
+        self.add_generic_action(ActionCategory.Notify, Action.create_notification.value, name, action_cond)
 
     def add_generic_action(self, action_category, action_type, name, action_cond=MAIN_ACTION_TEXT):
         self.find_element_by_text(action_cond).click()
@@ -170,6 +176,11 @@ class EnforcementsPage(EntitiesPage):
     def get_action_categories(self):
         return [el.text.strip() for el in self.driver.find_elements_by_css_selector(self.CATEGORY_LIST_CSS)]
 
+    def open_first_action_category(self):
+        self.driver.find_element_by_css_selector(self.CATEGORY_LIST_CSS).click()
+        # Opening animation time
+        time.sleep(0.2)
+
     def open_action_category(self, category_name):
         self.find_element_by_text(category_name).click()
         # Opening animation time
@@ -182,6 +193,9 @@ class EnforcementsPage(EntitiesPage):
 
     def find_disabled_action(self, action_name):
         return self.driver.find_element_by_xpath(self.DISABLED_ACTION_XPATH.format(action_name=action_name))
+
+    def click_action(self, action_name):
+        self.find_element_by_text(action_name).click()
 
     def find_missing_email_server_notification(self):
         return self.find_element_by_text('In order to send alerts through mail, configure it under settings')
@@ -216,7 +230,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(ActionCategory.Notify).click()
         # Opening animation time
         time.sleep(0.2)
-        self.find_element_by_text(Action.PushNotification).click()
+        self.find_element_by_text(Action.create_notification.value).click()
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
@@ -230,7 +244,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(ActionCategory.Run).click()
         # Opening animation time
         time.sleep(0.2)
-        self.find_element_by_text(Action.RunWMI).click()
+        self.find_element_by_text(Action.run_wmi_scan.value).click()
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
@@ -251,7 +265,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(ActionCategory.Notify).click()
         # Opening animation time
         time.sleep(0.2)
-        self.find_element_by_text(Action.Syslog).click()
+        self.find_element_by_text(Action.notify_syslog.value).click()
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
@@ -267,7 +281,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(ActionCategory.Deploy).click()
         # Opening animation time
         time.sleep(0.2)
-        self.find_element_by_text(Action.DeployWindows).click()
+        self.find_element_by_text(Action.run_executable_windows.value).click()
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
@@ -461,6 +475,10 @@ class EnforcementsPage(EntitiesPage):
 
     def fill_action_library_search(self, text):
         self.fill_text_field_by_css_selector('.x-action-library .x-search-input .input-value', text)
+
+    def find_action_library_tip(self, tip_text):
+        library_tip = self.wait_for_element_present_by_css('.x-action-library-tip')
+        return self.find_element_by_text(tip_text, element=library_tip)
 
     def fill_enter_table_search(self, text):
         self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)

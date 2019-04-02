@@ -99,6 +99,9 @@ class Page:
     JSON_ADAPTER_NAME = 'JSON File'
     CUSTOM_ADAPTER_NAME = 'Custom Data'
 
+    DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
+    DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
+
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url
@@ -552,3 +555,31 @@ class Page:
     @staticmethod
     def is_input_error(input_element):
         return 'border-error' in input_element.get_attribute('class')
+
+    def wait_for_modal_close(self):
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
+    def fill_showing_results(self, date_to_fill):
+        self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS, date_to_fill.date().isoformat())
+        # Sleep through the time it takes the date picker to react to the filled date
+        time.sleep(0.5)
+
+    def close_showing_results(self):
+        try:
+            self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS).click()
+            self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
+        except NoSuchElementException:
+            # Already closed
+            pass
+
+    def click_remove_sign(self):
+        self.click_button('X', partial_class=True, should_scroll_into_view=False)
+
+    def clear_showing_results(self):
+        try:
+            self.click_remove_sign()
+            # Make sure it is removed
+            time.sleep(0.2)
+        except NoSuchElementException:
+            # Already clear
+            pass

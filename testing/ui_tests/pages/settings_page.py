@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timedelta
 
 from selenium.common.exceptions import NoSuchElementException
 
@@ -481,10 +482,18 @@ class SettingsPage(Page):
     def fill_remote_access_timeout(self, timeout):
         self.fill_text_field_by_element_id('remote-access-timer', timeout)
 
+    def get_locked_actions(self):
+        return self.driver.find_element_by_css_selector('.md-select .md-input.md-select-value').get_attribute('value')
+
     def is_locked_action(self, action_name):
-        return action_name in self.driver.find_element_by_css_selector(
-            '.md-select .md-input.md-select-value').get_attribute('value')
+        return action_name in self.get_locked_actions()
 
     def set_locked_actions(self, action_name):
         self.find_field_by_label('Actions Locked for Client').click()
         self.driver.find_element_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(action_name=action_name)).click()
+
+    def fill_trial_expiration_by_remainder(self, days_remaining=None):
+        self.clear_showing_results()
+        if days_remaining is not None:
+            self.fill_showing_results(datetime.now() + timedelta(days_remaining))
+            self.close_showing_results()

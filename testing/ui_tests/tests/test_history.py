@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import time
 
 from axonius.consts.metric_consts import Query
 from axonius.utils.wait import wait_until
@@ -16,8 +15,6 @@ class TestHistory(TestBase):
         tester = self.axonius_system.gui.log_tester
         for day in range(1, 30):
             self.users_page.fill_showing_results(datetime.now() - timedelta(day))
-            # Sleep through the time it takes the date picker to react to the filled date
-            time.sleep(0.5)
             self.users_page.wait_for_table_to_load()
             assert self.users_page.count_entities() == day_to_user_count[day - 1]
             for user_name in self.users_page.get_column_data(self.users_page.FIELD_USERNAME_NAME):
@@ -34,8 +31,6 @@ class TestHistory(TestBase):
         tester = self.axonius_system.gui.log_tester
         for day in range(1, 30):
             self.devices_page.fill_showing_results(datetime.now() - timedelta(day))
-            # Sleep through the time it takes the date picker to react to the filled date
-            time.sleep(0.5)
             self.devices_page.wait_for_table_to_load()
             assert self.devices_page.count_entities() == day_to_device_count[day - 1]
             for host_name in self.users_page.get_column_data(self.devices_page.FIELD_HOSTNAME_NAME):

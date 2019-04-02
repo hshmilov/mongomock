@@ -1,8 +1,8 @@
 import re
+import time
 
 import requests
 from retrying import retry
-from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
@@ -76,11 +76,7 @@ class EntitiesPage(Page):
     AD_ADAPTER_FILTER = 'adapters == "active_directory_adapter"'
     AD_WMI_ADAPTER_FILTER = f'{AD_ADAPTER_FILTER} and adapters_data.general_info.id == exists(true)'
 
-    DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
-    DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
-
     NOTES_CONTENT_CSS = '.x-entity-notes'
-
     NOTES_TAB_CSS = 'li#notes'
     TAGS_TAB_CSS = 'li#tags'
     CUSTOM_DATA_TAB_CSS = 'li#gui_unique'
@@ -174,6 +170,8 @@ class EntitiesPage(Page):
     def fill_query_wizard_date_picker(self, date_value, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_DATE_PICKER_CSS,
                                              parse_date(date_value).date().isoformat(), context=parent)
+        # Sleep through the time it takes the date picker to react to the filled date
+        time.sleep(0.5)
 
     def get_query_comp_op(self):
         return self.driver.find_element_by_css_selector(self.QUERY_COMP_OP_DROPDOWN_CSS).text
@@ -403,23 +401,6 @@ class EntitiesPage(Page):
     def click_save_query_save_button(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
-
-    def fill_showing_results(self, date_to_fill):
-        self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS, date_to_fill.date().isoformat())
-
-    def close_showing_results(self):
-        try:
-            self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS).click()
-            self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
-        except NoSuchElementException:
-            # Already closed
-            pass
-
-    def click_remove_sign(self):
-        self.click_button('X', partial_class=True, should_scroll_into_view=False)
-
-    def clear_showing_results(self):
-        self.click_remove_sign()
 
     def run_filter_and_save(self, query_name, query_filter):
         self.fill_filter(query_filter)

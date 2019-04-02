@@ -249,3 +249,13 @@ class DashboardPage(Page):
     @staticmethod
     def find_quantity_in_card(card):
         return [int(x.text) for x in card.find_elements_by_css_selector('div.quantity') if x.text]
+
+    def find_no_trial_banner(self):
+        self.wait_for_element_absent_by_css('.x-trial-banner')
+
+    def find_trial_remainder_banner(self, remainder_count):
+        return self.wait_for_element_present_by_text(f'{remainder_count} days remaining in your Axonius evaluation')
+
+    def find_trial_expired_banner(self):
+        return self.wait_for_element_present_by_text(
+            'Axonius evaluation period has expired. Please reach out to your Account Manager.')

@@ -108,12 +108,12 @@
         return !this.actionsDef[action]
       },
       onClickAction (action) {
-        this.checkEmptySettings(action.name)
-        if (this.anyEmptySettings) return
         if (action.locked || !action.implemented) {
           this.actionToTip = action
           return
         }
+        this.checkEmptySettings(action.name)
+        if (this.anyEmptySettings) return
         this.$emit('select', action.name)
       }
     }

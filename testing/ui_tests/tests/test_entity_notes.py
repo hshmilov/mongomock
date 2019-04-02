@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import time
 
 from axonius.consts.metric_consts import ApiMetric
 from axonius.entities import EntityType
@@ -109,8 +108,6 @@ class TestEntityNotes(TestBase):
         # Check no historical note was affected by the edit
         for day in range(1, 30):
             entities_page.fill_showing_results(datetime.now() - timedelta(day))
-            # Sleep through the time it takes the date picker to react to the filled date
-            time.sleep(0.5)
             entities_page.wait_for_table_to_load()
             entities_page.close_showing_results()
             if entities_page.get_all_data():

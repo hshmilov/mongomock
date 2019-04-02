@@ -13,6 +13,7 @@ from selenium import webdriver
 
 import conftest
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
+from axonius.consts.gui_consts import FeatureFlagsNames, FEATURE_FLAGS_CONFIG
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
 from services.axonius_service import get_service
@@ -213,6 +214,15 @@ class TestBase:
 
         self.axonius_system.db.get_gui_entity_fields(EntityType.Users).delete_many({})
         self.axonius_system.db.get_gui_entity_fields(EntityType.Devices).delete_many({})
+
+        self.axonius_system.db.gui_config_collection().update_one({
+            'config_name': FEATURE_FLAGS_CONFIG
+        }, {
+            '$set': {
+                f'config.{FeatureFlagsNames.TrialEnd}':
+                    (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
+            }
+        })
 
     def change_base_url(self, new_url):
         old_base_url = self.base_url

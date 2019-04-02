@@ -369,7 +369,7 @@ class TestEnforcementSanity(TestBase):
         self.enforcements_page.open_action_category(ActionCategory.Scan)
         # Opening animation time
         time.sleep(0.2)
-        assert self.enforcements_page.find_disabled_action(Action.ScanQualys)
+        assert self.enforcements_page.find_disabled_action(Action.scan_with_qualys.value)
 
     def test_full_action_flow(self):
         """
@@ -429,4 +429,5 @@ class TestEnforcementSanity(TestBase):
         assert self.enforcements_page.get_action_categories() == [ActionCategory.Deploy, ActionCategory.Isolate,
                                                                   ActionCategory.Patch, ActionCategory.ManageAD,
                                                                   ActionCategory.Incident]
-        assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [Action.ChangePolicyCB]
+        assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [
+            Action.carbonblack_defense_change_policy.value]
