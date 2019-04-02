@@ -19,7 +19,7 @@ class TestDevicesTable(TestEntitiesTable):
 
     def test_devices_action_remove_plugin_tag(self):
         with GeneralInfoService().contextmanager(take_ownership=True):
-            self.create_run_wmi_scan_on_each_cycle_enforcement()
+            self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_load()

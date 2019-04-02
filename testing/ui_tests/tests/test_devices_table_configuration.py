@@ -48,7 +48,7 @@ class TestDevicesTable(TestEntitiesTable):
 
     def test_devices_config(self):
         with GeneralInfoService().contextmanager(take_ownership=True):
-            self.create_run_wmi_scan_on_each_cycle_enforcement()
+            self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
 
             # Testing regular Adapter

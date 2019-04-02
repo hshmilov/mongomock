@@ -327,6 +327,3 @@ class TestBase:
         self.axonius_system.db.get_historical_entity_db_view(entity_type).drop()
         self.base_page.run_discovery()
         self._create_history(entity_type)
-
-    def create_run_wmi_scan_on_each_cycle_enforcement(self):
-        self.enforcements_page.create_run_wmi_enforcement()

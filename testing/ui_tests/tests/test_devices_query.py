@@ -296,7 +296,7 @@ class TestDevicesQuery(TestBase):
     def _test_complex_obj_dates(self):
         self.devices_page.close_dropdown()
         with GeneralInfoService().contextmanager(take_ownership=True):
-            self.create_run_wmi_scan_on_each_cycle_enforcement()
+            self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
 
             # Wait for WMI info

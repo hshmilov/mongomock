@@ -3,9 +3,11 @@ import os
 from enum import Enum
 
 from ui_tests.pages.entities_page import EntitiesPage
+from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
 
 ENFORCEMENT_WMI_EVERY_CYCLE = 'Run WMI on every cycle'
-ENFORCEMENT_WMI_QUERY_NAME = 'Enabled AD Devices'
+ENFORCEMENT_WMI_SAVED_QUERY = f'adapters_data.active_directory_adapter.hostname == "{WMI_QUERIES_DEVICE}"'
+ENFORCEMENT_WMI_SAVED_QUERY_NAME = 'Execution devices'  # A strong device
 
 
 class Period:
@@ -417,8 +419,15 @@ class EnforcementsPage(EntitiesPage):
 
     def create_run_wmi_enforcement(self):
         self.switch_to_page()
-        # for some reason, this switch_to_page doesn't work from here sometimes
-        time.sleep(1)
+        self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_SAVED_QUERY_NAME,
+                                      enforce_added=False)
+        self.add_run_wmi_scan(ENFORCEMENT_WMI_EVERY_CYCLE)
+        self.add_tag_entities(name='Great Success', tag='Great Success', action_cond=self.SUCCESS_ACTIONS_TEXT)
+        self.click_save_button()
+        self.wait_for_table_to_load()
+
+    def create_run_wmi_scan_on_each_cycle_enforcement(self):
+        # First, check if we have it.
         self.switch_to_page()
         try:
             self.find_element_by_text(ENFORCEMENT_WMI_EVERY_CYCLE)
@@ -426,11 +435,9 @@ class EnforcementsPage(EntitiesPage):
             return
         except Exception:
             pass
-
-        self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_QUERY_NAME, enforce_added=False)
-        self.add_run_wmi_scan(ENFORCEMENT_WMI_EVERY_CYCLE)
-        self.click_save_button()
-        self.wait_for_table_to_load()
+        self.test_base.devices_page.switch_to_page()
+        self.test_base.devices_page.run_filter_and_save(ENFORCEMENT_WMI_SAVED_QUERY_NAME, ENFORCEMENT_WMI_SAVED_QUERY)
+        self.create_run_wmi_enforcement()
 
     def add_deploying_consequences(self, enforcement_name, success_tag_name, failure_tag_name, failure_isolate_name):
         self.edit_enforcement(enforcement_name)

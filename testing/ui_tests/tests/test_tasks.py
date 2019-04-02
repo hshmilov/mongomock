@@ -3,11 +3,15 @@ from datetime import datetime
 from axonius.utils.parsing import normalize_timezone_date
 from services.plugins.device_control_service import DeviceControlService
 from ui_tests.tests.ui_test_base import TestBase
+from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, NONEXISTEN_AD_DEVICE_IP
 
 ENFORCEMENT_NAME = 'Special enforcement name'
-ENFORCEMENT_QUERY = 'Enabled AD Devices'
+ENFORCEMENT_QUERY = 'Run WMI task'
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
+ENFORCEMENT_DEVICES_QUERY = f'adapters_data.active_directory_adapter.hostname == "{WMI_QUERIES_DEVICE}" or ' \
+    f'adapters_data.active_directory_adapter.network_interfaces.ips == "{NONEXISTEN_AD_DEVICE_IP}"'
 ENFORCEMENT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_enforcement_change == 5'
+TEST_ENFORCEMENT_NAME = 'Test 1'
 
 SUCCESS_TAG_NAME = 'Tag Special Success'
 FAILURE_TAG_NAME = 'Tag Special Failure'
@@ -23,6 +27,8 @@ class TestTasks(TestBase):
     FIELD_STATUS = 'Status'
 
     def test_tasks_table_content(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
         self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_QUERY)
         self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
                                                           FAILURE_TAG_NAME, FAILURE_ISOLATE_NAME)
@@ -114,9 +120,9 @@ class TestTasks(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         assert len(self.enforcements_page.get_column_data(self.FIELD_NAME)) == 5
 
-        self.enforcements_page.fill_enter_table_search('1')
+        self.enforcements_page.fill_enter_table_search(TEST_ENFORCEMENT_NAME)
         self.enforcements_page.wait_for_table_to_load()
-        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == ['Test 1']
+        assert self.enforcements_page.get_column_data(self.FIELD_NAME) == [TEST_ENFORCEMENT_NAME]
 
         self.enforcements_page.fill_enter_table_search(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.wait_for_table_to_load()
@@ -128,6 +134,8 @@ class TestTasks(TestBase):
 
     def test_task_results(self):
         with DeviceControlService().contextmanager(take_ownership=True):
+            self.devices_page.switch_to_page()
+            self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
             self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_QUERY)
             self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
                                                               FAILURE_TAG_NAME, FAILURE_ISOLATE_NAME)
@@ -139,13 +147,7 @@ class TestTasks(TestBase):
             self.enforcements_page.wait_for_table_to_load()
             self.enforcements_page.click_row()
 
-            try:
-                self._check_action_results(12, 8)
-                self._check_action_results(12, 0, SUCCESS_TAG_NAME)
-                self._check_action_results(8, 0, FAILURE_TAG_NAME)
-                self._check_action_results(0, 8, FAILURE_ISOLATE_NAME)
-            except AssertionError:
-                self._check_action_results(11, 9)
-                self._check_action_results(11, 0, SUCCESS_TAG_NAME)
-                self._check_action_results(9, 0, FAILURE_TAG_NAME)
-                self._check_action_results(0, 9, FAILURE_ISOLATE_NAME)
+            self._check_action_results(1, 1)
+            self._check_action_results(1, 0, SUCCESS_TAG_NAME)
+            self._check_action_results(1, 0, FAILURE_TAG_NAME)
+            self._check_action_results(0, 1, FAILURE_ISOLATE_NAME)
