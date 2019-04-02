@@ -40,6 +40,12 @@ export const compOps = {
         size: '{field} == size({val})',
         exists: exists_array
     },
+    array_discrete: {
+        count_equals: '{field} == size({val})',
+        count_below: '{field} < size({val})',
+        count_above: '{field} > size({val})',
+        exists: exists_array
+    },
     'date-time': date,
     date,
     time: {exists},

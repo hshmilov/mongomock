@@ -226,6 +226,17 @@ def convert_to_main_db(find):
                 }
             ]
             del find[k]
+        elif k == 'adapters' and isinstance(v, dict):
+            operator = next(iter(v))
+            if isinstance(v[operator], dict) and next(iter(v[operator])) == '$size':
+                find['$expr'] = {
+                    operator: [
+                        {
+                            '$size': '$adapters'
+                        }, v[operator]['$size']
+                    ]
+                }
+                del find['adapters']
         elif k == 'labels':
             find['tags.label_value'] = v
             del find[k]

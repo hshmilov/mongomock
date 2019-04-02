@@ -102,7 +102,7 @@
                 let ops = {}
                 let schema = this.fieldSchema
                 if (schema.type === 'array') {
-                    ops = compOps['array']
+                    ops = compOps[`array_${schema.format}`] || compOps['array']
                     schema = schema.items
                 }
                 if (schema.enum && schema.format !== 'predefined') {
@@ -120,9 +120,19 @@
                 }
                 return ops
             },
+            opTitleTranslation() {
+                return {
+                    count_equals: 'count =',
+                    count_below: 'count <',
+                    count_above: 'count >'
+                }
+            },
             opsList() {
                 return Object.keys(this.opsMap).map((op) => {
-                    return {name: op, title: op}
+                    return {
+                      name: op,
+                      title: this.opTitleTranslation[op] ? this.opTitleTranslation[op] : op
+                    }
                 })
             },
             showValue() {

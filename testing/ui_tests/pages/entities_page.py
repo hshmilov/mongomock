@@ -40,7 +40,7 @@ class EntitiesPage(Page):
     QUERY_COMP_CONTAINS = 'contains'
     QUERY_COMP_EQUALS = 'equals'
     QUERY_COMP_SUBNET = 'subnet'
-    QUERY_COMP_SIZE = 'size'
+    QUERY_COMP_SIZE = 'count ='
     QUERY_COMP_DAYS = 'days'
     QUERY_LOGIC_AND = 'and'
     QUERY_LOGIC_OR = 'or'

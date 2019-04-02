@@ -823,6 +823,7 @@ def entity_fields(entity_type: EntityType):
         'name': 'adapters',
         'title': 'Adapters',
         'type': 'array',
+        'format': 'discrete',
         'items': {
             'type': 'string',
             'format': 'logo',
