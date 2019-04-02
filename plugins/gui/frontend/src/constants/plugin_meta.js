@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    symantec_ee_adapter: {
+        title: 'Symantec Endpoint Encryption - BETA',
+        description: 'Symantec Endpoint Encryption combines full-disk and removable media encryption with centralized management to protect sensitive information and ensure regulatory compliance.'
+    },
     promisec_adapter: {
         title: 'Promisec - BETA',
         description: 'Promisec provides clientless end-point management software that secures and optimizes PCs and servers in enterprise computer networks.'

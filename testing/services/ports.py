@@ -139,6 +139,7 @@ DOCKER_PORTS = {
     'redcanary-adapter':                6671,
     'truefort-adapter':                 6672,
     'promisec-adapter':                 6673,
+    'symantec-ee-adapter':              6674,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
