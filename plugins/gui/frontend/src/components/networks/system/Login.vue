@@ -3,7 +3,10 @@
     v-if="!isConnected"
     class="x-login"
   >
-    <div class="login-container">
+    <div
+      class="login-container"
+      v-if="!fetchingSignup"
+    >
       <div class="header">
         <svg-icon
           name="logo/logo"
@@ -18,10 +21,11 @@
         />
       </div>
       <div class="body">
-        <template v-if="showLoginPage">
-          <x-signup-form v-if="showSignup" />
-          <x-login-form v-else />
-        </template>
+        <x-signup-form
+          v-if="showSignup"
+          @done="getSignup"
+        />
+        <x-login-form v-else-if="showLoginPage" />
         <x-login-options :login-okta="!showLoginPage"/>
       </div>
     </div>
@@ -52,6 +56,9 @@
         },
         showSignup (state) {
           return !state.auth.signup.data
+        },
+        fetchingSignup(state) {
+          return state.auth.signup.data === null || state.auth.signup.fetching
         }
     }),
     mounted() {
@@ -67,10 +74,9 @@
 
 <style lang="scss">
     .x-login {
-        background: url('/src/assets/images/general/login_bg.png');
-        background-size: cover;
-        background-position: center bottom;
-        height: 100vh;
+      background-size: cover;
+      background: url('/src/assets/images/general/login_bg.png') center bottom;
+      height: 100vh;
         padding-top: 20vh;
 
         .login-container {

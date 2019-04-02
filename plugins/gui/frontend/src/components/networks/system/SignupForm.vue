@@ -26,7 +26,7 @@
   import xToast from '../../axons/popover/Toast.vue'
 
   import { mapActions } from 'vuex'
-  import { SUBMIT_SIGNUP, GET_SIGNUP } from '../../../store/modules/auth'
+  import { SUBMIT_SIGNUP } from '../../../store/modules/auth'
 
   export default {
     name: 'XSignupForm',
@@ -79,8 +79,7 @@
     },
     methods: {
       ...mapActions({
-        submitSignup: SUBMIT_SIGNUP,
-        getSignup: GET_SIGNUP
+        submitSignup: SUBMIT_SIGNUP
       }),
       onValidate(valid) {
         this.valid = valid
@@ -96,11 +95,10 @@
         }
         this.submitSignup(this.signupData).then(() => {
           this.message = 'Signup completed'
-          this.signupData = { ...this.signupData }
-          this.getSignup()
+          this.$emit('done')
         }).catch(error => {
           this.message = JSON.parse(error.request.response).message
-          this.getSignup()
+          this.$emit('done')
         })
       }
     }
