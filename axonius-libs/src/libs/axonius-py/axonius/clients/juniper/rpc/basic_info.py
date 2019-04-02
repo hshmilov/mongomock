@@ -187,17 +187,61 @@ def parse_switching_interface(xml):
 
 def parse_l2ald_interface(xml):
     """ parse get-ethernet-l2ng-l2ald-iff-interface-information detail version 1"""
-    result = []
+    fields = {
+        'l2iff-interface-name': 'interface-name',
+        'l2iff-interface-interface-type': 'type',
+        'l2iff-interface-trunk-vlan': 'interface-port-mode',
+        'l2iff-interface-vlan-id':    'interface-vlan-member-tagid',
+        'l2iff-interface-vlan-name': 'interface-vlan-name',
+        'l2iff-interface-vlan-member-tagness': 'interface-vlan-member-tagness',
+    }
+
+    result_list = []
+    result = {}
     if gettag(xml.tag) != 'l2ng-l2ald-iff-interface-information':
         raise ValueError(f'l2ng-l2ald-iff-interface-information not found got {gettag(xml.tag)}')
-    raise NotImplementedError()
+
+    for entry_raw in xml:
+        entry = {}
+        if gettag(entry_raw.tag) != 'l2ng-l2ald-iff-interface-entry':
+            logger.warning(f'l2ng-l2ald-iff-interface-entry not found got {gettag(entry_raw.tag)}')
+            continue
+
+        for field in entry_raw:
+            if gettag(field.tag) not in fields:
+                continue
+
+            entry[fields[gettag(field.tag)]] = gettext(field.text)
+
+        if not entry.get('type', '').startswith('IFBD'):
+            continue
+
+        if 'interface-name' not in entry:
+            continue
+
+        interface_name = entry['interface-name']
+        if interface_name not in result:
+            result[interface_name] = {'interface-name': interface_name, 'vlans': []}
+
+        if 'interface-port-mode' in entry:
+            if str(entry['interface-port-mode']) == '0' and \
+                    not result[interface_name].get('interface-port-mode'):
+                result[interface_name]['interface-port-mode'] = 'Trunk'
+            del entry['interface-port-mode']
+
+        if entry.get('interface-vlan-member-tagness', '') == 'untagged':
+            result[interface_name]['interface-port-mode'] = 'Access'
+
+        result[interface_name]['vlans'].append(entry)
+
+    return list(result.values())
 
 
 def parse_vlans(xml):
     if gettag(xml.tag) == 'switching-interface-information':
         result = parse_switching_interface(xml)
     elif gettag(xml.tag) == 'l2ng-l2ald-iff-interface-information':
-        parse_l2ald_interface(xml)
+        result = parse_l2ald_interface(xml)
     else:
         raise ValueError(f'parse vlans got {gettag(xml.tag)}')
     return result

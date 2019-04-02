@@ -89,11 +89,17 @@ def test_parse_base_mac():
     assert len(result) == 1
 
 
-@pytest.mark.skip(reason='not supported yet')
 def test_parse_vlans2():
     data = prepare(VLAN_MOCK2)
     result = parse_vlans(data)
-    assert len(result) == 4
+    assert len(result) == 7
+
+    vlan_mock = VLAN_MOCK2.replace('ae0.0', 'em0.0').replace('ae10.0', 'em1.0')
+    mock = mock_query_basic_info()
+    mock[1].append(('vlans', vlan_mock))
+    result = parse_device('Juniper Device', mock)
+    result2 = list(create_device(lambda: JuniperDeviceAdapter(set(), set()), 'Juniper Device', result))[0]
+    result2.set_raw({})
 
 
 def test_basic_info():
