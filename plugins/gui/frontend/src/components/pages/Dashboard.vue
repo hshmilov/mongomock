@@ -31,7 +31,7 @@
             </div>
             <x-wizard v-if="wizardActivated" @done="wizardActivated = false" />
         </template>
-        <x-toast v-if="message" :message="message" @done="removeToast"/>
+        <x-toast v-if="message" v-model="message" />
     </x-page>
 </template>
 
@@ -238,9 +238,6 @@
                         this.cardHistoricalData = {...this.cardHistoricalData, [cardUuid]: response.data}
                     }
                 })
-            },
-            removeToast() {
-                this.message = ''
             },
             onClickInsights() {
                 this.$router.push({name: 'Insights Explorer'})

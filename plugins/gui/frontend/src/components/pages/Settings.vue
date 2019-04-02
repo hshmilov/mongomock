@@ -120,8 +120,7 @@
     </x-tabs>
     <x-toast
       v-if="message"
-      :message="message"
-      @done="removeToast"
+      v-model="message"
     />
   </x-page>
 </template>
@@ -321,9 +320,6 @@
         }).then(response => {
           this.createToast(response)
         })
-      },
-      removeToast () {
-        this.message = ''
       },
       createToast (response) {
         if (response.status === 200) {

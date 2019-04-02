@@ -1,7 +1,7 @@
 <template>
     <x-page title="users">
         <x-table module="users" @error="errorMessage = $event"/>
-        <x-toast v-if="errorMessage" :message="errorMessage" @done="removeErrorMessage"/>
+        <x-toast v-if="errorMessage" v-model="errorMessage" />
     </x-page>
 </template>
 
@@ -16,11 +16,6 @@
         data() {
             return {
                 errorMessage: ''
-            }
-        },
-        methods: {
-            removeErrorMessage() {
-                this.errorMessage = ''
             }
         }
     }

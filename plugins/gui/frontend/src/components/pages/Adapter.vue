@@ -56,7 +56,7 @@
                 <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
             </div>
         </x-modal>
-        <x-toast v-if="message" :message="message" @done="removeToast" :timeout="toastTimeout"/>
+        <x-toast v-if="message" v-model="message" :timeout="toastTimeout"/>
     </x-page>
 </template>
 

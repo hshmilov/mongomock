@@ -78,7 +78,7 @@
             <x-custom-fields slot="body" :module="module" v-model="fieldsEditor.data" :fields="customFields"
                              @validate="validateFieldsEditor" :external-error="error"/>
         </x-modal>
-        <x-toast v-if="toastMessage" :message="toastMessage" @done="removeToast"/>
+        <x-toast v-if="toastMessage" v-model="toastMessage" />
     </div>
 </template>
 
@@ -359,7 +359,7 @@
                             ids: this.entities, include: true
                         }, data: this.fieldsEditor.data
                     }
-                }).then((response) => {
+                }).then(() => {
                     this.toastMessage = 'Saved Custom Data'
                     this.fetchDataFields({module: this.module})
                     this.fetchCurrentEntity()
@@ -374,9 +374,6 @@
             },
             validateFieldsEditor(valid) {
                 this.fieldsEditor.valid = valid
-            },
-            removeToast() {
-                this.toastMessage = ''
             },
             existFields(item) {
                 // Filter out fields that doesn't have any data

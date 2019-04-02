@@ -284,8 +284,10 @@ class TestEnforcementSanity(TestBase):
         assert '0' in self.enforcements_page.get_column_data(self.FIELD_TIMES_TRIGGERED)
         self.enforcements_page.edit_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_run_button()
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
         self.notification_page.verify_amount_of_notifications(1)
-        wait_until(lambda: '1' in self.enforcements_page.get_column_data(self.FIELD_TIMES_TRIGGERED))
+        wait_until(lambda: '1' in self.enforcements_page.get_column_data(self.FIELD_TIMES_TRIGGERED), interval=1)
 
     def test_enforcement_table_content(self):
         self.enforcements_page.create_notifying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)

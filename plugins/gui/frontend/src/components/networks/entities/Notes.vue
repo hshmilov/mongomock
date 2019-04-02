@@ -21,7 +21,7 @@
                           placeholder="Enter your note..."></textarea>
             </template>
         </x-modal>
-        <x-toast v-if="toastMessage" :message="toastMessage" @done="remoteToast"/>
+        <x-toast v-if="toastMessage" v-model="toastMessage" />
     </div>
 </template>
 
@@ -175,9 +175,6 @@
                         this.toastMessage = 'Operation could not be performed. Check your logs.'
                     }
                 })
-            },
-            remoteToast() {
-                this.toastMessage = ''
             },
             sortNotes(fieldName) {
                 if (this.sort.field !== fieldName) {

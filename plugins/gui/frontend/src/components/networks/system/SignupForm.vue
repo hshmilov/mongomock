@@ -14,9 +14,8 @@
     >Get Started</x-button>
     <x-toast
       v-if="message"
-      :message="message"
+      v-model="message"
       :timeout="6000"
-      @done="removeToast"
     />
   </div>
 </template>
@@ -103,9 +102,6 @@
           this.message = JSON.parse(error.request.response).message
           this.getSignup()
         })
-      },
-      removeToast () {
-        this.message = ''
       }
     }
   }

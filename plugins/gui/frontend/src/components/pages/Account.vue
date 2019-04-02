@@ -24,7 +24,7 @@
                 This means that all applications using this key will stop working.
             </div>
         </x-modal>
-        <x-toast v-if="message" :message="message" @done="removeToast" :timeout="6000"/>
+        <x-toast v-if="message" v-model="message" :timeout="6000"/>
     </x-page>
 </template>
 
@@ -143,11 +143,7 @@
                         this.message = 'a new secret key has been generated, the old one is no longer valid'
                     }
                 })
-            },
-            removeToast() {
-                this.message = ''
             }
-
         },
         created() {
             this.getApiKey()

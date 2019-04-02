@@ -119,6 +119,7 @@
         />
       </x-card>
     </x-split-box>
+    <x-toast v-if="message" v-model="message" />
   </x-page>
 </template>
 
@@ -133,6 +134,7 @@
   import xActionGroup from '../networks/enforcement/ActionGroup.vue'
   import xActionConfig from '../networks/enforcement/ActionConfig.vue'
   import xActionLibrary from '../networks/enforcement/ActionLibrary.vue'
+  import xToast from '../axons/popover/Toast.vue'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
@@ -152,7 +154,8 @@
     components: {
       xPage, xSplitBox, xCard, xButton,
       xTrigger, xTriggerConfig,
-      xAction, xActionGroup, xActionConfig, xActionLibrary
+      xAction, xActionGroup, xActionConfig, xActionLibrary,
+      xToast
     },
     data () {
       return {
@@ -163,7 +166,8 @@
         triggerInProcess: {
           position: null, definition: null
         },
-        allowedActionNames: []
+        allowedActionNames: [],
+        message: ''
       }
     },
     computed: {
@@ -324,8 +328,11 @@
       },
       saveRun () {
         this.saveEnforcement(this.enforcement).then((response) => {
-          this.runEnforcement(this.id === 'new' ? response : this.id)
-          this.exit()
+          if (!this.enforcement.uuid) {
+            this.enforcement.uuid = response
+          }
+          this.runEnforcement(this.enforcement.uuid)
+          this.message = 'Enforcement Task is in progress'
         })
       },
       saveExit () {

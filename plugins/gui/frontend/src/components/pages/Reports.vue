@@ -42,7 +42,7 @@
                 </div>
             </div>
         </x-box>
-        <x-toast v-if="message" :message="message" @done="removeToast"/>
+        <x-toast v-if="message" v-model="message" />
     </x-page>
 </template>
 
@@ -133,9 +133,6 @@
                         this.message = 'Executive report periodic email setting saved.'
                     }
                 })
-            },
-            removeToast() {
-                this.message = ''
             }
         },
         created() {

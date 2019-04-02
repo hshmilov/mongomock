@@ -8,7 +8,7 @@
       tag="div"
     >
       <div class="body">
-        <div class="content">{{ message }}</div>
+        <div class="content">{{ value }}</div>
         <div class="actions">
           <slot />
         </div>
@@ -20,22 +20,34 @@
 <script>
   export default {
     name: 'XToast',
-    props: { message: { required: true }, timed: { default: true }, timeout: { default: 4000 } },
+    props: {
+      value: {
+        type: String,
+        required: true
+      },
+      timed: {
+        type: Boolean,
+        default: true
+      },
+      timeout: {
+        default: 4000
+      }
+    },
     data () {
       return {
         left: ''
       }
     },
     watch: {
-      message () {
+      value () {
         this.left = ''
         clearTimeout(this.timer)
-        this.timer = setTimeout(() => this.$emit('done'), this.timeout)
+        this.timer = setTimeout(() => this.$emit('input', ''), this.timeout)
       }
     },
     mounted () {
       if (this.timed) {
-        this.timer = setTimeout(() => this.$emit('done'), this.timeout)
+        this.timer = setTimeout(() => this.$emit('input', ''), this.timeout)
       }
       this.left = this.getLeftPos()
     },

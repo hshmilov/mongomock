@@ -42,13 +42,16 @@ class CiscoMerakiAdapter(AdapterBase):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config['CiscoMeraki_Domain']
 
-    def _test_reachability(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('CiscoMeraki_Domain'))
 
-    def _connect_client(self, client_config):
+    @staticmethod
+    def _connect_client(client_config):
         try:
             connection = CiscoMerakiConnection(domain=client_config['CiscoMeraki_Domain'],
                                                apikey=client_config['apikey'],
@@ -62,7 +65,8 @@ class CiscoMerakiAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         """
         Get all devices from a specific CiscoMeraki domain
 
@@ -79,7 +83,8 @@ class CiscoMerakiAdapter(AdapterBase):
         with connection:
             return connection.get_device_list(), vlan_exclude_list
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         """
         The schema CiscoMerakiAdapter expects from configs
 
@@ -118,8 +123,8 @@ class CiscoMerakiAdapter(AdapterBase):
         }
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks, arguments-differ
-    def _parse_raw_data(self, devices_clients_raw_data_exclude):
-        devices_clients_raw_data, vlan_exclude_list = devices_clients_raw_data_exclude
+    def _parse_raw_data(self, devices_clients_vlan_exclude):
+        devices_clients_raw_data, vlan_exclude_list = devices_clients_vlan_exclude
         devices_raw_data = devices_clients_raw_data.get('devices', [])
         clients_raw_date = devices_clients_raw_data.get('clients', [])
         for device_raw in devices_raw_data:

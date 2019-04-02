@@ -1,7 +1,7 @@
 <template>
     <x-page title="devices">
         <x-table module="devices" @data="updateDeviceState" @error="errorMessage = $event"/>
-        <x-toast v-if="errorMessage" @done="removeErrorMessage">{{ errorMessage }}</x-toast>
+        <x-toast v-if="errorMessage" v-model="errorMessage" />
     </x-page>
 </template>
 
@@ -41,9 +41,6 @@
                 } else {
                     this.changeState({name: this.tourDevices[0]})
                 }
-            },
-            removeErrorMessage() {
-                this.errorMessage = ''
             }
         }
     }

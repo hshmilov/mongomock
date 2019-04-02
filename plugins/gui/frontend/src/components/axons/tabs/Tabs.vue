@@ -97,7 +97,7 @@
             }
         }
 
-        .body {
+        > .body {
             height: calc(100% - 48px);
             background-color: $theme-white;
             border-top: 0;
