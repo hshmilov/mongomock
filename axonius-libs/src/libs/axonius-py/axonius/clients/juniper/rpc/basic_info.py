@@ -229,9 +229,6 @@ def parse_l2ald_interface(xml):
                 result[interface_name]['interface-port-mode'] = 'Trunk'
             del entry['interface-port-mode']
 
-        if entry.get('interface-vlan-member-tagness', '') == 'untagged':
-            result[interface_name]['interface-port-mode'] = 'Access'
-
         result[interface_name]['vlans'].append(entry)
 
     return list(result.values())

@@ -31,7 +31,7 @@ def parse_arps(xmls: list):
             for item in xml:
                 try:
                     if 'arp-table-entry' not in gettag(item.tag):
-                        logger.warning(
+                        logger.debug(
                             'arp-table-entry not found, got %s', gettag(item.tag))
                         continue
 
@@ -119,7 +119,7 @@ def parse_l2ng(xml):
 
     for vlan in xml:
         if gettag(vlan.tag) != 'l2ng-l2ald-mac-entry-vlan':
-            logger.warning(
+            logger.debug(
                 'l2ng-l2ald-mac-entry-vlan not found, got %s', gettag(vlan.tag))
             continue
 
@@ -132,7 +132,7 @@ def parse_l2ng(xml):
                 continue
 
             if gettag(entry.tag) != 'l2ng-mac-entry':
-                logger.warning(
+                logger.debug(
                     'l2ng-mac-entry not found, got %s', gettag(entry.tag))
                 continue
 
@@ -173,7 +173,7 @@ def parse_ethernet_switching(xml):
             new_entry = {}
 
             if gettag(entry.tag) != 'mac-table-entry':
-                logger.warning(
+                logger.debug(
                     'l2ng-mac-entry not found, got %s', gettag(entry.tag))
                 continue
 
@@ -212,7 +212,7 @@ def parse_lldp(xmls):
             xml = prepare(xml)
             json = Xml2Json(xml).result
             if 'lldp-neighbors-information' not in json:
-                logger.warning(
+                logger.debug(
                     'neighbors not found , got %s', list(json.keys()))
                 continue
 
