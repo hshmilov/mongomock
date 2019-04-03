@@ -10,6 +10,7 @@ from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter, 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.utils.files import get_local_config_file
+from axonius.utils.xml2json_parser import Xml2Json
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -67,8 +68,13 @@ class JuniperAdapter(AdapterBase):
                     device.device_model = f'{str(juno_device.platform)} {str(juno_device.OSVersion)}'
                     ip_address = str(juno_device.ipAddr)
                     device.add_nic(None, [ip_address] if ip_address is not None else None)
+                    device.connection_status = juno_device.connectionStatus
                     device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
-                    device.set_raw({})
+                    try:
+                        json = Xml2Json(juno_device.xml_string())
+                        device.set_raw(json.result)
+                    except Exception:
+                        logger.exception(f'Unable to set raw juniper space device')
                     yield device
                 except Exception:
                     logger.exception(f'Got problems with {juno_device.name}')

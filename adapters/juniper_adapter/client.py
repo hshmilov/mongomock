@@ -99,17 +99,12 @@ class JuniperClient:
             tm.delete()
 
     def get_all_devices(self):
-        devices = self.space_rest_client.device_management.devices.get(
-            filter_={'connectionStatus': 'up'})
-
-        final_devices = {}
-        for device in devices:
-            final_devices[str(device.serialNumber)] = device
-
-        devices = list(final_devices.values())
+        devices = self.space_rest_client.device_management.devices.get()
 
         for current_device in devices:
             yield ('Juniper Space Device', current_device)
+
+        up_devices = [device for device in devices if device.connectionStatus == 'up']
 
         actions = [
             ('LLDP Device', '<get-lldp-neighbors-information/>'),
@@ -124,4 +119,4 @@ class JuniperClient:
             ('base-mac', '<get-chassis-mac-addresses/>'),
         ]
 
-        yield from self._do_junus_space_command(devices, 'get_info_q', actions)
+        yield from self._do_junus_space_command(up_devices, 'get_info_q', actions)

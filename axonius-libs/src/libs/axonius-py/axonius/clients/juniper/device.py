@@ -15,6 +15,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class JuniperDeviceAdapter(DeviceAdapter):
     device_type = Field(str, 'Device Type', enum=['LLDP Device', 'ARP Device',
                                                   'FDB Device', 'Juniper Device', 'Juniper Space Device'])
+    connection_status = Field(str, 'Connection Status', enum=['up', 'down'])
 
 
 def _get_lldp_id(lldp_raw_device):
