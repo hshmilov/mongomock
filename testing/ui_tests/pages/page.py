@@ -14,6 +14,7 @@ from selenium.webdriver.common.keys import Keys
 
 from services.axon_service import TimeoutException
 from ui_tests.tests.ui_consts import TEMP_FILE_PREFIX
+from axonius.utils.parsing import normalize_timezone_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -559,12 +560,13 @@ class Page:
     def wait_for_modal_close(self):
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
-    def fill_showing_results(self, date_to_fill):
-        self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS, date_to_fill.date().isoformat())
+    def fill_datepicker_date(self, date_to_fill):
+        self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS,
+                                             normalize_timezone_date(date_to_fill.date().isoformat()))
         # Sleep through the time it takes the date picker to react to the filled date
         time.sleep(0.5)
 
-    def close_showing_results(self):
+    def close_datepicker(self):
         try:
             self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS).click()
             self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
@@ -575,11 +577,10 @@ class Page:
     def click_remove_sign(self):
         self.click_button('X', partial_class=True, should_scroll_into_view=False)
 
-    def clear_showing_results(self):
-        try:
-            self.click_remove_sign()
-            # Make sure it is removed
-            time.sleep(0.2)
-        except NoSuchElementException:
-            # Already clear
-            pass
+    def clear_existing_date(self):
+        self.click_remove_sign()
+        # Make sure it is removed
+        time.sleep(0.5)
+
+    def find_existing_date(self):
+        return self.wait_for_element_present_by_css('.md-datepicker .md-button.md-clear')

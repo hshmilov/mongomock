@@ -93,12 +93,14 @@ class TestFeatureFlags(TestBase):
         self.settings_page.set_locked_actions(self.ACTION_TO_UNLOCK)
         self.settings_page.save_and_wait_for_toaster()
 
-    def _change_expiration_date(self, days_remaining=None):
+    def _change_expiration_date(self, days_remaining=None, existing=True):
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
         self.settings_page.switch_to_page()
         self.settings_page.click_feature_flags()
+        if existing:
+            self.settings_page.find_existing_date()
         self.settings_page.fill_trial_expiration_by_remainder(days_remaining)
         self.settings_page.save_and_wait_for_toaster()
         self.login_page.logout()
@@ -108,14 +110,13 @@ class TestFeatureFlags(TestBase):
     def test_trial_expiration(self):
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.find_trial_remainder_banner(30)
-        self._change_expiration_date()
-        # Need to wait for fetch of the new data from server (bug AX-3625)
-        time.sleep(1)
-        self.dashboard_page.find_no_trial_banner()
-
         for days_remaining in [16, 8, 2]:
             self._change_expiration_date(days_remaining)
             assert self.dashboard_page.find_trial_remainder_banner(days_remaining)
 
-        self._change_expiration_date(-1)
+        self._change_expiration_date()
+        # Need to wait for fetch of the new data from server (bug AX-3625)
+        time.sleep(1)
+        self.dashboard_page.find_no_trial_banner()
+        self._change_expiration_date(-1, existing=False)
         assert self.dashboard_page.find_trial_expired_banner()

@@ -493,7 +493,10 @@ class SettingsPage(Page):
         self.driver.find_element_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(action_name=action_name)).click()
 
     def fill_trial_expiration_by_remainder(self, days_remaining=None):
-        self.clear_showing_results()
+        try:
+            self.clear_existing_date()
+        except NoSuchElementException:
+            pass
         if days_remaining is not None:
-            self.fill_showing_results(datetime.now() + timedelta(days_remaining))
-            self.close_showing_results()
+            self.fill_datepicker_date(datetime.now() + timedelta(days_remaining))
+            self.close_datepicker()
