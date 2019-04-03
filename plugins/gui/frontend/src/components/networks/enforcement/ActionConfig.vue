@@ -39,118 +39,121 @@
 </template>
 
 <script>
-    import xButton from '../../axons/inputs/Button.vue'
-    import xForm from '../../neurons/schema/Form.vue'
+  import xButton from '../../axons/inputs/Button.vue'
+  import xForm from '../../neurons/schema/Form.vue'
 
-    import actionsMixin from '../../../mixins/actions'
+  import actionsMixin from '../../../mixins/actions'
 
-    export default {
-        name: 'XActionConfig',
-        components: {
-            xButton, xForm
+  export default {
+    name: 'XActionConfig',
+    components: {
+      xButton, xForm
+    },
+    mixins: [actionsMixin],
+    props: {
+      value: {
+        type: Object,
+        default: () => {}
+      },
+      exclude: {
+        type: Array,
+        default: () => []
+      },
+      include: {
+        type: Array,
+        default: () => []
+      },
+      readOnly: Boolean
+    },
+    data () {
+      return {
+        nameValid: false,
+        formValid: true
+      }
+    },
+    computed: {
+      disableConfirm () {
+        return (!this.formValid || !this.nameValid)
+      },
+      disableName () {
+        return this.value.uuid
+      },
+      name: {
+        get () {
+          if (!this.value) return ''
+          return this.value.name
         },
-        mixins: [actionsMixin],
-        props: {
-            value: {
-                type: Object,
-                default: () => {}
-            },
-            exclude: {
-                type: Array,
-                default: () => []
-            },
-            include: {
-                type: Array,
-              default: () => []
-            },
-            readOnly: Boolean
-        },
-        data() {
-            return {
-                nameValid: true,
-                formValid: true,
+        set (name) {
+          this.$emit('input', {
+            ...this.value,
+            name, action: {
+              ...this.value.action, config: this.config
             }
-        },
-        computed: {
-            disableConfirm() {
-                return (!this.formValid || !this.nameValid)
-            },
-            disableName() {
-                return this.value.uuid
-            },
-            name: {
-                get() {
-                    if (!this.value) return ''
-                    return this.value.name
-                },
-                set(name) {
-                    this.$emit('input', {...this.value,
-                        name, action: {
-                            ...this.value.action, config: this.config
-                        }
-                    })
-                }
-            },
-            config: {
-                get() {
-                    if (!this.value || !this.value.action.config) return this.actionConfig.default || {}
-                    return this.value.action.config
-                },
-                set(config) {
-                    this.$emit('input', {...this.value,
-                        name: this.name, action: {
-                            ...this.value.action, config
-                        }
-                    })
-                }
-            },
-            actionName() {
-                if (!this.value || !this.value.action) return ''
-
-                return this.value.action['action_name']
-            },
-            actionConfig() {
-                if (!this.actionsDef || !this.actionName) return {}
-
-                return this.actionsDef[this.actionName]
-            },
-            actionSchema() {
-                if (!this.actionConfig) return {}
-
-                return this.actionConfig.schema
-            },
-            formError() {
-                if (this.formValid) return ''
-                return 'Form has incomplete required fields'
-            },
-            nameError() {
-                if (this.disableName) return ''
-                if (this.name === '') {
-                    return 'Action Name is a required field'
-                } else if ((this.actionNameExists(this.name) && !this.include.includes(this.name))
-                        || this.exclude.includes(this.name)) {
-                    return 'Name already taken by another saved Action'
-                }
-                return ''
-            }
-        },
-        watch: {
-            nameError(newVal) {
-                this.nameValid = !newVal
-            }
-        },
-        mounted() {
-            this.$refs.name.focus()
-        },
-        methods: {
-            validateForm(valid) {
-                this.formValid = valid
-            },
-            confirmAction() {
-                this.$emit('confirm')
-            }
+          })
         }
+      },
+      config: {
+        get () {
+          if (!this.value || !this.value.action.config) return this.actionConfig.default || {}
+          return this.value.action.config
+        },
+        set (config) {
+          this.$emit('input', {
+            ...this.value,
+            name: this.name, action: {
+              ...this.value.action, config
+            }
+          })
+        }
+      },
+      actionName () {
+        if (!this.value || !this.value.action) return ''
+
+        return this.value.action['action_name']
+      },
+      actionConfig () {
+        if (!this.actionsDef || !this.actionName) return {}
+
+        return this.actionsDef[this.actionName]
+      },
+      actionSchema () {
+        if (!this.actionConfig) return {}
+
+        return this.actionConfig.schema
+      },
+      formError () {
+        if (this.formValid) return ''
+        return 'Form has incomplete required fields'
+      },
+      nameError () {
+        if (this.disableName) return ''
+        if (this.name === '') {
+          return 'Action Name is a required field'
+        } else if ((this.actionNameExists(this.name) && !this.include.includes(this.name))
+                || this.exclude.includes(this.name)) {
+          return 'Name already taken by another saved Action'
+        }
+        return ''
+      }
+    },
+    watch: {
+      nameError (newVal) {
+        this.nameValid = !newVal
+      }
+    },
+    mounted () {
+      this.$refs.name.focus()
+      this.nameValid = !this.nameError
+    },
+    methods: {
+      validateForm (valid) {
+        this.formValid = valid
+      },
+      confirmAction () {
+        this.$emit('confirm')
+      }
     }
+  }
 </script>
 
 <style lang="scss">

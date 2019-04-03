@@ -61,90 +61,116 @@
       <label>{{ schema.title }}</label>
       <md-chips
         v-model="data"
+        ref="chips"
         md-placeholder="Add..."
+        @keydown.native="checkChip"
+        @focusout.native="insertChip"
       />
     </template>
   </div>
 </template>
 
 <script>
-    import xTypeWrap from './TypeWrap.vue'
-    import string from '../string/StringEdit.vue'
-    import number from '../numerical/NumberEdit.vue'
-    import integer from '../numerical/IntegerEdit.vue'
-    import bool from '../boolean/BooleanEdit.vue'
-    import file from './FileEdit.vue'
-    import range from '../string/RangeEdit.vue'
-    import xButton from '../../../../axons/inputs/Button.vue'
+  import xTypeWrap from './TypeWrap.vue'
+  import string from '../string/StringEdit.vue'
+  import number from '../numerical/NumberEdit.vue'
+  import integer from '../numerical/IntegerEdit.vue'
+  import bool from '../boolean/BooleanEdit.vue'
+  import file from './FileEdit.vue'
+  import range from '../string/RangeEdit.vue'
+  import xButton from '../../../../axons/inputs/Button.vue'
 
-    import arrayMixin from './array'
+  import arrayMixin from './array'
 
-    export default {
-        name: 'Array',
-        components: {
-            xTypeWrap, string, number, integer, bool, file, range, xButton
-        },
-        mixins: [arrayMixin],
-        props: {
-          readOnly: {
-            type: Boolean,
-            default: false
-          }
-        },
-        data() {
-        	return {
-                needsValidation: false
-            }
-        },
-        computed: {
-            isItemsString() {
-                if (this.isOrderedObject) return false
-                return this.schema.items.type === 'string'
-            },
-            isItemsStringEnum() {
-              return this.isItemsString && this.schema.items.enum
-            }
-        },
-        watch: {
-        	isHidden() {
-        		/*
-        		    Change of hidden, means some fields may appear or disappear.
-        		    Therefore, the new children should be re-validated but the DOM has not updated yet
-        		 */
-        		this.needsValidation = true
-            }
-        },
-        mounted() {
-            this.validate(true)
-        },
-        updated() {
-        	if (this.needsValidation) {
-        		// Here the new children (after change of hidden) are updated in the DOM
-				this.validate(true)
-                this.needsValidation = false
-            }
-        },
-        methods: {
-            onValidate(validity) {
-                this.$emit('validate', validity)
-            },
-            validate(silent) {
-            	if (!this.$refs.itemChild) return
-                this.$refs.itemChild.forEach(item => item.validate(silent))
-            },
-            addNewItem() {
-                this.data = [...this.data,
-                  this.schema.items.items.reduce((map, field) => {
-                        map[field.name] = field.default || null
-                        return map
-                    }, {})
-                ]
-            },
-            removeItem(index) {
-                this.data.splice(index, 1)
-            }
+  export default {
+    name: 'Array',
+    components: {
+      xTypeWrap, string, number, integer, bool, file, range, xButton
+    },
+    mixins: [arrayMixin],
+    props: {
+      readOnly: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data () {
+      return {
+        needsValidation: false
+      }
+    },
+    computed: {
+      isItemsString () {
+        if (this.isOrderedObject) return false
+        return this.schema.items.type === 'string'
+      },
+      isItemsStringEnum () {
+        return this.isItemsString && this.schema.items.enum
+      }
+    },
+    watch: {
+      isHidden () {
+        /*
+            Change of hidden, means some fields may appear or disappear.
+            Therefore, the new children should be re-validated but the DOM has not updated yet
+         */
+        this.needsValidation = true
+      }
+    },
+    mounted () {
+      this.validate(true)
+    },
+    updated () {
+      if (this.needsValidation) {
+        // Here the new children (after change of hidden) are updated in the DOM
+        this.validate(true)
+        this.needsValidation = false
+      }
+    },
+    methods: {
+      onValidate (validity) {
+        this.$emit('validate', validity)
+      },
+      validate (silent) {
+        if (!this.$refs.itemChild) return
+        this.$refs.itemChild.forEach(item => item.validate(silent))
+      },
+      addNewItem () {
+        this.data = [...this.data,
+          this.schema.items.items.reduce((map, field) => {
+            map[field.name] = field.default || null
+            return map
+          }, {})
+        ]
+      },
+      removeItem (index) {
+        this.data.splice(index, 1)
+      },
+      checkChip (event) {
+        event = (event) ? event : window.event
+        if (event.key !== 'Tab' && event.key !== ',' && event.key !== ';') {
+          return true
         }
+        this.insertChip(event)
+        event.preventDefault()
+      },
+      insertChip(event) {
+        let value = event.target.value
+        if (!value) return
+        let processedValue = value.split(/[;,]+/).map(item => {
+          if (this.schema.items.format === 'email') {
+            let emailMatch = item.match(new RegExp('.*?\s?<(\.*?)>'))
+            if (emailMatch && emailMatch.length > 1) {
+              return emailMatch[1]
+            }
+          }
+          return item
+        })
+        this.data = Array.from(new Set(this.data.concat(processedValue)))
+        this.$refs.chips.inputValue = ''
+      }
     }
+  }
 </script>
 
 <style lang="scss">

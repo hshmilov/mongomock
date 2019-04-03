@@ -77,7 +77,8 @@ class SendEmailsAction(ActionTypeAlert):
                     'title': 'Recipients',
                     'type': 'array',
                     'items': {
-                        'type': 'string'
+                        'type': 'string',
+                        'format': 'email'
                     }
                 },
                 {
@@ -85,7 +86,8 @@ class SendEmailsAction(ActionTypeAlert):
                     'title': 'Recipients CC',
                     'type': 'array',
                     'items': {
-                        'type': 'string'
+                        'type': 'string',
+                        'format': 'email'
                     }
                 },
                 {
