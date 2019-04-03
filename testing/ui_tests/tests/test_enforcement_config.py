@@ -344,6 +344,8 @@ class TestEnforcementSanity(TestBase):
             self.enforcements_page.edit_enforcement(name)
             self.enforcements_page.click_save_button()
             self.enforcements_page.wait_for_table_to_load()
+            # Make a distinct difference between each save
+            time.sleep(1)
         assert self.enforcements_page.get_column_data(self.FIELD_NAME) == sorted(enforcement_names, reverse=True)
 
     def test_enforcement_table_search(self):
