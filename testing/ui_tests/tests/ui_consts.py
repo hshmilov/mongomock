@@ -3,8 +3,6 @@ from pathlib import Path
 
 from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
 
-from test_credentials.test_gui_credentials import DEFAULT_USER
-
 INCORRECT_PASSWORD = 'Incorrect!'
 UNMATCHED_PASSWORD1 = 'Unmatched!'
 UNMATCHED_PASSWORD2 = 'Unmatched!2'
@@ -72,6 +70,3 @@ class Tags:
 
 class Account:
     file_path = 'account_data.tmp'
-
-
-SIGNUP_TEST_CREDS = {'company': 'test_company', 'password': DEFAULT_USER['password'], 'email': 'a@b.com'}

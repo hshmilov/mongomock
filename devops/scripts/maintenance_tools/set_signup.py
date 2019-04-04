@@ -1,5 +1,6 @@
 from services.plugins.gui_service import GuiService
-from ui_tests.tests.ui_consts import SIGNUP_TEST_CREDS
+
+SIGNUP_TEST_CREDS = {'company': 'test_company', 'password': 'cAll2SecureAll', 'email': 'a@b.com'}
 
 
 def main():

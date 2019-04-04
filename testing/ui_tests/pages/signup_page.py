@@ -1,5 +1,5 @@
+from scripts.maintenance_tools.set_signup import SIGNUP_TEST_CREDS
 from ui_tests.pages.page import Page
-from ui_tests.tests.ui_consts import SIGNUP_TEST_CREDS
 
 
 class SignupPage(Page):
