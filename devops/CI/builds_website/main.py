@@ -262,7 +262,7 @@ def instances():
             vm_type=instance_type,
             security_group_id=security_group,
             image_id=image_id,
-            key_name=request.form.get("key_name")
+            key_name=request.form.get("key_name", buildsmanager.KEY_NAME)
         ))
 
         if image_id is not None:
