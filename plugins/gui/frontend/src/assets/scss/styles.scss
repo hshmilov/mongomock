@@ -506,24 +506,7 @@ table {
     transform: scale(1);
     transition: .3s cubic-bezier(.4, 0, .2, 1);
   }
-  &.md-chips {
-    margin-bottom: 0;
-    padding-top: 0;
-    min-height: auto;
-    &:after {
-      background-color: $grey-2;
-    }
-    .md-input {
-      border: 0;
-      font-size: 14px;
-      height: 28px;
-    }
-    .md-chip {
-      background-color: $grey-1;
-      height: 24px;
-      line-height: 24px;
-    }
-  }
+
 }
 .md-switch {
   .md-switch-container {

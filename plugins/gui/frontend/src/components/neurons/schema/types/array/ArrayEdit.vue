@@ -59,12 +59,9 @@
     </template>
     <template v-else>
       <label>{{ schema.title }}</label>
-      <md-chips
+      <x-list-input
         v-model="data"
-        ref="chips"
-        md-placeholder="Add..."
-        @keydown.native="checkChip"
-        @focusout.native="insertChip"
+        :format="schema.items.format"
       />
     </template>
   </div>
@@ -79,13 +76,14 @@
   import file from './FileEdit.vue'
   import range from '../string/RangeEdit.vue'
   import xButton from '../../../../axons/inputs/Button.vue'
+  import xListInput from '../../../../axons/inputs/ListInput.vue'
 
   import arrayMixin from './array'
 
   export default {
     name: 'Array',
     components: {
-      xTypeWrap, string, number, integer, bool, file, range, xButton
+      xTypeWrap, string, number, integer, bool, file, range, xButton, xListInput
     },
     mixins: [arrayMixin],
     props: {
@@ -145,29 +143,6 @@
       },
       removeItem (index) {
         this.data.splice(index, 1)
-      },
-      checkChip (event) {
-        event = (event) ? event : window.event
-        if (event.key !== 'Tab' && event.key !== ',' && event.key !== ';') {
-          return true
-        }
-        this.insertChip(event)
-        event.preventDefault()
-      },
-      insertChip(event) {
-        let value = event.target.value
-        if (!value) return
-        let processedValue = value.split(/[;,]+/).map(item => {
-          if (this.schema.items.format === 'email') {
-            let emailMatch = item.match(new RegExp('.*?\s?<(\.*?)>'))
-            if (emailMatch && emailMatch.length > 1) {
-              return emailMatch[1]
-            }
-          }
-          return item
-        })
-        this.data = Array.from(new Set(this.data.concat(processedValue)))
-        this.$refs.chips.inputValue = ''
       }
     }
   }
