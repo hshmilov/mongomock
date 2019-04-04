@@ -13,9 +13,7 @@
     </div>
     <div class="main">
       <template v-if="actionSchema && actionSchema.type">
-        <h4 class="title">
-          Configuration
-        </h4>
+        <h4 class="title">Configuration</h4>
         <x-form
           v-model="config"
           :schema="actionSchema"
@@ -121,10 +119,6 @@
 
         return this.actionConfig.schema
       },
-      formError () {
-        if (this.formValid) return ''
-        return 'Form has incomplete required fields'
-      },
       nameError () {
         if (this.disableName) return ''
         if (this.name === '') {
@@ -134,6 +128,10 @@
           return 'Name already taken by another saved Action'
         }
         return ''
+      },
+      formError () {
+        if (this.formValid) return ''
+        return 'Configuration fields are not complete'
       }
     },
     watch: {
@@ -146,9 +144,6 @@
       this.nameValid = !this.nameError
     },
     methods: {
-      validateForm (valid) {
-        this.formValid = valid
-      },
       confirmAction () {
         this.$emit('confirm')
       }
@@ -180,9 +175,10 @@
                 margin-top: 0;
                 margin-bottom: 12px;
             }
-            .x-form .x-array-edit {
+            .x-form > .x-array-edit {
                 grid-template-columns: 1fr;
                 grid-gap: 24px 0;
+                display: grid;
             }
         }
         .footer {

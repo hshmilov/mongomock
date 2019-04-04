@@ -1,6 +1,6 @@
 <template>
   <div class="x-array-edit">
-    <template v-if="!isItemsString">
+    <template v-if="!isStringList">
       <h4
         v-if="schema.title"
         :id="schema.name"
@@ -41,7 +41,7 @@
         @click.prevent="addNewItem"
       >+</x-button>
     </template>
-    <template v-else-if="isItemsStringEnum">
+    <template v-else-if="isStringList && schema.items.enum">
       <label>{{ schema.title }}</label>
       <md-field>
         <md-select
@@ -61,7 +61,10 @@
       <label>{{ schema.title }}</label>
       <x-list-input
         v-model="data"
-        :format="schema.items.format"
+        :format="formatStringItem"
+        :error-items="invalidStringItems"
+        :class="{'error-border': !stringListValid}"
+        @focusout.native="() => validateStringList()"
       />
     </template>
   </div>
@@ -94,16 +97,31 @@
     },
     data () {
       return {
-        needsValidation: false
+        needsValidation: false,
+        stringListValid: true
       }
     },
     computed: {
-      isItemsString () {
+      isStringList () {
         if (this.isOrderedObject) return false
         return this.schema.items.type === 'string'
       },
-      isItemsStringEnum () {
-        return this.isItemsString && this.schema.items.enum
+      invalidStringItems() {
+        if (!this.isStringList) return []
+        return this.data.filter(item => {
+          if (this.schema.items.format === 'email') {
+            return !item.match(new RegExp('^"?[\\w\\.\\+\\- ]{1,64}"?@[a-zA-Z_\\-0-9]+?(\\.[a-zA-Z]*){0,2}$'))
+          }
+          return false
+        })
+      },
+      stringListError() {
+        if (this.invalidStringItems.length) {
+          return `'${this.schema.title}' items are not all properly formed`
+        } else if (this.data.length === 0 && this.schema.required) {
+          return `'${this.schema.title}' is required`
+        }
+        return ''
       }
     },
     watch: {
@@ -113,6 +131,9 @@
             Therefore, the new children should be re-validated but the DOM has not updated yet
          */
         this.needsValidation = true
+      },
+      stringListError () {
+        this.validateStringList()
       }
     },
     mounted () {
@@ -131,7 +152,11 @@
       },
       validate (silent) {
         if (!this.$refs.itemChild) return
-        this.$refs.itemChild.forEach(item => item.validate(silent))
+        if (this.isStringList) {
+          this.validateStringList(silent)
+        } else {
+          this.$refs.itemChild.forEach(item => item.validate(silent))
+        }
       },
       addNewItem () {
         this.data = [...this.data,
@@ -143,28 +168,56 @@
       },
       removeItem (index) {
         this.data.splice(index, 1)
+      },
+      formatStringItem(item) {
+        if (this.schema.items.format === 'email') {
+          let emailMatch = item.match(new RegExp('.*?\s?<(\.*?)>'))
+          if (emailMatch && emailMatch.length > 1) {
+            return emailMatch[1]
+          }
+        }
+        return item
+      },
+      validateStringList(silent) {
+        this.stringListValid = this.stringListError === ''
+        this.$emit('validate', {
+          name: this.schema.name,
+          valid: this.stringListValid,
+          error: this.stringListValid || silent? '': this.stringListError
+        })
       }
     }
   }
 </script>
 
 <style lang="scss">
-    .x-array-edit {
-        .array-header {
-            margin-bottom: 0;
-            display: inline-block;
-            min-width: 200px;
-        }
-        .item {
-            display: flex;
-            align-items: flex-end;
-            .index {
-                display: inline-block;
-                vertical-align: top;
-            }
-            .x-button.link {
-                text-align: right;
-            }
-        }
+  .x-array-edit {
+    .array-header {
+      margin-bottom: 0;
+      display: inline-block;
+      min-width: 200px;
     }
+
+    .item {
+      display: flex;
+      align-items: flex-end;
+
+      .index {
+        display: inline-block;
+        vertical-align: top;
+      }
+
+      .x-button.link {
+        text-align: right;
+      }
+    }
+
+    .object {
+      width: 100%;
+
+      input, select, textarea {
+        width: 100%;
+      }
+    }
+  }
 </style>

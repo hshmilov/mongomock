@@ -13,7 +13,17 @@
     @keyup.a.native="keys.a = false"
     @keydown.backspace.native="removeAll"
     @focusout.native="onFocusout"
-  />
+  >
+    <template
+      slot="md-chip"
+      slot-scope="{ chip }"
+    >
+      <div
+        class="text"
+        :class="{'bg-error': errorItems.includes(chip)}"
+      >{{ chip }}</div>
+    </template>
+  </md-chips>
 </template>
 
 <script>
@@ -25,8 +35,12 @@
         default: () => []
       },
       format: {
-        type: String,
-        default: ''
+        type: Function,
+        default: () => () => {}
+      },
+      errorItems: {
+        type: Array,
+        default: () => []
       }
     },
     data() {
@@ -62,9 +76,8 @@
         this.chips.inputValue = text
         this.data.splice(index, 1)
         this.editedIndex = index
-        this.inputToEditIndex()
+        this.placeInputForEdit()
         this.chips.$refs.input.$el.focus()
-        this.chips.$refs.input.$el.classList.add('inline')
       },
       selectAll() {
         this.keys.a = true
@@ -86,38 +99,43 @@
           this.insertedChip = ''
         }
         this.insertChip(event)
-        event.preventDefault()
+        if (event.key !== 'Tab') event.preventDefault()
       },
       onFocusout(event) {
         this.allSelected = false
-        this.editedIndex = -1
         this.insertChip(event)
       },
       insertChip(event) {
         let value = event.target.value
-        if (!value) return
-        let processedValue = value.split(/[;,]+/).map(item => {
-          if (this.format === 'email') {
-            let emailMatch = item.match(new RegExp('.*?\s?<(\.*?)>'))
-            if (emailMatch && emailMatch.length > 1) {
-              return emailMatch[1]
-            }
+        if (!value) {
+          if (this.editedIndex !== -1 && !this.$refs.chips.inputValue) {
+            this.placeInputForInsert()
           }
-          return item
-        })
+          return
+        }
+        let processedValue = value.split(/[;,]+/).map(this.format)
         if (this.editedIndex !== -1) {
-          this.inputToEditIndex()
-          processedValue = processedValue.concat(this.data.splice(this.editedIndex))
-          this.chips.$refs.input.$el.classList.remove('inline')
-          this.editedIndex = -1
+          processedValue = [ ...processedValue, ...this.data.splice(this.editedIndex)]
+          this.placeInputForInsert()
         }
         this.data = Array.from(new Set(this.data.concat(processedValue)))
         this.$refs.chips.inputValue = ''
       },
-      inputToEditIndex() {
+      placeInputForEdit() {
         let chipsEl = this.chips.$children[0].$el
         let chipsElChildren = chipsEl.children
         chipsEl.insertBefore(chipsElChildren[chipsElChildren.length - 1], chipsElChildren[this.editedIndex])
+        this.chips.$refs.input.$el.classList.add('inline')
+      },
+      placeInputForInsert() {
+        this.$nextTick(() => {
+          let chipsEl = this.chips.$children[0].$el
+          let chipsElChildren = chipsEl.children
+          chipsEl.insertBefore(chipsElChildren[this.editedIndex], chipsElChildren[chipsElChildren.length - 1].nextElementSibling)
+          this.chips.$refs.input.$el.classList.remove('inline')
+          this.editedIndex = -1
+          this.chips.$refs.input.$el.focus()
+        })
       }
     }
   }
@@ -136,18 +154,32 @@
       font-size: 14px;
       height: 28px;
       &.inline {
-        flex: 0
+        flex: 0;
+        margin: 0 8px;
       }
     }
     .md-chip {
       background-color: $grey-1;
       height: 24px;
       line-height: 24px;
+      .md-ripple {
+        padding: 0;
+        .text {
+          padding: 0 32px 0 12px;
+          &.bg-error {
+            background-color: $indicator-error;
+            border-radius: 32px;
+          }
+        }
+      }
     }
     &.selected {
       .md-chip {
         background-color: $grey-3;
       }
+    }
+    &.error-border:after {
+      background-color: $indicator-error;
     }
   }
 </style>

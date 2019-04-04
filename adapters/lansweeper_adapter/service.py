@@ -38,7 +38,8 @@ class LansweeperAdapter(AdapterBase):
     def _get_client_id(client_config):
         return get_client_id(client_config)
 
-    def _test_reachability(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
         RESTConnection.test_reachability(
             client_config.get(consts.LANSWEEPER_HOST),
             port=client_config.get(consts.LANSWEEPER_PORT, consts.DEFAULT_LANSWEEPER_PORT),
@@ -68,7 +69,8 @@ class LansweeperAdapter(AdapterBase):
             raise ClientConnectionException(get_exception_string())
 
     # pylint: disable=R0912
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         with client_data:
             bios_data_dict = dict()
             try:
@@ -133,7 +135,8 @@ class LansweeperAdapter(AdapterBase):
                        hotfix_id_to_hotfix_data_dict,
                        asset_reg_dict, bios_data_dict)
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         return {
             'items': [
                 {'name': consts.LANSWEEPER_HOST, 'title': 'MSSQL Server', 'type': 'string'},

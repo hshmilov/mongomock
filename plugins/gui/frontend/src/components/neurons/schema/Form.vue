@@ -84,21 +84,15 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-gap: 12px 24px;
+            input, select, textarea {
 
-            .object {
-                width: 100%;
-
-                input, select, textarea {
-                    width: 100%;
-
-                    &.error-border {
-                        border-color: $indicator-error;
-                    }
+                &.error-border {
+                    border-color: $indicator-error;
                 }
+            }
 
-                .error-border {
-                    border: 1px solid $indicator-error;
-                }
+            .error-border:not(.md-field) {
+                border: 1px solid $indicator-error;
             }
         }
 
