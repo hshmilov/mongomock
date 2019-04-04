@@ -6,8 +6,8 @@ from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field, ListField, JsonArrayFormat
-from axonius.smart_json_class import SmartJsonClass
+from axonius.fields import Field, ListField
+from axonius.devices.device_adapter import TenableSource, TenableVulnerability
 from axonius.plugin_base import add_rule, return_error
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.datetime import parse_date
@@ -20,27 +20,12 @@ from axonius.clients.tenable_io.connection import TenableIoConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class TenableVulnerability(SmartJsonClass):
-    plugin = Field(str, 'plugin')
-    severity = Field(str, 'severity')
-
-
-class TenableSource(SmartJsonClass):
-    first_seen = Field(datetime.datetime, 'First Seen')
-    last_seen = Field(datetime.datetime, 'Last Seen')
-    source = Field(str, 'Source')
-
-
 class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         has_agent = Field(bool, 'Has Agent')
         agent_version = Field(str, 'Agent Version')
         status = Field(str, 'Status')
-        plugin_and_severities = ListField(TenableVulnerability, 'Plugins and Severities',
-                                          json_format=JsonArrayFormat.table)
-        tenable_sources = ListField(TenableSource, 'Tenable Source',
-                                    json_format=JsonArrayFormat.table)
         risk_and_name_list = ListField(str, 'CSV - Vulnerability Details')
 
         def add_tenable_vuln(self, **kwargs):

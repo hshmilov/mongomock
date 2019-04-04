@@ -56,7 +56,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            fetch_ips=True,
                            snow_department_table_dict=None,
                            users_table_dict=None,
-                           snow_alm_asset_table_dict=None):
+                           snow_alm_asset_table_dict=None,
+                           companies_table_dict=None):
         if snow_location_table_dict is None:
             snow_location_table_dict = dict()
         if snow_alm_asset_table_dict is None:
@@ -187,7 +188,19 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             if owned_by:
                 device.owner = owned_by.get('name')
             try:
-                device.device_manufacturer = device_raw.get('cpu_manufacturer')
+                try:
+                    manufacturer_link = (device_raw.get('manufacturer') or {}).get('value')
+                    if manufacturer_link and companies_table_dict.get(manufacturer_link):
+                        device.device_manufacturer = companies_table_dict.get(manufacturer_link).get('name')
+                except Exception:
+                    logger.exception(f'Problem getting manufacturer for {device_raw}')
+                cpu_manufacturer = None
+                try:
+                    cpu_manufacturer_link = (device_raw.get('cpu_manufacturer') or {}).get('value')
+                    if cpu_manufacturer_link and companies_table_dict.get(cpu_manufacturer_link):
+                        cpu_manufacturer = companies_table_dict.get(cpu_manufacturer_link).get('name')
+                except Exception:
+                    logger.exception(f'Problem getting manufacturer for {device_raw}')
                 ghz = device_raw.get('cpu_speed')
                 if ghz:
                     ghz = float(ghz) / 1024.0
@@ -198,7 +211,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                if device_raw.get('cpu_count') else None,
                                cores_thread=int(device_raw.get('cpu_core_thread'))
                                if device_raw.get('cpu_core_thread') else None,
-                               ghz=ghz)
+                               ghz=ghz,
+                               manufacturer=cpu_manufacturer)
             except Exception:
                 logger.exception(f'Problem adding cpu stuff to {device_raw}')
             try:
@@ -397,12 +411,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
             snow_location_table_dict = table_devices_data.get(LOCATION_TABLE_KEY)
             snow_alm_asset_table_dict = table_devices_data.get(ALM_ASSET_TABLE)
+            companies_table_dict = table_devices_data.get(COMPANY_TABLE)
             for device_raw in table_devices_data[DEVICES_KEY]:
                 device = self.create_snow_device(device_raw=device_raw,
                                                  snow_department_table_dict=snow_department_table_dict,
                                                  snow_location_table_dict=snow_location_table_dict,
                                                  snow_alm_asset_table_dict=snow_alm_asset_table_dict,
                                                  users_table_dict=users_table_dict,
+                                                 companies_table_dict=companies_table_dict,
                                                  fetch_ips=self.__fetch_ips,
                                                  table_type=table_devices_data[DEVICE_TYPE_NAME_KEY])
                 if device:

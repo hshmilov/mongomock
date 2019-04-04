@@ -37,7 +37,7 @@ class ServiceNowConnection(RESTConnection):
                 logger.exception(f'Problem getting manager for user {user}')
             yield user_to_yield
 
-    # pylint: disable=R0912
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def get_device_list(self):
         tables_devices = []
         users_table = []
@@ -56,7 +56,11 @@ class ServiceNowConnection(RESTConnection):
             departments_table = list(self.__get_devices_from_table(consts.DEPARTMENTS_TABLE))
         except Exception:
             logger.exception(f'Problem getting departments')
-
+        companies_table = []
+        try:
+            companies_table = list(self.__get_devices_from_table(consts.COMPANY_TABLE))
+        except Exception:
+            logger.exception(f'Problem getting companies')
         users_table_dict = dict()
         for user in users_table:
             if user.get('sys_id'):
@@ -82,6 +86,11 @@ class ServiceNowConnection(RESTConnection):
             if alm_asset.get('sys_id'):
                 alm_asset_table_dict[alm_asset.get('sys_id')] = alm_asset
 
+        companies_table_dict = dict()
+        for company in companies_table:
+            if company.get('sys_id'):
+                companies_table_dict[company.get('sys_id')] = company
+
         self.__users_table = users_table_dict
         for table_details in consts.TABLES_DETAILS:
             new_table_details = table_details.copy()
@@ -91,6 +100,7 @@ class ServiceNowConnection(RESTConnection):
             new_table_details[consts.LOCATION_TABLE_KEY] = location_table_dict
             new_table_details[consts.DEPARTMENT_TABLE_KEY] = department_table_dict
             new_table_details[consts.ALM_ASSET_TABLE] = alm_asset_table_dict
+            new_table_details[consts.COMPANY_TABLE] = companies_table_dict
             tables_devices.append(new_table_details)
 
         return tables_devices

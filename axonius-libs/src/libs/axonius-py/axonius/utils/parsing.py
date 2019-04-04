@@ -644,7 +644,8 @@ def is_only_host_adapter_not_localhost(adapter_device):
                                                   'mssql_adapter',
                                                   'code42_adapter',
                                                   'sysaid_adapter',
-                                                  'logrhythm_adapter']) and \
+                                                  'logrhythm_adapter',
+                                                  'symantec_ee_adapter']) and \
         (not adapter_device.get('data').get('hostname') or
             'localhost' not in adapter_device.get('data').get('hostname').strip().lower())
 
@@ -876,7 +877,7 @@ def get_asset_name(adapter_device):
 
 def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
-    if serial and serial.upper().strip() != 'INVALID' and 'VMWARE' not in serial.upper().strip():
+    if serial and serial.upper().strip() not in ['INVALID', '0'] and 'VMWARE' not in serial.upper().strip():
         return serial.upper()
     return None
 

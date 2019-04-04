@@ -17,6 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class CylanceAdapter(AdapterBase):
 
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         is_safe = Field(str, 'Is Safe')
@@ -30,7 +31,7 @@ class CylanceAdapter(AdapterBase):
 
     @staticmethod
     def _get_client_id(client_config):
-        return client_config['domain']
+        return client_config['domain'] + '_' + client_config['tid'] + '_' + client_config['app_id']
 
     @staticmethod
     def _test_reachability(client_config):
@@ -145,6 +146,7 @@ class CylanceAdapter(AdapterBase):
                     device.domain = '.'.join(hostname.split('.')[1:])
             except Exception:
                 logger.exception(f'Problem getting domain in {device_raw}')
+            device.name = device_raw.get('name')
             try:
                 mac_addresses = device_raw.get('mac_addresses') or []
                 ip_addresses = device_raw.get('ip_addresses') or []

@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.utils.parsing import is_domain_valid
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
@@ -146,7 +147,9 @@ class SamangeAdapter(AdapterBase):
                         device.add_nic(None, ip.split('/'))
                 except Exception:
                     logger.exception(f'Problem adding nic to {device_raw}')
-                device.domain = device_raw.get('active_directory')
+                domain = device_raw.get('active_directory')
+                if is_domain_valid(domain):
+                    device.domain = domain
                 networks = device_raw.get('networks')
                 if isinstance(networks, list):
                     for network in networks:

@@ -361,10 +361,28 @@ class ProcessData(SmartJsonClass):
     name = Field(str, 'Name')
 
 
+class RegistryInfomation(SmartJsonClass):
+    reg_key = Field(str, 'Registry Key')
+    value_name = Field(str, 'Value Name')
+    value_data = Field(str, 'Value Data')
+    last_changed = Field(datetime.datetime, 'Last Changed')
+
+
 class ServiceData(SmartJsonClass):
     name = Field(str, 'Name')
     display_name = Field(str, 'Display Name')
     status = Field(str, 'Status')
+
+
+class TenableVulnerability(SmartJsonClass):
+    plugin = Field(str, 'plugin')
+    severity = Field(str, 'severity')
+
+
+class TenableSource(SmartJsonClass):
+    first_seen = Field(datetime.datetime, 'First Seen')
+    last_seen = Field(datetime.datetime, 'Last Seen')
+    source = Field(str, 'Source')
 
 
 class DeviceAdapter(SmartJsonClass):
@@ -479,7 +497,13 @@ class DeviceAdapter(SmartJsonClass):
     port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
     dns_servers = ListField(str, 'DNS Servers')
     dhcp_servers = ListField(str, 'DHCP Servers')
-
+    plugin_and_severities = ListField(TenableVulnerability, 'Plugins and Severities',
+                                      json_format=JsonArrayFormat.table)
+    tenable_sources = ListField(TenableSource, 'Tenable Source',
+                                json_format=JsonArrayFormat.table)
+    registry_information = ListField(
+        RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
+    )
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
     def generate_direct_connected_devices(self):

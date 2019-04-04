@@ -176,8 +176,8 @@ export const pluginMeta = {
         description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'
     },
     solarwinds_orion_adapter: {
-        title: 'Solarwinds Network Performance Manager',
-        description: 'Solarwinds Network Performance Manager is a unified IT systems management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hybrid environment, or in the cloud.'
+        title: 'Solarwinds Network Performance Monitor',
+        description: 'Solarwinds Network Performance Monitor is a unified IT systems management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hybrid environment, or in the cloud.'
     },
     pingidentity_adapter: {
         title: 'Ping Identity',
@@ -292,8 +292,8 @@ export const pluginMeta = {
         description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository.'
     },
     symantec_adapter: {
-        title: 'Symantec Endpoint Management Suite',
-        description: 'Symantec Endpoint Management Suite (formerly Altiris) manages, patches, and remediates application and OS configurations on desktops, laptops and servers to strengthen endpoint security and maximize user productivity. '
+        title: 'Symantec Endpoint Protection Manager',
+        description: 'Symantec Endpoint Protection Manager manages events, policies, and registration for the client computers that connect to customer networks.'
     },
     nessus_adapter: {
         title: 'Tenable Nessus',

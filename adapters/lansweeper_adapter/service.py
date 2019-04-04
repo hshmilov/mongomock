@@ -6,8 +6,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field, JsonArrayFormat, ListField
-from axonius.smart_json_class import SmartJsonClass
+from axonius.fields import Field
+from axonius.devices.device_adapter import RegistryInfomation
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string, is_domain_valid
@@ -17,22 +17,12 @@ from lansweeper_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class RegistryInfomation(SmartJsonClass):
-    reg_key = Field(str, 'Registry Key')
-    value_name = Field(str, 'Value Name')
-    value_data = Field(str, 'Value Data')
-    last_changed = Field(datetime.datetime, 'Last Changed')
-
-
 class LansweeperAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         last_active_scan = Field(datetime.datetime, 'Last Active Scan')
         lsat_ls_agent = Field(datetime.datetime, 'Last Ls Agent')
-        registry_information = ListField(
-            RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
-        )
         lansweeper_type = Field(str, 'Lansweeper Type')
 
         def add_registry_information(self, **kwargs):
