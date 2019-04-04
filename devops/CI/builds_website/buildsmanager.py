@@ -23,6 +23,7 @@ BUILDS_AUTO_TEST_VM_TYPE = "Auto-Test-VM"
 AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
+
 PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
 PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
 PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
