@@ -430,6 +430,7 @@ class BuildsManager(object):
                                       "date": datetime.datetime.utcnow(),
                                       "vm_type": vm_type,
                                       "fork": fork,
+                                      "ami_id": image_id,
                                       "branch": branch})
 
         self.update_last_user_interaction_time(instance_id)
