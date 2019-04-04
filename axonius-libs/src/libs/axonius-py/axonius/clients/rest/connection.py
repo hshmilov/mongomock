@@ -202,7 +202,8 @@ class RESTConnection(ABC):
     # pylint: disable=R0912, R0913, R0914
     def _do_request(self, method, name, url_params=None, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
-                    do_digest_auth=False, return_response_raw=False, alternative_auth_dict=None):
+                    do_digest_auth=False, return_response_raw=False, alternative_auth_dict=None, extra_headers=None,
+                    raise_for_status=True):
         """ Serves a GET request to REST API
 
         :param str name: the name of the request
@@ -248,12 +249,16 @@ class RESTConnection(ABC):
             # If the same header exists in both headers, _session_headers win.
             headers_for_request = self._permanent_headers.copy()
             headers_for_request.update(self._session_headers)
+            if extra_headers:
+                headers_for_request.update(extra_headers)
+
             response = self._session.request(method, url, params=url_params,
                                              headers=headers_for_request, verify=self._verify_ssl,
                                              json=request_json, data=request_data,
                                              timeout=self._session_timeout, proxies=self._proxies,
                                              auth=auth_dict)
-            response.raise_for_status()
+            if raise_for_status:
+                response.raise_for_status()
         except requests.HTTPError as e:
             try:
                 # Try get the error if it comes back.

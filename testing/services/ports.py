@@ -140,6 +140,7 @@ DOCKER_PORTS = {
     'truefort-adapter':                 6672,
     'promisec-adapter':                 6673,
     'symantec-ee-adapter':              6674,
+    'cisco-ise-adapter':                6675,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    cisco_ise_adapter: {
+        title: 'Cisco ISE - BETA',
+        description: 'Cisco Identity Services Engine (ISE) is a next-generation identity and access control policy platform that provides a single policy plane across the entire organization.'
+    },
     symantec_ee_adapter: {
         title: 'Symantec Endpoint Encryption - BETA',
         description: 'Symantec Endpoint Encryption combines full-disk and removable media encryption with centralized management to protect sensitive information and ensure regulatory compliance.'
