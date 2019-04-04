@@ -1,3 +1,4 @@
+from scripts.maintenance_tools.set_signup import COMPANY_FIELD
 from ui_tests.tests.ui_consts import LOGGED_IN_MARKER
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -26,7 +27,7 @@ class TestSignup(TestBase):
 
         signup_data = self.axonius_system.gui.get_signup_collection().find_one()
         # if this one changes - we might need to update integration with chef
-        assert signup_data['companyName'] == company_name
+        assert signup_data[COMPANY_FIELD] == company_name
 
         self.login_page.login(username='admin', password='123')
         self.settings_page.switch_to_page()

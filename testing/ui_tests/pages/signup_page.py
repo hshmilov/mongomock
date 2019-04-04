@@ -1,4 +1,4 @@
-from scripts.maintenance_tools.set_signup import SIGNUP_TEST_CREDS
+from scripts.maintenance_tools.set_signup import SIGNUP_TEST_CREDS, COMPANY_FIELD
 from ui_tests.pages.page import Page
 
 
@@ -20,7 +20,7 @@ class SignupPage(Page):
         return 'a[href="/"]'
 
     def fill_signup_with_defaults_and_save(self):
-        self.fill_signup_and_save(company=SIGNUP_TEST_CREDS['company'],
+        self.fill_signup_and_save(company=SIGNUP_TEST_CREDS[COMPANY_FIELD],
                                   email=SIGNUP_TEST_CREDS['email'],
                                   passw=SIGNUP_TEST_CREDS['password'],
                                   confirm_passw=SIGNUP_TEST_CREDS['password'])

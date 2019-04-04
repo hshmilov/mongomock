@@ -1,6 +1,8 @@
 from services.plugins.gui_service import GuiService
 
-SIGNUP_TEST_CREDS = {'company': 'test_company', 'password': 'cAll2SecureAll', 'email': 'a@b.com'}
+# DO NOT MOVE THE CREDS FROM THIS FILE
+COMPANY_FIELD = 'companyName'
+SIGNUP_TEST_CREDS = {COMPANY_FIELD: 'test_company', 'password': 'cAll2SecureAll', 'email': 'a@b.com'}
 
 
 def main():
