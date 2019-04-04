@@ -61,6 +61,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH = None
     DEFAULT_CONNECT_CLIENT_TIMEOUT = 300
     DEFAULT_FETCHING_TIMEOUT = 5400
+    DEFAULT_LAST_SEEN_PRIORITIZED = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -109,6 +110,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         fetching_timeout = config.get('fetching_timeout')
         self.__fetching_timeout = timedelta(seconds=fetching_timeout) if fetching_timeout else None
+
+        self._is_last_seen_prioritized = config.get('last_seen_prioritized', False)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -1237,6 +1240,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     "type": "number",
                 },
                 {
+                    "name": "last_seen_prioritized",
+                    "title": "Discard data if last seen is older than the last_seen saved",
+                    "type": "bool",
+                },
+                {
                     "name": "realtime_adapter",
                     "title": "Run as a Real Time adapter",
                     "type": "bool",
@@ -1258,5 +1266,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             "minimum_time_until_next_fetch": cls.DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH,
             "connect_client_timeout": cls.DEFAULT_CONNECT_CLIENT_TIMEOUT,
             "fetching_timeout": cls.DEFAULT_FETCHING_TIMEOUT,
+            "last_seen_prioritized": cls.DEFAULT_LAST_SEEN_PRIORITIZED,
             "realtime_adapter": False
         }

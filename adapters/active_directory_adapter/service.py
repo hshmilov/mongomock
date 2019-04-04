@@ -102,6 +102,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = None
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 48
     DEFAULT_USER_LAST_SEEN = 24 * 365 * 5
+    DEFAULT_LAST_SEEN_PRIORITIZED = True
 
     class MyDeviceAdapter(DeviceAdapter, DNSResolvableDevice, ADEntity):
         ad_service_principal_name = ListField(str, "AD Service Principal Name")

@@ -367,6 +367,8 @@ class PluginBase(Configurable, Feature):
 
         self.log_level = logging.INFO
 
+        self._is_last_seen_prioritized = False
+
         # Creating logger
         create_logger(self.plugin_unique_name, self.log_level, LOG_PATH)
 
@@ -1322,24 +1324,64 @@ class PluginBase(Configurable, Feature):
                 to_lock = [_to_insert_identity]
 
             with multilocker.get_lock(to_lock):
+                array_filters = None
+
+                if self._is_last_seen_prioritized:
+                    last_seen_from_data = data_to_update.get(f'adapters.$.data.{LAST_SEEN_FIELD}')
+                    if last_seen_from_data:
+                        array_filters = [
+                            {
+                                f'i.{LAST_SEEN_FIELD}': {
+                                    '$gte': last_seen_from_data
+                                }
+                            }
+                        ]
+                    else:
+                        array_filters = [{
+                            '$or': [
+                                {
+                                    f'i.{LAST_SEEN_FIELD}': {
+                                        '$exists': False
+                                    }
+                                },
+                                {
+                                    f'i.{LAST_SEEN_FIELD}': None
+                                }
+                            ]
+                        }]
+
+                    # updating the saving query to conhere to array_filter semantics
+                    data_to_update = {
+                        k.replace('adapters.$', 'adapters.$[i]'): v
+                        for k, v
+                        in data_to_update.items()
+                    }
+
                 # trying to update the device if it is already in the DB
-                modified_count = db_to_use.update_one({
+                update_result = db_to_use.update_one({
                     'adapters': {
                         '$elemMatch': {
                             PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
                             'data.id': parsed_to_insert['data']['id']
                         }
                     }
-                }, {"$set": data_to_update}).modified_count
+                }, {
+                    "$set": data_to_update
+                }, array_filters=array_filters)
 
-                if modified_count == 0:
-                    # if it's not in the db then,
+                if update_result.matched_count > 0 and update_result.modified_count == 0:
+                    # This means that a device is found but already has a newer instance in the DB,
+                    # so the device is discarded
+                    logger.debug(f'Dropping {data_to_update} due to oldness')
+                    return
 
+                if update_result.modified_count == 0:
+                    # if it's not in the db
                     if correlates:
                         # for scanner adapters this is case B - see "scanner_adapter_base.py"
                         # we need to add this device to the list of adapters in another device
                         correlate_plugin_unique_name, correlated_id = correlates
-                        modified_count = db_to_use.update_one({
+                        update_result = db_to_use.update_one({
                             'adapters': {
                                 '$elemMatch': {
                                     PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
@@ -1353,8 +1395,8 @@ class PluginBase(Configurable, Feature):
                             '$inc': {
                                 ADAPTERS_LIST_LENGTH: 1
                             }
-                        }).modified_count
-                        if modified_count == 0:
+                        })
+                        if update_result.modified_count == 0:
                             logger.error("No devices update for case B for scanner device "
                                          f"{parsed_to_insert['data']['id']} from "
                                          f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
@@ -1398,8 +1440,10 @@ class PluginBase(Configurable, Feature):
 
             inserter = self.__first_time_inserter
             # quickest way to find if there are any devices from this plugin in the DB
-            if inserter and db_to_use.find_one(
-                    {"adapters.plugin_unique_name": plugin_unique_name}) is None:
+            if inserter and not self._is_last_seen_prioritized and \
+                    db_to_use.count_documents({
+                        f'adapters.{PLUGIN_NAME}': plugin_unique_name
+                    }, limit=1) == 0:
                 logger.info("Fast path! First run.")
                 # DB is empty! no need for slow path, can just bulk-insert all.
                 for devices in chunks(500, data_of_client['parsed']):
