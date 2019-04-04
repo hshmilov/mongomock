@@ -48,16 +48,16 @@ export const actionsMeta = {
         title: 'Create ServiceNow Computer'
     },
     carbonblack_defense_change_policy: {
-        title: 'Change Carbonblack Defense Policy'
+        title: 'Change CarbonBlack Defense Policy'
     },
     enable_entities: {
-        title: 'Enable users or devices'
+        title: 'Enable Users or Devices'
     },
     slack_send_message: {
         title: 'Send Slack Message'
     },
     disable_entities: {
-        title: 'Disable users or devices'
+        title: 'Disable Users or Devices'
     },
     create_service_now_incident: {
         title: 'Create ServiceNow Incident'

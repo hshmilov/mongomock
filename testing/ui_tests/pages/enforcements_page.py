@@ -35,7 +35,7 @@ class Action(Enum):
     run_wmi_scan = 'Run WMI Scan'
     scan_with_qualys = 'Add to Qualys'
     ScanTenable = 'Add to Tenable'
-    carbonblack_defense_change_policy = 'Change Carbonblack Defense Policy'
+    carbonblack_defense_change_policy = 'Change CarbonBlack Defense Policy'
     tenable_sc_add_ips_to_asset = 'Add IPs to Tenable SC Asset'
     tenable_io_add_ips_to_target_group = 'Add IPs to Tenable IO Target Group'
     create_jira_incident = 'Create Jira Issue'
