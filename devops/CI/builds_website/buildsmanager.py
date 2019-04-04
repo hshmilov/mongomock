@@ -266,7 +266,10 @@ class BuildsManager(object):
             instances_array.append(i)
 
         # Lets get information about our instances.
-        ec2_instances = list(self.ec2.instances.filter(Filters=[{"Name": "tag:VM-Type", "Values": [vm_type]}]))
+        if ec2_id is not None:
+            ec2_instances = list(self.ec2.instances.filter(InstanceIds=[ec2_id]))
+        else:
+            ec2_instances = list(self.ec2.instances.filter())
 
         # After we have this information, we need to build our joined array of information
         all_instances = []

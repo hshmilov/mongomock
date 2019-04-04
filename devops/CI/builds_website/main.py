@@ -261,7 +261,8 @@ def instances():
             configuration_code=config_code,
             vm_type=instance_type,
             security_group_id=security_group,
-            image_id=image_id
+            image_id=image_id,
+            key_name=request.form.get("key_name")
         ))
 
         if image_id is not None:
