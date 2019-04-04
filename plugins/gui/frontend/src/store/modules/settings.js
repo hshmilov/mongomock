@@ -27,16 +27,21 @@ export const settings = {
             if (!state.configurable[payload.pluginId]) {
                 state.configurable[payload.pluginId] = {}
             }
+            if (!state.configurable[payload.pluginId][payload.configName]) {
+                state.configurable[payload.pluginId][payload.configName] = {}
+            }
             state.configurable = {
                 ...state.configurable,
                 [payload.pluginId]: {
                     ...state.configurable[payload.pluginId],
                     [payload.configName]: {
-                        ...state.configurable[payload.pluginId][payload.configName],
-                        config: payload.config,
-                        schema: payload.schema?
-                            payload.schema:
-                            state.configurable[payload.pluginId][payload.configName].schema
+                        fetching: payload.fetching, error: payload.error,
+                        config: payload.data ?
+                          payload.data.config :
+                          state.configurable[payload.pluginId][payload.configName].config,
+                        schema: payload.data ?
+                          payload.data.schema :
+                          state.configurable[payload.pluginId][payload.configName].schema
                     }
                 }
             }
@@ -82,16 +87,9 @@ export const settings = {
 
             let rule = `plugins/configs/${payload.pluginId}/${payload.configName}`
             return dispatch(REQUEST_API, {
-                rule
-            }).then(response => {
-                if (response.data) {
-                    commit(CHANGE_PLUGIN_CONFIG, {
-                        pluginId: payload.pluginId,
-                        configName: payload.configName,
-                        config: response.data.config,
-                        schema: response.data.schema
-                    })
-                }
+                rule,
+                type: CHANGE_PLUGIN_CONFIG,
+                payload
             })
         },
         [FETCH_MAINTENANCE_CONFIG]({dispatch}) {

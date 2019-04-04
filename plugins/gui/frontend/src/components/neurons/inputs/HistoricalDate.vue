@@ -7,8 +7,9 @@
 
 <script>
     import xDateEdit from '../schema/types/string/DateEdit.vue'
-    import {mapState, mapActions} from 'vuex'
+    import {mapState, mapGetters, mapActions} from 'vuex'
     import {FETCH_FIRST_HISTORICAL_DATE, FETCH_ALLOWED_DATES} from '../../../store/modules/constants'
+    import {IS_EXPIRED} from '../../../store/getters'
 
     export default {
         name: 'x-historical-date',
@@ -33,10 +34,10 @@
                 },
                 allowedDates(state) {
                     return state.constants.allowedDates[this.module]
-                },
-                isExpired(state) {
-                  return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
                 }
+            }),
+            ...mapGetters({
+                isExpired: IS_EXPIRED
             }),
             currentDate() {
                 return new Date()

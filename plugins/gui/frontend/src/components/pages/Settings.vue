@@ -14,7 +14,7 @@
         :selected="true"
       >
         <div class="tab-settings">
-          <template v-if="schedulerSettings">
+          <template v-if="schedulerSettings && schedulerSettings.schema">
             <x-form
               v-model="schedulerSettings.config"
               :schema="schedulerSettings.schema"
@@ -38,7 +38,7 @@
         title="Global Settings"
       >
         <div class="tab-settings">
-          <template v-if="coreSettings">
+          <template v-if="coreSettings && coreSettings.schema">
             <x-form
               v-model="coreSettings.config"
               :schema="coreSettings.schema"
@@ -65,7 +65,7 @@
         title="GUI Settings"
       >
         <div class="tab-settings">
-          <template v-if="guiSettings">
+          <template v-if="guiSettings && guiSettings.schema">
             <x-form
               v-model="guiSettings.config"
               :schema="guiSettings.schema"
@@ -89,7 +89,7 @@
         title="Feature flags"
       >
         <x-feature-flags
-          v-if="featureFlags"
+          v-if="featureFlags && featureFlags.schema"
           v-model="featureFlags.config"
           :schema="featureFlags.schema"
           @save="saveFeatureFlags"
@@ -156,19 +156,19 @@
           return user.permissions.Settings === 'ReadOnly'
         },
         schedulerSettings (state) {
-          if (!state.settings.configurable.system_scheduler) return null
+          if (!state.settings.configurable.system_scheduler) return undefined
           return state.settings.configurable.system_scheduler.SystemSchedulerService
         },
         coreSettings (state) {
-          if (!state.settings.configurable.core) return null
+          if (!state.settings.configurable.core) return undefined
           return state.settings.configurable.core.CoreService
         },
         guiSettings (state) {
-          if (!state.settings.configurable.gui) return null
+          if (!state.settings.configurable.gui) return undefined
           return state.settings.configurable.gui.GuiService
         },
         featureFlags (state) {
-          if (!state.settings.configurable.gui) return null
+          if (!state.settings.configurable.gui) return undefined
           return state.settings.configurable.gui.FeatureFlags
         },
         users (state) {

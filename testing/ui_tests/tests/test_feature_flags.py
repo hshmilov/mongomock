@@ -1,4 +1,3 @@
-import time
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
@@ -115,8 +114,6 @@ class TestFeatureFlags(TestBase):
             assert self.dashboard_page.find_trial_remainder_banner(days_remaining)
 
         self._change_expiration_date()
-        # Need to wait for fetch of the new data from server (bug AX-3625)
-        time.sleep(1)
         self.dashboard_page.find_no_trial_banner()
         self._change_expiration_date(-1, existing=False)
         assert self.dashboard_page.find_trial_expired_banner()

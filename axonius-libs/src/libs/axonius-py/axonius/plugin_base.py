@@ -73,7 +73,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PROXY_FOR_ADAPTERS, GLOBAL_KEYVAL_COLLECTION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.distribution_config import MEDICAL_MODE
@@ -2448,9 +2448,9 @@ class PluginBase(Configurable, Feature):
         feature_flags_config = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_NAME).find_one({
             'config_name': FEATURE_FLAGS_CONFIG
         })
-        if not feature_flags_config['config'].get('trial_end'):
+        if not feature_flags_config['config'].get(FeatureFlagsNames.TrialEnd):
             return False
-        return parse_date(feature_flags_config['config']['trial_end']) < parse_date(datetime.now())
+        return parse_date(feature_flags_config['config'][FeatureFlagsNames.TrialEnd]) < parse_date(datetime.now())
 
     @staticmethod
     def global_settings_schema():

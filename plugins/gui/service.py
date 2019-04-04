@@ -2166,11 +2166,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             })
 
         # Otherwise, handle POST
-
-        if config_name == FeatureFlags.__name__ and (session.get('user') or {}).get('user_name') != AXONIUS_USER_NAME:
-            logger.error(f'Request to modify {FeatureFlags.__name__} from a regular user!')
-            return return_error('Illegal Operation', 400)  # keep gui happy, but don't show/change the flags
-
         config_to_set = request.get_json(silent=True)
         if config_to_set is None:
             return return_error('Invalid config', 400)
@@ -2220,9 +2215,33 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                         f'hostname in given cert is {cn}', 400)
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
+        return ''
 
-        if config_name == FeatureFlags.__name__:
-            self.__invalidate_sessions()
+    @gui_add_rule_logged_in('plugins/configs/gui/FeatureFlags', methods=['POST', 'GET'], enforce_trial=False)
+    def plugins_configs_feature_flags(self):
+        plugin_name = GUI_NAME
+        config_name = FeatureFlags.__name__
+
+        if request.method == 'GET':
+            db_connection = self._get_db_connection()
+            config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
+            schema_collection = db_connection[plugin_name]['config_schemas']
+            return jsonify({
+                'config': config_collection.find_one({'config_name': config_name})['config'],
+                'schema': schema_collection.find_one({'config_name': config_name})['schema']
+            })
+
+        # Otherwise, handle POST
+        if (session.get('user') or {}).get('user_name') != AXONIUS_USER_NAME:
+            logger.error(f'Request to modify {FeatureFlags.__name__} from a regular user!')
+            return return_error('Illegal Operation', 400)  # keep gui happy, but don't show/change the flags
+
+        config_to_set = request.get_json(silent=True)
+        if config_to_set is None:
+            return return_error('Invalid config', 400)
+
+        self._update_plugin_config(plugin_name, config_name, config_to_set)
+        self.__invalidate_sessions()
         return ''
 
     @gui_add_rule_logged_in('configuration', methods=['GET'])

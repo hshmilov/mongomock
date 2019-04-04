@@ -58,7 +58,8 @@ import {
   GET_DATA_SCHEMA_BY_NAME, getDataSchemaByName,
   GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
   GET_DATA_BY_ID, getDataByID,
-  SINGLE_ADAPTER, singleAdapter
+  SINGLE_ADAPTER, singleAdapter,
+  IS_EXPIRED, isExpired
 } from './getters'
 
 import { adapters } from './modules/adapters'
@@ -96,7 +97,8 @@ export default new Vuex.Store({
     [GET_DATA_SCHEMA_BY_NAME]: getDataSchemaByName,
     [GET_DATA_FIELD_LIST_SPREAD]: getDataFieldListSpread,
     [GET_DATA_BY_ID]: getDataByID,
-    [SINGLE_ADAPTER]: singleAdapter
+    [SINGLE_ADAPTER]: singleAdapter,
+    [IS_EXPIRED]: isExpired
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,

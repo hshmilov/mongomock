@@ -31,7 +31,7 @@
         class="logo-text"
       />
     </div>
-    <x-trial-banner v-if="!isSettingsRestricted" />
+    <x-trial-banner />
     <ul
       v-if="!medicalConfig"
       class="bar-nav"
@@ -195,9 +195,10 @@
   import xTipInfo from '../onboard/TipInfo.vue'
   import xTrialBanner from '../onboard/TrialBanner.vue'
 
-  import { mapState, mapMutations, mapActions } from 'vuex'
+  import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
   import { FETCH_LIFECYCLE } from '../../../store/modules/dashboard'
   import { UPDATE_EMPTY_STATE, START_TOUR } from '../../../store/modules/onboarding'
+  import {IS_EXPIRED} from '../../../store/getters'
   import { TOGGLE_SIDEBAR } from '../../../store/mutations'
   import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE, FETCH_DATA_FIELDS } from '../../../store/actions'
   import { entities } from '../../../constants/entities'
@@ -243,10 +244,10 @@
         },
         medicalConfig (state) {
           return state.staticConfiguration.medicalConfig
-        },
-        isExpired(state) {
-          return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
         }
+      }),
+      ...mapGetters({
+        isExpired: IS_EXPIRED
       }),
       anyEmptySettings () {
         return Object.values(this.emptySettings).find(value => value)

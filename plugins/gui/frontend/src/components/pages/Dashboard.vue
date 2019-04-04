@@ -57,10 +57,11 @@
         FETCH_DISCOVERY_DATA, FETCH_DASHBOARD, REMOVE_DASHBOARD,
         FETCH_HISTORICAL_SAVED_CARD, FETCH_DASHBOARD_FIRST_USE
     } from '../../store/modules/dashboard'
+    import {IS_EXPIRED} from '../../store/getters'
     import {UPDATE_DATA_VIEW} from '../../store/mutations'
     import {SAVE_VIEW} from '../../store/actions'
     import {CHANGE_TOUR_STATE, NEXT_TOUR_STATE} from '../../store/modules/onboarding'
-    import {mapState, mapMutations, mapActions} from 'vuex'
+    import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
 
     export default {
         name: 'x-dashboard',
@@ -124,10 +125,10 @@
                     let user = state.auth.currentUser.data
                     if (!user || !user.permissions) return true
                     return user.permissions.Users === 'Restricted'
-                },
-                isExpired(state) {
-                    return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
                 }
+            }),
+            ...mapGetters({
+                isExpired: IS_EXPIRED
             }),
             lifecycle() {
                 if (!this.dashboard.lifecycle.data) return {}

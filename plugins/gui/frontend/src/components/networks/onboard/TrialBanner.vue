@@ -3,25 +3,13 @@
     v-if="inTrial"
     class="x-trial-banner"
   >
-    <template
-      v-if="trialDaysRemaining <= 0"
-    >
-      <x-banner
-        severity="error"
-      >Axonius evaluation period has expired. Please reach out to your Account Manager.</x-banner>
+    <template v-if="isExpired">
+      <x-banner severity="error">Axonius evaluation period has expired. Please reach out to your Account Manager.</x-banner>
       <div class="banner-overlay" />
     </template>
     <x-banner
-      v-else-if="trialDaysRemaining <= 7"
-      severity="error"
-    >{{ trialDaysRemaining }} {{unit}} remaining in your Axonius evaluation</x-banner>
-    <x-banner
-      v-else-if="trialDaysRemaining <= 14"
-      severity="warning"
-    >{{ trialDaysRemaining }} {{unit}} remaining in your Axonius evaluation</x-banner>
-    <x-banner
       v-else
-      severity="info"
+      :severity="severity"
     >{{ trialDaysRemaining }} {{unit}} remaining in your Axonius evaluation</x-banner>
   </div>
 </template>
@@ -30,7 +18,8 @@
   import xBanner from '../../axons/popover/Banner.vue'
   import featureFlagsMixin from '../../../mixins/feature_flags'
 
-  import {mapState} from 'vuex'
+  import {mapState, mapGetters} from 'vuex'
+  import {IS_EXPIRED} from '../../../store/getters'
 
   export default {
     name: 'XTrialBanner',
@@ -44,6 +33,9 @@
           return state.auth.currentUser.data.user_name === '_axonius'
         }
       }),
+      ...mapGetters({
+        isExpired: IS_EXPIRED
+      }),
       trialDaysRemaining () {
         if (!this.featureFlags || !this.featureFlags.trial_end) return null
         
@@ -53,6 +45,11 @@
       },
       inTrial() {
         return this.trialDaysRemaining !== null && !this.isAxonius
+      },
+      severity() {
+        if (this.trialDaysRemaining <= 7) return 'error'
+        if (this.trialDaysRemaining <= 14) return 'warning'
+        return 'info'
       },
       unit() {
         if (this.trialDaysRemaining === 1) {

@@ -27,10 +27,11 @@
 	import xTourState from './networks/onboard/TourState.vue'
     import xAccessModal from './neurons/popover/AccessModal.vue'
     import {GET_USER} from '../store/modules/auth'
+    import {IS_EXPIRED} from '../store/getters'
     import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG, FETCH_SYSTEM_EXPIRED} from '../store/actions'
     import {FETCH_CONSTANTS} from '../store/modules/constants'
     import {UPDATE_WINDOW_WIDTH} from '../store/mutations'
-    import { mapState, mapMutations, mapActions } from 'vuex'
+    import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { entities } from '../constants/entities'
 
 	import './axons/icons'
@@ -51,10 +52,10 @@
                 },
                 userPermissions(state) {
                     return state.auth.currentUser.data.permissions
-                },
-                isExpired(state) {
-                    return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'
                 }
+            }),
+            ...mapGetters({
+                isExpired: IS_EXPIRED
             })
 		},
         data() {
