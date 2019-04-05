@@ -27,6 +27,7 @@
 
   import { mapActions } from 'vuex'
   import { SUBMIT_SIGNUP } from '../../../store/modules/auth'
+  import { FETCH_SYSTEM_EXPIRED } from '../../../store/actions'
 
   export default {
     name: 'XSignupForm',
@@ -79,7 +80,7 @@
     },
     methods: {
       ...mapActions({
-        submitSignup: SUBMIT_SIGNUP
+        submitSignup: SUBMIT_SIGNUP, fetchExpired: FETCH_SYSTEM_EXPIRED
       }),
       onValidate(valid) {
         this.valid = valid
@@ -96,6 +97,7 @@
         this.submitSignup(this.signupData).then(() => {
           this.message = 'Signup completed'
           this.$emit('done')
+          this.fetchExpired()
         }).catch(error => {
           this.message = JSON.parse(error.request.response).message
           this.$emit('done')

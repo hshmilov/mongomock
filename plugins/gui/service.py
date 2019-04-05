@@ -59,7 +59,8 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        ChartViews,
                                        Signup,
                                        ResearchStatus,
-                                       PROXY_ERROR_MESSAGE)
+                                       PROXY_ERROR_MESSAGE,
+                                       FeatureFlagsNames)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -4674,6 +4675,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         signup_data[Signup.ConfirmNewPassword] = ''
 
         signup_collection.insert_one(signup_data)
+        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+            'config_name': FeatureFlags.__name__
+        }, {
+            '$set': {
+                f'config.{FeatureFlagsNames.TrialEnd}':
+                    (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
+            }
+        })
         return jsonify({})
 
     @gui_helpers.add_rule_unauth('provision')
