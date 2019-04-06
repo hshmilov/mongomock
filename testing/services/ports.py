@@ -141,6 +141,7 @@ DOCKER_PORTS = {
     'promisec-adapter':                 6673,
     'symantec-ee-adapter':              6674,
     'cisco-ise-adapter':                6675,
+    'device42-adapter':                 6676,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

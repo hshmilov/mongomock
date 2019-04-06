@@ -33,7 +33,6 @@ class TripwireEnterpriseAdapter(AdapterBase):
         tripwire_tags = ListField(str, 'Tripwire Tags')
         element_count = Field(int, 'Element Count')
         agent_capabilities = ListField(str, 'Agent Capabilities')
-        agent_uuid = Field(str, 'Agent UUID')
         audit_enabled = Field(bool, 'Audit Enabled')
         event_generator_installed = Field(bool, 'Evenet Generator Installed')
         event_generator_enabled = Field(bool, 'Evenet Generator Enabled')
@@ -163,7 +162,7 @@ class TripwireEnterpriseAdapter(AdapterBase):
                              (device_raw.get('commonAgentOsVersion') or ''))
         except Exception:
             logger.exception(f'Prbolem getting os for {device_raw}')
-        device.agent_uuid = device_raw.get('commonAgentUuid')
+        device.uuid = device_raw.get('commonAgentUuid')
         device.audit_enabled = device_raw.get('auditEnabled')
         device.event_generator_installed = device_raw.get('eventGeneratorInstalled')
         device.event_generator_enabled = device_raw.get('eventGeneratorEnabled')

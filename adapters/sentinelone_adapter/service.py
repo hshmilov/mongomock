@@ -191,6 +191,7 @@ class SentineloneAdapter(AdapterBase):
                         logger.exception(f'Problem adding app to device raw {app} device: {device_raw}')
             except Exception:
                 logger.exception(f'Problem adding apps to {device_raw}')
+            device.uuid = device_raw.get('uuid')
             device.set_raw(device_raw)
             return device
         except Exception:

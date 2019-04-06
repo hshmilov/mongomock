@@ -1,15 +1,19 @@
 export const pluginMeta = {
+    device42_adapter: {
+        title: 'Device42 - BETA',
+        description: 'Device42 is a cloud-based CMDB for physical, virtual, and cloud servers and containers, network components, software, services, applications, and their relationships and dependencies.'
+    },
     cisco_ise_adapter: {
-        title: 'Cisco ISE - BETA',
-        description: 'Cisco Identity Services Engine (ISE) is a next-generation identity and access control policy platform that provides a single policy plane across the entire organization.'
+        title: 'Cisco Identity Services Engine (ISE) - BETA',
+        description: 'Cisco Identity Services Engine (ISE) is a network administration product that enables the creation and enforcement of security and access policies for endpoint devices connected to the company’s routers and switches.'
     },
     symantec_ee_adapter: {
         title: 'Symantec Endpoint Encryption - BETA',
         description: 'Symantec Endpoint Encryption combines full-disk and removable media encryption with centralized management to protect sensitive information and ensure regulatory compliance.'
     },
     promisec_adapter: {
-        title: 'Promisec - BETA',
-        description: 'Promisec provides clientless end-point management software that secures and optimizes PCs and servers in enterprise computer networks.'
+        title: 'Promisec Endpoint Manager - BETA',
+        description: 'Promisec Endpoint Manager is an agentless endpoint detection and remediation solution that detects, analyzes, and remediates abnormalities. \t'
     },
     truefort_adapter: {
         title: 'TrueFort - BETA',
@@ -17,7 +21,7 @@ export const pluginMeta = {
     },
     redcanary_adapter: {
         title: 'Red Canary',
-        description: 'Red Canary is an outcome-focused security operations partner for modern teams, deployed in minutes to reduce risk and improve security.'
+        description: 'The Red Canary suite includes products that record telemetry, detect and investigate threats, and automate remediation.'
     },
     cloudpassage_adapter: {
         title: 'CloudPassage Halo - BETA',
@@ -72,7 +76,7 @@ export const pluginMeta = {
         description: 'The Microsoft SQL Server Adapter imports device information from arbitrary SQL servers.'
     },
     quest_kace_adapter: {
-        title: 'Quest KACE Endpoint Systems Management Appliances - BETA',
+        title: 'Quest KACE Endpoint Systems Management Appliances',
         description: 'Quest KACE Endpoint Systems Management Appliances provision, manage, secure, and service network-connected devices.'
     },
     shodan_adapter: {
@@ -296,7 +300,7 @@ export const pluginMeta = {
         description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository.'
     },
     symantec_adapter: {
-        title: 'Symantec Endpoint Protection Manager',
+        title: 'Symantec Endpoint Protection',
         description: 'Symantec Endpoint Protection Manager manages events, policies, and registration for the client computers that connect to customer networks.'
     },
     nessus_adapter: {
@@ -464,8 +468,8 @@ export const pluginMeta = {
         description: 'Microsoft Hyper-V is a native hypervisor; it can create virtual machines on x86-64 systems running Windows.'
     },
     symantec_altiris_adapter: {
-        title: 'Symantec Altiris',
-        description: 'The Symantec Asset Management Suite enables organizations to take control, uncover savings, and ensure compliance of IT assets, by giving a picture of assets throughout their lifecycle.'
+        title: 'Symantec Endpoint Management Suite',
+        description: 'Symantec Endpoint Management Suite (formerly Altiris) manages, patches, and remediates application and OS configurations on desktops, laptops and servers to strengthen endpoint security and maximize user productivity.'
     },
     azure_adapter: {
         title: 'Microsoft Azure',

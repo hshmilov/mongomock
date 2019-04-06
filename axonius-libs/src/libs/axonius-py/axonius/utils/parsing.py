@@ -753,7 +753,7 @@ def compare_nessus_no_scan_id(adapter_device1, adapter_device2):
 
 def get_domain(adapter_device):
     domain = adapter_device['data'].get('domain')
-    if domain:
+    if domain and is_domain_valid(domain):
         return domain.upper()
     return None
 
@@ -781,11 +781,30 @@ def compare_last_used_users(adapter_device1, adapter_device2):
     users2 = get_last_used_users(adapter_device2)
     if not users1 or not users2:
         return False
-    users1 = [normalize_username(username) for username in users1 if normalize_username(username)]
-    users2 = [normalize_username(username) for username in users2 if normalize_username(username)]
+    users1 = [normalize_username(username) for username in users1
+              if (normalize_username(username) and 'admin' not in username.lower() and
+                  'user' not in username.lower() and 'guest' not in username.lower())]
+    users2 = [normalize_username(username) for username in users2
+              if (normalize_username(username) and 'admin' not in username.lower()
+                  and 'user' not in username.lower() and 'guest' not in username.lower())]
     if not users1 or not users2:
         return False
     return is_items_in_list1_are_in_list2(users1, users2) or is_items_in_list1_are_in_list2(users2, users1)
+
+
+def get_uuid(adapter_device):
+    uuid = adapter_device.get('uuid')
+    if uuid and str(uuid).lower() not in ['none', 'n/a', '0', 'unknown', 'undefined']:
+        return uuid.lower()
+    return None
+
+
+def compare_uuid(adapter_device1, adapter_device2):
+    uuid1 = get_uuid(adapter_device1)
+    uuid2 = get_uuid(adapter_device2)
+    if uuid1 and uuid2 and uuid1 == uuid2:
+        return True
+    return False
 
 
 def compare_domain(adapter_device1, adapter_device2):

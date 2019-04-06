@@ -497,6 +497,7 @@ class DeviceAdapter(SmartJsonClass):
     port_security = ListField(PortSecurityInterface, 'Port Security', json_format=JsonArrayFormat.table)
     dns_servers = ListField(str, 'DNS Servers')
     dhcp_servers = ListField(str, 'DHCP Servers')
+    uuid = Field(str, 'UUID')
     plugin_and_severities = ListField(TenableVulnerability, 'Plugins and Severities',
                                       json_format=JsonArrayFormat.table)
     tenable_sources = ListField(TenableSource, 'Tenable Source',

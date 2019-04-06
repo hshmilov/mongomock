@@ -15,25 +15,25 @@ export const actionsMeta = {
         title: 'Run WMI Scan'
     },
     carbonblack_isolate: {
-        title: 'Isolate in CarbonBlack'
+        title: 'Isolate in Carbon Black CB Response'
     },
     carbonblack_unisolate: {
-        title: 'Unisolate in CarbonBlack'
+        title: 'Unisolate in Carbon Black CB Response'
     },
     cybereason_isolate: {
-        title: 'Isolate in Cybereason'
+        title: 'Isolate in Cybereason Deep Detect & Respond'
     },
     cybereason_unisolate: {
-        title: 'Unisolate in Cybereason'
+        title: 'Unisolate in Cybereason Deep Detect & Respond'
     },
     scan_with_qualys: {
-        title: 'Add to Qualys'
+        title: 'Add to Qualys Cloud Platform'
     },
     tenable_io_add_ips_to_target_group: {
-        title: 'Add IPs to Tenable IO Target Group'
+        title: 'Add IPs to Tenable.io Target Group'
     },
     tenable_sc_add_ips_to_asset: {
-        title: 'Add IPs to Tenable SC Asset'
+        title: 'Add IPs to Tenable.sc Asset'
     },
     patch_device_windows: {
         title: 'Patch Windows Device'
@@ -42,13 +42,13 @@ export const actionsMeta = {
         title: 'Patch Linux Device'
     },
     block_fw_paloalto: {
-        title: 'Block in Palo Alto'
+        title: 'Block Device in Palo Alto Networks Panorama'
     },
     create_service_now_computer: {
         title: 'Create ServiceNow Computer'
     },
     carbonblack_defense_change_policy: {
-        title: 'Change CarbonBlack Defense Policy'
+        title: 'Change Carbon Black CB Defense Policy'
     },
     enable_entities: {
         title: 'Enable Users or Devices'
@@ -66,7 +66,7 @@ export const actionsMeta = {
         title: 'Create Jira Issue'
     },
     create_sysaid_incident: {
-        title: 'Create Sysaid Incident'
+        title: 'Create SysAid Incident'
     },
     send_emails: {
         title: 'Send Email'
@@ -124,7 +124,7 @@ export const actionsMeta = {
         items: ['create_service_now_computer']
     },
     manage_directory: {
-        title: 'Manage Active Directory Services',
+        title: 'Manage Microsoft Active Directory (AD) Services',
         items: ['enable_entities', 'disable_entities']
     },
     create_incident: {

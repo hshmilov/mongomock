@@ -41,7 +41,8 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
                                    get_hostname_or_serial, compare_hostname_serial,
-                                   is_from_twistlock_or_aws, get_nessus_no_scan_id, compare_nessus_no_scan_id)
+                                   is_from_twistlock_or_aws, get_nessus_no_scan_id, compare_nessus_no_scan_id,
+                                   is_domain_valid, compare_uuid, get_uuid)
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -63,7 +64,7 @@ def _refresh_domain_to_dns_dict():
 
 def get_domain_for_correlation(adapter_device):
     domain = adapter_device['data'].get('domain')
-    if domain:
+    if domain and is_domain_valid(domain):
         try:
             domain_dns_name = DOMAIN_TO_DNS_DICT.get(domain.lower())
             if domain_dns_name:
@@ -449,6 +450,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same SNOW Asset + Hostname name'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_uuid(self, adapters_to_correlate):
+        logger.info('Starting to correlate UUID')
+        filtered_adapters_list = filter(get_uuid, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_uuid],
+                                      [compare_uuid],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same UUID'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_splunk_vpn_hostname(self, adapters_to_correlate):
         logger.info('Starting to correlate on Splunk VPN')
         filtered_adapters_list = filter(is_splunk_vpn, adapters_to_correlate)
@@ -515,6 +527,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial_no_s(adapters_to_correlate)
         yield from self._correlate_serial_with_hostname(adapters_to_correlate)
         yield from self._correlate_nessus_no_scan_id(adapters_to_correlate)
+        yield from self._correlate_uuid(adapters_to_correlate)
+
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
 

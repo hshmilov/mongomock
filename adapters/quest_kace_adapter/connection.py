@@ -2,6 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from quest_kace_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -24,9 +25,24 @@ class QuestKaceConnection(RESTConnection):
                                                                             'organizationName': self._orgname},
                               use_json_in_response=False,
                               return_response_raw=True)
-        if 'x-dell-csrf-token' not in response['headers']:
+        if 'x-dell-csrf-token' not in response.headers:
             raise RESTException(f'Bad Response: {response.content[:100]}')
-        self._session_headers['x-dell-csrf-token'] = response['headers']['x-dell-csrf-token']
+        self._session_headers['x-dell-csrf-token'] = response.headers['x-dell-csrf-token']
+        self._session_headers['x-dell-api-version'] = '5'
+        self._get(f'api/inventory/machines?paging=limit {DEVICE_PER_PAGE}')
 
     def get_device_list(self):
-        yield from self._get('api/machines?paging=limit ALL')
+        offset = 0
+        response = self._get(f'api/inventory/machines?paging=limit {DEVICE_PER_PAGE} offset {offset}')
+        yield from response['Machines']
+        count = response['Count']
+        offset += DEVICE_PER_PAGE
+        while offset < min(count, MAX_NUMBER_OF_DEVICES):
+            try:
+                response = self._get(f'api/inventory/machines?paging=limit {DEVICE_PER_PAGE} offset {offset}')
+                yield from response['Machines']
+                count = response['Count']
+                offset += DEVICE_PER_PAGE
+            except Exception:
+                logger.exception(f'Problem at offset {offset}')
+                break

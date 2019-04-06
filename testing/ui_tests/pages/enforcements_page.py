@@ -26,18 +26,18 @@ class Trigger:
 class Action(Enum):
     send_emails = 'Send Email'
     create_notification = 'Push System Notification'
-    carbonblack_isolate = 'Isolate in CarbonBlack'
-    cybereason_isolate = 'Isolate in Cybereason'
-    cybereason_unisolate = 'Unisolate in Cybereason'
+    carbonblack_isolate = 'Isolate in Carbon Black CB Response'
+    cybereason_isolate = 'Isolate in Cybereason Deep Detect & Respond'
+    cybereason_unisolate = 'Unisolate in Cybereason Deep Detect & Respond'
     notify_syslog = 'Send to Syslog System'
     tag = 'Add Tag'
     run_executable_windows = 'Deploy on Windows Device'
     run_wmi_scan = 'Run WMI Scan'
-    scan_with_qualys = 'Add to Qualys'
+    scan_with_qualys = 'Add to Qualys Cloud Platform'
     ScanTenable = 'Add to Tenable'
-    carbonblack_defense_change_policy = 'Change CarbonBlack Defense Policy'
-    tenable_sc_add_ips_to_asset = 'Add IPs to Tenable SC Asset'
-    tenable_io_add_ips_to_target_group = 'Add IPs to Tenable IO Target Group'
+    carbonblack_defense_change_policy = 'Change Carbon Black CB Defense Policy'
+    tenable_sc_add_ips_to_asset = 'Add IPs to Tenable.sc Asset'
+    tenable_io_add_ips_to_target_group = 'Add IPs to Tenable.io Target Group'
     create_jira_incident = 'Create Jira Issue'
 
 
@@ -49,8 +49,9 @@ class ActionCategory:
     Utils = 'Axonius Utilities'
     Scan = 'Add Device to VA Scan'
     Patch = 'Patch Device'
-    ManageAD = 'Manage Active Directory Services'
+    ManageAD = 'Manage Microsoft Active Directory (AD) Services'
     Incident = 'Create Incident'
+    Block = 'Block Device in Firewall'
 
 
 class EnforcementsPage(EntitiesPage):

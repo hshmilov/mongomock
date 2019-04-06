@@ -15,7 +15,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class RiverbedAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        uuid = Field(str, 'UUID')
         health = Field(str, 'Health')
         address = Field(str, 'Address')
         device_version = Field(str, 'Device version')

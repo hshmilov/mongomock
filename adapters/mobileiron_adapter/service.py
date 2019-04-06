@@ -25,7 +25,6 @@ class MobileironAdapter(AdapterBase, Configurable):
         storage_capacity = Field(str, 'Storage Capacity')
         user_email = Field(str, 'User Email')
         imsi = Field(str, 'Device IMSI')
-        uuid = Field(str, 'Device UUID')
         current_phone_number = Field(str, 'Current phone number')
         user_first_name = Field(str, 'User First Name')
         user_last_name = Field(str, 'User Last Name')

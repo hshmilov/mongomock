@@ -431,7 +431,10 @@ class TestEnforcementSanity(TestBase):
         self.enforcements_page.wait_for_action_library()
         self.enforcements_page.fill_action_library_search('de')
         assert self.enforcements_page.get_action_categories() == [ActionCategory.Deploy, ActionCategory.Isolate,
-                                                                  ActionCategory.Patch, ActionCategory.ManageAD,
+                                                                  ActionCategory.Patch, ActionCategory.Block,
+                                                                  ActionCategory.ManageAD,
                                                                   ActionCategory.Incident]
         assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [
+            Action.cybereason_isolate.value,
+            Action.cybereason_unisolate.value,
             Action.carbonblack_defense_change_policy.value]

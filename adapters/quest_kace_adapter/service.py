@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from quest_kace_adapter.connection import QuestKaceConnection
@@ -100,20 +101,46 @@ class QuestKaceAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _parse_raw_data(self, devices_raw_data):
-        print_log = True
-        for device_raw in devices_raw_data:
+    def _create_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('Id')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('Name') or '')
+            device.hostname = device_raw.get('Name')
             try:
-                if print_log:
-                    logger.info(f'Got device {device_raw}')
-                    print_log = False
-                continue
-                # pylint: disable=W0101
-                device = self._new_device_adapter()
-                device.set_raw(device_raw)
-                yield device
+                device.figure_os(device_raw.get('Os_name'))
             except Exception:
-                logger.exception(f'Problem with fetching QuestKace Device for {device_raw}')
+                logger.exception(f'Problem getting os for {device_raw}')
+            try:
+                device.last_seen = parse_date(device_raw.get('Last_sync'))
+            except Exception:
+                logger.exception(f'Problem getting last seen for {device_raw}')
+            try:
+                ip = device_raw.get('Ip')
+                if ip and isinstance(ip, str):
+                    device.add_nic(None, ip.split(','))
+            except Exception:
+                logger.exception(f'Problem adding nic to {device_raw}')
+            try:
+                user = device_raw.get('User')
+                if user and isinstance(user, str):
+                    device.last_used_users = user.split(',')
+            except Exception:
+                logger.exception(f'Problem adding user to {device_raw}')
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching Device42 Device for {device_raw}')
+            return None
+
+    def _parse_raw_data(self, devices_raw_data):
+        for device_raw in devices_raw_data:
+            device = self._create_device(device_raw)
+            if device:
+                yield device
 
     @classmethod
     def adapter_properties(cls):

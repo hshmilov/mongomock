@@ -29,6 +29,7 @@ class CiscoMerakiAdapter(AdapterBase):
 
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        associated_user = Field(str, 'Associated User')
         device_type = Field(str, 'Device Type', enum=['Client Device', 'Cisco Device'])
         network_id = Field(str, 'Network Name')
         lng = Field(str, 'Lng')
@@ -199,6 +200,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 client_raw['ip'] = list(filter(lambda ip: isinstance(ip, str), client_raw['ip']))
                 device = self._new_device_adapter()
                 device.id = client_id
+                device.associated_user = client_raw.get('user')
                 device.device_type = 'Client Device'
                 mac_address = client_raw.get('mac') or ''
                 hostname = client_raw.get('mdnsName') or client_raw.get('dhcpHostname')
