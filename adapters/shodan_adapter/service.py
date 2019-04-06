@@ -109,7 +109,8 @@ class ShodanAdapter(ScannerAdapterBase):
                 {
                     'name': 'domain',
                     'title': 'Shodan Domain',
-                    'type': 'string'
+                    'type': 'string',
+                    'default': 'api.shodan.io'
                 },
                 {
                     'name': 'cidr',

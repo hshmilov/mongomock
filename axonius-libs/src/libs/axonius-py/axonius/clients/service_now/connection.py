@@ -133,6 +133,12 @@ class ServiceNowConnection(RESTConnection):
         short_description = service_now_dict.get('short_description', '')
         description = service_now_dict.get('description', '')
         u_incident_type = service_now_dict.get('u_incident_type')
+        u_requested_for = service_now_dict.get('u_requested_for')
+        assignment_group = service_now_dict.get('assignment_group')
+        u_symptom = service_now_dict.get('u_symptom')
+        cmdb_ci = service_now_dict.get('cmdb_ci')
+        caller_id = service_now_dict.get('caller_id')
+
         self.__number_of_incidents += 1
         logger.info(f'Creating servicenow incident num {self.__number_of_incidents}: impact={impact}, '
                     f'short_description={short_description}, description={description}')
@@ -143,6 +149,16 @@ class ServiceNowConnection(RESTConnection):
                           'description': description}
             if u_incident_type:
                 final_dict['u_incident_type'] = u_incident_type
+            if u_requested_for:
+                final_dict['u_requested_for'] = u_requested_for
+            if assignment_group:
+                final_dict['assignment_group'] = assignment_group
+            if u_symptom:
+                final_dict['u_symptom'] = u_symptom
+            if cmdb_ci:
+                final_dict['cmdb_ci'] = cmdb_ci
+            if caller_id:
+                final_dict['caller_id'] = caller_id
             self.__add_dict_to_table('incident', final_dict)
             return True
         except Exception:

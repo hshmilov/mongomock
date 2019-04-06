@@ -26,7 +26,7 @@ from reports.action_types.base.tenable_io_add_ips_to_asset import TenableIoAddIP
 from reports.action_types.base.send_email_to_entities import SendEmailToEntities
 from reports.action_types.base.run_wmi_scan import RunWMIScan
 from reports.action_types.alert.send_csv_to_share import SendCsvToShare
-
+from reports.action_types.base.create_servicenow_incident_per_entity import ServiceNowIncidentPerEntity
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_service_now_computer': ServiceNowComputerAction,
@@ -53,5 +53,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'tenable_io_add_ips_to_target_group': TenableIoAddIPsToTargetGroup,
     'send_email_to_entities': SendEmailToEntities,
     'send_csv_to_share': SendCsvToShare,
-    'run_wmi_scan': RunWMIScan
+    'run_wmi_scan': RunWMIScan,
+    'create_service_now_incident_per_entity': ServiceNowIncidentPerEntity
 }

@@ -62,6 +62,9 @@ export const actionsMeta = {
     create_service_now_incident: {
         title: 'Create ServiceNow Incident'
     },
+    create_service_now_incident_per_entity: {
+        title: 'Create ServiceNow Incident Per Entity'
+    },
     create_jira_incident: {
         title: 'Create Jira Issue'
     },
@@ -129,7 +132,7 @@ export const actionsMeta = {
     },
     create_incident: {
         title: 'Create Incident',
-        items: ['create_service_now_incident', 'create_jira_incident', 'create_sysaid_incident']
+        items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident']
     },
     notify: {
         title: 'Notify',

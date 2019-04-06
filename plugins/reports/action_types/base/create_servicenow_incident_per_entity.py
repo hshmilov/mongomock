@@ -1,16 +1,16 @@
 import logging
 
-from axonius.consts import report_consts
-from axonius.types.enforcement_classes import AlertActionResult
+from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 from axonius.clients.service_now.connection import ServiceNowConnection
-from reports.action_types.action_type_alert import ActionTypeAlert
+from axonius.consts import report_consts
+from reports.action_types.action_type_base import ActionTypeBase
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ServiceNowIncidentAction(ActionTypeAlert):
+class ServiceNowIncidentPerEntity(ActionTypeBase):
     """
-    Creates an incident in the ServiceNow account
+    Creates an incident per every service_now entity
     """
 
     @staticmethod
@@ -62,16 +62,6 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     ]
                 },
                 {
-                    'name': 'incident_description',
-                    'title': 'Incident Description',
-                    'type': 'string'
-                },
-                {
-                    'name': 'description_default',
-                    'title': 'Add Incident Description Default',
-                    'type': 'bool'
-                },
-                {
                     'name': 'u_incident_type',
                     'type': 'string',
                     'title': 'Incident Type'
@@ -87,6 +77,11 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
+                    'name': 'cmdb_ci',
+                    'title': 'Configuration Item',
+                    'type': 'string'
+                },
+                {
                     'name': 'u_symptom',
                     'title': 'Symptom',
                     'type': 'string'
@@ -99,8 +94,6 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             ],
             'required': [
                 'use_adapter'
-                'description_default',
-                'incident_description',
                 'severity',
                 'incident_title'
             ],
@@ -110,34 +103,32 @@ class ServiceNowIncidentAction(ActionTypeAlert):
     @staticmethod
     def default_config() -> dict:
         return {
-            'severity': 'info',
-            'description_default': False,
-            'incident_description': None,
-            'incident_title': None,
             'use_adapter': False,
             'domain': None,
             'username': None,
             'password': None,
             'https_proxy': None,
             'verify_ssl': True,
-            'u_symptom': None,
-            'assignment_group': None,
             'u_requested_for': None,
             'caller_id': None,
+            'severity': 'info',
+            'incident_title': None,
+            'cmdb_ci': None,
+            'u_symptom': None,
+            'assignment_group': None
         }
 
     def _create_service_now_incident(self, short_description, description, impact, u_incident_type,
-                                     caller_id, u_symptom, assignment_group, u_requested_for
-                                     ):
+                                     caller_id, cmdb_ci, u_symptom, assignment_group, u_requested_for):
         service_now_dict = {'short_description': short_description,
                             'description': description,
                             'impact': impact,
                             'u_incident_type': u_incident_type,
                             'caller_id': caller_id,
+                            'cmdb_ci': cmdb_ci,
                             'u_symptom': u_symptom,
                             'assignment_group': assignment_group,
-                            'u_requested_for': u_requested_for
-                            }
+                            'u_requested_for': u_requested_for}
         try:
             if self._config['use_adapter'] is True:
                 response = self._plugin_base.request_remote_plugin('create_incident', 'service_now_adapter', 'post',
@@ -157,29 +148,48 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             logger.exception(f'Got exception creating ServiceNow incident wiht {service_now_dict}')
             return f'Got exception creating ServiceNow incident: {str(e)}'
 
-    def _run(self) -> AlertActionResult:
-        query_name = self._run_configuration.view.name
-        old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
-            len(self._added_axon_ids)
-        log_message = report_consts.REPORT_CONTENT.format(name=self._report_data['name'],
-                                                          query=query_name,
-                                                          num_of_triggers=self._run_configuration.times_triggered,
-                                                          trigger_message=self._get_trigger_description(),
-                                                          num_of_current_devices=len(self._internal_axon_ids),
-                                                          old_results_num_of_devices=old_results_num_of_devices,
-                                                          query_link=self._generate_query_link(query_name))
-        impact = report_consts.SERVICE_NOW_SEVERITY.get(self._config['severity'],
-                                                        report_consts.SERVICE_NOW_SEVERITY['error'])
-        log_message_full = self._config['incident_description']
-        if self._config.get('description_default') is True:
-            log_message_full += '\n' + log_message
-        message = self._create_service_now_incident(short_description=self._config['incident_title'],
-                                                    description=log_message,
-                                                    impact=impact,
-                                                    u_incident_type=self._config.get('u_incident_type'),
-                                                    caller_id=self._config.get('caller_id'),
-                                                    u_symptom=self._config.get('u_symptom'),
-                                                    assignment_group=self._config.get('assignment_group'),
-                                                    u_requested_for=self._config.get('u_requested_for')
-                                                    )
-        return AlertActionResult(not message, message or 'Success')
+    # pylint: disable=R0912,R0914,R0915,R1702
+    def _run(self) -> EntitiesResult:
+
+        service_now_projection = {
+            'internal_axon_id': 1,
+            'adapters.plugin_name': 1,
+            'adapters.data.hostname': 1,
+            'adapters.data.id': 1,
+            'adapters.data.name': 1,
+            'adapters.data.os.type': 1,
+            'adapters.data.device_serial': 1,
+            'adapters.data.device_manufacturer': 1,
+            'adapters.data.network_interfaces.mac': 1,
+            'adapters.data.description': 1,
+            'adapters.data.cpus.cores': 1,
+            'adapters.data.cpus.name': 1,
+            'adapters.data.cpus.ghz': 1,
+            'adapters.data.username': 1,
+            'adapters.data.display_name': 1,
+            'adapters.data.mail': 1,
+            'adapters.data.last_used_users': 1,
+            'adapters.data.domain': 1,
+            'adapters.data.power_state': 1
+        }
+        current_result = self._get_entities_from_view(service_now_projection)
+        results = []
+
+        for entry in current_result:
+            try:
+                impact = report_consts.SERVICE_NOW_SEVERITY.get(self._config['severity'],
+                                                                report_consts.SERVICE_NOW_SEVERITY['error'])
+                message = self._create_service_now_incident(short_description=self._config['incident_title'],
+                                                            description=str(entry),
+                                                            impact=impact,
+                                                            u_incident_type=self._config.get('u_incident_type'),
+                                                            caller_id=self._config.get('caller_id'),
+                                                            cmdb_ci=self._config.get('cmdb_ci'),
+                                                            u_symptom=self._config.get('u_symptom'),
+                                                            assignment_group=self._config.get('assignment_group'),
+                                                            u_requested_for=self._config.get('u_requested_for'))
+                results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
+            except Exception:
+                logger.exception(f'Problem with entry {entry}')
+                results.append(EntityResult(entry['internal_axon_id'], False, 'Unexpected Error'))
+        return results
