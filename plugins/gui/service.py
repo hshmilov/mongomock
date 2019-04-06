@@ -128,6 +128,7 @@ from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.adapter_data import adapter_data
+from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.get_ec_historical_data_for_entity import (TaskData,
                                                              get_all_task_data)
@@ -1847,18 +1848,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             required_permissions={Permission(PermissionType.Enforcements,
                                                              ReadOnlyJustForGet)})
     def enforcement_by_id(self, enforcement_id):
-        """
-
-        :param enforcement_id:
-        :return:
-        """
         if request.method == 'GET':
             def get_saved_action(name):
                 if not name:
                     return {}
-                return gui_helpers.beautify_db_entry(self.enforcements_saved_actions_collection.find_one({
+                saved_action = self.enforcements_saved_actions_collection.find_one({
                     'name': name
-                }))
+                })
+                if not saved_action:
+                    return {}
+
+                # fixing password to be 'unchanged'
+                action_type = saved_action['action']['action_name']
+                schema = self._get_actions_from_reports_plugin()[action_type]['schema']
+                saved_action['action']['config'] = clear_passwords_fields(saved_action['action']['config'], schema)
+                return gui_helpers.beautify_db_entry(saved_action)
 
             enforcement = self.enforcements_collection.find_one({
                 '_id': ObjectId(enforcement_id)
@@ -1878,6 +1882,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         # Handle remaining request - POST
         enforcement_to_update = request.get_json(silent=True)
+        enforcement_actions_from_user = {
+            x['name']: x
+            for x
+            in extract_actions_from_ec(enforcement_to_update['actions'])
+        }
 
         # Remove old enforcement's actions
         enforcement_actions = self.enforcements_collection.find_one({
@@ -1885,13 +1894,31 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         }, {
             'actions': 1
         })['actions']
-        self.enforcements_saved_actions_collection.delete_many({
+
+        all_actions_from_db = extract_actions_from_ec(enforcement_actions)
+
+        all_actions_query = {
             'name': {
-                '$in':
-                    [enforcement_actions[ACTIONS_MAIN_FIELD]] + enforcement_actions[ACTIONS_SUCCESS_FIELD]
-                    + enforcement_actions[ACTIONS_FAILURE_FIELD] + enforcement_actions[ACTIONS_POST_FIELD]
+                '$in': all_actions_from_db
             }
-        })
+        }
+
+        for action_from_db in self.enforcements_saved_actions_collection.find(all_actions_query,
+                                                                              projection={
+                                                                                  'name': 1,
+                                                                                  'action.config': 1,
+                                                                                  '_id': 0
+                                                                              }):
+            corresponding_user_action = enforcement_actions_from_user.get(action_from_db['name'])
+            logger.info(action_from_db)
+            logger.info(corresponding_user_action)
+            if not corresponding_user_action:
+                continue
+            corresponding_user_action['action']['config'] = refill_passwords_fields(
+                corresponding_user_action['action']['config'],
+                action_from_db['action']['config'])
+
+        self.enforcements_saved_actions_collection.delete_many(all_actions_query)
 
         self.__process_enforcement_actions(enforcement_to_update[ACTIONS_FIELD])
         response = self.request_remote_plugin(f'reports/{enforcement_id}', 'reports', method='post',
@@ -1927,17 +1954,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         })
         return response.text, response.status_code
 
+    @rev_cached(ttl=3600)
+    def _get_actions_from_reports_plugin(self) -> dict:
+        response = self.request_remote_plugin('reports/actions', 'reports', method='get')
+        response.raise_for_status()
+        return response.json()
+
     @gui_add_rule_logged_in('enforcements/actions', required_permissions={Permission(PermissionType.Enforcements,
                                                                                      PermissionLevel.ReadOnly)})
     def actions(self):
         """
         Returns all action names and their schema, as defined by the author of the class
         """
-        response = self.request_remote_plugin('reports/actions', 'reports', method='get')
-        if response is None:
-            return return_error('Failed to get all actions and schemas', 400)
+        response = self._get_actions_from_reports_plugin()
 
-        return jsonify(response.json()), response.status_code
+        return jsonify(response)
 
     @gui_add_rule_logged_in('enforcements/actions/saved', required_permissions={Permission(PermissionType.Enforcements,
                                                                                            PermissionLevel.ReadOnly)})
