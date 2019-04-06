@@ -9,9 +9,7 @@
                     <template v-else>Download Now</template>
                 </x-button>
             </div>
-            <div class="x-report-latest">
-                {{latestReportDate}}.
-                <template v-if="!isLatestReport"></template>
+            <div class="x-report-latest">{{latestReportDate}}.<template v-if="!isLatestReport"></template>
             </div>
             <h3 id="reports_schedule">Periodical Report Email</h3>
             <div class="x-content">
@@ -151,7 +149,15 @@
             }).then((response) => {
                 this.fetching.lastGenerated = false
                 if (response.data) {
-                    this.latestReportDate = 'Last generated: ' + response.data
+                    let dateTime = new Date(response.data)
+                    if (dateTime == 'Invalid Date') {
+                        this.latestReportDate = 'Last generated: ' + response.data
+                    } else {
+                        dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
+                        let dateParts = dateTime.toISOString().split('T')
+                        dateParts[1] = dateParts[1].split('.')[0]
+                        this.latestReportDate = 'Last generated: ' + dateParts.join(' ')
+                    }
                     this.isLatestReport = true
                 }
             })

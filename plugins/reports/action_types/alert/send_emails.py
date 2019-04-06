@@ -129,8 +129,11 @@ class SendEmailsAction(ActionTypeAlert):
             self._config.get('mailSubject') else report_consts.REPORT_TITLE.format(name=self._report_data['name'],
                                                                                    query=query_name)
         logger.info(self._config)
+        if not self._config.get('emailList'):
+            logger.info('Email cannot be sent because no recipients are configured')
+            return AlertActionResult(False, 'Email required Recipients')
         email = mail_sender.new_email(subject,
-                                      self._config.get('emailList', []),
+                                      self._config['emailList'],
                                       cc_recipients=self._config.get('emailListCC', []))
         # all the trigger result
         if self._config.get('sendDeviceCSV', False):

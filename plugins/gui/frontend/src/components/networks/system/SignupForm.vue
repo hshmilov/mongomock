@@ -109,6 +109,7 @@
 
 <style lang="scss">
   .x-signup-form {
+    height: 100%;
     .title {
       margin-bottom: 4px;
     }

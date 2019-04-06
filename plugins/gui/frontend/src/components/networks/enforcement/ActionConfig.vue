@@ -144,6 +144,9 @@
       this.nameValid = !this.nameError
     },
     methods: {
+      validateForm (valid) {
+        this.formValid = valid
+      },
       confirmAction () {
         this.$emit('confirm')
       }

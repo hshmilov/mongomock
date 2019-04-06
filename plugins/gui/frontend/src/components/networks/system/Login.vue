@@ -73,59 +73,64 @@
 </script>
 
 <style lang="scss">
-    .x-login {
-      background-size: cover;
-      background: url('/src/assets/images/general/login_bg.png') center bottom;
-      height: 100vh;
-        padding-top: 20vh;
+  .x-login {
+    background: url('/src/assets/images/general/login_bg.png') center bottom;
+    background-size: cover;
+    height: 100vh;
+    display: flex;
+    overflow: auto;
 
-        .login-container {
-            width: 400px;
-            margin: auto;
-            border-radius: 4px;
-            background-color: $grey-1;
-            display: flex;
-            flex-flow: column;
-            justify-content: center;
+    .login-container {
+      width: 400px;
+      margin: auto;
+      border-radius: 4px;
+      background-color: $grey-1;
+      display: flex;
+      flex-flow: column;
+      justify-content: center;
 
-            .header {
-                height: 128px;
-                display: flex;
-                flex-flow: column;
-                justify-content: center;
-            }
+      .header {
+        height: 128px;
+        display: flex;
+        flex-flow: column;
+        justify-content: center;
+      }
 
-            .body {
-                background-color: white;
-                flex: 1 0 auto;
-                padding: 48px;
-                border-radius: 4px;
+      .body {
+        background-color: white;
+        flex: 1 0 auto;
+        padding: 48px;
+        border-radius: 4px;
+        max-height: calc(100% - 128px);
 
-                .title {
-                    margin-top: 0;
-                }
-
-                .x-form {
-                    .x-array-edit {
-                        display: block;
-
-                        .object {
-                            width: 100%;
-                        }
-
-                        .item {
-                            width: 100%;
-                            margin-bottom: 12px;
-                        }
-                    }
-                }
-
-                .x-button {
-                    width: 100%;
-                }
-
-            }
-
+        .title {
+          margin-top: 0;
         }
+
+        .x-form {
+          height: calc(100% - 96px);
+
+          .x-array-edit {
+            display: block;
+
+            .object {
+              width: 100%;
+            }
+
+            .item {
+              width: 100%;
+              margin-bottom: 12px;
+            }
+          }
+        }
+
+        .x-button {
+          width: 100%;
+          margin-top: 8px;
+        }
+
+      }
+
     }
+  }
 </style>

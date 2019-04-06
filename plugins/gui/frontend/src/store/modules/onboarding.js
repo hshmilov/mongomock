@@ -508,7 +508,7 @@ export const onboarding = {
 				},
 				'actionMain': {
 					id: 'main_action', title: 'MAIN ACTION', align: 'right',
-					content: 'Select and configure a action to run on all query results.'
+					content: 'Select and configure an action to run on all query results.'
 				},
 				'actionSuccess': {
 					id: 'success_action', title: 'SUCCESS ACTIONS', align: 'right',
