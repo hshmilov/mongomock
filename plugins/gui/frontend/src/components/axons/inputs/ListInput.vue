@@ -91,7 +91,7 @@
       },
       processInsertChip (event) {
         event = (event) ? event : window.event
-        if (event.key !== 'Tab' && event.key !== ',' && event.key !== ';' && event.key !== 'Enter') {
+        if ((event.key !== 'Tab' || !this.$refs.chips.inputValue) && event.key !== ',' && event.key !== ';' && event.key !== 'Enter') {
           return true
         }
         if (event.key === 'Enter') {
@@ -99,7 +99,7 @@
           this.insertedChip = ''
         }
         this.insertChip(event)
-        if (event.key !== 'Tab') event.preventDefault()
+        event.preventDefault()
       },
       onFocusout(event) {
         this.allSelected = false
@@ -128,14 +128,12 @@
         this.chips.$refs.input.$el.classList.add('inline')
       },
       placeInputForInsert() {
-        this.$nextTick(() => {
-          let chipsEl = this.chips.$children[0].$el
-          let chipsElChildren = chipsEl.children
-          chipsEl.insertBefore(chipsElChildren[this.editedIndex], chipsElChildren[chipsElChildren.length - 1].nextElementSibling)
-          this.chips.$refs.input.$el.classList.remove('inline')
-          this.editedIndex = -1
-          this.chips.$refs.input.$el.focus()
-        })
+        let chipsEl = this.chips.$children[0].$el
+        let chipsElChildren = chipsEl.children
+        chipsEl.insertBefore(chipsElChildren[this.editedIndex], chipsElChildren[chipsElChildren.length - 1].nextElementSibling)
+        this.chips.$refs.input.$el.classList.remove('inline')
+        this.editedIndex = -1
+        this.chips.$refs.input.$el.focus()
       }
     }
   }

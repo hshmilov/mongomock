@@ -19,6 +19,7 @@
           :schema="actionSchema"
           api-upload="actions"
           :read-only="readOnly"
+          silent
           @validate="validateForm"
         />
       </template>
@@ -66,12 +67,12 @@
     data () {
       return {
         nameValid: false,
-        formValid: true
+        formError: ''
       }
     },
     computed: {
       disableConfirm () {
-        return (!this.formValid || !this.nameValid)
+        return (Boolean(this.formError) || !this.nameValid)
       },
       disableName () {
         return this.value.uuid
@@ -128,10 +129,6 @@
           return 'Name already taken by another saved Action'
         }
         return ''
-      },
-      formError () {
-        if (this.formValid) return ''
-        return 'Configuration fields are not complete'
       }
     },
     watch: {
@@ -144,8 +141,8 @@
       this.nameValid = !this.nameError
     },
     methods: {
-      validateForm (valid) {
-        this.formValid = valid
+      validateForm (validityError) {
+        this.formError = validityError
       },
       confirmAction () {
         this.$emit('confirm')

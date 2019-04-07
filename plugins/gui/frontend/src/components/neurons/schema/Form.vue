@@ -1,7 +1,7 @@
 <template>
     <form class="x-form" @keyup.enter.stop="$emit('submit')">
         <x-array-edit v-model="data" :schema="schema" :api-upload="apiUpload" :read-only="readOnly" @validate="onValidate"/>
-        <div class="error">
+        <div class="error" v-if="!silent">
             <template v-if="error">{{error}}</template>
             <template v-else-if="validity.error">{{ validity.error }}</template>
             <template v-else>&nbsp;</template>
@@ -22,7 +22,17 @@
     export default {
         name: 'x-form',
         components: {xArrayEdit},
-        props: ['value', 'schema', 'error', 'apiUpload', 'readOnly'],
+        props: {
+          value: {},
+          schema: {},
+          error: {},
+          apiUpload: {},
+          readOnly: {},
+          silent: {
+            type: Boolean,
+            default: false
+          }
+        },
         computed: {
             data: {
                 get() {
@@ -62,6 +72,10 @@
                 } else {
                     let nextInvalidField = this.validity.fields.find(x => x.error)
                     this.validity.error = nextInvalidField ? nextInvalidField.error : ''
+                }
+                if (this.silent) {
+                  this.$emit('validate', this.validity.error)
+                  return
                 }
                 this.$emit('validate', this.validity.fields.length === 0)
             }

@@ -110,7 +110,7 @@
         if (!this.isStringList) return []
         return this.data.filter(item => {
           if (this.schema.items.format === 'email') {
-            return !item.match(new RegExp('^"?[\\w\\.\\+\\- ]{1,64}"?@[a-zA-Z_\\-0-9]+?(\\.[a-zA-Z]*){0,2}$'))
+            return !item.match(new RegExp('^"?[\\w\\.\\+\\- ]{1,64}"?@[a-zA-Z_\\-0-9]+?(\\.[a-zA-Z]+){0,2}$'))
           }
           return false
         })
