@@ -235,6 +235,9 @@
                 /* Load given view by settings current filter and expressions to it */
                 this.inTextSearch = false
                 this.updateView({module: this.module, view})
+                if (!this.inTextSearch) {
+                    this.searchValue = view.query.filter
+                }
                 this.filterValid = true
                 this.focusInput()
                 this.closeInput()
