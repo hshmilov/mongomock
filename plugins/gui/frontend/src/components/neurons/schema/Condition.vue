@@ -17,7 +17,7 @@
     import number from './types/numerical/NumberEdit.vue'
     import integer from './types/numerical/IntegerEdit.vue'
     import bool from './types/boolean/BooleanEdit.vue'
-    import array from './types/array/ArrayFilter.vue'
+    import array from './types/numerical/IntegerEdit.vue'
 
     import {compOps} from '../../../constants/filter'
     import IP from 'ip'
