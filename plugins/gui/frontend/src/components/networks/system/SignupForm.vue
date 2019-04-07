@@ -5,6 +5,7 @@
     <x-form
       v-model="signupData"
       :schema="signupSchema"
+      :error="error"
       @validate="onValidate"
       @submit="onSave"
     />
@@ -12,18 +13,12 @@
       :disabled="!valid"
       @click="onSave"
     >Get Started</x-button>
-    <x-toast
-      v-if="message"
-      v-model="message"
-      :timeout="6000"
-    />
   </div>
 </template>
 
 <script>
   import xForm from '../../neurons/schema/Form.vue'
   import xButton from '../../axons/inputs/Button.vue'
-  import xToast from '../../axons/popover/Toast.vue'
 
   import { mapActions } from 'vuex'
   import { SUBMIT_SIGNUP } from '../../../store/modules/auth'
@@ -32,7 +27,7 @@
   export default {
     name: 'XSignupForm',
     components: {
-      xForm, xButton, xToast
+      xForm, xButton
     },
     data() {
       return {
@@ -44,7 +39,7 @@
           confirmNewPassword: null
         },
         valid: false,
-        message: ''
+        error: ''
       }
     },
     computed: {
@@ -87,20 +82,14 @@
       },
       onSave () {
         if (this.signupData.newPassword !== this.signupData.confirmNewPassword) {
-          this.message = 'Passwords do not match'
-          return
-        }
-        if (this.signupData.newPassword === '') {
-          this.message = 'Empty password is not allowed'
+          this.error = 'Passwords do not match'
           return
         }
         this.submitSignup(this.signupData).then(() => {
-          this.message = 'Signup completed'
           this.$emit('done')
           this.fetchExpired()
         }).catch(error => {
-          this.message = JSON.parse(error.request.response).message
-          this.$emit('done')
+          this.error = JSON.parse(error.request.response).message
         })
       }
     }

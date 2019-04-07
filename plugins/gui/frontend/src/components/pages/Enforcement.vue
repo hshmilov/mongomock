@@ -53,15 +53,15 @@
           </div>
           <div>
             <x-button
+              v-if="saved"
+              emphasize
+              @click="viewTasks"
+            >View Tasks</x-button>
+            <x-button
               v-if="isReadOnly"
               @click="exit"
             >Exit</x-button>
             <template v-else>
-              <x-button
-                v-if="saved"
-                emphasize
-                @click="viewTasks"
-              >View Tasks</x-button>
               <x-button
                 emphasize
                 :disabled="disableRun"

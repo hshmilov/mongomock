@@ -8,7 +8,7 @@ class SignupPage(Page):
     NEW_PASSWORD = 'newPassword'
     CONFIRM_PASSWORD = 'confirmNewPassword'
     SIGNUP_COMPLETED_TOASTER = 'Sign up completed'
-    PASSWORDS_DONT_MATCH_TOASTER = 'Passwords do not match'
+    PASSWORDS_DONT_MATCH_MESSAGE = 'Passwords do not match'
     SIGNUP_FORM_CSS = '.x-signup-form'
 
     @property
@@ -44,8 +44,8 @@ class SignupPage(Page):
     def wait_for_signup_completed_toaster(self):
         self.wait_for_toaster(self.SIGNUP_COMPLETED_TOASTER)
 
-    def wait_for_passwords_dont_match_toaster(self):
-        self.wait_for_toaster(self.PASSWORDS_DONT_MATCH_TOASTER)
+    def wait_for_passwords_dont_match_error(self):
+        self.wait_for_element_present_by_text(self.PASSWORDS_DONT_MATCH_MESSAGE)
 
     def wait_for_signup_page_to_load(self):
         self.wait_for_element_present_by_css(self.SIGNUP_FORM_CSS)

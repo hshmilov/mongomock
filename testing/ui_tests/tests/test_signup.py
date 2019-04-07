@@ -20,7 +20,7 @@ class TestSignup(TestBase):
         company_name = 'bla'
 
         self.signup_page.fill_signup_and_save(company=company_name, email='a@b', passw='1', confirm_passw='2')
-        self.signup_page.wait_for_passwords_dont_match_toaster()
+        self.signup_page.wait_for_passwords_dont_match_error()
 
         self.signup_page.fill_signup_and_save(company=company_name, email='a@b', passw='123', confirm_passw='123')
         self.login_page.wait_for_login_page_to_load()
