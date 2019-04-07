@@ -74,7 +74,7 @@
               type: 'string',
               format: 'password'
             }],
-          required: ['companyName', 'newPassword', 'confirmNewPassword', 'contactEmail']
+          required: ['companyName', 'newPassword', 'confirmNewPassword', 'contactEmail', 'userName']
         }
       }
     },
