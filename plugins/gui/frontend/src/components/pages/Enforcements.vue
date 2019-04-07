@@ -74,6 +74,14 @@
         this.selection = { ids: [] }
       },
       navigateTasks () {
+        this.updateView({
+          module: 'tasks',
+          view: {
+            query: {
+              filter: ''
+            }
+          }
+        })
         this.$router.push({ name: 'Tasks' })
       },
       onSearchConfirm() {
