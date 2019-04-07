@@ -20,7 +20,8 @@ class SendEmailToEntities(ActionTypeBase):
                 {
                     'name': 'mail_content',
                     'title': 'Mail Content',
-                    'type': 'string'
+                    'type': 'string',
+                    'format': 'text'
                 },
             ],
             'required': [
