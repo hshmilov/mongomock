@@ -99,8 +99,9 @@
             modal_body.append(fields_table);
         }
 
-        var yes_button = m.find("#generic_modal_yes_button").prop('disabled', true);
+        var yes_button = m.find("#generic_modal_yes_button");
         if (validation !== undefined) {
+            yes_button.prop('disabled', true);
             $(validation_button).on('input', function() { yes_button.prop("disabled", $(validation_button).val() !== validation)});
             modal_body.append(validation_button);
         }
@@ -555,21 +556,21 @@
     // Instance actions and API's to the backend
     function start_instance(always_function, cloud, instance_id) {
         var data = {};
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/start", type: "POST", data: data})
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/start?get_new_data=true", type: "POST", data: data})
             .done(rewrite_all_tables)
             .fail(exception_modal)
             .always(always_function);
     }
     function stop_instance(always_function, cloud, instance_id) {
         var data = {};
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/stop", type: "POST", data: data})
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/stop?get_new_data=true", type: "POST", data: data})
             .done(rewrite_all_tables)
             .fail(exception_modal)
             .always(always_function);
     }
     function terminate_instance(always_function, cloud, instance_id) {
         console.log("terminating " + instance_id);
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/delete", type: "POST", data: {}})
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/delete?get_new_data=true", type: "POST", data: {}})
             .done(rewrite_all_tables)
             .fail(exception_modal)
             .always(always_function);
@@ -609,7 +610,7 @@
         } else {
             data['config']["fork"] = '';
             data['config']["branch"] = '';
-            data['config']["image"] = $("#new_vm_image")[0].value;
+            data['image'] = $("#new_vm_image")[0].value;
             // No need to put a key to an image.
         }
 
@@ -625,7 +626,7 @@
 
         $.ajax(
             {
-                url: "/api/instances",
+                url: "/api/instances?get_new_data=true",
                 type: "POST",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
@@ -643,14 +644,14 @@
     }
     function disable_bot_monitoring(always_function, cloud, instance_id) {
         console.log("Disabling bot monitoring for " + instance_id);
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/bot_monitoring", type: "POST", data: {'status': false}})
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/bot_monitoring?get_new_data=true", type: "POST", data: {'status': false}})
             .done(rewrite_all_tables)
             .fail(exception_modal)
             .always(always_function);
     }
     function enable_bot_monitoring(always_function, cloud, instance_id) {
         console.log("Enabling bot monitoring for " + instance_id);
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/bot_monitoring", type: "POST", data: {'status': true}})
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/bot_monitoring?get_new_data=true", type: "POST", data: {'status': true}})
             .done(rewrite_all_tables)
             .fail(exception_modal)
             .always(always_function);

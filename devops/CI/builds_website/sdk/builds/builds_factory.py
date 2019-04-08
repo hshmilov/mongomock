@@ -166,10 +166,14 @@ class Builds(BuildsAPI):
         super().__init__()
         self.instances: List[BuildsInstance] = []
 
-    def get_latest_export(self):
+    def get_latest_daily_export(self):
         response = self.get('exports', params={'limit': 10})
         daily_exports = [export for export in response['result'] if DAILY_EXPORT_SUFFIX in export['version']]
         return daily_exports[0]
+
+    def get_last_exports(self, limit=10):
+        response = self.get('exports', params={'limit': limit})
+        return response
 
     def create_instances(
             self,

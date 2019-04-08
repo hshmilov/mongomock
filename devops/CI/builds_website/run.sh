@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-
-docker-compose down
-
 set -e
+
 docker-compose build --no-cache
+docker-compose down
 
 if [ "$1" == "debug" ]; then
     echo Running builds in debug mode..

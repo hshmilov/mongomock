@@ -32,7 +32,10 @@ class SeleniumService(WeaveService):
               extra_flags=None,
               docker_internal_env_vars=None,
               run_env=None):
-        extra_flags = ['-e', 'TZ="Asia/Jerusalem"', '--privileged']
+        extra_flags = [
+            '-e', 'TZ="Asia/Jerusalem"', '--privileged',
+            '-e', 'SCREEN_WIDTH=1440', '-e', 'SCREEN_HEIGHT=900'
+        ]
 
         if not is_weave_up():
             extra_flags.append('--link=gui:gui.axonius.local')

@@ -41,8 +41,12 @@ class AWSComputeManager:
             pass
 
     def refresh_images_names(self, images_ids: Set):
-        for image_details in self.ec2_client.describe_images(ImageIds=list(images_ids))['Images']:
-            self.image_id_to_name[image_details['ImageId']] = image_details.get('Name') or 'Unknown'
+        try:
+            for image_details in self.ec2_client.describe_images(ImageIds=list(images_ids))['Images']:
+                self.image_id_to_name[image_details['ImageId']] = image_details.get('Name') or 'Unknown'
+        except Exception:
+            print(f'Could not refresh images names, will try later.')
+            pass
 
     def turn_raw_to_generic(self, raw_instance_data):
         result = {
@@ -140,14 +144,16 @@ class AWSComputeManager:
                 {
                     'DeviceName': '/dev/sda1',
                     'Ebs': {
-                        'DeleteOnTermination': True,
-                        'VolumeSize': hard_disk_size_in_gb
+                        'DeleteOnTermination': True
                     }
                 }
             ],
             'DisableApiTermination': True,
             'SecurityGroupIds': security_groups
         }
+
+        if hard_disk_size_in_gb:
+            args['BlockDeviceMappings'][0]['Ebs']['VolumeSize'] = hard_disk_size_in_gb
 
         if key_name:
             args['KeyName'] = key_name

@@ -96,6 +96,9 @@ class BuildsCloudManager:
         if cloud == 'aws':
             if not image:
                 image = AWS_UBUNTU_VANILLA_IMAGE_ID
+                hd_size = AWS_REGULAR_INSTANCE_DEFAULT_HD_SIZE
+            else:
+                hd_size = 0  # use the image's hd size
             generic, raw = self.aws_compute.create_instance(
                 f'{vm_type}-{name}',
                 num,
@@ -103,7 +106,7 @@ class BuildsCloudManager:
                 image,
                 key_name,
                 AWS_REGULAR_INSTANCE_SUBNET_ID,
-                AWS_REGULAR_INSTANCE_DEFAULT_HD_SIZE,
+                hd_size,
                 {'VM-Type': vm_type},
                 AWS_REGULAR_INSTANCE_SECURITY_GROUPS,
                 False,
@@ -112,6 +115,9 @@ class BuildsCloudManager:
         elif cloud == 'gcp':
             if not image:
                 image = GCP_UBUNTU_VANILLA_IMAGE_ID
+                hd_size = GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE
+            else:
+                hd_size = 0  # use the image's hd size
             generic, raw = self.gcp_compute.create_node(
                 f'{vm_type}-{name}',
                 num,
@@ -120,7 +126,7 @@ class BuildsCloudManager:
                 key_name,
                 GCP_REGULAR_INSTANCE_NETWORK_ID,
                 GCP_REGULAR_INSTANCE_SUBNETWORK_ID,
-                GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE,
+                hd_size,
                 {'vm-type': vm_type.lower()},
                 False,
                 code
@@ -144,6 +150,9 @@ class BuildsCloudManager:
         if cloud == 'aws':
             if not image:
                 image = AWS_UBUNTU_VANILLA_IMAGE_ID
+                hd_size = AWS_REGULAR_INSTANCE_DEFAULT_HD_SIZE
+            else:
+                hd_size = 0  # use the image's hd size
             generic, raw = self.aws_compute.create_instance(
                 f'{vm_type.lower()}-{domain}',
                 num,
@@ -151,7 +160,7 @@ class BuildsCloudManager:
                 image,
                 key_name,
                 AWS_PUBLIC_INSTANCE_SUBNET_ID,
-                AWS_PUBLIC_INSTANCE_DEFAULT_HD_SIZE,
+                hd_size,
                 {'VM-Type': vm_type},
                 AWS_PUBLIC_INSTANCE_SECURITY_GROUPS,
                 True,
@@ -160,6 +169,9 @@ class BuildsCloudManager:
         elif cloud == 'gcp':
             if not image:
                 image = GCP_UBUNTU_VANILLA_IMAGE_ID
+                hd_size = GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE
+            else:
+                hd_size = 0  # use the image's hd size
             generic, raw = self.gcp_compute.create_node(
                 f'{vm_type}-{domain}',
                 num,
@@ -168,7 +180,7 @@ class BuildsCloudManager:
                 CLOUD_KEYS[key_name],
                 GCP_PUBLIC_INSTANCE_NETWORK_ID,
                 GCP_PUBLIC_INSTANCE_SUBNETWORK_ID,
-                GCP_PUBLIC_INSTANCE_DEFAULT_HD_SIZE,
+                hd_size,
                 {'vm-type': vm_type.lower()},
                 True,
                 code

@@ -303,7 +303,10 @@ def instances():
                     attachments=[InstanceMonitor.get_instance_attachment(
                         context.bm.get_instances(instance_cloud, instance_id)[0], [])])
 
-        return jsonify({'result': context.bm.get_instances(), 'instances': generic})
+        if request.args.get('get_new_data') and request.args.get('get_new_data').lower() == 'true':
+            return jsonify({'result': context.bm.get_instances(), 'instances': generic})
+        else:
+            return jsonify({'instances': generic})
 
 
 @app.route("/api/instances/<cloud>", methods=['GET', 'DELETE', 'POST'])
@@ -347,11 +350,13 @@ def instance_action(cloud, instance_id, action):
             f'owner "{owner}" has *{word}* bot monitoring for instance "{instance_name}"',
             attachments=[InstanceMonitor.get_instance_attachment(instance_data, [])]
         )
-        return jsonify({'result': status})
     else:
         raise ValueError('Not supported')
 
-    return jsonify({'result': context.bm.get_instances()})
+    if request.args.get('get_new_data') and request.args.get('get_new_data').lower() == 'true':
+        return jsonify({'result': context.bm.get_instances(), 'action': True})
+    else:
+        return jsonify({'action': True})
 
 
 # This is not authorized on purpose

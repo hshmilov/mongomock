@@ -99,6 +99,20 @@ class GCPComputeManager:
         if not ex_metadata['items']:
             ex_metadata = None
 
+        ex_disks_gce_struct = [
+            {
+                'boot': True,
+                'autoDelete': True,
+                'initializeParams': {
+                    'sourceImage': image_full_url,
+                    'diskType': f'/zones/{GCP_DFEAULT_ZONE}/diskTypes/pd-ssd',
+                }
+            }
+        ]
+
+        if hard_disk_size_in_gb:
+            ex_disks_gce_struct[0]['initializeParams']['diskSizeGb'] = hard_disk_size_in_gb
+
         raw = self.client.ex_create_multiple_nodes(
             name,
             instance_type,
@@ -115,17 +129,7 @@ class GCPComputeManager:
             ex_on_host_maintenance='MIGRATE',
             ex_automatic_restart=True,
             ex_labels=final_labels,
-            ex_disks_gce_struct=[
-                {
-                    'boot': True,
-                    'autoDelete': True,
-                    'initializeParams': {
-                        'sourceImage': image_full_url,
-                        'diskType': f'/zones/{GCP_DFEAULT_ZONE}/diskTypes/pd-ssd',
-                        'diskSizeGb': hard_disk_size_in_gb
-                    }
-                }
-            ]
+            ex_disks_gce_struct=ex_disks_gce_struct
         )
 
         for instance in raw:

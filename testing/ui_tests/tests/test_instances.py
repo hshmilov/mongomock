@@ -34,7 +34,7 @@ def wait_for_booted_for_production(instance: BuildsInstance):
 
 def setup_instances(logger):
     builds_instance = Builds()
-    latest_export = builds_instance.get_latest_export()
+    latest_export = builds_instance.get_latest_daily_export()
     logger.info(f'using {latest_export["version"]} for instances tests')
     instances = builds_instance.create_instances(
         'test_latest_export',

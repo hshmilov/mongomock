@@ -5,7 +5,6 @@ AWS_REGULAR_INSTANCE_DEFAULT_HD_SIZE = 100
 
 AWS_PUBLIC_INSTANCE_SUBNET_ID = 'subnet-942157ef'     # Axonius public subnet
 AWS_PUBLIC_INSTANCE_SECURITY_GROUPS = ['sg-f5742f9e']   # parella
-AWS_PUBLIC_INSTANCE_DEFAULT_HD_SIZE = 196
 
 # Official 'Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-11-14'
 AWS_UBUNTU_VANILLA_IMAGE_ID = 'ami-0653e888ec96eab9b'
@@ -22,7 +21,6 @@ GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE = 100
 
 GCP_PUBLIC_INSTANCE_NETWORK_ID = 'axonius-office-vpc'
 GCP_PUBLIC_INSTANCE_SUBNETWORK_ID = 'public-subnet'
-GCP_PUBLIC_INSTANCE_DEFAULT_HD_SIZE = 196
 
 # Public Keys
 # Note that while we can reference keys only by their name in AWS, in GCP we have to provide the actual
