@@ -3,6 +3,8 @@
 docker-compose down
 
 set -e
+docker-compose build --no-cache
+
 if [ "$1" == "debug" ]; then
     echo Running builds in debug mode..
     docker-compose -f docker-compose.yml -f docker-compose.debug.yml up -d
