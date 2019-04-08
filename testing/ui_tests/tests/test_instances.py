@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 
@@ -24,7 +25,7 @@ DAILY_EXPORT_SUFFIX = '_daily_export'
 DAILY_EXPORT_DATE_FORMAT = '%Y%m%d'
 
 
-@retry(stop_max_attempt_number=30, wait_fixed=60)
+@retry(stop_max_attempt_number=90, wait_fixed=1000 * 20)
 def wait_for_booted_for_production(instance: BuildsInstance):
     print('Waiting for server to be booted for production...')
     test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'
@@ -36,8 +37,8 @@ def setup_instances(logger):
     builds_instance = Builds()
     latest_export = builds_instance.get_latest_daily_export()
     logger.info(f'using {latest_export["version"]} for instances tests')
-    instances = builds_instance.create_instances(
-        'test_latest_export',
+    instances, _ = builds_instance.create_instances(
+        'test_latest_export ' + (os.environ.get('TEST_GROUP_NAME') or ''),
         't2.2xlarge',
         1,
         instance_cloud=Builds.CloudType.AWS,
@@ -48,7 +49,12 @@ def setup_instances(logger):
 
     for current_instance in instances:
         current_instance.wait_for_ssh()
-        wait_for_booted_for_production(current_instance)
+        try:
+            wait_for_booted_for_production(current_instance)
+        except Exception:
+            # If we fail in setup_method, teardown will not be called. lets terminate the instance.
+            current_instance.terminate()
+            raise
 
     return instances
 
@@ -62,8 +68,8 @@ class TestInstances(TestBase):
         for current_instance in self.__instances:
             try:
                 current_instance.terminate()
-            except Exception:
-                print(f'Could not terminate {current_instance}, bypassing', file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f'Could not terminate {current_instance}: {e}, bypassing', file=sys.stderr, flush=True)
 
         super().teardown_method(method)
 

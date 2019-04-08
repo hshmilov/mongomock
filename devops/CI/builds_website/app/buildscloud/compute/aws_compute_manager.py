@@ -203,5 +203,9 @@ class AWSComputeManager:
 
         self.ec2_client.terminate_instances(InstanceIds=[instance_id])
 
+    def terminate_many_instances(self, instances_ids: List[str]):
+        for instance_id in instances_ids:
+            self.terminate_instance(instance_id)
+
     def deregister_ami(self, ami_id: str):
         self.ec2_client.deregister_image(ImageId=ami_id)

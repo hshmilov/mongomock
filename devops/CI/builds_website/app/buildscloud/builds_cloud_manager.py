@@ -4,7 +4,7 @@ This includes many of the options we need generically, but it masks the
 """
 import json
 
-from typing import Dict
+from typing import Dict, List
 
 from buildscloud.builds_cloud_consts import *
 from buildscloud.builds_cloud_enums import BuildsComputeType, BuildsStorageType, BuildsDNSType
@@ -177,7 +177,7 @@ class BuildsCloudManager:
                 num,
                 instance_type,
                 image,
-                CLOUD_KEYS[key_name],
+                key_name,
                 GCP_PUBLIC_INSTANCE_NETWORK_ID,
                 GCP_PUBLIC_INSTANCE_SUBNETWORK_ID,
                 hd_size,
@@ -203,6 +203,16 @@ class BuildsCloudManager:
             self.aws_compute.terminate_instance(instance_id)
         elif cloud == 'gcp':
             self.gcp_compute.terminate_node(instance_id)
+        else:
+            raise ValueError(f'Unsupported compute cloud type {cloud}')
+
+    def terminate_many_instances(self, cloud: str, instances_ids: List[str]):
+        assert len(instances_ids) < 20, \
+            'Can not terminate more than 20, this is a protection for you to not terminate everything'
+        if cloud == 'aws':
+            self.aws_compute.terminate_many_instances(instances_ids)
+        elif cloud == 'gcp':
+            self.gcp_compute.terminate_many_nodes(instances_ids)
         else:
             raise ValueError(f'Unsupported compute cloud type {cloud}')
 

@@ -667,7 +667,7 @@
 
         $.ajax({url: "/api/exports", type: "POST", data: data})
             .done(function(data) {
-                flush_url("/exportsinprogress", function(data) {
+                flush_url("/api/exportsinprogress", function(data) {
                     current_exports_in_progress = data["current"];
                     rewrite_exports_in_progress_table();
                     changeMenu($("#vm_exports_link"));

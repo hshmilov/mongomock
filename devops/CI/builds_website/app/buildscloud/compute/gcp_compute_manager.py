@@ -1,7 +1,7 @@
 import ipaddress
 import string
 import time
-from typing import Dict
+from typing import Dict, List
 
 import libcloud
 import libcloud.compute.drivers.gce
@@ -173,3 +173,12 @@ class GCPComputeManager:
         self.client.destroy_node(node)
         if public_ip_name:
             self.client.ex_destroy_address(public_ip_name)
+
+    def terminate_many_nodes(self, nodes_ids: List[str]):
+        # Note: This does not handle public ips!
+        nodes = []
+        for node_id in nodes_ids:
+            nodes.append(self.client.ex_get_node(node_id, zone='all'))
+
+        results = self.client.ex_destroy_multiple_nodes(nodes)
+        assert all(results), f'Not all nodes are terminated: {results}'

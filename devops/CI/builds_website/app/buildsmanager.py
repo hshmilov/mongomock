@@ -6,6 +6,7 @@ This project assumes the aws settings & credentials are already configured in th
 import os
 import re
 import datetime
+import time
 from typing import List
 
 import paramiko
@@ -81,7 +82,7 @@ class BuildsManager(object):
     def add_instances(
             self, cloud, vm_type, name, instance_type, num, image, key_name, public, code,
             owner, fork, branch
-    ) -> List[str]:
+    ) -> (List[str], str):
         if public is True:
             generic, _ = self.bcm.create_public_instances(
                 cloud, vm_type, name, instance_type, num, key_name, image, code
@@ -93,6 +94,7 @@ class BuildsManager(object):
 
         owner_full_name, owner_slack_id = owner
         instance_ids = [instance['id'] for instance in generic]
+        group_name = f'{name}-' + str(time.time())
         for i, instance_id in enumerate(instance_ids):
             self.db.instances.insert_one(
                 {
@@ -101,6 +103,7 @@ class BuildsManager(object):
                     'vm_type': vm_type,
                     'key_name': key_name,
                     'name': name if num == 1 else f'{name}-{i}',
+                    'group_name': group_name,
                     'code': code,
                     'date': datetime.datetime.utcnow(),
                     'owner': owner_full_name,
@@ -110,13 +113,34 @@ class BuildsManager(object):
                 }
             )
             self.update_last_user_interaction_time(cloud, instance_id)
-        return generic
+        return generic, group_name
 
     def terminate_instance(self, cloud, instance_id):
         """Delete an instance by its id."""
         self.update_last_user_interaction_time(cloud, instance_id)
         self.bcm.terminate_instance(cloud, instance_id)
         self.db.instances.update_one({'cloud': cloud, 'id': instance_id}, {'$set': {'terminated': True, }})
+        return True
+
+    def terminate_group(self, group_name):
+        # Note - this does not handle public ips!
+        assert group_name
+        instances = self.db.instances.find({'group_name': group_name})
+        instances_by_cloud = {}
+        for instance in instances:
+            assert 'test' in instance['vm_type'].lower(), 'Do not ever use terminate_group on non-tests!'
+            if instance['cloud'] not in instances_by_cloud:
+                instances_by_cloud[instance['cloud']] = []
+
+            if instance.get('terminated') is not True:
+                instances_by_cloud[instance['cloud']].append(instance['id'])
+
+        for cloud, instances_ids in instances_by_cloud.items():
+            self.bcm.terminate_many_instances(cloud.lower(), instances_ids)
+            for instance_id in instances_ids:
+                self.update_last_user_interaction_time(cloud, instance_id)
+                self.db.instances.update_one({'cloud': cloud, 'id': instance_id}, {'$set': {'terminated': True, }})
+
         return True
 
     def stop_instance(self, cloud, instance_id):

@@ -15,6 +15,8 @@ import requests
 import urllib3
 
 # surpress warning messages about vaildation error
+from retrying import retry
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # its debug by default
@@ -117,6 +119,7 @@ class BuildsInstance(BuildsAPI):
         Runs a command and returns its output. not interactive.
         :param quiet: Should not write debug print.
         :param command: the command.
+        :param environment: optional environment
         :return: (stdout, stderr).
         """
         assert self.initialized, 'Instance is not initialized, please use wait_for_ssh'
@@ -148,6 +151,7 @@ class BuildsInstance(BuildsAPI):
         assert rc == 0, f'Error in compressing remote folder: {output}'
         return self.get_file('/tmp/tmp.tar')
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def terminate(self):
         self.post(f'instances/{self.cloud}/{self.id}/delete')
 
@@ -165,6 +169,7 @@ class Builds(BuildsAPI):
     def __init__(self):
         super().__init__()
         self.instances: List[BuildsInstance] = []
+        self.groups: List[str] = []
 
     def get_latest_daily_export(self):
         response = self.get('exports', params={'limit': 10})
@@ -187,7 +192,7 @@ class Builds(BuildsAPI):
             predefined_ssh_username: str = None,
             predefined_ssh_password: str = None
 
-    ) -> List[BuildsInstance]:
+    ) -> (List[BuildsInstance], str):
         request_obj = {
             'name': group_name,
             'type': instance_type,
@@ -223,9 +228,11 @@ class Builds(BuildsAPI):
         }
 
         result = self.post('instances', json_data=request_obj)
+        result_instances = result['instances']
+        result_group_name = result['group_name']
         instances = []
 
-        for instance_data in result['instances']:
+        for instance_data in result_instances:
             instances.append(
                 BuildsInstance(
                     instance_cloud.value,
@@ -237,13 +244,18 @@ class Builds(BuildsAPI):
             )
 
         self.instances.extend(instances)
+        self.groups.append(result_group_name)
 
-        return instances
+        return instances, result_group_name
+
+    @retry(stop_max_attempt_number=3, wait_fixed=5000)
+    def terminate_group(self, group_name):
+        self.post(f'groups/delete', json_data={'group_name': group_name})
 
     def terminate_all(self):
-        for instance in self.instances:
+        for group in self.groups:
             try:
-                print(f'Terminating {instance.id}...')
-                instance.terminate()
-            except Exception:
-                print(f'Could not terminate {instance.id}, bypassing', file=sys.stderr, flush=True)
+                print(f'Terminating group {group}...')
+                self.terminate_group(group)
+            except Exception as e:
+                print(f'Could not terminate {group}, bypassing: {e}', file=sys.stderr, flush=True)

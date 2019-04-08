@@ -22,11 +22,10 @@ def ssh_example(instance: BuildsInstance):
 def main():
     bo = Builds()
     print(f'Latest exports: ')
-    print(bo.get_latest_export())
+    print(bo.get_last_exports())
     try:
-        instances = []
-        # instances.extend(bo.create_instances(f'Test GCP', 'n1-standard-2', 2))
-        instances.extend(bo.create_instances('Test AWS', 't2.large', 1, instance_cloud=Builds.CloudType.AWS))
+        instances, group_name = bo.create_instances(f'Test GCP', 'n1-standard-2', 5)
+        print(f'Created group name {group_name}')
         for instance in instances:
             instance.wait_for_ssh()
             ssh_example(instance)

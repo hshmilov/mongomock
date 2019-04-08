@@ -279,7 +279,7 @@ def instances():
 
         user_auth = (session['builds_user_full_name'], session['builds_user_id'])
 
-        generic = context.bm.add_instances(
+        generic, group_name = context.bm.add_instances(
             instance_cloud,
             vm_type,
             instance_name,
@@ -304,9 +304,9 @@ def instances():
                         context.bm.get_instances(instance_cloud, instance_id)[0], [])])
 
         if request.args.get('get_new_data') and request.args.get('get_new_data').lower() == 'true':
-            return jsonify({'result': context.bm.get_instances(), 'instances': generic})
+            return jsonify({'result': context.bm.get_instances(), 'instances': generic, 'group_name': group_name})
         else:
-            return jsonify({'instances': generic})
+            return jsonify({'instances': generic, 'group_name': group_name})
 
 
 @app.route("/api/instances/<cloud>", methods=['GET', 'DELETE', 'POST'])
@@ -418,6 +418,13 @@ def instance_update_state(cloud, instance_id):
     context.bm.update_last_user_interaction_time(cloud, instance_id)
 
     return render_template('message.html', message='Done. Check your slack for final message')
+
+
+@app.route("/api/groups/delete", methods=['POST'])
+@authorize
+def delete_groups():
+    group_name = request.get_json()['group_name']
+    return jsonify({'result': context.bm.terminate_group(group_name)})
 
 
 @app.route('/api/install', methods=['GET'])

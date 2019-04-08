@@ -47,6 +47,9 @@ class TeamcityHelper(TeamcityServiceMessages):
             flowId=flowId
         )
 
+    def set_environment_variable(self, name, value):
+        self.setParameter(f'env.{name}', value=value)
+
     def print(self, message, status='NORMAL', flowId=None):
         if flowId is None:
             flowId = threading.get_ident()

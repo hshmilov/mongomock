@@ -7,7 +7,7 @@ from datetime import timedelta, datetime
 from slacknotifier import SlackNotifier
 from buildsmanager import BuildsManager, EXTERNAL_BUILDS_HOST
 
-CYCLE_HOURS = 12     # run a cycle to check on instances state every 12 hours
+CYCLE_MINUTES = 20     # run a cycle to check on instances state every 1 hour
 SHOULD_DELETE_OLD_MESSAGES = False  # Do we want to remove old messages like a notice, after an action has been made?
 
 MONITORING_BOT_METADATA_NAMESPACE = 'monitoring_bot'
@@ -24,13 +24,13 @@ REGULAR_TERMINATE_TIMES = {
 }
 
 TEST_SHUTDOWN_TIMES = {
-    'first_notice': timedelta(hours=3),
-    'action': timedelta(hours=4)
+    'first_notice': timedelta(hours=1, minutes=30),
+    'action': timedelta(hours=2)
 }
 
 TEST_TERMINATE_TIMES = {
-    'first_notice': timedelta(hours=5),
-    'action': timedelta(hours=6)
+    'first_notice': timedelta(hours=2),
+    'action': timedelta(hours=2, minutes=10)
 }
 
 
@@ -224,12 +224,12 @@ class InstanceMonitor:
 
 
 def main():
-    print(f'Running Builds Slack Notifier every {CYCLE_HOURS} hours')
+    print(f'Running Builds Slack Notifier every {CYCLE_MINUTES} minutes')
     im = InstanceMonitor()
     while True:
         im.run_cycle()
         sys.stdout.flush()
-        time.sleep(60 * 60 * CYCLE_HOURS)
+        time.sleep(60 * CYCLE_MINUTES)
 
 
 if __name__ == '__main__':

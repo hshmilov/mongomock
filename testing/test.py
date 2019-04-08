@@ -25,6 +25,7 @@ DEFAULT_CLOUD_INSTANCE_CLOUD = 'aws'
 DEFAULT_CLOUD_INSTANCE_TYPE = 't2.2xlarge'
 DEFAULT_CLOUD_NUMBER_OF_INSTANCES = 10
 DEFAULT_MAX_PARALLEL_TESTS_IN_INSTANCE = 5
+BUILDS_GROUP_NAME_ENV = 'BUILDS_GROUP_NAME'
 MAX_PARALLEL_PREPARE_CI_ENV_JOBS = 10   # prepare_ci_env is a very resource-consuming task, we have to limit it
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 ARTIFACTS_DIR_RELATIVE = 'artifacts'
@@ -99,6 +100,7 @@ class InstanceManager:
         self.number_of_instances = number_of_instances
         self.__instances: List[BuildsInstance] = []
         self.__builds = Builds()
+        self.__group_name = None
 
         execute(f'rm -rf {ARTIFACTS_DIR_ABSOLUTE}')
         if not os.path.exists(ARTIFACTS_DIR_ABSOLUTE):
@@ -172,6 +174,7 @@ class InstanceManager:
         Creates {number_of_instances} independent cloud instances and prepares the system on them.
         :return:
         """
+        self.__group_name = group_name
         if self.cloud == 'gcp':
             cloud = self.__builds.CloudType.GCP
         elif self.cloud == 'aws':
@@ -179,12 +182,13 @@ class InstanceManager:
         else:
             raise ValueError(f'Invalid cloud {self.cloud}')
 
-        self.__instances = self.__builds.create_instances(
+        self.__instances, group_name_from_builds = self.__builds.create_instances(
             group_name,
             self.instance_type,
             self.number_of_instances,
             instance_cloud=cloud
         )
+        TC.set_environment_variable(BUILDS_GROUP_NAME_ENV, group_name_from_builds)
 
         for instance in self.__instances:
             print(f'Waiting for instance {instance} to initialize...')
@@ -399,7 +403,7 @@ def main():
     test run ut -p axonius-libs/tests/test_async.py -> runs this specific module.
     test run ui -p test_bad_login.py -> runs this specific module.
     ''')
-    parser.add_argument('action', choices=['run'])
+    parser.add_argument('action', choices=['run', 'delete'])
     parser.add_argument('target', choices=['all', 'ut', 'integ', 'parallel', 'ui'], help='Which scenario to run')
     parser.add_argument('-p', '--path', help='In case of running a specific test, this would be the path')
     parser.add_argument('--cloud', choices=['aws', 'gcp'], default=DEFAULT_CLOUD_INSTANCE_CLOUD, help='type of cloud')
@@ -422,6 +426,7 @@ def main():
     print(f'Max Parallel Builder Tasks: {args.max_parallel_builder_tasks}')
 
     group_name = os.environ['BUILD_NUMBER'] if 'BUILD_NUMBER' in os.environ else f'Local test ({socket.gethostname()})'
+    test_group_name_as_env = group_name.replace('"', '-').replace('$', '-').replace('#', '-')
 
     if args.action == 'run':
         instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances)
@@ -431,7 +436,7 @@ def main():
 
             def get_ut_tests_jobs():
                 return {
-                    'Unit Tests': './run_ut_tests.sh'
+                    'Unit Tests': f'TEST_GROUP_NAME="{test_group_name_as_env}" ./run_ut_tests.sh'
                 }
 
             def get_integ_tests_jobs():
@@ -441,7 +446,7 @@ def main():
                         print(test_module)
 
                 return {
-                    'integ_' + file_name.split('.py')[0]:
+                    'integ_' + file_name.split('.py')[0]: f'TEST_GROUP_NAME="{test_group_name_as_env}" ' \
                         f'python3 -u ./testing/run_pytest.py {os.path.join(DIR_MAP["integ"], file_name)}'
                     for file_name in integ_tests
                 }
@@ -464,7 +469,8 @@ def main():
                         for file_path in parallel_tests[i:i + args.max_parallel_builder_tasks]
                     ])
 
-                    parallel_jobs[job_name] = f'python3 -u ./testing/run_parallel_tests.py {files_list}'
+                    parallel_jobs[job_name] = f'TEST_GROUP_NAME="{test_group_name_as_env}" ' \
+                        f'python3 -u ./testing/run_parallel_tests.py {files_list}'
 
                 return parallel_jobs
 
@@ -475,7 +481,7 @@ def main():
                         print(test_module)
 
                 return {
-                    'ui_' + test_module.split('.py')[0]:
+                    'ui_' + test_module.split('.py')[0]: f'TEST_GROUP_NAME="{test_group_name_as_env}" ' \
                         f'python3 -u ./testing/run_ui_tests.py {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
                 }
@@ -505,6 +511,15 @@ def main():
 
         finally:
             instance_manager.terminate_all()
+    elif args.action == 'delete':
+        group_name = os.environ.get(BUILDS_GROUP_NAME_ENV)
+        if group_name:
+            print(f'Trying to terminate instances group {group_name}')
+            try:
+                Builds().terminate_group(group_name)
+                print('Terminated successfully')
+            except Exception as e:
+                print(f'Could not terminate group {group_name}: {e}')
 
 
 if __name__ == '__main__':
