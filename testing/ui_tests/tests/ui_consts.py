@@ -32,6 +32,10 @@ TEMP_FILE_PREFIX = 'temp_file_upload'
 
 NOTE_COLUMN = 'Note'
 
+JSON_ADAPTER_NAME = 'JSON File'
+JSON_ADAPTER_SEARCH = 'json'
+JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
+
 
 class EmailSettings:
     port = '25'

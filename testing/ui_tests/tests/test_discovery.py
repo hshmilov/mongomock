@@ -3,7 +3,7 @@ import time
 
 from flaky import flaky
 
-from ui_tests.tests.test_adapters import JSON_ADAPTER_SEARCH, JSON_ADAPTER_NAME, JSON_ADAPTER_PLUGIN_NAME
+from ui_tests.tests.ui_consts import JSON_ADAPTER_SEARCH, JSON_ADAPTER_NAME, JSON_ADAPTER_PLUGIN_NAME
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.test_ad_credentials import ad_client1_details, ad_client2_details
 

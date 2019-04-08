@@ -191,3 +191,16 @@ class AdaptersPage(EntitiesPage):
             except NoSuchElementException:
                 pass
             time.sleep(interval)
+
+    def wait_for_adapter_down(self, adapter_name, retires=60 * 3, interval=2):
+        for _ in range(retires):
+            self.test_base.settings_page.switch_to_page()
+            self.switch_to_page()
+            try:
+                element = self.find_element_by_text(adapter_name)
+                if element:
+                    time.sleep(interval)
+                    continue
+            except NoSuchElementException:
+                return
+        raise AssertionError('Adapter still up')

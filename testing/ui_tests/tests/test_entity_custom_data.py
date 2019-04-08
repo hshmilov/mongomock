@@ -1,7 +1,7 @@
 from selenium.common.exceptions import ElementNotVisibleException, NoSuchElementException
 
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.test_adapters import JSON_ADAPTER_NAME
+from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME
 
 
 class TestEntityCustomData(TestBase):
