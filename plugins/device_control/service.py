@@ -212,7 +212,7 @@ class DeviceControlService(Triggerable, PluginBase):
                         f'on device {device.internal_axon_id} '
                         f'on attempt {attempt_number}')
 
-            data_label = f'Acton type: {action_type}. '
+            data_label = f'Action type: {action_type}. '
             if action_type == 'shell':
                 command = action_params['command']
                 data_label += f'Command: {command}'

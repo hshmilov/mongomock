@@ -1,6 +1,7 @@
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.pages.page import Page
+from services.axon_service import TimeoutException
 
 
 class DashboardPage(Page):
@@ -254,7 +255,12 @@ class DashboardPage(Page):
         self.wait_for_element_absent_by_css('.x-trial-banner')
 
     def find_trial_remainder_banner(self, remainder_count):
-        return self.wait_for_element_present_by_text(f'{remainder_count} days remaining in your Axonius evaluation')
+        msg = 'days remaining in your Axonius evaluation'
+        try:
+            return self.wait_for_element_present_by_text(f'{remainder_count} {msg}')
+        except TimeoutException:
+            # Currently there is a bug, probably if it is running in midnight AX-3730
+            return self.wait_for_element_present_by_text(f'{remainder_count + 1} {msg}')
 
     def find_trial_expired_banner(self):
         return self.wait_for_element_present_by_text(
