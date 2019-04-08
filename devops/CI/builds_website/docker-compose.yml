@@ -8,8 +8,8 @@ services:
         volumes:
             - "./config:/home/axonius/config"
             - "./app:/home/axonius/app"
-            - "/home/ubuntu/secrets/credentials.json:/home/axonius/credentials.json:ro"
-            - "/home/ubuntu/secrets/tokens.json:/home/axonius/tokens.json:ro"
+            - "/home/ubuntu/.secrets/credentials.json:/home/axonius/credentials.json:ro"
+            - "/home/ubuntu/.secrets/tokens.json:/home/axonius/tokens.json:ro"
         restart: always
         logging:
             driver: "json-file"

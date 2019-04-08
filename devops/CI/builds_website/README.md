@@ -17,8 +17,8 @@ just go to https://builds.in.axonius.com. For debugging only, use https://builds
 * update credentials.json
 
 ### Production use ###
-```docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d```
+```./run.sh```
 
 ### Debug use ###
 Note! This exposes your db to the public, runs less threads and not running the periodic instance monitor.
-```docker-compose -f docker-compose.yml -f docker-compose.debug.yml up -d```
+```./run.sh debug```
