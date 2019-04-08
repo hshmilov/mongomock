@@ -1,0 +1,35 @@
+version: "3.2"
+services:
+    web:
+        build: .
+        image: axonius/builds:latest
+        ports:
+            - 443:443
+        volumes:
+            - "./config:/home/axonius/config"
+            - "./app:/home/axonius/app"
+            - "/home/ubuntu/secrets/credentials.json:/home/axonius/credentials.json:ro"
+            - "/home/ubuntu/secrets/tokens.json:/home/axonius/tokens.json:ro"
+        restart: always
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "500M"
+                max-file: "10"
+
+    mongo:
+        image: mongo:4.0
+        restart: always
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "500M"
+                max-file: "10"
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=axonius
+            - MONGO_INITDB_ROOT_PASSWORD=cqNLLfvQetvFog9y3iqi
+        volumes:
+            - "builds_db:/data/db"
+
+volumes:
+    builds_db:

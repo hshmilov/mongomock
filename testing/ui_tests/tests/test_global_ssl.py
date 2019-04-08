@@ -71,7 +71,7 @@ class TestGlobalSSL(TestBase):
             self.settings_page.refresh()
             try:
                 time.sleep(10)
-                peercert = _get_peer_ssl(self.base_url, crt_filename)
+                peercert = _get_peer_ssl('https://localhost', crt_filename)
                 # In this path, we check that the certificate is good
                 peercert_parsed = dict(i[0] for i in peercert['subject'])
                 assert peercert_parsed['commonName'] == 'localhost'

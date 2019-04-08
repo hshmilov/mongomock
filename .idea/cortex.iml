@@ -13,6 +13,9 @@
       <sourceFolder url="file://$MODULE_DIR$/adapters/splunk_nexpose_adapter/external" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/deployment" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/devops/mockingbird/app" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/devops/CI/builds_website" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/devops/CI/builds_website/app" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/devops/CI/builds_website/sdk" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/deployment/packages" />
       <excludeFolder url="file://$MODULE_DIR$/plugins/gui/frontend" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />

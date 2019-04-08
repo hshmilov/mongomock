@@ -1,0 +1,11 @@
+version: "3.2"
+services:
+    web:
+        environment:
+            - BUILDS_DEBUG=true
+            - BUILDS_HOST=192.168.127.238
+            - UWSGI_PROCESSES=10
+
+    mongo:
+        ports:
+            - "0.0.0.0:27017:27017"

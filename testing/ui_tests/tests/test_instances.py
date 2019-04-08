@@ -1,12 +1,21 @@
+import sys
 import time
 
-import requests
+import paramiko
+from retrying import retry
 
-from CI.scripts.axonius_builds_context.axoniusbuilds import builds
+from builds import Builds
+from builds.builds_factory import BuildsInstance
 from ui_tests.tests.ui_test_base import TestBase
+
+from devops.scripts.instances.restart_system_on_reboot import \
+    BOOTED_FOR_PRODUCTION_MARKER_PATH
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
+
+DEFAULT_IMAGE_USERNAME = 'ubuntu'
+DEFAULT_IMAGE_PASSWORD = 'bringorder'
 
 DEFAULT_LIMIT = 10
 
@@ -15,51 +24,69 @@ DAILY_EXPORT_SUFFIX = '_daily_export'
 DAILY_EXPORT_DATE_FORMAT = '%Y%m%d'
 
 
-def get_latest_export():
-    response = requests.get(url=f'{builds.BUILDS_SERVER_URL}/{EXPORTS_ENDPOINT}', params={'limit': DEFAULT_LIMIT},
-                            verify=False)
-    data = response.json()
-    daily_exports = [export for export in data['result'] if DAILY_EXPORT_SUFFIX in export['version']]
-    latest_daily_export = daily_exports[0]
-
-    return latest_daily_export
+@retry(stop_max_attempt_number=30, wait_fixed=60)
+def wait_for_booted_for_production(instance: BuildsInstance):
+    print('Waiting for server to be booted for production...')
+    test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'
+    state = instance.ssh(test_ready_command)
+    assert 'root root' in state[0]
 
 
 def setup_instances(logger):
-    latest_export = get_latest_export()
+    builds_instance = Builds()
+    latest_export = builds_instance.get_latest_export()
     logger.info(f'using {latest_export["version"]} for instances tests')
-    instances = {
-        'node_1': builds.Instance('test_node_1', ami=latest_export['ami_id']),
-    }
+    instances = builds_instance.create_instances(
+        'test_latest_export',
+        't2.2xlarge',
+        1,
+        instance_cloud=Builds.CloudType.GCP,
+        instance_image=latest_export['ami_id'],
+        predefined_ssh_username=DEFAULT_IMAGE_USERNAME,
+        predefined_ssh_password=DEFAULT_IMAGE_PASSWORD
+    )
 
-    for current_instance in instances.values():
-        current_instance.init_server()
-        current_instance.connect_ssh(password=current_instance.sshpass)
-        current_instance.wait_for_booted_for_production()
+    for current_instance in instances:
+        current_instance.wait_for_ssh()
+        wait_for_booted_for_production(current_instance)
 
     return instances
 
 
 class TestInstances(TestBase):
+    def __init__(self):
+        super().__init__(self)
+        self.__instances = []
+
     def setup_method(self, method):
         super().setup_method(method)
-        self._instances = setup_instances(self.logger)
+        self.__instances = setup_instances(self.logger)
 
     def teardown_method(self, method):
-        for current_instance in self._instances.values():
-            current_instance.terminate()
+        for current_instance in self.__instances:
+            try:
+                current_instance.terminate()
+            except Exception:
+                print(f'Could not terminate {current_instance}, bypassing', file=sys.stderr, flush=True)
 
         super().teardown_method(method)
 
     def test_nodemaker_user_exists(self):
-        self._instances['node_1'].connect_ssh(username=NODE_MAKER_USERNAME, password=NODE_MAKER_PASSWORD)
+        for instance in self.__instances:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(
+                instance.ip, username=NODE_MAKER_USERNAME, password=NODE_MAKER_PASSWORD, timeout=60,
+                auth_timeout=60
+            )
 
     def test_nodemaker_user_delete_after_login(self):
-        assert NODE_MAKER_USERNAME in self._instances['node_1'].ssh('cat /etc/passwd')[0]
-        self.change_base_url(f'https://{self._instances["node_1"].ip}')
-        self.signup_page.wait_for_signup_page_to_load()
-        self.signup_page.fill_signup_with_defaults_and_save()
-        self.login_page.wait_for_login_page_to_load()
-        self.login()
-        time.sleep(61)
-        assert NODE_MAKER_USERNAME not in self._instances['node_1'].ssh('cat /etc/passwd')[0]
+        for instance in self.__instances:
+            assert NODE_MAKER_USERNAME in instance.ssh('cat /etc/passwd')[1]
+            self.change_base_url(f'https://{instance.ip}')
+            self.signup_page.wait_for_signup_page_to_load()
+            self.signup_page.fill_signup_with_defaults_and_save()
+            self.login_page.wait_for_login_page_to_load()
+            self.login()
+            time.sleep(61)
+            assert NODE_MAKER_USERNAME not in instance.ssh('cat /etc/passwd')[1]
