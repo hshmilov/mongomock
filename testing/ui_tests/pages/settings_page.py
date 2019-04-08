@@ -5,7 +5,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE
 from services.axon_service import TimeoutException
-from ui_tests.pages.page import X_BODY, Page
+from ui_tests.pages.page import X_BODY, BODY, Page
 
 
 class SettingsPage(Page):
@@ -214,6 +214,9 @@ class SettingsPage(Page):
 
     def find_syslog_toggle(self):
         return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
+
+    def set_syslog_toggle(self, make_yes=True):
+        self.click_toggle_button(self.find_syslog_toggle(), make_yes=make_yes, window=BODY)
 
     def select_syslog_ssl(self, text):
         self.select_option_without_search(self.SYSLOG_SSL_CSS_DROPBOX,
@@ -463,7 +466,7 @@ class SettingsPage(Page):
 
     def set_allow_saml_based_login(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)
-        self.click_toggle_button(toggle, make_yes=make_yes)
+        self.click_toggle_button(toggle, make_yes=make_yes, window=BODY)
 
     def is_saml_login_enabled(self):
         toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)

@@ -48,7 +48,7 @@ class TestPrepareGlobalSettings(TestBase):
         self.settings_page.click_global_settings()
 
         syslog_server = SyslogService()
-        self.settings_page.click_toggle_button(self.settings_page.find_syslog_toggle(), make_yes=True)
+        self.settings_page.set_syslog_toggle(make_yes=True)
         self.settings_page.fill_syslog_host(syslog_server.name)
         self.settings_page.fill_syslog_port(syslog_server.tcp_port)
         self.settings_page.save_and_wait_for_toaster()
