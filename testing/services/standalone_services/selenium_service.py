@@ -34,7 +34,7 @@ class SeleniumService(WeaveService):
               run_env=None):
         extra_flags = [
             '-e', 'TZ="Asia/Jerusalem"', '--privileged',
-            '-e', 'SCREEN_WIDTH=1440', '-e', 'SCREEN_HEIGHT=900'
+            '-e', 'SCREEN_WIDTH=1360', '-e', 'SCREEN_HEIGHT=1020'
         ]
 
         if not is_weave_up():
