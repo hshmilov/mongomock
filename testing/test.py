@@ -426,7 +426,7 @@ def main():
     print(f'Max Parallel Builder Tasks: {args.max_parallel_builder_tasks}')
 
     group_name = os.environ['BUILD_NUMBER'] if 'BUILD_NUMBER' in os.environ else f'Local test ({socket.gethostname()})'
-    test_group_name_as_env = group_name.replace('"', '-').replace('$', '-').replace('#', '-')
+    # test_group_name_as_env = group_name.replace('"', '-').replace('$', '-').replace('#', '-')
 
     if args.action == 'run':
         instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances)
@@ -436,7 +436,7 @@ def main():
 
             def get_ut_tests_jobs():
                 return {
-                    'Unit Tests': f'TEST_GROUP_NAME="{test_group_name_as_env}" ./run_ut_tests.sh'
+                    'Unit Tests': f'./run_ut_tests.sh'
                 }
 
             def get_integ_tests_jobs():
@@ -446,7 +446,7 @@ def main():
                         print(test_module)
 
                 return {
-                    'integ_' + file_name.split('.py')[0]: f'TEST_GROUP_NAME="{test_group_name_as_env}" ' \
+                    'integ_' + file_name.split('.py')[0]:
                         f'python3 -u ./testing/run_pytest.py {os.path.join(DIR_MAP["integ"], file_name)}'
                     for file_name in integ_tests
                 }
@@ -469,8 +469,7 @@ def main():
                         for file_path in parallel_tests[i:i + args.max_parallel_builder_tasks]
                     ])
 
-                    parallel_jobs[job_name] = f'TEST_GROUP_NAME="{test_group_name_as_env}" ' \
-                        f'python3 -u ./testing/run_parallel_tests.py {files_list}'
+                    parallel_jobs[job_name] = f'python3 -u ./testing/run_parallel_tests.py {files_list}'
 
                 return parallel_jobs
 
@@ -481,7 +480,7 @@ def main():
                         print(test_module)
 
                 return {
-                    'ui_' + test_module.split('.py')[0]: f'TEST_GROUP_NAME="{test_group_name_as_env}" ' \
+                    'ui_' + test_module.split('.py')[0]:
                         f'python3 -u ./testing/run_ui_tests.py {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
                 }
