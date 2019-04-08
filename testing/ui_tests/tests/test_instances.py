@@ -29,7 +29,7 @@ def wait_for_booted_for_production(instance: BuildsInstance):
     print('Waiting for server to be booted for production...')
     test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'
     state = instance.ssh(test_ready_command)
-    assert 'root root' in state[0]
+    assert 'root root' in state[1]
 
 
 def setup_instances(logger):
