@@ -78,8 +78,8 @@ class CiscoIseAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
-                    'name': CLIENT_CONFIG_FIELDS.domain,
-                    'title': CLIENT_CONFIG_TITLES.domain,
+                    'name': CLIENT_CONFIG_FIELDS.username,
+                    'title': CLIENT_CONFIG_TITLES.username,
                     'type': 'string'
                 },
                 {
