@@ -74,7 +74,7 @@ settings = BuildsSettings()
 app = prepare_flask()
 context = BuildsContext()
 
-INSTALL_DEMO_SCRIPT = """# how to use: curl -k https://builds-local.axonius.lan/install[?fork=axonius&branch=develop&exclude=ad,esx,puppet&set_credentials=true] | bash -
+INSTALL_DEMO_SCRIPT = """# how to use: curl -k https://builds-local.axonius.lan/api/install[?fork=axonius&branch=develop&exclude=ad,esx,puppet&set_credentials=true] | bash -
 set -e
 rm -rf /home/ubuntu/cortex
 mkdir /home/ubuntu/cortex
@@ -99,7 +99,7 @@ if [ "{run_cycle}" == "True" ]; then
 fi
 exit"""
 
-INSTALL_SYSTEM_LINE = "curl -k 'https://{builds_host}/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}&run_cycle={run_cycle}&system_up_params={system_up_params}' | bash -"
+INSTALL_SYSTEM_LINE = "curl -k 'https://{builds_host}/api/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}&run_cycle={run_cycle}&system_up_params={system_up_params}' | bash -"
 STARTUP_SCRIPT_TEMPLATE = """#!/bin/bash
 set -x
 HOME_DIRECTORY=/home/ubuntu/builds_log/

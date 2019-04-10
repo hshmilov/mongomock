@@ -150,7 +150,7 @@ class InstanceMonitor:
 
     def handle_instance(self, instance, shutdown_times, terminate_times):
         instance_name = instance['db']['name']
-        owner = instance['db']['owner']
+        owner = instance['db'].get('owner') or 'Unknown'
         cloud_name = instance['cloud']['cloud']
         cloud_id = instance['cloud']['id']
         owner_slack_id = instance['db']['owner_slack_id']
