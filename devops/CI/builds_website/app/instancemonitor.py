@@ -24,13 +24,13 @@ REGULAR_TERMINATE_TIMES = {
 }
 
 TEST_SHUTDOWN_TIMES = {
-    'first_notice': timedelta(hours=1, minutes=30),
-    'action': timedelta(hours=2)
+    'first_notice': timedelta(hours=2, minutes=30),
+    'action': timedelta(hours=2, minutes=40)
 }
 
 TEST_TERMINATE_TIMES = {
-    'first_notice': timedelta(hours=2),
-    'action': timedelta(hours=2, minutes=10)
+    'first_notice': timedelta(hours=3),
+    'action': timedelta(hours=3, minutes=10)
 }
 
 

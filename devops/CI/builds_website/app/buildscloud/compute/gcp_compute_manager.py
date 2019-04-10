@@ -75,7 +75,7 @@ class GCPComputeManager:
     ):
         assert not (is_public and num != 1), 'Does not support multiple public instances'
         name = ''.join(c if c in APPROVED_NODE_CHARACTERS else '-' for c in name.lower()) + \
-               '-' + str(round(time.time()))
+               '-' + str(round(time.time()))[:60]
         external_ip = None
         tags = None
         if is_public:
