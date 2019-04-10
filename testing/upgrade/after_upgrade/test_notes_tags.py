@@ -24,4 +24,6 @@ class TestNotes(TestBase):
         self.devices_page.fill_filter(Notes.note1_device_filter)
         self.devices_page.enter_search()
         self.devices_page.wait_for_table_to_load()
-        assert Tags.tag_1 in self.devices_page.get_first_row_tags()
+
+        wait_until(lambda: Tags.tag_1 in self.devices_page.get_first_row_tags(),
+                   exc_list=[Exception])
