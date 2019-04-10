@@ -1,3 +1,5 @@
+import pytest
+
 from services.adapters.openstack_service import OpenstackService, openstack_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_openstack_credentials import *
@@ -20,3 +22,11 @@ class TestOpenStackAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip(reason="Upgrading our test openstack env")
+    def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip(reason="Upgrading our test openstack env")
+    def test_check_reachability(self):
+        pass
