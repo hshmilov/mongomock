@@ -1331,21 +1331,25 @@ class PluginBase(Configurable, Feature):
                     if last_seen_from_data:
                         array_filters = [
                             {
-                                f'i.{LAST_SEEN_FIELD}': {
-                                    '$gte': last_seen_from_data
+                                f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                                'i.data.id': parsed_to_insert['data']['id'],
+                                f'i.data.{LAST_SEEN_FIELD}': {
+                                    '$lte': last_seen_from_data
                                 }
                             }
                         ]
                     else:
                         array_filters = [{
+                            f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                            'i.data.id': parsed_to_insert['data']['id'],
                             '$or': [
                                 {
-                                    f'i.{LAST_SEEN_FIELD}': {
+                                    f'i.data.{LAST_SEEN_FIELD}': {
                                         '$exists': False
                                     }
                                 },
                                 {
-                                    f'i.{LAST_SEEN_FIELD}': None
+                                    f'i.data.{LAST_SEEN_FIELD}': None
                                 }
                             ]
                         }]
