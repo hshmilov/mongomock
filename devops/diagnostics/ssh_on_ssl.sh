@@ -35,7 +35,7 @@ do
     pkill stunnel
     stunnel4 ./stunnel_autogen.conf
     sleep 5
-    sshpass -p ${PUBLIC_SSL_HOST_PASSW} ssh -oServerAliveInterval=30 -oServerAliveCountMax=3 -oStrictHostKeyChecking=no -NTR ${PUBLIC_SSL_HOST_STUNNEL_LINK_PORT}:localhost:22 ${PUBLIC_SSL_HOST_USER}@localhost -p ${LOCAL_STUNNEL_LINK_PORT}
+    sshpass -p ${PUBLIC_SSL_HOST_PASSW} ssh -oServerAliveInterval=30 -oServerAliveCountMax=3 -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -NTR ${PUBLIC_SSL_HOST_STUNNEL_LINK_PORT}:localhost:22 ${PUBLIC_SSL_HOST_USER}@localhost -p ${LOCAL_STUNNEL_LINK_PORT}
     echo "=> Tunnel Link down!, waiting to reconnect"
     sleep 10
     echo "=> Reconnecting..."
