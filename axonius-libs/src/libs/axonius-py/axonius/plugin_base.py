@@ -1442,7 +1442,7 @@ class PluginBase(Configurable, Feature):
             # quickest way to find if there are any devices from this plugin in the DB
             if inserter and not self._is_last_seen_prioritized and \
                     db_to_use.count_documents({
-                        f'adapters.{PLUGIN_NAME}': plugin_unique_name
+                        f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
                     }, limit=1) == 0:
                 logger.info("Fast path! First run.")
                 # DB is empty! no need for slow path, can just bulk-insert all.
