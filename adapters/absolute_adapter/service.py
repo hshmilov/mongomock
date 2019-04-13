@@ -112,7 +112,7 @@ class AbsoluteAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=R0912,R0915
+    # pylint:disable=too-many-nested-blocks,too-many-branches,too-many-statements
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -198,9 +198,12 @@ class AbsoluteAdapter(AdapterBase):
                             ips.append(ipv6.strip())
                         if not ips:
                             ips = None
-                        mac = device_raw.get('macAddress')
+                        mac = nic_raw.get('macAddress')
                         if not mac:
                             mac = None
+                        else:
+                            if mac.startswith('0x'):
+                                mac = mac[2:]
                         if ips or mac:
                             device.add_nic(mac, ips, speed=str(nic_raw.get('speed')) if nic_raw.get('speed') else None)
                     except Exception:

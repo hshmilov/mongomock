@@ -1,3 +1,4 @@
+import datetime
 import logging
 from enum import Enum, auto
 
@@ -143,6 +144,11 @@ class EsxAdapter(AdapterBase):
         device.power_state = POWER_STATE_MAP.get(
             details.get('runtime', {}).get('powerState'), DeviceRunningState.Unknown
         )
+        try:
+            if details.get('runtime', {}).get('powerState') == 'poweredOn':
+                device.last_seen = datetime.datetime.now()
+        except Exception:
+            logger.exception(f'Problem addding last seen for {details}')
         boot_time = details.get('runtime', {}).get('bootTime')
         if boot_time is not None:
             device.set_boot_time(boot_time=parse_date(boot_time))

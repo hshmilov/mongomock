@@ -76,7 +76,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         return 'Failure', 400
 
     def _get_client_id(self, client_config):
-        return client_config['domain']
+        return client_config['domain'] + '_' + client_config['access_key']
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))

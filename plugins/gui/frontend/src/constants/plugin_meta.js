@@ -1,10 +1,14 @@
 export const pluginMeta = {
+    webroot_adapter: {
+        title: 'Webroot Endpoint Protection - BETA',
+        description: 'Webroot Endpoint Protection protects against threats across email, browsers, files, URLs, ads, apps, and more.'
+    },
     device42_adapter: {
         title: 'Device42 - BETA',
         description: 'Device42 is a cloud-based CMDB for physical, virtual, and cloud servers and containers, network components, software, services, applications, and their relationships and dependencies.'
     },
     cisco_ise_adapter: {
-        title: 'Cisco Identity Services Engine (ISE) - BETA',
+        title: 'Cisco Identity Services Engine (ISE)',
         description: 'Cisco Identity Services Engine (ISE) is a network administration product that enables the creation and enforcement of security and access policies for endpoint devices connected to the company’s routers and switches.'
     },
     symantec_ee_adapter: {
@@ -16,7 +20,7 @@ export const pluginMeta = {
         description: 'Promisec Endpoint Manager is an agentless endpoint detection and remediation solution that detects, analyzes, and remediates abnormalities. \t'
     },
     truefort_adapter: {
-        title: 'TrueFort - BETA',
+        title: 'TrueFort',
         description: 'TrueFort offers application behavior analytics, control, and protection.'
     },
     redcanary_adapter: {

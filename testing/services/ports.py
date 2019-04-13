@@ -142,6 +142,7 @@ DOCKER_PORTS = {
     'symantec-ee-adapter':              6674,
     'cisco-ise-adapter':                6675,
     'device42-adapter':                 6676,
+    'webroot-adapter':                  6677,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

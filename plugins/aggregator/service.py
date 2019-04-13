@@ -103,6 +103,7 @@ class AggregatorService(Triggerable, PluginBase):
             db.create_index([(f'adapters.data.network_interfaces.ips', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.data.last_used_users', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.data.username', pymongo.ASCENDING)], background=True)
+            db.create_index([(f'adapters.data.installed_software.name', pymongo.ASCENDING)], background=True)
             db.create_index([(f'adapters.data.fetch_time', pymongo.ASCENDING)], background=True)
 
             db.create_index([('tags.data.id', pymongo.ASCENDING)], background=True)

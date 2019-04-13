@@ -21,7 +21,8 @@ from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.utils.parsing import pair_comparator, is_different_plugin, parameter_function, normalize_adapter_device, \
     extract_all_macs, get_hostname, macs_do_not_contradict, hostnames_do_not_contradict, os_do_not_contradict, \
-    ips_do_not_contradict, NORMALIZED_IPS, remove_duplicates_by_reference, NORMALIZED_MACS, NORMALIZED_HOSTNAME_STRING
+    ips_do_not_contradict, NORMALIZED_IPS, remove_duplicates_by_reference, \
+    NORMALIZED_MACS, NORMALIZED_HOSTNAME_STRING, not_snow_adapters
 
 
 def newest(devices):
@@ -169,7 +170,8 @@ class ScannerCorrelatorBase(object):
                                                predicates=[is_different_plugin,
                                                            macs_do_not_contradict,
                                                            hostnames_do_not_contradict,
-                                                           os_do_not_contradict])
+                                                           os_do_not_contradict,
+                                                           not_snow_adapters])
 
     def find_correlation(self, parsed_device) -> Tuple[str, str]:
         """

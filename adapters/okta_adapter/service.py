@@ -24,6 +24,7 @@ class OktaAdapter(AdapterBase, Configurable):
         manager_id = Field(str, 'Manager ID')
         apps = ListField(str, 'Assigned Applications')
         groups = ListField(str, 'Groups')
+        user_status = Field(str, 'User Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -81,6 +82,7 @@ class OktaAdapter(AdapterBase, Configurable):
                 user.id = user_raw['id']
                 user.groups = user_raw.get('groups_data')
                 user.account_disabled = user_raw.get('status') not in ('PROVISIONED', 'ACTIVE')
+                user.user_status = user_raw.get('status')
                 user.last_seen = parse_date(user_raw.get('last_login'))
                 user.last_password_change = parse_date(user_raw.get('passwordChanged'))
                 user.user_created = parse_date(user_raw.get('created'))

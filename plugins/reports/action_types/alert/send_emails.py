@@ -118,6 +118,7 @@ class SendEmailsAction(ActionTypeAlert):
             'emailBody': ''
         }
 
+    # pylint: disable=too-many-branches
     def _run(self) -> AlertActionResult:
         mail_sender = self._plugin_base.mail_sender
         if not mail_sender:
@@ -135,19 +136,22 @@ class SendEmailsAction(ActionTypeAlert):
         email = mail_sender.new_email(subject,
                                       self._config['emailList'],
                                       cc_recipients=self._config.get('emailListCC', []))
-        # all the trigger result
-        if self._config.get('sendDeviceCSV', False):
-            query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
-                'name': query_name
-            })
-            parsed_query_filter = parse_filter(query['view']['query']['filter'])
-            field_list = query['view'].get('fields', [])
-            csv_string = gui_helpers.get_csv(parsed_query_filter,
-                                             gui_helpers.get_sort(query['view']),
-                                             {field: 1 for field in field_list},
-                                             self._entity_type)
+        try:
+            # all the trigger result
+            if self._config.get('sendDeviceCSV', False):
+                query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
+                    'name': query_name
+                })
+                parsed_query_filter = parse_filter(query['view']['query']['filter'])
+                field_list = query['view'].get('fields', [])
+                csv_string = gui_helpers.get_csv(parsed_query_filter,
+                                                 gui_helpers.get_sort(query['view']),
+                                                 {field: 1 for field in field_list},
+                                                 self._entity_type)
 
-            email.add_attachment('Axonius Entity Data.csv', csv_string.getvalue().encode('utf-8'), 'text/csv')
+                email.add_attachment('Axonius Entity Data.csv', csv_string.getvalue().encode('utf-8'), 'text/csv')
+        except Exception:
+            logger.exception(f'Problem adding CSV attachment')
 
         added_result_count = 0
         removed_result_count = 0
@@ -156,11 +160,14 @@ class SendEmailsAction(ActionTypeAlert):
         if self._removed_axon_ids:
             removed_result_count = len(self._removed_axon_ids)
 
-        if self._config.get('sendDevicesChangesCSV', False):
-            if added_result_count:
-                self.__add_changes_csv(email, self._added_axon_ids, 'added')
-            if removed_result_count:
-                self.__add_changes_csv(email, self._removed_axon_ids, 'removed')
+        try:
+            if self._config.get('sendDevicesChangesCSV', False):
+                if added_result_count:
+                    self.__add_changes_csv(email, self._added_axon_ids, 'added')
+                if removed_result_count:
+                    self.__add_changes_csv(email, self._removed_axon_ids, 'removed')
+        except Exception:
+            logger.exception(f'Problem adding changes csv')
 
         image_cid = make_msgid()
 
@@ -199,10 +206,15 @@ class SendEmailsAction(ActionTypeAlert):
         query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
             'name': query_name
         })
-        parsed_query_filter = parse_filter(query['view']['query']['filter'])
+        try:
+            parsed_query_filter = parse_filter(query['view']['query']['filter'])
 
-        self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
-                                     10, 'Top 10 results')
+            self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
+                                         10, 'Top 10 results')
+        except Exception:
+            parsed_query_filter = self.__create_query(self._internal_axon_ids)
+            self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
+                                         10, 'Top 10 results')
 
         if added_result_count > 0:
             parsed_added_query_filter = self.__create_query(self._added_axon_ids)

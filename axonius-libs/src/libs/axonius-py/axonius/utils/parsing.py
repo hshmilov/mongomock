@@ -1052,6 +1052,10 @@ def macs_do_not_contradict(adapter_device1, adapter_device2):
     return not device1_macs or not device2_macs or is_one_subset_of_the_other(device1_macs, device2_macs)
 
 
+def not_snow_adapters(adapter_device1, adapter_device2):
+    return not is_snow_adapter(adapter_device1) and not is_snow_adapter(adapter_device2)
+
+
 def snow_asset_names_do_not_contradict(adapter_device1, adapter_device2):
     if not is_snow_adapter(adapter_device1) or not is_snow_adapter(adapter_device2):
         return True
