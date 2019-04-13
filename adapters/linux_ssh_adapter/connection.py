@@ -4,7 +4,7 @@ import socket
 import paramiko
 
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.linux_ssh.data import CommandExecutor
+from axonius.clients.linux_ssh.data import CommandExecutor, MD5FilesCommand
 from axonius.utils.memfiles import temp_memfd
 from linux_ssh_adapter.consts import NETWORK_TIMEOUT
 
@@ -69,10 +69,14 @@ class LinuxSshConnection:
         output = output.strip().decode('utf-8')
         return output
 
-    def get_commands(self, md5_files_list):
+    def get_commands(self, md5_files_list=None):
         # Pass password if only if sudoer
         password = self._password if self._is_sudoer else None
-        yield from CommandExecutor(self._execute_ssh_cmdline, password).get_commands(md5_files_list)
+        command_executor = CommandExecutor(self._execute_ssh_cmdline, password)
+
+        if md5_files_list:
+            command_executor.add_dynamic_command(MD5FilesCommand(md5_files_list))
+        yield from command_executor.get_commands()
 
     @staticmethod
     def test_reachability(hostname, port):

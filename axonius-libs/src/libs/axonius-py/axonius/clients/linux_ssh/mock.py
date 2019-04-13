@@ -7,12 +7,8 @@ from axonius.clients.linux_ssh.data import *
 class LocalInfoMockMixin:
     RAW_DATA = None
 
-    def __init__(self):
-        super().__init__(self.START_MAGIC + self.RAW_DATA + self.END_MAGIC)
-
-    @classmethod
-    def from_shell_execute(cls, *args, **kargs):
-        return cls()
+    def shell_execute(self, execute_callback: Callable[[str], str] = None, password: str = None):
+        self._raw_data = self.START_MAGIC + self.RAW_DATA + self.END_MAGIC
 
 
 class HostnameMock(LocalInfoMockMixin, HostnameCommand):
@@ -128,10 +124,19 @@ Codename:	buster
 class FailDistroMock(LocalInfoMockMixin, DebianDistroCommand):
     RAW_DATA = 'fail'
 
-    def __init__(self):
-        # pylint: disable=bad-super-call
-        super(DebianDistroCommand, self).__init__(self.RAW_DATA)
-        # pylint: enable=bad-super-call
+    def shell_execute(self, execute_callback: Callable[[str], str] = None, password: str = None):
+        self._raw_data = self.RAW_DATA
+
+
+class MD5FilesCommandMock(LocalInfoMockMixin, MD5FilesCommand):
+    RAW_DATA = \
+        '''
+md5sum: 'asdf qwer': No such file or directory
+d41d8cd98f00b204e9800998ecf8427e  /tmp/a
+md5sum: /tmp/cscope.25365: Is a directory
+md5sum: /tmp/: Is a directory
+f00d8cd98f00b204e9800998ecf8d16a  /tmp/asdgf
+'''
 
 
 class RedHatDistroMock(LocalInfoMockMixin, RedHatDistroCommand):
@@ -1391,46 +1396,46 @@ End Of Table
 class MockCommandExecutor(CommandExecutor):
     # XXX: this is code duplication of ALL_COMMNADS from CommandExecutor
     ALL_COMMANDS = [
-        HostnameMock,
-        IfaceMock,
-        HDMock,
+        HostnameMock(),
+        IfaceMock(),
+        HDMock(),
 
         # Distro command assume that version command already finished
         ConcateCommands([
-            VersionMock,
+            VersionMock(),
             ConcateCommands([
-                DebianDistroMock,
-                RedHatDistroMock
+                DebianDistroMock(),
+                RedHatDistroMock()
             ], should_stop_on_first_success=True),
         ]),
-        MemMock,
+        MemMock(),
 
         # DPKG is debian only if failed try RPM
         ConcateCommands([
-            DPKGMock,
+            DPKGMock(),
         ], should_stop_on_first_success=True),
-        UsersMock,
+        UsersMock(),
     ]
 
     def __init__(self):
-        super().__init__(None, None)
+        super().__init__(lambda x: x, None)
 
 
 class ConcatCommandFailMockExecutor(MockCommandExecutor):
     ALL_COMMANDS = [
-        VersionMock,
+        VersionMock(),
         ConcateCommands([
-            FailDistroMock,
-            RedHatDistroMock
+            FailDistroMock(),
+            RedHatDistroMock()
         ], should_stop_on_first_success=True),
     ]
 
 
 class ConcatCommandSuccessMockExecutor(MockCommandExecutor):
     ALL_COMMANDS = [
-        VersionMock,
+        VersionMock(),
         ConcateCommands([
-            RedHatDistroMock,
-            FailDistroMock
+            RedHatDistroMock(),
+            FailDistroMock()
         ], should_stop_on_first_success=True),
     ]

@@ -3,10 +3,9 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.files import get_local_config_file
+from axonius.clients.linux_ssh.data import LinuxDeviceAdapter
 from axonius.mixins.configurable import Configurable
-from axonius.fields import ListField
+from axonius.utils.files import get_local_config_file
 from linux_ssh_adapter.client_id import get_client_id
 from linux_ssh_adapter.connection import LinuxSshConnection
 from linux_ssh_adapter.consts import (DEFAULT_PORT, HOSTNAME, IS_SUDOER,
@@ -16,8 +15,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class LinuxSshAdapter(AdapterBase, Configurable):
-    class MyDeviceAdapter(DeviceAdapter):
-        md5_files_list = ListField(str, 'MD5 Files List')
+    MyDeviceAdapter = LinuxDeviceAdapter
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -161,8 +159,4 @@ class LinuxSshAdapter(AdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
-        md5_files_list = config['md5_files_list']
-        if md5_files_list:
-            self.__md5_files_list = md5_files_list.split(',')
-        else:
-            self.__md5_files_list = None
+        self.__md5_files_list = config['md5_files_list']

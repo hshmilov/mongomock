@@ -1,5 +1,6 @@
 import logging
 import re
+import shlex
 
 # pylint: disable=no-name-in-module
 from distutils import version
@@ -8,11 +9,15 @@ from typing import Callable, List
 # pylint: disable=deprecated-module
 import string
 # pylint: enable=deprecated-module
-from axonius.devices.device_adapter import AdapterProperty
+from axonius.devices.device_adapter import AdapterProperty, DeviceAdapter, ListField
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 EMPTY_MAC = '00:00:00:00:00:00'
+
+
+class LinuxDeviceAdapter(DeviceAdapter):
+    md5_files_list = ListField(str, 'MD5 Files List')
 
 
 def kilo_to_giga(kilo):
@@ -44,11 +49,23 @@ class AbstractCommand:
     STATIC_PATH = '/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin'
     END_MAGIC = 'OKOK'
     START_MAGIC = 'STARTSTART'
+    CHECK_RET_VALUE = True
     REQUIRE_ROOT_PRIVILEGES = False
 
-    def __init__(self, data):
-        self._raw_data = data
+    def __init__(self):
+        self._raw_data = ''
         self._parsed_data = {}
+
+    def shell_execute(self, execute_callback: Callable[[str], str], password: str = None):
+        """ factory to create the class given shell_execute function """
+        shell_cmdline = self._get_command()
+
+        # If we have password and the command require root privilege add sudo
+        # if not, just try to execute it - maybe it will work
+        if self.REQUIRE_ROOT_PRIVILEGES and password is not None:
+            shell_cmdline = f'echo \'{password}\' | sudo -S sh -c \'{shell_cmdline}\''
+
+        self._raw_data = execute_callback(shell_cmdline)
 
     def parse(self):
         try:
@@ -66,17 +83,18 @@ class AbstractCommand:
     def _parse(raw_data):
         raise NotImplementedError()
 
-    @classmethod
-    def _get_command(cls, dynamic_cmd: str = None):
+    def _get_command(self):
         """ we delete HISTFILE to make sure that we don't write passwords to history.
             In some distros such as redhat, non-interactive path is limited so we prepend
             default path. Add magic logic"""
-        if not dynamic_cmd:
-            commad_str = cls.COMMAND
+        if self.CHECK_RET_VALUE:
+            sep = '&&'
         else:
-            commad_str = dynamic_cmd
-        command = f'echo -n {cls.START_MAGIC} && {commad_str} && echo -n {cls.END_MAGIC}'
-        command = f'HISTFILE=/dev/null PATH={cls.STATIC_PATH}:$PATH {command}'
+            sep = ';'
+
+        command = f'echo -n {self.START_MAGIC} {sep} {self.COMMAND} {sep} echo -n {self.END_MAGIC}'
+        command = f'HISTFILE=/dev/null PATH={self.STATIC_PATH}:$PATH {command}'
+
         return command
 
     @classmethod
@@ -93,21 +111,6 @@ class AbstractCommand:
         start = cls.START_MAGIC
         end = cls.END_MAGIC
         return raw_data[raw_data.index(start) + len(start):raw_data.index(end)]
-
-    @classmethod
-    def from_shell_execute(cls,
-                           shell_execute: Callable[[str], str],
-                           password: str = None, dynamic_cmd: str = None):
-        """ factory to create the class given shell_execute function """
-        shell_cmdline = cls._get_command(dynamic_cmd)
-
-        # If we have password and the command require root privilege add sudo
-        # if not, just try to execute it - maybe it will work
-        if cls.REQUIRE_ROOT_PRIVILEGES and password is not None:
-            shell_cmdline = f'echo \'{password}\' | sudo -S sh -c \'{shell_cmdline}\''
-
-        command = cls(shell_execute(shell_cmdline))
-        return command
 
 
 class LocalInfoCommand(AbstractCommand):
@@ -142,23 +145,33 @@ class LocalInfoCommand(AbstractCommand):
         raise NotImplementedError()
 
 
-class ForeignInfoCommand(AbstractCommand):
-    def create_axonius_devices(self, create_device_callback):
-        raise NotImplementedError()
-
-
 class MD5FilesCommand(LocalInfoCommand):
+    COMMAND = 'md5sum {filenames}'
+    CHECK_RET_VALUE = False
+
+    def __init__(self, filenames: str):
+        filenames = ' '.join([shlex.quote(file_) for file_ in filenames.split(',')])
+        self._filenames = filenames
+        super().__init__()
+
+    def _get_command(self):
+        command = super()._get_command()
+        command = command.format(filenames=self._filenames)
+        return command
 
     @staticmethod
     def _parse(raw_data):
-        if 'md5sum:' in raw_data or len(raw_data.split('  ')) == 1:
-            return None
-        return raw_data.split('  ')[1] + ':' + raw_data.split('  ')[0]
+        return re.findall(r'^([0-9a-fA-F]{32})\s*(.*)$', raw_data.strip(), re.MULTILINE)
 
     @staticmethod
     def _to_axonius(device, parsed_data):
-        if parsed_data:
-            device.md5_files_list.append(parsed_data)
+        for hash_, filename in parsed_data:
+            device.md5_files_list.append(f'{filename}: {hash_}')
+
+
+class ForeignInfoCommand(AbstractCommand):
+    def create_axonius_devices(self, create_device_callback):
+        raise NotImplementedError()
 
 
 class HostnameCommand(LocalInfoCommand):
@@ -617,41 +630,45 @@ class CommandExecutor:
     """ gets execute functions callback and client id, and handles all the command execution """
 
     ALL_COMMANDS = [
-        HostnameCommand,
-        IfaceCommand,
-        HDCommand,
+        HostnameCommand(),
+        IfaceCommand(),
+        HDCommand(),
 
         # Distro command assume that version command already finished
         ConcateCommands([
-            VersionCommand,
+            VersionCommand(),
             ConcateCommands([
-                DebianDistroCommand,
-                RedHatDistroCommand
+                DebianDistroCommand(),
+                RedHatDistroCommand()
             ], should_stop_on_first_success=True),
         ]),
-        MemCommand,
+        MemCommand(),
 
         # DPKG is debian only if failed try RPM
         ConcateCommands([
-            DPKGCommand,
-            RPMCommand,
+            DPKGCommand(),
+            RPMCommand(),
         ], should_stop_on_first_success=True),
-        UsersCommand,
-        HardwareCommand,
+        UsersCommand(),
+        HardwareCommand(),
     ]
 
     def __init__(self, shell_execute: Callable[[str], str], password: str = None):
         self._shell_execute = shell_execute
         self._password = password
+        self._dynamic_commands = []
+
+    def add_dynamic_command(self, command):
+        self._dynamic_commands.append(command)
 
     def handle_concated_commands(self, concated):
         parsed = False
 
-        for command_cls in concated.commands:
-            if isinstance(command_cls, ConcateCommands):
-                parsed = yield from self.handle_concated_commands(command_cls)
+        for command in concated.commands:
+            if isinstance(command, ConcateCommands):
+                parsed = yield from self.handle_concated_commands(command)
             else:
-                parsed = yield from self.yield_command(command_cls)
+                parsed = yield from self.yield_command(command)
 
             if parsed and concated.should_stop_on_first_success:
                 break
@@ -661,29 +678,23 @@ class CommandExecutor:
 
         return parsed
 
-    def yield_command(self, command_cls, dynamic_cmd=None):
+    def yield_command(self, command, dynamic_cmd=None):
         result = False
         try:
-            command = command_cls.from_shell_execute(self._shell_execute, self._password, dynamic_cmd=dynamic_cmd)
+            command.shell_execute(self._shell_execute, self._password)
             if command.parse():
                 result = True
             yield command
         except Exception as e:
-            logger.exception(f'Failed to execute command {command_cls}')
+            logger.exception(f'Failed to execute command {command}')
         return result
 
-    def get_commands(self, md5_files_list=None):
-        for command_cls in self.ALL_COMMANDS:
+    def get_commands(self):
+        for command in self.ALL_COMMANDS + self._dynamic_commands:
             try:
-                if isinstance(command_cls, ConcateCommands):
-                    yield from self.handle_concated_commands(command_cls)
+                if isinstance(command, ConcateCommands):
+                    yield from self.handle_concated_commands(command)
                 else:
-                    yield from self.yield_command(command_cls)
+                    yield from self.yield_command(command)
             except Exception as e:
-                logger.exception(f'get_devices {command_cls} failed')
-        if md5_files_list:
-            for md5_file in md5_files_list:
-                try:
-                    yield from self.yield_command(MD5FilesCommand, f'md5sum {md5_file}')
-                except Exception:
-                    logger.exception(f'Problem with file {md5_file}')
+                logger.exception(f'get_commands {command} failed')
