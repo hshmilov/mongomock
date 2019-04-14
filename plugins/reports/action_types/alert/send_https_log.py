@@ -74,10 +74,17 @@ class SendHttpsLogAction(ActionTypeAlert):
             {
                 'name': query_name
             })
-        parsed_query_filter = parse_filter(query['view']['query']['filter'])
-        field_list = query['view'].get('fields', [])
+        if query:
+            parsed_query_filter = parse_filter(query['view']['query']['filter'])
+            field_list = query['view'].get('fields', [])
+            sort = gui_helpers.get_sort(query['view'])
+        else:
+            parsed_query_filter = self._create_query(self._internal_axon_ids)
+            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
+                          'specific_data.data.os.type', 'specific_data.data.last_used_users']
+            sort = {}
         all_gui_entities = gui_helpers.get_entities(None, None, parsed_query_filter,
-                                                    gui_helpers.get_sort(query['view']),
+                                                    sort,
                                                     {
                                                         field: 1
                                                         for field

@@ -142,10 +142,17 @@ class SendEmailsAction(ActionTypeAlert):
                 query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
                     'name': query_name
                 })
-                parsed_query_filter = parse_filter(query['view']['query']['filter'])
-                field_list = query['view'].get('fields', [])
+                if query:
+                    parsed_query_filter = parse_filter(query['view']['query']['filter'])
+                    field_list = query['view'].get('fields', [])
+                    sort = gui_helpers.get_sort(query['view'])
+                else:
+                    parsed_query_filter = self._create_query(self._internal_axon_ids)
+                    field_list = ['specific_data.data.name', 'specific_data.data.hostname',
+                                  'specific_data.data.os.type', 'specific_data.data.last_used_users']
+                    sort = {}
                 csv_string = gui_helpers.get_csv(parsed_query_filter,
-                                                 gui_helpers.get_sort(query['view']),
+                                                 sort,
                                                  {field: 1 for field in field_list},
                                                  self._entity_type)
 
@@ -212,18 +219,18 @@ class SendEmailsAction(ActionTypeAlert):
             self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
                                          10, 'Top 10 results')
         except Exception:
-            parsed_query_filter = self.__create_query(self._internal_axon_ids)
+            parsed_query_filter = self._create_query(self._internal_axon_ids)
             self.__create_table_in_email(email, parsed_query_filter, html_sections, images_cid,
                                          10, 'Top 10 results')
 
         if added_result_count > 0:
-            parsed_added_query_filter = self.__create_query(self._added_axon_ids)
+            parsed_added_query_filter = self._create_query(self._added_axon_ids)
 
             self.__create_table_in_email(email, parsed_added_query_filter, html_sections, images_cid,
                                          5, f'Top 5 new {self._entity_type} in query')
             logger.info(parsed_added_query_filter)
         if removed_result_count > 0:
-            parsed_removed_query_filter = self.__create_query(self._removed_axon_ids)
+            parsed_removed_query_filter = self._create_query(self._removed_axon_ids)
 
             self.__create_table_in_email(email, parsed_removed_query_filter, html_sections, images_cid, 5,
                                          f'Top 5 {self._entity_type} removed from query')
@@ -331,24 +338,20 @@ class SendEmailsAction(ActionTypeAlert):
         :param data_action: added or removed from query
         """
 
-        parsed_query_filter = self.__create_query(trigger_data)
+        parsed_query_filter = self._create_query(trigger_data)
         query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
             {
                 'name': self._run_configuration.view.name
             })
-        field_list = query['view'].get('fields', [])
-        csv_string = gui_helpers.get_csv(parsed_query_filter, gui_helpers.get_sort(query['view']),
+        if query:
+            field_list = query['view'].get('fields', [])
+            sort = gui_helpers.get_sort(query['view'])
+        else:
+            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
+                          'specific_data.data.os.type', 'specific_data.data.last_used_users']
+            sort = {}
+        csv_string = gui_helpers.get_csv(parsed_query_filter, sort,
                                          {field: 1 for field in field_list}, self._entity_type)
 
         email.add_attachment(f'Axonius {data_action} entity data.csv', csv_string.getvalue().encode('utf-8'),
                              'text/csv')
-
-    @staticmethod
-    def __create_query(trigger_data: list):
-        """
-        create the query for the result diff
-        :param trigger_data:  The results difference added or removed result
-        :return:
-        """
-        parsed_query_filter = {'internal_axon_id': {'$in': trigger_data}}
-        return parsed_query_filter

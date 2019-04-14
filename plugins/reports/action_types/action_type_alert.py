@@ -64,3 +64,13 @@ class ActionTypeAlert(ActionTypeBase, ABC):
     @abstractmethod
     def _run(self) -> AlertActionResult:
         pass
+
+    @staticmethod
+    def _create_query(trigger_data: list):
+        """
+        create the query for the result diff
+        :param trigger_data:  The results difference added or removed result
+        :return:
+        """
+        parsed_query_filter = {'internal_axon_id': {'$in': trigger_data}}
+        return parsed_query_filter

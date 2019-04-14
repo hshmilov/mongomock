@@ -58,10 +58,17 @@ class SendCsvToShare(ActionTypeAlert):
             query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
                 'name': query_name
             })
-            parsed_query_filter = parse_filter(query['view']['query']['filter'])
-            field_list = query['view'].get('fields', [])
+            if query:
+                parsed_query_filter = parse_filter(query['view']['query']['filter'])
+                field_list = query['view'].get('fields', [])
+                sort = gui_helpers.get_sort(query['view'])
+            else:
+                parsed_query_filter = self._create_query(self._internal_axon_ids)
+                field_list = ['specific_data.data.name', 'specific_data.data.hostname',
+                              'specific_data.data.os.type', 'specific_data.data.last_used_users']
+                sort = {}
             csv_string = gui_helpers.get_csv(parsed_query_filter,
-                                             gui_helpers.get_sort(query['view']),
+                                             sort,
                                              {field: 1 for field in field_list},
                                              self._entity_type)
 
