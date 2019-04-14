@@ -5,7 +5,6 @@ from threading import RLock
 import jose
 import requests
 
-from axonius.distribution_config import MEDICAL_MODE
 from axonius.utils.revving_cache import rev_cached
 from dataclasses import dataclass, field
 from flask import request
@@ -74,14 +73,6 @@ class OidcData:
     access_token: str
     # The refresh token
     refresh_token: str
-    # Groups from okta, see https://developer.okta.com/docs/api/resources/groups
-    groups: object = None
-    # Whether or not the user is an Admin of the app
-    is_admin: bool = None
-    # Something gindi make up, idk
-    is_account_manager: bool = None
-    # Something gindi made up, idk
-    admin_redirect_url: str = None
     # The main lock
     lock: RLock = field(default_factory=RLock)
 
@@ -91,94 +82,10 @@ class OidcData:
         :raises: Various exceptions if the token fails the refresh, TBD the exceptions themselves
         """
         with self.lock:
-            if MEDICAL_MODE:
-                self.perform_refresh()
             return {
                 'id_token': self.id_token,
-                'groups': self.groups,
                 'claims': self.claims,
-                'is_admin': self.is_admin,
-                'is_account_manager': self.is_account_manager,
-                'admin_redirect_url': self.admin_redirect_url
             }
-
-    def __validate_tokens(self) -> bool:
-        """
-        Returns if the current access token and id_token are still valid
-        """
-        with self.lock:
-            return okta_post_authenticated('/v1/introspect', {
-                'token': self.access_token,
-                'token_type_hint': 'access_token'
-            }).json().get('active', False) and okta_post_authenticated('/v1/introspect', {
-                'token': self.id_token,
-                'token_type_hint': 'id_token'
-            }).json().get('active', False)
-
-    @rev_cached(ttl=300, remove_from_cache_ttl=3600, key_func=lambda self: id(self))
-    def perform_refresh(self):
-        """
-        If the tokens aren't valid, refreshes them.
-        :raises: Various exceptions if the token fails the refresh, TBD the exceptions themselves
-        """
-        with self.lock:
-            if not self.__validate_tokens():
-                res = okta_post_authenticated('/v1/token', {
-                    'grant_type': 'refresh_token',
-                    'scope': 'offline_access openid profile email',
-                    'refresh_token': self.refresh_token
-                })
-                res.raise_for_status()
-                res = res.json()
-                self.refresh_token = res['refresh_token']
-                self.id_token = res['id_token']
-                self.access_token = res['access_token']
-
-    def reload_info_from_api(self):
-        if not MEDICAL_MODE:
-            return
-        with self.lock:
-            self.load_groups()
-            self.figure_out_admin_status()
-
-    def load_groups(self):
-        """
-        Loads Enrolled Groups
-        """
-        if not MEDICAL_MODE:
-            return
-        with self.lock:
-            sub = self.claims['sub']
-            res = make_okta_api_request(f'/v1/users/{sub}/groups')
-            res.raise_for_status()
-            self.groups = res.json()
-
-    def figure_out_admin_status(self):
-        with self.lock:
-            if not MEDICAL_MODE:
-                return
-            if self.claims.get('app_role', '') == 'master_manager' and \
-                    any('_ACCOUNT_MANAGERS' in group for group in self.claims.get('groups', [])):
-                self.is_account_manager = True
-            else:
-                self.is_account_manager = False
-
-            sub = self.claims['sub']
-            res = make_okta_api_request(f'/v1/apps?filter=user.id+eq+\"{sub}\"')
-            res.raise_for_status()
-            for app in res.json():
-                label = app.get('label')
-                if label and 'ADMINS_' in label:
-                    self.is_admin = True
-                    self.admin_redirect_url = ''
-                    for link in app['_links'].get('appLinks', []):
-                        href = link.get('href')
-                        if href:
-                            self.admin_redirect_url = href
-                        break
-                    return
-            self.is_admin = False
-            self.admin_redirect_url = ''
 
 
 def fetch_jwk_for(id_token):
@@ -296,5 +203,4 @@ def try_connecting_using_okta(okta_config) -> OidcData:
         return None
 
     oidc_data = OidcData(id_token, claims, access_token, refresh_token)
-    oidc_data.reload_info_from_api()
     return oidc_data

@@ -86,7 +86,6 @@ from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACT
                                           NOT_RAN_STATE)
 
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.distribution_config import MEDICAL_MODE
 from axonius.email_server import EmailServer
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.fields import Field
@@ -2446,7 +2445,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'okta': {
                 'enabled': self._okta['enabled'],
                 'client_id': self._okta['client_id'],
-                'authorization_server': self._okta.get('authorization_server', ''),
                 'url': self._okta['url'],
                 'gui2_url': self._okta['gui2_url']
             },
@@ -2620,13 +2618,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             # the upgrade script as well.
             self.__exteranl_login_successful(
                 'okta',  # Look at the comment above
-                oidc.claims['preferred_username'] if MEDICAL_MODE else oidc.claims['email'],
+                oidc.claims['email'],
                 oidc.claims.get('given_name', ''),
-                oidc.claims.get('family_name', ''),
-                additional_userinfo={
-                    'language': oidc.claims.get('default_language'),
-                    'workspace': 'Account' if oidc.is_account_manager else oidc.claims.get('organic_branch')
-                }
+                oidc.claims.get('family_name', '')
             )
 
         return redirect('/', code=302)
@@ -4813,11 +4807,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             'type': 'string'
                         },
                         {
-                            'name': 'authorization_server',
-                            'title': 'Okta authorization server name',
-                            'type': 'string'
-                        },
-                        {
                             'name': 'client_secret',
                             'title': 'Okta application client secret',
                             'type': 'string',
@@ -4832,15 +4821,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             'name': 'gui2_url',
                             'title': 'The URL of Axonius GUI',
                             'type': 'string'
-                        },
-                        *([{
-                            'name': 'api_token',
-                            'title': 'API token',
-                            'type': 'string'
-                        }] if MEDICAL_MODE else [])
+                        }
                     ],
-                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url',
-                                 *(['api_token'] if MEDICAL_MODE else [])],
+                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url'],
                     'name': 'okta_login_settings',
                     'title': 'Okta Login Settings',
                     'type': 'array'
@@ -4928,12 +4911,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'enabled': False,
                 'client_id': '',
                 'client_secret': '',
-                'authorization_server': '',
                 'url': 'https://yourname.okta.com',
-                'gui2_url': 'https://127.0.0.1',
-                **({
-                    'api_token': ''
-                } if MEDICAL_MODE else {})
+                'gui2_url': 'https://127.0.0.1'
             },
             'ldap_login_settings': {
                 'enabled': False,

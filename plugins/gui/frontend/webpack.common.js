@@ -47,7 +47,7 @@ module.exports = env => {
             }),
             new webpack.DefinePlugin({
                     ENV: {
-                        medical: env ? env.medical : false
+                        medical: false
                     }
                 })
         ],

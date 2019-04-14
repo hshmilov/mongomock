@@ -76,7 +76,6 @@ from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
-from axonius.distribution_config import MEDICAL_MODE
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
 from axonius.logging.logger import create_logger
@@ -518,12 +517,9 @@ class PluginBase(Configurable, Feature):
             cache.delayed_initialization()
 
         # Finished, Writing some log
-        logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully {3}".format(self.plugin_unique_name,
-                                                                                           self.version,
-                                                                                           self.lib_version,
-                                                                                           'in medical mode' if
-                                                                                           MEDICAL_MODE
-                                                                                           else ''))
+        logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully".format(self.plugin_unique_name,
+                                                                                       self.version,
+                                                                                       self.lib_version))
 
     @retry(stop_max_attempt_number=3,
            wait_fixed=5000)

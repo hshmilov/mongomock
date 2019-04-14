@@ -440,13 +440,10 @@ class GuiService(PluginService):
     # I don't want to change all dockerfiles
     # pylint: disable=W0221
     def get_dockerfile(self, *args, docker_internal_env_vars=None, **kwargs):
-        docker_internal_env_vars = docker_internal_env_vars or []
-        is_medical = 'MEDICAL=true' in docker_internal_env_vars
-        npm_params = '-- --env.medical=true' if is_medical else ''
 
         build_command = '' if self.is_dev else f'''
 # Compile npm, assuming we have it from axonius-libs
-RUN cd ./gui/frontend/ && npm run build {npm_params}
+RUN cd ./gui/frontend/ && npm run build
 '''
         install_command = '' if self.is_dev else '''
 # Prepare build packages
