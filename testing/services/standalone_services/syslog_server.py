@@ -24,6 +24,7 @@ class SyslogService(WeaveService):
     def get_dockerfile(self, *args, **kwargs):
         return r'''
     FROM balabit/syslog-ng:latest
+    RUN printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" > /etc/apt/sources.list
     RUN apt-get update && apt-get install -y openssl
     WORKDIR /usr/local/etc
     RUN mkdir syslog-ng

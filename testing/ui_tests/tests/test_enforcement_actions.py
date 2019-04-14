@@ -3,7 +3,6 @@ from typing import List
 
 from retrying import retry
 from flaky import flaky
-import pytest
 
 from axonius.utils.wait import wait_until
 from services.adapters.json_file_service import JsonFileService
@@ -110,7 +109,6 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.find_missing_email_server_notification()
 
     @flaky(max_runs=3)
-    @pytest.mark.skip('AX-3626')
     def test_syslog_operation_multiple_actions(self):
         syslog_server = SyslogService()
         syslog_server.take_process_ownership()

@@ -301,7 +301,7 @@ class InstanceManager:
                                                    ), 'wb') \
                                     as final_xml:
                                 final_xml.write(extracted_xml_file.read())
-            except Exception:
+            except Exception as e:
                 TC.print(f'{instance_to_run_on}: job {command_job_name} exception while getting logs. '
                          f'Current output is:\n{current_output}. Exception is: {str(e)}')
                 raise
