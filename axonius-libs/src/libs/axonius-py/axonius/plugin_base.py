@@ -1331,21 +1331,25 @@ class PluginBase(Configurable, Feature):
                     if last_seen_from_data:
                         array_filters = [
                             {
-                                f'i.{LAST_SEEN_FIELD}': {
-                                    '$gte': last_seen_from_data
+                                f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                                'i.data.id': parsed_to_insert['data']['id'],
+                                f'i.data.{LAST_SEEN_FIELD}': {
+                                    '$lte': last_seen_from_data
                                 }
                             }
                         ]
                     else:
                         array_filters = [{
+                            f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                            'i.data.id': parsed_to_insert['data']['id'],
                             '$or': [
                                 {
-                                    f'i.{LAST_SEEN_FIELD}': {
+                                    f'i.data.{LAST_SEEN_FIELD}': {
                                         '$exists': False
                                     }
                                 },
                                 {
-                                    f'i.{LAST_SEEN_FIELD}': None
+                                    f'i.data.{LAST_SEEN_FIELD}': None
                                 }
                             ]
                         }]
@@ -1442,7 +1446,7 @@ class PluginBase(Configurable, Feature):
             # quickest way to find if there are any devices from this plugin in the DB
             if inserter and not self._is_last_seen_prioritized and \
                     db_to_use.count_documents({
-                        f'adapters.{PLUGIN_NAME}': plugin_unique_name
+                        f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
                     }, limit=1) == 0:
                 logger.info("Fast path! First run.")
                 # DB is empty! no need for slow path, can just bulk-insert all.

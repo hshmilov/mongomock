@@ -185,7 +185,7 @@ class SendEmailsAction(ActionTypeAlert):
         html_sections.append(REPORTS_TEMPLATES['header'].render({'subject': self._report_data['name']}))
         html_sections.append(REPORTS_TEMPLATES['second_header'].render(
             {'query_link': query_link, 'reason': reason, 'period': period, 'query': query_name}))
-        if self._config['emailBody']:
+        if self._config.get('emailBody'):
             html_sections.append(REPORTS_TEMPLATES['custom_body'].render({
                 'body_text': self._config['emailBody']
             }))
