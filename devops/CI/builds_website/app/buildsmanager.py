@@ -132,13 +132,20 @@ class BuildsManager(object):
             self.update_last_user_interaction_time(cloud, instance_id)
 
         if image is not None:
+            # We must let the realtime monitor update itself.
+            time.sleep(10)
             for instance_generic in generic:
                 instance_id = instance_generic['id']
+                try:
+                    instance_data = self.get_instances(cloud, instance_id)[0]
+                except Exception:
+                    # a second try.
+                    time.sleep(10)
+                    instance_data = self.get_instances(cloud, instance_id)[0]
                 self.st.post_channel(
                     f'owner "{owner_full_name}" has raised an instance that will be connected to chef.',
                     channel='test_machines',
-                    attachments=[self.st.get_instance_attachment(
-                        self.get_instances(cloud, instance_id)[0], [])])
+                    attachments=[self.st.get_instance_attachment(instance_data, [])])
 
         return generic, group_name
 
