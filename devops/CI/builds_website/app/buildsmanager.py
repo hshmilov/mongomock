@@ -3,10 +3,10 @@
 This project assumes the aws settings & credentials are already configured in the machine, either by using aws cli
 (aws configure) or by putting it in "~/.aws.config"
 """
-import os
 import re
 import datetime
 import time
+import json
 from typing import List
 
 import paramiko
@@ -14,6 +14,8 @@ import paramiko
 from pymongo import MongoClient, DESCENDING
 from bson.objectid import ObjectId
 from buildscloud.builds_cloud_manager import BuildsCloudManager
+from config import TOKENS_PATH, CREDENTIALS_PATH, LOCAL_BUILDS_HOST
+from slacknotifier import SlackNotifier
 
 AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
@@ -25,18 +27,13 @@ OVA_IMAGE_NAME = "Axonius-operational-export-106"
 
 S3_BUCKET_NAME_FOR_OVA = "axonius-releases"
 S3_BUCKET_NAME_FOR_EXPORT_LOGS = "axonius-export-logs"
-
-LOCAL_BUILDS_HOST = 'builds-local.axonius.lan' if 'BUILDS_HOST' not in os.environ else os.environ['BUILDS_HOST']
-EXTERNAL_BUILDS_HOST = 'builds.in.axonius.com' if 'BUILDS_HOST' not in os.environ else os.environ['BUILDS_HOST']
 DB_ADDR = 'mongo'
-
-NUMBER_OF_TEST_INSTANCES_AVAILABLE = 5
 
 
 class BuildsManager(object):
     """Handles aws and db connections to provide data about instances, dockers, and VM's."""
 
-    def __init__(self, credentials_file_path: str, bypass_token=None):
+    def __init__(self):
         """Initialize the object."""
         self.db = MongoClient(
             DB_ADDR,
@@ -44,30 +41,41 @@ class BuildsManager(object):
             password='cqNLLfvQetvFog9y3iqi',
             connect=False
         ).builds
-        self.bcm = BuildsCloudManager(credentials_file_path)
-        self.bypass_token = bypass_token
+        self.bcm = BuildsCloudManager(CREDENTIALS_PATH)
+        self.st = SlackNotifier()
 
-        # Not Used
-        # self.redis_client = redis.StrictRedis(host=BUILDS_HOST)
+        self.bypass_token = None
+        with open(TOKENS_PATH, 'rt') as f:
+            tokens = json.loads(f.read())
+            for token, data in tokens.items():
+                if data['builds_user_full_name'].lower() == 'builds':
+                    self.bypass_token = token
+                    break
+        assert self.bypass_token, 'No bypass token found'
 
     def get_instances(self, cloud=None, instance_id=None, vm_type=None):
-        mongo_filter = dict()
+        last_instances = self.db.realtime.find_one({'name': 'instances'})['value']
         if cloud:
-            mongo_filter['cloud'] = cloud
-
+            last_instances = [instance for instance in last_instances if instance['cloud']['cloud'] == cloud]
         if instance_id:
-            mongo_filter['id'] = instance_id
-
+            last_instances = [instance for instance in last_instances if instance['cloud']['id'] == instance_id]
         if vm_type:
-            mongo_filter['vm_type'] = vm_type
+            last_instances = [
+                instance for instance in last_instances
+                if ((instance['cloud'].get('tags') or {}).get('VM-Type') or '').lower() == vm_type.lower() or
+                   ((instance['cloud'].get('tags') or {}).get('vm-type') or '').lower() == vm_type.lower()
+            ]
 
+        return last_instances
+
+    def update_instances_realtime(self):
         cloud_id_to_db = dict()
-        for db_instance in self.db.instances.find(mongo_filter):
+        for db_instance in self.db.instances.find({}):
             if db_instance.get('id'):
                 cloud_id_to_db[db_instance['id']] = db_instance
 
         all_instances = []
-        for cloud_instance in self.bcm.get_instances(cloud=cloud, instance_id=instance_id, vm_type=vm_type):
+        for cloud_instance in self.bcm.get_instances():
             all_instances.append(
                 {
                     'cloud': cloud_instance,
@@ -77,7 +85,16 @@ class BuildsManager(object):
 
         # Sort by time of creation
         all_instances.sort(key=lambda x: datetime.datetime.now() if (x['db'] == {}) else x['db']['date'], reverse=True)
-        return all_instances
+
+        self.db.realtime.update_one(
+            {'name': 'instances'},
+            {
+                '$set': {
+                    'value': all_instances
+                }
+            },
+            upsert=True
+        )
 
     def add_instances(
             self, cloud, vm_type, name, instance_type, num, image, key_name, public, code,
@@ -113,6 +130,16 @@ class BuildsManager(object):
                 }
             )
             self.update_last_user_interaction_time(cloud, instance_id)
+
+        if image is not None:
+            for instance_generic in generic:
+                instance_id = instance_generic['id']
+                self.st.post_channel(
+                    f'owner "{owner_full_name}" has raised an instance that will be connected to chef.',
+                    channel='test_machines',
+                    attachments=[self.st.get_instance_attachment(
+                        self.get_instances(cloud, instance_id)[0], [])])
+
         return generic, group_name
 
     def terminate_instance(self, cloud, instance_id):

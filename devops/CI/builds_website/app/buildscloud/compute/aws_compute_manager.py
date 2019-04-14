@@ -57,7 +57,8 @@ class AWSComputeManager:
             'private_ip': raw_instance_data.get('PrivateIpAddress'),
             'state': raw_instance_data['State']['Name'],
             'security_groups': [group.get('GroupName', 'Unknown') for group in raw_instance_data['SecurityGroups']],
-            'image_id': raw_instance_data.get('ImageId')
+            'image_id': raw_instance_data.get('ImageId'),
+            'launch_date': raw_instance_data['LaunchTime']
         }
         name = self.get_name_tag(raw_instance_data['Tags'])
         if name:

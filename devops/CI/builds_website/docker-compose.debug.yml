@@ -3,7 +3,7 @@ services:
     web:
         environment:
             - BUILDS_DEBUG=true
-            - BUILDS_HOST=192.168.127.238
+            - BUILDS_HOST=develop
             - UWSGI_PROCESSES=10
 
     mongo:

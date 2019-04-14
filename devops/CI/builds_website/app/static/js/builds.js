@@ -18,7 +18,6 @@
 
     var last_custom_configuration_code = "";
     var is_in_custom_configuration_code = false;
-    var github_token = "githubreadonly@axonius.com:3Zc0kRElHCzhHbM1u0LX";
 
 
     /* Global functions */
@@ -141,6 +140,11 @@
     function exception_modal(data) {
                 $("#modal_error .modal-body")[0].innerText = data.responseText;
                 $("#modal_error").modal()
+    }
+
+    function success_modal(data) {
+                $("#modal_success .modal-body")[0].innerHTML = data;
+                $("#modal_success").modal()
     }
     function update_datatable(table_id, dataSet, onclick_function) {
         var table = $("#" + table_id);
@@ -357,7 +361,7 @@
             ["Owner", inst['db']['owner']],
             ["Fork", ("fork" in inst['db']) ? inst['db']['fork'] : ""],
             ["Branch", ("branch" in inst['db']) ? inst['db']['branch'] : ""],
-            ["Date Created", inst['db']['date']],
+            ["Date Created", inst['db']['date'] || inst['cloud']['launch_date']],
             ["Comments", (inst['db']['comments']) ? inst['db']['comments'].replace("\n", "<br>") : ""]
         ];
 
@@ -430,7 +434,7 @@
             ["Owner", inst['db']['owner']],
             ["Fork", ("fork" in inst['db']) ? inst['db']['fork'] : ""],
             ["Branch", ("branch" in inst['db']) ? inst['db']['branch'] : ""],
-            ["Date Created", inst['db']['date']],
+            ["Date Created", inst['db']['date'] || inst['cloud']['launch_date']],
             ["Comments", (inst['db']['comments']) ? inst['db']['comments'].replace("\n", "<br>") : ""]
         ];
 
@@ -465,6 +469,7 @@
         current_instance_details_i = i;
         var inst = current_auto_tests_in_progress[i];
         var inst_name = inst['db']['name'] || inst['cloud']['name']
+        var group_name = inst['db']['group_name']
 
         security_groups = inst['cloud']['security_groups']
         if (security_groups !== undefined) {
@@ -475,6 +480,7 @@
         var vm_info_data = [
             ["Cloud", icon + inst['cloud']['cloud']],
             ["Cloud ID", inst['cloud']['id']],
+            ["Group Name", group_name],
             ["State", inst['cloud']['state']],
             ["Image Id", inst['cloud']['image_id']],
             ["Image", inst['cloud']['image']],
@@ -491,7 +497,7 @@
             ["Owner", inst['db']['owner']],
             ["Fork", ("fork" in inst['db']) ? inst['db']['fork'] : ""],
             ["Branch", ("branch" in inst['db']) ? inst['db']['branch'] : ""],
-            ["Date Created", inst['db']['date']],
+            ["Date Created", inst['db']['date'] || inst['cloud']['launch_date']],
             ["Comments", (inst['db']['comments']) ? inst['db']['comments'].replace("\n", "<br>") : ""]
         ];
 
@@ -504,7 +510,8 @@
         var cloud_state = inst['cloud']['state'];
         if (cloud_state !== 'terminated' && cloud_state !== 'shutting-down' && cloud_state !== 'pending') {
             actions_data = [
-                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate " + inst_name + "?", function (yes_function) { return terminate_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]
+                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate " + inst_name + "?", function (yes_function) { return terminate_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)],
+                ["Terminate Group", wrap_modal_with_td("Are you sure you want to terminate " + group_name + "?", function (yes_function) { return terminate_group(yes_function, group_name);}, [], undefined, group_name)]
             ];
 
              if (cloud_state === "running") {
@@ -556,22 +563,47 @@
     // Instance actions and API's to the backend
     function start_instance(always_function, cloud, instance_id) {
         var data = {};
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/start?get_new_data=true", type: "POST", data: data})
-            .done(rewrite_all_tables)
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/start?get_new_data=true&async=true", type: "POST", data: data})
+            .done(function(result) {
+                rewrite_all_tables(result);
+                success_modal('Your instance is being started.<br>Please refresh the page to see the changes in a few seconds.')
+            })
             .fail(exception_modal)
             .always(always_function);
     }
     function stop_instance(always_function, cloud, instance_id) {
         var data = {};
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/stop?get_new_data=true", type: "POST", data: data})
-            .done(rewrite_all_tables)
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/stop?get_new_data=true&async=true", type: "POST", data: data})
+            .done(function(result) {
+                rewrite_all_tables(result);
+                success_modal('Your instance is being stopped.<br>Please refresh the page to see the changes in a few seconds.')
+            })
             .fail(exception_modal)
             .always(always_function);
     }
     function terminate_instance(always_function, cloud, instance_id) {
         console.log("terminating " + instance_id);
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/delete?get_new_data=true", type: "POST", data: {}})
-            .done(rewrite_all_tables)
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/delete?get_new_data=true&async=true", type: "POST", data: {}})
+            .done(function(result) {
+                rewrite_all_tables(result);
+                success_modal('Your instance is being terminated.<br>Please refresh the page to see the changes in a few seconds.')
+            })
+            .fail(exception_modal)
+            .always(always_function);
+    }
+    function terminate_group(always_function, group_name) {
+        console.log("terminating " + group_name);
+        $.ajax({
+            url: "/api/groups/delete?get_new_data=true&async=true",
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: JSON.stringify({'group_name': group_name})
+        })
+            .done(function(result) {
+                rewrite_all_tables(result);
+                success_modal('Your test group is being terminated.<br>Please refresh the page to see the changes in a few seconds.')
+            })
             .fail(exception_modal)
             .always(always_function);
     }
@@ -595,6 +627,7 @@
         data['config'] = {};
         data['config']["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
         data['config']["empty"] = $("#new_vm_empty_server")[0].checked;
+        data['config']["post_script"] = $("#new_vm_postscript").val()
         data['config']["adapters"] = $("#new_vm_adapters_options option:selected").map(function () {
             return $(this).text();
         }).get();
@@ -614,29 +647,22 @@
             // No need to put a key to an image.
         }
 
-        counter = 60;
-        $("#new_instance_modal_add_button").prop("disabled", true).text(counter);
-        var interval = setInterval(function() {
-            counter--;
-            $("#new_instance_modal_add_button").text(counter);
-            if (counter === 0){
-                clearInterval(interval);
-            }
-        }, 1000)
-
+        $("#new_instance_modal_add_button").prop("disabled", true).text('Loading..');
         $.ajax(
             {
-                url: "/api/instances?get_new_data=true",
+                url: "/api/instances?get_new_data=true&async=true",
                 type: "POST",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 data: JSON.stringify(data)
             }
             )
-            .done(rewrite_all_tables)
+            .done(function(result) {
+                rewrite_all_tables(result);
+                success_modal('Your instance is being created.<br>Please refresh the page to see the changes in a few seconds.')
+            })
             .fail(exception_modal)
             .always(function() {
-                clearInterval(interval);
                 $("#new_instance_modal").modal("hide");
                 $("#new_instance_modal_add_button").text("Add");
                 $("#new_instance_modal_add_button").prop("disabled", false)
@@ -645,14 +671,20 @@
     function disable_bot_monitoring(always_function, cloud, instance_id) {
         console.log("Disabling bot monitoring for " + instance_id);
         $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/bot_monitoring?get_new_data=true", type: "POST", data: {'status': false}})
-            .done(rewrite_all_tables)
+            .done(function(result) {
+                rewrite_all_tables(result);
+                success_modal('You have disabled bot monitoring.<br>Please refresh the page to see the changes in a few seconds.')
+            })
             .fail(exception_modal)
             .always(always_function);
     }
     function enable_bot_monitoring(always_function, cloud, instance_id) {
         console.log("Enabling bot monitoring for " + instance_id);
         $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/bot_monitoring?get_new_data=true", type: "POST", data: {'status': true}})
-            .done(rewrite_all_tables)
+            .done(function(result) {
+                rewrite_all_tables(result);
+                success_modal('You have enabled bot monitoring.<br>Please refresh the page to see the changes in a few seconds.')
+            })
             .fail(exception_modal)
             .always(always_function);
     }
@@ -769,85 +801,44 @@
             empty_server_checkbox(true)
         }
     }
-    function new_instance_modal_fork_change(fork_name, page_number) {
-        var select = $("#new_vm_branch");
-        if (page_number === 1) {
-            select.html("");
-        }
+    function new_instance_modal_fork_change(fork_name) {
+        var select = $("#new_vm_branch").html("");
         $.ajax({
-            url: "https://api.github.com/repos/" + fork_name + "/branches?page=" + page_number,
+            url: "/api/github/branches?fork=" + fork_name,
             type: "GET",
-            beforeSend: function (xhr) {
-                var token_hash = "Basic " + btoa(github_token);
-                xhr.setRequestHeader('Authorization', token_hash);
-            }
         }).done(function (data) {
-            data.forEach(function (i) {
-                if (i.name == "develop"){
-                    select.append($("<option selected>").attr("value", i.name).text(i.name));
+            data['branches'].forEach(function (i) {
+                if (i === "develop"){
+                    select.append($("<option selected>").attr("value", i).text(i));
                 }
                 else {
-                    select.append($("<option>").attr("value", i.name).text(i.name));
+                    select.append($("<option>").attr("value", i).text(i));
                 }
             });
 
-            if (data.length !== 0) {
-                new_instance_modal_fork_change(fork_name, page_number + 1);
-            }
-            else {
-                new_instance_modal_branch_change($("#new_vm_branch").val());
-            }
-        })
-            .fail(exception_modal)
+            new_instance_modal_branch_change($("#new_vm_branch").val(), fork_name);
+        }).fail(exception_modal)
     }
     function new_instance_modal_branch_change(branch_name, fork_name) {
-        if (typeof fork_name === 'undefined') {
-            fork_name = $('#new_vm_fork').val();
+        if (fork_name == undefined) {
+            fork_name = $("#new_vm_fork").val()
         }
-
         var select = $("#new_vm_adapters_options").html("");
 
         select.append($("<option>").attr("value", "ALL").text("ALL"));
-        $.ajax({url: "https://api.github.com/repos/" + fork_name + "/contents/testing/services/adapters?ref=" + branch_name,
-            type: "GET",
-            beforeSend: function (xhr) {
-                var token_hash = "Basic " + btoa(github_token);
-                xhr.setRequestHeader('Authorization', token_hash);
-            }})
-            .done(function(data) {
-                data.forEach(function (i) {
-                    if (i.name !== "__init__.py") {
-                        let option_name = i.name.substring(0, i.name.length - "_service.py".length);
-                        select.append($("<option>").attr("value", option_name).text(option_name));
-                    }
+        $.ajax({url: "/api/github/adapters?fork=" + fork_name + "&branch=" + branch_name, type: "GET"}).done(
+            function(data) {
+                data['adapters'].forEach(function (i) {
+                    select.append($("<option>").attr("value", i).text(i));
                 });
             })
             .fail(exception_modal)
     }
     function empty_server_checkbox(is_empty_server) {
         $("#new_vm_adapters_options").prop("disabled", is_empty_server);
-        $("#new_vm_set_credentials").prop("disabled", is_empty_server);
+        $("#new_vm_set_credentials").attr('checked', false).prop("disabled", is_empty_server);
     }
-    function load_release_list(page_number) {
-        var select = $("#new_vm_release");
 
-        $.ajax({url: "https://api.github.com/repos/axonius/cortex/tags?page=" + page_number,
-            type: "GET",
-            beforeSend: function (xhr) {
-                var token_hash = "Basic " + btoa(github_token);
-                xhr.setRequestHeader('Authorization', token_hash);
-            }})
-            .done(function(data) {
-                data.forEach(function (i) {
-                        select.append($("<option>").attr("value", i.name).text(i.name));
-                });
-
-                if (data.length !== 0) {
-                    load_release_list(page_number + 1);
-                }
-            })
-            .fail(exception_modal)
-    }
     function load_ami_list(exports_data) {
         var select = $("#new_vm_image");
 
@@ -860,23 +851,7 @@
             }
         });
     }
-    function load_fork_list() {
-        var select = $("#new_vm_fork").html("");
-        select.append($("<option>").attr("value", "axonius/cortex").text("axonius/cortex"));
-        $.ajax({url: "https://api.github.com/repos/axonius/cortex/forks",
-            type: "GET",
-            beforeSend: function (xhr) {
-                var token_hash = "Basic " + btoa(github_token);
-                xhr.setRequestHeader('Authorization', token_hash);
-            }})
-            .done(function(data) {
-                data.forEach(function (i) {
-                    select.append($("<option>").attr("value", i.full_name).text(i.full_name));
-                });
 
-                new_instance_modal_change_configuration_code(0);
-            }).fail(exception_modal)
-    }
     function chooseCloud(cloud){
         console.log(cloud)
         if (cloud === 'aws') {
@@ -1006,10 +981,43 @@
         }
     }
 
+    function load_source_control_general() {
+        var fork_select = $("#new_vm_fork").html("");
+        fork_select.append($("<option>").attr("value", "axonius/cortex").text("axonius/cortex"));
+
+        var branch_select = $("#new_vm_branch").html("");
+        branch_select.append($("<option>").attr("value", "develop").text("develop"));
+
+        var release_select = $("#new_vm_release").html("");
+
+        $.ajax({url: "/api/github", type: "GET"}).done(function(data)
+        {
+            data['forks'].forEach(
+                function (i) {
+                    fork_select.append($("<option>").attr("value", i).text(i));
+                }
+                );
+
+            data['branches'].forEach(
+                function (i) {
+                    if (i != 'develop') {
+                        branch_select.append($("<option>").attr("value", i).text(i));
+                    }
+                }
+                );
+
+            data['tags'].forEach(
+                function (i) {
+                    release_select.append($("<option>").attr("value", i).text(i));
+                }
+                );
+        }
+        ).fail(exception_modal)
+    }
+
     $(document).ready(function() {
-        load_fork_list();
-        new_instance_modal_fork_change('axonius/cortex', 1);
-        load_release_list(1);
+        load_source_control_general()
+        new_instance_modal_branch_change('develop', 'axonius/cortex')
 
         // initialize datatables.
         if (window.location.hash === "") {

@@ -1,24 +1,31 @@
 """A minimal http server for CI purpouses; Allows you to view and control your current machines and docker images."""
 import datetime
+import time
 import traceback
 import os
 import json
 
 from functools import wraps
 
+from retrying import retry
+
+import tasks
+
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from flask_dance.contrib.slack import make_slack_blueprint, slack
 from flask_dance.consumer import oauth_authorized
 from bson import ObjectId
+
+from config import TOKENS_PATH, CREDENTIALS_PATH
 from slacknotifier import SlackNotifier
-from instancemonitor import MONITORING_BOT_METADATA_NAMESPACE, InstanceMonitor, SHOULD_DELETE_OLD_MESSAGES
+from instancemonitor import MONITORING_BOT_METADATA_NAMESPACE, SHOULD_DELETE_OLD_MESSAGES
 from buildsmanager import BuildsManager, LOCAL_BUILDS_HOST
+from github import Github
 
 DEFAULT_CLOUD = 'gcp'
 
-CREDENTIALS_PATH = os.path.join('..', 'credentials.json')
-TOKENS_PATH = os.path.join('..', 'tokens.json')
 SESSION_SECRET_KEY_PATH = os.path.join('..', 'secret.txt')
+TIME_TO_SLEEP_BEFORE_ASYNC_RESPONSE = 0    # we wait for async response that require real-time data
 
 
 class BuildsSettings:
@@ -43,8 +50,12 @@ class BuildsSettings:
 
 class BuildsContext:
     def __init__(self):
-        self.bm = BuildsManager(CREDENTIALS_PATH, bypass_token=settings.bypass_token)
-        self.st = SlackNotifier(settings.credentials['slack']['data']['workspace_app_bot_api_token'], 'builds')
+        self.bm = BuildsManager()
+        self.st = SlackNotifier()
+        self.github = Github(
+            settings.credentials['github']['data']['username'],
+            settings.credentials['github']['data']['password']
+        )
 
 
 def prepare_flask():
@@ -107,9 +118,10 @@ mkdir -p $HOME_DIRECTORY
 LOG_FILE=$HOME_DIRECTORY"install.log"
 exec 1>$LOG_FILE 2>&1
 echo prepend domain-name-servers 192.168.20.4\; >> /etc/dhcp/dhclient.conf
-echo prepend domain-search \"axonius.lan\"\; >> /etc/dhcp/dhclient.conf
+echo prepend domain-search \\"axonius.lan\\"\; >> /etc/dhcp/dhclient.conf
 dhclient -v
 {install_system_line}
+{post_script}
 chown -R ubuntu:ubuntu $HOME_DIRECTORY
 """
 
@@ -251,12 +263,16 @@ def instances():
         config = data.get('config') or {}
 
         config_code = None
+        post_script = config.get('post_script') or ''
         if instance_image is None:
             if config.get('empty') is True:
-                config_code = STARTUP_SCRIPT_TEMPLATE.format(install_system_line='')
+                config_code = STARTUP_SCRIPT_TEMPLATE.format(install_system_line='', post_script=post_script)
 
             elif config.get('custom_code'):
-                config_code = STARTUP_SCRIPT_TEMPLATE.format(install_system_line=config.get('custom_code'))
+                config_code = STARTUP_SCRIPT_TEMPLATE.format(
+                    install_system_line=config.get('custom_code'),
+                    post_script=post_script
+                )
 
             else:
                 adapters = config['adapters']
@@ -274,12 +290,12 @@ def instances():
                     set_credentials=config.get('set_credentials', 'false'),
                     include=include, exclude=exclude,
                     run_cycle=False,
-                    system_up_params='--prod')
+                    system_up_params='--prod'), post_script=post_script
                 )
 
         user_auth = (session['builds_user_full_name'], session['builds_user_id'])
 
-        generic, group_name = context.bm.add_instances(
+        task = tasks.add_instances.delay(
             instance_cloud,
             vm_type,
             instance_name,
@@ -293,20 +309,21 @@ def instances():
             config.get('fork'),
             config.get('branch')
         )
-
-        if instance_image is not None:
-            for instance_generic in generic:
-                instance_id = instance_generic['id']
-                context.st.post_channel(
-                    f'owner "{session["builds_user_full_name"]}" has raised an instance that will be connected to chef.',
-                    channel='test_machines',
-                    attachments=[InstanceMonitor.get_instance_attachment(
-                        context.bm.get_instances(instance_cloud, instance_id)[0], [])])
+        result = dict()
+        is_async = request.args.get('async') and request.args.get('async').lower() == 'true'
+        if is_async:
+            result['action_id'] = task.id
+            task.forget()
+        else:
+            generic, group_name = task.get()
+            result.update({'instances': generic, 'group_name': group_name})
 
         if request.args.get('get_new_data') and request.args.get('get_new_data').lower() == 'true':
-            return jsonify({'result': context.bm.get_instances(), 'instances': generic, 'group_name': group_name})
-        else:
-            return jsonify({'instances': generic, 'group_name': group_name})
+            if is_async:
+                time.sleep(TIME_TO_SLEEP_BEFORE_ASYNC_RESPONSE)
+            result['result'] = context.bm.get_instances()
+
+        return jsonify(result)
 
 
 @app.route("/api/instances/<cloud>", methods=['GET', 'DELETE', 'POST'])
@@ -326,20 +343,20 @@ def instance(cloud, instance_id):
 def instance_action(cloud, instance_id, action):
     """Get information about instance and provide actions on it."""
     if action == 'delete':
-        context.bm.terminate_instance(cloud=cloud, instance_id=instance_id)
+        task = tasks.terminate_instance.delay(cloud=cloud, instance_id=instance_id)
 
     elif action == 'start':
-        context.bm.start_instance(cloud=cloud, instance_id=instance_id)
+        task = tasks.start_instance.delay(cloud=cloud, instance_id=instance_id)
 
     elif action == 'stop':
-        context.bm.stop_instance(cloud=cloud, instance_id=instance_id)
+        task = tasks.stop_instance.delay(cloud=cloud, instance_id=instance_id)
 
     elif action == 'bot_monitoring':
         instance_data = context.bm.get_instances(cloud=cloud, instance_id=instance_id)[0]
         owner = instance_data['db']['owner']
         instance_name = instance_data['db']['name']
 
-        status = context.bm.change_bot_monitoring_status(cloud, instance_id, request.form["status"])
+        context.bm.change_bot_monitoring_status(cloud, instance_id, request.form["status"])
 
         if request.form['status'] == 'false':
             word = 'disabled'
@@ -348,15 +365,28 @@ def instance_action(cloud, instance_id, action):
 
         context.st.post_channel(
             f'owner "{owner}" has *{word}* bot monitoring for instance "{instance_name}"',
-            attachments=[InstanceMonitor.get_instance_attachment(instance_data, [])]
+            attachments=[context.st.get_instance_attachment(instance_data, [])]
         )
+        task = None
     else:
         raise ValueError('Not supported')
 
+    result = dict()
+    is_async = request.args.get('async') and request.args.get('async').lower() == 'true'
+    if task:
+        if is_async:
+            result['action_id'] = task.id
+            task.forget()
+        else:
+            action_result = task.get()
+            result.update({'action': action_result})
+
     if request.args.get('get_new_data') and request.args.get('get_new_data').lower() == 'true':
-        return jsonify({'result': context.bm.get_instances(), 'action': True})
-    else:
-        return jsonify({'action': True})
+        if is_async and task:
+            time.sleep(TIME_TO_SLEEP_BEFORE_ASYNC_RESPONSE)
+        result['result'] = context.bm.get_instances()
+
+    return jsonify(result)
 
 
 # This is not authorized on purpose
@@ -373,7 +403,7 @@ def instance_update_state(cloud, instance_id):
     vm_state = instance_data['cloud']['state']
     last_message_channel = instance_data['db'].get('monitoring_bot', {}).get('bot_last_message_channel')
     last_message_ts = instance_data['db'].get('monitoring_bot', {}).get('bot_last_message_ts')
-    attachment = InstanceMonitor.get_instance_attachment(instance_data, [])
+    attachment = context.st.get_instance_attachment(instance_data, [])
 
     try:
         if last_message_channel and last_message_ts and SHOULD_DELETE_OLD_MESSAGES:
@@ -398,14 +428,14 @@ def instance_update_state(cloud, instance_id):
                 context.st.post_user(owner_slack_id, f'Can not stop your instance, it is not running!.',
                                      attachments=[attachment])
             else:
-                context.bm.stop_instance(cloud, instance_id)
+                tasks.stop_instance.delay(cloud, instance_id).forget()
                 context.st.post_user(owner_slack_id, f'Ok, I\'m *stopping* it.', attachments=[attachment])
         elif state == 'terminate':
             if vm_state not in ['running', 'stopping', 'stopped']:
                 context.st.post_user(owner_slack_id, f'Can not terminate your instance, it is not there anymore!',
                                      attachments=[attachment])
             else:
-                context.bm.terminate_instance(cloud, instance_id)
+                tasks.terminate_instance.delay(cloud, instance_id).forget()
                 context.st.post_user(owner_slack_id, f'Ok, I\'m *terminating* it.', attachments=[attachment])
 
     except Exception as e:
@@ -424,7 +454,21 @@ def instance_update_state(cloud, instance_id):
 @authorize
 def delete_groups():
     group_name = request.get_json()['group_name']
-    return jsonify({'result': context.bm.terminate_group(group_name)})
+    task = tasks.terminate_group.delay(group_name)
+    json_result = dict()
+
+    is_async = request.args.get('async') and request.args.get('async').lower() == 'true'
+    if is_async:
+        json_result['action_id'] = task.id
+        task.forget()
+    else:
+        json_result['terminate'] = task.get()
+
+    if request.args.get('get_new_data') and request.args.get('get_new_data').lower() == 'true':
+        if is_async:
+            time.sleep(TIME_TO_SLEEP_BEFORE_ASYNC_RESPONSE)
+        json_result['result'] = context.bm.get_instances()
+    return jsonify(json_result)
 
 
 @app.route('/api/install', methods=['GET'])
@@ -452,6 +496,45 @@ def get_install_demo_script():
 
     return INSTALL_DEMO_SCRIPT.format(fork=fork, branch=branch, set_credentials=set_credentials,
                                       install_params=opt_params, run_cycle=str(run_cycle))
+
+
+@app.route('/api/github')
+@authorize
+@retry(stop_max_attempt_number=2, wait_fixed=100)
+def github_get_general_data():
+    main_repo = context.github.get_repo('axonius/cortex')
+
+    return jsonify({
+        'branches': [branch.name for branch in main_repo.get_branches()],
+        'tags': [tag.name for tag in main_repo.get_tags()],
+        'forks': [repo.full_name for repo in main_repo.get_forks()]
+    })
+
+
+@app.route('/api/github/branches')
+@authorize
+@retry(stop_max_attempt_number=2, wait_fixed=100)
+def github_get_branches_for_fork():
+    main_repo = context.github.get_repo(request.args['fork'])
+    return jsonify({
+        'branches': [branch.name for branch in main_repo.get_branches()]
+    })
+
+
+@app.route('/api/github/adapters')
+@authorize
+@retry(stop_max_attempt_number=2, wait_fixed=100)
+def github_get_adapters_for_branch():
+    fork = request.args['fork']
+    branch = request.args['branch']
+
+    adapters = [
+        file.path.split('/')[-1].replace('_service.py', '') for file in
+        context.github.get_repo(fork).get_contents('testing/services/adapters', branch)
+        if '__init__' not in file.path.lower()
+    ]
+
+    return jsonify({'adapters': adapters})
 
 
 @app.after_request

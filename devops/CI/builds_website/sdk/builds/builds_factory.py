@@ -25,10 +25,11 @@ BUILDS_AUTH_TOKEN = 'c9129428-1973-45e2-94e2-8cca92a31350'
 BUILDS_URL = 'builds-local.axonius.lan' if 'BUILDS_HOST' not in os.environ else os.environ['BUILDS_HOST']
 DAILY_EXPORT_SUFFIX = '_daily_export'
 
-SSH_NETWORK_TIMEOUT = 60 * 120  # some commands are really long...
+SSH_NETWORK_TIMEOUT = 60 * 90  # some commands are really long...
 TIME_TO_WAIT_BETWEEN_SSH_CONNECT_TRIES = 5
 MAX_SSH_TRIES = 60
 MAX_TIMEOUT_FOR_TRANSFERS = 60 * 10
+SSH_BUFFER_SIZE = 100   # We read in these chunks. In case of a timeout, we lose the last chunk.
 
 
 def debug_print(print_str):
@@ -114,12 +115,12 @@ class BuildsInstance(BuildsAPI):
         self.debug_print('Connected via SSH.')
         self.initialized = True
 
-    def ssh(self, command, quiet=True):
+    def ssh(self, command, quiet=True, timeout=None):
         """
         Runs a command and returns its output. not interactive.
         :param quiet: Should not write debug print.
         :param command: the command.
-        :param environment: optional environment
+        :param timeout: optional timeout for command
         :return: (stdout, stderr).
         """
         assert self.initialized, 'Instance is not initialized, please use wait_for_ssh'
@@ -127,14 +128,25 @@ class BuildsInstance(BuildsAPI):
         if not quiet:
             self.debug_print('Running ssh: {0}'.format(command))
 
-        chan = self.sshc.get_transport().open_session(timeout=SSH_NETWORK_TIMEOUT)
+        chan = self.sshc.get_transport().open_session(timeout=timeout or SSH_NETWORK_TIMEOUT)
         chan.set_combine_stderr(True)
-        chan.settimeout(SSH_NETWORK_TIMEOUT)
+        chan.settimeout(timeout or SSH_NETWORK_TIMEOUT)
         stdout = chan.makefile()
         chan.exec_command(command)
-        output = stdout.read()
+        output = b''
+
+        try:
+            while True:
+                current = stdout.read(SSH_BUFFER_SIZE)
+                if not current:
+                    break
+                output += current
+            rc = chan.recv_exit_status()
+        except Exception:
+            # Timeout
+            rc = -1
+
         output = output.strip().decode('utf-8')
-        rc = chan.recv_exit_status()
         return rc, output
 
     def get_file(self, file_path):
@@ -250,7 +262,7 @@ class Builds(BuildsAPI):
 
     @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def terminate_group(self, group_name):
-        self.post(f'groups/delete', json_data={'group_name': group_name})
+        self.post(f'groups/delete?async=true', json_data={'group_name': group_name})
 
     def terminate_all(self):
         for group in self.groups:

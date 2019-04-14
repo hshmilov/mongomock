@@ -3,6 +3,7 @@ import string
 import time
 from typing import Dict, List
 
+import dateutil
 import libcloud
 import libcloud.compute.drivers.gce
 from libcloud.compute.base import Node
@@ -43,7 +44,8 @@ class GCPComputeManager:
             'type': node.extra['machineType'].split('/')[-1],
             'private_ip': node.private_ips[0],
             'state': node.state,
-            'tags': node.extra['labels']
+            'tags': node.extra['labels'],
+            'launch_date': dateutil.parser.parse(node.extra['creationTimestamp'])
         }
 
         if node.public_ips:
@@ -52,9 +54,13 @@ class GCPComputeManager:
         all_ips = node.private_ips + node.public_ips
         for ip in all_ips:
             for subnetwork_name, subnetwork_cidr in self.subnet_name_to_cidr.items():
-                if ipaddress.ip_address(ip) in ipaddress.ip_network(subnetwork_cidr):
-                    result['subnet'] = subnetwork_name
-                    break
+                try:
+                    if ipaddress.ip_address(ip) in ipaddress.ip_network(subnetwork_cidr):
+                        result['subnet'] = subnetwork_name
+                        break
+                except Exception:
+                    # In 'pending' state sometimes the ips are invalid.
+                    pass
 
         return result
 
@@ -75,7 +81,8 @@ class GCPComputeManager:
     ):
         assert not (is_public and num != 1), 'Does not support multiple public instances'
         name = ''.join(c if c in APPROVED_NODE_CHARACTERS else '-' for c in name.lower()) + \
-               '-' + str(round(time.time()))[:60]
+               '-' + str(round(time.time()))
+        name = name[:55]
         external_ip = None
         tags = None
         if is_public:

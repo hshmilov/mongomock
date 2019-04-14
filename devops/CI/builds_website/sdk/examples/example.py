@@ -24,7 +24,7 @@ def main():
     print(f'Latest exports: ')
     print(bo.get_last_exports())
     try:
-        instances, group_name = bo.create_instances(f'Test GCP', 'n1-standard-2', 5)
+        instances, group_name = bo.create_instances(f'Test GCP', 'n1-standard-2', 1)
         print(f'Created group name {group_name}')
         for instance in instances:
             instance.wait_for_ssh()

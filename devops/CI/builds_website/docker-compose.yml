@@ -11,6 +11,9 @@ services:
             - "/home/ubuntu/.secrets/credentials.json:/home/axonius/credentials.json:ro"
             - "/home/ubuntu/.secrets/tokens.json:/home/axonius/tokens.json:ro"
         restart: always
+        depends_on:
+            - mongo
+            - redis
         logging:
             driver: "json-file"
             options:
@@ -30,6 +33,16 @@ services:
             - MONGO_INITDB_ROOT_PASSWORD=cqNLLfvQetvFog9y3iqi
         volumes:
             - "builds_db:/data/db"
+
+    redis:
+        image: redis
+        restart: always
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "500M"
+                max-file: "10"
+
 
 volumes:
     builds_db:

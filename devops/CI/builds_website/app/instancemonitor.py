@@ -1,17 +1,18 @@
 import sys
 import time
 import json
+from collections import defaultdict
 
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
-from slacknotifier import SlackNotifier
-from buildsmanager import BuildsManager, EXTERNAL_BUILDS_HOST
+from slacknotifier import SlackNotifier, get_vm_type_from_instance
+from buildsmanager import BuildsManager
+from config import EXTERNAL_BUILDS_HOST, CREDENTIALS_PATH
 
 CYCLE_MINUTES = 20     # run a cycle to check on instances state every 1 hour
 SHOULD_DELETE_OLD_MESSAGES = False  # Do we want to remove old messages like a notice, after an action has been made?
 
 MONITORING_BOT_METADATA_NAMESPACE = 'monitoring_bot'
-CREDENTIALS_PATH = 'credentials.json'
 
 REGULAR_SHUTDOWN_TIMES = {
     'first_notice': timedelta(days=1),
@@ -23,39 +24,20 @@ REGULAR_TERMINATE_TIMES = {
     'action': timedelta(days=4)
 }
 
-TEST_SHUTDOWN_TIMES = {
-    'first_notice': timedelta(hours=2, minutes=30),
-    'action': timedelta(hours=2, minutes=40)
-}
-
-TEST_TERMINATE_TIMES = {
-    'first_notice': timedelta(hours=3),
-    'action': timedelta(hours=3, minutes=10)
-}
-
-
-def get_vm_type_from_instance(instance):
-    if instance['db'].get('vm_type'):
-        return instance['db'].get('vm_type')
-    else:
-        instance_tags = instance['cloud'].get('tags') or {}
-        if instance_tags.get('VM-Type'):
-            return instance_tags.get('VM-Type')
-        elif instance_tags.get('vm-type'):
-            return instance_tags.get('vm-type')
-
-    raise ValueError(f'Can not determinte vm_type')
+MAX_TEST_GROUP_TIME = timedelta(hours=2, minutes=30)
 
 
 class InstanceMonitor:
     def __init__(self):
         with open(CREDENTIALS_PATH, 'rt') as f:
             self.credentials = json.loads(f.read())
-        self.slack_notifier = SlackNotifier(self.credentials['slack']['data']['workspace_app_bot_api_token'], 'builds')
-        self.builds_manager = BuildsManager(CREDENTIALS_PATH)
+        self.slack_notifier = SlackNotifier()
+        self.builds_manager = BuildsManager()
 
     def run_cycle(self):
         print(f'[{datetime.now()}] Running a cycle')
+        all_exceptions = ''
+        test_groups = defaultdict(list)
         for instance in self.builds_manager.get_instances():
             try:
                 vm_state = instance['cloud']['state']
@@ -65,88 +47,63 @@ class InstanceMonitor:
                 if bot_monitoring != 'false' and 'demo' not in vm_type and 'saas' not in vm_type \
                         and vm_state in ['running', 'stopped']:
                     if 'test' in vm_type:
-                        self.handle_instance(instance, TEST_SHUTDOWN_TIMES, TEST_TERMINATE_TIMES)
-                    else:
+                        test_groups[instance['db']['group_name']].append(instance)
+                    elif 'builds-vm' in vm_type:
                         self.handle_instance(instance, REGULAR_SHUTDOWN_TIMES, REGULAR_TERMINATE_TIMES)
+                    else:
+                        raise ValueError(f'Unknown vm type {vm_type}')
 
             except Exception as e:
                 print(f'Exception {repr(e)}')
-                self.slack_notifier.post_channel(f'Exception while handling instance {instance}: {repr(e)}')
+                all_exceptions += f'Exception while handling instance {instance}: {repr(e)}\n'
 
-    @staticmethod
-    def get_instance_attachment(instance, action_buttons):
-        attachment = {
-            'title': f'{instance["db"]["name"]} - {instance["cloud"]["private_ip"]}',
-            'title_link': f'https://{instance["cloud"]["private_ip"]}',
-            'color': '#fd662c',
-            'fields': [
-                {
-                    'title': 'State',
-                    'value': f'{instance["cloud"]["state"]}',
-                    'short': 'True'
-                },
-                {
-                    'title': 'Tier',
-                    'value': get_vm_type_from_instance(instance) + f' - {instance["cloud"]["cloud"]}',
-                    'short': 'True'
-                },
-                {
-                    'title': 'Instance Type',
-                    'value': f'{instance["cloud"]["type"]}',
-                    'short': 'True'
-                },
-                {
-                    'title': 'Date Created',
-                    'value': f'{instance["db"]["date"]}',
-                    'short': 'True'
-                },
-            ]
-        }
-
-        if action_buttons:
-            attachment['actions'] = []
-
-            cloud_id = instance['cloud']['id']
-            cloud_name = instance['cloud']['cloud']
-
-            if 'keep' in action_buttons:
-                attachment['actions'].append(
-                    {
-                        'type': 'button',
-                        'text': 'Yes, please keep it',
-                        'url': f'https://{EXTERNAL_BUILDS_HOST}/api/instances/{cloud_name}/{cloud_id}/update_state?state=keep',
-                        'style': 'default'
-                    }
-                )
-
-            if 'shutdown' in action_buttons:
-                attachment['actions'].append(
-                    {
-                        'type': 'button',
-                        'text': 'Yes, but please shut it down',
-                        'url': f'https://{EXTERNAL_BUILDS_HOST}/api/instances/{cloud_name}/{cloud_id}/update_state?state=shutdown',
-                        'style': 'default'
-                    },
-                )
-
-            if 'terminate' in action_buttons:
-                attachment['actions'].append(
-                    {
-                        'type': 'button',
-                        'text': 'No, please terminate it',
-                        'url': f'https://{EXTERNAL_BUILDS_HOST}/api/instances/{cloud_name}/{cloud_id}/update_state?state=terminate',
-                        'style': 'primary',
-                        'confirm':
+        for test_group_name, test_group_instances in test_groups.items():
+            try:
+                first_instance_launch_time = test_group_instances[0]['cloud']['launch_date'].astimezone(timezone.utc)
+                already_running = datetime.now().astimezone(timezone.utc) - first_instance_launch_time
+                delta = already_running - MAX_TEST_GROUP_TIME
+                if delta > timedelta(0):
+                    self.slack_notifier.post_channel(
+                        f'Test group {test_group_name} is running too much and is probably hanging, '
+                        f'I\'m terminating it.',
+                        attachments=[
                             {
-                                'title': 'Are you sure?',
-                                'text': 'Are you sure you would like to terminate this instance?',
-                                'ok_text': 'Yes',
-                                'dismiss_text': 'No'
+                                'title': test_group_name,
+                                'title_link': f'https://{EXTERNAL_BUILDS_HOST}/#auto_tests',
+                                'color': '#fd662c',
+                                'fields': [
+                                    {
+                                        'title': 'Running time',
+                                        'value': str(already_running),
+                                        'short': 'True'
+                                    },
+                                    {
+                                        'title': 'Number of instances',
+                                        'value': len(test_group_instances),
+                                        'short': 'True'
+                                    }
+                                ]
                             }
-                    }
-                )
+                        ]
+                    )
+                    self.builds_manager.terminate_group(test_group_name)
 
-        return attachment
+            except Exception as e:
+                print(f'Exception {repr(e)}')
+                all_exceptions += f'Exception while handling test group {test_group_name} {test_group_instances}: ' \
+                    f'{repr(e)}\n'
+
+        if all_exceptions:
+            self.slack_notifier.post_channel(
+                '',
+                attachments=[
+                    {
+                        'title': f'Exceptions in instance monitor',
+                        'color': '#fd662c',
+                        'text': str(all_exceptions),
+                    }
+                ]
+            )
 
     def handle_instance(self, instance, shutdown_times, terminate_times):
         instance_name = instance['db']['name']
@@ -170,10 +127,11 @@ class InstanceMonitor:
                 result = self.slack_notifier.post_user(
                     owner_slack_id,
                     'Your instance has been stopped (but not terminated).',
-                    attachments=[self.get_instance_attachment(instance, [])],
+                    attachments=[self.slack_notifier.get_instance_attachment(instance, [])],
                 )
                 self.slack_notifier.post_channel(f'Instance "{instance_name}" of user "{owner}" has been stopped.',
-                                                 attachments=[self.get_instance_attachment(instance, [])])
+                                                 attachments=[
+                                                     self.slack_notifier.get_instance_attachment(instance, [])])
                 self.builds_manager.stop_instance(cloud_name, cloud_id)
                 new_state = 'stopped'
 
@@ -182,7 +140,8 @@ class InstanceMonitor:
                 result = self.slack_notifier.post_user(
                     owner_slack_id,
                     f'Hi! Do you need your running instance?',
-                    attachments=[self.get_instance_attachment(instance, ['keep', 'shutdown', 'terminate'])]
+                    attachments=[
+                        self.slack_notifier.get_instance_attachment(instance, ['keep', 'shutdown', 'terminate'])]
                 )
                 new_state = 'stop_notice'
 
@@ -194,10 +153,11 @@ class InstanceMonitor:
                 result = self.slack_notifier.post_user(
                     owner_slack_id,
                     'This is the last notice. Please terminate your instance.',
-                    attachments=[self.get_instance_attachment(instance, [])],
+                    attachments=[self.slack_notifier.get_instance_attachment(instance, [])],
                 )
                 self.slack_notifier.post_channel(f'Instance "{instance_name}" of user "{owner}" should be terminated.',
-                                                 attachments=[self.get_instance_attachment(instance, [])])
+                                                 attachments=[
+                                                     self.slack_notifier.get_instance_attachment(instance, [])])
                 # We never actually terminate instances.
                 new_state = 'terminated'
 
@@ -206,7 +166,7 @@ class InstanceMonitor:
                 result = self.slack_notifier.post_user(
                     owner_slack_id,
                     f'Hi! Do you need your stopped instance?',
-                    attachments=[self.get_instance_attachment(instance, ['keep', 'terminate'])]
+                    attachments=[self.slack_notifier.get_instance_attachment(instance, ['keep', 'terminate'])]
                 )
                 new_state = 'terminate_notice'
 
