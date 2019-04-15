@@ -169,11 +169,17 @@ class BuildsManager(object):
             if instance.get('terminated') is not True:
                 instances_by_cloud[instance['cloud']].append(instance['id'])
 
-        for cloud, instances_ids in instances_by_cloud.items():
-            self.bcm.terminate_many_instances(cloud.lower(), instances_ids)
-            for instance_id in instances_ids:
-                self.update_last_user_interaction_time(cloud, instance_id)
-                self.db.instances.update_one({'cloud': cloud, 'id': instance_id}, {'$set': {'terminated': True, }})
+        try:
+            for cloud, instances_ids in instances_by_cloud.items():
+                self.bcm.terminate_many_instances(cloud.lower(), instances_ids)
+                for instance_id in instances_ids:
+                    self.update_last_user_interaction_time(cloud, instance_id)
+                    self.db.instances.update_one({'cloud': cloud, 'id': instance_id}, {'$set': {'terminated': True, }})
+        except AssertionError as e:
+            # This could happen if instances are already in a termination phase.
+            # If instances are still not terminated for any reason, the instance monitor will try to terminate them.
+            if 'not all nodes are terminated' not in str(e).lower():
+                raise
 
         return True
 

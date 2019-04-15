@@ -133,18 +133,9 @@ class BuildsInstance(BuildsAPI):
         chan.settimeout(timeout or SSH_NETWORK_TIMEOUT)
         stdout = chan.makefile()
         chan.exec_command(command)
-        output = b''
 
-        try:
-            while True:
-                current = stdout.read(SSH_BUFFER_SIZE)
-                if not current:
-                    break
-                output += current
-            rc = chan.recv_exit_status()
-        except Exception:
-            # Timeout
-            rc = -1
+        output = stdout.read()
+        rc = chan.recv_exit_status()
 
         output = output.strip().decode('utf-8')
         return rc, output
