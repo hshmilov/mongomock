@@ -80,7 +80,8 @@ echo "Adding ubuntu to the docker group, please note that you must logout and lo
 usermod -aG docker ubuntu
 gpasswd -a ubuntu docker
 echo "Installing weave"
-curl -L git.io/weave -o /usr/local/bin/weave
+cd "$(dirname "$0")"
+cp ./weave-2.5.1 /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 echo "Setting system-wide settings"
 sudo timedatectl set-timezone UTC
@@ -101,7 +102,6 @@ else
     chown netconfig /home/netconfig
     usermod -s /home/netconfig/login netconfig
     echo netconfig:netconfig | /usr/sbin/chpasswd
-    cd "$(dirname "$0")"
     cp ./ip_wizard/login.c /home/netconfig/login.c
     cp ./ip_wizard/login.py /home/netconfig/login.py
     cd /home/netconfig

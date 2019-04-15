@@ -282,7 +282,7 @@ class InstanceManager:
 
             # Start putting artifacts in this folder
             try:
-                current_logs_tar_file_name = f'{command_job_name}_logs.tar'
+                current_logs_tar_file_name = f'{command_job_name}_logs.tar.gz'
                 logs_tar_file_location = os.path.join(
                     ARTIFACTS_DIR_ABSOLUTE, command_job_name, current_logs_tar_file_name)
                 with open(logs_tar_file_location, 'wb') as tar_file_obj:

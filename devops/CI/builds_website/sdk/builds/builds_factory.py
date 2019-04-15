@@ -3,6 +3,7 @@ Does everything.
 """
 import os
 import random
+import socket
 import string
 import sys
 import time
@@ -134,8 +135,17 @@ class BuildsInstance(BuildsAPI):
         stdout = chan.makefile()
         chan.exec_command(command)
 
-        output = stdout.read()
-        rc = chan.recv_exit_status()
+        output = b''
+        try:
+            while True:
+                current = stdout.read(SSH_BUFFER_SIZE)
+                if not current:
+                    break
+                output += current
+            rc = chan.recv_exit_status()
+        except socket.timeout:
+            # Timeout
+            rc = -1
 
         output = output.strip().decode('utf-8')
         return rc, output

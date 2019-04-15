@@ -85,6 +85,11 @@
       "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard"
     },
     {
+      "type": "file",
+      "source": "weave-2.5.1",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.5.1"
+    },
+    {
       "type": "shell",
       "script": "init_host.sh",
       "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
