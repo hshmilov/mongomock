@@ -19,6 +19,7 @@
     "npm": "6.8.0",
     "promise": "8.0.2",
     "vue": "2.6.6",
+    "vue-analytics": "5.16.4",
     "vue-google-charts": "0.3.2",
     "vue-json-tree-view": "2.1.4",
     "vue-material": "1.0.0-beta-10.2",

@@ -4629,6 +4629,32 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             self.request_remote_plugin(f'nodes/tags/{data["node_id"]}', method='DELETE', json={'tags': data['tags']})
             return ''
 
+    @gui_helpers.add_rule_unauth('google_analytics/collect', methods=['GET', 'POST'])
+    def google_analytics_proxy(self):
+        values = dict(request.values)
+        signup_collection = self._get_collection(Signup.SignupCollection)
+        signup = signup_collection.find_one({})
+        if signup:
+            customer = signup.get(Signup.CompanyField, 'signup-not-set')
+        else:
+            customer = 'not-set'
+
+        # referrer
+        values['tid'] = 'UA-137924837-1'
+        values['dr'] = f'https://{customer}'
+        values['dh'] = customer
+        if 'dl' in values:
+            del values['dl']
+
+        response = requests.request(request.method,
+                                    'https://www.google-analytics.com/collect',
+                                    params=values)
+
+        if response.status_code != 200:
+            logger.error('Failed to submit ga data {response}')
+
+        return ''
+
     @property
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.PostCorrelation

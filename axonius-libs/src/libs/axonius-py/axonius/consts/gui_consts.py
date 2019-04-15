@@ -127,3 +127,4 @@ class Signup:
     SignupEndpoint = 'signup'
     NewPassword = 'newPassword'
     ConfirmNewPassword = 'confirmNewPassword'
+    CompanyField = 'companyName'  # do not change this const!
