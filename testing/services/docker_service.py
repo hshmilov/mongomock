@@ -131,7 +131,6 @@ chmod-socket = 666
 vacuum = true
 
 die-on-term = true
-reload-on-exception = true
 
 ignore-sigpipe = true
 ignore-write-errors = true
