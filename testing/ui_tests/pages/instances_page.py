@@ -1,9 +1,12 @@
+import re
+
 from ui_tests.pages.entities_page import EntitiesPage
 
 
 class InstancesPage(EntitiesPage):
     ROOT_PAGE_CSS = 'li#instances.x-nav-item'
     CONNECT_NODE_ID = 'get-connection-string'
+    NODE_JOIN_TOKEN_REGEX = '<axonius-hostname> (.*) '
 
     @property
     def url(self):
@@ -20,6 +23,14 @@ class InstancesPage(EntitiesPage):
 
     def click_connect_node(self):
         self.click_button_by_id(self.CONNECT_NODE_ID)
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
 
     def is_connect_node_disabled(self):
         return self.is_element_disabled_by_id(self.CONNECT_NODE_ID)
+
+    def get_node_join_token(self):
+        self.switch_to_page()
+        self.click_connect_node()
+        connection_details = self.find_element_by_text('How to connect a new node').text
+        self.click_ok_button()
+        return re.search(self.NODE_JOIN_TOKEN_REGEX, connection_details).group(1)

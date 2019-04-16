@@ -1,16 +1,14 @@
 import os
 import sys
-import time
 
 import paramiko
 from retrying import retry
 
 from builds import Builds
 from builds.builds_factory import BuildsInstance
-from ui_tests.tests.ui_test_base import TestBase
-
 from devops.scripts.instances.restart_system_on_reboot import \
     BOOTED_FOR_PRODUCTION_MARKER_PATH
+from ui_tests.tests.ui_test_base import TestBase
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
@@ -19,10 +17,6 @@ DEFAULT_IMAGE_USERNAME = 'ubuntu'
 DEFAULT_IMAGE_PASSWORD = 'bringorder'
 
 DEFAULT_LIMIT = 10
-
-EXPORTS_ENDPOINT = 'exports'
-DAILY_EXPORT_SUFFIX = '_daily_export'
-DAILY_EXPORT_DATE_FORMAT = '%Y%m%d'
 
 
 @retry(stop_max_attempt_number=90, wait_fixed=1000 * 20)
@@ -59,13 +53,13 @@ def setup_instances(logger):
     return instances
 
 
-class TestInstances(TestBase):
+class TestInstancesBase(TestBase):
     def setup_method(self, method):
         super().setup_method(method)
-        self.__instances = setup_instances(self.logger)
+        self._instances = setup_instances(self.logger)
 
     def teardown_method(self, method):
-        for current_instance in self.__instances:
+        for current_instance in self._instances:
             try:
                 current_instance.terminate()
             except Exception as e:
@@ -73,23 +67,10 @@ class TestInstances(TestBase):
 
         super().teardown_method(method)
 
-    def test_instances(self):
-        # Test that user exists and we can connect to it
-        for instance in self.__instances:
-            client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(
-                instance.ip, username=NODE_MAKER_USERNAME, password=NODE_MAKER_PASSWORD, timeout=60,
-                auth_timeout=60
-            )
-
-        # Test that node maker does not exist after login
-        for instance in self.__instances:
-            assert NODE_MAKER_USERNAME in instance.ssh('cat /etc/passwd')[1]
-            self.change_base_url(f'https://{instance.ip}')
-            self.signup_page.wait_for_signup_page_to_load()
-            self.signup_page.fill_signup_with_defaults_and_save()
-            self.login_page.wait_for_login_page_to_load()
-            self.login()
-            time.sleep(61)
-            assert NODE_MAKER_USERNAME not in instance.ssh('cat /etc/passwd')[1]
+    @staticmethod
+    def connect_node_maker(instance):
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(instance.ip, username=NODE_MAKER_USERNAME, password=NODE_MAKER_PASSWORD, timeout=60,
+                       auth_timeout=60, look_for_keys=False, allow_agent=False)
+        return client
