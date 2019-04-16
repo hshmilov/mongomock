@@ -9,3 +9,10 @@ def filter_ids(inp):
         return '_id_'
     except Exception:
         return inp
+
+
+def remove_ids(path):
+    splitted = path.split('/')
+    noids = [filter_ids(s) for s in splitted]
+    cleanpath = '/'.join(noids)
+    return cleanpath

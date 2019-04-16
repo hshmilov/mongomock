@@ -14,7 +14,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
                                        check_permissions,
                                        deserialize_db_permissions)
-from axonius.utils.metric import filter_ids
+from axonius.utils.metric import remove_ids
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -82,9 +82,7 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
 
             if has_request_context():
                 path = request.path
-                splitted = path.split('/')
-                noids = [filter_ids(s) for s in splitted]
-                cleanpath = '/'.join(noids)
+                cleanpath = remove_ids(path)
                 log_metric(logger, ApiMetric.PUBLIC_REQUEST_PATH, cleanpath, method=request.method)
 
             return func(self, *args, **kwargs)

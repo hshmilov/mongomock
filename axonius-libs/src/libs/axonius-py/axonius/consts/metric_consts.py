@@ -5,6 +5,7 @@ class SystemMetric:
     USERS_SEEN = 'system.users.seen'
     USERS_UNIQUE = 'system.users.unique'
     ENFORCEMENT_RAW = 'system.alert.raw'
+    TIMED_ENDPOINT = 'timed_endpoint'
 
 
 class ApiMetric:

@@ -113,7 +113,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        deserialize_db_permissions,
                                        get_entity_labels,
                                        get_historized_filter)
-from axonius.utils.metric import filter_ids
+from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.mongo_chunked import get_chunks_length
@@ -187,9 +187,7 @@ def session_connection(func, required_permissions: Iterable[Permission], enforce
 
         if has_request_context():
             path = request.path
-            splitted = path.split('/')
-            noids = [filter_ids(s) for s in splitted]
-            cleanpath = '/'.join(noids)
+            cleanpath = remove_ids(path)
             method = request.method
             if method != 'GET':
                 log_metric(logger, ApiMetric.REQUEST_PATH, cleanpath, method=request.method)
@@ -1098,6 +1096,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     # DEVICE #
     ##########
 
+    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_helpers.paginated()
     @gui_helpers.filtered_entities()
@@ -1133,6 +1132,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         output.headers['Content-type'] = 'text/csv'
         return output
 
+    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_add_rule_logged_in('devices/<device_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices,

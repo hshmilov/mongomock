@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import itertools
+import time
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -13,8 +14,9 @@ import dateutil
 import pymongo
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
+from axonius.consts.metric_consts import SystemMetric
 from axonius.entities import EntitiesNamespace
-from flask import request
+from flask import request, has_request_context
 from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
@@ -25,7 +27,9 @@ from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
     parse_filter_non_entities
+from axonius.utils.metric import remove_ids
 from axonius.utils.threading import singlethreaded
+from axonius.logging.metric_helper import log_metric
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -1031,3 +1035,23 @@ def add_labels_to_entities(db, namespace: EntitiesNamespace, entities: Iterable[
 
     namespace.add_many_labels(entities, labels=labels,
                               are_enabled=not to_delete)
+
+
+def timed_endpoint():
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            now = time.time()
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                if has_request_context():
+                    if request.args.get('is_refresh') != '1':
+                        cleanpath = remove_ids(request.path)
+                        log_metric(logger, SystemMetric.TIMED_ENDPOINT,
+                                   metric_value=time.time() - now,
+                                   endpoint=cleanpath,
+                                   method=request.method)
+
+        return actual_wrapper
+
+    return wrap
