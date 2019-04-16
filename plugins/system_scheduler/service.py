@@ -315,8 +315,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     should_trigger_plugins = False
                     should_fetch_rt_adapter = False
 
-                logger.info(f'RT Cycle, plugins - {should_trigger_plugins} and adapters - {should_fetch_rt_adapter} '
-                            f'state - {self.state}')
+                logger.debug(f'RT Cycle, plugins - {should_trigger_plugins} and adapters - {should_fetch_rt_adapter} '
+                             f'state - {self.state}')
                 if should_fetch_rt_adapter:
                     adapters_to_call = list(self.__get_all_realtime_adapters())
                     if not adapters_to_call:
@@ -336,10 +336,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         plugins_to_call.append('reports')
 
                     for plugin_unique_name in plugins_to_call:
-                        logger.info(f'Executing plugin {plugin_unique_name}')
+                        logger.debug(f'Executing plugin {plugin_unique_name}')
                         self._trigger_remote_plugin(plugin_unique_name, blocking=False)
             finally:
-                logger.info('Finished RT cycle')
+                logger.debug('Finished RT cycle')
 
     def _get_plugins(self, plugin_subtype: PluginSubtype):
         """
