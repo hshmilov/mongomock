@@ -3,6 +3,7 @@ import time
 import pytest
 
 from ui_tests.tests.ui_test_base import TestBase
+from axonius.utils.wait import wait_until
 
 
 class TestDashboard(TestBase):
@@ -184,6 +185,10 @@ class TestDashboard(TestBase):
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_PIE_TITLE)
 
+    def _does_user_appear(self):
+        results = self.dashboard_page.get_all_table_rows()
+        return len(results) > 1 and results[1]
+
     def test_dashboard_search(self):
         string_to_search = 'be'
         self.dashboard_page.switch_to_page()
@@ -191,6 +196,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.fill_query_value(string_to_search)
         self.dashboard_page.enter_search()
         self.dashboard_page.wait_for_table_to_load()
+        wait_until(self._does_user_appear)
         results = self.dashboard_page.get_all_table_rows()
         host_name = results[0][0]
         user_name = results[1][0]
