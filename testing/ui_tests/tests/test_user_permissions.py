@@ -1,6 +1,5 @@
 import pytest
-from selenium.common.exceptions import (InvalidElementStateException,
-                                        NoSuchElementException)
+from selenium.common.exceptions import NoSuchElementException
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -56,9 +55,10 @@ class TestUserPermissions(TestBase):
         with pytest.raises(NoSuchElementException):
             self.enforcements_page.find_new_enforcement_button()
 
-        self.report_page.switch_to_page()
-        with pytest.raises(InvalidElementStateException):
-            self.report_page.fill_email(ui_consts.VALID_EMAIL)
+        self.reports_page.switch_to_page()
+        with pytest.raises(NoSuchElementException):
+            self.reports_page.find_new_report_button()
+        self.reports_page.is_disabled_new_report_button()
 
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()

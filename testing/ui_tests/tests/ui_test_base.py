@@ -29,7 +29,7 @@ from ui_tests.pages.enforcements_page import EnforcementsPage
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.my_account_page import MyAccountPage
 from ui_tests.pages.notification_page import NotificationPage
-from ui_tests.pages.report_page import ReportPage
+from ui_tests.pages.reports_page import ReportsPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
@@ -269,7 +269,7 @@ class TestBase:
         self.devices_page = DevicesPage(**params)
         self.devices_queries_page = DevicesQueriesPage(**params)
         self.users_page = UsersPage(**params)
-        self.report_page = ReportPage(**params)
+        self.reports_page = ReportsPage(**params)
         self.enforcements_page = EnforcementsPage(**params)
         self.adapters_page = AdaptersPage(**params)
         self.notification_page = NotificationPage(**params)
@@ -283,7 +283,7 @@ class TestBase:
                    self.users_page,
                    self.enforcements_page,
                    self.adapters_page,
-                   self.report_page,
+                   self.reports_page,
                    self.instances_page)
         return screens
 

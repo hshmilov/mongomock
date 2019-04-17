@@ -2288,15 +2288,29 @@ class PluginBase(Configurable, Feature):
         :param mongo_filter: Query to fetch entire data by
         :return: List of internal axon ids that were meant to be selected, according to given selection and filter
         """
+        return self.get_selected_ids(self._entity_db_map[entity_type], entities_selection,
+                                     mongo_filter, 'internal_axon_id')
+
+    def get_selected_ids(self, mongo_collection, entities_selection: dict, mongo_filter: dict, id_field='_id'):
+        """
+
+        :param id_field: the field of the relevant id
+        :param entities_selection: Represents the selection of entities.
+                If include is True, then ids is the list of selected internal axon ids
+                Otherwise, selected internal axon ids are all those fetched by the mongo filter excluding the ids list
+        :param mongo_collection: Type of collection to bring from the mongo
+        :param mongo_filter: Query to fetch entire data by
+        :return: List of internal axon ids that were meant to be selected, according to given selection and filter
+        """
         if entities_selection['include']:
             return entities_selection['ids']
-        return [entry['internal_axon_id'] for entry in self._entity_db_map[entity_type].find({
+        return [entry[id_field] for entry in mongo_collection.find({
             '$and': [
-                {'internal_axon_id': {
+                {id_field: {
                     '$nin': entities_selection['ids']
                 }}, mongo_filter
             ]
-        }, projection={'internal_axon_id': 1})]
+        }, projection={id_field: 1})]
 
     def _adapters_with_feature(self, feature: str) -> Set[str]:
         """

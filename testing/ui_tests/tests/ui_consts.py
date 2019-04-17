@@ -74,3 +74,8 @@ class Tags:
 
 class Account:
     file_path = 'account_data.tmp'
+
+
+class Reports:
+    test_report_no_email = 'test_report_no_email'
+    test_report_with_email = 'test_report_with_email'

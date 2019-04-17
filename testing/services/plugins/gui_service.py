@@ -3,10 +3,10 @@ import os
 import secrets
 
 import requests
-
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
+
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
-                                       FEATURE_FLAGS_CONFIG, Signup)
+                                       FEATURE_FLAGS_CONFIG, Signup, EXEC_REPORT_TITLE)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -16,9 +16,11 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           MAINTENANCE_TYPE,
                                           GUI_SYSTEM_CONFIG_COLLECTION)
+from axonius.entities import EntityType
 
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
-from services.plugin_service import PluginService
+from services.\
+    plugin_service import PluginService
 
 MAINTENANCE_FILTER = {'type': MAINTENANCE_TYPE}
 
@@ -54,8 +56,10 @@ class GuiService(PluginService):
             self._update_schema_version_9()
         if self.db_schema_version < 10:
             self._update_schema_version_10()
+        if self.db_schema_version < 11:
+            self._update_schema_version_11()
 
-        if self.db_schema_version != 10:
+        if self.db_schema_version != 11:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -392,6 +396,14 @@ class GuiService(PluginService):
         self._update_default_locked_actions(['tenable_io_add_ips_to_target_group'])
         self.db_schema_version = 10
 
+    def _update_schema_version_11(self):
+        print('Upgrade to schema 11')
+        try:
+            self._migrate_default_report()
+            self.db_schema_version = 11
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 11. Details: {e}')
+
     def _update_default_locked_actions(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
@@ -587,3 +599,78 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
     def get_signup_collection(self):
         return self.db.client[self.plugin_name][Signup.SignupCollection]
+
+    def get_saved_views(self):
+
+        user_view = self.db.get_collection('gui', 'user_views')
+        device_view = self.db.get_collection('gui', 'device_views')
+
+        entity_query_views_db_map = {
+            EntityType.Users: user_view,
+            EntityType.Devices: device_view,
+        }
+
+        def filter_archived(additional_filter=None):
+            """
+                Returns a filter that filters out archived values
+                :param additional_filter: optional - allows another filter to be made
+            """
+            base_non_archived = {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
+            if additional_filter and additional_filter != {}:
+                return {'$and': [base_non_archived, additional_filter]}
+            return base_non_archived
+
+        saved_views_filter = filter_archived({
+            'query_type': 'saved',
+            '$or': [
+                {
+                    'predefined': False
+                },
+                {
+                    'predefined': {
+                        '$exists': False
+                    }
+                }
+            ]
+        })
+        views_data = []
+        for entity in EntityType:
+            saved_views = entity_query_views_db_map[entity].find(saved_views_filter)
+            for view_doc in saved_views:
+                view = view_doc.get('view')
+                if view:
+                    views_data.append({
+                        'entity': entity.value,
+                        'name': view_doc.get('name')
+                    })
+
+        return views_data
+
+    def _upsert_report_config(self, name, report):
+        reports_collection = self.db.get_collection('gui', 'reports_config')
+
+        new_report = {**report}
+
+        result = reports_collection.replace_one({'name': name},
+                                                new_report, upsert=True)
+        return result
+
+    def _migrate_default_report(self):
+        exec_reports_settings_collection = self.db.get_collection('gui', 'exec_reports_settings')
+        default_report = exec_reports_settings_collection.find_one()
+        views = self.get_saved_views()
+        if default_report:
+            mail_properties = dict(mailSubject='', emailList=[], emailListCC=[])
+            mail_properties['emailList'] = default_report.get('recipients')
+            mail_properties['mailSubject'] = EXEC_REPORT_TITLE
+            new_report = {
+                'name': EXEC_REPORT_TITLE,
+                'include_saved_views': 'IncludeSavedViews',
+                'include_dashboard': 'IncludeDashBoard',
+                'add_scheduling': 'AddScheduling',
+                'period': default_report.get('period'),
+                'mail_properties': mail_properties,
+                'views': views
+            }
+            self._upsert_report_config(EXEC_REPORT_TITLE, new_report)
+            exec_reports_settings_collection.delete_one({'_id': default_report.get('_id')})

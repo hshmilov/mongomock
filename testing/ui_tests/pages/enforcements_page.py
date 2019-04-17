@@ -200,9 +200,6 @@ class EnforcementsPage(EntitiesPage):
     def click_action(self, action_name):
         self.find_element_by_text(action_name).click()
 
-    def find_missing_email_server_notification(self):
-        return self.find_element_by_text('In order to send alerts through mail, configure it under settings')
-
     def check_enforcement_checkbox(self, text):
         self.find_element_by_text(text).click()
 

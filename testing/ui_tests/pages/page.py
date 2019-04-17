@@ -102,6 +102,16 @@ class Page:
 
     DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
     DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
+    CHIPS_WITH_LABEL_XPATH = '//div[label[text()=\'{label_text}\']]' \
+                             '/div[contains(@class, \'md-chips\')]//input[@type=\'text\']'
+
+    CHIPS_VALUES_WITH_LABEL_XPATH = '//div[label[text()=\'{label_text}\']]' \
+                                    '/div[contains(@class, \'md-chips\')]//div[contains(@class, \'md-chip\')]'
+
+    CHECKBOX_BY_PARENT_ID = '//div[@id=\'{parent_id}\']/div[contains(@class, \'x-checkbox\')]' \
+                            '//input[@type=\'checkbox\']'
+
+    FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -389,10 +399,15 @@ class Page:
     def find_elements_by_xpath(self, xpath, element=None):
         if not element:
             element = self.driver
-        try:
-            return element.find_elements(by=By.XPATH, value=xpath)
-        except ElementNotVisibleException:
-            logger.info(f'Failed to find element by xpath {xpath}')
+        return element.find_elements(by=By.XPATH, value=xpath)
+
+    def find_chips_by_label(self, label_text):
+        xpath = self.CHIPS_WITH_LABEL_XPATH.format(label_text=label_text)
+        return self.driver.find_element_by_xpath(xpath)
+
+    def find_chips_values_by_label(self, label_text):
+        xpath = self.CHIPS_VALUES_WITH_LABEL_XPATH.format(label_text=label_text)
+        return self.find_elements_by_xpath(xpath)
 
     # this is currently a bit duplicated, will fix later
     def wait_for_element_present_by_text(self,
@@ -584,3 +599,15 @@ class Page:
 
     def find_existing_date(self):
         return self.wait_for_element_present_by_css('.md-datepicker .md-button.md-clear')
+
+    def find_checkbox_by_label(self, text):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
+
+    def find_checkbox_with_label_by_label(self, text):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))
+
+    def find_field_by_label(self, text):
+        return self.driver.find_element_by_xpath(self.FIELD_WITH_LABEL_XPATH.format(label_text=text))
+
+    def find_checkbox_by_parent_id(self, parent_id):
+        return self.driver.find_element_by_xpath(self.CHECKBOX_BY_PARENT_ID.format(parent_id=parent_id))

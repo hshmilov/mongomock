@@ -10,6 +10,8 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestMetrics(TestBase):
+    TEST_METRIC_QUERY_NAME = 'test_metric_query_1'
+
     def test_metrics(self):
         stress = StresstestService()
         stress_scanner = StresstestScannerService()
@@ -25,7 +27,7 @@ class TestMetrics(TestBase):
             self.devices_page.fill_filter(metric_query)
             self.devices_page.enter_search()
             self.devices_page.click_save_query()
-            self.devices_page.fill_query_name('test_metric_query_1')
+            self.devices_page.fill_query_name(self.TEST_METRIC_QUERY_NAME)
             self.devices_page.click_save_query_save_button()
 
             self.base_page.run_discovery()
@@ -52,6 +54,9 @@ class TestMetrics(TestBase):
             wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities.meta', r'\d+'))
 
             report = re.escape(metric_query)
+
+            self._create_report(metric_query)
+
             wait_until(lambda: tester.is_metric_in_log('query.report', report))
 
             self.devices_page.switch_to_page()
@@ -60,3 +65,15 @@ class TestMetrics(TestBase):
             self.devices_page.enter_search()
 
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_GUI, query_text))
+
+    def _create_report(self, metric_query):
+        self.reports_page.switch_to_page()
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.click_new_report()
+        self.reports_page.click_add_scheduling()
+        self.reports_page.find_missing_email_server_notification()
+        self.reports_page.fill_report_name(metric_query)
+        self.reports_page.click_include_dashboard()
+        self.reports_page.click_include_queries()
+        self.reports_page.select_saved_view(self.TEST_METRIC_QUERY_NAME)
+        self.reports_page.click_save()

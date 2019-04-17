@@ -162,3 +162,6 @@ class MongoService(WeaveService):
             return self.client[GUI_NAME]['users_fields']
         if entity_type == EntityType.Devices:
             return self.client[GUI_NAME]['devices_fields']
+
+    def gui_reports_config_collection(self):
+        return self.client[GUI_NAME]['reports_config']

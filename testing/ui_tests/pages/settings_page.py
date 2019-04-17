@@ -79,7 +79,6 @@ class SettingsPage(Page):
                                         ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
                                         ' > div:nth-child(5) > div > div > div.file-name '
 
-    FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
     LOCKED_ACTION_OPTION_XPATH = '//div[contains(@class, \'md-select-menu\')]//div[contains(@class, \'md-list-item\')]'\
                                  '//span[text()=\'{action_name}\']'
 
@@ -230,6 +229,10 @@ class SettingsPage(Page):
         toggle = self.find_send_emails_toggle()
         self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=True)
 
+    def set_dont_send_emails_toggle(self):
+        toggle = self.find_send_emails_toggle()
+        self.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=True)
+
     def set_remote_support_toggle(self, make_yes):
         self.set_maintenance_toggle(make_yes, self.find_remote_support_toggle())
 
@@ -372,15 +375,6 @@ class SettingsPage(Page):
         self.driver.find_element_by_css_selector('[for=use_ssl]+div>div>div>div').click()
         self.fill_text_field_by_css_selector('input.input-value', verification_status)
         self.driver.find_element_by_css_selector(self.SELECT_OPTION_CSS).click()
-
-    def find_checkbox_by_label(self, text):
-        return self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=text))
-
-    def find_checkbox_with_label_by_label(self, text):
-        return self.driver.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))
-
-    def find_field_by_label(self, text):
-        return self.driver.find_element_by_xpath(self.FIELD_WITH_LABEL_XPATH.format(label_text=text))
 
     def click_start_remote_access(self):
         self.click_button('Start', scroll_into_view_container=X_BODY)

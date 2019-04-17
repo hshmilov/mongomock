@@ -42,7 +42,7 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
                                        EXEC_REPORT_THREAD_ID,
-                                       EXEC_REPORT_TITLE,
+                                       EXEC_REPORT_GENERATE_PDF_THREAD_ID,
                                        LOGGED_IN_MARKER_PATH,
                                        PREDEFINED_ROLE_ADMIN,
                                        PREDEFINED_ROLE_READONLY,
@@ -60,7 +60,9 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        Signup,
                                        ResearchStatus,
                                        PROXY_ERROR_MESSAGE,
-                                       FeatureFlagsNames)
+                                       FeatureFlagsNames,
+                                       REPORTS_DELETED,
+                                       REPORTS_ADDED)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -123,6 +125,7 @@ from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
+from axonius.consts import report_consts
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
@@ -299,9 +302,20 @@ def filter_archived(additional_filter=None):
     :param additional_filter: optional - allows another filter to be made
     """
     base_non_archived = {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
-    if additional_filter and additional_filter != {}:
+    if additional_filter:
         return {'$and': [base_non_archived, additional_filter]}
     return base_non_archived
+
+
+def filter_by_name(names, additional_filter=None):
+    """
+    Returns a filter that filters in objects by names
+    :param additional_filter: optional - allows another filter to be made
+    """
+    base_names = {'name': {'$in': names}}
+    if additional_filter:
+        return {'$and': [base_names, additional_filter]}
+    return base_names
 
 
 def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, date]]:
@@ -376,7 +390,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
         self._mark_demo_views()
-        self.add_default_reports('default_reports.ini')
         self.add_default_dashboard_charts('default_dashboard_charts.ini')
         if not self.system_collection.count_documents({'type': 'server'}):
             self.system_collection.insert_one({'type': 'server', 'server_name': 'localhost'})
@@ -397,17 +410,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.__roles_collection = self._get_collection(ROLES_COLLECTION)
         self.__users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
 
+        self.reports_config_collection.create_index([('name', pymongo.HASHED)])
+
         self.__add_defaults()
 
-        # Start exec report scheduler
-        self.exec_report_lock = threading.RLock()
+        # Start exec reports scheduler
+        self.exec_report_locks = {}
 
         self._client_insertion_threadpool = LoggedThreadPoolExecutor(max_workers=20)  # Only for client insertion
 
         self._job_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(1)})
-        current_exec_report_setting = self._get_exec_report_settings(self.exec_report_collection)
-        if current_exec_report_setting != {}:
-            self._schedule_exec_report(self.exec_report_collection, current_exec_report_setting)
+        current_exec_reports_setting = self._get_exec_report_settings(self.reports_config_collection)
+        for current_exec_report_setting in current_exec_reports_setting:
+            self._schedule_exec_report(current_exec_report_setting)
         self._job_scheduler.start()
         if self._maintenance_config.get('timeout'):
             next_run_time = self._maintenance_config['timeout']
@@ -521,22 +536,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         except Exception:
             logger.exception(f'Error adding default views')
 
-    def add_default_reports(self, default_reports_ini_path):
-        try:
-            config = configparser.ConfigParser()
-            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), f'configs/{default_reports_ini_path}')))
-
-            for name, report in config.items():
-                if name == 'DEFAULT':
-                    # ConfigParser always has a fake DEFAULT key, skip it
-                    continue
-                try:
-                    self._insert_report_config(name, report)
-                except Exception as e:
-                    logger.exception(f'Error adding default report {name}. Reason: {repr(e)}')
-        except Exception as e:
-            logger.exception(f'Error adding default reports. Reason: {repr(e)}')
-
     def add_default_dashboard_charts(self, default_dashboard_charts_ini_path):
         try:
             config = configparser.ConfigParser()
@@ -587,16 +586,39 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         logger.info(f'Added view {name} id: {result.upserted_id}')
         return result.upserted_id
 
-    def _insert_report_config(self, name, report):
-        reports_collection = self._get_collection('reports_config')
-        existed_report = reports_collection.find_one({'name': name})
-        if existed_report is not None and not existed_report.get('archived'):
-            logger.info(f'Report {name} already exists under id: {existed_report["_id"]}')
-            return
+    def _upsert_report_config(self, name, report, clear_generated_report):
 
-        result = reports_collection.replace_one({'name': name},
-                                                {'name': name, 'adapters': json.loads(report['adapters'])}, upsert=True)
-        logger.info(f'Added report {name} id: {result.upserted_id}')
+        existed_report = self.reports_config_collection.find_one({'name': name})
+
+        new_report = {**report}
+
+        if clear_generated_report:
+            new_report[report_consts.LAST_GENERATED_FIELD] = None
+
+        result = self.reports_config_collection.replace_one({'name': name},
+                                                            new_report, upsert=True)
+        if existed_report is not None and not existed_report.get('archived'):
+            logger.info(f'Updated report {name} id: {result.upserted_id}')
+        else:
+            logger.info(f'Added report {name} id: {result.upserted_id}')
+        return result
+
+    def _delete_report_configs(self, reports):
+        reports_collection = self.reports_config_collection
+        ids = self.get_selected_ids(reports_collection, reports, {})
+        for report_id in ids:
+            existed_report = reports_collection.find_one({'_id': ObjectId(report_id)})
+            if existed_report is None or existed_report.get('archived'):
+                logger.info(f'Report with id {report_id} does not exists')
+                return
+            name = existed_report['name']
+            result = reports_collection.delete_one({'name': name, '_id': ObjectId(report_id)})
+            exec_report_thread_id = EXEC_REPORT_THREAD_ID.format(name)
+            exec_report_job = self._job_scheduler.get_job(exec_report_thread_id)
+            if exec_report_job:
+                self._job_scheduler.remove_job(exec_report_job.id)
+            logger.info(f'Deleted report {name} id: {report_id}')
+        return REPORTS_DELETED
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data, hide_empty=False):
         dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
@@ -1733,6 +1755,110 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                              PermissionLevel.ReadWrite)})
     def actions_upload_file(self):
         return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
+
+    # REPORTS
+    def get_reports(self, limit, mongo_filter, mongo_sort, skip):
+        sort = []
+        for field, direction in mongo_sort.items():
+            if field in [ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
+                field = f'actions.{field}'
+            sort.append((field, direction))
+        if not sort:
+            sort.append((LAST_UPDATE_FIELD, pymongo.DESCENDING))
+
+        def beautify_report(report):
+            beautify_object = {
+                '_id': report['_id'],
+                'name': report['name'],
+                'last_updated': report.get('last_updated'),
+                report_consts.LAST_GENERATED_FIELD: report.get(report_consts.LAST_GENERATED_FIELD)
+            }
+            if report.get('add_scheduling'):
+                beautify_object['period'] = report.get('period').capitalize()
+                if report.get('mail_properties'):
+                    beautify_object['mailSubject'] = report.get('mail_properties').get('mailSubject')
+            return gui_helpers.beautify_db_entry(beautify_object)
+        reports_collection = self.reports_config_collection
+        result = [beautify_report(enforcement) for enforcement in reports_collection.find(
+            mongo_filter).sort(sort).skip(skip).limit(limit)]
+        return result
+
+    def _generate_and_schedule_report(self, report):
+        generateReportThreadPool = LoggedThreadPoolExecutor(max_workers=1)
+        generateReportThreadPool.submit(self._generate_and_save_report, report)
+        if report.get('period'):
+            self._schedule_exec_report(report)
+
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_add_rule_logged_in('reports', methods=['GET', 'PUT', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Reports,
+                                                             ReadOnlyJustForGet)})
+    def reports(self, limit, skip, mongo_filter, mongo_sort):
+        """
+        GET results in list of all currently configured enforcements, with their query id they were created with
+        PUT Send report_service a new enforcement to be configured
+
+        :return:
+        """
+        if request.method == 'GET':
+            return jsonify(self.get_reports(limit, mongo_filter, mongo_sort, skip))
+
+        if request.method == 'PUT':
+            report_to_add = request.get_json()
+            reports_collection = self.reports_config_collection
+            report_name = report_to_add['name']
+            report = reports_collection.find_one({
+                'name': report_name
+            })
+            if report:
+                return f'Report with "{report_name}" name already exists', 400
+
+            report_to_add['last_updated'] = datetime.now()
+            self._upsert_report_config(report_to_add['name'], report_to_add, False)
+            self._generate_and_schedule_report(report_to_add)
+            return REPORTS_ADDED, 201
+
+        # Handle remaining method - DELETE
+        return self._delete_report_configs(self.get_request_data_as_object()), 200
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('reports/count', required_permissions={Permission(PermissionType.Enforcements,
+                                                                              PermissionLevel.ReadOnly)})
+    def reports_count(self, mongo_filter):
+        reports_collection = self.reports_config_collection
+        return jsonify(reports_collection.count_documents(mongo_filter))
+
+    @gui_add_rule_logged_in('reports/<report_id>', methods=['GET', 'POST'],
+                            required_permissions={Permission(PermissionType.Reports,
+                                                             ReadOnlyJustForGet)})
+    def report_by_id(self, report_id):
+        """
+        :param report_id:
+        :return:
+        """
+        reports_collection = self.reports_config_collection
+        if request.method == 'GET':
+            report = reports_collection.find_one({
+                '_id': ObjectId(report_id)
+            })
+            if not report:
+                return return_error(f'Report with id {report_id} was not found', 400)
+
+            return jsonify(gui_helpers.beautify_db_entry(report))
+
+        # Handle remaining request - POST
+        report_to_update = request.get_json(silent=True)
+        report_to_update['last_updated'] = datetime.now()
+
+        response = self._upsert_report_config(report_to_update['name'], report_to_update, True)
+        self._generate_and_schedule_report(report_to_update)
+
+        if response is None:
+            return return_error('No response whether report was updated')
+
+        return jsonify(report_to_update), 200
 
     ################
     # ENFORCEMENTS #
@@ -4045,7 +4171,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         return list(get_adapters_data())
 
-    def _get_saved_views_data(self):
+    def _get_saved_views_data(self, include_all_saved_views=True, saved_queries=None):
         """
         *** Currently this function is unused ***
         For each entity in system, fetch all saved views.
@@ -4066,10 +4192,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         logger.info('Getting views data')
         views_data = []
-        for entity in EntityType:
-            field_to_title = _get_field_titles(entity)
-            # Fetch only saved views that were added by user, excluding out-of-the-box queries
-            saved_views = self.gui_dbs.entity_query_views_db_map[entity].find(filter_archived({
+        query_per_entity = {}
+        for saved_query in saved_queries:
+            entity = saved_query['entity']
+            name = saved_query['name']
+            if entity not in query_per_entity:
+                query_per_entity[entity] = []
+            query_per_entity[entity].append(name)
+        saved_views_filter = None
+        if include_all_saved_views:
+            saved_views_filter = filter_archived({
                 'query_type': 'saved',
                 '$or': [
                     {
@@ -4081,8 +4213,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                         }
                     }
                 ]
-            }))
-            for i, view_doc in enumerate(saved_views):
+            })
+        for entity in EntityType:
+            field_to_title = _get_field_titles(entity)
+            # Fetch only saved views that were added by user, excluding out-of-the-box queries
+            if query_per_entity.get(entity.name.lower()) and not include_all_saved_views:
+                saved_views_filter = filter_by_name(query_per_entity[entity.name.lower()])
+
+            if not saved_views_filter:
+                continue
+
+            saved_views = self.gui_dbs.entity_query_views_db_map[entity].find(saved_views_filter)
+            for view_doc in saved_views:
                 try:
                     view = view_doc.get('view')
                     if view:
@@ -4090,7 +4232,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                         log_metric(logger, 'query.report', filter_query)
                         field_list = view.get('fields', [])
                         views_data.append({
-                            'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
+                            'name': view_doc.get('name'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in field_list],
                             'data': list(gui_helpers.get_entities(limit=view.get('pageSize', 20),
                                                                   skip=0,
@@ -4101,7 +4243,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                   default_sort=self._system_settings['defaultSort']))
                         })
                 except Exception:
-                    logger.exception(f'Problem with View {str(i)} ViewDoc {str(view_doc)}')
+                    logger.exception('Problem with View {} ViewDoc {}'.format(view_doc.get('name'), str(view_doc)))
         return views_data
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
@@ -4115,10 +4257,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             # GUI is a post correlation plugin, thus this is called near the end of the cycle
             self._trigger('clear_dashboard_cache', blocking=False)
             self.dump_metrics()
-            return self.generate_new_report_offline()
+            return self.generate_new_reports_offline()
         raise RuntimeError(f'GUI was called with a wrong job name {job_name}')
 
-    def generate_new_report_offline(self):
+    def generate_new_reports_offline(self):
         """
         Generates a new version of the report as a PDF file and saves it to the db
         (this method is NOT an endpoint)
@@ -4126,24 +4268,55 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return: "Success" if successful, error if there is an error
         """
 
-        logger.info('Rendering Report.')
+        logger.info('Rendering Reports.')
+        reports = self.reports_config_collection.find()
+        for report in reports:
+            try:
+                self._generate_and_save_report(report)
+            except Exception:
+                logger.exception('error generating pdf for the report {}'.format(report['name']))
+        return 'Success'
+
+    def _generate_and_save_report(self, report):
         # generate_report() renders the report html
-        report_html = self.generate_report()
+        report_html = self.generate_report(report)
+
+        exec_report_generate_pdf_thread_id = EXEC_REPORT_GENERATE_PDF_THREAD_ID.format(report['name'])
+        exec_report_generate_pdf_job = self._job_scheduler.get_job(exec_report_generate_pdf_thread_id)
+        # If job doesn't exist generate it
+        if exec_report_generate_pdf_job is None:
+            self._job_scheduler.add_job(func=self._convert_to_pdf_and_save_report,
+                                        kwargs={'report': report,
+                                                'report_html': report_html},
+                                        trigger='date',
+                                        next_run_time=datetime.now(),
+                                        name=exec_report_generate_pdf_thread_id,
+                                        id=exec_report_generate_pdf_thread_id,
+                                        max_instances=1)
+            self._job_scheduler.start()
+        else:
+            exec_report_generate_pdf_job.modify(next_run_time=datetime.now())
+            self._job_scheduler.reschedule_job(exec_report_generate_pdf_thread_id)
+            self._job_scheduler.start()
+
+    def _convert_to_pdf_and_save_report(self, report, report_html):
         # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
         with io.BytesIO() as report_data:
             report_html.write_pdf(report_data)
             report_data.seek(0)
             # Uploads the report to the db and returns a uuid to retrieve it
-            uuid = self._upload_report(report_data)
+            uuid = self._upload_report(report_data, report)
             logger.info(f'Report was saved to the db {uuid}')
             # Stores the uuid in the db in the "reports" collection
+            filename = 'most_recent_{}'.format(report['name'])
             self._get_collection('reports').replace_one(
-                {'filename': 'most_recent_report'},
-                {'uuid': uuid, 'filename': 'most_recent_report', 'time': datetime.now()}, True
+                {'filename': filename},
+                {'uuid': uuid, 'filename': filename, 'time': datetime.now()}, True
             )
-        return 'Success'
+            report[report_consts.LAST_GENERATED_FIELD] = datetime.now()
+            self._upsert_report_config(report['name'], report, False)
 
-    def _upload_report(self, report):
+    def _upload_report(self, report, report_metadata):
         """
         Uploads the latest report PDF to the db
         :param report: report data
@@ -4151,25 +4324,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         if not report:
             return return_error('Report must exist', 401)
+        report_name = 'most_recent_{}'.format(report_metadata['name'])
 
         # First, need to delete the old report
-        self._delete_last_report()
+        self._delete_last_report(report_name)
 
-        report_name = 'most_recent_report'
         db_connection = self._get_db_connection()
         fs = gridfs.GridFS(db_connection[GUI_NAME])
         written_file_id = fs.put(report, filename=report_name)
         logger.info('Report successfully placed in the db')
         return str(written_file_id)
 
-    def _delete_last_report(self):
+    def _delete_last_report(self, report_name):
         """
         Deletes the last version of the report pdf to avoid having too many saved versions
         :return:
         """
         report_collection = self._get_collection('reports')
         if report_collection != None:
-            most_recent_report = report_collection.find_one({'filename': 'most_recent_report'})
+            most_recent_report = report_collection.find_one({'filename': report_name})
             if most_recent_report != None:
                 uuid = most_recent_report.get('uuid')
                 if uuid != None:
@@ -4178,9 +4351,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     fs = gridfs.GridFS(db_connection[GUI_NAME])
                     fs.delete(ObjectId(uuid))
 
-    @gui_add_rule_logged_in('export_report', required_permissions={Permission(PermissionType.Dashboard,
-                                                                              PermissionLevel.ReadOnly)})
-    def export_report(self):
+    @gui_add_rule_logged_in('export_report/<report_name>', required_permissions={Permission(PermissionType.Dashboard,
+                                                                                            PermissionLevel.ReadOnly)})
+    def export_report(self, report_name):
         """
         Gets definition of report from DB for the dynamic content.
         Gets all the needed data for both pre-defined and dynamic content definitions.
@@ -4191,35 +4364,42 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
         :return:
         """
-        report_path = self._get_existing_executive_report()
+        report_path = self._get_existing_executive_report(report_name)
         return send_file(report_path, mimetype='application/pdf', as_attachment=True,
                          attachment_filename=report_path)
 
-    def _get_existing_executive_report(self):
-        report = self._get_collection('reports').find_one({'filename': 'most_recent_report'})
+    def _get_existing_executive_report(self, name):
+        report = self._get_collection('reports').find_one({'filename': 'most_recent_{}'.format(name)})
         if not report:
-            self.generate_new_report_offline()
+            self.generate_new_reports_offline()
 
         uuid = report['uuid']
-        report_path = f'/tmp/axonius-report_{datetime.now()}.pdf'
+        report_path = f'/tmp/axonius-{name}_{datetime.now()}.pdf'
         db_connection = self._get_db_connection()
         with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_content:
             open(report_path, 'wb').write(report_content.read())
             return report_path
 
-    def generate_report(self):
+    def generate_report(self, report=None):
         """
         Generates the report and returns html.
         :return: the generated report file path.
         """
         logger.info('Starting to generate report')
+        saved_views = report['views'] if report else None
+        include_dashboard = report.get('include_dashboard', False)
+        include_all_saved_views = report.get('include_all_saved_views', False)
+        include_saved_views = report.get('include_saved_views', False)
         report_data = {
-            'adapter_devices': adapter_data.call_uncached(EntityType.Devices),
-            'adapter_users': adapter_data.call_uncached(EntityType.Users),
-            'custom_charts': list(self._get_dashboard()),
-            'views_data': self._get_saved_views_data()
+            'include_dashboard': include_dashboard,
+            'adapter_devices': adapter_data.call_uncached(EntityType.Devices) if include_dashboard else None,
+            'adapter_users': adapter_data.call_uncached(EntityType.Users) if include_dashboard else None,
+            'custom_charts': list(self._get_dashboard()) if include_dashboard else None,
+            'views_data':
+                self._get_saved_views_data(include_all_saved_views, saved_views) if include_saved_views else None
         }
-        report = self._get_collection('reports_config').find_one({'name': 'Main Report'})
+        if not include_saved_views:
+            log_metric(logger, 'query.report', None)
         if report.get('adapters'):
             report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
@@ -4232,21 +4412,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                              PermissionLevel.ReadWrite)})
     def test_exec_report(self):
         try:
-            recipients = self.get_request_data_as_object()
-            self._send_report_thread(recipients=recipients)
+            report = self.get_request_data_as_object()
+            self._send_report_thread(report=report)
             return ''
         except Exception as e:
             logger.exception('Failed sending test report by email.')
             return return_error(f'Problem testing report by email:\n{str(e.args[0]) if e.args else e}', 400)
 
     def _get_exec_report_settings(self, exec_reports_settings_collection):
-        settings_object = exec_reports_settings_collection.find_one({}, projection={'_id': False, 'period': True,
-                                                                                    'recipients': True})
-        return settings_object or {}
+        settings_objects = exec_reports_settings_collection.find(
+            {'period': {'$exists': True}, 'mail_properties': {'$exists': True}})
+        return settings_objects
 
-    def _schedule_exec_report(self, exec_reports_settings_collection, exec_report_data):
-        logger.info('rescheduling exec_report')
-        time_period = exec_report_data['period']
+    def _schedule_exec_report(self, exec_report_data):
+        logger.info('rescheduling exec_reports')
+        time_period = exec_report_data.get('period')
         current_date = datetime.now()
         next_run_time = None
         new_interval_triggger = None
@@ -4269,21 +4449,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         else:
             raise ValueError('period have to be in (\'daily\', \'monthly\', \'weekly\').')
 
-        exec_report_job = self._job_scheduler.get_job(EXEC_REPORT_THREAD_ID)
+        exec_report_thread_id = EXEC_REPORT_THREAD_ID.format(exec_report_data['name'])
+        exec_report_job = self._job_scheduler.get_job(exec_report_thread_id)
 
         # If job doesn't exist generate it
         if exec_report_job is None:
             self._job_scheduler.add_job(func=self._send_report_thread,
+                                        kwargs={'report': exec_report_data},
                                         trigger=new_interval_triggger,
                                         next_run_time=next_run_time,
-                                        name=EXEC_REPORT_THREAD_ID,
-                                        id=EXEC_REPORT_THREAD_ID,
+                                        name=exec_report_thread_id,
+                                        id=exec_report_thread_id,
                                         max_instances=1)
         else:
             exec_report_job.modify(next_run_time=next_run_time)
-            self._job_scheduler.reschedule_job(EXEC_REPORT_THREAD_ID, trigger=new_interval_triggger)
+            self._job_scheduler.reschedule_job(exec_report_thread_id, trigger=new_interval_triggger)
 
-        exec_reports_settings_collection.replace_one({}, exec_report_data, upsert=True)
         logger.info(f'Scheduling an exec_report sending for {next_run_time} and period of {time_period}.')
         return 'Scheduled next run.'
 
@@ -4300,24 +4481,31 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         elif request.method == 'POST':
             exec_report_data = self.get_request_data_as_object()
-            return self._schedule_exec_report(self.exec_report_collection, exec_report_data)
+            return self._schedule_exec_report(exec_report_data)
 
-    def _send_report_thread(self, recipients=None):
+    def _send_report_thread(self, report):
         if self.trial_expired():
             logger.error('Report email not sent - system trial has expired')
             return
 
-        with self.exec_report_lock:
-            if not recipients:
-                exec_report = self.exec_report_collection.find_one()
-                if exec_report:
-                    recipients = exec_report.get('recipients', [])
-            report_path = self._get_existing_executive_report()
+        report_name = report['name']
+        lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
+        self.exec_report_locks[report_name] = lock
+        with lock:
+            report_path = self._get_existing_executive_report(report_name)
             if self.mail_sender:
-                email = self.mail_sender.new_email(EXEC_REPORT_TITLE, recipients)
-                with open(report_path, 'rb') as report_file:
-                    email.add_pdf(EXEC_REPORT_FILE_NAME, bytes(report_file.read()))
-                email.send(EXEC_REPORT_EMAIL_CONTENT)
+                mail_properties = report['mail_properties']
+                subject = mail_properties.get('mailSubject')
+                logger.info(mail_properties)
+                if mail_properties.get('emailList'):
+                    email = self.mail_sender.new_email(subject,
+                                                       mail_properties.get('emailList', []),
+                                                       cc_recipients=mail_properties.get('emailListCC', []))
+                    with open(report_path, 'rb') as report_file:
+                        email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), bytes(report_file.read()))
+                    email.send(EXEC_REPORT_EMAIL_CONTENT)
+                    report[report_consts.LAST_TRIGGERED_FIELD] = datetime.now()
+                    self._upsert_report_config(report_name, report, False)
             else:
                 logger.info('Email cannot be sent because no email server is configured')
                 raise RuntimeWarning('No email server configured')
@@ -4662,6 +4850,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @property
     def system_collection(self):
         return self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION)
+
+    @property
+    def reports_config_collection(self):
+        return self._get_collection('reports_config')
 
     @property
     def exec_report_collection(self):

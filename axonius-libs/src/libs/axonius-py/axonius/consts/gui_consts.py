@@ -79,11 +79,13 @@ USERS_CONFIG_COLLECTION = 'users_config'
 # Exec report consts #
 ######################
 
-EXEC_REPORT_THREAD_ID = 'exec_report_thread'
+EXEC_REPORT_THREAD_ID = 'exec_report_thread_{}'
+
+EXEC_REPORT_GENERATE_PDF_THREAD_ID = 'exec_report_generate_pdf_thread_{}'
 
 EXEC_REPORT_TITLE = 'Axonius Report'
 
-EXEC_REPORT_FILE_NAME = 'Axonius Report.pdf'
+EXEC_REPORT_FILE_NAME = 'Axonius Report {}.pdf'
 
 EXEC_REPORT_EMAIL_CONTENT = '''Hello,
 
@@ -114,6 +116,13 @@ LOGGED_IN_MARKER_PATH = AXONIOUS_SETTINGS_PATH / '.logged_in'
 SPECIFIC_DATA = 'specific_data'
 ADAPTERS_DATA = 'adapters_data'
 PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
+
+######################
+# reports consts     #
+######################
+
+REPORTS_DELETED = 'reports_deleted'
+REPORTS_ADDED = 'report_added'
 
 
 class FeatureFlagsNames:

@@ -9,7 +9,7 @@ export default {
             views(state) {
                 return this.entityList.reduce((map, module) => {
                     map[module] = state[module].views.saved.data.map((view) => {
-                        return {name: view.name, title: view.name}
+                        return {name: view.name, title: view.name, predefined: view.predefined}
                     })
                     return map
                 }, {})
@@ -24,6 +24,15 @@ export default {
         }),
         entityList() {
             return this.entityOptions.map(entity => entity.name)
+        },
+        nonPredefinedCount() {
+            let count = 0;
+            this.entityList.forEach((module) => {
+                count += this.views[module].filter((view) => {
+                    return !view.predefined;
+                }).length;
+            });
+            return count;
         }
     },
     methods: mapActions({

@@ -169,7 +169,7 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 	})
 }
 
-export const downloadFile = (fileType, response)=>{
+export const downloadFile = (fileType, response) => {
 	let format = '';
 	let reportType = '';
 	switch (fileType) {
@@ -189,6 +189,18 @@ export const downloadFile = (fileType, response)=>{
     let formattedDate = now.toLocaleDateString().replace(/\//g,'')
     let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
     link.download = `axonius-${reportType}_${formattedDate}-${formattedTime}.${format}`
+    link.click()
+}
+
+export const downloadPdfReportFile = (name, response) => {
+    let format = 'pdf';
+    let blob = new Blob([response.data], { type: response.headers["content-type"]} )
+    let link = document.getElementById('file-auto-download-link')
+    link.href = window.URL.createObjectURL(blob)
+    let now = new Date()
+    let formattedDate = now.toLocaleDateString().replace(/\//g,'')
+    let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
+    link.download = `${name}_${formattedDate}-${formattedTime}.${format}`
     link.click()
 }
 

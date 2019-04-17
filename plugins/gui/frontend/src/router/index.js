@@ -21,6 +21,7 @@ const Settings = () => import('../components/pages/Settings.vue')
 const User = () => import('../components/pages/User.vue')
 const Users = () => import('../components/pages/Users.vue')
 const UsersQuery = () => import('../components/pages/UsersQuery.vue')
+import Report from '../components/pages/Report.vue'
 const ExternalViewComponent = () => import('../components/pages/medical/ExternalViewComponent.vue')
 const FleetViewer = () => import('../components/pages/medical/FleetViewer.vue')
 
@@ -151,6 +152,10 @@ if (ENV.medical) {
             path: '/reports',
             name: 'Reports',
             component: Reports
+        },
+        {
+            path: '/reports/:id',
+            component: Report
         },
         {
             path: '/account',

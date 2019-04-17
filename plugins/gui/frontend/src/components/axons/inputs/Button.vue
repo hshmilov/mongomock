@@ -1,5 +1,5 @@
 <template>
-    <button class="x-button" :class="{disabled, inverse, light, right, link, great, emphasize, active}"
+    <button class="x-button" :class="{disabled, inverse, inverseEmphasize, light, right, link, great, emphasize, active}"
             @click="onClick"><slot /></button>
 </template>
 
@@ -12,6 +12,10 @@
                 default: false
             },
             inverse: {
+                type: Boolean,
+                default: false
+            },
+            inverseEmphasize: {
                 type: Boolean,
                 default: false
             },
@@ -87,6 +91,11 @@
             background-color: $theme-white;
             color: $theme-blue;
             border: 1px solid $theme-blue;
+        }
+        &.inverseEmphasize {
+            background-color: $theme-white;
+            color: $theme-orange;
+            border: 1px solid $theme-orange;
         }
         &.light {
             background-color: $grey-2;

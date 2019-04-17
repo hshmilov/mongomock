@@ -57,15 +57,17 @@ class ReportGenerator(object):
         :return: The name of the generated pdf file
         """
         now = datetime.now()
-        timestamp = now.strftime("%d%m%Y-%H%M%S")
+        timestamp = now.strftime('%d%m%Y-%H%M%S')
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
         logger.info(f'Report Generator: PDF generated and saved to ${temp_report_filename}')
         return self.render_html(now).write_pdf(temp_report_filename)
 
     def render_html(self, current_time):
         sections = []
-        # Add summary section containing dashboard panels, pre- and user-defined
-        sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
+
+        if self.report_data.get('include_dashboard'):
+            # Add summary section containing dashboard panels, pre- and user-defined
+            sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
 
         # Add section for each adapter with results of its queries
         adapter_data = self.report_data.get('adapter_data')
@@ -83,8 +85,8 @@ class ReportGenerator(object):
 
         # Join all sections as the content of the report
         html_data = self.templates['report'].render(
-            {'date': current_time.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
-        timestamp = current_time.strftime("%d%m%Y-%H%M%S")
+            {'date': current_time.strftime('%d/%m/%Y'), 'content': '\n'.join(sections)})
+        timestamp = current_time.strftime('%d%m%Y-%H%M%S')
         temp_html_filename = f'{self.output_path}axonius-report_{timestamp}.html'
         with open(temp_html_filename, 'wb') as file:
             file.write(bytes(html_data.encode('utf-8')))
@@ -139,7 +141,10 @@ class ReportGenerator(object):
         if self.report_data.get('custom_charts'):
             charts_added = 0
             for i, custom_chart in enumerate(self.report_data['custom_charts']):
-                if not custom_chart.get('metric') or not custom_chart.get('data'):
+                chart_data = custom_chart.get('data')
+                chart_value = chart_data[0]['value'] if chart_data else None
+                if not custom_chart.get('metric') or not chart_data \
+                        or (custom_chart.get('hide_empty') and chart_data and chart_value in [0, 1]):
                     continue
                 title = custom_chart.get('name', f'Custom Chart {i}')
                 try:
@@ -160,7 +165,7 @@ class ReportGenerator(object):
                     charts_added += 1
                     summary_content.append(self.templates['card'].render({'title': title, 'content': content}))
                 except Exception:
-                    logger.exception(f"Problem adding pie chart to reports with title: {title}")
+                    logger.exception(f'Problem adding pie chart to reports with title: {title}')
             logger.info(f'Report Generator, Summary Section: Added {charts_added} Custom Panels')
         return '\n'.join(summary_content)
 
@@ -329,7 +334,7 @@ class ReportGenerator(object):
             }))
         if views is not None:
             for client_name, views in views.items():
-                results.append(f"<h3>{client_name}</h3>")
+                results.append(f'<h3>{client_name}</h3>')
                 for view_data in views:
                     if not view_data.get('name') or not view_data.get('data'):
                         continue
@@ -341,9 +346,6 @@ class ReportGenerator(object):
         views = []
         added_views = 0
         for view_data in self.report_data['views_data']:
-            if not view_data.get('name') or not view_data.get('data'):
-                continue
-
             views.append(self._create_data_view(view_data))
             added_views += 1
 
