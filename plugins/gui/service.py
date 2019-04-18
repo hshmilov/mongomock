@@ -620,7 +620,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             logger.info(f'Deleted report {name} id: {report_id}')
         return REPORTS_DELETED
 
-    def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data, hide_empty=False):
+    def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data,
+                                hide_empty=False):
         dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
         existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
@@ -4819,6 +4820,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.add_rule_unauth('google_analytics/collect', methods=['GET', 'POST'])
     def google_analytics_proxy(self):
+        self.handle_ga_request('https://www.google-analytics.com/collect')
+        return ''
+
+    @gui_helpers.add_rule_unauth('google_analytics/r/collect', methods=['GET', 'POST'])
+    def google_analytics_r_proxy(self):
+        self.handle_ga_request('https://www.google-analytics.com/r/collect')
+        return ''
+
+    def handle_ga_request(self, path):
         values = dict(request.values)
         signup_collection = self._get_collection(Signup.SignupCollection)
         signup = signup_collection.find_one({})
@@ -4826,22 +4836,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             customer = signup.get(Signup.CompanyField, 'signup-not-set')
         else:
             customer = 'not-set'
-
         # referrer
         values['tid'] = 'UA-137924837-1'
         values['dr'] = f'https://{customer}'
         values['dh'] = customer
         if 'dl' in values:
             del values['dl']
-
         response = requests.request(request.method,
-                                    'https://www.google-analytics.com/collect',
+                                    path,
                                     params=values)
-
         if response.status_code != 200:
             logger.error('Failed to submit ga data {response}')
-
-        return ''
 
     @property
     def plugin_subtype(self) -> PluginSubtype:
