@@ -43,8 +43,12 @@ echo ""
 
 
 echo "Updating the sources..."
-sudo mv /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list /tmp
-sudo mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
+if [ -e /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list ]; then
+    sudo mv /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list /tmp
+fi
+if [ -e /var/lib/dpkg/info/oracle-java8-installer.postinst ]; then
+    sudo mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
+fi
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 _wait_for_apt update
 echo "Upgrading..."
