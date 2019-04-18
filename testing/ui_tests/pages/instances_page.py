@@ -7,6 +7,8 @@ class InstancesPage(EntitiesPage):
     ROOT_PAGE_CSS = 'li#instances.x-nav-item'
     CONNECT_NODE_ID = 'get-connection-string'
     NODE_JOIN_TOKEN_REGEX = '<axonius-hostname> (.*) '
+    INSTANCES_ROW_BY_NAME_XPATH = '//tr[child::td[child::div[text()=\'{instance_name}\']]]'
+    INSTANCES_USER_PASSWORD_XPATH = './/td[position()=4]/div'
 
     @property
     def url(self):
@@ -34,3 +36,12 @@ class InstancesPage(EntitiesPage):
         connection_details = self.find_element_by_text('How to connect a new node').text
         self.click_ok_button()
         return re.search(self.NODE_JOIN_TOKEN_REGEX, connection_details).group(1)
+
+    def get_node_password(self, node_name):
+        self.switch_to_page()
+        self.refresh()
+        instances_row = self.find_query_row_by_name(node_name)
+        return instances_row.find_element_by_xpath(self.INSTANCES_USER_PASSWORD_XPATH).text
+
+    def find_query_row_by_name(self, instance_name):
+        return self.driver.find_element_by_xpath(self.INSTANCES_ROW_BY_NAME_XPATH.format(instance_name=instance_name))

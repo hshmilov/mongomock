@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 import paramiko
 from retrying import retry
@@ -17,6 +18,8 @@ DEFAULT_IMAGE_USERNAME = 'ubuntu'
 DEFAULT_IMAGE_PASSWORD = 'bringorder'
 AUTO_TEST_VM_KEY_PAIR = 'Auto-Test-VM-Key'
 
+RESTART_LOG_PATH = Path('/var/log/restart_system_on_reboot.log')
+
 DEFAULT_LIMIT = 10
 
 
@@ -26,6 +29,12 @@ def wait_for_booted_for_production(instance: BuildsInstance):
     test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'
     state = instance.ssh(test_ready_command)
     assert 'root root' in state[1]
+
+
+def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
+    get_log_command = f'tail {RESTART_LOG_PATH.absolute().as_posix()}'
+    restart_log_tail = instance.ssh(get_log_command)
+    logger.info(f'/var/log/restart_system_on_reboot.log : {restart_log_tail[1]}')
 
 
 def setup_instances(logger):
@@ -47,7 +56,9 @@ def setup_instances(logger):
         current_instance.wait_for_ssh()
         try:
             wait_for_booted_for_production(current_instance)
+            logger.info('Server is booted for production.')
         except Exception:
+            bring_restart_on_reboot_node_log(current_instance, logger)
             # If we fail in setup_method, teardown will not be called. lets terminate the instance.
             current_instance.terminate()
             raise
@@ -70,9 +81,9 @@ class TestInstancesBase(TestBase):
         super().teardown_method(method)
 
     @staticmethod
-    def connect_node_maker(instance):
+    def connect_node_maker(instance, password=NODE_MAKER_PASSWORD):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(instance.ip, username=NODE_MAKER_USERNAME, password=NODE_MAKER_PASSWORD, timeout=60,
+        client.connect(instance.ip, username=NODE_MAKER_USERNAME, password=password, timeout=60,
                        auth_timeout=60, look_for_keys=False, allow_agent=False)
         return client
