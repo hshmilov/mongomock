@@ -41,9 +41,15 @@ echo "Initializing the host image.."
 echo "hostname: $(hostname)"
 echo ""
 
-echo "Updating the sources..."
 
+echo "Updating the sources..."
+sudo mv /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list /tmp
+sudo mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
+sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
+_wait_for_apt update
+echo "Upgrading..."
 _wait_for_apt upgrade -y -f
+echo "Done upgrading"
 _wait_for_apt install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
@@ -51,7 +57,6 @@ add-apt-repository \
    $(lsb_release -cs) \
    stable"
 add-apt-repository -y ppa:jonathonf/python-3.6
-sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 _wait_for_apt update
 echo "Installing various dependencies..."
 _wait_for_apt install -y sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
