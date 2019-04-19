@@ -1,10 +1,11 @@
 from datetime import datetime
 
+import dateutil
 from bson import ObjectId
 
 from services.plugin_service import PluginService
 from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
-    ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD,\
+    ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD, \
     LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD
 
 
@@ -23,7 +24,10 @@ class ReportsService(PluginService):
         if self.db_schema_version < 3:
             self._update_to_schema(3, self.__update_schema_version_3)
 
-        if self.db_schema_version != 3:
+        if self.db_schema_version < 4:
+            self._update_to_schema(4, self.__update_schema_version_4)
+
+        if self.db_schema_version != 4:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
@@ -190,6 +194,30 @@ class ReportsService(PluginService):
                         'name': f'{name} {i + 1}'
                     }
                 })
+
+    @staticmethod
+    def __update_schema_version_4(db):
+        # https://axonius.atlassian.net/browse/AX-3832
+        # Fixes LAST_TRIGGERED_FIELD that are strings in the DB to be datettimes
+        collection = db['reports']
+        projection = {
+            '_id': 1,
+            f'triggers.{LAST_TRIGGERED_FIELD}': 1,
+            'triggers.name': 1,
+        }
+        for report_data in collection.find(projection=projection):
+            for trigger in report_data['triggers']:
+                last = trigger[LAST_TRIGGERED_FIELD]
+                if isinstance(last, str):
+                    last = dateutil.parser.parse(last)
+                    collection.update_one({
+                        '_id': report_data['_id'],
+                        'triggers.name': trigger['name']
+                    }, {
+                        '$set': {
+                            f'triggers.$.{LAST_TRIGGERED_FIELD}': last
+                        }
+                    })
 
     def _update_to_schema(self, version, to_call):
         print(f'upgrade to schema {version}')

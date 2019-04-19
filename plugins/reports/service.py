@@ -210,6 +210,8 @@ class ReportsService(Triggerable, PluginBase):
         """
         if request.method == 'POST':
             processed_trigger = self.__process_trigger(self.get_request_data_as_object())
+            processed_trigger.pop(LAST_TRIGGERED_FIELD, None)
+
             with self.__reports_collection.start_session() as session:
                 with session.start_transaction():
                     result = session.update_one({
@@ -217,7 +219,9 @@ class ReportsService(Triggerable, PluginBase):
                         'triggers.name': trigger_name
                     }, {
                         '$set': {
-                            'triggers.$': processed_trigger
+                            f'triggers.$.{k}': v
+                            for k, v
+                            in processed_trigger.items()
                         }
                     })
                     if result.matched_count == 0:
