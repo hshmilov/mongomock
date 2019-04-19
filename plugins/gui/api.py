@@ -321,7 +321,7 @@ class API:
     @api_add_rule('adapters', methods=['GET'],
                   required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadOnly)})
     def api_adapters(self):
-        return self._adapters()
+        return jsonify(self._adapters())
 
     @api_add_rule('adapters/<adapter_name>/clients/<client_id>', methods=['PUT', 'DELETE'],
                   required_permissions={Permission(PermissionType.Adapters, PermissionLevel.ReadWrite)})

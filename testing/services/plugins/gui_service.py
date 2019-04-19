@@ -19,8 +19,8 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
 from axonius.entities import EntityType
 
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
-from services.\
-    plugin_service import PluginService
+from gui.gui_logic.filter_utils import filter_archived
+from services.plugin_service import PluginService
 
 MAINTENANCE_FILTER = {'type': MAINTENANCE_TYPE}
 
@@ -609,16 +609,6 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             EntityType.Users: user_view,
             EntityType.Devices: device_view,
         }
-
-        def filter_archived(additional_filter=None):
-            """
-                Returns a filter that filters out archived values
-                :param additional_filter: optional - allows another filter to be made
-            """
-            base_non_archived = {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
-            if additional_filter and additional_filter != {}:
-                return {'$and': [base_non_archived, additional_filter]}
-            return base_non_archived
 
         saved_views_filter = filter_archived({
             'query_type': 'saved',

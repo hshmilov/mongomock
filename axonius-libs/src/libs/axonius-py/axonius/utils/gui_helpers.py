@@ -27,6 +27,7 @@ from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
     parse_filter_non_entities
+from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.metric import remove_ids
 from axonius.utils.threading import singlethreaded
 from axonius.logging.metric_helper import log_metric
@@ -767,6 +768,8 @@ def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str
     :param field_schema: See "devices_fields" collection in any adapter, where name=parsed
     :param existing_fields: See "devices_fields" collection in any adapter, where name=exist
     """
+    if not existing_fields:
+        return
 
     def valid_items():
         for item in field_schema['items']:
@@ -790,6 +793,7 @@ def _get_generic_fields(entity_type: EntityType):
     raise AssertionError
 
 
+@rev_cached_entity_type(ttl=60)
 def entity_fields(entity_type: EntityType):
     """
     Get generic fields schema as well as adapter-specific parsed fields schema.

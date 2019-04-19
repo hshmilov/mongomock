@@ -26,7 +26,7 @@ class EntitiesPage(Page):
     QUERY_VALUE_COMPONENT_CSS = '.expression-value'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[text()=\'{query_name_text}\']'
-    QUERY_SEARCH_EVERYWHERE_XPATH = '//div[@class=\'query-quick\']//div[contains(text(), \'Search in table:\')]'
+    QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
     QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-button'
     QUERY_NEST_EXPRESSION_CSS = '.x-filter .x-expression .x-button.expression-nest'
     QUERY_BRACKET_LEFT_CSS = '.expression-bracket-left'
@@ -232,8 +232,9 @@ class EntitiesPage(Page):
         el = self.wait_for_element_present_by_xpath(self.QUERY_SEARCH_DROPDOWN_XPATH.format(query_name_text=query_name))
         el.click()
 
+    @retry(wait_fixed=500, stop_max_attempt_number=10)
     def select_search_everywhere(self):
-        el = self.wait_for_element_present_by_xpath(self.QUERY_SEARCH_EVERYWHERE_XPATH)
+        el = self.wait_for_element_present_by_css(self.QUERY_SEARCH_EVERYWHERE_CSS)
         el.click()
 
     def find_search_value(self):

@@ -492,6 +492,13 @@ class Page:
         element.send_keys(Keys.ARROW_DOWN)
 
     def wait_for_spinner_to_end(self):
+        # This method wants to wait for the spinner to appear and finish.
+
+        # It's impossible to wait for the spinner to begin
+        # because it might already be gone when we got here, so we optimistically
+        # wait a bit to simulate waiting for the spinner to appear.
+        time.sleep(0.3)
+
         self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
         self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS2)
 

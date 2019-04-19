@@ -1425,6 +1425,7 @@ class PluginBase(Configurable, Feature):
                     entity_type,
                     plugin_identity
                 ) for data in devices)
+
                 db_to_use.insert_many(({
                     "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
                     "accurate_for_datetime": datetime.now(),

@@ -3,7 +3,6 @@ import io
 import json
 import logging
 import os
-import re
 import secrets
 import shutil
 import tarfile
@@ -114,7 +113,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        beautify_user_entry, check_permissions,
                                        deserialize_db_permissions,
                                        get_entity_labels,
-                                       get_historized_filter)
+                                       get_historized_filter, entity_fields)
 from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
@@ -132,10 +131,12 @@ from gui.feature_flags import FeatureFlags
 from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
+from gui.gui_logic.filter_utils import filter_archived
 from gui.gui_logic.get_ec_historical_data_for_entity import (TaskData,
                                                              get_all_task_data)
 from gui.gui_logic.historical_dates import (all_historical_dates,
                                             first_historical_date)
+from gui.gui_logic.views_data import get_views
 from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -294,17 +295,6 @@ def refill_passwords_fields(data, data_from_db):
         return data
 
     return data
-
-
-def filter_archived(additional_filter=None):
-    """
-    Returns a filter that filters out archived values
-    :param additional_filter: optional - allows another filter to be made
-    """
-    base_non_archived = {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
-    if additional_filter:
-        return {'$and': [base_non_archived, additional_filter]}
-    return base_non_archived
 
 
 def filter_by_name(names, additional_filter=None):
@@ -848,27 +838,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
         if method == 'GET':
-            mongo_filter = filter_archived(mongo_filter)
-            fielded_plugins = get_fielded_plugins(entity_type)
-
-            def _validate_adapters_used(view):
-                if not view.get('predefined'):
-                    return True
-                for expression in view['view']['query'].get('expressions', []):
-                    adapter_matches = re.findall(r'adapters_data\.(\w*?)\.', expression.get('field', ''))
-                    if not adapter_matches:
-                        continue
-                    if list(filter(lambda x: all(x not in y for y in fielded_plugins), adapter_matches)):
-                        return False
-                return True
-
-            # Fetching views according to parameters given to the method
-            all_views = entity_views_collection.find(mongo_filter).sort([('timestamp', pymongo.DESCENDING)]).skip(
-                skip).limit(limit)
-            logger.info('Filtering views that use fields from plugins without persisted fields schema')
-            logger.info(f'Remaining plugins include: {fielded_plugins}')
-            # Returning only the views that do not contain fields whose plugin has no field schema saved
-            return [gui_helpers.beautify_db_entry(entry) for entry in filter(_validate_adapters_used, all_views)]
+            return [gui_helpers.beautify_db_entry(entry)
+                    for entry
+                    in get_views(entity_type, limit, skip, mongo_filter)]
 
         if method == 'POST':
             view_data = self.get_request_data_as_object()
@@ -877,12 +849,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if not view_data.get('view'):
                 return return_error(f'View data is required in order to save one', 400)
             view_data['timestamp'] = datetime.now()
-            update_result = entity_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
-            if not update_result.upserted_id and not update_result.modified_count:
-                return return_error(f'View named {view_data.name} was not saved', 400)
+            update_result = entity_views_collection.find_one_and_replace({
+                'name': view_data['name']
+            }, view_data, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
 
-            entity = entity_views_collection.find_one({'name': view_data['name']})
-            return str(entity.get('_id'))
+            return str(update_result['_id'])
 
         if method == 'DELETE':
             query_ids = self.get_request_data_as_object()
@@ -1037,10 +1008,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 except Exception as e:
                     logger.exception(e)
 
-            pool.map_async(tag_adapter, entities).get()
+            pool.map(tag_adapter, entities)
 
         self._save_field_names_to_db(entity_type)
         self._trigger('clear_dashboard_cache', blocking=False)
+        entity_fields.clean_cache()
 
     def __get_entity_hyperlinks(self, entity_type: EntityType) -> Dict[str, str]:
         """
@@ -1397,8 +1369,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('adapters', required_permissions={Permission(PermissionType.Adapters,
                                                                          PermissionLevel.ReadOnly)})
     def adapters(self):
-        return self._adapters()
+        return jsonify(self._adapters())
 
+    @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _adapters(self):
         """
         Get all adapters from the core
@@ -1417,7 +1390,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 # Plugin not registered - unwanted in UI
                 continue
 
-            clients_collection = db_connection[adapter_name]['clients']
             schema = self._get_plugin_schemas(db_connection, adapter_name).get('clients')
             nodes_metadata_collection = db_connection['core']['nodes_metadata']
             if not schema:
@@ -1425,18 +1397,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 # but it still hasn't written it's schema
                 continue
 
-            clients = [gui_helpers.beautify_db_entry(client) for client in clients_collection.find()
+            clients = [gui_helpers.beautify_db_entry(client)
+                       for client
+                       in db_connection[adapter_name]['clients'].find()
                        .sort([('_id', pymongo.DESCENDING)])]
             for client in clients:
                 client['client_config'] = clear_passwords_fields(client['client_config'], schema)
                 client[NODE_ID] = adapter[NODE_ID]
             status = ''
             if len(clients):
-                clients_connected = clients_collection.count_documents({'status': 'success'})
-                status = 'success' if len(clients) == clients_connected else 'warning'
+                status = 'success' if all(client.get('status') == 'success' for client in clients) \
+                    else 'warning'
 
-            node_name = nodes_metadata_collection.find_one(
-                {NODE_ID: adapter[NODE_ID]})
+            node_name = nodes_metadata_collection.find_one({
+                NODE_ID: adapter[NODE_ID]
+            })
 
             node_name = '' if node_name is None else node_name.get(NODE_NAME)
 
@@ -1456,7 +1431,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             plugin_name = adapter.pop('plugin_name')
             adapters[plugin_name].append(adapter)
 
-        return jsonify(adapters)
+        return adapters
 
     @gui_add_rule_logged_in('adapter_features')
     def adapter_features(self):
@@ -1503,6 +1478,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         # adding client to specific adapter
         response = self.request_remote_plugin('clients', adapter_unique_name, method='put',
                                               json=clients)
+        self._adapters.clean_cache()
         if response.status_code == 200:
             self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
                                                      response.json()['client_id'], clients)
@@ -1576,6 +1552,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}').json().get('plugin_unique_name')
         if request.method == 'PUT':
+            def reset_cache_soon():
+                time.sleep(5)
+                entity_fields.clean_cache()
+            if self.__is_system_first_use:
+                run_and_forget(reset_cache_soon())
+
             self.__is_system_first_use = False
             return self._query_client_for_devices(adapter_unique_name, clients)
         else:
@@ -1615,9 +1597,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 url = f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}'
                 adapter_unique_name = self.request_remote_plugin(url).json().get('plugin_unique_name')
 
+            self._adapters.clean_cache()
             return self._query_client_for_devices(adapter_unique_name, data,
                                                   data_from_db_for_unchanged=client_from_db)
 
+        self._adapters.clean_cache()
         return '', 200
 
     def delete_client_data(self, plugin_name, client_id, node_id, delete_entities=False):
@@ -3376,6 +3360,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         get_fielded_plugins.update_cache()
         first_historical_date.clean_cache()
         all_historical_dates.clean_cache()
+        entity_fields.clean_cache()
+        self.__lifecycle.clean_cache()
+        self._adapters.clean_cache()
 
     def __generate_dashboard_uncached(self, dashboard):
         """
@@ -4254,6 +4241,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             # Don't clean too often!
             time.sleep(5)
             return ''
+
         elif job_name == 'execute':
             # GUI is a post correlation plugin, thus this is called near the end of the cycle
             self._trigger('clear_dashboard_cache', blocking=False)

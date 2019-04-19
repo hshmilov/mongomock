@@ -1,5 +1,5 @@
-from ui_tests.tests.ui_test_base import TestBase
 from axonius.utils.wait import wait_until
+from ui_tests.tests.ui_test_base import TestBase
 from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
@@ -38,7 +38,9 @@ class TestDevicesQuery(TestBase):
     def test_saved_queries_execute(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
+
         self.devices_queries_page.switch_to_page()
+
         self.devices_page.wait_for_spinner_to_end()
         windows_query_row = self.devices_queries_page.find_query_row_by_name('Windows Operating System')
         windows_filter = self.devices_queries_page.find_query_filter_in_row(windows_query_row)
