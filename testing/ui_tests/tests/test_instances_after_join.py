@@ -1,8 +1,10 @@
 import re
 import subprocess
+import time
 
 import paramiko
 import pytest
+from axonius.utils.wait import wait_until
 
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_nexpose_credentials import client_details
@@ -29,6 +31,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
         self.check_password_change()
         self.check_add_adapter_to_node()
+        self.check_node_restart()
 
     def node_join(self):
         def read_until(ssh_chan, what):
@@ -66,11 +69,34 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         node_maker_password = self.instances_page.get_node_password('{}')
         self.connect_node_maker(self._instances[0], node_maker_password)
 
-    def check_add_adapter_to_node(self):
-        client_details.pop('verify_ssl')
+    def _add_nexpose_adadpter_and_discover_devices(self):
+        # Using nexpose on all these test since i do not raise
+        # nexpose as part of the tests so the only nexpose adapter present
+        # should be from the node (and the client add should only have that option)
+        # and for any reason it is not present than we have an instances bug.
+        client_details.pop('verify_ssl', None)
         self.adapters_page.add_server(client_details, adapter_name=NEXPOSE_ADAPTER_NAME)
         self.adapters_page.wait_for_spinner_to_end()
         self.base_page.run_discovery()
+        wait_until(lambda: self._check_device_count() > 1, total_timeout=90, interval=20)
+
+    def _check_device_count(self):
         self.devices_page.switch_to_page()
+        self.devices_page.refresh()
         self.devices_page.run_filter_query(NEXPOSE_ADAPTER_FILTER)
-        assert self.devices_page.count_entities() > 1
+        return self.devices_page.count_entities()
+
+    def _delete_nexpose_adapter_and_data(self):
+        client_details.pop('verify_ssl', None)
+        self.adapters_page.remove_server(adapter_name=NEXPOSE_ADAPTER_NAME, delete_associated_entities=True)
+        wait_until(lambda: self._check_device_count() == 0, total_timeout=90, interval=20)
+
+    def check_add_adapter_to_node(self):
+        self._add_nexpose_adadpter_and_discover_devices()
+
+    def check_node_restart(self):
+        self._delete_nexpose_adapter_and_data()
+        self._instances[0].ssh('sudo reboot')
+        time.sleep(5)
+        self._instances[0].wait_for_ssh()
+        self._add_nexpose_adadpter_and_discover_devices()
