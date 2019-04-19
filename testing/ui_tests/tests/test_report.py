@@ -1,5 +1,4 @@
 import os
-import time
 
 from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
 from ui_tests.tests.ui_test_base import TestBase
@@ -62,8 +61,8 @@ class TestReport(TestBase):
 
             self.reports_page.switch_to_page()
             self.reports_page.wait_for_table_to_load()
+            self.reports_page.wait_for_report_generation(report_name)
             self.reports_page.click_report(report_name)
-            self.reports_page.wait_for_send_mail_button()
             assert self.reports_page.is_frequency_set(self.PERIOD_DAILY)
             assert self.reports_page.is_generated()
 
@@ -117,6 +116,8 @@ class TestReport(TestBase):
             self.reports_page.fill_email(recipient)
             self.reports_page.click_save()
             self.reports_page.wait_for_table_to_load()
+            self.reports_page.wait_for_report_generation(recipient)
+
             self.reports_page.click_report(recipient)
             self.reports_page.wait_for_send_mail_button()
             self.reports_page.click_send_email()
@@ -165,11 +166,11 @@ class TestReport(TestBase):
             self.reports_page.fill_email_subject(self.REPORT_SUBJECT)
             self.reports_page.fill_email(recipient)
             self.reports_page.click_save()
-            time.sleep(5)
+            self.reports_page.wait_for_report_generation(recipient)
             self.reports_page.click_report(recipient)
+            self.reports_page.wait_for_send_mail_button()
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
-
             smtp_service.verify_email_send(recipient)
 
         self.settings_page.switch_to_page()

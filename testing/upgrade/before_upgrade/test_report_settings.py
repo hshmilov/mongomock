@@ -5,6 +5,11 @@ from ui_tests.tests.ui_test_base import TestBase
 
 class TestPrepareReportSettings(TestBase):
     def test_report_no_email_settings(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        self.settings_page.set_dont_send_emails_toggle()
+        self.settings_page.save_and_wait_for_toaster()
+
         self.reports_page.switch_to_page()
         self.reports_page.wait_for_table_to_load()
         self.reports_page.click_new_report()
@@ -13,6 +18,12 @@ class TestPrepareReportSettings(TestBase):
         self.reports_page.fill_report_name(Reports.test_report_no_email)
         self.reports_page.click_include_dashboard()
         self.reports_page.click_save()
+        self.reports_page.wait_for_table_to_load()
+
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        self.settings_page.set_send_emails_toggle()
+        self.settings_page.save_and_wait_for_toaster()
 
     def test_report_with_email_settings(self):
         self.settings_page.switch_to_page()

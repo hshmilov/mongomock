@@ -657,16 +657,20 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
     def _migrate_default_report(self):
         exec_reports_settings_collection = self.db.get_collection('gui', 'exec_reports_settings')
+        reports_collection = self.db.get_collection('gui', 'reports_config')
+
         default_report = exec_reports_settings_collection.find_one()
+        default_report_config = reports_collection.find_one()
         views = self.get_saved_views()
         if default_report:
             mail_properties = dict(mailSubject='', emailList=[], emailListCC=[])
             mail_properties['emailList'] = default_report.get('recipients')
             mail_properties['mailSubject'] = EXEC_REPORT_TITLE
+            include_saved_views = 'IncludeSavedViews' if len(views) > 0 else None
             new_report = {
                 'name': EXEC_REPORT_TITLE,
-                'include_saved_views': 'IncludeSavedViews',
-                'include_dashboard': 'IncludeDashBoard',
+                'include_saved_views': include_saved_views,
+                'include_dashboard': 'IncludeDashboard',
                 'add_scheduling': 'AddScheduling',
                 'period': default_report.get('period'),
                 'mail_properties': mail_properties,
@@ -674,3 +678,4 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             }
             self._upsert_report_config(EXEC_REPORT_TITLE, new_report)
             exec_reports_settings_collection.delete_one({'_id': default_report.get('_id')})
+            reports_collection.delete_one({'_id': default_report_config.get('_id')})

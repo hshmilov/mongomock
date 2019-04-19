@@ -1,4 +1,7 @@
+from selenium.common.exceptions import NoSuchElementException
+
 from ui_tests.pages.entities_page import EntitiesPage
+from axonius.utils.wait import wait_until
 
 
 class ReportFrequency:
@@ -118,6 +121,20 @@ class ReportsPage(EntitiesPage):
 
     def wait_for_email_description(self):
         self.wait_for_element_present_by_css(self.EMAIL_DESCRIPTION_CSS)
+
+    def click_report_and_check_generation(self, report_name):
+        self.refresh()
+        try:
+            self.wait_for_table_to_load()
+            self.click_report(report_name)
+            return self.is_generated()
+        except NoSuchElementException:
+            return False
+
+    def wait_for_report_generation(self, report_name):
+        wait_until(lambda: self.click_report_and_check_generation(report_name),
+                   total_timeout=60 * 3, interval=2)
+        self.refresh()
 
     def wait_for_send_mail_button(self):
         self.wait_for_element_present_by_id(self.SEND_MAIL_BUTTON_ID)

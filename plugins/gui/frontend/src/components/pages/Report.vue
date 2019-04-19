@@ -390,15 +390,20 @@
                         this.report.views.push({entity: '', name: ''})
                     }
 
-                  let dateTime = new Date(this.report.last_generated)
+
                   if (this.report.last_generated === null) {
                     this.isLatestReport = false
                   } else {
-                    dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
-                    let dateParts = dateTime.toISOString().split('T')
-                    dateParts[1] = dateParts[1].split('.')[0]
-                    this.last_generated = 'Last generated: ' + dateParts.join(' ')
-                    this.isLatestReport = true
+                    let dateTime = new Date(this.report.last_generated)
+                    if(dateTime) {
+                      dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
+                      let dateParts = dateTime.toISOString().split('T')
+                      dateParts[1] = dateParts[1].split('.')[0]
+                      this.last_generated = 'Last generated: ' + dateParts.join(' ')
+                      this.isLatestReport = true
+                    } else {
+                      this.isLatestReport = false
+                    }
                   }
 
                 }
@@ -459,10 +464,7 @@
                 let self = this;
                 this.saveReport(this.report).then(
                     () => {
-                        self.message = 'Report is being generated'
-                        setTimeout(() => {
-                            self.exit()
-                        }, 2000);
+                      self.exit()
                     }
                 ).catch((error) => {
                     this.message = error.response.data;
