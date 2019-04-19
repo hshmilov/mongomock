@@ -1965,7 +1965,8 @@ class PluginBase(Configurable, Feature):
                               x[PLUGIN_UNIQUE_NAME] == plugin_unique_name and
                               x['data']['id'] == adapter_id]
         if len(adapter_to_extract) != 1:
-            raise CorrelateException(f'Weird entity: {entity_to_split}')
+            logger.debug(f'Weird entity with {entity_to_split}')
+            raise CorrelateException(f'Weird entity with {len(adapter_to_extract)} adapters')
         adapter_to_extract = adapter_to_extract[0]
 
         internal_axon_id = get_preferred_internal_axon_id_from_dict(adapter_to_extract, entity_type)
