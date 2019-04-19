@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -9,6 +10,8 @@ from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
 from exclude_helper import ExcludeHelper
 from services.axonius_service import get_service
 import subprocess
+
+from services.standalone_services.mockingbird_service import MOCKINGBIRD_SERVICE
 
 CORTEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
@@ -91,7 +94,6 @@ def system_entry_point(args):
                         help='Puts the version name in generated metadata.')
     parser.add_argument('--rebuild-libs', action='store_true', default=False, help='Rebuild axonius-libs first')
     parser.add_argument('--yes-hard', default=False, action='store_true')
-    parser.add_argument('--mock', default=False, action='store_true', help='Start axonius on mock mode')
     parser.add_argument('--env', metavar='N', type=str, nargs='*', action=ExtendAction,
                         help='environment vars to start the containers with',
                         default=[])
@@ -134,13 +136,19 @@ def system_entry_point(args):
         assert args.mode in ('up', 'build')
         assert args.yes_hard is True, "--hard will delete all of your volumes! if you are sure, pass --yes-hard"
         args.rebuild = True
+
     if args.pull_base_image or args.rebuild_libs:
         assert args.mode in ('up', 'build')
+
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image)
         axonius_system.build_libs(args.rebuild_libs)
-    if args.mock:
+
+    standalone_services = []
+    if is_demo_instance():
         args.env.append(AXONIUS_MOCK_DEMO_ENV_VAR)
+        standalone_services = [MOCKINGBIRD_SERVICE]
+
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
@@ -152,8 +160,14 @@ def system_entry_point(args):
         axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild)
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db,
                                       env_vars=args.env, internal_service_white_list=internal_services)
-        axonius_system.start_plugins(args.adapters, args.services, [], mode, args.restart, hard=args.hard,
-                                     skip=args.skip, env_vars=args.env)
+        axonius_system.start_plugins(adapter_names=args.adapters,
+                                     plugin_names=args.services,
+                                     standalone_services_names=standalone_services,
+                                     mode=mode,
+                                     allow_restart=args.restart,
+                                     hard=args.hard,
+                                     skip=args.skip,
+                                     env_vars=args.env)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
@@ -174,6 +188,11 @@ def process_exclude_from_config(exclude):
     return set(conf_exclude).union(exclude)
 
 
+def is_demo_instance():
+    customer_conf = json.loads(CUSTOMER_CONF_PATH.read_text())
+    return customer_conf.get('is_demo', False)
+
+
 def service_entry_point(target, args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
@@ -190,7 +209,6 @@ def service_entry_point(target, args):
     parser.add_argument('--exclude', metavar='N', type=str, nargs='*', action=ExtendAction,
                         help='Adapters and Services to exclude',
                         default=[])
-    parser.add_argument('--mock', default=False, action='store_true', help='Start service on mock mode')
     parser.add_argument('--env', metavar='N', type=str, nargs='*', action=ExtendAction,
                         help='environment vars to start the containers with',
                         default=[])
@@ -232,8 +250,9 @@ def service_entry_point(target, args):
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image)
         axonius_system.build_libs(args.rebuild_libs)
-    if args.mock:
+    if is_demo_instance():
         args.env.append(AXONIUS_MOCK_DEMO_ENV_VAR)
+
     if args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',

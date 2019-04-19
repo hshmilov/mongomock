@@ -7,18 +7,20 @@ from services.weave_service import WeaveService
 
 CORTEX_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
+MOCKINGBIRD_SERVICE = 'mockingbird'
+
 
 class MockingbirdService(WeaveService):
     def __init__(self):
-        super().__init__(self.name, os.path.join('..', 'devops', 'mockingbird'))
-        self.override_exposed_port = True   # if this service is up, always be exposed to remote connections
+        super().__init__(self.name, os.path.join('..', 'devops', MOCKINGBIRD_SERVICE))
+        self.override_exposed_port = True  # if this service is up, always be exposed to remote connections
 
     def is_up(self):
         return True
 
     @property
     def name(self):
-        return 'mockingbird'
+        return MOCKINGBIRD_SERVICE
 
     @property
     def port(self):
