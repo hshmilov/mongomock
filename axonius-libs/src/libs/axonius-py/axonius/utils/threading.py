@@ -81,6 +81,7 @@ def run_in_thread_helper(thread: ReusableThread, method_to_call, resolve, reject
             reject(e)
         except (StopThreadException, func_timeout.exceptions.FunctionTimedOut):
             logger.exception(f'StopThread or Timeout in {method_to_call.__name__} using thread {thread}')
+            reject(e)
 
     thread.start(resolver)
 
