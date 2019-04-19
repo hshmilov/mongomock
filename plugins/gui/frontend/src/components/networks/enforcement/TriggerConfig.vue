@@ -218,8 +218,9 @@
             },
             anyConditions() {
                 if (!this.conditions) return false
-                return this.conditions.new_entities || this.conditions.previous_entities
-                        || this.conditions.above || this.conditions.below
+                // the reason for the '!!' is that these conditions might be integers
+                return (!!this.conditions.new_entities) || (!!this.conditions.previous_entities)
+                        || (!!this.conditions.above) || (!!this.conditions.below)
             },
             showAbove: {
                 get() {
