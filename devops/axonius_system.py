@@ -189,8 +189,11 @@ def process_exclude_from_config(exclude):
 
 
 def is_demo_instance():
-    customer_conf = json.loads(CUSTOMER_CONF_PATH.read_text())
-    return customer_conf.get('is_demo', False)
+    try:
+        customer_conf = json.loads(CUSTOMER_CONF_PATH.read_text())
+        return customer_conf.get('is_demo', False)
+    except Exception:
+        return False
 
 
 def service_entry_point(target, args):
