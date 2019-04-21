@@ -594,7 +594,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     try:
                         max_pwd_age = user_raw.get("axonius_extended", {}).get("maxPwdAge")
                         if max_pwd_age is not None:
-                            user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
+                            password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
+                            user.password_expiration_date = password_expiration_date
+                            user.days_until_password_expiration = \
+                                (password_expiration_date.replace(tzinfo=None) - datetime.utcnow()).days
                     except Exception:
                         # This will happen for every user. Switched to debug to avoid spam
                         logger.debug(f"Error parsing max pwd age {max_pwd_age}, is it too large?")

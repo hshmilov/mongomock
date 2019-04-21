@@ -36,6 +36,7 @@ class UserAdapter(SmartJsonClass):
     is_locked = Field(bool, 'Is Locked')  # If true, account is locked, and the time of lockout is last_lockout_time
     last_lockout_time = Field(datetime.datetime, 'Last Lockout time')
     password_expiration_date = Field(datetime.datetime, 'Password Expiration Date')
+    days_until_password_expiration = Field(int, 'Days Until Password Expiration')
     password_never_expires = Field(bool, 'Password Never Expires')
     password_not_required = Field(bool, 'Password Is Not Required')
     account_disabled = Field(bool, 'Account Disabled')
