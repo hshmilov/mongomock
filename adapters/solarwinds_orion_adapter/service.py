@@ -12,7 +12,9 @@ from solarwinds_orion_adapter.connection import SolarwindsConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-# AX-969
+SOLARWINDS_PORT = 17778
+
+# pylint: disable=too-many-instance-attributes,too-many-branches,too-many-statements
 
 
 class SolarwindsOrionAdapter(AdapterBase):
@@ -47,8 +49,7 @@ class SolarwindsOrionAdapter(AdapterBase):
         return client_config['domain']
 
     def _test_reachability(self, client_config):
-        # TODO: the port isn't documented anywhere but inside the connection class...
-        return RESTConnection.test_reachability(client_config.get('domain'), 17778)
+        return RESTConnection.test_reachability(client_config.get('domain'), SOLARWINDS_PORT)
 
     def _connect_client(self, client_config):
         """
@@ -66,8 +67,7 @@ class SolarwindsOrionAdapter(AdapterBase):
             connection.connect()
             return connection
         except Exception as e:
-            logger.error('Failed to connect to client {0}'.format(
-                self._get_client_id(client_config)))
+            logger.error('Failed to connect to client %s', self._get_client_id(client_config))
             raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -182,57 +182,57 @@ class SolarwindsOrionAdapter(AdapterBase):
             if not id_check:
                 logger.error(f'ID coming from Solarwinds does not have an ID on device {raw_device_data}')
                 return None
-            else:
-                device.id = str(id_check)
-                device.node_id = device.id
-                device.name = raw_device_data.get('NodeName')
-                device.description = raw_device_data.get('Description')
-                available_memory_gb = None
-                used_memory_gb = None
-                try:
-                    if raw_device_data.get('MemoryAvailable'):
-                        available_memory_bytes = float(raw_device_data.get('MemoryAvailable'))
-                        available_memory_gb = available_memory_bytes / (1024 ** 3)
-                        device.free_physical_memory = available_memory_gb
-                except Exception:
-                    logger.exception(f'No value for the float for {raw_device_data}')
-                try:
-                    if raw_device_data.get('MemoryUsed'):
-                        used_memory_bytes = float(raw_device_data.get('MemoryUsed'))
-                        used_memory_gb = used_memory_bytes / (1024 ** 3)
-                except Exception:
-                    logger.exception(f'No value for the float for {raw_device_data}')
 
-                try:
-                    if available_memory_gb and used_memory_gb:
-                        device.total_physical_memory = available_memory_gb + used_memory_gb
-                except Exception:
-                    logger.exception(f'Either memory used or available memory does not exist in {raw_device_data}')
+            device.id = str(id_check)
+            device.node_id = device.id
+            device.name = raw_device_data.get('NodeName')
+            device.description = raw_device_data.get('Description')
+            available_memory_gb = None
+            used_memory_gb = None
+            try:
+                if raw_device_data.get('MemoryAvailable'):
+                    available_memory_bytes = float(raw_device_data.get('MemoryAvailable'))
+                    available_memory_gb = available_memory_bytes / (1024 ** 3)
+                    device.free_physical_memory = available_memory_gb
+            except Exception:
+                logger.exception(f'No value for the float for {raw_device_data}')
+            try:
+                if raw_device_data.get('MemoryUsed'):
+                    used_memory_bytes = float(raw_device_data.get('MemoryUsed'))
+                    used_memory_gb = used_memory_bytes / (1024 ** 3)
+            except Exception:
+                logger.exception(f'No value for the float for {raw_device_data}')
 
-                device.physical_memory_percentage = raw_device_data.get('PercentMemoryUsed')
-                device.figure_os(raw_device_data.get('NodeDescription'))
-                try:
-                    if raw_device_data.get('CPUCount'):
-                        device.add_cpu(cores=int(raw_device_data.get('CPUCount')))
-                except Exception:
-                    logger.exception(f'Either no value or illegal cast to integer for {raw_device_data}')
-                device.uri = raw_device_data.get('Uri')
-                device.ip_address_guid = raw_device_data.get('IPAddressGUID')
+            try:
+                if available_memory_gb and used_memory_gb:
+                    device.total_physical_memory = available_memory_gb + used_memory_gb
+            except Exception:
+                logger.exception(f'Either memory used or available memory does not exist in {raw_device_data}')
 
-                mac_addresses = raw_device_data.get('MacAddresses') or []
-                ip_address = raw_device_data.get('IPAddress') or []
-                device.add_ips_and_macs(mac_addresses, ip_address)
-                sw_list = raw_device_data.get('sw_list')
-                if sw_list and isinstance(sw_list, list):
-                    for sw_data in sw_list:
-                        try:
-                            device.add_installed_software(name=sw_data[0],
-                                                          version=sw_data[1],
-                                                          publisher=sw_data[2])
-                        except Exception:
-                            logger.exception(f'Problem adding sw data to {raw_device_data}')
-                device.software_hardware_makeup = raw_device_data.get('NodeDescription')
-                device.location = raw_device_data.get('Location')
+            device.physical_memory_percentage = raw_device_data.get('PercentMemoryUsed')
+            device.figure_os(raw_device_data.get('NodeDescription'))
+            try:
+                if raw_device_data.get('CPUCount'):
+                    device.add_cpu(cores=int(raw_device_data.get('CPUCount')))
+            except Exception:
+                logger.exception(f'Either no value or illegal cast to integer for {raw_device_data}')
+            device.uri = raw_device_data.get('Uri')
+            device.ip_address_guid = raw_device_data.get('IPAddressGUID')
+
+            mac_addresses = raw_device_data.get('MacAddresses') or []
+            ip_address = raw_device_data.get('IPAddress') or []
+            device.add_ips_and_macs(mac_addresses, ip_address)
+            sw_list = raw_device_data.get('sw_list')
+            if sw_list and isinstance(sw_list, list):
+                for sw_data in sw_list:
+                    try:
+                        device.add_installed_software(name=sw_data[0],
+                                                      version=sw_data[1],
+                                                      publisher=sw_data[2])
+                    except Exception:
+                        logger.exception(f'Problem adding sw data to {raw_device_data}')
+            device.software_hardware_makeup = raw_device_data.get('NodeDescription')
+            device.location = raw_device_data.get('Location')
             device.set_raw(raw_device_data)
             return device
         except Exception:

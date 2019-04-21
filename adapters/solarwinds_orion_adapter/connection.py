@@ -1,10 +1,14 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
+
 import requests
 from orionsdk import SwisClient
 
+logger = logging.getLogger(f'axonius.{__name__}')
 
-class SolarwindsConnection(object):
+# pylint: disable=too-many-branches,too-many-statements,invalid-triple-quote
+
+
+class SolarwindsConnection:
     def __init__(self, domain, username, password, verify_ssl):
         self.domain = domain
         self.username = username
@@ -24,8 +28,12 @@ class SolarwindsConnection(object):
         try:
             swis = SwisClient(self.domain, self.username, self.password)
             self.client = swis
+            swis.query('SELECT Uri FROM Orion.Nodes WHERE NodeID=@id', id=1)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 403:
+                raise ValueError(f'Error fetching devices: {str(e)}')
+            raise ValueError(f'Error connecting to the server: {str(e)}')
         except Exception as e:
-            # whether username is none or is just incorrect, we need to raise an appropriate error
             raise ValueError(f'Error connecting to the server: {str(e)}')
 
     def get_device_list(self):
@@ -69,12 +77,12 @@ class SolarwindsConnection(object):
         logger.info('Added mac address data to corresponding node')
 
         try:
-            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, CPUCount, IPAddressGUID, 
+            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, CPUCount, IPAddressGUID,
                                             NodeName, Uri, CPULoad, MemoryUsed, MemoryAvailable, PercentMemoryAvailable, 
                                             PercentMemoryUsed, IPAddressType, Caption, NodeDescription, Description, 
                                             SysObjectID FROM Orion.Nodes""")
         except Exception:
-            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, IPAddressGUID, 
+            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, IPAddressGUID,
                                             NodeName, Uri, CPULoad, MemoryUsed, MemoryAvailable, PercentMemoryAvailable, 
                                             PercentMemoryUsed, IPAddressType, Caption, NodeDescription, Description, 
                                             SysObjectID FROM Orion.Nodes""")

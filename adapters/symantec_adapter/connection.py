@@ -39,6 +39,7 @@ class SymantecConnection(RESTConnection):
                     error += ':' + message
                 raise RESTException(error)
             self.__set_token(response['token'], response['adminId'])
+            self._get('computers', url_params={'pageSize': 1, 'pageIndex': 1})
         else:
             raise RESTException('no username or password and no token')
 

@@ -10,14 +10,19 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class AirwatchConnection(RESTConnection):
 
     def _connect(self):
-        if self._username is not None and self._password is not None:
-            # Note that the following self._get will have the application/xml Accept type,
-            # but only afterwards we will update session headers to application/json.
-            # when having both 'Accept' in permanent and session headers, session wins.
-            self._get('system/info', do_basic_auth=True, use_json_in_response=False)
-            self._session_headers['Accept'] = 'application/json'
-        else:
+        if self._username is None or self._password is None:
             raise RESTException('No user name or password or API key')
+
+        # Note that the following self._get will have the application/xml Accept type,
+        # but only afterwards we will update session headers to application/json.
+        # when having both 'Accept' in permanent and session headers, session wins.
+        self._get('system/info', do_basic_auth=True, use_json_in_response=False)
+        self._session_headers['Accept'] = 'application/json'
+
+        try:
+            self._get('mdm/devices/search', url_params={'pagesize': 1, 'page': 0}, do_basic_auth=True)
+        except Exception:
+            self._get('mdm/devices/search', url_params={'pagesize': 1, 'page': 1}, do_basic_auth=True)
 
     def get_device_list(self):
         devices_raw_list = []
