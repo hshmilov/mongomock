@@ -11,6 +11,7 @@ from config import EXTERNAL_BUILDS_HOST, CREDENTIALS_PATH
 
 CYCLE_MINUTES = 20     # run a cycle to check on instances state every 1 hour
 SHOULD_DELETE_OLD_MESSAGES = False  # Do we want to remove old messages like a notice, after an action has been made?
+SE_CI_KEY = 'SE_CI_TEST_KEY'
 
 MONITORING_BOT_METADATA_NAMESPACE = 'monitoring_bot'
 
@@ -54,8 +55,10 @@ class InstanceMonitor:
                         raise ValueError(f'Unknown vm type {vm_type}')
 
             except Exception as e:
-                print(f'Exception {repr(e)}')
-                all_exceptions += f'Exception while handling instance {instance}: {repr(e)}\n'
+                if (instance.get('cloud') or {}).get('key_name') != SE_CI_KEY:
+                    # SE-CI Exceptions are known and should not be informed.
+                    print(f'Exception {repr(e)}')
+                    all_exceptions += f'Exception while handling instance {instance}: {repr(e)}\n'
 
         for test_group_name, test_group_instances in test_groups.items():
             try:
