@@ -26,12 +26,12 @@ class AdaptersPage(EntitiesPage):
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test connectivity is not supported for this adapter.'
     TEST_CONNECTIVITY_PROBLEM = 'Problem connecting to server.'
 
-    SERVER_ORANGE_COLOR_ID = 'svgicon-symbol-warning-a'
-    SERVER_RED_COLOR_ID = 'svgicon-symbol-error-a'
-    SERVER_GREEN_COLOR_ID = 'svgicon-symbol-success-a'
-    ORANGE_COLOR_ID = 'svgicon-symbol-warning-b'
-    RED_COLOR_ID = 'svgicon-symbol-error-b'
-    GREEN_COLOR_ID = 'svgicon-symbol-success-b'
+    SERVER_ORANGE_COLOR_ID = 'svgicon_symbol_warning_a'
+    SERVER_RED_COLOR_ID = 'svgicon_symbol_error_a'
+    SERVER_GREEN_COLOR_ID = 'svgicon_symbol_success_a'
+    ORANGE_COLOR_ID = 'svgicon_symbol_warning_b'
+    RED_COLOR_ID = 'svgicon_symbol_error_b'
+    GREEN_COLOR_ID = 'svgicon_symbol_success_b'
     NEW_SERVER_BUTTON_ID = 'new_server'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
 
