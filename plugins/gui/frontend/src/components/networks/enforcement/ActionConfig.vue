@@ -15,6 +15,7 @@
       <template v-if="actionSchema && actionSchema.type">
         <h4 class="title">Configuration</h4>
         <x-form
+          ref="form"
           v-model="config"
           :schema="actionSchema"
           api-upload="actions"
@@ -67,12 +68,12 @@
     data () {
       return {
         nameValid: false,
-        formError: ''
+        formValid: false
       }
     },
     computed: {
       disableConfirm () {
-        return (Boolean(this.formError) || !this.nameValid)
+        return (!this.formValid || !this.nameValid)
       },
       disableName () {
         return this.value.uuid
@@ -129,6 +130,10 @@
           return 'Name already taken by another saved Action'
         }
         return ''
+      },
+      formError() {
+        if (this.formValid || !this.$refs.form) return ''
+        return this.$refs.form.validity.error
       }
     },
     watch: {
@@ -139,10 +144,13 @@
     mounted () {
       this.$refs.name.focus()
       this.nameValid = !this.nameError
+      if (!this.$refs.form) {
+        this.formValid = true
+      }
     },
     methods: {
-      validateForm (validityError) {
-        this.formError = validityError
+      validateForm (valid) {
+        this.formValid = valid
       },
       confirmAction () {
         this.$emit('confirm')

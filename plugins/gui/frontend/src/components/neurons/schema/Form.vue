@@ -73,10 +73,6 @@
                     let nextInvalidField = this.validity.fields.find(x => x.error)
                     this.validity.error = nextInvalidField ? nextInvalidField.error : ''
                 }
-                if (this.silent) {
-                  this.$emit('validate', this.validity.error)
-                  return
-                }
                 this.$emit('validate', this.validity.fields.length === 0)
             }
         },

@@ -151,10 +151,9 @@
         this.$emit('validate', validity)
       },
       validate (silent) {
-        if (!this.$refs.itemChild) return
         if (this.isStringList) {
           this.validateStringList(silent)
-        } else {
+        } else if (this.$refs.itemChild) {
           this.$refs.itemChild.forEach(item => item.validate(silent))
         }
       },
@@ -179,11 +178,12 @@
         return item
       },
       validateStringList(silent) {
-        this.stringListValid = this.stringListError === ''
+        let valid = this.stringListError === ''
+        this.stringListValid = valid || silent
         this.$emit('validate', {
           name: this.schema.name,
-          valid: this.stringListValid,
-          error: this.stringListValid || silent? '': this.stringListError
+          valid,
+          error: this.stringListValid? '': this.stringListError
         })
       }
     }

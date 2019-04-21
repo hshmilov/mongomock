@@ -79,6 +79,7 @@
 
 <style lang="scss">
     .x-array-view {
+        display: inline-table;
         .separator {
             width: 100%;
             height: 1px;
@@ -88,14 +89,14 @@
         .x-button.link.expander {
             display: inline-block;
             padding: 0;
-            width: 20px;
+            width: 16px;
             text-align: left;
         }
         .item-container {
             overflow: hidden;
         }
         .placeholder {
-            margin-left: 20px;
+            margin-left: 16px;
             color: $grey-3;
             font-weight: 500;
         }
@@ -107,6 +108,11 @@
             margin-right: 4px;
             display: inline-block;
             vertical-align: top;
+        }
+        .object {
+            display: inline-grid;
+            white-space: pre-wrap;
+            text-overflow: ellipsis;
         }
     }
 </style>

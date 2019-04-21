@@ -431,18 +431,16 @@
                     height: 100%;
                     overflow: auto;
 
-                    .object {
-                        width: calc(100% - 36px);
-                    }
-
                     > .x-array-view > .array {
                         display: grid;
                         grid-template-columns: 50% 50%;
                         grid-gap: 4px 0;
-                        overflow-wrap: break-word;
 
                         .array {
                             margin-left: 20px;
+                        }
+                        .object {
+                            width: calc(100% - 36px);
                         }
                     }
                 }

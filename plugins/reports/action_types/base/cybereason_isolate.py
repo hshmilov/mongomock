@@ -15,17 +15,11 @@ class CybereasonIsolateAction(ActionTypeBase):
     @staticmethod
     def config_schema() -> dict:
         return {
-            'items': [
-            ],
-            'required': [
-            ],
-            'type': 'array'
         }
 
     @staticmethod
     def default_config() -> dict:
         return {
-            'malop_id': None,
         }
 
     def _run(self) -> EntitiesResult:
