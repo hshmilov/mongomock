@@ -1,5 +1,5 @@
 <template>
-    <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: isReadOnly}" beta>
+    <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: isReadOnly}">
         <x-search v-model="searchValue" placeholder="Search Enforcement Sets..." @keyup.enter.native="onSearchConfirm" />
         <x-table module="enforcements" @click-row="navigateEnforcement" title="Enforcement Sets" v-model="isReadOnly? undefined: selection">
             <template slot="actions">

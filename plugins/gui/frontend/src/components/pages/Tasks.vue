@@ -4,7 +4,6 @@
     :breadcrumbs="[
       { title: 'enforcement center', path: { name: 'Enforcements'}},
       { title: 'enforcement tasks' }]"
-    beta
   >
     <x-search
       v-model="searchValue"

@@ -2,7 +2,7 @@
     <x-page class="x-task" :breadcrumbs="[
         { title: 'enforcements', path: { name: 'Enforcements'}},
     	{ title: 'tasks', path: {name: 'Tasks'} },
-    	{ title: name }]" beta>
+    	{ title: name }]">
         <x-split-box>
             <template slot="main">
                 <div class="header">
