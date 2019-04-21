@@ -4595,11 +4595,20 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             for enforcement in enforcements:
                 log_metric(logger, SystemMetric.ENFORCEMENT_RAW, str(enforcement))
 
+            plugins_by_plugin_name = {x[PLUGIN_NAME]
+                                      for x
+                                      in self.get_available_plugins_from_core().values()}
+
             def dump_per_adapter(mapping, subtype):
                 counters = mapping['counters']
+                plugins_left = set(plugins_by_plugin_name)
                 for counter in counters:
                     log_metric(logger, f'adapter.{subtype}.{counter["name"]}.entities', counter['value'])
                     log_metric(logger, f'adapter.{subtype}.{counter["name"]}.entities.meta', counter['meta'])
+                    plugins_left -= {counter['name']}
+                for name in plugins_left:
+                    log_metric(logger, f'adapter.{subtype}.{name}.entities', 0)
+                    log_metric(logger, f'adapter.{subtype}.{name}.entities.meta', 0)
 
             dump_per_adapter(adapter_devices, 'devices')
             dump_per_adapter(adapter_users, 'users')

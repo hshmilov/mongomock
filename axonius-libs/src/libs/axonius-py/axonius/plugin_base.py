@@ -405,9 +405,6 @@ class PluginBase(Configurable, Feature):
         self._open_actions = dict()
         self._open_actions_lock = threading.Lock()
 
-        # Used in get_available_plugins_from_core - see docs there
-        self.__get_all_plugins_from_core_lock = threading.Lock()
-
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
         AXONIUS_REST.url_map.strict_slashes = False  # makes routing to "page" and "page/" the same.
@@ -895,19 +892,11 @@ class PluginBase(Configurable, Feature):
         """
         return requests.get(self.core_address + '/register').json()
 
+    @singlethreaded()
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
     def get_available_plugins_from_core(self):
         """
         Gets all running plugins from core by querying core/register
-        """
-        with self.__get_all_plugins_from_core_lock:
-            # There's no point in issuing many requests for this,
-            return self.__get_available_plugins_from_core_locked()
-
-    @singlethreaded()
-    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
-    def __get_available_plugins_from_core_locked(self):
-        """
-        See get_available_plugins_from_core
         """
         return self.get_available_plugins_from_core_uncached()
 
