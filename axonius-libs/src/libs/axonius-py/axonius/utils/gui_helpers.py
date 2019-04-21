@@ -1051,8 +1051,9 @@ def timed_endpoint():
                 if has_request_context():
                     if request.args.get('is_refresh') != '1':
                         cleanpath = remove_ids(request.path)
+                        delay_seconds = time.time() - now
                         log_metric(logger, SystemMetric.TIMED_ENDPOINT,
-                                   metric_value=time.time() - now,
+                                   metric_value=delay_seconds,
                                    endpoint=cleanpath,
                                    method=request.method)
 

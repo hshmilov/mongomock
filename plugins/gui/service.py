@@ -1226,6 +1226,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     # USER #
     #########
 
+    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_helpers.paginated()
     @gui_helpers.filtered_entities()
@@ -1262,6 +1263,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         output.headers['Content-type'] = 'text/csv'
         return output
 
+    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_add_rule_logged_in('users/<user_id>', methods=['GET'], required_permissions={Permission(PermissionType.Users,
                                                                                                  PermissionLevel.ReadOnly)})
