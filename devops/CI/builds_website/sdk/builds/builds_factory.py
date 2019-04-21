@@ -25,6 +25,7 @@ IS_DEBUG = True
 BUILDS_AUTH_TOKEN = 'c9129428-1973-45e2-94e2-8cca92a31350'
 BUILDS_URL = 'builds-local.axonius.lan' if 'BUILDS_HOST' not in os.environ else os.environ['BUILDS_HOST']
 DAILY_EXPORT_SUFFIX = '_daily_export'
+EXPORT_STATUS = 'completed'
 
 SSH_NETWORK_TIMEOUT = 60 * 90  # some commands are really long...
 TIME_TO_WAIT_BETWEEN_SSH_CONNECT_TRIES = 5
@@ -185,8 +186,9 @@ class Builds(BuildsAPI):
         self.groups: List[str] = []
 
     def get_latest_daily_export(self):
-        response = self.get('exports', params={'limit': 10})
-        daily_exports = [export for export in response['result'] if DAILY_EXPORT_SUFFIX in export['version']]
+        response = self.get_last_exports()
+        daily_exports = [export for export in response['result'] if
+                         DAILY_EXPORT_SUFFIX in export['version'] and EXPORT_STATUS == export['status']]
         return daily_exports[0]
 
     def get_last_exports(self, limit=10):
