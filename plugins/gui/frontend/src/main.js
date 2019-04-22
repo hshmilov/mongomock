@@ -31,7 +31,7 @@ Vue.use(VmSelect)
 Vue.use(VueAnalytics, {
 	id: 'UA-123123123-0', // set in backend
 	router,
-	customResourceURL: './src/analytics.js'
+	customResourceURL: '/src/analytics.js'
 })
 
 new Vue({
