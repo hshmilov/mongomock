@@ -438,7 +438,7 @@ class AxoniusService:
         return image_name
 
     def pull_weave_images(self, repull=False, show_print=True):
-        weave_images = ['weaveworks/weavedb', 'weaveworks/weaveexec:2.5.0', 'weaveworks/weave:2.5.0']
+        weave_images = ['weaveworks/weavedb', 'weaveworks/weaveexec:2.5.1', 'weaveworks/weave:2.5.1']
         for current_weave_image in weave_images:
             self._pull_image(current_weave_image, repull, show_print)
         return weave_images
