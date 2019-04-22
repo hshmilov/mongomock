@@ -32,8 +32,8 @@ INSTANCES_SCRIPT_PATH = 'devops/scripts/instances'
 WEAVE_PATH = '/usr/local/bin/weave'
 DELETE_INSTANCES_USER_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
                                                       'delete_instances_user.py')
-RESTART_SYSTEM_ON_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
-                                                       'restart_system_on_reboot.py')
+START_SYSTEM_ON_FIRST_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
+                                                           'start_system_on_first_boot.py')
 INSTANCES_SETUP_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH, 'setup_node.py')
 INSTANCE_SETTINGS_DIR_NAME = '.axonius_settings'
 AXONIUS_SETTINGS_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME)
@@ -134,14 +134,14 @@ def install(first_time, root_pass):
     chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
 
     # This parts tends to have problems. Minimize the code after it as much as possible.
-    start_axonius()
-    run_discovery()
-
-    # Chown again after the run, to make log file which are created afterwards be also part of it
-    set_special_permissions(root_pass)
-    chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
-
     if not first_time:
+        start_axonius()
+        run_discovery()
+
+        # Chown again after the run, to make log file which are created afterwards be also part of it
+        set_special_permissions(root_pass)
+        chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
+
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
 
@@ -207,7 +207,7 @@ def create_cronjob(script_path, cronjob_timing, specific_run_env=''):
 
 def setup_instances_cronjobs():
     create_cronjob(DELETE_INSTANCES_USER_CRON_SCRIPT_PATH, '*/1 * * * *', specific_run_env='/usr/local/bin/python3')
-    create_cronjob(RESTART_SYSTEM_ON_BOOT_CRON_SCRIPT_PATH, '@reboot', specific_run_env='/usr/local/bin/python3')
+    create_cronjob(START_SYSTEM_ON_FIRST_BOOT_CRON_SCRIPT_PATH, '@reboot', specific_run_env='/usr/local/bin/python3')
 
 
 def push_old_instances_settings():

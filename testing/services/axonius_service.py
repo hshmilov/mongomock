@@ -1,3 +1,5 @@
+import stat
+
 import pytest
 import glob
 import importlib
@@ -89,6 +91,9 @@ class AxoniusService:
                     exist_ok=True)
                 with open(key_file_path, 'w') as encryption_key_file:
                     encryption_key_file.write(encryption_key)
+
+                # Making sure that it can be used by node_maker user.
+                os.chmod(key_file_path, 0o646)
 
             print(f'Creating weave network')
             weave_launch_command = [WEAVE_PATH, 'launch',

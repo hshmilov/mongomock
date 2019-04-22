@@ -7,7 +7,7 @@ from retrying import retry
 
 from builds import Builds
 from builds.builds_factory import BuildsInstance
-from devops.scripts.instances.restart_system_on_reboot import \
+from devops.scripts.instances.start_system_on_first_boot import \
     BOOTED_FOR_PRODUCTION_MARKER_PATH
 from ui_tests.tests.ui_test_base import TestBase
 
