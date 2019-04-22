@@ -329,16 +329,22 @@ class JamfConnection(object):
 
         # Getting all devices at once so no progress is logged
         # alive_hours/24 evaluates to an int on purpose
-        computers = self.threaded_get_devices(
-            url=consts.COMPUTERS_URL,
-            device_list_name=consts.COMPUTERS_DEVICE_LIST_NAME,
-            device_type=consts.COMPUTER_DEVICE_TYPE,
-            should_fetch_department=should_fetch_department)
-        if should_fetch_policies:
-            self.threaded_get_policy_history(computers)
-        yield from computers
-        mobile_devices = self.threaded_get_devices(
-            url=consts.MOBILE_DEVICE_URL,
-            device_list_name=consts.MOBILE_DEVICE_LIST_NAME,
-            device_type=consts.MOBILE_DEVICE_TYPE)
-        yield from mobile_devices
+        try:
+            computers = self.threaded_get_devices(
+                url=consts.COMPUTERS_URL,
+                device_list_name=consts.COMPUTERS_DEVICE_LIST_NAME,
+                device_type=consts.COMPUTER_DEVICE_TYPE,
+                should_fetch_department=should_fetch_department)
+            if should_fetch_policies:
+                self.threaded_get_policy_history(computers)
+            yield from computers
+        except Exception:
+            logger.exception(f'Problem with computers')
+        try:
+            mobile_devices = self.threaded_get_devices(
+                url=consts.MOBILE_DEVICE_URL,
+                device_list_name=consts.MOBILE_DEVICE_LIST_NAME,
+                device_type=consts.MOBILE_DEVICE_TYPE)
+            yield from mobile_devices
+        except Exception:
+            logger.exception(f'Problem with mobiles')

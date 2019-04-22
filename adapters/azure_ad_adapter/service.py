@@ -30,6 +30,15 @@ class AzureAdAdapter(AdapterBase):
         ad_on_premise_last_sync_date_time = Field(datetime.datetime, 'On Premise Last Sync Date Time')
         ad_on_premise_sync_enabled = Field(bool, 'On Premise Sync Enabled')
         ad_on_premise_trust_type = Field(str, 'Azure On Premise Trust Type')
+        android_security_patch_level = Field(str, 'Android Security Patch Level')
+        phone_number = Field(str, 'Phone Number')
+        imei = Field(str, 'IMEI')
+        email = Field(str, 'Email')
+        is_encrypted = Field(bool, 'Is Encrypted')
+        user_principal_name = Field(str, 'User Principal Name')
+        total_storage_space_in_bytes = Field(int, 'Total Storage Space')
+        free_storage_space_in_bytes = Field(int, 'Free Storage Space')
+        managed_device_name = Field(str, 'Managed Device Name')
 
     class MyUserAdapter(UserAdapter, ADEntity):
         ad_on_premise_immutable_id = Field(str, 'On Premise Immutable ID')
@@ -103,53 +112,105 @@ class AzureAdAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _parse_raw_data(self, raw_data):
-        for raw_device_data in iter(raw_data):
+    def _create_azure_ad_device(self, raw_device_data):
+        try:
+            # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
+            device = self._new_device_adapter()
+
+            device.id = raw_device_data['id']
+
+            account_enabled = raw_device_data.get('accountEnabled')
+            if isinstance(account_enabled, bool):
+                device.device_disabled = not account_enabled
+
             try:
-                # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
-                device = self._new_device_adapter()
-
-                device.id = raw_device_data['id']
-
-                account_enabled = raw_device_data.get('accountEnabled')
-                if isinstance(account_enabled, bool):
-                    device.device_disabled = not account_enabled
-
-                try:
-                    device.last_seen = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
-                except Exception:
-                    logger.exception(f'Can not parse last seen')
-
-                device.azure_device_id = raw_device_data.get('deviceId')
-                device.name = raw_device_data.get('displayName')
-                device.azure_display_name = raw_device_data.get('displayName')
-
-                azure_is_compliant = raw_device_data.get('isCompliant')
-                if isinstance(azure_is_compliant, bool):
-                    device.azure_is_compliant = azure_is_compliant
-
-                azure_is_managed = raw_device_data.get('isManaged')
-                if isinstance(azure_is_managed, bool):
-                    device.azure_is_managed = azure_is_managed
-
-                azure_sync_enabled = raw_device_data.get('onPremisesSyncEnabled')
-                if isinstance(azure_sync_enabled, bool):
-                    device.ad_on_premise_sync_enabled = azure_sync_enabled
-
-                try:
-                    device.ad_on_premise_last_sync_date_time = parse_date(
-                        raw_device_data.get('onPremisesLastSyncDateTime'))
-                except Exception:
-                    logger.exception(f'Can not parse last sync date time')
-
-                device.ad_on_premise_trust_type = raw_device_data.get('trustType')
-                device.figure_os(raw_device_data.get('operatingSystem', ''))
-                device.os.build = raw_device_data.get('operatingSystemVersion')
-                device.adapter_properties = [AdapterProperty.Assets.name, AdapterProperty.Manager.name]
-                device.set_raw(raw_device_data)
-                yield device
+                device.last_seen = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
             except Exception:
-                logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+                logger.exception(f'Can not parse last seen')
+
+            device.azure_device_id = raw_device_data.get('deviceId')
+            device.name = raw_device_data.get('displayName')
+            device.azure_display_name = raw_device_data.get('displayName')
+
+            azure_is_compliant = raw_device_data.get('isCompliant')
+            if isinstance(azure_is_compliant, bool):
+                device.azure_is_compliant = azure_is_compliant
+
+            azure_is_managed = raw_device_data.get('isManaged')
+            if isinstance(azure_is_managed, bool):
+                device.azure_is_managed = azure_is_managed
+
+            azure_sync_enabled = raw_device_data.get('onPremisesSyncEnabled')
+            if isinstance(azure_sync_enabled, bool):
+                device.ad_on_premise_sync_enabled = azure_sync_enabled
+
+            try:
+                device.ad_on_premise_last_sync_date_time = parse_date(
+                    raw_device_data.get('onPremisesLastSyncDateTime'))
+            except Exception:
+                logger.exception(f'Can not parse last sync date time')
+
+            device.ad_on_premise_trust_type = raw_device_data.get('trustType')
+            device.figure_os(raw_device_data.get('operatingSystem', ''))
+            device.os.build = raw_device_data.get('operatingSystemVersion')
+            device.adapter_properties = [AdapterProperty.Assets.name, AdapterProperty.Manager.name]
+            device.set_raw(raw_device_data)
+            return device
+        except Exception:
+            logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+            return None
+
+    def _create_intune_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('id')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('deviceName') or '')
+            device.name = device_raw.get('deviceName')
+            device.device_manufacturer = device_raw.get('manufacturer')
+            device.device_model = device_raw.get('model')
+            try:
+                device.total_storage_space_in_bytes = int(device_raw.get('totalStorageSpaceInBytes'))
+                device.free_storage_space_in_bytes = int(device_raw.get('freeStorageSpaceInBytes'))
+            except Exception:
+                logger.exception(f'Problem getting storage')
+            device.managed_device_name = device_raw.get('managedDeviceName')
+            try:
+                device.figure_os((device_raw.get('osVersion') or '') + ' ' +
+                                 ((device_raw.get('operatingSystem')) or ''))
+            except Exception:
+                logger.exception(f'Problem getting os for {device_raw}')
+            device.imei = device_raw.get('imei')
+            try:
+                device.last_seen = parse_date(device_raw.get('lastSyncDateTime'))
+            except Exception:
+                logger.exception(f'Prbolem getting last seen for {device_raw}')
+            device.device_serial = device_raw.get('serialNumber')
+            device.phone_number = device_raw.get('phoneNumber')
+            device.android_security_patch_level = device_raw.get('androidSecurityPatchLevel')
+            device.email = device_raw.get('emailAddress')
+            if device_raw.get('wiFiMacAddress'):
+                device.add_nic(device_raw.get('wiFiMacAddress'), None)
+            device.is_encrypted = device_raw.get('isEncrypted')
+            device.user_principal_name = device_raw.get('userPrincipalName')
+            device.azure_ad_id = device_raw.get('azureADDeviceId')
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with device {device_raw}')
+            return None
+
+    def _parse_raw_data(self, raw_data):
+        for raw_device_data, devie_type in iter(raw_data):
+            device = None
+            if devie_type == 'Azure AD':
+                device = self._create_azure_ad_device(raw_device_data)
+            if devie_type == 'Intune':
+                device = self._create_intune_device(raw_device_data)
+            if device:
+                yield device
 
     def _parse_users_raw_data(self, raw_data):
         for raw_user_data in iter(raw_data):

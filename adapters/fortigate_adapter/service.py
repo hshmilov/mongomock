@@ -106,7 +106,10 @@ class FortigateAdapter(AdapterBase, Configurable):
                     last_seen) - datetime.timedelta(seconds=self.__dhcp_lease_time)
             except Exception:
                 logger.exception(f'Problem getting last seen for device {raw_device}')
-            device.interface = raw_device.get('interface')
+            interface = raw_device.get('interface')
+            if interface and interface.strip() in self.__interfaces_exclude_list:
+                return None
+            device.interface = interface
             device.set_raw(raw_device)
             return device
         except Exception:
@@ -201,6 +204,12 @@ class FortigateAdapter(AdapterBase, Configurable):
                     'name': consts.DHCP_LEASE_TIME,
                     'title': 'DHCP Lease Time (In Seconds)',
                     'type': 'integer'
+                },
+                {
+                    'name': 'interfaces_exclude_list',
+                    'title': 'Interfaces Exclude List',
+                    'type': 'string',
+                    'description': 'A comma-delimeted list of interfaces to exclude'
                 }
             ],
             'required': [
@@ -214,7 +223,10 @@ class FortigateAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             consts.DHCP_LEASE_TIME: consts.DEFAULT_DHCP_LEASE_TIME,
+            'interfaces_exclude_list': None
         }
 
     def _on_config_update(self, config):
         self.__dhcp_lease_time = config.get(consts.DHCP_LEASE_TIME, consts.DEFAULT_DHCP_LEASE_TIME)
+        self.__interfaces_exclude_list = [interface.strip() for interface
+                                          in (config.get('interfaces_exclude_list') or '').strip(',') if interface]

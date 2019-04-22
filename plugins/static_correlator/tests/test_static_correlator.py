@@ -144,7 +144,8 @@ def test_rule_domain_hostname_correlation():
     Checking domain + host name
     :return:
     """
-    device1 = get_raw_device(hostname='ubuntuLolol',
+    device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME,
+                             hostname='ubuntuLolol.test',
                              os={'bitness': 32,
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},

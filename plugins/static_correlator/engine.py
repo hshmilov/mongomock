@@ -22,7 +22,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_asset_snow_or_host, compare_snow_asset_hosts,
                                    get_bios_serial_or_serial, get_cloud_data,
                                    get_hostname, get_id,
-                                   get_last_used_users,
+                                   get_last_used_users, is_from_ad,
                                    get_normalized_hostname_str,
                                    get_normalized_ip, get_serial,
                                    hostnames_do_not_contradict,
@@ -31,7 +31,6 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_only_host_adapter_not_localhost,
                                    is_different_plugin, is_from_ad_or_jamf,
                                    is_from_juniper_and_asset_name,
-                                   is_from_no_mac_adapters_with_empty_mac,
                                    is_junos_space_device,
                                    is_old_device, is_sccm_or_ad, is_snow_device,
                                    is_splunk_vpn, normalize_adapter_devices,
@@ -42,7 +41,8 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
                                    get_hostname_or_serial, compare_hostname_serial,
                                    is_from_twistlock_or_aws, get_nessus_no_scan_id, compare_nessus_no_scan_id,
-                                   is_domain_valid, compare_uuid, get_uuid)
+                                   is_domain_valid, compare_uuid, get_uuid,
+                                   is_from_azure_ad, get_azure_ad_id, compare_azure_ad_id)
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -227,7 +227,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [],
+                                      [is_from_ad],
                                       [compare_domain_for_correlation,
                                        not_aruba_adapters,
                                        serials_do_not_contradict],
@@ -275,7 +275,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_nessus_no_scan_id],
                                       [compare_nessus_no_scan_id],
                                       [],
-                                      [],
+                                      [asset_hostnames_do_not_contradict],
                                       {'Reason': 'They are the same nessus id no scan'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -297,18 +297,19 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_bios_serial_or_serial],
                                       [compare_bios_serial_serial],
                                       [],
-                                      [hostnames_do_not_contradict],
+                                      [asset_hostnames_do_not_contradict],
                                       {'Reason': 'Bios serial or serials are equal'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_serial_with_hostname(self, adapters_to_correlate):
+        # Right now we do it only with Airwatch
         logger.info('Starting to correlate on Hostname-Serial')
         filtered_adapters_list = filter(get_hostname_or_serial, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname_or_serial],
                                       [compare_hostname_serial],
-                                      [get_serial],
-                                      [hostnames_do_not_contradict],
+                                      [lambda x: x.get('plugin_name') == 'airwatch_adapter'],
+                                      [asset_hostnames_do_not_contradict],
                                       {'Reason': 'Hostname or serials are equal'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -319,7 +320,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_bios_serial_or_serial_no_s],
                                       [compare_bios_serial_serial_no_s],
                                       [],
-                                      [hostnames_do_not_contradict],
+                                      [asset_hostnames_do_not_contradict],
                                       {'Reason': 'Bios serial or serials are equal with no S'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -356,22 +357,6 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname are twistlock'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_with_no_mac_adapters(self, adapters_to_correlate):
-        """
-        EPO (and more adaptrers) correlation is a little more loose - we allow correlation based on hostname alone,
-        but only where theres is no MAC.
-        In order to lower the false positive rate we don't use the normalized hostname but rather the full one
-        """
-        logger.info('Starting to correlate on Hostname-No-Mac-ADAPTERS')
-        filtered_adapters_list = filter(get_hostname, adapters_to_correlate)
-        return self._bucket_correlate(list(filtered_adapters_list),
-                                      [get_hostname],
-                                      [compare_hostname],
-                                      [is_from_no_mac_adapters_with_empty_mac],
-                                      [not_aruba_adapters],
-                                      {'Reason': 'They have the same hostname and one is No MACs Adapters with no MAC'},
-                                      CorrelationReason.StaticAnalysis)
-
     def _correlate_with_juniper(self, adapters_to_correlate):
         """
         juniper correlation is a little more loose - we allow correlation based on asset name alone,
@@ -401,6 +386,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same ID and one is AD and the second is SCCM'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlata_azure_ad_intune(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Intune Azuze ad')
+        filtered_adapters_list = filter(is_from_azure_ad, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_azure_ad_id],
+                                      [compare_azure_ad_id],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same AZURE AD ID'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_ad_azure_ad(self, adapters_to_correlate):
         """
         Correlate Azure AD and AD
@@ -428,7 +424,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_asset_hosts],
                                       [get_asset_name],
                                       [ips_do_not_contradict_or_mac_intersection,
-                                       not_aruba_adapters],
+                                       not_aruba_adapters,
+                                       asset_hostnames_do_not_contradict],
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -446,7 +443,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [is_snow_device],
                                       [ips_do_not_contradict_or_mac_intersection,
                                        not_aruba_adapters,
-                                       cloud_id_do_not_contradict],
+                                       cloud_id_do_not_contradict,
+                                       asset_hostnames_do_not_contradict],
                                       {'Reason': 'They have the same SNOW Asset + Hostname name'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -502,9 +500,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # Find azure ad and ad with the same display name
         yield from self._correlate_ad_azure_ad(adapters_to_correlate)
 
-        # EPO devices on VPN netwrok will almost conflict on IP+MAC with other Agents.
-        # If no mac on EPO allow correlation by full host name
-        yield from self._correlate_with_no_mac_adapters(adapters_to_correlate)
+        yield from self._correlata_azure_ad_intune(adapters_to_correlate)
 
         # juniper correlation is a little more loose - we allow correlation based on asset name alone,
         yield from self._correlate_with_juniper(adapters_to_correlate)

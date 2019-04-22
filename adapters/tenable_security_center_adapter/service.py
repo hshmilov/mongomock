@@ -179,7 +179,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
             hostname_by_netbios = None
             logger.warning(f'Couldn\'t parse hostname from netbios name {netbios_name}')
 
-        hostname = raw_device_data.get('dnsName', hostname_by_netbios)
+        hostname = raw_device_data.get('dnsName') or hostname_by_netbios
         device.hostname = hostname
         uuid = raw_device_data.get('uuid')
         if uuid:

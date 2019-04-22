@@ -466,7 +466,8 @@ class SccmAdapter(AdapterBase):
                 device.total_number_of_physical_processors = int(processors) if processors else None
                 device.current_logged_user = device_raw.get('UserName0') or device_raw.get('User_Name0')
                 device.time_zone = device_raw.get('CurrentTimeZone0')
-                device.set_boot_time(boot_time=device_raw.get('LastBootUpTime0'))
+                if device_raw.get('LastBootUpTime0'):
+                    device.set_boot_time(boot_time=device_raw.get('LastBootUpTime0'))
                 last_seen = device_raw.get('Last Seen')
                 try:
                     if last_seen:

@@ -109,7 +109,13 @@ class AzureAdClient(RESTConnection):
             page_num += 1
 
     def get_device_list(self):
-        yield from self._paged_get(f'devices?$select={",".join(DEVICE_ATTRIBUTES)}')
+        for device_raw in self._paged_get(f'devices?$select={",".join(DEVICE_ATTRIBUTES)}'):
+            yield device_raw, 'Azure AD'
+        try:
+            for device_raw in self._paged_get(f'deviceManagement/managedDevices'):
+                yield device_raw, 'Intune'
+        except Exception:
+            logger.exception(f'Cant get Intune')
 
     def get_user_list(self):
         # We have to specify the attibutes, "*" is not supported.

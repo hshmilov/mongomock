@@ -647,7 +647,10 @@ def is_only_host_adapter_not_localhost(adapter_device):
                                                   'logrhythm_adapter',
                                                   'symantec_ee_adapter']) and \
         (not adapter_device.get('data').get('hostname') or
-            'localhost' not in adapter_device.get('data').get('hostname').strip().lower())
+         ('localhost' not in adapter_device.get('data').get('hostname').strip().lower()
+          and 'iphone' not in adapter_device.get('data').get('hostname').strip().lower()
+          and 'ipad' not in adapter_device.get('data').get('hostname').strip().lower())
+         )
 
 
 def is_sccm_or_ad(adapter_device):
@@ -677,6 +680,18 @@ def is_from_no_mac_adapters_with_empty_mac(adapter_device):
 
 def is_from_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter'
+
+
+def get_azure_ad_id(adapter_device):
+    return adapter_device.get('data').get('azure_ad_id ') or adapter_device.get('data').get('id')
+
+
+def compare_azure_ad_id(adapter_device1, adapter_device2):
+    azure_ad_id_1 = get_azure_ad_id(adapter_device1)
+    azure_ad_id_2 = get_azure_ad_id(adapter_device2)
+    if azure_ad_id_1 and azure_ad_id_2:
+        return azure_ad_id_1 == azure_ad_id_2
+    return False
 
 
 def is_from_azure_ad(adapter_device):
@@ -1057,12 +1072,24 @@ def not_snow_adapters(adapter_device1, adapter_device2):
 
 
 def snow_asset_names_do_not_contradict(adapter_device1, adapter_device2):
-    if not is_snow_adapter(adapter_device1) or not is_snow_adapter(adapter_device2):
+    if is_snow_adapter(adapter_device1) and is_snow_adapter(adapter_device2):
+        asset1 = get_asset_name(adapter_device1)
+        asset2 = get_asset_name(adapter_device2)
+        if asset1 and asset2 and asset1.lower() != asset2.lower():
+            return False
+    elif not is_snow_adapter(adapter_device1) and not is_snow_adapter(adapter_device2):
         return True
-    asset1 = get_asset_name(adapter_device1)
-    asset2 = get_asset_name(adapter_device2)
-    if asset1 and asset2 and asset1.lower() != asset2.lower():
-        return False
+    else:
+        if is_snow_adapter(adapter_device1):
+            asset1 = get_asset_name(adapter_device1)
+            asset2 = get_hostname(adapter_device2)
+            if asset1 and asset2 and asset1.split('.')[0].lower() != asset2.split('.')[0].lower():
+                return False
+        if is_snow_adapter(adapter_device2):
+            asset1 = get_hostname(adapter_device1)
+            asset2 = get_asset_name(adapter_device2)
+            if asset1 and asset2 and asset1.split('.')[0].lower() != asset2.split('.')[0].lower():
+                return False
     return True
 
 
@@ -1099,7 +1126,7 @@ def contain_jamf_generic_names(adapter_device):
     hostname = get_hostname(adapter_device)
     if not hostname:
         return False
-    if 'MacBook Pro (' in hostname:
+    if 'MacBook Pro (' in hostname or 'MacBook-Pro' in hostname or 'localhost' in hostname:
         return True
     return False
 

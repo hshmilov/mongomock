@@ -238,6 +238,8 @@ class CsvAdapter(AdapterBase):
                     hostname = hostname.split('\\')[1]
                     hostname_domain = hostname.split('\\')[0]
                 device.hostname = hostname
+                if not hostname:
+                    device.hostname = vals.get('name')
                 device.device_model = vals.get('model')
                 device.domain = vals.get('domain') or hostname_domain
                 try:
@@ -247,7 +249,7 @@ class CsvAdapter(AdapterBase):
                     else:
                         device.last_seen = datetime.datetime.fromtimestamp(int(vals.get('last_seen')))
                 except Exception:
-                    logger.exception(f'Problem adding last seen')
+                    logger.debug(f'Problem adding last seen')
 
                 device.device_manufacturer = vals.get('manufacturer')
                 device.total_physical_memory = vals.get('total_physical_memory_gb')

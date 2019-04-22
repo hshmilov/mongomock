@@ -125,8 +125,7 @@ class TenableSecurityScannerConnection(RESTConnection):
         total_records = response['totalRecords']
         records_returned = response['returnedRecords']
         logger.info(f'Got {records_returned} out of {total_records} at the first page')
-        while int(start_offest) < int(total_records) \
-                and int(start_offest) < int(consts.MAX_RECORDS):
+        while int(start_offest) < int(consts.MAX_RECORDS):
             try:
                 response = self._post('analysis', body_params={'type': analysis_type,
                                                                'sourceType': source_type,
@@ -137,6 +136,8 @@ class TenableSecurityScannerConnection(RESTConnection):
                 yield from response['results']
                 records_returned = response['returnedRecords']
                 logger.info(f'Got {records_returned} out of {total_records} at offset {start_offest}')
+                if records_returned != consts.DEVICE_PER_PAGE:
+                    break
             except Exception:
                 logger.exception(f'Problems at offset {start_offest}')
             start_offest += consts.DEVICE_PER_PAGE

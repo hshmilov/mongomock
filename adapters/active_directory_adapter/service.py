@@ -117,6 +117,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         user_account_control = Field(int, 'User Account Control')
         account_lockout = Field(bool, "Account Lockout")
         ad_dc_source = Field(str, 'AD DC Source')
+        mobile = Field(str, 'Mobile Number')
 
     def __init__(self):
 
@@ -674,7 +675,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 user.employee_id = user_raw.get('employeeID')
                 user.employee_number = user_raw.get('employeeNumber')
                 user.employee_type = user_raw.get('employeeType')
-
+                user.mobile = user_raw.get('mobile')
                 user.set_raw(user_raw)
                 yield user
             except Exception:

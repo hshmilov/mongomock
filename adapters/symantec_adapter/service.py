@@ -8,6 +8,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.utils.parsing import is_domain_valid
 from symantec_adapter import consts
 from symantec_adapter.connection import SymantecConnection
 
@@ -118,7 +119,7 @@ class SymantecAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=R0912,R0915
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -162,7 +163,15 @@ class SymantecAdapter(AdapterBase):
                 device.id = device_raw['agentId'] + '_' + computer_name
                 try:
                     if device_raw.get('logonUserName'):
-                        device.last_used_users = device_raw.get('logonUserName').split(',')
+                        if device_raw.get('loginDomain') and is_domain_valid(device_raw.get('loginDomain')):
+                            if '.' not in device_raw.get('loginDomain'):
+                                device.last_used_users = [device_raw.get('loginDomain') +
+                                                          '\\' + device_raw.get('logonUserName')]
+                            else:
+                                device.last_used_users = [device_raw.get('logonUserName') +
+                                                          '@' + device_raw.get('loginDomain')]
+                        else:
+                            device.last_used_users = [device_raw.get('logonUserName')]
                 except Exception:
                     logger.exception(f'Problem adding user to {device_raw}')
                 device.cids_defset_version = device_raw.get('cidsDefsetVersion')

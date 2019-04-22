@@ -162,6 +162,12 @@ class TwistlockAdapter(AdapterBase):
             device.agent_version = device_raw.get('version')
             device.agent_type = device_raw.get('type')
             device.last_modified = parse_date(device_raw.get('lastModified'))
+            try:
+                ips = device_raw.get('hostIPs')
+                if ips and isinstance(ips, list):
+                    device.add_nic(None, ips)
+            except Exception:
+                logger.exception(f'Problem adding nic to {device_raw}')
             device.is_connected = device_raw.get('connected')
             agent_features = device_raw.get('features')
             if isinstance(agent_features, dict) and agent_features:

@@ -1,3 +1,4 @@
+import json
 import datetime
 import logging
 
@@ -5,7 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.parsing import is_domain_valid
@@ -24,6 +25,7 @@ class TruefortAdapter(AdapterBase):
         create_time = Field(datetime.datetime, 'Create Time')
         agent_version = Field(str, 'Agent Version')
         agent_status = Field(str, 'Agent Status')
+        applications = ListField(str, 'Applications')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -145,7 +147,12 @@ class TruefortAdapter(AdapterBase):
                 device.create_time = parse_date(device_raw.get('createTime'))
             except Exception:
                 logger.exception(f'Problem getting create time for {device_raw}')
-
+            try:
+                apps_raw = device_raw.get('applications')
+                if apps_raw and isinstance(apps_raw, str):
+                    device.applications = list(json.loads(apps_raw).values())
+            except Exception:
+                logger.exception(f'Problem adding apps to {device_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:

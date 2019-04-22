@@ -347,7 +347,7 @@ class RESTConnection(ABC):
 
         # Now that we have built the new requests, try to asynchronously get them.
         for chunk_id in range(int(math.ceil(len(aio_requests) / chunks))):
-            logger.info(f'Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}')
+            logger.debug(f'Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}')
             all_answers = async_request(aio_requests[chunks * chunk_id: chunks * (chunk_id + 1)])
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.

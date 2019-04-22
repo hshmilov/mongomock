@@ -2022,8 +2022,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                                   '_id': 0
                                                                               }):
             corresponding_user_action = enforcement_actions_from_user.get(action_from_db['name'])
-            logger.info(action_from_db)
-            logger.info(corresponding_user_action)
+            logger.debug(action_from_db)
+            logger.debug(corresponding_user_action)
             if not corresponding_user_action:
                 continue
             corresponding_user_action['action']['config'] = refill_passwords_fields(

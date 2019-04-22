@@ -20,6 +20,7 @@ class ClarotyAdapter(AdapterBase):
         vendor = Field(str, 'Vendor')
         criticality = Field(str, 'Criticality')
         site_name = Field(str, 'Site Name')
+        ghost = Field(bool, 'Ghost')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -139,6 +140,8 @@ class ClarotyAdapter(AdapterBase):
                 device.vendor = device_raw.get('vendor')
                 device.site_name = device_raw.get('site_name')
                 device.criticality = device_raw.get('criticality__')
+                if isinstance(device_raw.get('ghost'), bool):
+                    device.ghost = device_raw.get('ghost')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

@@ -27,5 +27,16 @@ class DynatraceConnection(RESTConnection):
             raise RESTException('No API Key')
         self._get('entity/infrastructure/hosts')
 
+    def get_id_to_host_dict(self):
+        id_to_host_dict = dict()
+        try:
+            devices_raw = self._get('entity/infrastructure/hosts')
+            for device_raw in devices_raw:
+                if device_raw.get('entityId') and device_raw.get('displayName'):
+                    id_to_host_dict[device_raw.get('entityId')] = device_raw.get('displayName')
+        except Exception:
+            logger.exception(f'Problem getting dict')
+        return id_to_host_dict
+
     def get_device_list(self):
         yield from self._get('entity/infrastructure/hosts')

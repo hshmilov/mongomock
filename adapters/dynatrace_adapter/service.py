@@ -64,7 +64,9 @@ class DynatraceAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            id_to_host_dict = client_data.get_id_to_host_dict()
+            for device_raw in client_data.get_device_list():
+                yield device_raw, id_to_host_dict
 
     @staticmethod
     def _clients_schema():
@@ -111,7 +113,7 @@ class DynatraceAdapter(AdapterBase):
         }
 
     # pylint: disable=too-many-branches,too-many-statements
-    def _create_device(self, device_raw):
+    def _create_device(self, device_raw, id_to_host_dict):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('entityId')
@@ -160,12 +162,18 @@ class DynatraceAdapter(AdapterBase):
             try:
                 from_relation_client_hosts = (device_raw.get('fromRelationships') or {}).get('isNetworkClientOfHost')
                 if from_relation_client_hosts:
+                    from_relation_client_hosts = [id_to_host_dict.get(id_from)
+                                                  for id_from in from_relation_client_hosts
+                                                  if id_to_host_dict.get(id_from)]
                     device.from_relation_client_hosts = from_relation_client_hosts
             except Exception:
                 logger.exception(f'Problem with relation from {device_raw}')
             try:
                 to_relation_client_hosts = (device_raw.get('toRelationships') or {}).get('isNetworkClientOfHost')
                 if to_relation_client_hosts:
+                    to_relation_client_hosts = [id_to_host_dict.get(id_to)
+                                                for id_to in to_relation_client_hosts
+                                                if id_to_host_dict.get(id_to)]
                     device.to_relation_client_hosts = to_relation_client_hosts
             except Exception:
                 logger.exception(f'Problem with relation to {device_raw}')
@@ -177,8 +185,8 @@ class DynatraceAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._create_device(device_raw)
+        for device_raw, id_to_host_dict in devices_raw_data:
+            device = self._create_device(device_raw, id_to_host_dict)
             if device:
                 yield device
 

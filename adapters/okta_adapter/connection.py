@@ -69,8 +69,8 @@ class OktaConnection:
             aio_ids.append(i)
 
         for chunk_id in range(int(math.ceil(len(aio_requests) / PARALLEL_REQUESTS_MAX))):
-            logger.info(f'Async requests: sending '
-                        f'{chunk_id * PARALLEL_REQUESTS_MAX} out of {len(aio_requests)}')
+            logger.debug(f'Async requests: sending '
+                         f'{chunk_id * PARALLEL_REQUESTS_MAX} out of {len(aio_requests)}')
 
             all_answers = async_request(
                 aio_requests[PARALLEL_REQUESTS_MAX * chunk_id:

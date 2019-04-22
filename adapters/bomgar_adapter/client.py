@@ -173,7 +173,7 @@ class BomgarConnection(object):
             aio_requests.append(aio_req)
 
         for chunk_id in range(int(math.ceil(len(aio_requests) / MAX_ASYNC_REQUESTS_IN_PARALLEL))):
-            logger.info(
+            logger.debug(
                 f"Async requests: sending {chunk_id * MAX_ASYNC_REQUESTS_IN_PARALLEL} out of {len(aio_requests)}")
 
             all_answers = async_request(

@@ -915,7 +915,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     # not all adapters have that
                     parsed_device_last_seen = None
                 if parsed_device_id in device_ids_and_last_seen.keys():
-                    logger.error(f"Error! device with id {parsed_device_id} already yielded! "
+                    logger.debug(f"Error! device with id {parsed_device_id} already yielded! "
                                  f"First device last seen: {str(device_ids_and_last_seen.get(parsed_device_id))}, "
                                  f"current yielded last seen: {str(parsed_device_last_seen)}. skipping")
                     continue

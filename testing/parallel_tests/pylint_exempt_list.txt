@@ -12,7 +12,6 @@ adapters/bomgar_adapter/json_utils.py
 adapters/chef_adapter/connection.py
 adapters/chef_adapter/exceptions.py
 adapters/chef_adapter/service.py
-adapters/cisco_meraki_adapter/connection.py
 adapters/cisco_meraki_adapter/exceptions.py
 adapters/desktop_central_adapter/connection.py
 adapters/desktop_central_adapter/service.py
@@ -215,7 +214,6 @@ adapters/splunk_adapter/external/splunklib/searchcommands/streaming_command.py
 adapters/splunk_adapter/external/splunklib/searchcommands/validators.py
 adapters/stresstest_adapter/service.py
 adapters/stresstest_scanner_adapter/service.py
-adapters/symantec_altiris_adapter/service.py
 adapters/tenable_io_adapter/service.py
 adapters/tenable_security_center_adapter/service.py
 adapters/tenable_security_center_adapter/utils/mock_server.py
