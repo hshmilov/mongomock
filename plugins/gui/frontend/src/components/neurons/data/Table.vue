@@ -1,6 +1,6 @@
 <template>
     <div class="x-data-table" :class="{ multiline }">
-        <x-table-wrapper :title="tableTitle" :count="count.data_to_show" :loading="loading" :error="content.error">
+        <x-table-wrapper :title="tableTitle" :count="count" :loading="loading" :error="content.error">
             <div slot="state" v-if="selectionCount" class="selection">
                 <div>[ {{ selectionCount }} selected.</div>
                 <x-button v-if="enableSelectAll && !allSelected" @click="selectAllData" link>Select all</x-button>
@@ -89,7 +89,7 @@
                 return this.moduleState.content
             },
             count() {
-                return this.moduleState.count
+                return this.moduleState.count.data || this.moduleState.count.data_to_show
             },
             view() {
                 return this.moduleState.view
@@ -116,8 +116,8 @@
                 return this.pageData.map(item => item[this.idField])
             },
             pageCount() {
-                if (!this.count.data) return 1
-                return Math.ceil(this.count.data / this.view.pageSize) - 1
+                if (!this.count) return 1
+                return Math.ceil(this.count / this.view.pageSize) - 1
             },
             pageLinkNumbers() {
                 // Page numbers that can be navigated to, should include 3 before current and 3 after
@@ -147,7 +147,7 @@
             selectionCount() {
                 if (!this.value) return 0
                 if (this.allSelected) {
-                    return this.count.data - this.value.ids.length
+                    return this.count - this.value.ids.length
                 }
                 return this.value.ids.length
             },
@@ -249,12 +249,12 @@
                 this.timer = setTimeout(fetchAuto, this.refresh * 1000)
             },
             onUpdateSelection(selectedList) {
-                if (!this.allSelected && selectedList.length === this.count.data) {
+                if (!this.allSelected && selectedList.length === this.count) {
                     this.allSelected = true
                 }
                 let newIds = this.selectionExcludePage.concat(
                     this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
-                if (this.allSelected && newIds.length === this.count.data) {
+                if (this.allSelected && newIds.length === this.count) {
                     this.allSelected = false
                     newIds = []
                 }
