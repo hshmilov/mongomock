@@ -52,12 +52,11 @@ class BuildsAPI:
             method, f'https://{BUILDS_URL}/api/{endpoint}',
             data=data, json=json_data, params=params, verify=False, headers=headers
         )
-        try:
-            response.raise_for_status()
-            return response.json()
-        except Exception:
-            debug_print(f'Got errornous response {response.content.decode("utf-8")}')
-            raise
+        if response.status_code != requests.codes.ok:
+            raise ValueError(f'Got bad response with status code {response.status_code}, '
+                             f'error: {response.content.decode("utf-8")}')
+
+        return response.json()
 
     def get(self, *args, **kwargs):
         return self.request('GET', *args, **kwargs)
@@ -180,6 +179,10 @@ class Builds(BuildsAPI):
         AWS = 'aws'
         GCP = 'gcp'
 
+    class NetworkSecurityOptions(Enum):
+        Regular = None
+        NoInternet = 'no-internet'
+
     def __init__(self):
         super().__init__()
         self.instances: List[BuildsInstance] = []
@@ -205,7 +208,8 @@ class Builds(BuildsAPI):
             key_name: str = None,
             instance_image: str = None,
             predefined_ssh_username: str = None,
-            predefined_ssh_password: str = None
+            predefined_ssh_password: str = None,
+            network_security_options: NetworkSecurityOptions = NetworkSecurityOptions.Regular,
 
     ) -> (List[BuildsInstance], str):
         request_obj = {
@@ -241,6 +245,9 @@ class Builds(BuildsAPI):
         request_obj['config'] = {
             'custom_code': custom_code
         }
+
+        if network_security_options.value:
+            request_obj['config']['network_security_options'] = network_security_options.value
 
         result = self.post('instances', json_data=request_obj)
         result_instances = result['instances']

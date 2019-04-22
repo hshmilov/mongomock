@@ -2,6 +2,7 @@
 AWS_REGULAR_INSTANCE_SUBNET_ID = 'subnet-4154273a'   # Axonius builds subnet
 AWS_REGULAR_INSTANCE_SECURITY_GROUPS = ['sg-8e00dce6']       # 'default' security group
 AWS_REGULAR_INSTANCE_DEFAULT_HD_SIZE = 100
+AWS_REGULAR_INSTANCE_NO_INTERNET_SG = ['sg-794a8513']   # 'No Internet' security group
 
 AWS_PUBLIC_INSTANCE_SUBNET_ID = 'subnet-942157ef'     # Axonius public subnet
 AWS_PUBLIC_INSTANCE_SECURITY_GROUPS = ['sg-f5742f9e']   # parella
@@ -21,6 +22,9 @@ GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE = 100
 
 GCP_PUBLIC_INSTANCE_NETWORK_ID = 'axonius-office-vpc'
 GCP_PUBLIC_INSTANCE_SUBNETWORK_ID = 'public-subnet'
+
+# Options
+NO_INTERNET_NETWORK_SECURITY_OPTION = 'no-internet'
 
 # Public Keys
 # Note that while we can reference keys only by their name in AWS, in GCP we have to provide the actual

@@ -49,7 +49,8 @@ def setup_instances(logger):
         instance_image=latest_export['ami_id'],
         predefined_ssh_username=DEFAULT_IMAGE_USERNAME,
         predefined_ssh_password=DEFAULT_IMAGE_PASSWORD,
-        key_name=AUTO_TEST_VM_KEY_PAIR
+        key_name=AUTO_TEST_VM_KEY_PAIR,
+        network_security_options=Builds.NetworkSecurityOptions.NoInternet
     )
 
     for current_instance in instances:

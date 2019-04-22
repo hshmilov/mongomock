@@ -92,6 +92,7 @@ class BuildsCloudManager:
             key_name: str,
             image: str = None,
             code: str = None,
+            network_security_options: str = None,
     ):
         if cloud == 'aws':
             if not image:
@@ -99,6 +100,13 @@ class BuildsCloudManager:
                 hd_size = AWS_REGULAR_INSTANCE_DEFAULT_HD_SIZE
             else:
                 hd_size = 0  # use the image's hd size
+
+            if not network_security_options:
+                security_groups = AWS_REGULAR_INSTANCE_SECURITY_GROUPS
+            elif network_security_options == NO_INTERNET_NETWORK_SECURITY_OPTION:
+                security_groups = AWS_REGULAR_INSTANCE_NO_INTERNET_SG
+            else:
+                raise ValueError('Unknown network security options')
             generic, raw = self.aws_compute.create_instance(
                 f'{vm_type}-{name}',
                 num,
@@ -108,11 +116,13 @@ class BuildsCloudManager:
                 AWS_REGULAR_INSTANCE_SUBNET_ID,
                 hd_size,
                 {'VM-Type': vm_type},
-                AWS_REGULAR_INSTANCE_SECURITY_GROUPS,
+                security_groups,
                 False,
                 code if code else ''
             )
         elif cloud == 'gcp':
+            assert network_security_options is None, \
+                'Currently Builds GCP module does not support network security options'
             if not image:
                 image = GCP_UBUNTU_VANILLA_IMAGE_ID
                 hd_size = GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE
@@ -146,7 +156,9 @@ class BuildsCloudManager:
             key_name: str,
             image: str = None,
             code: str = None,
+            network_security_options: str = None,
     ):
+        assert network_security_options is None, 'Public instances can not be assigned network security options'
         if cloud == 'aws':
             if not image:
                 image = AWS_UBUNTU_VANILLA_IMAGE_ID

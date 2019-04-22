@@ -13,6 +13,8 @@ import paramiko
 
 from pymongo import MongoClient, DESCENDING
 from bson.objectid import ObjectId
+
+from buildscloud.builds_cloud_consts import NO_INTERNET_NETWORK_SECURITY_OPTION
 from buildscloud.builds_cloud_manager import BuildsCloudManager
 from config import TOKENS_PATH, CREDENTIALS_PATH, LOCAL_BUILDS_HOST
 from slacknotifier import SlackNotifier
@@ -97,16 +99,16 @@ class BuildsManager(object):
         )
 
     def add_instances(
-            self, cloud, vm_type, name, instance_type, num, image, key_name, public, code,
+            self, cloud, vm_type, name, instance_type, num, image, key_name, public, code, network_security_options,
             owner, fork, branch
     ) -> (List[str], str):
         if public is True:
             generic, _ = self.bcm.create_public_instances(
-                cloud, vm_type, name, instance_type, num, key_name, image, code
+                cloud, vm_type, name, instance_type, num, key_name, image, code, network_security_options
             )
         else:
             generic, _ = self.bcm.create_regular_instances(
-                cloud, vm_type, name, instance_type, num, key_name, image, code
+                cloud, vm_type, name, instance_type, num, key_name, image, code, network_security_options
             )
 
         owner_full_name, owner_slack_id = owner
@@ -142,10 +144,11 @@ class BuildsManager(object):
                     # a second try.
                     time.sleep(10)
                     instance_data = self.get_instances(cloud, instance_id)[0]
-                self.st.post_channel(
-                    f'owner "{owner_full_name}" has raised an instance that will be connected to chef.',
-                    channel='test_machines',
-                    attachments=[self.st.get_instance_attachment(instance_data, [])])
+                if network_security_options != NO_INTERNET_NETWORK_SECURITY_OPTION:
+                    self.st.post_channel(
+                        f'owner "{owner_full_name}" has raised an instance that will be connected to chef.',
+                        channel='test_machines',
+                        attachments=[self.st.get_instance_attachment(instance_data, [])])
 
         return generic, group_name
 

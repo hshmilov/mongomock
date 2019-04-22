@@ -305,6 +305,7 @@ def instances():
             key_name,
             is_public,
             config_code,
+            config.get('network_security_options'),
             user_auth,
             config.get('fork'),
             config.get('branch')
