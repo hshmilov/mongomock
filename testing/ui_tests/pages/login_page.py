@@ -8,7 +8,6 @@ class LoginPage(Page):
     REMEMBER_ME_INPUT_CSS = '[for=remember_me]+div'
     LOGOUT_CSS = 'a[title="Logout"]'
     WRONG_USERNAME_OR_PASSWORD_MESSAGE = 'Wrong user name or password'
-    DISABLED_BUTTON_XPATH = './/button[@class=\'x-button disabled\' and .//text()=\'Login\']'
     LOGIN_WITH_LDAP_BUTTON_CLASS = 'x-button link'
     LOGIN_WITH_OKTA_BUTTON_CLASS = 'x-button link'
     OKTA_LOGIN_PASSWORD_ID = 'okta-signin-password'
@@ -56,10 +55,10 @@ class LoginPage(Page):
         return self.wait_for_element_present_by_text(self.WRONG_USERNAME_OR_PASSWORD_MESSAGE)
 
     def wait_for_login_page_to_load(self):
-        self.wait_for_element_present_by_xpath(self.DISABLED_BUTTON_XPATH)
+        self.wait_for_element_present_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text='Login'))
 
     def find_disabled_login_button(self):
-        return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH)
+        return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text='Login'))
 
     def click_login_with_ldap(self):
         self.driver.find_element_by_id('ldap_login_link').click()

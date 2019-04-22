@@ -151,3 +151,28 @@ class TestTasks(TestBase):
             self._check_action_results(1, 0, SUCCESS_TAG_NAME)
             self._check_action_results(1, 0, FAILURE_TAG_NAME)
             self._check_action_results(0, 1, FAILURE_ISOLATE_NAME)
+
+    def test_enforcement_tasks(self):
+        self.devices_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_FILTER)
+        self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
+
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.create_notifying_enforcement('Test 1', ENFORCEMENT_CHANGE_NAME,
+                                                            added=False, subtracted=False)
+        self.enforcements_page.create_notifying_enforcement('Test 2', ENFORCEMENT_QUERY,
+                                                            added=False, subtracted=False)
+        self.base_page.run_discovery()
+        self.enforcements_page.edit_enforcement('Test 1')
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_spinner_to_end()
+        self.enforcements_page.wait_for_table_to_load()
+        assert len(self.enforcements_page.get_all_data()) == 1
+        assert self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME) == [ENFORCEMENT_CHANGE_NAME]
+
+        self.enforcements_page.refresh()
+        self.enforcements_page.wait_for_spinner_to_end()
+        self.enforcements_page.wait_for_table_to_load()
+        assert len(self.enforcements_page.get_all_data()) == 2
+        assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME)

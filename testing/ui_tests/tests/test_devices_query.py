@@ -339,6 +339,28 @@ class TestDevicesQuery(TestBase):
             assert len(self.devices_page.get_all_data())
             self.devices_page.clear_query_wizard()
 
+    def _test_adapters_size(self):
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+        self.devices_page.select_query_field(self.devices_page.FIELD_ADAPTERS)
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE)
+        self.devices_page.fill_query_value('1')
+        self.devices_page.wait_for_spinner_to_end()
+        assert self.devices_page.is_query_error()
+
+        assert len(self.devices_page.get_all_data()) == 20
+        self.devices_page.fill_query_value('2')
+        assert len(self.devices_page.get_all_data()) == 0
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE_BELOW)
+        assert len(self.devices_page.get_all_data()) == 20
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SIZE_ABOVE)
+        assert len(self.devices_page.get_all_data()) == 0
+        self.devices_page.fill_query_value('1')
+        assert len(self.devices_page.get_all_data()) == 0
+        self.devices_page.fill_query_value('0')
+        assert len(self.devices_page.get_all_data()) == 20
+        self.devices_page.clear_query_wizard()
+
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -352,6 +374,7 @@ class TestDevicesQuery(TestBase):
         self._test_query_brackets()
         self._test_remove_query_expressions()
         self._test_not_expression()
+        self._test_adapters_size()
 
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()

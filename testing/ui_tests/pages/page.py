@@ -91,6 +91,7 @@ class Page:
     DELETE_BUTTON = 'Delete'
     ACTIONS_BUTTON = 'Actions'
     CONFIRM_BUTTON = 'Confirm'
+    DISABLED_BUTTON_XPATH = './/button[@class=\'x-button disabled\' and .//text()=\'{button_text}\']'
     VERTICAL_TABS_CSS = '.x-tabs.vertical .header .header-tab'
     NAMED_TAB_XPATH = '//div[@class=\'x-tabs\']/ul/li[contains(@class, "header-tab")]//div[text()=\'{tab_title}\']'
     TABLE_ROWS_CSS = 'tbody .x-row.clickable'
@@ -175,6 +176,9 @@ class Page:
 
     def fill_text_field_by_name(self, name, value, context=None):
         return self.fill_text_field_by(By.NAME, name, value, context)
+
+    def fill_text_field_by_tag_name(self, tag_name, value, context=None):
+        return self.fill_text_field_by(By.TAG_NAME, tag_name, value, context)
 
     def fill_text_field_by_css_selector(self, css_selector, value, context=None):
         return self.fill_text_field_by(By.CSS_SELECTOR, css_selector, value, context)

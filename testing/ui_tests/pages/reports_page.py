@@ -90,6 +90,10 @@ class ReportsPage(EntitiesPage):
         self.fill_text_by_element(element, email)
         self.key_down_enter(element)
 
+    def edit_email(self, new_email, index=0):
+        self.find_chips_values_by_label(self.EMAIL_BOX_RECIPIENTS)[index].click()
+        self.fill_email(new_email)
+
     def get_emails(self):
         elements = self.find_chips_values_by_label(self.EMAIL_BOX_RECIPIENTS)
         return [element.text for element in elements]
@@ -127,6 +131,7 @@ class ReportsPage(EntitiesPage):
         try:
             self.wait_for_table_to_load()
             self.click_report(report_name)
+            self.wait_for_spinner_to_end()
             return self.is_generated()
         except NoSuchElementException:
             return False

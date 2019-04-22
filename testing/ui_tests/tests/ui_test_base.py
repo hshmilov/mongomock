@@ -203,6 +203,7 @@ class TestBase:
         self.axonius_system.get_actions_db().delete_many({})
         self.axonius_system.get_tasks_db().delete_many({})
         self.axonius_system.get_notifications_db().delete_many({})
+        self.axonius_system.get_reports_config_db().delete_many({})
 
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Users))
         truncate_capped_collection(self.axonius_system.db.get_historical_entity_db_view(EntityType.Devices))

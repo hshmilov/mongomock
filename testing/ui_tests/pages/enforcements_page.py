@@ -488,3 +488,17 @@ class EnforcementsPage(EntitiesPage):
     def fill_enter_table_search(self, text):
         self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)
         self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))
+
+    def email_recipients(self, name, recipient, body=None):
+        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
+        # Appearance animation time
+        time.sleep(0.6)
+        self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
+        self.fill_text_field_by_css_selector('.md-input', recipient, context=self.find_field_by_label('Recipients'))
+        if body:
+            custom_message_element = self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(
+                label_text='Custom Message (up to 200 characters)'))
+            self.fill_text_field_by_tag_name('textarea', body, context=custom_message_element)
+            assert custom_message_element.find_element_by_tag_name('textarea').get_attribute('value') == body[:200]
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_present_by_text(name)

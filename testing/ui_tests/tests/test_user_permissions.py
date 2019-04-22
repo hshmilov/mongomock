@@ -101,6 +101,20 @@ class TestUserPermissions(TestBase):
         self.devices_page.wait_for_table_to_load()
         assert len(self.devices_page.get_column_data(self.devices_page.FIELD_ASSET_NAME))
 
+    def test_new_user_validation(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.click_new_user()
+        assert self.settings_page.find_disabled_create_user()
+        self.settings_page.fill_new_user_details(ui_consts.RESTRICTED_USERNAME, '')
+        assert self.settings_page.find_disabled_create_user()
+        self.settings_page.fill_new_user_details(ui_consts.RESTRICTED_USERNAME, '', first_name=ui_consts.FIRST_NAME)
+        assert self.settings_page.find_disabled_create_user()
+        assert self.settings_page.find_password_input().get_attribute('class') == 'error-border'
+        self.settings_page.fill_new_user_details(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        assert self.settings_page.find_password_input().get_attribute('class') == ''
+        self.settings_page.click_create_user()
+
     def test_new_user_change_password(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()

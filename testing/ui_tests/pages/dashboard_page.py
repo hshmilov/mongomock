@@ -160,8 +160,9 @@ class DashboardPage(Page):
         pie.find_element_by_css_selector('svg').click()
 
     def remove_card(self, card_title):
-        card_id_css = self.get_card_id_css_from_title(card_title)
-        self.driver.find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS.format(id=f'{card_id_css}')).click()
+        card_close_button_css = self.CARD_CLOSE_BTN_CSS.format(id=self.get_card_id_css_from_title(card_title))
+        self.driver.find_element_by_css_selector(card_close_button_css).click()
+        self.wait_for_element_absent_by_css(card_close_button_css)
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)

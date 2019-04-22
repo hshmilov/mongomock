@@ -84,6 +84,8 @@ class SettingsPage(Page):
 
     TABS_BODY_CSS = '.x-tabs .body'
 
+    CREATE_USER_BUTTON = 'Create User'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -113,7 +115,13 @@ class SettingsPage(Page):
             self.fill_text_field_by_element_id('last_name', last_name)
 
     def click_create_user(self):
-        self.click_button('Create User')
+        self.click_button(self.CREATE_USER_BUTTON)
+
+    def find_disabled_create_user(self):
+        return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text=self.CREATE_USER_BUTTON))
+
+    def find_password_input(self):
+        return self.driver.find_element_by_id('password')
 
     def create_new_user(self, username, password, first_name=None, last_name=None):
         self.click_new_user()

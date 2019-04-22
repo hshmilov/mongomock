@@ -30,6 +30,7 @@ class TestSignup(TestBase):
         assert signup_data[Signup.CompanyField] == company_name
 
         self.login_page.login(username='admin', password='123')
+        self.dashboard_page.find_trial_remainder_banner(30)
         self.settings_page.switch_to_page()
 
         self.login_page.logout()

@@ -6,6 +6,14 @@
       { title: name }]"
   >
     <x-box>
+      <div
+        v-if="loading"
+        class="v-spinner-bg"
+      />
+      <pulse-loader
+        :loading="loading"
+        color="#FF7D46"
+      />
       <div class="page-content main">
         <div class="report-title">The report will be generated as a PDF file, every Discovery Cycle<span v-if="isLatestReport">, {{ last_generated }}</span></div>
         <div class="item">
@@ -188,373 +196,377 @@
 </template>
 
 <script>
-    import Vue from 'vue'
-    import xPage from '../axons/layout/Page.vue'
-    import xBox from '../axons/layout/Box.vue'
-    import xButton from '../axons/inputs/Button.vue'
-    import xCheckbox from '../axons/inputs/Checkbox.vue'
-    import xSelectSymbol from '../neurons/inputs/SelectSymbol.vue'
-    import xSelect from '../axons/inputs/Select.vue'
-    import viewsMixin from '../../mixins/views'
-    import xArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue'
-    import xToast from '../axons/popover/Toast.vue'
-    import configMixin from '../../mixins/config'
+  import Vue from 'vue'
+  import xPage from '../axons/layout/Page.vue'
+  import xBox from '../axons/layout/Box.vue'
+  import xButton from '../axons/inputs/Button.vue'
+  import xCheckbox from '../axons/inputs/Checkbox.vue'
+  import xSelectSymbol from '../neurons/inputs/SelectSymbol.vue'
+  import xSelect from '../axons/inputs/Select.vue'
+  import viewsMixin from '../../mixins/views'
+  import xArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue'
+  import xToast from '../axons/popover/Toast.vue'
+  import configMixin from '../../mixins/config'
 
-    import {mapState, mapMutations, mapActions} from 'vuex'
-    import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
-    import {
-        initRecipe, FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT
-    } from '../../store/modules/reports'
-    export default {
-        name: 'XReport',
-        components: {xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, xToast},
-        mixins: [viewsMixin, configMixin],
-        props: {
-            readOnly: Boolean
+  import { mapState, mapMutations, mapActions } from 'vuex'
+  import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
+  import {
+    initRecipe, FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT
+  } from '../../store/modules/reports'
+
+  export default {
+    name: 'XReport',
+    components: { xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, xToast },
+    mixins: [viewsMixin, configMixin],
+    props: {
+      readOnly: Boolean
+    },
+    data () {
+      return {
+        report: {
+          include_dashboard: false,
+          include_saved_views: false,
+          views: [{ entity: '', name: '' }],
+          recipients: [],
+          add_scheduling: null,
+          period: 'daily',
+          mail_properties: {
+            mailSubject: '',
+            emailList: [],
+            emailListCC: []
+          }
         },
-        data() {
-            return {
-                report: {
-                    include_dashboard: false,
-                    include_saved_views: false,
-                    views: [ {entity: '', name: ''}],
-                    recipients: [],
-                    add_scheduling: null,
-                    period: 'daily',
-                    mail_properties: {
-                        mailSubject: '',
-                        emailList: [],
-                        emailListCC: []
-                    }
-                },
-                downloading: false,
-                queryValidity: false,
-                scheduleValidity: false,
-                toastTimeout: 50000,
-                message: null,
-                validity: {
-                  fields: [], error: ''
-                },
-                last_generated: null,
-                isLatestReport: false
-            }
+        downloading: false,
+        queryValidity: false,
+        scheduleValidity: false,
+        toastTimeout: 50000,
+        message: null,
+        validity: {
+          fields: [], error: ''
         },
-        computed: {
+        last_generated: null,
+        isLatestReport: false,
+        loading: false
+      }
+    },
+    computed: {
 
-            ...mapState({
-                reportData(state) {
-                    return state.reports.current.data
-                },
-                reportFetching(state) {
-                    return state.reports.current.fetching
-                },
-                isReadOnly(state) {
-                    let user = state.auth.currentUser.data
-                    if (!user || !user.permissions) return true
-                    return user.permissions.Reports === 'ReadOnly'
-                },
-                disableDownloadReport() {
-                    return this.downloading
-                },
-            }),
-            id() {
-                return this.$route.params.id
-            },
-            name() {
-                if (!this.reportData || !this.reportData.name) return 'New Report'
-
-                return this.reportData.name
-            },
-            disableSave() {
-                return !this.report.name || !this.trigger || !this.trigger.view || !this.trigger.view.name || !this.mainAction.name
-            },
-            hideTestNow(){
-                if(!this.valid){
-                    return true;
-                }
-                if(!this.report.add_scheduling){
-                    return true;
-                }
-                if(!this.report.last_generated){
-                    return true;
-                }
-                if(!this.validateEmail){
-                    return true;
-                }
-                return false;
-            },
-            hideDownloadNow(){
-                return !this.report.last_generated;
-            },
-            valid(){
-                if(this.isReadOnly){
-                    return false;
-                }
-                if(!this.report.name){
-                    return false;
-                }
-                if(!this.report.include_dashboard && !this.report.include_saved_views){
-                    return false;
-                }
-                if(this.report.include_saved_views){
-                    if(!this.queryValidity){
-                        return false;
-                    }
-                }
-                if(this.report.add_scheduling){
-                    if(this.validity.error){
-                      return false;
-                    }
-                }
-                return true;
-            },
-            error() {
-                if(!this.report.name){
-                    return 'Report Name is a required field';
-                }
-                if(!this.report.include_dashboard && !this.report.include_saved_views){
-                    return 'You must include the dashboard or "Saved Views"';
-                }
-                if(this.report.include_saved_views){
-                    if(!this.queryValidity){
-                        return 'The "Saved Queries" are invalid';
-                    }
-                }
-                if(this.report.add_scheduling){
-                  return this.validity.error;
-                }
-                return ''
-            },
-            mailSchema() {
-                return { name: 'mail_config', title: '',
-                    items: [
-                        {
-                            'name': 'mailSubject',
-                            'title': 'Subject',
-                            'type': 'string',
-                            'required': true
-                        },
-                        {
-                            'name': 'emailList',
-                            'title': 'Recipients',
-                            'type': 'array',
-                            'items': {
-                                'type': 'string',
-                                'format': 'email'
-                            },
-                            'required': true
-                        },
-                        {
-                            'name': 'emailListCC',
-                            'title': 'Recipients CC',
-                            'type': 'array',
-                            'items': {
-                                'type': 'string',
-                                'format': 'email'
-                            }
-                        }
-                    ],
-                    'required': [
-                        'mailSubject', 'emailList'
-                    ],
-                    'type': 'array'
-                }
-            }
+      ...mapState({
+        reportData (state) {
+          return state.reports.current.data
         },
-        created() {
-            if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
-                this.fetchReport(this.id).then(() => {
-                    this.initData()
-                })
-            } else {
-                this.initData()
-            }
+        reportFetching (state) {
+          return state.reports.current.fetching
         },
-        mounted() {
-            if (this.$refs.name) {
-                this.$refs.name.focus()
-            }
+        isReadOnly (state) {
+          let user = state.auth.currentUser.data
+          if (!user || !user.permissions) return true
+          return user.permissions.Reports === 'ReadOnly'
         },
-        methods: {
-            ...mapMutations({
-                tour: CHANGE_TOUR_STATE
-            }),
-            ...mapActions({
-                fetchReport: FETCH_REPORT, saveReport: SAVE_REPORT,
-                runReport: RUN_REPORT, downloadReport: DOWNLOAD_REPORT
-            }),
-            initData() {
-                if(this.reportData && this.reportData.name) {
-                    this.report = this.reportData ? {...this.reportData} : {}
-                    if (this.report.views.length == 0) {
-                        this.report.views.push({entity: '', name: ''})
-                    }
-
-
-                  if (this.report.last_generated === null) {
-                    this.isLatestReport = false
-                  } else {
-                    let dateTime = new Date(this.report.last_generated)
-                    if(dateTime) {
-                      dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
-                      let dateParts = dateTime.toISOString().split('T')
-                      dateParts[1] = dateParts[1].split('.')[0]
-                      this.last_generated = 'Last generated: ' + dateParts.join(' ')
-                      this.isLatestReport = true
-                    } else {
-                      this.isLatestReport = false
-                    }
-                  }
-
-                }
-                this.validateSavedQueries();
-            },
-            startDownload() {
-                if (this.disableDownloadReport) return
-                this.downloading = true
-                this.downloadReport(this.report.name).then((response) => {
-                    this.downloading = false
-                    this.tour({name: 'tourFinale'})
-                }).catch((error) => {
-                    this.downloading = false
-                    this.message = error.response.data.message
-                })
-            },
-            onAddScheduling() {
-                let actionName = this.settingToActions.mail[0];
-                this.checkEmptySettings(actionName);
-                if (this.anyEmptySettings) {
-                    this.report.add_scheduling = false;
-                    return
-                }
-                setTimeout(() => {
-                  if(this.report.add_scheduling){
-                    this.$refs.mail_ref.validate()
-                  }
-                })
-
-            },
-            toggleScheduling() {
-                this.report.add_scheduling = !this.report.add_scheduling;
-                this.onAddScheduling();
-                setTimeout(() => {
-                  if(this.report.add_scheduling){
-                    this.$refs.mail_ref.validate()
-                  }
-                })
-                this.$forceUpdate()
-            },
-            runNow() {
-                let self = this;
-                this.saveReport(this.report).then(() => {
-                    setTimeout(() => {
-                        self.runReport(this.report).then(() => {
-                            this.message = 'Email is being sent';
-                            setTimeout(() => {
-                                self.message = 'Email sent successfully';
-                            })
-                        }).catch((error) => {
-                            this.message = error.response.data.message
-                        })
-                    }, 2000);
-                })
-            },
-            saveExit() {
-                this.message = 'Saving the report...'
-                let self = this;
-                this.saveReport(this.report).then(
-                    () => {
-                      self.exit()
-                    }
-                ).catch((error) => {
-                    this.message = error.response.data;
-                })
-            },
-            exit() {
-                this.$router.push({name: 'Reports'})
-            },
-            onEntityChange(name, index) {
-                Vue.set(this.report.views, index, {entity: name, name: ''})
-                this.$forceUpdate()
-                this.validateSavedQueries();
-            },
-            addQuery(){
-                this.report.views.push({entity: '', name: ''})
-                this.$forceUpdate()
-                this.validateSavedQueries();
-            },
-            removeQuery(index) {
-                this.report.views.splice(index, 1);
-                this.$forceUpdate()
-                this.validateSavedQueries();
-
-            },
-            onQueryNameChange(name, index) {
-                Vue.set(this.report.views, index, {entity: this.report.views[index].entity, name: name})
-                this.$forceUpdate()
-                this.validateSavedQueries();
-
-            },
-            viewOptions(index) {
-                if (!this.views && !this.report.views[index].entity) return
-                let views = (this.report.views && this.report.views[index]) ? this.views[this.report.views[index].entity] : []
-                if (this.report.views && this.report.views>length > 0 && this.report.views[index].name && !views.some(view => view.name === this.report.views[index].name)) {
-                    views.push({
-                        name: this.report.view[index].name, title: `${this.report.views[0].name} (deleted)`
-                    })
-                }
-                return views
-            },
-            validateEmail(){
-                if(this.report.mail_properties.mailSubject && this.report.mail_properties.emailList.length > 0){
-                    return true;
-                }
-                return false;
-            },
-            validateSavedQueries(){
-                let result = true;
-                if(!this.report.include_saved_views){
-                    this.queryValidity = result;
-                    return;
-                }
-                if(this.report.views && this.report.views.length === 0){
-                    result = false;
-                }
-                this.report.views.forEach(view => {
-                    if(!view.entity || !view.name){
-                        result = false;
-                    }
-                })
-                this.queryValidity = result;
-            },
-            removeToast() {
-                this.message = ''
-            },
-            onValidate(field) {
-              let validityChanged = false;
-              this.validity.fields = this.validity.fields.filter(x => x.name !== field.name)
-              if (!field.valid) {
-                this.validity.fields.push(field)
-              }
-              if (field.error) {
-                if(!this.validity.error){
-                  validityChanged = true;
-                }
-                this.validity.error = field.error
-              } else {
-                let nextInvalidField = this.validity.fields.find(x => x.error)
-                let nextResult = nextInvalidField ? nextInvalidField.error : ''
-                if(nextResult != this.validity.error){
-                  validityChanged = true;
-                }
-                this.validity.error = nextResult
-              }
-              if(validityChanged){
-                this.$forceUpdate();
-              }
-            }
+        disableDownloadReport () {
+          return this.downloading
         }
+      }),
+      id () {
+        return this.$route.params.id
+      },
+      name () {
+        if (!this.reportData || !this.reportData.name) return 'New Report'
+
+        return this.reportData.name
+      },
+      disableSave () {
+        return !this.report.name || !this.trigger || !this.trigger.view || !this.trigger.view.name || !this.mainAction.name
+      },
+      hideTestNow () {
+        if (!this.valid) {
+          return true
+        }
+        if (!this.report.add_scheduling) {
+          return true
+        }
+        if (!this.report.last_generated) {
+          return true
+        }
+        if (!this.validateEmail) {
+          return true
+        }
+        return false
+      },
+      hideDownloadNow () {
+        return !this.report.last_generated
+      },
+      valid () {
+        if (this.isReadOnly) {
+          return false
+        }
+        if (!this.report.name) {
+          return false
+        }
+        if (!this.report.include_dashboard && !this.report.include_saved_views) {
+          return false
+        }
+        if (this.report.include_saved_views) {
+          if (!this.queryValidity) {
+            return false
+          }
+        }
+        if (this.report.add_scheduling) {
+          if (this.validity.error) {
+            return false
+          }
+        }
+        return true
+      },
+      error () {
+        if (!this.report.name) {
+          return 'Report Name is a required field'
+        }
+        if (!this.report.include_dashboard && !this.report.include_saved_views) {
+          return 'You must include the dashboard or "Saved Views"'
+        }
+        if (this.report.include_saved_views) {
+          if (!this.queryValidity) {
+            return 'The "Saved Queries" are invalid'
+          }
+        }
+        if (this.report.add_scheduling) {
+          return this.validity.error
+        }
+        return ''
+      },
+      mailSchema () {
+        return {
+          name: 'mail_config', title: '',
+          items: [
+            {
+              'name': 'mailSubject',
+              'title': 'Subject',
+              'type': 'string',
+              'required': true
+            },
+            {
+              'name': 'emailList',
+              'title': 'Recipients',
+              'type': 'array',
+              'items': {
+                'type': 'string',
+                'format': 'email'
+              },
+              'required': true
+            },
+            {
+              'name': 'emailListCC',
+              'title': 'Recipients CC',
+              'type': 'array',
+              'items': {
+                'type': 'string',
+                'format': 'email'
+              }
+            }
+          ],
+          'required': [
+            'mailSubject', 'emailList'
+          ],
+          'type': 'array'
+        }
+      }
+    },
+    created () {
+      if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
+        this.loading = true
+        this.fetchReport(this.id).then(() => {
+          this.initData()
+          this.loading = false
+        })
+      } else {
+        this.initData()
+      }
+    },
+    mounted () {
+      if (this.$refs.name) {
+        this.$refs.name.focus()
+      }
+    },
+    methods: {
+      ...mapMutations({
+        tour: CHANGE_TOUR_STATE
+      }),
+      ...mapActions({
+        fetchReport: FETCH_REPORT, saveReport: SAVE_REPORT,
+        runReport: RUN_REPORT, downloadReport: DOWNLOAD_REPORT
+      }),
+      initData () {
+        if (this.reportData && this.reportData.name) {
+          this.report = this.reportData ? { ...this.reportData } : {}
+          if (this.report.views.length == 0) {
+            this.report.views.push({ entity: '', name: '' })
+          }
+
+          if (this.report.last_generated === null) {
+            this.isLatestReport = false
+          } else {
+            let dateTime = new Date(this.report.last_generated)
+            if (dateTime) {
+              dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
+              let dateParts = dateTime.toISOString().split('T')
+              dateParts[1] = dateParts[1].split('.')[0]
+              this.last_generated = 'Last generated: ' + dateParts.join(' ')
+              this.isLatestReport = true
+            } else {
+              this.isLatestReport = false
+            }
+          }
+
+        }
+        this.validateSavedQueries()
+      },
+      startDownload () {
+        if (this.disableDownloadReport) return
+        this.downloading = true
+        this.downloadReport(this.report.name).then((response) => {
+          this.downloading = false
+          this.tour({ name: 'tourFinale' })
+        }).catch((error) => {
+          this.downloading = false
+          this.message = error.response.data.message
+        })
+      },
+      onAddScheduling () {
+        let actionName = this.settingToActions.mail[0]
+        this.checkEmptySettings(actionName)
+        if (this.anyEmptySettings) {
+          this.report.add_scheduling = false
+          return
+        }
+        setTimeout(() => {
+          if (this.report.add_scheduling) {
+            this.$refs.mail_ref.validate()
+          }
+        })
+
+      },
+      toggleScheduling () {
+        this.report.add_scheduling = !this.report.add_scheduling
+        this.onAddScheduling()
+        setTimeout(() => {
+          if (this.report.add_scheduling) {
+            this.$refs.mail_ref.validate()
+          }
+        })
+        this.$forceUpdate()
+      },
+      runNow () {
+        let self = this
+        this.saveReport(this.report).then(() => {
+          setTimeout(() => {
+            self.runReport(this.report).then(() => {
+              this.message = 'Email is being sent'
+              setTimeout(() => {
+                self.message = 'Email sent successfully'
+              })
+            }).catch((error) => {
+              this.message = error.response.data.message
+            })
+          }, 2000)
+        })
+      },
+      saveExit () {
+        this.message = 'Saving the report...'
+        let self = this
+        this.saveReport(this.report).then(
+                () => {
+                  self.exit()
+                }
+        ).catch((error) => {
+          this.message = error.response.data
+        })
+      },
+      exit () {
+        this.$router.push({ name: 'Reports' })
+      },
+      onEntityChange (name, index) {
+        Vue.set(this.report.views, index, { entity: name, name: '' })
+        this.$forceUpdate()
+        this.validateSavedQueries()
+      },
+      addQuery () {
+        this.report.views.push({ entity: '', name: '' })
+        this.$forceUpdate()
+        this.validateSavedQueries()
+      },
+      removeQuery (index) {
+        this.report.views.splice(index, 1)
+        this.$forceUpdate()
+        this.validateSavedQueries()
+
+      },
+      onQueryNameChange (name, index) {
+        Vue.set(this.report.views, index, { entity: this.report.views[index].entity, name: name })
+        this.$forceUpdate()
+        this.validateSavedQueries()
+
+      },
+      viewOptions (index) {
+        if (!this.views && !this.report.views[index].entity) return
+        let views = (this.report.views && this.report.views[index]) ? this.views[this.report.views[index].entity] : []
+        if (this.report.views && this.report.views > length > 0 && this.report.views[index].name && !views.some(view => view.name === this.report.views[index].name)) {
+          views.push({
+            name: this.report.view[index].name, title: `${this.report.views[0].name} (deleted)`
+          })
+        }
+        return views
+      },
+      validateEmail () {
+        if (this.report.mail_properties.mailSubject && this.report.mail_properties.emailList.length > 0) {
+          return true
+        }
+        return false
+      },
+      validateSavedQueries () {
+        let result = true
+        if (!this.report.include_saved_views) {
+          this.queryValidity = result
+          return
+        }
+        if (this.report.views && this.report.views.length === 0) {
+          result = false
+        }
+        this.report.views.forEach(view => {
+          if (!view.entity || !view.name) {
+            result = false
+          }
+        })
+        this.queryValidity = result
+      },
+      removeToast () {
+        this.message = ''
+      },
+      onValidate (field) {
+        let validityChanged = false
+        this.validity.fields = this.validity.fields.filter(x => x.name !== field.name)
+        if (!field.valid) {
+          this.validity.fields.push(field)
+        }
+        if (field.error) {
+          if (!this.validity.error) {
+            validityChanged = true
+          }
+          this.validity.error = field.error
+        } else {
+          let nextInvalidField = this.validity.fields.find(x => x.error)
+          let nextResult = nextInvalidField ? nextInvalidField.error : ''
+          if (nextResult != this.validity.error) {
+            validityChanged = true
+          }
+          this.validity.error = nextResult
+        }
+        if (validityChanged) {
+          this.$forceUpdate()
+        }
+      }
     }
+  }
 </script>
 
 <style lang="scss">

@@ -47,7 +47,8 @@ export default {
 				}
 				// Primitive children are required if appear in schema.required list
 				if (schema.type !== 'array' || (schema.items && schema.items.type === 'string')) {
-					schema.required = (this.schema.required && this.schema.required.includes(schema.name))
+					schema.required = (this.schema.required === true ||
+						(Array.isArray(this.schema.required) && this.schema.required.includes(schema.name)))
 				}
 			})
 			return schemaItems
