@@ -25,7 +25,7 @@ REGULAR_TERMINATE_TIMES = {
     'action': timedelta(days=4)
 }
 
-MAX_TEST_GROUP_TIME = timedelta(hours=2, minutes=30)
+MAX_TEST_GROUP_TIME = timedelta(hours=3)
 
 
 class InstanceMonitor:

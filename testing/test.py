@@ -118,7 +118,7 @@ class InstanceManager:
         TC.print(f'{instance}: executing {job_name}: {commands}')
         start_time = time.time()
 
-        rc, output = instance.ssh(commands, timeout=timeout)
+        rc, output = instance.ssh(commands)  # a timeout is implemented using the timeout command.
         end_time = time.time()
         if rc != 0:
             if (end_time - start_time) > timeout:

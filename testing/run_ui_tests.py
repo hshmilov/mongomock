@@ -13,6 +13,8 @@ from services.adapters.json_file_service import JsonFileService
 from services.axonius_service import get_service
 from services.standalone_services.selenium_service import SeleniumService
 
+TIMEOUT_EXIT_CODE = 1000    # This has to be a large integer. [1-6] are valid pytest exit codes.
+
 
 class ArgumentParser(argparse.ArgumentParser):
     """ Argumentparser for the script """
@@ -41,7 +43,8 @@ def print_frame(frame):
 def signal_term_handler(signal_, frame):
     print(f'{signal_} signal handler')
     print_frame(frame)
-    raise TimeoutError
+    # Exit violently. Do not use sys.exit which can call other code.
+    os._exit(TIMEOUT_EXIT_CODE)  # pylint: disable=protected-access
 
 
 def cleanup(axonius_system, ad_service, json_service, selenium_service=None):

@@ -32,6 +32,7 @@ TIME_TO_WAIT_BETWEEN_SSH_CONNECT_TRIES = 5
 MAX_SSH_TRIES = 60
 MAX_TIMEOUT_FOR_TRANSFERS = 60 * 10
 SSH_BUFFER_SIZE = 100   # We read in these chunks. In case of a timeout, we lose the last chunk.
+SSH_POLLING_INTERVAL = 0.1
 
 
 def debug_print(print_str):
@@ -129,25 +130,33 @@ class BuildsInstance(BuildsAPI):
         if not quiet:
             self.debug_print('Running ssh: {0}'.format(command))
 
-        chan = self.sshc.get_transport().open_session(timeout=timeout or SSH_NETWORK_TIMEOUT)
+        chan = self.sshc.get_transport().open_session()
         chan.set_combine_stderr(True)
-        chan.settimeout(timeout or SSH_NETWORK_TIMEOUT)
-        stdout = chan.makefile()
+        chan.setblocking(0)
+        chan.makefile()
         chan.exec_command(command)
 
         output = b''
-        try:
-            while True:
-                current = stdout.read(SSH_BUFFER_SIZE)
-                if not current:
-                    break
-                output += current
-            rc = chan.recv_exit_status()
-        except socket.timeout:
-            # Timeout
-            rc = -1
+        start = time.time()
+        while True:
+            if chan.exit_status_ready():
+                while chan.recv_ready():
+                    output += chan.recv(SSH_BUFFER_SIZE)
+                rc = chan.recv_exit_status()
+                break
 
-        output = output.strip().decode('utf-8')
+            if (time.time() - start) > SSH_NETWORK_TIMEOUT:
+                print(f'SSH timeout on command {command}', file=sys.stdout, flush=True)
+                chan.close()
+                rc = -1
+                break
+
+            if chan.recv_ready():
+                output += chan.recv(SSH_BUFFER_SIZE)
+
+            time.sleep(SSH_POLLING_INTERVAL)
+
+        output = output.decode('utf-8').strip()
         return rc, output
 
     def get_file(self, file_path):
