@@ -98,7 +98,8 @@ class CoreService(PluginBase, Configurable):
                                     next_run_time=datetime.now(),
                                     name='clean_offline_plugins',
                                     id='clean_offline_plugins',
-                                    max_instances=1)
+                                    max_instances=1,
+                                    coalesce=True)
         self.cleaner_thread.start()
 
         # pool for global config updates
