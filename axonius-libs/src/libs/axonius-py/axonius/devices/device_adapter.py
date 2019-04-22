@@ -99,7 +99,7 @@ class DeviceAdapterOS(SmartJsonClass):
     """ A definition for the json-scheme for an OS (of a device) """
 
     type = Field(
-        str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS',
+        str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
                            'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks']
     )
     distribution = Field(str, 'Distribution')
@@ -152,6 +152,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     port_type = Field(str, "Port Type", enum=["Access", "Trunk"])
     mtu = Field(str, "MTU", description="Interface Maximum transmission unit")
     gateway = Field(str, 'Gateway')
+    port = Field(str, 'Port')
 
 
 class ConnectionType(Enum):
@@ -692,7 +693,8 @@ class DeviceAdapter(SmartJsonClass):
         admin_status=None,
         vlans=None,
         port_type=None,
-        gateway=None
+        gateway=None,
+        port=None,
     ):
         """
         Add a new network interface card to this device.
@@ -721,6 +723,13 @@ class DeviceAdapter(SmartJsonClass):
                     raise
                 logger.exception(f'Invalid name: {repr(name)}')
 
+        if port is not None:
+            try:
+                nic.port = port
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid port: {repr(port)}')
         if mtu is not None:
             try:
                 nic.mtu = int(mtu)

@@ -143,6 +143,7 @@ DOCKER_PORTS = {
     'cisco-ise-adapter':                6675,
     'device42-adapter':                 6676,
     'webroot-adapter':                  6677,
+    'unifi-adapter':                    6678,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

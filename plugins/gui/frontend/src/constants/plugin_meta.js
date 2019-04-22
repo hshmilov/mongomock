@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    unifi_adapter: {
+        title: 'Ubiquti UniFi Network Controller',
+        description: 'The UniFi Controller is a wireless network management software solution for managing multiple wireless networks using a web browser.'
+    },
     webroot_adapter: {
         title: 'Webroot Endpoint Protection - BETA',
         description: 'Webroot Endpoint Protection protects against threats across email, browsers, files, URLs, ads, apps, and more.'

@@ -256,10 +256,6 @@ class Test{capitalize_adapter_name(adapter_name)}Adapter(AdapterTestBase):
         return get_client_id(CLIENT_DETAILS)
 
     @property
-    def some_client_detials(self):
-        return CLIENT_DETAILS
-
-    @property
     def some_client_details(self):
         return CLIENT_DETAILS
 
