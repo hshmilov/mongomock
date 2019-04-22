@@ -53,7 +53,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         chan.settimeout(TIMEOUT)
         chan.invoke_shell()
         read_until(chan, b'Please enter connection string:')
-        chan.sendall(f'{master_ip_address} {node_join_token} node_1\n')
+        chan.sendall(f'{master_ip_address} {node_join_token} {NODE_NAME}\n')
         try:
             read_until(chan, b'Node successfully joined Axonius cluster.\n')
         except Exception:
@@ -66,7 +66,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         # Note that the usage of "{}" instead of NODE_NAME is due to a bug that is
         # caused because of the restart_system_on_boot because the master is derived
         # by test and not by export it is not subjected to a restart and the adapters_unique_name of it stay "_0".
-        node_maker_password = self.instances_page.get_node_password('{}')
+        node_maker_password = self.instances_page.get_node_password(NODE_NAME)
         self.connect_node_maker(self._instances[0], node_maker_password)
 
     def _add_nexpose_adadpter_and_discover_devices(self):
