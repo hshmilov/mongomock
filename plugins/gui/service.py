@@ -61,7 +61,9 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        PROXY_ERROR_MESSAGE,
                                        FeatureFlagsNames,
                                        REPORTS_DELETED,
-                                       REPORTS_ADDED)
+                                       REPORTS_ADDED,
+                                       SIGNUP_TEST_CREDS,
+                                       SIGNUP_TEST_COMPANY_NAME)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -141,6 +143,7 @@ from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
+
 
 # pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,dangerous-default-value,unidiomatic-typecheck,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme
 
@@ -4833,6 +4836,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         signup = signup_collection.find_one({})
         if signup:
             customer = signup.get(Signup.CompanyField, 'signup-not-set')
+            if customer in [SIGNUP_TEST_CREDS[Signup.CompanyField], SIGNUP_TEST_COMPANY_NAME]:
+                return
         else:
             customer = 'not-set'
         # referrer

@@ -1,8 +1,5 @@
-from axonius.consts.gui_consts import Signup
+from axonius.consts.gui_consts import SIGNUP_TEST_CREDS
 from services.plugins.gui_service import GuiService
-
-# DO NOT MOVE THE CREDS FROM THIS FILE
-SIGNUP_TEST_CREDS = {Signup.CompanyField: 'test_company', 'password': 'cAll2SecureAll', 'email': 'a@b.com'}
 
 
 def main():

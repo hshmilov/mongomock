@@ -1,5 +1,4 @@
-from axonius.consts.gui_consts import Signup
-from scripts.maintenance_tools.set_signup import SIGNUP_TEST_CREDS
+from axonius.consts.gui_consts import (Signup, SIGNUP_TEST_CREDS)
 from ui_tests.pages.page import Page
 
 

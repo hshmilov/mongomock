@@ -1,4 +1,4 @@
-from axonius.consts.gui_consts import Signup
+from axonius.consts.gui_consts import (Signup, SIGNUP_TEST_COMPANY_NAME)
 from ui_tests.tests.ui_consts import LOGGED_IN_MARKER
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -17,7 +17,7 @@ class TestSignup(TestBase):
         self.login_page.refresh()
         self.signup_page.wait_for_signup_page_to_load()
 
-        company_name = 'bla'
+        company_name = SIGNUP_TEST_COMPANY_NAME
 
         self.signup_page.fill_signup_and_save(company=company_name, email='a@b', passw='1', confirm_passw='2')
         self.signup_page.wait_for_passwords_dont_match_error()
