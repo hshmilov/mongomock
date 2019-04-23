@@ -10,6 +10,7 @@ import pytest
 from retrying import retry
 from passlib.hash import bcrypt
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 import conftest
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
@@ -77,8 +78,17 @@ class TestBase:
             self.base_url = f'https://{DOCKER_NETWORK_DEFAULT_GATEWAY}:{self.port}'
             logger.info(f'Base Url: {self.base_url}')
             logger.info(f'Connecting to the remote hub {remote_hub}..')
-            self.driver = webdriver.Remote(command_executor=remote_hub,
-                                           desired_capabilities=self._get_desired_capabilities())
+            chrome_options = Options()
+            chrome_options.add_argument('enable-automation')
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-extensions')
+            chrome_options.add_argument('--dns-prefetch-disable')
+            chrome_options.add_argument('--disable-gpu')
+            self.driver = webdriver.Remote(
+                command_executor=remote_hub,
+                desired_capabilities=self._get_desired_capabilities(),
+                options=chrome_options)
             logger.info('Connected successfully!')
         else:
             self.local_browser = False
