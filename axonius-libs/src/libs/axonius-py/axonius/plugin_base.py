@@ -1898,6 +1898,16 @@ class PluginBase(Configurable, Feature):
                                              for axonius_entity in entities_candidates
                                          ]
                                          })
+
+                    if len(all_unique_adapter_entities_data) > 30:
+                        logger.info(f'Over sized adapter link occurred on {internal_axon_id}, '
+                                    f'has {len(all_unique_adapter_entities_data)} adapters')
+                    adapters_by_plugin_name = defaultdict(int)
+                    for adapter in all_unique_adapter_entities_data:
+                        adapters_by_plugin_name[adapter[PLUGIN_UNIQUE_NAME]] += 1
+                    if any(x > 10 for x in adapters_by_plugin_name.values()):
+                        logger.info(f'Too many from a single adapter: {adapters_by_plugin_name} for {internal_axon_id}')
+
                     session.insert_one({
                         '_id': remaining_entity['_id'],
                         "internal_axon_id": internal_axon_id,
