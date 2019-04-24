@@ -87,6 +87,9 @@
         .x-select-symbol {
             border-bottom-right-radius: 0;
             border-top-right-radius: 0;
+            .logo-text {
+                max-width: 178px;
+            }
         }
 
         .field-select {
