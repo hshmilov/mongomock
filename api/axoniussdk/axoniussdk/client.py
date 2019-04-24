@@ -78,9 +78,9 @@ class RESTClient:
         }
         return self.do_request('post', '/devices/views', json=data)
 
-    def delete_devices_views(self, device_id: list):
+    def delete_devices_views(self, device_ids: list):
         # Deletes all listed device views (by ID).
-        return self.do_request('delete', '/devices/views', json={'ids': device_id})
+        return self.do_request('delete', '/devices/views', json={'ids': device_ids})
 
     def get_users(self, skip: str, limit: str, fields=None, filter_=None):
         params = {}

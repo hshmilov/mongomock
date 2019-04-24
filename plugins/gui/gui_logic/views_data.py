@@ -13,7 +13,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def _process_filter_views(entity_type: EntityType, mongo_filter):
-    fielded_plugins = [re.match(r'([\w_]*?)_\d+', plugin_unique_name)[1] for plugin_unique_name in
+    fielded_plugins = [re.match(r'([\w_]*?)(_\d+)?$', plugin_unique_name)[1] for plugin_unique_name in
                        get_fielded_plugins(entity_type)]
     logger.info('Filtering views that use fields from plugins without persisted fields schema')
     logger.info(f'Remaining plugins include: {fielded_plugins}')

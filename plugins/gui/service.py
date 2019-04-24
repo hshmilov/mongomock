@@ -1144,7 +1144,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('devices/count', required_permissions={Permission(PermissionType.Devices,
                                                                               PermissionLevel.ReadOnly)})
     def get_devices_count(self, mongo_filter, history: datetime):
-        quick = request.args.get('quick', 'False') == 'True'
+        quick = request.args.get('quick') == 'True'
         return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
                                                   history_date=history, quick=quick))
 
@@ -1168,7 +1168,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('devices/views/count', required_permissions={Permission(PermissionType.Devices,
                                                                                     PermissionLevel.ReadOnly)})
     def get_devices_views_count(self, mongo_filter):
-        quick = request.args.get('quick', 'False') == 'True'
+        quick = request.args.get('quick') == 'True'
         return str(get_views_count(EntityType.Devices, mongo_filter, quick=quick))
 
     @gui_helpers.filtered_entities()
@@ -1286,7 +1286,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('users/count', required_permissions={Permission(PermissionType.Users,
                                                                             PermissionLevel.ReadOnly)})
     def get_users_count(self, mongo_filter, history: datetime):
-        quick = request.args.get('quick', 'False') == 'True'
+        quick = request.args.get('quick') == 'True'
         return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Users),
                                                   history_date=history, quick=quick))
 
@@ -1318,7 +1318,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('users/views/count', required_permissions={Permission(PermissionType.Users,
                                                                                   PermissionLevel.ReadOnly)})
     def get_users_views_count(self, mongo_filter):
-        quick = request.args.get('quick', 'False') == 'True'
+        quick = request.args.get('quick') == 'True'
         return str(get_views_count(EntityType.Users, mongo_filter, quick=quick))
 
     @gui_helpers.filtered_entities()
