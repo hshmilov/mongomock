@@ -277,6 +277,7 @@
                 filter = this.wrapFilterOptions(filter)
                 if (this.queryFilter === filter) return
                 this.queryFilter = filter
+                this.inTextSearch = false
                 this.filterValid = true
             },
             openSaveView() {
