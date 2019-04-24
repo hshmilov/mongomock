@@ -228,7 +228,7 @@ class TestEnforcementActions(TestBase):
             self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
             self.settings_page.fill_email_host(smtp_service.fqdn)
             self.settings_page.fill_email_port(smtp_service.port)
-            self.settings_page.click_save_button()
+            self.settings_page.save_and_wait_for_toaster()
 
             self.devices_page.switch_to_page()
             self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME,
