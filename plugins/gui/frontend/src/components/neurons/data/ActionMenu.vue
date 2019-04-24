@@ -97,7 +97,7 @@
             },
             deleteEntities() {
                 return this.deleteData({
-                    module: this.module, data: this.entities
+                    module: this.module, selection: this.entities
                 }).then(() => this.$emit('done'))
             },
             saveFields() {

@@ -117,8 +117,8 @@ export const UPDATE_REMOVED_DATA_VIEW = 'UPDATE_REMOVED_DATA_VIEW'
 export const updateRemovedDataView = (state, payload) => {
 	if (!getModule(state, payload)) return
 
-	state[payload.module].views.saved.data =
-		state[payload.module].views.saved.data.filter(query => !payload.ids.includes(query.uuid))
+	state[payload.module].content.data =
+		state[payload.module].content.data.filter(query => !payload.selection.includes(query.uuid))
 }
 
 export const UPDATE_DATA_FIELDS = 'UPDATE_DATA_FIELDS'

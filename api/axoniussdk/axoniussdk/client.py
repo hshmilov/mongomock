@@ -80,7 +80,7 @@ class RESTClient:
 
     def delete_devices_views(self, device_id: list):
         # Deletes all listed device views (by ID).
-        return self.do_request('delete', '/devices/views', json=device_id)
+        return self.do_request('delete', '/devices/views', json={'ids': device_id})
 
     def get_users(self, skip: str, limit: str, fields=None, filter_=None):
         params = {}
@@ -124,8 +124,7 @@ class RESTClient:
 
     def delete_users_views(self, user_ids: list):
         # Deletes all listed device views (by ID).
-        data = user_ids
-        return self.do_request('delete', '/users/views', json=data)
+        return self.do_request('delete', '/users/views', json={'ids': user_ids})
 
     def get_alerts(self, skip: int = None, limit: int = None, fields: list = None):
         params = {

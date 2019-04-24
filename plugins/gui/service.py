@@ -138,7 +138,7 @@ from gui.gui_logic.get_ec_historical_data_for_entity import (TaskData,
                                                              get_all_task_data)
 from gui.gui_logic.historical_dates import (all_historical_dates,
                                             first_historical_date)
-from gui.gui_logic.views_data import get_views
+from gui.gui_logic.views_data import get_views, get_views_count
 from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -841,6 +841,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
         if method == 'GET':
+            mongo_filter['query_type'] = mongo_filter.get('query_type', 'saved')
             return [gui_helpers.beautify_db_entry(entry)
                     for entry
                     in get_views(entity_type, limit, skip, mongo_filter)]
@@ -859,7 +860,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return str(update_result['_id'])
 
         if method == 'DELETE':
-            query_ids = self.get_request_data_as_object()
+            query_ids = self.get_selected_ids(entity_views_collection, self.get_request_data_as_object(), mongo_filter)
             entity_views_collection.update_many({'_id': {'$in': [ObjectId(i) for i in query_ids]}},
                                                 {'$set': {'archived': True}})
             return ''
@@ -1163,6 +1164,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter))
 
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('devices/views/count', required_permissions={Permission(PermissionType.Devices,
+                                                                                    PermissionLevel.ReadOnly)})
+    def get_devices_views_count(self, mongo_filter):
+        quick = request.args.get('quick', 'False') == 'True'
+        return str(get_views_count(EntityType.Devices, mongo_filter, quick=quick))
+
     @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/labels', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices, ReadOnlyJustForGet)})
@@ -1305,6 +1313,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             required_permissions={Permission(PermissionType.Users, ReadOnlyJustForGet)})
     def user_views(self, limit, skip, mongo_filter):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
+
+    @gui_helpers.filtered()
+    @gui_add_rule_logged_in('users/views/count', required_permissions={Permission(PermissionType.Users,
+                                                                                  PermissionLevel.ReadOnly)})
+    def get_users_views_count(self, mongo_filter):
+        quick = request.args.get('quick', 'False') == 'True'
+        return str(get_views_count(EntityType.Users, mongo_filter, quick=quick))
 
     @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/labels', methods=['GET', 'POST', 'DELETE'],

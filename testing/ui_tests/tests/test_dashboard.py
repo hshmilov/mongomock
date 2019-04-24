@@ -210,12 +210,12 @@ class TestDashboard(TestBase):
         self.devices_page.wait_for_table_to_load()
         devices_page_tables_count = self.devices_page.get_all_tables_counters()[0]
         assert devices_page_tables_count == dashboard_devices_table_count
-        assert self.devices_page.find_search_value().count(f'regex("{string_to_search}", "i")') == 7
+        assert self.devices_page.find_search_value() == string_to_search
         assert any(host_name in s for s in self.devices_page.get_all_table_rows()[0])
         self.devices_page.page_back()
         self.dashboard_page.open_view_users()
         self.users_page.wait_for_table_to_load()
         users_tables_count = self.users_page.get_all_tables_counters()[0]
         assert users_tables_count == dashboard_users_table_count
-        assert self.users_page.find_search_value().count(f'regex("{string_to_search}", "i")') == 6
+        assert self.users_page.find_search_value() == string_to_search
         assert any(user_name in s for s in self.users_page.get_all_table_rows()[0])

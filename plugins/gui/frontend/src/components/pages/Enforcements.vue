@@ -1,14 +1,39 @@
 <template>
-    <x-page title="Enforcement Center" class="x-enforcements" :class="{disabled: isReadOnly}">
-        <x-search v-model="searchValue" placeholder="Search Enforcement Sets..." @keyup.enter.native="onSearchConfirm" />
-        <x-table module="enforcements" @click-row="navigateEnforcement" title="Enforcement Sets" v-model="isReadOnly? undefined: selection">
-            <template slot="actions">
-                <x-button link v-if="hasSelection" @click="remove">Remove</x-button>
-                <x-button @click="navigateEnforcement('new')" id="enforcement_new" :disabled="isReadOnly">+ New Enforcement</x-button>
-                <x-button emphasize @click="navigateTasks">View Tasks</x-button>
-            </template>
-        </x-table>
-    </x-page>
+  <x-page
+    title="Enforcement Center"
+    class="x-enforcements"
+    :class="{disabled: isReadOnly}"
+  >
+    <x-search
+      v-model="searchValue"
+      placeholder="Search Enforcement Sets..."
+      @keyup.enter.native="onSearchConfirm"
+    />
+    <x-table
+      v-model="isReadOnly? undefined: selection"
+      module="enforcements"
+      title="Enforcement Sets"
+      :static-fields="fields"
+      @click-row="navigateEnforcement"
+    >
+      <template slot="actions">
+        <x-button
+          v-if="hasSelection"
+          link
+          @click="remove"
+        >Remove</x-button>
+        <x-button
+          id="enforcement_new"
+          :disabled="isReadOnly"
+          @click="navigateEnforcement('new')"
+        >+ New Enforcement</x-button>
+        <x-button
+          emphasize
+          @click="navigateTasks"
+        >View Tasks</x-button>
+      </template>
+    </x-table>
+  </x-page>
 </template>
 
 
@@ -24,15 +49,20 @@
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
   export default {
-    name: 'x-enforcements',
-    components: { xPage, xSearch, xTable, xButton },
+    name: 'XEnforcements',
+    components: {
+      xPage, xSearch, xTable, xButton
+    },
+    data () {
+      return {
+        selection: { ids: [] },
+        searchValue: ''
+      }
+    },
     computed: {
       ...mapState({
         tourEnforcements (state) {
           return state.onboarding.tourStates.queues.enforcements
-        },
-        enforcementFields(state) {
-          return state.enforcements.view.fields
         },
         isReadOnly (state) {
           let user = state.auth.currentUser.data
@@ -43,21 +73,35 @@
       name () {
         return 'enforcements'
       },
+      fields () {
+        return [{
+          name: 'name', title: 'Name', type: 'string'
+        }, {
+          name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
+        }, {
+          name: 'actions.main', title: 'Main Action', type: 'string'
+        }, {
+          name: 'triggers.view.name', title: 'Trigger Query Name', type: 'string'
+        }, {
+          name: 'triggers.last_triggered', title: 'Last Triggered', type: 'string', format: 'date-time'
+        }, {
+          name: 'triggers.times_triggered', title: 'Times Triggered', type: 'integer'
+        }]
+      },
       hasSelection () {
         return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
       },
       searchFilter() {
         let patternParts = []
-        this.enforcementFields.forEach((field) => {
-          patternParts.push(field + ` == regex("${this.searchValue}", "i")`)
+        this.fields.forEach((field) => {
+          patternParts.push(field.name + ` == regex("${this.searchValue}", "i")`)
         })
         return patternParts.join(' or ')
       }
     },
-    data () {
-      return {
-        selection: { ids: [] },
-        searchValue: ''
+    created () {
+      if (this.tourEnforcements && this.tourEnforcements.length) {
+        this.changeState({ name: this.tourEnforcements[0] })
       }
     },
     methods: {
@@ -94,11 +138,6 @@
             page: 0
           }
         })
-      }
-    },
-    created () {
-      if (this.tourEnforcements && this.tourEnforcements.length) {
-        this.changeState({ name: this.tourEnforcements[0] })
       }
     }
   }

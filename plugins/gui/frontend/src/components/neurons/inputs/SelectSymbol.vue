@@ -65,8 +65,7 @@
 <style lang="scss">
     .x-select-symbol {
         .content {
-            width: 100%;
-
+            min-width: 100%;
         }
 
         .x-select-trigger {

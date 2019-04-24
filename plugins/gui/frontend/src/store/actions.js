@@ -73,11 +73,9 @@ export const requestApi = ({commit}, payload) => {
 
 export const getModule = (state, payload) => {
 	if (!payload || !payload.module) return null
-	if (payload.section && state[payload.section]) {
-		return state[payload.section][payload.module]
-	} else if (!payload.section) {
-        return state[payload.module]
-    }
+	return payload.module.split('/').reduce((moduleState, key) => {
+		return moduleState[key]
+	}, state)
 }
 
 export const FETCH_DATA_COUNT = 'FETCH_DATA_COUNT'
@@ -113,7 +111,7 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 
 const createContentRequest = (state, payload) => {
     let module = getModule(state, payload)
-    if (!module) return
+    if (!module) return ''
 	const view = module.view
 
 	let params = []
@@ -249,22 +247,6 @@ export const saveView = ({dispatch, commit}, payload) => {
 	}).catch(console.log.bind(console))
 }
 
-export const REMOVE_DATA_VIEW = 'REMOVE_DATA_VIEW'
-export const removeDataView = ({state, dispatch, commit}, payload) => {
-	if (!getModule(state, payload) || !payload.ids || !payload.ids.length) return
-
-	dispatch(REQUEST_API, {
-		rule: `${payload.module}/views`,
-		method: 'DELETE',
-		data: payload.ids
-	}).then((response) => {
-		if (response.data !== '') {
-			return
-		}
-		commit(UPDATE_REMOVED_DATA_VIEW, payload)
-	})
-}
-
 export const FETCH_DATA_FIELDS = 'FETCH_DATA_FIELDS'
 export const fetchDataFields = ({state, dispatch}, payload) => {
 	if (!getModule(state, payload)) return
@@ -352,12 +334,16 @@ export const disableData = ({state, dispatch}, payload) => {
 export const DELETE_DATA = 'DELETE_DATA'
 export const deleteData = ({state, dispatch}, payload) => {
     let moduleState = getModule(state, payload)
-	if (!moduleState || !payload.data) return
+	if (!moduleState || !payload.selection) return
 
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
 		method: 'DELETE',
-		data: payload.data
+		data: payload.selection
+	}).then(response => {
+		if (response.status === 200 && response.data === '') {
+			dispatch(FETCH_DATA_CONTENT, payload)
+		}
 	})
 }
 

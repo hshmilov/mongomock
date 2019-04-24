@@ -9,28 +9,10 @@ export const tasks = {
         content: { data: [], fetching: false, error: ''},
         count: { data: 0, fetching: false, error: ''},
         view: {
-            page: 0, pageSize: 20, fields: [
-                'status', 'result.metadata.success_rate', 'post_json.report_name', 'result.main.name',
-                'result.metadata.trigger.view.name', 'started_at', 'finished_at'
-            ], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
-        },
-        fields: {
-            data: {
-                generic: [{
-                    name: 'status', title: 'Status', type: 'string'
-                }, {
-                    name: 'result.metadata.success_rate', title: 'Successful / Total', type: 'string'
-                }, {
-                    name: 'post_json.report_name', title: 'Name', type: 'string'
-                }, {
-                    name: 'result.main.name', title: 'Main Action', type: 'string'
-                }, {
-                    name: 'result.metadata.trigger.view.name', title: 'Trigger Query Name', type: 'string'
-                }, {
-                    name: 'started_at', title: 'Started', type: 'string', format: 'date-time'
-                }, {
-                    name: 'finished_at', title: 'Completed', type: 'string', format: 'date-time'
-                }]
+            page: 0, pageSize: 20, coloumnSizes: [], query: {
+                filter: '', expressions: []
+            }, sort: {
+                field: '', desc: true
             }
         },
 

@@ -2293,7 +2293,7 @@ class PluginBase(Configurable, Feature):
         :param mongo_filter: Query to fetch entire data by
         :return: List of internal axon ids that were meant to be selected, according to given selection and filter
         """
-        if entities_selection['include']:
+        if entities_selection.get('include', True):
             return entities_selection['ids']
         return [entry[id_field] for entry in mongo_collection.find({
             '$and': [

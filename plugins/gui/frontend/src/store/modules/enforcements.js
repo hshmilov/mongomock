@@ -46,29 +46,16 @@ export const initTrigger = {
 export const enforcements = {
   state: {
     /* Enforcements DataTable State */
+
     content: { data: [], fetching: false, error: '' },
+
     count: { data: 0, fetching: false, error: '' },
+
     view: {
-      page: 0, pageSize: 20, fields: [
-        'name', 'actions.main', 'triggers.view.name', 'triggers.last_triggered',
-        'triggers.times_triggered', 'last_updated'
-      ], coloumnSizes: [], query: { filter: '', expressions: [] }, sort: { field: '', desc: true }
-    },
-    fields: {
-      data: {
-        generic: [{
-          name: 'name', title: 'Name', type: 'string'
-        }, {
-          name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time'
-        }, {
-          name: 'actions.main', title: 'Main Action', type: 'string'
-        }, {
-          name: 'triggers.view.name', title: 'Trigger Query Name', type: 'string'
-        }, {
-          name: 'triggers.last_triggered', title: 'Last Triggered', type: 'string', format: 'date-time'
-        }, {
-          name: 'triggers.times_triggered', title: 'Times Triggered', type: 'integer'
-        }]
+      page: 0, pageSize: 20, coloumnSizes: [], query: {
+        filter: '', expressions: []
+      }, sort: {
+        field: '', desc: true
       }
     },
 

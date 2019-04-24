@@ -1,7 +1,7 @@
 <template>
     <div class="x-query">
         <!-- Dropdown component for selecting a query --->
-        <x-dropdown class="flex-expand" @activated="tour('querySelect')">
+        <x-dropdown class="query-search" @activated="tour('querySelect')">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
             <x-search-input slot="trigger" v-model="searchValue" ref="greatInput" id="query_list" @input="searchQuery"
                             @keyup.enter.native.stop="submitFilter"
@@ -350,7 +350,9 @@
                     }
                 }
             })
-            if (this.queryFilter) {
+            if (this.query.search) {
+              this.searchValue = this.query.search
+            } else if (this.queryFilter) {
                 this.searchValue = this.queryFilter
             }
         }
@@ -410,6 +412,13 @@
                         }
                     }
                 }
+            }
+        }
+
+        .query-search {
+            flex: 1 0 auto;
+            .content {
+                width: 100%;
             }
         }
 

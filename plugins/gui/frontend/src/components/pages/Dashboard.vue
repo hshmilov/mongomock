@@ -258,7 +258,7 @@
             getDashboardData().then(() => {
                 if (this._isDestroyed || this.isExpired) return
                 if (!this.isEmptySystem) this.nextState('dashboard')
-                if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
+                if (this.devicesViewsList.length && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count
                 if (this.seenDevices && this.isDevicesEdit) {
                     let adapter = this.deviceDiscovery.counters.find((item) => !item.name.includes('active_directory'))

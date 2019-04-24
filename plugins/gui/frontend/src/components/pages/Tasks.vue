@@ -26,6 +26,7 @@
     <x-table
       module="tasks"
       title="Enforcement Tasks"
+      :static-fields="fields"
       @click-row="viewTask"
     />
   </x-page>
@@ -37,7 +38,7 @@
   import xSelect from '../axons/inputs/Select.vue'
   import xTable from '../neurons/data/Table.vue'
 
-  import { mapState, mapMutations, mapActions } from 'vuex'
+  import { mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
   import { FETCH_TASK } from '../../store/modules/tasks'
 
@@ -47,11 +48,23 @@
       xPage, xSearch, xSelect, xTable
     },
     computed: {
-      ...mapState({
-        searchFields (state) {
-          return state.tasks.view.fields
-        }
-      }),
+      fields() {
+        return [{
+          name: 'status', title: 'Status', type: 'string'
+        }, {
+          name: 'result.metadata.success_rate', title: 'Successful / Total', type: 'string'
+        }, {
+          name: 'post_json.report_name', title: 'Name', type: 'string'
+        }, {
+          name: 'result.main.name', title: 'Main Action', type: 'string'
+        }, {
+          name: 'result.metadata.trigger.view.name', title: 'Trigger Query Name', type: 'string'
+        }, {
+          name: 'started_at', title: 'Started', type: 'string', format: 'date-time'
+        }, {
+          name: 'finished_at', title: 'Completed', type: 'string', format: 'date-time'
+        }]
+      },
       statusOptions() {
         return [{
           name: '*', title: 'Any'
@@ -62,7 +75,7 @@
         }]
       },
       searchFilter() {
-        let textFilter = this.searchFields.map(field => `${field} == regex("${this.searchValue}", "i")`).join(' or ')
+        let textFilter = this.fields.map(field => `${field.name} == regex("${this.searchValue}", "i")`).join(' or ')
         if (this.statusValue === '*') {
           return textFilter
         }

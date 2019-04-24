@@ -1,124 +1,157 @@
 <template>
-    <div class="x-queries-table">
-        <x-search v-model="searchText" placeholder="Search Query Name..."/>
-        <x-table-wrapper title="Queries" :count="queries.length" :loading="loading">
-            <template slot="actions">
-                <x-button v-if="selected.length === 1" :disabled="!isEnforcementsWrite" link @click="createEnforcement">+ New Enforcement</x-button>
-                <x-button v-if="selected && selected.length" :disabled="readOnly" link @click="removeQuery">Remove</x-button>
-            </template>
-            <x-table slot="table" :data="filteredQueries" :fields="fields" v-model="readOnly? undefined: selected"
-                     :click-row-handler="runQuery"/>
-        </x-table-wrapper>
-    </div>
+  <div class="x-queries-table">
+    <x-search
+      v-model="searchValue"
+      placeholder="Search Query Name..."
+      @keyup.enter.native="onSearchConfirm"
+    />
+    <x-table
+      slot="table"
+      v-model="readOnly? undefined: selection"
+      :module="stateLocation"
+      title="Saved Queries"
+      :static-fields="fields"
+      @click-row="runQuery"
+    >
+      <template slot="actions">
+        <x-button
+          v-if="selection.ids.length === 1"
+          :disabled="!isEnforcementsWrite"
+          link
+          @click="createEnforcement"
+        >+ New Enforcement</x-button>
+        <x-button
+          v-if="hasSelection"
+          :disabled="readOnly"
+          link
+          @click="removeQuery"
+        >Remove</x-button>
+      </template>
+    </x-table>
+  </div>
 </template>
 
 <script>
-    import xSearch from '../../neurons/inputs/SearchInput.vue'
-    import xTableWrapper from '../../axons/tables/TableWrapper.vue'
-    import xTable from '../../axons/tables/Table.vue'
-    import xButton from '../../axons/inputs/Button.vue'
+  import xSearch from '../../neurons/inputs/SearchInput.vue'
+  import xTable from '../../neurons/data/Table.vue'
+  import xButton from '../../axons/inputs/Button.vue'
 
-    import {mapState, mapMutations, mapActions} from 'vuex'
-    import {UPDATE_DATA_VIEW} from '../../../store/mutations'
-    import {FETCH_DATA_VIEWS, REMOVE_DATA_VIEW} from '../../../store/actions'
-    import {SET_ENFORCEMENT, initTrigger} from '../../../store/modules/enforcements'
+  import { mapState, mapMutations, mapActions } from 'vuex'
+  import { UPDATE_DATA_VIEW } from '../../../store/mutations'
+  import { DELETE_DATA } from '../../../store/actions'
+  import { SET_ENFORCEMENT, initTrigger } from '../../../store/modules/enforcements'
 
-    export default {
-        name: 'x-queries-table',
-        components: {xSearch, xTableWrapper, xTable, xButton},
-        props: {
-            module: {required: true}, readOnly: {default: false}
+  export default {
+    name: 'XQueriesTable',
+    components: {
+      xSearch, xTable, xButton
+    },
+    props: {
+      module: {
+        type: String,
+        required: true
+      },
+      readOnly: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data () {
+      return {
+        selection: { ids: [] },
+        searchValue: ''
+      }
+    },
+    computed: {
+      ...mapState({
+        views (state) {
+          return state[this.module].views.content.data
         },
-        computed: {
-            ...mapState({
-                queries(state) {
-                    return state[this.module].views.saved.data
-                },
-                isEnforcementsWrite(state) {
-                    let user = state.auth.currentUser.data
-                    if (!user || !user.permissions) return true
-                    return user.permissions.Enforcements === 'ReadWrite' || user.admin
-                }
-            }),
-            filteredQueries() {
-                // Filter by query's name, according to user's input to the search input field
-                return this.queries.filter(
-                    (query) => query.name.toLowerCase().includes(this.searchText.toLowerCase())
-                )
-            },
-            fields() {
-                return [
-                    {name: 'name', title: 'Name', type: 'string'},
-                    {name: 'view->query->filter', title: 'Filter', type: 'string'},
-                    {name: 'timestamp', title: 'Save Time', type: 'string', format: 'date-time'}
-                ]
-            },
-            selectedNames() {
-                return this.queries.filter(query => this.selected.includes(query.uuid)).map(query => query.name)
-            }
-        },
-        data() {
-            return {
-                selected: [],
-                loading: true,
-              searchText: ''
-            }
-        },
-        methods: {
-            ...mapMutations({
-                updateView: UPDATE_DATA_VIEW, setEnforcement: SET_ENFORCEMENT
-            }),
-            ...mapActions({
-                fetchDataQueries: FETCH_DATA_VIEWS, removeDataQuery: REMOVE_DATA_VIEW
-            }),
-            runQuery(queryId) {
-                let query = this.queries.filter(query => query.uuid === queryId)[0]
-                this.updateView({module: this.module, view: query.view})
-
-                this.$router.push({path: `/${this.module}`})
-            },
-            createEnforcement() {
-                this.setEnforcement({
-                    uuid: 'new',
-                    actions: {
-                        main: null,
-                        success: [],
-                        failure: [],
-                        post: []
-                    },
-                    triggers: this.selectedNames.map(name => {
-                        return {...initTrigger,
-                            name: 'Trigger',
-                            view: {
-                                name, entity: this.module
-                            }
-                        }
-                    })
-                })
-                /* Navigating to new enforcement - requested queries will be selected as triggers there */
-                this.$router.push({path: '/enforcements/new'})
-            },
-            removeQuery() {
-                this.removeDataQuery({module: this.module, ids: this.selected})
-                this.selected = []
-            }
-        },
-        created() {
-            this.fetchDataQueries({module: this.module, type: 'saved'}).then(() => this.loading = false)
+        isEnforcementsWrite (state) {
+          let user = state.auth.currentUser.data
+          if (!user || !user.permissions) return true
+          return user.permissions.Enforcements === 'ReadWrite' || user.admin
         }
+      }),
+      stateLocation() {
+        return `${this.module}/views`
+      },
+      hasSelection () {
+        return (this.selection.ids && this.selection.ids.length) || this.selection.include === false
+      },
+      fields() {
+        return [{
+          name: 'name', title: 'Name', type: 'string'
+        }, {
+          name: 'timestamp', title: 'Last Updated', type: 'string', format: 'date-time'
+        }, {
+          name: 'view->query->filter', title: 'Filter', type: 'string'
+        }]
+      },
+      searchFilter() {
+        if (!this.searchValue) return ''
+        return `name == regex("${this.searchValue}", "i")`
+      },
+      selectedName () {
+        return this.views.find(view => this.selection.ids[0] === view.uuid).name
+      }
+    },
+    methods: {
+      ...mapMutations({
+        updateView: UPDATE_DATA_VIEW, setEnforcement: SET_ENFORCEMENT
+      }),
+      ...mapActions({
+        removeData: DELETE_DATA
+      }),
+      runQuery (viewId) {
+        this.updateView({
+          module: this.module,
+          view: this.views.find(view => view.uuid === viewId).view
+        })
+
+        this.$router.push({ path: `/${this.module}` })
+      },
+      createEnforcement () {
+        this.setEnforcement({
+          uuid: 'new',
+          actions: {
+            main: null,
+            success: [],
+            failure: [],
+            post: []
+          },
+          triggers: {
+            ...initTrigger,
+            name: 'Trigger',
+            view: {
+              name: this.selectedName, entity: this.module
+            }
+          }
+        })
+        /* Navigating to new enforcement - requested queries will be selected as triggers there */
+        this.$router.push({ path: '/enforcements/new' })
+      },
+      removeQuery () {
+        this.removeData({ module: this.stateLocation, selection: this.selection })
+        this.selection = {
+          ids: []
+        }
+      },
+      onSearchConfirm () {
+        this.updateView({
+          module: this.stateLocation,
+          view: {
+            query: {
+              filter: this.searchFilter
+            },
+            page: 0
+          }
+        })
+      }
     }
+  }
 </script>
 
 <style lang="scss">
-    .x-queries-table {
-        height: 100%;
 
-        .x-search-input {
-            margin-bottom: 12px;
-        }
-
-        .x-table-wrapper {
-            height: calc(100% - 72px);
-        }
-    }
 </style>

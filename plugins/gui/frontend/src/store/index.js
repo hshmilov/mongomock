@@ -9,7 +9,6 @@ import {
   FETCH_DATA_VIEWS, fetchDataViews,
   SAVE_DATA_VIEW, saveDataView,
   SAVE_VIEW, saveView,
-  REMOVE_DATA_VIEW, removeDataView,
   FETCH_DATA_FIELDS, fetchDataFields,
   FETCH_DATA_HYPERLINKS, fetchDataHyperlinks,
   START_RESEARCH_PHASE, startResearch,
@@ -68,7 +67,6 @@ import { constants } from './modules/constants'
 import { dashboard } from './modules/dashboard'
 import { devices } from './modules/devices'
 import { enforcements } from './modules/enforcements'
-import { explorer } from './modules/explorer'
 import { notifications } from './modules/notifications'
 import { onboarding } from './modules/onboarding'
 import { reports } from './modules/reports'
@@ -102,8 +100,8 @@ export default new Vuex.Store({
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,
-    [ UPDATE_LANGUAGE ]: updateLanguage,
-    [ UPDATE_BRANCH ]: updateBranch,
+    [UPDATE_LANGUAGE]: updateLanguage,
+    [UPDATE_BRANCH]: updateBranch,
     [UPDATE_WINDOW_WIDTH]: updateWindowWidth,
     [UPDATE_DATA_CONTENT]: updateDataContent,
     [UPDATE_DATA_COUNT]: updateDataCount,
@@ -131,7 +129,6 @@ export default new Vuex.Store({
     [FETCH_DATA_VIEWS]: fetchDataViews,
     [SAVE_DATA_VIEW]: saveDataView,
     [SAVE_VIEW]: saveView,
-    [REMOVE_DATA_VIEW]: removeDataView,
     [FETCH_DATA_FIELDS]: fetchDataFields,
     [FETCH_DATA_HYPERLINKS]: fetchDataHyperlinks,
     [START_RESEARCH_PHASE]: startResearch,
@@ -163,7 +160,6 @@ export default new Vuex.Store({
     dashboard,
     devices,
     enforcements,
-    explorer,
     notifications,
     onboarding,
     reports,

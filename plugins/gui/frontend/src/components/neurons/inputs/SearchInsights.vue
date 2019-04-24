@@ -1,89 +1,123 @@
 <template>
-    <div>
-        <div class="x-search-insights">
-            <x-search-input placeholder="Search by Host Name, User Name, MAC or IP..." v-model="searchValue"
-                            @keydown.enter.native="onClick" :disabled="entitiesRestricted"
-                            @click.native="notifyAccess"/>
-            <x-button right :disabled="entitiesRestricted" @click="onClick" @access="notifyAccess">Search</x-button>
-        </div>
-        <x-access-modal v-model="blockedComponent"/>
+  <div>
+    <div class="x-search-insights">
+      <x-search-input
+        v-model="searchValue"
+        placeholder="Search by Host Name, User Name, MAC or IP..."
+        :disabled="entitiesRestricted"
+        @keydown.enter.native="onClick"
+        @click.native="notifyAccess"
+      />
+      <x-button
+        right
+        :disabled="entitiesRestricted"
+        @click="onClick"
+        @access="notifyAccess"
+      >Search</x-button>
     </div>
+    <x-access-modal v-model="blockedComponent" />
+  </div>
 </template>
 
 <script>
-    import xButton from '../../axons/inputs/Button.vue'
-    import xSearchInput from './SearchInput.vue'
-    import xAccessModal from '../popover/AccessModal.vue'
+  import xButton from '../../axons/inputs/Button.vue'
+  import xSearchInput from './SearchInput.vue'
+  import xAccessModal from '../popover/AccessModal.vue'
 
-    import {mapState, mapMutations} from 'vuex'
-    import {UPDATE_DATA_VIEW} from '../../../store/mutations'
-    import {UPDATE_SEARCH_VALUE} from '../../../store/modules/explorer'
-    import {entities} from '../../../constants/entities'
+  import { mapState, mapMutations } from 'vuex'
+  import { UPDATE_DATA_VIEW } from '../../../store/mutations'
+  import { entities } from '../../../constants/entities'
 
-    export default {
-        name: 'x-search-insights',
-        components: {xButton, xSearchInput, xAccessModal},
-        computed: {
-            ...mapState({
-                explorer(state) {
-                    return state.explorer
-                },
-                entitiesRestricted(state) {
-                    let user = state.auth.currentUser.data
-                    if (!user || !user.permissions) return true
-                    return user.permissions.Devices === 'Restricted' || user.permissions.Users === 'Restricted'
-                }
-            }),
-            searchValue: {
-                get() {
-                    return this.explorer.searchValue
-                },
-                set(value) {
-                    this.updateSearchValue(value)
-                }
-            },
-            excludedFields() {
-                return []
-            }
+  export default {
+    name: 'XSearchInsights',
+    components: { xButton, xSearchInput, xAccessModal },
+    computed: {
+      ...mapState({
+        entitiesView (state) {
+          return entities.reduce((map, entity) => {
+            map[entity.name] = state[entity.name].view
+            return map
+          }, {})
         },
-        data() {
-            return {
-                blockedComponent: ''
-            }
-        },
-        methods: {
-            ...mapMutations({
-                updateDataView: UPDATE_DATA_VIEW, updateSearchValue: UPDATE_SEARCH_VALUE
-            }),
-            notifyAccess() {
-                if (!this.entitiesRestricted) return
-                this.blockedComponent = 'Devices and Users Search'
-            },
-            onClick() {
-                let expressions = this.searchValue.split(',')
-                entities.forEach(entity => {
-                    let patternParts = []
-                    this.explorer[entity.name].view.fields.forEach(field => {
-                        if (this.excludedFields.includes(field)) return
-                        expressions.forEach(expression =>
-                            patternParts.push(`${field} == regex("${expression.trim()}", "i")`))
-                    })
-                    this.updateDataView({
-                        module: entity.name, section: 'explorer', view: {query: {filter: patternParts.join(' or ')}}
-                    })
-                })
-                this.$emit('click')
-            }
+        entitiesRestricted (state) {
+          let user = state.auth.currentUser.data
+          if (!user || !user.permissions) return true
+          return user.permissions.Devices === 'Restricted' || user.permissions.Users === 'Restricted'
         }
+      }),
+      searchValue: {
+        get () {
+          return this.entitiesView[entities[0].name].query.search
+        },
+        set (value) {
+          this.updateSearchValue(value)
+        }
+      },
+      entitiesFields () {
+        return {
+          devices: [
+            'adapters', 'specific_data.data.hostname', 'specific_data.data.name',
+            'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac',
+            'specific_data.data.last_used_users', 'labels'
+          ], users: [
+            'adapters', 'specific_data.data.username', 'specific_data.data.mail', 'specific_data.data.first_name',
+            'specific_data.data.last_name', 'labels'
+          ]
+        }
+      }
+    },
+    data () {
+      return {
+        blockedComponent: ''
+      }
+    },
+    methods: {
+      ...mapMutations({
+        updateDataView: UPDATE_DATA_VIEW
+      }),
+      notifyAccess () {
+        if (!this.entitiesRestricted) return
+        this.blockedComponent = 'Devices and Users Search'
+      },
+      updateSearchValue (search) {
+        entities.forEach(entity => {
+          this.updateDataView({
+            module: entity.name, view: {
+              query: {
+                search, filter: this.entitiesView[entity.name].query.filter
+              }, fields: this.entitiesFields[entity.name]
+            }
+          })
+        })
+      },
+      onClick () {
+        let expressions = this.searchValue.split(',')
+        entities.forEach(entity => {
+          let patternParts = []
+          this.entitiesView[entity.name].fields.forEach(field => {
+            expressions.forEach(expression =>
+              patternParts.push(`${field} == regex("${expression.trim()}", "i")`))
+          })
+          this.updateDataView({
+            module: entity.name, view: {
+              query: {
+                filter: patternParts.join(' or '),
+                search: this.searchValue
+              }
+            }
+          })
+        })
+        this.$emit('click')
+      }
     }
+  }
 </script>
 
 <style lang="scss">
     .x-search-insights {
         display: flex;
         width: 60vw;
-        margin: auto;
-        margin-bottom: 12px;
+        margin: auto auto 12px;
 
         .x-search-input {
             flex: 1 0 auto;
