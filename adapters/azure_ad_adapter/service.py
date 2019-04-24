@@ -18,6 +18,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 AZURE_CLIENT_ID = 'client_id'
 AZURE_CLIENT_SECRET = 'client_secret'
 AZURE_TENANT_ID = 'tenant_id'
+AZURE_AUTHORIZATION_CODE = 'authorization_code'
 
 
 # pylint: disable=invalid-name,too-many-instance-attributes,arguments-differ
@@ -62,6 +63,16 @@ class AzureAdAdapter(AdapterBase):
                                        client_secret=client_config[AZURE_CLIENT_SECRET],
                                        tenant_id=client_config[AZURE_TENANT_ID],
                                        https_proxy=client_config.get('https_proxy'))
+            auth_code = client_config.get(AZURE_AUTHORIZATION_CODE)
+            if auth_code:
+                if auth_code.startswith('refresh-'):
+                    refresh_token = auth_code[len('refresh-'):]
+                else:
+                    refresh_token = connection.get_refresh_token_from_authorization_code(auth_code)
+                    client_config[AZURE_AUTHORIZATION_CODE] = 'refresh-' + refresh_token  # override refresh token
+
+                connection.set_refresh_token(refresh_token)
+
             connection.test_connection()
             return connection
         except Exception as e:
@@ -97,6 +108,12 @@ class AzureAdAdapter(AdapterBase):
                     'name': AZURE_TENANT_ID,
                     'title': 'Azure Tenant ID',
                     'type': 'string'
+                },
+                {
+                    'name': AZURE_AUTHORIZATION_CODE,
+                    'title': 'Azure Oauth Authorization Code',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
                     'name': 'https_proxy',

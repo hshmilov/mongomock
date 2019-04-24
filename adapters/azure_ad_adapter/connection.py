@@ -11,6 +11,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 AUTHORITY_HOST_URL = 'https://login.microsoftonline.com'
 GRAPH_API_URL = 'https://graph.microsoft.com'
+TEMPLATE_AUTHZ_URL = 'https://login.windows.net/{tenant_id}/oauth2/authorize?response_type=code&client_id={client_id}' \
+                     '&redirect_uri=https://localhost&state=after-auth&resource=https://graph.microsoft.com' \
+                     '&prompt=admin_consent'
 DEFAULT_EXPIRATION_IN_SECONDS = 60 * 20     # 20 min
 MAX_PAGE_NUM_TO_AVOID_INFINITE_LOOP = 20000
 USERS_ATTRIBUTES = [
@@ -53,20 +56,51 @@ DEVICE_ATTRIBUTES = [
 ]
 
 
+# pylint: disable=logging-format-interpolation
 class AzureAdClient(RESTConnection):
     def __init__(self, client_id, client_secret, tenant_id, *args, **kwargs):
         self._client_id = client_id
         self._client_secret = client_secret
         self._tenant_id = tenant_id
+        self._refresh_token = None
         super().__init__(domain=GRAPH_API_URL, url_base_prefix='/v1.0', *args, **kwargs)
+
+    def set_refresh_token(self, refresh_token):
+        self._refresh_token = refresh_token
+
+    def get_refresh_token_from_authorization_code(self, authorization_code):
+        context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}', proxies=self._proxies)
+        answer = context.acquire_token_with_authorization_code(
+            authorization_code,
+            'https://localhost',
+            GRAPH_API_URL,
+            self._client_id,
+            self._client_secret
+        )
+
+        if 'refreshToken' not in answer:
+            raise ValueError(f'Authentication error: {answer}')
+
+        return answer['refreshToken']
 
     def _connect(self):
         try:
             context = adal.AuthenticationContext(f'{AUTHORITY_HOST_URL}/{self._tenant_id}', proxies=self._proxies)
-            token_answer = context.acquire_token_with_client_credentials(
-                GRAPH_API_URL,
-                self._client_id,
-                self._client_secret)
+            if self._refresh_token:
+                token_answer = context.acquire_token_with_refresh_token(
+                    self._refresh_token,
+                    self._client_id,
+                    GRAPH_API_URL,
+                    self._client_secret
+                )
+            else:
+                token_answer = context.acquire_token_with_client_credentials(
+                    GRAPH_API_URL,
+                    self._client_id,
+                    self._client_secret)
+                logger.info('Authorization URL for oauth: {0}'.format(
+                    TEMPLATE_AUTHZ_URL.format(tenant_id=self._tenant_id, client_id=self._client_id)
+                ))
 
             if 'accessToken' not in token_answer:
                 logger.error(f'Error authenticating, response is {token_answer}')

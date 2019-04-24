@@ -313,7 +313,7 @@ else:
             os.system(f'docker logs -f {self.container_name} >> {logsfile} 2>&1 &')
 
     def build(self, mode='', runner=None, docker_internal_env_vars=None, **kwargs):
-        docker_build = ['docker', 'build', '.']
+        docker_build = ['docker', 'build', '.', '--no-cache']
 
         # If Dockerfile exists, use it, else use the provided Dockerfile from self.get_dockerfile
         dockerfile_path = os.path.join(self.service_dir, 'Dockerfile')
