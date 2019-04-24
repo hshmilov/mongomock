@@ -5,7 +5,7 @@
     ]" class="x-adapter">
         <x-table-wrapper title="Add or Edit Servers" :loading="loading">
             <template slot="actions">
-                <x-button v-if="selectedServers && selectedServers.length" @click="removeServers">Remove</x-button>
+                <x-button v-if="selectedServers && selectedServers.length" link @click="removeServers">Remove</x-button>
                 <x-button @click="configServer('new')" id="new_server" :disabled="isReadOnly">+ New Server</x-button>
             </template>
             <x-table slot="table" :fields="tableFields" v-model="isReadOnly? undefined: selectedServers"
@@ -244,6 +244,10 @@
                     uuid: this.serverModal.uuid
                 }).then((updateRes) => {
                     this.fetchAdapters().then(() => {
+                        if (this.selectedServers.includes('')) {
+                            this.selectedServers.push(updateRes.data.id)
+                            this.selectedServers = this.selectedServers.filter(selected => selected !== '')
+                        }
                         document.getElementById(updateRes.data.id).children[2].id = 'status_server'
                         this.changeState({name: `${updateRes.data.status}Server`})
                         if (updateRes.data.status === 'error') {
