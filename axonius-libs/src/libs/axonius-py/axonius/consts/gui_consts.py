@@ -122,7 +122,6 @@ PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 ######################
 
 REPORTS_DELETED = 'reports_deleted'
-REPORTS_ADDED = 'report_added'
 
 
 class FeatureFlagsNames:

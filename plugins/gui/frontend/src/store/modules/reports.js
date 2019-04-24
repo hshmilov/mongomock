@@ -102,7 +102,7 @@ export const reports = {
                     data: report
                 }).then((response) => {
                     if (response.status === 201 && response.data) {
-                        handleSuccess(response.data)
+                        handleSuccess(response.data.uuid)
                         return response.data
                     }
                 })

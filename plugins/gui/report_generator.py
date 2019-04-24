@@ -142,7 +142,9 @@ class ReportGenerator(object):
             charts_added = 0
             for i, custom_chart in enumerate(self.report_data['custom_charts']):
                 chart_data = custom_chart.get('data')
-                chart_value = chart_data[0]['value'] if chart_data else None
+                chart_value = None
+                if chart_data and chart_data[0] and chart_data[0].get('value'):
+                    chart_value = chart_data[0]['value']
                 if not custom_chart.get('metric') or not chart_data \
                         or (custom_chart.get('hide_empty') and chart_data and chart_value in [0, 1]):
                     continue

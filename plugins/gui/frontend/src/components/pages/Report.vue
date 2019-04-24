@@ -207,6 +207,7 @@
   import xArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue'
   import xToast from '../axons/popover/Toast.vue'
   import configMixin from '../../mixins/config'
+  import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
@@ -216,7 +217,7 @@
 
   export default {
     name: 'XReport',
-    components: { xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, xToast },
+    components: { xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, xToast, PulseLoader },
     mixins: [viewsMixin, configMixin],
     props: {
       readOnly: Boolean
@@ -403,7 +404,7 @@
             this.report.views.push({ entity: '', name: '' })
           }
 
-          if (this.report.last_generated === null) {
+          if (this.report.last_generated == null) {
             this.isLatestReport = false
           } else {
             let dateTime = new Date(this.report.last_generated)
@@ -679,6 +680,9 @@
                 display: flex;
                 .x-select-symbol {
                     width: 60px;
+                    .content {
+                      width: 120px;
+                    }
                 }
                 .query-name {
                     flex: 1 0 auto;

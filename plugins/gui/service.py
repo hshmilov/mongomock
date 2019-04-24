@@ -61,7 +61,6 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        PROXY_ERROR_MESSAGE,
                                        FeatureFlagsNames,
                                        REPORTS_DELETED,
-                                       REPORTS_ADDED,
                                        SIGNUP_TEST_CREDS,
                                        SIGNUP_TEST_COMPANY_NAME)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
@@ -1821,9 +1820,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 return f'Report with "{report_name}" name already exists', 400
 
             report_to_add['last_updated'] = datetime.now()
-            self._upsert_report_config(report_to_add['name'], report_to_add, False)
+            upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
             self._generate_and_schedule_report(report_to_add)
-            return REPORTS_ADDED, 201
+            report_to_add['uuid'] = str(upsert_result.upserted_id)
+            return jsonify(report_to_add), 201
 
         # Handle remaining method - DELETE
         return self._delete_report_configs(self.get_request_data_as_object()), 200
