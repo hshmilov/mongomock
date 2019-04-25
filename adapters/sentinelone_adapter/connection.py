@@ -110,21 +110,23 @@ class SentinelOneConnection(RESTConnection):
             start_offset += consts.DEVICE_PER_PAGE
 
     def _get_device_list_v2(self):
-        start_offset = 0
-        response = self._get('web/api/v2.0/agents', url_params={'limit': consts.DEVICE_PER_PAGE,
-                                                                'skip': start_offset})
+        response = self._get('web/api/v2.0/agents', url_params={'limit': consts.DEVICE_PER_PAGE})
         for device_raw in response['data']:
             yield device_raw, consts.V2
         total_devices = response['pagination']['totalItems']
-        start_offset += consts.DEVICE_PER_PAGE
-        while start_offset < min(total_devices, consts.MAX_DEVICES):
+        cursor = response['pagination']['nextCursor']
+        while cursor:
             try:
-                for device_raw in self._get('web/api/v2.0/agents', url_params={'limit': consts.DEVICE_PER_PAGE,
-                                                                               'skip': start_offset})['data']:
+                response = self._get('web/api/v2.0/agents', url_params={'limit': consts.DEVICE_PER_PAGE,
+                                                                        'cursor': cursor})
+                for device_raw in response['data']:
                     yield device_raw, consts.V2
+                if len(response['data']) < consts.DEVICE_PER_PAGE:
+                    break
+                cursor = response['pagination']['nextCursor']
             except Exception:
-                logger.exception(f'Problem with offset {start_offset}')
-            start_offset += consts.DEVICE_PER_PAGE
+                logger.exception(f'Problem while fetching')
+                break
 
     def get_device_list(self):
         if self.__api_version == consts.V2:

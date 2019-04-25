@@ -26,7 +26,7 @@ class Device42Connection(RESTConnection):
 
     def get_device_list(self):
         offset = 0
-        response = self._get('devices',
+        response = self._get('devices/all/',
                              do_basic_auth=True,
                              url_params={'limit': DEVICE_PER_PAGE,
                                          'offset': offset})
@@ -35,7 +35,7 @@ class Device42Connection(RESTConnection):
         offset += DEVICE_PER_PAGE
         while offset < min(count, MAX_NUMBER_OF_DEVICES):
             try:
-                response = self._get('devices',
+                response = self._get('devices/all/',
                                      do_basic_auth=True,
                                      url_params={'limit': DEVICE_PER_PAGE,
                                                  'offset': offset})

@@ -147,6 +147,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
         if uuid:
             device.id = uuid
             device.uuid = uuid
+        elif raw_device_data.get('biosGUID'):
+            device.id = raw_device_data.get('biosGUID')
+            device.uuid = raw_device_data.get('biosGUID')
 
         # Parse all raw data
         device.figure_os(raw_device_data.get('os'))

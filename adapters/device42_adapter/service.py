@@ -119,7 +119,7 @@ class Device42Adapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches, too-many-statements
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -127,7 +127,7 @@ class Device42Adapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.hostname = device_raw.get('name')
             device.customer = device_raw.get('customer')
             device.building = device_raw.get('building')
@@ -149,26 +149,27 @@ class Device42Adapter(AdapterBase):
             if isinstance(device_raw.get('in_service'), bool):
                 device.in_service = device_raw.get('in_service')
             try:
-                for nic in device_raw.get('ip_addresses'):
-                    try:
-                        ip = nic.get('ip')
-                        if not ip:
-                            ip = None
-                        else:
-                            ip = ip.split(',')
-                        mac = nic.get('macaddress')
-                        if not mac:
-                            mac = None
-                        if ip or mac:
-                            device.add_nic(mac, ip, name=nic.get('subnet'))
-                    except Exception:
-                        logger.exception(f'Problem getting nic {nic}')
+                if device_raw.get('ip_addresses') and isinstance(device_raw.get('ip_addresses'), list):
+                    for nic in device_raw.get('ip_addresses'):
+                        try:
+                            ip = nic.get('ip')
+                            if not ip:
+                                ip = None
+                            else:
+                                ip = ip.split(',')
+                            mac = nic.get('macaddress')
+                            if not mac:
+                                mac = None
+                            if ip or mac:
+                                device.add_nic(mac, ip, name=nic.get('subnet'))
+                        except Exception:
+                            logger.exception(f'Problem getting nic {nic}')
             except Exception:
                 logger.exception(f'Problem adding nic to {device_raw}')
             device.device_manufacturer = device_raw.get('manufacturer')
             device.notes = device_raw.get('notes')
             try:
-                device.figure_os((device_raw.get('os') or '') + ' ' + (device_raw.get('osarch') or ''))
+                device.figure_os((device_raw.get('os') or '') + ' ' + str(device_raw.get('osarch') or ''))
             except Exception:
                 logger.exception(f'Problem getting os for {device_raw}')
             device.device_serial = device_raw.get('serial_no')

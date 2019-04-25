@@ -42,6 +42,7 @@ class TwistlockAdapter(AdapterBase):
         image_name = Field(str, 'Image Name')
         profile_id = Field(str, 'Profile ID')
         last_modified = Field(datetime.datetime, 'Last Modified')
+        compliance_risk_score = Field(str, 'Compliance Risk Score')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -138,6 +139,17 @@ class TwistlockAdapter(AdapterBase):
             device.container_app = device_info.get('app')
             device.image_name = device_info.get('imageName')
             device.profile_id = device_info.get('profileID')
+            compliance_distribution_raw = device_info.get('complianceDistribution')
+            device.compliance_risk_score = device_raw.get('complianceRiskScore')
+            if compliance_distribution_raw and isinstance(compliance_distribution_raw, dict):
+                compliance_distribution = VulnerabilitiesCount()
+                for key, value in compliance_distribution_raw.items():
+                    try:
+                        # pylint: disable=E1137
+                        compliance_distribution[key] = value
+                    except Exception:
+                        logger.exception(f'Problem with key {key} and value {value}')
+                device.compliance_distribution = compliance_distribution
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -216,6 +228,7 @@ class TwistlockAdapter(AdapterBase):
                             logger.exception(f'Problem adding package {package}')
             except Exception:
                 logger.exception(f'Problem adding sw to {device_raw}')
+            device.compliance_risk_score = device_raw.get('complianceRiskScore')
             compliance_distribution_raw = device_info.get('complianceDistribution')
             if compliance_distribution_raw and isinstance(compliance_distribution_raw, dict):
                 compliance_distribution = VulnerabilitiesCount()
