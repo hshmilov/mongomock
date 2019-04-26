@@ -146,6 +146,7 @@ DOCKER_PORTS = {
     'spacewalk-adapter':                6678,
     'opswat-adapter':                   6679,
     'unifi-adapter':                    6680,
+    'saltstack-enterprise-adapter':     6681,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
