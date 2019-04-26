@@ -506,8 +506,10 @@ class Page:
         self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
         self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS2)
 
-    def wait_for_table_to_load(self):
-        self.wait_for_element_present_by_xpath(TABLE_SPINNER_NOT_DISPLAYED_XPATH)
+    def wait_for_table_to_load(self, retries=RETRY_WAIT_FOR_ELEMENT, interval=SLEEP_INTERVAL):
+        self.wait_for_element_present_by_xpath(TABLE_SPINNER_NOT_DISPLAYED_XPATH,
+                                               retries=retries,
+                                               interval=interval)
 
     def get_all_checkboxes(self):
         return self.driver.find_elements_by_css_selector(self.CHECKBOX_CSS)

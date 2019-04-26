@@ -113,7 +113,7 @@ class TestEntityNotes(TestBase):
             if entities_page.get_all_data():
                 entities_page.click_row()
                 entities_page.wait_for_spinner_to_end()
-                entities_page.wait_for_table_to_load()
+                entities_page.wait_for_table_to_load(retries=60 * 5, interval=1)
                 entities_page.click_notes_tab()
                 assert [self.NOTE_1_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
                 entities_page.switch_to_page()

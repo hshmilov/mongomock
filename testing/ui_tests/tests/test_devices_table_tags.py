@@ -27,6 +27,7 @@ class TestDevicesTable(TestEntitiesTable):
                 self.devices_page.FIELD_TAGS)), total_timeout=60 * 5)
             self.settings_page.switch_to_page()
             self.devices_page.switch_to_page()
+            self.devices_page.wait_for_spinner_to_end()
             self.devices_page.click_sort_column(self.devices_page.FIELD_TAGS)
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_row_checkbox()
