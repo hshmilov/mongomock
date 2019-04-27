@@ -11,7 +11,7 @@ BOOTED_FOR_PRODUCTION_MARKER_PATH = AXONIUS_SETTINGS_PATH / '.booted_for_product
 
 
 def raise_system():
-    subprocess.check_call(['./axonius.sh', 'system', 'up', '--all', '--prod'],
+    subprocess.check_call(['./axonius.sh', 'system', 'up', '--all', '--restart', '--prod'],
                           cwd=str(CORTEX_PATH))
 
 
