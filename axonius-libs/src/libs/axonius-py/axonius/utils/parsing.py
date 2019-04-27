@@ -634,6 +634,18 @@ def is_snow_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'service_now_adapter'
 
 
+def is_airwtch_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'airwatch_adapter'
+
+
+def is_lansweerp_dapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'lansweeper_adapter'
+
+
+def is_dangerous_asset_names_adapter(adapter_device):
+    return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device)
+
+
 def is_only_host_adapter_not_localhost(adapter_device):
     return (adapter_device.get('plugin_name') in ['deep_security_adapter',
                                                   'cisco_umbrella_adapter',
@@ -1071,21 +1083,26 @@ def not_snow_adapters(adapter_device1, adapter_device2):
     return not is_snow_adapter(adapter_device1) and not is_snow_adapter(adapter_device2)
 
 
-def snow_asset_names_do_not_contradict(adapter_device1, adapter_device2):
-    if is_snow_adapter(adapter_device1) and is_snow_adapter(adapter_device2):
+def not_airwatch_adapters(adapter_device1, adapter_device2):
+    return not is_airwtch_adapter(adapter_device1) and not is_airwtch_adapter(adapter_device2)
+
+
+def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
+    if is_dangerous_asset_names_adapter(adapter_device1) and is_dangerous_asset_names_adapter(adapter_device2):
         asset1 = get_asset_name(adapter_device1)
         asset2 = get_asset_name(adapter_device2)
         if asset1 and asset2 and asset1.lower() != asset2.lower():
             return False
-    elif not is_snow_adapter(adapter_device1) and not is_snow_adapter(adapter_device2):
+    elif not is_dangerous_asset_names_adapter(adapter_device1)\
+            and not is_dangerous_asset_names_adapter(adapter_device2):
         return True
     else:
-        if is_snow_adapter(adapter_device1):
+        if is_dangerous_asset_names_adapter(adapter_device1):
             asset1 = get_asset_name(adapter_device1)
             asset2 = get_hostname(adapter_device2)
             if asset1 and asset2 and asset1.split('.')[0].lower() != asset2.split('.')[0].lower():
                 return False
-        if is_snow_adapter(adapter_device2):
+        if is_dangerous_asset_names_adapter(adapter_device2):
             asset1 = get_hostname(adapter_device1)
             asset2 = get_asset_name(adapter_device2)
             if asset1 and asset2 and asset1.split('.')[0].lower() != asset2.split('.')[0].lower():
@@ -1095,7 +1112,7 @@ def snow_asset_names_do_not_contradict(adapter_device1, adapter_device2):
 
 def asset_hostnames_do_not_contradict(adapter_device1, adapter_device2):
     return hostnames_do_not_contradict(adapter_device1, adapter_device2) and \
-        snow_asset_names_do_not_contradict(adapter_device1, adapter_device2)
+        dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2)
 
 
 def serials_do_not_contradict(adapter_device1, adapter_device2):

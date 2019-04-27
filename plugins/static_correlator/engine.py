@@ -49,7 +49,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter']
-
+DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 
 
@@ -116,7 +116,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users,
                 has_nessus_scan_no_id]
 
-    # pylint: disable=R0912
+    # pylint: disable=R0912,too-many-boolean-expressions
     def _correlate_mac(self, adapters_to_correlate):
         """
         To write a correlator rule we do a few things:
@@ -173,7 +173,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                         logger.debug(f'This could be bad mac {mac}')
                         if not is_different_plugin(x, y) or (get_domain_for_correlation(x) and
                                                              get_domain_for_correlation(y) and
-                                                             compare_domain_for_correlation(x, y)):
+                                                             compare_domain_for_correlation(x, y)) \
+                                or x.get('plugin_name') in DANGEROUS_ADAPTERS \
+                                or y.get('plugin_name') in DANGEROUS_ADAPTERS:
                             logger.debug(f'Added to blacklist {mac} for X {x} and Y {y}')
                             mac_blacklist.add(mac)
                             break
@@ -309,7 +311,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname_or_serial],
                                       [compare_hostname_serial],
                                       [lambda x: x.get('plugin_name') == 'airwatch_adapter'],
-                                      [asset_hostnames_do_not_contradict],
+                                      [asset_hostnames_do_not_contradict, ips_do_not_contradict_or_mac_intersection],
                                       {'Reason': 'Hostname or serials are equal'},
                                       CorrelationReason.StaticAnalysis)
 

@@ -61,7 +61,7 @@ class OktaConnection:
             aio_req['method'] = 'GET'
             aio_req['url'] = uritools.urijoin(self.__base_url,
                                               f'api/v1/apps?'
-                                              f'filter=user.id+eq+\'{item_id}\'&expand=user/{item_id}')
+                                              f'filter=user.id+eq+\"{item_id}\"&expand=user/{item_id}')
             aio_req['timeout'] = (5, 30)
 
             aio_req['headers'] = {'Authorization': f'SSWS {self.__api_key}'}

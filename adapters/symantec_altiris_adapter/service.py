@@ -66,8 +66,20 @@ class SymantecAltirisAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting inventory')
 
+            software_dict = dict()
+            try:
+                for software_data in client_data.query(consts.SOFTWARE_QUERY):
+                    asset_id = software_data.get('_ResourceGuid')
+                    if not asset_id:
+                        continue
+                    if asset_id not in software_dict:
+                        software_dict[asset_id] = []
+                    software_dict[asset_id].append(software_data)
+            except Exception:
+                logger.exception(f'Problem getting inventory')
+
             for device_raw in client_data.query(consts.ALTIRIS_QUERY):
-                yield device_raw, inventory_dict
+                yield device_raw, inventory_dict, software_dict
 
     def _clients_schema(self):
         return {
@@ -113,7 +125,7 @@ class SymantecAltirisAdapter(AdapterBase):
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, inventory_dict in devices_raw_data:
+        for device_raw, inventory_dict, software_dict in devices_raw_data:
             try:
                 device_id = str(UUID(bytes=device_raw.get('Guid')))
                 if not device_id:
@@ -126,6 +138,17 @@ class SymantecAltirisAdapter(AdapterBase):
                     domain = None
                 device.domain = domain
                 name = device_raw.get('Name')
+                try:
+                    software_data = software_dict.get(device_raw.get('Guid'))
+                    if software_data and isinstance(software_data, list):
+                        for software_raw in software_data:
+                            try:
+                                device.add_installed_software(name=software_raw.get('DisplayName'),
+                                                              version=software_raw.get('DisplayVersion'))
+                            except Exception:
+                                logger.exception(f'Problem adding software raw {software_raw}')
+                except Exception:
+                    logger.exception(f'Problem getting software {device_raw}')
                 try:
                     inventory_data = inventory_dict.get(device_raw.get('Guid'))
                     if inventory_data:

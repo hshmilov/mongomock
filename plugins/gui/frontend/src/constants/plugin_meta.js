@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    cloudflare_adapter: {
+        title: 'Cloudflare DNS Records',
+        description: 'Cloudflare, Inc. is a U.S. company that provides content delivery network services, DDoS mitigation, Internet security and distributed domain name server services.'
+    },
     saltstack_enterprise_adapter: {
         title: 'SaltStack Enterprise',
         description: 'SaltStack Enterprise intelligent automation delivers event-driven security, cloud and configuration management.'

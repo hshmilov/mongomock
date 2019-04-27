@@ -72,6 +72,7 @@ DOCKER_PORTS = {
     'deep-security-adapter':            5799,
     'quest-kace-adapter':               5840,
     'mssql-adapter':                    5870,
+    'cloudflare-adapter':               5880,
     'selenium-vnc':                     5900,
     'lansweeper-adapter':               5907,
     'cynet-adapter':                    5910,
