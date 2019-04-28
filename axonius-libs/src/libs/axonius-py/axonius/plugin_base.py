@@ -1339,7 +1339,7 @@ class PluginBase(Configurable, Feature):
                             ]
                         }]
 
-                    # updating the saving query to conhere to array_filter semantics
+                    # updating the saving query to adhere to array_filter semantics
                     data_to_update = {
                         k.replace('adapters.$', 'adapters.$[i]'): v
                         for k, v
