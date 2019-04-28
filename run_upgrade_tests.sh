@@ -42,6 +42,11 @@ cd ${install_dir}
 wget -q https://s3.us-east-2.amazonaws.com/axonius-releases/latest/axonius_latest.py
 chmod +x ./axonius_latest.py
 sudo ./axonius_latest.py --first-time &> ../logs/install_latest_stable.log
+
+cd cortex
+sudo ./axonius.sh system up --all --restart --prod &> ../../logs/start_latest_stable.log
+cd ..
+
 cd ..
 echo "#### Latest stable version installed"
 
