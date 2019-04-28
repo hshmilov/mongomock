@@ -1111,7 +1111,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                      EntityType.Devices,
-                                     default_sort=self._system_settings.get('defaultSort') or True,
+                                     default_sort=self._system_settings.get('defaultSort'),
                                      history_date=history))
 
     @gui_helpers.historical()
@@ -1122,7 +1122,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                             PermissionLevel.ReadOnly)})
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices,
-                                         default_sort=self._system_settings.get('defaultSort') or True,
+                                         default_sort=self._system_settings.get('defaultSort'),
                                          history=history)
         output = make_response(csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
