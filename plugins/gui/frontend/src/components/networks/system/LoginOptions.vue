@@ -106,7 +106,7 @@
           type: 'array',
           items: [
             {name: 'user_name', title: 'User Name', type: 'string'},
-            {name: 'domain', title: 'Domain', type: 'string', default: this.ldapConfig.default_domain},
+            {name: 'domain', title: 'Domain', type: 'string'},
             {
               name: 'password', title: 'Password', type: 'string', format: 'password'
             }
@@ -130,6 +130,9 @@
           this.oktaConfig = response.data.okta
           this.samlConfig = response.data.saml
           this.ldapConfig = response.data.ldap
+          if (this.ldapConfig.default_domain) {
+            this.ldapData.credentials.domain = this.ldapConfig.default_domain
+          }
           if (this.loginOkta) {
             this.onOktaLogin()
           }
@@ -142,10 +145,6 @@
         this.ldapData.complete = valid
       },
       onLdapLogin () {
-        if (!this.ldapData.credentials.domain) {
-          // workaround for default values not showing up
-          this.ldapData.credentials.domain = this.ldapConfig.default_domain
-        }
         this.ldapLogin(this.ldapData.credentials)
       },
       onOktaLogin () {
