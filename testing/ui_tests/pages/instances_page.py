@@ -1,5 +1,8 @@
 import re
 
+from selenium.common.exceptions import NoSuchElementException
+
+from axonius.utils.wait import wait_until
 from ui_tests.pages.entities_page import EntitiesPage
 
 
@@ -36,6 +39,14 @@ class InstancesPage(EntitiesPage):
         connection_details = self.find_element_by_text('How to connect a new node').text
         self.click_ok_button()
         return re.search(self.NODE_JOIN_TOKEN_REGEX, connection_details).group(1)
+
+    def wait_until_node_appears_in_table(self, node_name):
+        def _refresh_and_get_row_by_node_name():
+            self.switch_to_page()
+            self.refresh()
+            return self.find_query_row_by_name(node_name)
+
+        wait_until(_refresh_and_get_row_by_node_name, check_return_value=False, exc_list=[NoSuchElementException])
 
     def get_node_password(self, node_name):
         self.switch_to_page()

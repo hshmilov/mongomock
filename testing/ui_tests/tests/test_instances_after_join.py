@@ -4,8 +4,8 @@ import time
 
 import paramiko
 import pytest
-from axonius.utils.wait import wait_until
 
+from axonius.utils.wait import wait_until
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_nexpose_credentials import client_details
 from ui_tests.tests.instances_test_base import TestInstancesBase
@@ -58,6 +58,8 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
             read_until(chan, b'Node successfully joined Axonius cluster.\n')
         except Exception:
             self.logger.exception('Failed to connect node.')
+
+        self.instances_page.wait_until_node_appears_in_table(NODE_NAME)
 
     def check_password_change(self):
         with pytest.raises(paramiko.ssh_exception.AuthenticationException):
