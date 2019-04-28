@@ -50,11 +50,12 @@ if [ -e /var/lib/dpkg/info/oracle-java8-installer.postinst ]; then
     sudo mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
 fi
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
+export DEBIAN_FRONTEND=noninteractive
 _wait_for_apt update
 echo "Upgrading..."
-_wait_for_apt upgrade -y -f
+_wait_for_apt upgrade -yq -f
 echo "Done upgrading"
-_wait_for_apt install -y apt-transport-https ca-certificates curl software-properties-common # required for https-repos
+_wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
@@ -63,9 +64,9 @@ add-apt-repository \
 add-apt-repository -y ppa:jonathonf/python-3.6
 _wait_for_apt update
 echo "Installing various dependencies..."
-_wait_for_apt install -y sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
+_wait_for_apt install -yq sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
 echo "Installing python 3.6..."
-_wait_for_apt install -y python3.6 python3.6-dev python3.6-venv ipython python-pip
+_wait_for_apt install -yq python3.6 python3.6-dev python3.6-venv ipython python-pip
 curl https://bootstrap.pypa.io/get-pip.py | python3.6
 # The following is a horrible hack we are doing to make python3.6 the default on ubuntu 16.04.
 # By default, ubuntu 16.04 does not support python3.6 being the default python because many of its apps are written
@@ -83,7 +84,7 @@ pip3 install virtualenv
 pip2 install --upgrade setuptools
 pip3 install --upgrade setuptools
 echo "Installing docker-ce..."
-_wait_for_apt install -y docker-ce=18.03.0~ce-0~ubuntu
+_wait_for_apt install -yq docker-ce=18.03.0~ce-0~ubuntu
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
