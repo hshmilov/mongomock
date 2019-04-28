@@ -4919,7 +4919,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         signup = signup_collection.find_one({})
 
         if request.method == 'GET':
-            return jsonify({Signup.SignupField: signup or has_customer_login_happened()})
+            return jsonify({Signup.SignupField: bool(signup) or has_customer_login_happened()})
 
         # POST from here
         if signup:
