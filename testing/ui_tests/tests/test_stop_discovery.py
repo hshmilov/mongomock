@@ -30,10 +30,12 @@ class TestStopDiscovery(TestBase):
         # Wait for discovery to start.
         self.base_page.run_discovery(wait=False)
         self.base_page.wait_for_stop_research()
-        time.sleep(10)
 
         # Stop discovery
         self.base_page.stop_discovery()
+
+        time.sleep(20)
+        self.adapters_page.refresh()
 
         # Removing TestSecDomain, edit and save the TestDomain
         self.adapters_page.remove_server(ad_client2_details)
@@ -42,6 +44,9 @@ class TestStopDiscovery(TestBase):
         self.adapters_page.wait_for_server_green()
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.wait_for_data_collection_toaster_absent()
+
+        time.sleep(20)
+        self.adapters_page.refresh()
 
         # Remove And re-add == TestDomain
         self.adapters_page.remove_server(ad_client1_details)
