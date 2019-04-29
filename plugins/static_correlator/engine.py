@@ -53,7 +53,12 @@ DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 
 
+def force_mac_adapters(adapter_device):
+    return adapter_device.get('plugin_name') in ['sentinelone_adapter', 'carbonblack_defense_adapter']
+
 # pylint: disable=global-statement
+
+
 def _refresh_domain_to_dns_dict():
     try:
         global DOMAIN_TO_DNS_DICT
@@ -171,9 +176,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 if not hostnames_do_not_contradict(x, y):
                     if mac not in mac_blacklist:
                         logger.debug(f'This could be bad mac {mac}')
-                        if not is_different_plugin(x, y) or (get_domain_for_correlation(x) and
-                                                             get_domain_for_correlation(y) and
-                                                             compare_domain_for_correlation(x, y)) \
+                        # pylint: disable=line-too-long
+                        if not (is_different_plugin(x, y) or force_mac_adapters(x))\
+                                or (get_domain_for_correlation(x) and get_domain_for_correlation(y) and compare_domain_for_correlation(x, y)) \
                                 or x.get('plugin_name') in DANGEROUS_ADAPTERS \
                                 or y.get('plugin_name') in DANGEROUS_ADAPTERS:
                             logger.debug(f'Added to blacklist {mac} for X {x} and Y {y}')
