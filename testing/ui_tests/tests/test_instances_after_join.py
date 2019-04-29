@@ -52,10 +52,12 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         chan = ssh_client.get_transport().open_session()
         chan.settimeout(TIMEOUT)
         chan.invoke_shell()
-        read_until(chan, b'Please enter connection string:')
+        node_join_message = read_until(chan, b'Please enter connection string:')
+        self.logger.info(f'node_maker login message: {node_join_message.decode("utf-8")}')
         chan.sendall(f'{master_ip_address} {node_join_token} {NODE_NAME}\n')
         try:
-            read_until(chan, b'Node successfully joined Axonius cluster.\n')
+            node_join_log = read_until(chan, b'Node successfully joined Axonius cluster.\n')
+            self.logger.info(f'node join log: {node_join_log.decode("utf-8")}')
         except Exception:
             self.logger.exception('Failed to connect node.')
 

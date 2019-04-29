@@ -46,7 +46,12 @@ class InstancesPage(EntitiesPage):
             self.refresh()
             return self.find_query_row_by_name(node_name)
 
-        wait_until(_refresh_and_get_row_by_node_name, check_return_value=False, exc_list=[NoSuchElementException])
+        # Since the only adapter that duplicates and
+        # initiates node name change (core/service.py search "Setting node_init_name")
+        # is active directory this will have to wait until the duplicate from the node registers in core.
+        # We have no way of knowing when this will happen but 10 minutes should do.
+        wait_until(_refresh_and_get_row_by_node_name, check_return_value=False, exc_list=[NoSuchElementException],
+                   total_timeout=60 * 10)
 
     def get_node_password(self, node_name):
         self.switch_to_page()

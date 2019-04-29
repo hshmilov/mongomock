@@ -392,6 +392,7 @@ class CoreService(PluginBase, Configurable):
                             plugin_unique_name = self._generate_unique_name(plugin_name)
                             if node_init_name is not None:
                                 # Setting node_init_name
+                                logger.info(f'Setting new node name: {node_init_name}')
                                 self._set_node_name(node_id, node_init_name)
 
             else:
