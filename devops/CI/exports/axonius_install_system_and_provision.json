@@ -154,8 +154,8 @@
     },
     {
       "type": "file",
-      "source": "setup_network_cron.py",
-      "destination": "/home/ubuntu/cortex/setup_network_cron.py"
+      "source": "setup_crons.py",
+      "destination": "/home/ubuntu/cortex/setup_crons.py"
     },
     {
       "type": "file",
@@ -163,11 +163,16 @@
       "destination": "/home/ubuntu/cortex/setup_network.sh"
     },
     {
+      "type": "file",
+      "source": "create_swap.py",
+      "destination": "/home/ubuntu/cortex/create_swap.py"
+    },
+    {
       "type": "shell",
       "remote_folder": "/home/ubuntu/cortex",
       "inline": [
-        "/home/ubuntu/cortex/venv/bin/python /home/ubuntu/cortex/setup_network_cron.py",
-        "rm -f setup_network.sh setup_network_cron.py",
+        "/home/ubuntu/cortex/venv/bin/python /home/ubuntu/cortex/setup_crons.py",
+        "rm -f setup_network.sh setup_crons.py create_swap.py",
         "cat /dev/null > /home/ubuntu/.bash_history"
       ],
       "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"

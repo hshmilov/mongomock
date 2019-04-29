@@ -66,7 +66,7 @@ _wait_for_apt update
 echo "Installing various dependencies..."
 _wait_for_apt install -yq sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1
 echo "Installing python 3.6..."
-_wait_for_apt install -yq python3.6 python3.6-dev python3.6-venv ipython python-pip
+_wait_for_apt install -yq python3.6 python3.6-dev python3.6-venv ipython python-pip htpdate
 curl https://bootstrap.pypa.io/get-pip.py | python3.6
 # The following is a horrible hack we are doing to make python3.6 the default on ubuntu 16.04.
 # By default, ubuntu 16.04 does not support python3.6 being the default python because many of its apps are written
@@ -83,6 +83,7 @@ pip2 install virtualenv
 pip3 install virtualenv
 pip2 install --upgrade setuptools
 pip3 install --upgrade setuptools
+pip3 install ipython
 echo "Installing docker-ce..."
 _wait_for_apt install -yq docker-ce=18.03.0~ce-0~ubuntu
 systemctl enable docker
@@ -140,7 +141,7 @@ echo "Installing swap"
 if [ $(cat /etc/fstab | grep swapfile | wc -l) -ne 0 ]; then
     echo "Swap file exists"
 else
-    fallocate -l 16G /swapfile
+    fallocate -l 64G /swapfile
     chmod 600 /swapfile
     mkswap /swapfile
     swapon /swapfile
