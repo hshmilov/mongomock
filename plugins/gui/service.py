@@ -2974,7 +2974,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         logger.info(f'User {session} has logged out')
         session['user'] = None
-        return ''
+        return redirect('/', code=302)
 
     @gui_helpers.paginated()
     @gui_add_rule_logged_in('system/users', methods=['GET', 'PUT'],

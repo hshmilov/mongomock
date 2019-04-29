@@ -45,8 +45,7 @@
     import xNavItem from '../../axons/menus/NavItem.vue'
     import xNestedNav from '../../axons/menus/NestedNav.vue'
 
-    import {LOGOUT} from '../../../store/modules/auth'
-    import {mapState, mapActions} from 'vuex'
+    import {mapState} from 'vuex'
 
     export default {
         name: 'x-side-bar',
@@ -80,7 +79,6 @@
         }
         },
         methods: {
-            ...mapActions({logout: LOGOUT}),
             navigationProps(name, id, title) {
                 let restricted = this.isRestricted(name)
                 return {
@@ -99,10 +97,12 @@
                 this.$emit('access-violation', name)
             },
             onLogout() {
-                if (window.location.pathname !== '/') {
-                    this.$router.push('/')
+                try {
+                    const auth2 = window.gapi.auth2.getAuthInstance()
+                    auth2.signOut()
+                } catch (err) {
                 }
-                this.logout()
+                window.location.replace(window.location.origin + '/api/logout')
             }
         }
     }

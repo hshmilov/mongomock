@@ -5,7 +5,6 @@ export const LOGIN = 'LOGIN'
 export const LDAP_LOGIN = 'LDAP_LOGIN'
 export const SET_USER = 'SET_USER'
 export const SET_LOGIN_OPTIONS = 'SET_LOGIN_OPTIONS'
-export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
 export const INIT_ERROR = 'INIT_ERROR'
 export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS'
@@ -152,21 +151,6 @@ export const auth = {
         }
       }).catch((error) => {
         commit(SET_USER, { error: error.response.data.message })
-      })
-    },
-    [LOGOUT] ({ dispatch }) {
-      try {
-        const auth2 = window.gapi.auth2.getAuthInstance()
-        auth2.signOut()
-      } catch (err) {
-      }
-
-      dispatch(REQUEST_API, {
-        rule: 'logout',
-        type: INIT_USER,
-        payload: {
-          error: 'Not logged in'
-        }
       })
     },
     [GET_ALL_USERS] ({ dispatch }) {
