@@ -49,6 +49,7 @@ class CiscoMerakiAdapter(AdapterBase):
         system_type = Field(str, 'System Type')
         is_rooted = Field(str, 'Is Rooted')
         imei = Field(str, 'IMEI')
+        auto_tags = ListField(str, 'Auto Tags')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -296,6 +297,11 @@ class CiscoMerakiAdapter(AdapterBase):
                     device.mdm_tags = device_raw.get('tags')
             except Exception:
                 logger.exception(f'Problem getting tags for {device_raw}')
+            try:
+                if device_raw.get('autoTags') and isinstance(device_raw.get('autoTags'), list):
+                    device.auto_tags = device_raw.get('autoTags')
+            except Exception:
+                logger.exception(f'Problem getting auto tags for {device_raw}')
             device.ssid = device_raw.get('ssid')
             device.uuid = device_raw.get('uuid')
             device.device_model = device_raw.get('systemModel')
