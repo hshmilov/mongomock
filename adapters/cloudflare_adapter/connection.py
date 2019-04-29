@@ -31,7 +31,7 @@ class CloudflareConnection(RESTConnection):
                              url_params={'page': page,
                                          'per_page': DEVICE_PER_PAGE})
         yield from response['result']
-        total_count = response['total_count']
+        total_count = response['result_info']['total_count']
         while page * DEVICE_PER_PAGE < min(total_count, MAX_NUMBER_OF_DEVICES):
             try:
                 page += 1
@@ -48,7 +48,7 @@ class CloudflareConnection(RESTConnection):
     # pylint: disable=too-many-nested-blocks
     def get_device_list(self):
         cnamas_dict = dict()
-        zones = self._get_items_list('zones')
+        zones = list(self._get_items_list('zones'))
         for zone in zones:
             try:
                 zone_id = zone.get('id')

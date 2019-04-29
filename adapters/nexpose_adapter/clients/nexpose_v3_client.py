@@ -59,7 +59,7 @@ class NexposeV3Client(NexposeClient):
                     # The answer could be an exception
                     if isinstance(raw_answer, Exception):
                         logger.error(f"Exception getting tags for request {request_id_absolute}, yielding"
-                                     f" device with no tags")
+                                     f" device with no tags. Data type {data_type}. Exception {raw_answer}")
 
                     # Or, it can be the actual response
                     elif isinstance(raw_answer, tuple) and isinstance(raw_answer[0], str) \

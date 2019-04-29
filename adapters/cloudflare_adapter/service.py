@@ -11,6 +11,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from cloudflare_adapter.connection import CloudflareConnection
 from cloudflare_adapter.client_id import get_client_id
+from cloudflare_adapter.consts import DEFAULT_DOMAIN
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -33,11 +34,11 @@ class CloudflareAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'))
+        return RESTConnection.test_reachability(client_config.get('domain') or DEFAULT_DOMAIN)
 
     @staticmethod
     def get_connection(client_config):
-        connection = CloudflareConnection(domain=client_config['domain'],
+        connection = CloudflareConnection(domain=client_config.get('domain') or DEFAULT_DOMAIN,
                                           verify_ssl=client_config['verify_ssl'],
                                           https_proxy=client_config.get('https_proxy'),
                                           username=client_config['user_email'],
@@ -80,7 +81,8 @@ class CloudflareAdapter(AdapterBase):
                 {
                     'name': 'domain',
                     'title': 'Cloudflare Domain',
-                    'type': 'string'
+                    'type': 'string',
+                    'default': DEFAULT_DOMAIN
                 },
                 {
                     'name': 'user_email',
@@ -105,7 +107,6 @@ class CloudflareAdapter(AdapterBase):
                 }
             ],
             'required': [
-                'domain',
                 'user_email',
                 'apikey',
                 'verify_ssl'

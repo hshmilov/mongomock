@@ -37,9 +37,9 @@ class AzureAdAdapter(AdapterBase):
         email = Field(str, 'Email')
         is_encrypted = Field(bool, 'Is Encrypted')
         user_principal_name = Field(str, 'User Principal Name')
-        total_storage_space_in_bytes = Field(int, 'Total Storage Space')
-        free_storage_space_in_bytes = Field(int, 'Free Storage Space')
         managed_device_name = Field(str, 'Managed Device Name')
+        azure_ad_id = Field(str)
+        last_sign_in = Field(datetime.datetime, 'Approximate Last SignIn Time')
 
     class MyUserAdapter(UserAdapter, ADEntity):
         ad_on_premise_immutable_id = Field(str, 'On Premise Immutable ID')
@@ -141,7 +141,7 @@ class AzureAdAdapter(AdapterBase):
                 device.device_disabled = not account_enabled
 
             try:
-                device.last_seen = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
+                device.last_sign_in = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
             except Exception:
                 logger.exception(f'Can not parse last seen')
 
@@ -189,8 +189,10 @@ class AzureAdAdapter(AdapterBase):
             device.device_manufacturer = device_raw.get('manufacturer')
             device.device_model = device_raw.get('model')
             try:
-                device.total_storage_space_in_bytes = int(device_raw.get('totalStorageSpaceInBytes'))
-                device.free_storage_space_in_bytes = int(device_raw.get('freeStorageSpaceInBytes'))
+                total_storage_space_in_gb = int(device_raw.get('totalStorageSpaceInBytes')) / (1024.0 ** 3)
+                free_storage_space_in_gb = int(device_raw.get('freeStorageSpaceInBytes')) / (1024.0 ** 3)
+                device.add_hd(total_size=total_storage_space_in_gb,
+                              free_size=free_storage_space_in_gb)
             except Exception:
                 logger.exception(f'Problem getting storage')
             device.managed_device_name = device_raw.get('managedDeviceName')

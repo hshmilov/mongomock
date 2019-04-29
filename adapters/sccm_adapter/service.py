@@ -74,6 +74,9 @@ class SccmAdapter(AdapterBase):
         desktop_or_laptop = Field(str, 'Desktop Or Laptop', enum=['Desktop', 'Laptop'])
         chasis_value = Field(str, 'Chasis Value')
         sccm_vms = ListField(SccmVm, 'SCCM VMs')
+        owner = Field(str, 'Owner')
+        department = Field(str, 'Department')
+        purpose = Field(str, 'Purpose')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -114,6 +117,16 @@ class SccmAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         try:
             client_data.connect()
+
+            owner_dict = dict()
+            try:
+                for owner_data in client_data.query(consts.OWNER_QUERY):
+                    asset_id = owner_data.get('MachineID')
+                    if not asset_id:
+                        continue
+                    owner_dict[asset_id] = owner_data
+            except Exception:
+                logger.exception(f'Problem getting chasis')
 
             asset_encryption_dict = dict()
             try:
@@ -252,12 +265,12 @@ class SccmAdapter(AdapterBase):
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
                         asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict, owner_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
                         asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict, owner_dict
         finally:
             client_data.logout()
 
@@ -288,6 +301,7 @@ class SccmAdapter(AdapterBase):
             asset_chasis_dict,
             asset_encryption_dict,
             asset_vm_dict,
+            owner_dict,
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -430,6 +444,15 @@ class SccmAdapter(AdapterBase):
                                 logger.exception(f'Problem with vm_data {vm_data}')
                 except Exception:
                     logger.exception(f'Problem getting vm data dor {device_raw}')
+
+                try:
+                    if isinstance(owner_dict.get(device_raw.get('ResourceID')), dict):
+                        owner_data = owner_dict.get(device_raw.get('ResourceID'))
+                        device.owner = owner_data.get('Owner00')
+                        device.department = owner_data.get('Department00')
+                        device.purpose = owner_data.get('Purpose00')
+                except Exception:
+                    logger.exception(f'Problem getting owner data dor {device_raw}')
                 try:
                     if isinstance(asset_chasis_dict.get(device_raw.get('ResourceID')), dict):
                         chasis_data = asset_chasis_dict.get(device_raw.get('ResourceID'))

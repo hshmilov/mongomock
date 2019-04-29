@@ -1,2 +1,3 @@
 DEVICE_PER_PAGE = 50
 MAX_NUMBER_OF_DEVICES = 1000000
+DEFAULT_DOMAIN = 'https://api.cloudflare.com'

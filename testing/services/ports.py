@@ -77,6 +77,7 @@ DOCKER_PORTS = {
     'lansweeper-adapter':               5907,
     'cynet-adapter':                    5910,
     'illusive-adapter':                 5911,
+    'nmap-adapter':                     5920,
     'cybereason-adapter':               5940,
     'snipeit-adapter':                  5941,
     'saltstack-adapter':                5942,
@@ -148,6 +149,7 @@ DOCKER_PORTS = {
     'opswat-adapter':                   6679,
     'unifi-adapter':                    6680,
     'saltstack-enterprise-adapter':     6681,
+    'symantec-cloud-workload-adapter':  6682,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

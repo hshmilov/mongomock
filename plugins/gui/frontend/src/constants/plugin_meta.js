@@ -1,7 +1,15 @@
 export const pluginMeta = {
+    nmap_adapter: {
+        title: 'Nmap Security Scanner',
+        description: 'Nmap security scanner is a free and open source utility for network discovery and security auditing.'
+    },
+    symantec_cloud_workload_adapter: {
+        title: 'Symantec Cloud Workload Protection (CWP)',
+        description: 'Symantec Cloud Workload Protection (CWP) automates security policy enforcement to protect public cloud workloads.'
+    },
     cloudflare_adapter: {
-        title: 'Cloudflare DNS Records',
-        description: 'Cloudflare, Inc. is a U.S. company that provides content delivery network services, DDoS mitigation, Internet security and distributed domain name server services.'
+        title: 'CloudFlare DNS',
+        description: 'Cloudflare DNS runs one of the largest authoritative DNS networks in the world.'
     },
     saltstack_enterprise_adapter: {
         title: 'SaltStack Enterprise',

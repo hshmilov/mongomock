@@ -44,3 +44,4 @@ CHASIS_QUERY = 'select ResourceID, ChassisTypes0 from v_GS_SYSTEM_ENCLOSURE'
 ENCRYPTION_QUERY = 'select ResourceID,DriveLetter0,ProtectionStatus0 from v_GS_ENCRYPTABLE_VOLUME'
 VM_QUERY = 'select ResourceID, ' \
            'DNSName0, IPAddress0, State0, VMName0, Path0, Type0, TimeStamp from V_GS_VIRTUAL_MACHINES'
+OWNER_QUERY = 'select * from OWNERINFO_DATA'
