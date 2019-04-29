@@ -85,8 +85,9 @@
   import xButton from '../../axons/inputs/Button.vue'
   import { nestedExpression } from '../../../constants/filter'
 
-  import { mapMutations } from 'vuex'
+  import {mapGetters, mapMutations} from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../../store/modules/onboarding'
+  import { AUTO_QUERY } from "../../../store/getters";
 
   export default {
     name: 'XExpression',
@@ -115,6 +116,7 @@
       }
     },
     computed: {
+      ...mapGetters({autoQuery: AUTO_QUERY}),
       logicOps () {
         return [{
           name: 'and', title: 'and'
@@ -163,7 +165,9 @@
       }
     },
     updated () {
-      this.compileExpression()
+      if (this.autoQuery) {
+          this.compileExpression()
+      }
       if (this.first) {
         if (this.expression.field && this.expression.compOp && !this.expression.value) {
           this.changeState({ name: 'queryValue' })
@@ -244,7 +248,9 @@
         } else {
           this.condition = condition
         }
-        this.compileExpression()
+        if (this.autoQuery) {
+          this.compileExpression()
+        }
       },
       onErrorCondition (error) {
         this.errorCondition = error

@@ -82,6 +82,12 @@ export const singleAdapter = (state) => {
     return state.configuration.data.system.singleAdapter
 }
 
+export const AUTO_QUERY = 'AUTO_QUERY'
+export const autoQuery = (state) => {
+    if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return true
+    return state.configuration.data.system.autoQuery
+}
+
 export const IS_EXPIRED = 'IS_EXPIRED'
 export const isExpired = (state) => {
     return state.expired.data && state.auth.currentUser.data.user_name !== '_axonius'

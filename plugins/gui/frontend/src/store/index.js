@@ -58,6 +58,7 @@ import {
   GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
   GET_DATA_BY_ID, getDataByID,
   SINGLE_ADAPTER, singleAdapter,
+  AUTO_QUERY, autoQuery,
   IS_EXPIRED, isExpired
 } from './getters'
 
@@ -96,6 +97,7 @@ export default new Vuex.Store({
     [GET_DATA_FIELD_LIST_SPREAD]: getDataFieldListSpread,
     [GET_DATA_BY_ID]: getDataByID,
     [SINGLE_ADAPTER]: singleAdapter,
+    [AUTO_QUERY]: autoQuery,
     [IS_EXPIRED]: isExpired
   },
   mutations: {

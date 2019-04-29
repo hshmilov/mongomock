@@ -5003,6 +5003,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             'type': 'bool'
                         },
                         {
+                            'name': 'autoQuery',
+                            'title': 'Perform a query every keypress',
+                            'type': 'bool'
+                        },
+                        {
                             'name': 'percentageThresholds',
                             'title': 'Percentage Fields Severity Scopes',
                             'type': 'array',
@@ -5031,7 +5036,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                             'type': 'bool'
                         }
                     ],
-                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'tableView'],
+                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'autoQuery', 'tableView'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -5177,6 +5182,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'singleAdapter': False,
                 'multiLine': False,
                 'defaultSort': True,
+                'autoQuery': True,
                 'percentageThresholds': {
                     'error': 40,
                     'warning': 60,
