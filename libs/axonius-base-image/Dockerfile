@@ -1,5 +1,12 @@
-# Use openresty.
-FROM openresty/openresty:xenial
+# Use our own openresty, which is compiled without the support of SSE4_2, to support old cpu's.
+# This is the build instructions:
+# git clone https://github.com/openresty/docker-openresty.git
+# cd docker-openresty
+# docker build -f xenial/Dockerfile --build-arg "RESTY_CONFIG_OPTIONS_MORE=--with-luajit-xcflags='-mno-sse4.2'" -t axonius/openresty:xenial.
+# docker login ....
+# docker push axonius/openresty:xenial
+# docker logout
+FROM axonius/openresty:xenial
 
 WORKDIR /home/axonius
 ENV HOME /home/axonius
