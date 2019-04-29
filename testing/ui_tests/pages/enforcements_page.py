@@ -330,6 +330,9 @@ class EnforcementsPage(EntitiesPage):
     def choose_period(self, period):
         self.wait_for_element_present_by_id(period).click()
 
+    def get_all_periods_sorted(self):
+        return [x.text for x in self.driver.find_elements_by_css_selector('div.list-item > label.radio-label')]
+
     def fill_above_value(self, value):
         self.fill_text_field_by_css_selector(self.ABOVE_INPUT_CSS, value)
 

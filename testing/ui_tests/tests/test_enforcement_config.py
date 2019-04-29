@@ -8,6 +8,7 @@ from axonius.consts.metric_consts import SystemMetric
 from services.adapters.json_file_service import JsonFileService
 from ui_tests.tests.ui_test_base import TestBase
 
+
 COMMON_ENFORCEMENT_QUERY = 'Enabled AD Devices'
 
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
@@ -233,3 +234,15 @@ class TestEnforcementSanity(TestBase):
         self.enforcements_page.fill_enter_table_search(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.wait_for_table_to_load()
         assert self.enforcements_page.get_column_data(FIELD_QUERY_NAME) == 3 * [ENFORCEMENT_CHANGE_NAME]
+
+    def test_enforcement_triggers_order(self):
+        self._create_enforcement_change_query()
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.wait_for_spinner_to_end()
+        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.check_scheduling()
+        labels = self.enforcements_page.get_all_periods_sorted()
+        assert labels == ['Every Discovery Cycle', 'Daily', 'Weekly', 'Monthly']
