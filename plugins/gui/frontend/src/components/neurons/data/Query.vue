@@ -275,10 +275,10 @@
             },
             updateFilter(filter) {
                 filter = this.wrapFilterOptions(filter)
-                if (this.queryFilter === filter) return
-                this.queryFilter = filter
                 this.inTextSearch = false
                 this.filterValid = true
+                if (this.queryFilter === filter) return
+                this.queryFilter = filter
             },
             openSaveView() {
                 if (this.searchValue === '') return
