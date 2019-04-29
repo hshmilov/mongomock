@@ -71,6 +71,11 @@
         blockedComponent: ''
       }
     },
+    mounted() {
+      if (this.$route.query.search) {
+        this.searchValue = this.$route.query.search
+      }
+    },
     methods: {
       ...mapMutations({
         updateDataView: UPDATE_DATA_VIEW
