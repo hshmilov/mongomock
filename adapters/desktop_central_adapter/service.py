@@ -174,7 +174,8 @@ class DesktopCentralAdapter(AdapterBase):
                     device.installation_status = {21: 'Yet to install', 22: 'Installed',
                                                   23: 'uninstalled', 24: 'yet to uninstall',
                                                   29: 'installation failure'}.get(installation_status)
-                device.last_used_users = device_raw.get('agent_logged_on_users', '').split(',')
+                if device_raw.get('agent_logged_on_users'):
+                    device.last_used_users = device_raw.get('agent_logged_on_users').split(',')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
