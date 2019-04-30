@@ -134,10 +134,16 @@ class Signup:
     SignupField = 'signup'
     SignupEndpoint = 'signup'
     NewPassword = 'newPassword'
-    ConfirmNewPassword = 'confirmNewPassword'
+    ConfirmNewPassword = 'confirmNewPassword'  # do not change this const!
     CompanyField = 'companyName'  # do not change this const!
+    ContactEmailField = 'contactEmail'  # do not change this const!
+    UserName = 'userName'
 
 
 # DO NOT MOVE THESE CREDS FROM THIS FILE. we need the in test AND prod AND inside the docker!
-SIGNUP_TEST_CREDS = {Signup.CompanyField: 'test_company', 'password': 'cAll2SecureAll', 'email': 'a@b.com'}
+SIGNUP_TEST_CREDS = {Signup.CompanyField: 'test_company',
+                     Signup.NewPassword: 'cAll2SecureAll',
+                     Signup.ContactEmailField: 'a@b.com',
+                     Signup.UserName: 'admin'
+                     }
 SIGNUP_TEST_COMPANY_NAME = 'singnup_test_company_name'

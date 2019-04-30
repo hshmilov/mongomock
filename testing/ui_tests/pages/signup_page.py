@@ -21,9 +21,9 @@ class SignupPage(Page):
 
     def fill_signup_with_defaults_and_save(self):
         self.fill_signup_and_save(company=SIGNUP_TEST_CREDS[Signup.CompanyField],
-                                  email=SIGNUP_TEST_CREDS['email'],
-                                  passw=SIGNUP_TEST_CREDS['password'],
-                                  confirm_passw=SIGNUP_TEST_CREDS['password'])
+                                  email=SIGNUP_TEST_CREDS[Signup.ContactEmailField],
+                                  passw=SIGNUP_TEST_CREDS[Signup.NewPassword],
+                                  confirm_passw=SIGNUP_TEST_CREDS[Signup.NewPassword])
 
     def fill_signup_and_save(self, company, email, passw, confirm_passw):
         self.fill_text_field_by_element_id(self.COMPANY_NAME, company)
