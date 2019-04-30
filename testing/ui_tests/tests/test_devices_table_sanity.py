@@ -33,7 +33,7 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
 
-        self.devices_page.delete_json_device()
+        self.devices_page.delete_devices(self.devices_page.JSON_ADAPTER_FILTER)
 
     def test_devices_export_csv(self):
         self.settings_page.switch_to_page()

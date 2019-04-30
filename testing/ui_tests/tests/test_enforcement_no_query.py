@@ -175,7 +175,7 @@ class TestEnforcementNoQuery(TestBase):
     def test_run_added_entities(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
-        self.devices_page.delete_json_device()
+        self.devices_page.delete_devices(self.devices_page.JSON_ADAPTER_FILTER)
         self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_FILTER)
 
         self.enforcements_page.switch_to_page()

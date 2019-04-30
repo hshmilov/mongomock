@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
@@ -45,7 +47,7 @@ class DevicesPage(EntitiesPage):
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
 
-    DELETE_DIALOG_TEXT = 'You are about to delete 1 devices.'
+    DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
 
     @property
     def url(self):
@@ -111,10 +113,22 @@ class DevicesPage(EntitiesPage):
     def query_hostname_contains(self, string):
         self.run_filter_query(self.FILTER_HOSTNAME.format(filter_value=string))
 
-    def delete_json_device(self):
-        self.query_json_adapter()
-        self.click_row_checkbox()
+    def delete_devices(self, query_filter=None):
+        """
+        By default removes the json device after querying it.
+        :param query_filter: Can delete any device by query filter
+        """
+        self.switch_to_page()
+        if query_filter:
+            self.run_filter_query(query_filter)
+        else:
+            self.clear_filter()
+        self.wait_for_table_to_load()
+        if query_filter:
+            self.click_row_checkbox()
+        else:
+            self.select_all_page_rows_checkbox()
         self.open_delete_dialog()
-        wait_until(lambda: self.DELETE_DIALOG_TEXT in self.read_delete_dialog())
+        wait_until(lambda: re.match(self.DELETE_DIALOG_TEXT_REGEX, self.read_delete_dialog()) is not None)
         self.confirm_delete()
         wait_until(lambda: not self.count_entities())

@@ -9,6 +9,8 @@ from axonius.utils.wait import wait_until
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_nexpose_credentials import client_details
 from ui_tests.tests.instances_test_base import TestInstancesBase
+from services.adapters.ad_service import AdService
+from services.adapters.json_file_service import JsonFileService
 
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
 
@@ -32,6 +34,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_password_change()
         self.check_add_adapter_to_node()
         self.check_node_restart()
+        self.check_master_disconnect()
 
     def node_join(self):
         def read_until(ssh_chan, what):
@@ -104,3 +107,29 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         time.sleep(5)
         self._instances[0].wait_for_ssh()
         self._add_nexpose_adadpter_and_discover_devices()
+
+    def check_master_disconnect(self):
+        local_json_adapter = JsonFileService()
+        local_json_adapter.take_process_ownership()
+        local_ad_adapter = AdService()
+        local_ad_adapter.take_process_ownership()
+        try:
+            local_json_adapter.stop()
+            local_ad_adapter.stop()
+
+            self.adapters_page.remove_server(delete_associated_entities=True)
+            self.devices_page.delete_devices()
+
+            self.axonius_system.take_process_ownership()
+            self.axonius_system.stop()
+
+            subprocess.check_call('weave stop'.split())
+            self.axonius_system.start_and_wait()
+            self.login_page.wait_for_login_page_to_load()
+            self.login()
+            self.devices_page.switch_to_page()
+            self.base_page.run_discovery()
+            wait_until(lambda: self._check_device_count() > 1, total_timeout=90, interval=20)
+        finally:
+            local_ad_adapter.start_and_wait()
+            local_json_adapter.start_and_wait()
