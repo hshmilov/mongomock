@@ -132,3 +132,6 @@ class DevicesPage(EntitiesPage):
         wait_until(lambda: re.match(self.DELETE_DIALOG_TEXT_REGEX, self.read_delete_dialog()) is not None)
         self.confirm_delete()
         wait_until(lambda: not self.count_entities())
+
+    def get_fetch_time(self):
+        return self.driver.find_element_by_css_selector('[format="date-time"] > label[for="fetch_time"] + div').text
