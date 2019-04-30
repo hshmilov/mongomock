@@ -319,7 +319,10 @@ def convert_ldap_searchpath_to_domain_name(ldap_search_path):
 
 def get_organizational_units_from_dn(distinguished_name):
     try:
-        return [ou[3:] for ou in distinguished_name.split(",") if ou.startswith("OU=")]
+        ous = [ou[3:] for ou in distinguished_name.split(",") if ou.startswith("OU=")]
+        if ous:
+            return ous
+        return None
     except Exception:
         return None
 
