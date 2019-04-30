@@ -21,7 +21,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 from pathlib import Path
-from typing import Iterable, List, Tuple, Set
+from typing import Iterable, List, Tuple, Set, Dict
 
 import cachetools
 import func_timeout
@@ -442,6 +442,11 @@ class PluginBase(Configurable, Feature):
             EntityType.Devices: self.MyDeviceAdapter
         }
 
+        self.__existing_fields: Dict[EntityType, Set[str]] = {
+            EntityType.Users: set(),
+            EntityType.Devices: set()
+        }
+
         # GUI Stuff
         gui_db_connection = self._get_db_connection()[GUI_NAME]
         user_view = gui_db_connection["user_views"]
@@ -623,9 +628,10 @@ class PluginBase(Configurable, Feature):
             current_dynamic_schema_names = [field['name'] for field in current_dynamic_schema['items']]
 
             # Search for an old dynamic schema and add whatever we don't already have
-
-            # TODO: Figure out if this could be optimized away
-            dynamic_fields_collection_in_db = fields_collection.find_one({'name': 'dynamic'})
+            dynamic_fields_collection_in_db = fields_collection.find_one({
+                'name': 'dynamic',
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+            })
             if dynamic_fields_collection_in_db:
                 for old_dynamic_field in dynamic_fields_collection_in_db.get('schema', {}).get('items', []):
                     if old_dynamic_field['name'] not in current_dynamic_schema_names:
@@ -653,7 +659,7 @@ class PluginBase(Configurable, Feature):
                 'schema': current_schema
             }, upsert=True)
 
-            exist_fields = list(my_entity.all_fields_found)
+            exist_fields = list(self.__existing_fields[entity_type])
             if exist_fields:
                 fields_collection.update_one({
                     'name': 'exist',
@@ -666,8 +672,9 @@ class PluginBase(Configurable, Feature):
                     }
                 }, upsert=True)
 
-                self._all_fields_db_map[entity_type].update_one({
-                    'name': 'exist'
+                fields_collection.update_one({
+                    'name': 'exist',
+                    PLUGIN_UNIQUE_NAME: '*'
                 }, {
                     '$addToSet': {
                         'fields': {
@@ -1408,12 +1415,16 @@ class PluginBase(Configurable, Feature):
             promises = []
 
             def insert_quickpath_to_db(devices):
-                all_parsed = (self._create_axonius_entity(
+                all_parsed = [self._create_axonius_entity(
                     client_name,
                     data,
                     entity_type,
                     plugin_identity
-                ) for data in devices)
+                ) for data in devices]
+
+                for adapter_entity in all_parsed:
+                    for key in adapter_entity['data']:
+                        self.__existing_fields[entity_type].add(key)
 
                 db_to_use.insert_many(({
                     "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
@@ -1455,6 +1466,9 @@ class PluginBase(Configurable, Feature):
                         entity_type,
                         plugin_identity
                     )
+
+                    for key in parsed_to_insert['data']:
+                        self.__existing_fields[entity_type].add(key)
 
                     # Note that this updates fields that are present. If some fields are not present but are present
                     # in the db they will stay there.
@@ -2195,6 +2209,8 @@ class PluginBase(Configurable, Feature):
         """
         result = self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
                            action_if_exists, client_used, additional_data)
+        for key in data:
+            self.__existing_fields[entity].add(key)
         return result
 
     @add_rule("update_config", methods=['POST'], should_authenticate=False)

@@ -809,7 +809,7 @@ def entity_fields(entity_type: EntityType):
     global_existing_fields = [x
                               for x
                               in all_data_from_fields
-                              if x['name'] == 'exist' and PLUGIN_UNIQUE_NAME not in x]
+                              if x['name'] == 'exist' and x.get(PLUGIN_UNIQUE_NAME) == '*']
     if global_existing_fields:
         global_existing_fields = global_existing_fields[0]
 

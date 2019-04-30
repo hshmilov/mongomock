@@ -18,7 +18,6 @@ class UserAdapterDevice(SmartJsonClass):
 
 class UserAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a User """
-
     image = Field(str, 'Image', json_format=JsonStringFormat.image)
     id = Field(str, 'ID')  # Usually username@domain.
     user_sid = Field(str, 'SID')

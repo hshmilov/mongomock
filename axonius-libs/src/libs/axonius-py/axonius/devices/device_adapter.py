@@ -388,7 +388,6 @@ class TenableSource(SmartJsonClass):
 
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
-
     name = Field(str, 'Asset Name')
     hostname = Field(str, 'Host Name')
     description = Field(str, 'Description')

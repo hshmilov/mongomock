@@ -404,11 +404,20 @@ class TestDevicesQuery(TestBase):
 
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
+
+        self.devices_page.select_query_adapter('General', parent=expressions[0])
+        fields = list(self.devices_page.get_all_fields_in_field_selection())
+        # swap_cached is only returned by chef, not by AD or JSON
+        assert 'Total Swap GB' not in fields
+        assert 'Host Name' in fields
+
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_JSON, parent=expressions[0])
         fields = list(self.devices_page.get_all_fields_in_field_selection())
+        assert 'Last Contact' in fields
         assert 'Cloud ID' not in fields
-        assert 'Last Seen' in fields
+        assert 'Last Seen' not in fields
         assert 'AD Use DES Key Only' not in fields
+
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
         fields = list(self.devices_page.get_all_fields_in_field_selection())
         assert 'AD Use DES Key Only' in fields

@@ -289,7 +289,6 @@ class GeneralInfoService(Triggerable, PluginBase):
             return
 
         try:
-            is_execution_exception = False
             last_execution_debug = None
 
             # Now get some info depending on the adapter that ran the execution

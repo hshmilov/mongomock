@@ -107,7 +107,6 @@ def test_dpkg():
     command.shell_execute()
     assert command.parse()
     assert command.to_axonius('test_dpkg', device)
-    assert 'installed_software' in device.all_fields_found
     assert len(device.to_dict()['installed_software']) == 11
 
 
@@ -117,7 +116,6 @@ def test_rpm():
     command.shell_execute()
     assert command.parse()
     assert command.to_axonius('test_dpkg', device)
-    assert 'installed_software' in device.all_fields_found
     assert len(device.to_dict()['installed_software']) == 23
 
 

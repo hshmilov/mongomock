@@ -262,7 +262,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if post_json and post_json.get('check_fetch_time'):
                 check_fetch_time = post_json.get('check_fetch_time')
             try:
-                return self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
+                res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
+                for entity_type in EntityType:
+                    self._save_field_names_to_db(entity_type)
+                return res
+
             except BaseException:
                 delayed_trigger_gc()
                 raise
