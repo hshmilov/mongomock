@@ -2000,7 +2000,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'fetch_load_balancers',
-                    'title': 'Fetch information about ELB (Elastic load balancers)',
+                    'title': 'Fetch information about ELB (Elastic Load Balancers)',
                     'type': 'bool'
                 },
                 {

@@ -1230,7 +1230,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 },
                 {
                     "name": "minimum_time_until_next_fetch",
-                    "title": "Minimum time until next fetch entities",
+                    "title": "Minimum number of hours until next entities fetch",
                     "type": "number",
                 },
                 {
@@ -1245,7 +1245,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 },
                 {
                     "name": "last_seen_prioritized",
-                    "title": "Discard data if last seen is older than the last_seen saved",
+                    "title": "Discard data if last seen is older than the last seen saved",
                     "type": "bool",
                 },
                 {
