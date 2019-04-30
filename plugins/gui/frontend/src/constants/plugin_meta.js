@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    alertlogic_adapter: {
+        title: 'Alert Logic - BETA',
+        description: 'Alert Logic provides threat, log, and web security management solution.'
+    },
     nmap_adapter: {
         title: 'Nmap Security Scanner',
         description: 'Nmap security scanner is a free and open source utility for network discovery and security auditing.'
