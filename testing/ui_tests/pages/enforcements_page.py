@@ -1,9 +1,9 @@
-import time
 import os
+import time
 from enum import Enum
 
-from ui_tests.pages.entities_page import EntitiesPage
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
+from ui_tests.pages.entities_page import EntitiesPage
 
 ENFORCEMENT_WMI_EVERY_CYCLE = 'Run WMI on every cycle'
 ENFORCEMENT_WMI_SAVED_QUERY = f'adapters_data.active_directory_adapter.hostname == "{WMI_QUERIES_DEVICE}"'
@@ -33,6 +33,7 @@ class Action(Enum):
     tag = 'Add Tag'
     run_executable_windows = 'Deploy on Windows Device'
     run_wmi_scan = 'Run WMI Scan'
+    run_linux_ssh_scan = 'Run Linux SSH Scan'
     scan_with_qualys = 'Add to Qualys Cloud Platform'
     ScanTenable = 'Add to Tenable'
     carbonblack_defense_change_policy = 'Change Carbon Black CB Defense Policy'
@@ -76,10 +77,14 @@ class EnforcementsPage(EntitiesPage):
     BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[@title=\'{enforcement_name}\']'
     SEND_AN_EMAIL = 'Send an Email'
-    DISABLED_ACTION_XPATH = '//div[contains(@class, \'md-list-item-content\')]//div[@class=\'x-title disabled\' ' \
-                            'and .//text()=\'{action_name}\']'
-    CATEGORY_ACTIONS_XPATH = '//div[contains(@class, \'md-list-item-container\') and child::div[' \
-                             './/text()=\'{category}\']]//div[@class=\'md-list-expand\']//div[@class=\'action-name\']'
+    DISABLED_ACTION_XPATH = (
+        '//div[contains(@class, \'md-list-item-content\')]//div[@class=\'x-title disabled\' '
+        'and .//text()=\'{action_name}\']'
+    )
+    CATEGORY_ACTIONS_XPATH = (
+        '//div[contains(@class, \'md-list-item-container\') and child::div['
+        './/text()=\'{category}\']]//div[@class=\'md-list-expand\']//div[@class=\'action-name\']'
+    )
     CATEGORY_LIST_CSS = '.x-action-library > .md-list > .md-list-item > .md-list-item-container > .md-list-item-content'
     TASK_RESULT_CSS = '.x-action-result .x-summary div:nth-child({child_count})'
     TASK_RESULT_SUCCESS_CSS = TASK_RESULT_CSS.format(child_count=1)
@@ -191,8 +196,10 @@ class EnforcementsPage(EntitiesPage):
 
     def get_action_category_items(self, category_name):
         self.open_action_category(category_name)
-        return [el.text.strip() for el in
-                self.find_elements_by_xpath(self.CATEGORY_ACTIONS_XPATH.format(category=category_name))]
+        return [
+            el.text.strip()
+            for el in self.find_elements_by_xpath(self.CATEGORY_ACTIONS_XPATH.format(category=category_name))
+        ]
 
     def find_disabled_action(self, action_name):
         return self.driver.find_element_by_xpath(self.DISABLED_ACTION_XPATH.format(action_name=action_name))
@@ -270,8 +277,9 @@ class EnforcementsPage(EntitiesPage):
         # Appearance animation time
         time.sleep(0.6)
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.select_option_without_search(f'{self.ACTION_CONF_CONTAINER_CSS} .x-dropdown.x-select',
-                                          self.DROPDOWN_SELECTED_OPTION_CSS, severity)
+        self.select_option_without_search(
+            f'{self.ACTION_CONF_CONTAINER_CSS} .x-dropdown.x-select', self.DROPDOWN_SELECTED_OPTION_CSS, severity
+        )
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
@@ -300,17 +308,24 @@ class EnforcementsPage(EntitiesPage):
         time.sleep(0.6)
 
     def save_trigger(self):
-        self.click_button(self.SAVE_BUTTON, scroll_into_view_container=self.TRIGGER_CONF_CONTAINER_CSS,
-                          context=self.driver.find_element_by_css_selector(self.TRIGGER_CONF_CONTAINER_CSS))
+        self.click_button(
+            self.SAVE_BUTTON,
+            scroll_into_view_container=self.TRIGGER_CONF_CONTAINER_CSS,
+            context=self.driver.find_element_by_css_selector(self.TRIGGER_CONF_CONTAINER_CSS),
+        )
 
     def select_saved_view(self, text, entity='Devices'):
         self.select_option_without_search(self.SELECT_VIEW_ENTITY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, entity)
-        self.select_option(self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_SELECTED_OPTION_CSS,
-                           text)
+        self.select_option(
+            self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, text
+        )
 
     def save_action(self):
-        self.click_button(self.SAVE_BUTTON, scroll_into_view_container=self.ACTION_CONF_CONTAINER_CSS,
-                          context=self.driver.find_element_by_css_selector(self.ACTION_CONF_CONTAINER_CSS))
+        self.click_button(
+            self.SAVE_BUTTON,
+            scroll_into_view_container=self.ACTION_CONF_CONTAINER_CSS,
+            context=self.driver.find_element_by_css_selector(self.ACTION_CONF_CONTAINER_CSS),
+        )
 
     def click_save_button(self):
         self.click_button('Save & Exit')
@@ -420,8 +435,9 @@ class EnforcementsPage(EntitiesPage):
 
     def create_run_wmi_enforcement(self):
         self.switch_to_page()
-        self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_SAVED_QUERY_NAME,
-                                      enforce_added=False)
+        self.create_basic_enforcement(
+            ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_SAVED_QUERY_NAME, enforce_added=False
+        )
         self.add_run_wmi_scan(ENFORCEMENT_WMI_EVERY_CYCLE)
         self.add_tag_entities(name='Great Success', tag='Great Success', action_cond=self.SUCCESS_ACTIONS_TEXT)
         self.click_save_button()
@@ -444,8 +460,9 @@ class EnforcementsPage(EntitiesPage):
         self.edit_enforcement(enforcement_name)
         self.add_tag_entities(name=success_tag_name, tag='Specially Deployed', action_cond=self.SUCCESS_ACTIONS_TEXT)
         self.add_cb_isolate(name=failure_isolate_name, action_cond=self.FAILURE_ACTIONS_TEXT)
-        self.add_tag_entities(name=failure_tag_name, tag='Missing Special Deploy',
-                              action_cond=self.FAILURE_ACTIONS_TEXT)
+        self.add_tag_entities(
+            name=failure_tag_name, tag='Missing Special Deploy', action_cond=self.FAILURE_ACTIONS_TEXT
+        )
         self.click_save_button()
         self.wait_for_table_to_load()
 
@@ -499,8 +516,9 @@ class EnforcementsPage(EntitiesPage):
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         self.fill_text_field_by_css_selector('.md-input', recipient, context=self.find_field_by_label('Recipients'))
         if body:
-            custom_message_element = self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(
-                label_text='Custom Message (up to 200 characters)'))
+            custom_message_element = self.driver.find_element_by_xpath(
+                self.DIV_BY_LABEL_TEMPLATE.format(label_text='Custom Message (up to 200 characters)')
+            )
             self.fill_text_field_by_tag_name('textarea', body, context=custom_message_element)
             assert custom_message_element.find_element_by_tag_name('textarea').get_attribute('value') == body[:200]
         self.click_button(self.SAVE_BUTTON)

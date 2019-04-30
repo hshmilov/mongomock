@@ -1,4 +1,4 @@
-from adapters.linux_ssh_adapter.consts import HOSTNAME, USERNAME, PASSWORD
+from axonius.clients.linux_ssh.consts import HOSTNAME, USERNAME, PASSWORD
 
 CLIENT_DETAILS = {
     HOSTNAME: '10.0.2.26',

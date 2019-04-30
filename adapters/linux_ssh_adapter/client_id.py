@@ -1,4 +1,4 @@
-from linux_ssh_adapter.consts import (DEFAULT_PORT, HOSTNAME, PORT)
+from axonius.clients.linux_ssh.consts import (DEFAULT_PORT, HOSTNAME, PORT)
 
 
 def get_client_id(client_config):

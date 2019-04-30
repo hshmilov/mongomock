@@ -6,7 +6,7 @@ import paramiko
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.linux_ssh.data import CommandExecutor, MD5FilesCommand
 from axonius.utils.memfiles import temp_memfd
-from linux_ssh_adapter.consts import NETWORK_TIMEOUT
+from axonius.clients.linux_ssh.consts import DEFAULT_NETWORK_TIMEOUT
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -14,7 +14,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class LinuxSshConnection:
     """ client for Linux ssh adapter """
 
-    def __init__(self, hostname, port, username, password=None, key=None, is_sudoer=False):
+    def __init__(self,
+                 hostname,
+                 port,
+                 username,
+                 password=None,
+                 key=None,
+                 is_sudoer=False,
+                 timeout=DEFAULT_NETWORK_TIMEOUT):
+
         if password is None and key is None:
             raise ClientConnectionException('password/key is required')
 
@@ -23,6 +31,7 @@ class LinuxSshConnection:
         self._username = username
         self._password = password
         self._key = key
+        self._timeout = timeout
 
         self._is_sudoer = is_sudoer
 
@@ -35,7 +44,7 @@ class LinuxSshConnection:
                              password=self._password,
                              key_filename=key_filename,
                              look_for_keys=False,
-                             timeout=NETWORK_TIMEOUT)
+                             timeout=self._timeout)
 
     def _connect(self):
         self._client = paramiko.SSHClient()
@@ -60,9 +69,9 @@ class LinuxSshConnection:
             (stdout + stderr combined), stripped and decoded as string
         """
 
-        chan = self._client.get_transport().open_session(timeout=NETWORK_TIMEOUT)
+        chan = self._client.get_transport().open_session(timeout=self._timeout)
         chan.set_combine_stderr(True)
-        chan.settimeout(NETWORK_TIMEOUT)
+        chan.settimeout(self._timeout)
         stdout = chan.makefile()
         chan.exec_command(cmdline)
         output = stdout.read()
@@ -79,11 +88,11 @@ class LinuxSshConnection:
         yield from command_executor.get_commands()
 
     @staticmethod
-    def test_reachability(hostname, port):
+    def test_reachability(hostname, port, timeout=DEFAULT_NETWORK_TIMEOUT):
         test_client = None
         try:
             sock = socket.socket()
-            sock.settimeout(NETWORK_TIMEOUT)
+            sock.settimeout(timeout)
             sock.connect((hostname, port))
             test_client = paramiko.Transport(sock)
             test_client.connect()
