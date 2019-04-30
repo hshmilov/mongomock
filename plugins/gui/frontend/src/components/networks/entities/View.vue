@@ -436,11 +436,18 @@
                         grid-template-columns: 50% 50%;
                         grid-gap: 4px 0;
 
+                        .object {
+                            width: 100%;
+                        }
+
                         .array {
                             margin-left: 20px;
+                            .object {
+                                width: calc(100% - 24px);
+                            }
                         }
-                        .object {
-                            width: calc(100% - 36px);
+                        .numbered > .object > .x-array-view > .array {
+                            margin-left: 0;
                         }
                     }
                 }
@@ -458,10 +465,6 @@
                             grid-template-columns: 50% 50%;
                             grid-gap: 12px 24px;
                             margin-left: 0;
-
-                            .array {
-                                margin-left: 20px;
-                            }
 
                             .separator {
                                 grid-column-end: span 2;

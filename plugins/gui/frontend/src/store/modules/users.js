@@ -7,7 +7,9 @@ export const usersFields = [
 export const users = {
     state: {
         content: {data: [], fetching: false, error: ''},
+
         count: {data: 0, fetching: false, error: ''},
+
         view: {
             page: 0, pageSize: 20, fields: usersFields, coloumnSizes: [], query: {
                 filter: '', expressions: [], search: ''
@@ -16,8 +18,13 @@ export const users = {
             },
             historical: null
         },
+
+        details: { data: {}, fetching: false, error: '' },
+
         fields: {data: [], fetching: false, error: ''},
+
         hyperlinks: {data: [], fetching: false, error: ''},
+
         views: {
             content: { data: [], fetching: false, error: '', rule: ''},
             count: { data: 0, fetching: false, error: ''},
@@ -33,7 +40,9 @@ export const users = {
 
             history: {data: [], fetching: false, error: ''}
         },
+
         labels: {data: [], fetching: false, error: ''},
-		current: {fetching: false, data: {}, error: ''}
+
+        current: {fetching: false, data: {}, error: ''}
     }
 }

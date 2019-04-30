@@ -4,6 +4,7 @@ import json
 import logging
 import itertools
 import time
+import re
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -459,7 +460,8 @@ def get_entities(limit: int, skip: int,
                  default_sort: bool = True,
                  run_over_projection=True,
                  history_date: datetime = None,
-                 ignore_errors: bool = False):
+                 ignore_errors: bool = False,
+                 include_details: bool = False):
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -536,7 +538,7 @@ def get_entities(limit: int, skip: int,
         if not projection:
             yield beautify_db_entry(entity)
         else:
-            yield parse_entity_fields(entity, projection.keys())
+            yield parse_entity_fields(entity, projection.keys(), include_details=include_details)
 
 
 def get_historized_filter(entities_filter, history_date: datetime):
@@ -658,19 +660,37 @@ def find_entity_field(entity_data, field_path):
     return children
 
 
-def parse_entity_fields(entity_data, fields):
+def parse_entity_fields(entity_data, fields, include_details=False):
     """
     For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
 
-    :param entity_data: A nested dict representing parsed values of an entity
-    :param fields:      List of paths to values in the entity_data dict
-    :return:            Mapping of a field path to it's value list as found in the entity_data
+    :param entity_data:     A nested dict representing parsed values of an entity
+    :param fields:          List of paths to values in the entity_data dict
+    :param include_details: For each requested field, add also <field>_details,
+                            containing a list of values for the field per adapter that composes the entity
+    :return:                Mapping of a field path to it's value list as found in the entity_data
     """
+    def _extract_name(field_path):
+        """
+        Try to match given field path with the prefix of specific_data, meaning it is a generic field
+        """
+        match_name = re.match(r'specific_data\.data\.([\w._]*)', field_path)
+        if match_name and len(match_name.groups()) == 1:
+            return match_name[1]
+
     field_to_value = {}
-    for field in fields:
-        val = find_entity_field(entity_data, field)
+    if include_details:
+        adapter_datas = [item for value in sorted(set(entity_data['adapters']))
+                         for item in entity_data['adapters_data'][value]]
+    for field_path in fields:
+        val = find_entity_field(entity_data, field_path)
         if val is not None and ((type(val) != str and type(val) != list) or len(val)):
-            field_to_value[field] = val
+            field_to_value[field_path] = val
+        if not include_details:
+            continue
+        generic_field = _extract_name(field_path)
+        field_to_value[f'{field_path}_details'] = [find_entity_field(data, generic_field) if generic_field else ''
+                                                   for data in adapter_datas]
     return field_to_value
 
 

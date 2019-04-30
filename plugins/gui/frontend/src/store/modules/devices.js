@@ -19,9 +19,11 @@ export const devices = {
 			historical: null
 		},
 
-		fields: { data: {}, fetching: false, error: ''},
+		details: { data: {}, fetching: false, error: '' },
 
-		hyperlinks: {data: [], fetching: false, error: ''},
+		fields: { data: {}, fetching: false, error: '' },
+
+		hyperlinks: {data: [], fetching: false, error: '' },
 
 		views: {
 			content: { data: [], fetching: false, error: '', rule: ''},

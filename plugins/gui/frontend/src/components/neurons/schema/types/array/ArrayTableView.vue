@@ -1,26 +1,40 @@
 <template>
-    <div class="array inline" :title="allItems">
-        <div class="item" v-for="item in limitedItems">
-            <component :is="item.type" :schema="item" :value="processedData[item.name]"/>
-        </div>
-        <div class="item" v-if="limit && filteredItems.length > limit">+{{remainder}}</div>
+  <div
+    class="array inline"
+    :title="allItems"
+  >
+    <div
+      v-for="item in limitedItems"
+      :key="item.name"
+      class="item"
+    >
+      <component
+        :is="item.type"
+        :schema="item"
+        :value="processedData[item.name]"
+      />
     </div>
+    <div
+      v-if="limit && filteredItems.length > limit"
+      class="item"
+    >+{{ remainder }}</div>
+  </div>
 </template>
 
 <script>
 	import string from '../string/StringView.vue'
 	import number from '../numerical/NumberView.vue'
 	import integer from '../numerical/IntegerView.vue'
-	import array from './ArrayInlineView.vue'
+	import array from './ArrayTableView.vue'
 	import bool from '../boolean/BooleanView.vue'
 	import file from './FileView.vue'
 
 	import arrayMixin from './array'
 
 	export default {
-		name: 'array',
-		mixins: [arrayMixin],
+		name: 'Array',
 		components: { string, number, integer, bool, file, array },
+		mixins: [arrayMixin],
 		props: { },
         computed: {
             filteredItems() {
@@ -28,7 +42,7 @@
             },
 			limit() {
                 if (this.schemaItems.length && this.schemaItems[0].format === 'logo') {
-					return 15
+					return null
                 }
                 return 2
             },

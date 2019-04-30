@@ -3,7 +3,7 @@
         <md-input type="text" disabled />
     </md-field>
     <div v-else class="x-date-edit" :class="{labeled: label}">
-        <md-datepicker :value="value" @input="onInput" :md-disabled-dates="isDisabledHandler" :md-immediately="true"
+        <md-datepicker :value="value" @input="onInput" :md-disabled-dates="checkDisabled" :md-immediately="true"
                        :md-debounce="500" :class="{'no-icon': minimal, 'no-clear': !clearable}" ref="date">
             <label v-if="label">{{ label }}</label>
         </md-datepicker>
@@ -33,7 +33,7 @@
             minimal: {
                 type: Boolean, default: false
             },
-            isDisabledHandler: {
+            checkDisabled: {
                 type: Function
             },
             label: {

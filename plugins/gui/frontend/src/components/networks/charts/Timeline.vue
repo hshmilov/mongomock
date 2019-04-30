@@ -16,9 +16,9 @@
             <input type="radio" v-model="config.timeframe.type" value="absolute" id="range_absolute"/>
             <label for="range_absolute">Show results in date range</label>
             <template v-if="isRangeAbsolute">
-                <x-date-edit v-model="config.timeframe.from" :is-disabled-handler="checkDateAvailabilityFrom"
+                <x-date-edit v-model="config.timeframe.from" :check-disabled="checkDateAvailabilityFrom"
                              :format="false" :clearable="false" label="From"/>
-                <x-date-edit v-model="config.timeframe.to" :is-disabled-handler="checkDateAvailabilityTo"
+                <x-date-edit v-model="config.timeframe.to" :check-disabled="checkDateAvailabilityTo"
                              :format="false" :clearable="false" label="To"/>
             </template>
             <div class="grid-span2" v-else></div>

@@ -1112,7 +1112,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                      EntityType.Devices,
                                      default_sort=self._system_settings.get('defaultSort'),
-                                     history_date=history))
+                                     history_date=history,
+                                     include_details=True))
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()
@@ -1147,8 +1148,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
                                                   history_date=history, quick=quick))
 
-    @gui_add_rule_logged_in('devices/fields', required_permissions={
-        Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('devices/fields',
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
     def device_fields(self):
         return jsonify(gui_helpers.entity_fields(EntityType.Devices))
 
@@ -1253,7 +1254,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                      EntityType.Users,
                                      default_sort=self._system_settings['defaultSort'],
-                                     history_date=history))
+                                     history_date=history,
+                                     include_details=True))
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()

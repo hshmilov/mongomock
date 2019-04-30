@@ -302,7 +302,7 @@ class EntitiesPage(Page):
     def get_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
         header_columns = headers.find_elements_by_tag_name('th')
-        return [head.text for head in header_columns if head.text]
+        return [head.text.strip() for head in header_columns if head.text.strip()]
 
     def count_sort_column(self, col_name, parent=None):
         # Return the position of given col_name in list of column headers, 1-based
@@ -347,14 +347,15 @@ class EntitiesPage(Page):
         the respective value
         """
         result = []
-        column_names = [x.text for x in self.driver.find_elements_by_css_selector(self.ALL_COLUMN_NAMES_CSS)]
+        column_names = [x.text for x in self.driver.find_elements_by_css_selector(self.ALL_COLUMN_NAMES_CSS)
+                        if x.text.strip()]
         all_entities = self.driver.find_elements_by_css_selector(self.ALL_ENTITIES_CSS)
         for entity in all_entities:
             if not entity.text.strip():
                 # an empty row represents the end
                 break
 
-            fields_values = entity.find_elements_by_tag_name('td')
+            fields_values = entity.find_elements_by_tag_name('td')[2:]
             assert len(fields_values) == len(column_names), 'nonmatching fields'
             fields_values = [x.find_element_by_tag_name('div') for x in fields_values]
             fields_values = [x.get_attribute('title') or x.text for x in fields_values]
@@ -489,7 +490,7 @@ class EntitiesPage(Page):
         csv_data_rows = all_csv_rows[1:-1]
 
         ui_headers = self.get_columns_header_text()
-        ui_data_rows = [row.split('\n') for row in self.get_all_data()]
+        ui_data_rows = [row.split('\n')[1:] for row in self.get_all_data()]
         # we don't writ image to csv
         if 'Image' in ui_headers:
             ui_headers.remove('Image')
@@ -500,7 +501,7 @@ class EntitiesPage(Page):
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)
         for index, data_row in enumerate(csv_data_rows):
             for ui_data_row in ui_data_rows[index]:
-                assert normalize_timezone_date(ui_data_row) in data_row
+                assert normalize_timezone_date(ui_data_row.strip()) in data_row
 
     def query_json_adapter(self):
         self.run_filter_query(self.JSON_ADAPTER_FILTER)

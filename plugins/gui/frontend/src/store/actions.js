@@ -4,10 +4,9 @@ import Promise from 'promise'
 import { INIT_USER } from './modules/auth'
 import {
 	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
-	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
+	UPDATE_DATA_DETAILS, UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
 	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
-    UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
-	UPDATE_REMOVED_DATA_VIEW, UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED,
+	UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE, UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED,
 	UPDATE_DATA_HYPERLINKS
 } from './mutations'
 
@@ -110,8 +109,8 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 }
 
 const createContentRequest = (state, payload) => {
-    let module = getModule(state, payload)
-    if (!module) return ''
+	let module = getModule(state, payload)
+	if (!module) return ''
 	const view = module.view
 
 	let params = []

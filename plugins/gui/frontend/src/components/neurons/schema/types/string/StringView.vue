@@ -26,9 +26,10 @@
   </div>
   <md-chip v-else-if="schema.format && schema.format === 'tag'">{{ processedData }}</md-chip>
   <div
-    v-else
+    v-else-if="processedData"
     :title="completeData"
   >{{ processedData }}</div>
+  <div v-else>&nbsp;</div>
 </template>
 
 <script>

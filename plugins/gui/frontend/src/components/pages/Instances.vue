@@ -7,7 +7,7 @@
             </template>
             <x-table v-if="instances" slot="table" id-field="node_id" :data="instances" :fields="fields"
                      v-model="isReadOnly ? undefined : selectedInstance"
-                     :click-row-handler="isReadOnly ? undefined : showNameChangeModal"/>
+                     :on-click-row="isReadOnly ? undefined : showNameChangeModal"/>
         </x-table-wrapper>
         <x-modal v-if="renaming" @close="closeNameChange" @confirm="instanceNameChange" approve-text="Change Name">
             <div slot="body">How do you want to name this instance?<br/><br/>

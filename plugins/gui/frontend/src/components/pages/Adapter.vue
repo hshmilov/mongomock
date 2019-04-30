@@ -9,7 +9,7 @@
                 <x-button @click="configServer('new')" id="new_server" :disabled="isReadOnly">+ New Server</x-button>
             </template>
             <x-table slot="table" :fields="tableFields" v-model="isReadOnly? undefined: selectedServers"
-                     :click-row-handler="isReadOnly? undefined: configServer" :data="adapterClients"/>
+                     :on-click-row="isReadOnly? undefined: configServer" :data="adapterClients"/>
         </x-table-wrapper>
 
         <div class="config-settings">

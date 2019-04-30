@@ -8,7 +8,7 @@
             </div>
         </div>
         <x-table :data="noteData" :fields="noteSchema" :sort="sort" v-model="readOnly? undefined : selectedNotes"
-                 :click-row-handler="readOnly? undefined : editNote" :click-col-handler="sortNotes"
+                 :on-click-row="readOnly? undefined : editNote" :on-click-col="sortNotes"
                  :read-only="readOnlyNotes"/>
         <x-modal v-if="removeNoteModal.active" approve-text="Delete" @confirm="removeNotes"
                  @close="closeRemoveNotesModal">

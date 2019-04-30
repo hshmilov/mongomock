@@ -1,6 +1,6 @@
 <template>
     <div class="x-historical-date">
-        <x-date-edit :value="value" @input="onInput" :is-disabled-handler="isDateUnavailable" label="Display by Date"/>
+        <x-date-edit :value="value" @input="onInput" :check-disabled="isDateUnavailable" label="Display by Date"/>
     </div>
 </template>
 

@@ -39,9 +39,10 @@
         :sort="view.sort"
         :id-field="idField"
         :value="pageSelection"
-        :click-row-handler="onClickRow"
-        :click-col-handler="onClickSort"
-        :click-all-handler="onClickAll"
+        :expandable="expandable"
+        :on-click-row="onClickRow"
+        :on-click-col="onClickSort"
+        :on-click-all="onClickAll"
         @input="onUpdateSelection"
       />
     </x-table-wrapper>
@@ -124,6 +125,10 @@
       staticFields: {
         type: Array,
         default: null
+      },
+      expandable: {
+        type: Boolean,
+        default: false
       }
     },
     data () {
@@ -271,8 +276,12 @@
       clearTimeout(this.timer)
     },
     methods: {
-      ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
-      ...mapActions({ fetchContent: FETCH_DATA_CONTENT }),
+      ...mapMutations({
+        updateView: UPDATE_DATA_VIEW
+      }),
+      ...mapActions({
+        fetchContent: FETCH_DATA_CONTENT
+      }),
       fetchContentPages (loading, isRefresh) {
         if (!this.pageLinkNumbers || !this.pageLinkNumbers.length) {
           return this.fetchContentSegment(0, this.view.pageSize)

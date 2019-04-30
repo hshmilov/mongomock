@@ -1,9 +1,10 @@
 <template>
   <div class="x-entity-table">
-    <span class="table-results-title"
+    <span
+      class="table-results-title"
     >
       <template v-if="ecFilter">
-        <i class="text">{{ecResultsMessage}}</i>
+        <i class="text">{{ ecResultsMessage }}</i>
         <x-button
           link
           @click="clearEc"
@@ -28,6 +29,7 @@
       v-model="isReadOnly? undefined: selection"
       :module="module"
       id-field="internal_axon_id"
+      :expandable="true"
       @click-row="configEntity"
       @data="onTableData"
     >

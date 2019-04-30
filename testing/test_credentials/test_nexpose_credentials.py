@@ -1,6 +1,6 @@
 client_details = {
     'host': '192.168.20.10',
-    'port': '3780',
+    'port': 3780,
     'username': 'readonly-user',
     'password': 'Password2',
     'verify_ssl': False

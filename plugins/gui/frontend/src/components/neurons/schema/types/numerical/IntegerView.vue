@@ -1,10 +1,12 @@
 <template>
-    <div :class="severity">
-        <a v-if="hyperlink" :href="hyperlink.href" @click="onClickLink(hyperlink)">{{ displaying }}</a>
-        <template v-else>
-            {{ displaying }}
-        </template>
-    </div>
+  <div :class="severity">
+    <a
+      v-if="hyperlink"
+      :href="hyperlink.href"
+      @click="onClickLink(hyperlink)"
+    >{{ displaying }}</a>
+    <template v-else>{{ displaying }}</template>
+  </div>
 </template>
 
 <script>
@@ -12,9 +14,18 @@
     import {mapState} from 'vuex'
 
     export default {
-        name: 'x-integer-view',
-        props: ['schema', 'value'],
+        name: 'XIntegerView',
         mixins: [hyperlinkMixin],
+        props: {
+          schema: {
+            type: Object,
+            required: true
+          },
+          value: {
+            type: [Number, Array],
+            default: null
+          }
+        },
         computed: {
             ...mapState({
                 percentageThresholds(state) {
