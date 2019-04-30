@@ -43,12 +43,10 @@ class TestDevicesQuery(TestBase):
 
         self.devices_page.wait_for_spinner_to_end()
         windows_query_row = self.devices_queries_page.find_query_row_by_name('Windows Operating System')
-        windows_filter = self.devices_queries_page.find_query_filter_in_row(windows_query_row)
         self.devices_page.wait_for_spinner_to_end()
         windows_query_row.click()
         assert 'devices' in self.driver.current_url and 'query' not in self.driver.current_url
         self.devices_page.wait_for_spinner_to_end()
-        assert self.devices_page.find_search_value() == windows_filter
         assert all(x == self.devices_page.VALUE_OS_WINDOWS for x in
                    self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
         self.devices_page.fill_filter('linux')

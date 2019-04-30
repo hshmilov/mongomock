@@ -5,7 +5,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class QueriesPage(Page):
     QUERY_ROW_BY_NAME_XPATH = '//tr[child::td[child::div[text()=\'{query_name}\']]]'
-    QUERY_FILTER_XPATH = './/td[position()=4]/div'
 
     @property
     def url(self):
@@ -29,9 +28,6 @@ class QueriesPage(Page):
 
     def find_query_row_by_name(self, query_name):
         return self.driver.find_element_by_xpath(self.QUERY_ROW_BY_NAME_XPATH.format(query_name=query_name))
-
-    def find_query_filter_in_row(self, row_element):
-        return row_element.find_element_by_xpath(self.QUERY_FILTER_XPATH).text
 
     def check_query_by_name(self, query_name):
         row = self.find_query_row_by_name(query_name)

@@ -26,10 +26,11 @@ def _process_filter_views(entity_type: EntityType, mongo_filter):
     return filter_archived(mongo_filter)
 
 
-def get_views(entity_type: EntityType, limit, skip, mongo_filter):
+def get_views(entity_type: EntityType, limit, skip, mongo_filter, mongo_sort):
     entity_views_collection = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type]
-    return list(entity_views_collection.find(_process_filter_views(entity_type, mongo_filter)).sort(
-        [('timestamp', pymongo.DESCENDING)]).skip(skip).limit(limit))
+    sort = [('timestamp', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
+    return list(entity_views_collection.find(_process_filter_views(entity_type, mongo_filter)).sort(sort).skip(
+        skip).limit(limit))
 
 
 def get_views_count(entity_type: EntityType, mongo_filter, quick: bool = False):

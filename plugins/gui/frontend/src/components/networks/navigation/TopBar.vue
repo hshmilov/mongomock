@@ -16,7 +16,6 @@
       </a>
     </div>
     <div
-      v-if="!medicalConfig"
       class="bar-logo"
     >
       <svg-icon
@@ -32,10 +31,7 @@
       />
     </div>
     <x-trial-banner />
-    <ul
-      v-if="!medicalConfig"
-      class="bar-nav"
-    >
+    <ul class="bar-nav">
       <li class="nav-item">
         <button
           v-if="researchStatusLocal === 'starting'"
@@ -168,30 +164,11 @@
         />
       </li>
     </ul>
-    <ul
-      v-else
-      class="bar-nav"
-    >
-      <li class="nav-item medical-menu">
-        <a class="item-link">
-          <x-workspace-picker />
-        </a>
-        <a class="item-link">
-          <x-language-picker />
-        </a>
-        <a class="item-link">
-          <x-medical-user-profile />
-        </a>
-      </li>
-    </ul>
   </header>
 </template>
 
 <script>
   import xNotificationPeek from '../NotificationsPeek.vue'
-  import xMedicalUserProfile from '../MedicalUserProfile.vue'
-  import xLanguagePicker from '../LanguagePicker.vue'
-  import xWorkspacePicker from '../WorkspacePicker.vue'
   import xTipInfo from '../onboard/TipInfo.vue'
   import xTrialBanner from '../onboard/TrialBanner.vue'
 
@@ -206,7 +183,7 @@
   export default {
     name: 'XTopBar',
     components: {
-      xNotificationPeek, xTipInfo, xMedicalUserProfile, xLanguagePicker, xWorkspacePicker, xTrialBanner
+      xNotificationPeek, xTipInfo, xTrialBanner
     },
     data () {
       return {
@@ -241,9 +218,6 @@
         },
         userPermissions (state) {
           return state.auth.currentUser.data.permissions
-        },
-        medicalConfig (state) {
-          return state.staticConfiguration.medicalConfig
         }
       }),
       ...mapGetters({
@@ -471,18 +445,6 @@
                     &.disabled {
                         cursor: default;
                     }
-                }
-            }
-
-            .medical-menu {
-                display: flex;
-                line-height: inherit;
-
-                .x-select {
-                    border-radius: 0;
-                    border: inherit;
-                    background: inherit;
-                    margin-top: 12px;
                 }
             }
         }

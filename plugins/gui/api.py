@@ -238,9 +238,9 @@ class API:
     ###########
     # QUERIES #
     ###########
-    def query_views(self, limit, skip, mongo_filter, entity_type):
+    def query_views(self, limit, skip, mongo_filter, mongo_sort, entity_type):
         # Assuming only flask endpoints call this function.
-        views = self._entity_views(request.method, entity_type, limit, skip, mongo_filter)
+        views = self._entity_views(request.method, entity_type, limit, skip, mongo_filter, mongo_sort)
 
         if request.method == 'GET':
 
@@ -255,27 +255,29 @@ class API:
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
     @api_add_rule(f'devices/views', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Devices,
                                                    ReadOnlyJustForGet)})
-    def api_device_views(self, limit, skip, mongo_filter):
+    def api_device_views(self, limit, skip, mongo_filter, mongo_sort):
         """
         Save or fetch views over the devices db
         :return:
         """
-        return self.query_views(limit, skip, mongo_filter, EntityType.Devices)
+        return self.query_views(limit, skip, mongo_filter, mongo_sort, EntityType.Devices)
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
     @api_add_rule(f'users/views', methods=['GET', 'POST', 'DELETE'],
                   required_permissions={Permission(PermissionType.Users,
                                                    ReadOnlyJustForGet)})
-    def api_users_views(self, limit, skip, mongo_filter):
+    def api_users_views(self, limit, skip, mongo_filter, mongo_sort):
         """
         Save or fetch views over the users db
         :return:
         """
-        return self.query_views(limit, skip, mongo_filter, EntityType.Users)
+        return self.query_views(limit, skip, mongo_filter, mongo_sort, EntityType.Users)
 
     ###########
     # ACTIONS #

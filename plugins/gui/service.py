@@ -833,7 +833,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         })
         return '', 200
 
-    def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter):
+    def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter, mongo_sort):
         """
         Save or fetch views over the entities db
         :return:
@@ -843,7 +843,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             mongo_filter['query_type'] = mongo_filter.get('query_type', 'saved')
             return [gui_helpers.beautify_db_entry(entry)
                     for entry
-                    in get_views(entity_type, limit, skip, mongo_filter)]
+                    in get_views(entity_type, limit, skip, mongo_filter, mongo_sort)]
 
         if method == 'POST':
             view_data = self.get_request_data_as_object()
@@ -1155,14 +1155,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
     @gui_add_rule_logged_in('devices/views', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices, ReadOnlyJustForGet)})
-    def device_views(self, limit, skip, mongo_filter):
+    def device_views(self, limit, skip, mongo_filter, mongo_sort):
         """
         Save or fetch views over the devices db
         :return:
         """
-        return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter))
+        return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter, mongo_sort))
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('devices/views/count', required_permissions={Permission(PermissionType.Devices,
@@ -1310,10 +1311,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
     @gui_add_rule_logged_in('users/views', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users, ReadOnlyJustForGet)})
-    def user_views(self, limit, skip, mongo_filter):
-        return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
+    def user_views(self, limit, skip, mongo_filter, mongo_sort):
+        return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort))
 
     @gui_helpers.filtered()
     @gui_add_rule_logged_in('users/views/count', required_permissions={Permission(PermissionType.Users,

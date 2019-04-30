@@ -84,8 +84,6 @@
           name: 'name', title: 'Name', type: 'string'
         }, {
           name: 'timestamp', title: 'Last Updated', type: 'string', format: 'date-time'
-        }, {
-          name: 'view->query->filter', title: 'Filter', type: 'string'
         }]
       },
       searchFilter() {
