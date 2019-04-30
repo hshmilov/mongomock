@@ -88,7 +88,7 @@ export const pluginMeta = {
     },
     logrhythm_adapter: {
         title: 'LogRhythm - BETA',
-        description: 'LogRhythm platform combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation and orchestration.'
+        description: 'LogRhythm combines SIEM, user and entity behavior analytics, network traffic and behavior analytics, and security automation and orchestration.'
     },
     twistlock_adapter: {
         title: 'Twistlock',
@@ -103,7 +103,7 @@ export const pluginMeta = {
         description: 'Check Point Infinity protects against cyber threats across networks, endpoint, cloud and mobile devices.'
     },
     sysaid_adapter: {
-        title: 'Sysaid',
+        title: 'SysAid',
         description: 'SysAid is an integrated ITSM, Service Desk and Help Desk software solution.'
     },
     mssql_adapter: {
@@ -152,7 +152,7 @@ export const pluginMeta = {
     },
     landesk_adapter: {
         title: 'Ivanti Landesk - BETA',
-        description: 'Ivanti Unified Endpoint Manager discovers network devices and automates software delivery.'
+        description: 'Ivanti Unified Endpoint Manager (UEM) is endpoint and user-profile management software that helps IT administrators gather detailed device data, automate software and OS deployments, personalize workspace environments, and fix user issues.'
     },
     lansweeper_adapter: {
         title: 'Lansweeper',
@@ -216,7 +216,7 @@ export const pluginMeta = {
     },
     claroty_adapter: {
         title: 'Claroty',
-        description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'
+        description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'                      
     },
     solarwinds_orion_adapter: {
         title: 'Solarwinds Network Performance Monitor',
@@ -336,7 +336,7 @@ export const pluginMeta = {
     },
     symantec_adapter: {
         title: 'Symantec Endpoint Protection',
-        description: 'Symantec Endpoint Protection Manager manages events, policies, and registration for the client computers that connect to customer networks.'
+        description: 'Symantec Endpoint Protection manages events, policies, and registration for the client computers that connect to customer networks.'
     },
     nessus_adapter: {
         title: 'Tenable Nessus',
@@ -432,7 +432,7 @@ export const pluginMeta = {
     },
     tanium_adapter: {
         title: 'Tanium',
-        description: 'Tanium for discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+        description: 'Tanium discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
     },
     aruba_adapter: {
         title: 'Aruba',
