@@ -90,6 +90,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
     def __start_analysis(self):
         try:
             self.__analyze_cves()
+            logger.info(f'Finished analyzing CVEs')
         except Exception:
             logger.exception('Exception while trying to analyze cves')
 
@@ -97,6 +98,12 @@ class StaticAnalysisService(Triggerable, PluginBase):
             self.__associate_users_with_devices()
         except Exception:
             logger.exception('Exception while trying to associate devices and users')
+
+        try:
+            self.__parse_devices_last_used_users_departments()
+            logger.info(f'Finished parsing devices last used users departments')
+        except Exception:
+            logger.exception('Exception while trying to get last used users departments')
 
     # CVE Analysis
 
@@ -455,6 +462,68 @@ class StaticAnalysisService(Triggerable, PluginBase):
             self._save_field_names_to_db(EntityType.Users)
 
         logger.info('Finished associating users with devices')
+
+    # pylint: disable=invalid-name
+    def __parse_devices_last_used_users_departments(self):
+        users_to_department = dict()
+        devices_with_last_used_users = self.devices_db.find(
+            parse_filter(
+                'specific_data.data.last_used_users == exists(true)'
+            )
+        )
+
+        for device_view in devices_with_last_used_users:
+            # Get a list of all users associated for this device.
+            device_raw = convert_db_entity_to_view_entity(device_view, ignore_errors=True)
+            device_specific_data = device_raw.get('specific_data', [])
+            device_last_used_users_set = set()
+
+            for device_adapter_data in device_specific_data:
+                device_adapter_data_last_used_users = (device_adapter_data.get('data') or {}).get('last_used_users')
+                if device_adapter_data_last_used_users and isinstance(device_adapter_data_last_used_users, list):
+                    for device_adapter_data_last_used_user in device_adapter_data_last_used_users:
+                        upn_name = \
+                            self.__try_convert_username_prefix_to_username_upn(device_adapter_data_last_used_user)
+                        device_last_used_users_set.add(upn_name)
+
+            # Now we have a set of all last used users for this device, from all of its adapters.
+            # Lets try to get each of these users to achieve their department
+            device_last_used_users_departments = set()
+            for last_used_user in device_last_used_users_set:
+                if last_used_user in users_to_department:
+                    if users_to_department.get(last_used_user):
+                        device_last_used_users_departments.add(users_to_department[last_used_user])
+                else:
+                    user = list(self.users.get(
+                        axonius_query_language=f'specific_data.data.id == regex("^{re.escape(last_used_user)}$", "i")'))
+
+                    if len(user) == 1:
+                        user = user[0]
+                        user_department = user.get_first_data('user_department')
+                        if user_department:
+                            device_last_used_users_departments.update(set(user_department))
+                        users_to_department[last_used_user] = user_department
+
+            # Now that we have all departments for this device lets add the appropriate adapterdata.
+            # be careful not to override an adapterdata which already exists like the vuln one.
+            device_adapter = self._new_device_adapter()
+            device_adapter.last_used_users_departments_association = list(device_last_used_users_departments)
+            # Add the final one
+            device_object = list(self.devices.get(internal_axon_id=device_raw['internal_axon_id']))
+            if len(device_object) != 1:
+                logger.critical(
+                    'Warning, could not get a device object for internal axon id {device_raw["internal_axon_id"]}'
+                )
+                continue
+            device_object = device_object[0]
+            device_object.add_adapterdata(
+                device_adapter.to_dict(),
+                action_if_exists='update',
+                additional_data={
+                    'hidden_for_gui': True
+                }
+            )
+            self._save_field_names_to_db(EntityType.Devices)
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

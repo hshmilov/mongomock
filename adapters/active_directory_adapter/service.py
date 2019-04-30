@@ -579,6 +579,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
                 user.user_sid = user_raw.get('objectSid')
                 user.mail = user_raw.get("mail")
+                user.organizational_unit = get_organizational_units_from_dn(user_raw.get('distinguishedName'))
                 user.ad_user_principal_name = user_raw.get("userPrincipalName")
                 user.is_local = False
                 is_admin = user_raw.get("adminCount")

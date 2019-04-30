@@ -27,6 +27,7 @@ class UserAdapter(SmartJsonClass):
     description = Field(str, 'Description')
     domain = Field(str, 'Domain')  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     is_admin = Field(bool, 'Is Admin')
+    organizational_unit = ListField(str, 'Organizational Unit')
     last_seen_in_devices = Field(datetime.datetime, 'Last Seen In Devices')
     last_seen = Field(datetime.datetime, 'Last Seen In Domain')
     associated_devices = ListField(UserAdapterDevice, 'Associated Devices',
