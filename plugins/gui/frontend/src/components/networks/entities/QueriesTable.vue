@@ -118,13 +118,13 @@
             failure: [],
             post: []
           },
-          triggers: {
+          triggers: [{
             ...initTrigger,
             name: 'Trigger',
             view: {
               name: this.selectedName, entity: this.module
             }
-          }
+          }]
         })
         /* Navigating to new enforcement - requested queries will be selected as triggers there */
         this.$router.push({ path: '/enforcements/new' })

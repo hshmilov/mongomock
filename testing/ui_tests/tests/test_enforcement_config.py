@@ -124,6 +124,9 @@ class TestEnforcementSanity(TestBase):
         self.devices_queries_page.wait_for_spinner_to_end()
         self.devices_queries_page.check_query_by_name(ENFORCEMENT_CHANGE_NAME)
         self.devices_queries_page.remove_selected_queries()
+        self.driver.refresh()
+        with pytest.raises(NoSuchElementException):
+            self.devices_queries_page.find_query_row_by_name(ENFORCEMENT_CHANGE_NAME)
 
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
@@ -133,16 +136,6 @@ class TestEnforcementSanity(TestBase):
         text = self.enforcements_page.get_saved_query_text()
         formatted = f'{ENFORCEMENT_CHANGE_NAME} (deleted)'
         assert text == formatted
-
-    def test_delete_saved_query(self):
-        self._create_enforcement_change_query()
-        self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_spinner_to_end()
-        self.devices_queries_page.check_query_by_name(ENFORCEMENT_CHANGE_NAME)
-        self.devices_queries_page.remove_selected_queries()
-        self.driver.refresh()
-        with pytest.raises(NoSuchElementException):
-            self.devices_queries_page.find_query_row_by_name(ENFORCEMENT_CHANGE_NAME)
 
     @flaky(max_runs=3)
     def test_edit_enforcement(self):
