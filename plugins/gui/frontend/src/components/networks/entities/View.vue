@@ -324,7 +324,7 @@
                 if (this.module === 'devices' && this.sortedSpecificData && this.sortedSpecificData.length) {
                     this.changeState({name: 'adaptersData'})
                     this.updateState({
-                        name: 'adapterDevice', id: this.sortedSpecificData[0].plugin_name, align: 'top'
+                        name: 'adapterDevice', id: this.sortedSpecificData[0].id, align: 'top'
                     })
                 }
                 this.delayInitTourState = false

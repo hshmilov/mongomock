@@ -1,28 +1,48 @@
 <template>
-    <div v-show="isActive" :class="{'active': isActive, [ id ]: true}" class="x-tab" role="tabpanel">
-        <slot></slot>
-    </div>
+  <div
+    v-show="isActive"
+    :class="{'active': isActive, [ id ]: true}"
+    class="x-tab"
+    role="tabpanel"
+  >
+    <slot />
+  </div>
 </template>
 
 <script>
-    export default {
-        name: 'x-tab',
-        props: {
-            id: {required: true},
-            title: {required: true},
-            selected: {default: false},
-            logo: {default: ''},
-            outdated: {default: false}
-        },
-        data() {
-            return {
-                isActive: false
-            }
-        },
-        created() {
-            this.isActive = this.selected
-        }
+  export default {
+    name: 'XTab',
+    props: {
+      id: {
+        type: String,
+        required: true
+      },
+      title: {
+        type: String,
+        required: true
+      },
+      selected: {
+        type: Boolean,
+        default: false
+      },
+      logo: {
+        type: String,
+        default: ''
+      },
+      outdated: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data () {
+      return {
+        isActive: false
+      }
+    },
+    created () {
+      this.isActive = this.selected
     }
+  }
 </script>
 
 <style lang="scss">

@@ -59,7 +59,7 @@
     } from '../../store/modules/dashboard'
     import {IS_EXPIRED} from '../../store/getters'
     import {UPDATE_DATA_VIEW} from '../../store/mutations'
-    import {SAVE_VIEW} from '../../store/actions'
+    import {FETCH_DATA_VIEWS, SAVE_VIEW} from '../../store/actions'
     import {CHANGE_TOUR_STATE, NEXT_TOUR_STATE} from '../../store/modules/onboarding'
     import {mapState, mapGetters, mapMutations, mapActions} from 'vuex'
 
@@ -185,9 +185,10 @@
             }),
             ...mapActions({
                 fetchDiscoveryData: FETCH_DISCOVERY_DATA,
-                fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE, saveView: SAVE_VIEW,
+                fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
                 fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
-                fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD
+                fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD,
+                fetchViews: FETCH_DATA_VIEWS, saveView: SAVE_VIEW
             }),
             runChartFilter(chartInd, queryInd) {
                 let query = this.charts[chartInd].data[queryInd]
@@ -258,27 +259,30 @@
             getDashboardData().then(() => {
                 if (this._isDestroyed || this.isExpired) return
                 if (!this.isEmptySystem) this.nextState('dashboard')
-                if (this.devicesViewsList.length && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
-                // If DEMO view was not yet added, add it now, according to the adapters' devices count
-                if (this.seenDevices && this.isDevicesEdit) {
-                    let adapter = this.deviceDiscovery.counters.find((item) => !item.name.includes('active_directory'))
-                    let name = ''
-                    let filter = ''
-                    if (adapter) {
-                        // Found an adapters other than Active Directory - view will filter it
-                        name = adapter.name.split('_').join(' ')
-                        filter = `adapters == '${adapter.name}'`
-                    } else {
-                        // Active Directory is the only adapters - view will filter for Windows 10
-                        name = 'Windows 10'
-                        filter = 'specific_data.data.os.distribution == "10"'
-                    }
-                    this.saveView({
-                        name: `DEMO - ${name}`, module: 'devices', predefined: true, view: {
-                            ...this.devicesView, query: {filter}
+                if (this.isDevicesRestricted) return
+                this.fetchViews({module: 'devices', type: 'saved'}).then(() => {
+                    if (this.devicesViewsList.length && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
+                    // If DEMO view was not yet added, add it now, according to the adapters' devices count
+                    if (this.seenDevices && this.isDevicesEdit) {
+                        let adapter = this.deviceDiscovery.counters.find((item) => !item.name.includes('active_directory'))
+                        let name = ''
+                        let filter = ''
+                        if (adapter) {
+                            // Found an adapters other than Active Directory - view will filter it
+                            name = adapter.name.split('_').join(' ')
+                            filter = `adapters == '${adapter.name}'`
+                        } else {
+                            // Active Directory is the only adapters - view will filter for Windows 10
+                            name = 'Windows 10'
+                            filter = 'specific_data.data.os.distribution == "10"'
                         }
-                    })
-                }
+                        this.saveView({
+                            name: `DEMO - ${name}`, module: 'devices', predefined: true, view: {
+                                ...this.devicesView, query: {filter}
+                            }
+                        })
+                    }
+                })
             })
         },
         updated() {
