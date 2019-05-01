@@ -13,6 +13,7 @@ import concurrent.futures
 import threading
 import tarfile
 import time
+from collections import OrderedDict
 
 from typing import Tuple, List, Dict, Callable
 
@@ -475,6 +476,16 @@ def main():
 
             def get_ui_tests_jobs():
                 ui_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['ui']))
+
+                slow_modules = ['test_instances_after_join.py', 'test_instances_before_join.py']
+                for slow in slow_modules[:]:
+                    if slow in ui_tests:
+                        ui_tests.remove(slow)
+                    else:
+                        print(f'{slow} is not found in slow_modules!')
+                        slow_modules.remove(slow)
+                ui_tests = slow_modules + ui_tests
+
                 with TC.block('Collected ui tests modules'):
                     for test_module in ui_tests:
                         print(test_module)
@@ -485,16 +496,16 @@ def main():
                     for test_module in ui_tests
                 }
 
-            jobs = dict()
-            # Collect jobs
+            jobs = OrderedDict()
+            # Collect jobs. Run UI first since they are the longest
+            if args.target in ['ui', 'all']:
+                jobs.update(get_ui_tests_jobs())
             if args.target in ['ut', 'all']:
                 jobs.update(get_ut_tests_jobs())
             if args.target in ['integ', 'all']:
                 jobs.update(get_integ_tests_jobs())
             if args.target in ['parallel', 'all']:
                 jobs.update(get_parallel_tests_jobs())
-            if args.target in ['ui', 'all']:
-                jobs.update(get_ui_tests_jobs())
 
             with TC.block(f'Jobs for target {args.target}'):
                 for job_name, job_value in jobs.items():
