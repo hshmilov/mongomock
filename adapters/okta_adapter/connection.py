@@ -9,6 +9,7 @@ import aiohttp
 
 from axonius.utils.json import from_json
 from axonius.async.utils import async_request
+from axonius.clients.rest.connection import RESTConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -18,6 +19,7 @@ PARALLEL_REQUESTS_MAX = 75
 
 class OktaConnection:
     def __init__(self, url: str, api_key: str, fetch_apps: bool):
+        url = RESTConnection.build_url(url).strip('/')
         self.__base_url = url
         self.__api_key = api_key
         self.__fetch_apps = fetch_apps
@@ -46,7 +48,7 @@ class OktaConnection:
         response = self.__make_request('api/v1/users', params={'limit': 1})
         if response.status_code == 200:
             return True
-        return response
+        raise Exception(f'Probelm fetching users. Got: {response.content}')
 
     def _get_apps_async(self, users_page):
         aio_requests = []
@@ -127,10 +129,12 @@ class OktaConnection:
         page_count = 0
         try:
             response = self.__make_request('api/v1/groups')
-            groups.extend(response.json())
+            if isinstance(response.json(), list):
+                groups.extend(response.json())
             while 'next' in response.links and page_count < _MAX_PAGE_COUNT:
                 response = self.__make_request(forced_url=response.links['next']['url'])
-                groups.extend(response.json())
+                if isinstance(response.json(), list):
+                    groups.extend(response.json())
             for group_raw in groups:
                 try:
                     if group_raw.get('id'):
