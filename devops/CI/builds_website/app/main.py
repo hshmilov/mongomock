@@ -287,7 +287,7 @@ def instances():
                     builds_host=LOCAL_BUILDS_HOST,
                     fork=config['fork'],
                     branch=config['branch'],
-                    set_credentials=config.get('set_credentials', 'false'),
+                    set_credentials='true' if config.get('set_credentials') is True else 'false',
                     include=include, exclude=exclude,
                     run_cycle=False,
                     system_up_params='--prod'), post_script=post_script
