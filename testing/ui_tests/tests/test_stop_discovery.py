@@ -39,6 +39,7 @@ class TestStopDiscovery(TestBase):
 
         # Removing TestSecDomain, edit and save the TestDomain
         self.adapters_page.remove_server(ad_client2_details)
+        time.sleep(5)
         self.adapters_page.click_row()
         self.adapters_page.click_save()
         self.adapters_page.wait_for_server_green()
