@@ -7,7 +7,7 @@ from axonius.clients.linux_ssh.consts import (ACTION_SCHEMA, HOSTNAME,
                                               IS_SUDOER, PASSWORD, PORT,
                                               PRIVATE_KEY, USERNAME)
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.mixins.triggerable import RunIdentifier
+from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.plugin_base import EntityType
 from axonius.types.correlation import CorrelationReason, CorrelationResult
 from axonius.utils.gui_helpers import find_entity_field
@@ -32,7 +32,7 @@ def get_entity_field_list(device_data, field):
     return result
 
 
-class LinuxSshExectionMixIn:
+class LinuxSshExectionMixIn(Triggerable):
     def get_valid_config(self, config):
         try:
             required_args = ACTION_SCHEMA['required']

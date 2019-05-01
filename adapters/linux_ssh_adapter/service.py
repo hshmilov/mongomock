@@ -50,14 +50,13 @@ class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
 
         return client_config
 
-    # pylint: disable=arguments-differ
-    def _grab_file_contents(self, key):
+    def _grab_file_contents(self, field_data, stored_locally=True):
         # XXX: Ugly hack to handle EC
         try:
-            return super()._grab_file_contents(key)
+            return super()._grab_file_contents(field_data, stored_locally)
         except gridfs.errors.NoFile:
             db_name = DEVICE_CONTROL_PLUGIN_NAME
-            return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(key['uuid'])).read()
+            return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid'])).read()
 
     def _connect_client(self, client_config):
         try:
