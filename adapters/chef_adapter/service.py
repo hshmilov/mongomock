@@ -250,6 +250,10 @@ class ChefAdapter(AdapterBase):
                 if axonius_internal:
                     device.set_dynamic_field('axonius_internal', axonius_internal)
 
+                axonius_signup = device_raw_automatic.get('axonius_signup', {}).get('data', {})
+                if axonius_signup:
+                    device.set_dynamic_field('axonius_signup', axonius_signup)
+
                 axonius_features = device_raw_automatic.get('axonius_features', {})
                 if axonius_features:
                     features = axonius_features.get('data', {})
