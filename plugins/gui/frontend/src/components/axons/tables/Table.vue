@@ -306,8 +306,12 @@
         }
       }
 
-      .md-icon:hover {
-        color: $theme-orange;
+      .md-icon {
+        width: 14px;
+        min-width: 14px;
+        &:hover {
+          color: $theme-orange;
+        }
       }
 
       .details-container {
@@ -315,19 +319,29 @@
         margin: 0px -8px;
 
         .details {
-          margin: 8px 0;
-          padding: 8px;
+          margin-top: 8px;
           display: grid;
-          grid-gap: 4px 0;
           background-color: rgba($grey-2, 0.6);
+
+          .detail {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid $theme-white;
+            padding: 4px 8px;
+
+            &:last-child {
+              border: none;
+            }
+          }
         }
 
         .slide-fade-enter-active {
-          transition: all .6s cubic-bezier(1.0, 0.4, 0.8, 1.0);
+          transition: all .4s cubic-bezier(1.0, 0.4, 0.8, 1.0);
         }
 
         .slide-fade-leave-active {
-          transition: all .3s ease;
+          transition: all .2s ease;
         }
 
         .slide-fade-enter, .slide-fade-leave-to {

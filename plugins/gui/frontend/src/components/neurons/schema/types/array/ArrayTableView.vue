@@ -75,11 +75,14 @@
 </script>
 
 <style lang="scss">
-    .array.inline {
-        display: flex;
-       .item {
-           margin-right: 8px;
-           line-height: 24px;
-        }
+  .array.inline {
+    display: flex;
+
+    .item {
+      margin-right: 8px;
+      line-height: 24px;
+      display: flex;
+      align-items: center;
     }
+  }
 </style>
