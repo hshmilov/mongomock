@@ -15,7 +15,7 @@ class ExcludeHelper:
             as_json = self.path.read_text()
             as_dict = json.loads(as_json)
             print(f'{self.path}: config content: {as_dict}')
-            exclude = as_dict[EXCLUDE_LIST_KEY]
+            exclude = as_dict.get(EXCLUDE_LIST_KEY, {})
             self.exclude_add = exclude.get(ADD_TO_EXCLUDE_KEY, [])
             print(f'{self.path} exclude_add {self.exclude_add}')
             self.exclude_remove = exclude.get(REMOVE_FROM_EXCLUDE_KEY, [])
