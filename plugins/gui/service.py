@@ -3830,6 +3830,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and ' if view else ''
 
         field_compare = 'true' if field['type'] == 'bool' else 'exists(true)'
+        if field['type'] in ['number', 'integer']:
+            field_compare = f'{field_compare} and {field["name"]} > 0'
         base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == {field_compare}'
         if for_date:
             # If history requested, fetch from appropriate historical db
