@@ -151,5 +151,8 @@
 </script>
 
 <style lang="scss">
+  .x-queries-table {
+    height: 100%;
+  }
 
 </style>
