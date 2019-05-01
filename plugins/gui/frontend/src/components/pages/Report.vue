@@ -25,7 +25,7 @@
             v-model="report.name"
             :disabled="isReadOnly"
             class="report-name-textbox"
-            @validate="onValidate"
+            @input="tour({name: 'reportsSchedule'})"
           >
           <input
             v-else
@@ -58,7 +58,7 @@
           >
             <div class="saved-queries">
               <div
-                v-for="(view,i) in report.views"
+                v-for="(view, i) in report.views"
                 :key="i"
               >
                 <div class="saved-query">
@@ -98,13 +98,13 @@
         <div class="item">
           <div class="header">
             <x-checkbox
-              id="report_schedule"
               v-model="report.add_scheduling"
               :read-only="readOnly"
               value="AddScheduling"
               @change="onAddScheduling"
             />
             <h5
+              id="report_schedule"
               class="title"
               @click="toggleScheduling"
             >Email Configuration</h5>
@@ -122,7 +122,7 @@
             />
             <div
               v-if="report.add_scheduling"
-              id="report_scheduling"
+              id="report_frequency"
             >
               <h4 class="title">Email Recurrence</h4>
               <div class="x-grid">
@@ -179,7 +179,7 @@
             <template v-else>Download Report</template>
           </x-button>
           <x-button
-            id="save-report"
+            id="report_save"
             :disabled="!valid"
             @click="saveExit"
           >Save</x-button>
@@ -212,7 +212,7 @@
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
   import {
-    initRecipe, FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT
+    FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT
   } from '../../store/modules/reports'
 
   export default {
@@ -388,6 +388,7 @@
       if (this.$refs.name) {
         this.$refs.name.focus()
       }
+      this.tour({name: 'reportsName'})
     },
     methods: {
       ...mapMutations({
@@ -427,7 +428,6 @@
         this.downloading = true
         this.downloadReport(this.report.name).then((response) => {
           this.downloading = false
-          this.tour({ name: 'tourFinale' })
         }).catch((error) => {
           this.downloading = false
           this.message = error.response.data.message
@@ -443,9 +443,9 @@
         setTimeout(() => {
           if (this.report.add_scheduling) {
             this.$refs.mail_ref.validate()
+            this.tour({name: 'reportsMails'})
           }
         })
-
       },
       toggleScheduling () {
         this.report.add_scheduling = !this.report.add_scheduling
@@ -557,7 +557,7 @@
         } else {
           let nextInvalidField = this.validity.fields.find(x => x.error)
           let nextResult = nextInvalidField ? nextInvalidField.error : ''
-          if (nextResult != this.validity.error) {
+          if (nextResult !== this.validity.error) {
             validityChanged = true
           }
           this.validity.error = nextResult
@@ -615,9 +615,7 @@
                 display: flex;
                 align-items: center;
                 margin-top: 24px;
-                .x-checkbox {
-                    margin-bottom: 4px;
-                }
+
                 .title {
                     margin: 0 0 0 8px;
                     cursor: pointer;
@@ -733,7 +731,4 @@
         }
     }
 
-    #report_schedule {
-        margin-bottom: 0;
-    }
 </style>

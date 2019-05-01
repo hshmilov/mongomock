@@ -61,6 +61,7 @@
       <label>{{ schema.title }}</label>
       <x-list-input
         v-model="data"
+        :id="schema.name"
         :format="formatStringItem"
         :error-items="invalidStringItems"
         :class="{'error-border': !stringListValid}"

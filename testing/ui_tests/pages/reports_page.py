@@ -14,13 +14,12 @@ class ReportsPage(EntitiesPage):
     NEW_REPORT_BUTTON = '+ New Report'
     REPORT_CSS = '.x-report'
     REPORT_NAME_ID = 'report_name'
-    REPORT_SCHEDULE = 'report_schedule'
+    REPORT_FREQUENCY = 'report_frequency'
     SAVED_QUERY_CLASS = '.saved-query'
     QUERY_ADD_CLASS = '.query-add'
     QUERY_REMOVE_CLASS = '.query-remove'
     ADD_SCHEDULING_CHECKBOX = 'Email Configuration'
-    ADD_SCHEDULING_ID = 'report_schedule'
-    SAVE_BUTTON_ID = 'save-report'
+    SAVE_BUTTON_ID = 'report_save'
     INCLUDE_QUERIES_CHECKBOX = 'Include Saved Queries data'
     INCLUDE_DASHBOARD_CHECKBOX = 'Include dashboard charts'
     EMAIL_BOX_CSS = 'input.md-input__inner.md-chips-input__inner'
@@ -110,7 +109,7 @@ class ReportsPage(EntitiesPage):
         self.driver.find_element_by_id(period).click()
 
     def is_frequency_set(self, period):
-        if self.is_toggle_selected(self.driver.find_element_by_id(self.REPORT_SCHEDULE)):
+        if self.driver.find_element_by_id(self.REPORT_FREQUENCY):
             return self.driver.find_element_by_id(period).is_selected()
         return False
 

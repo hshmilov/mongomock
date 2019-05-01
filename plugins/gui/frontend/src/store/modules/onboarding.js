@@ -664,28 +664,37 @@ export const onboarding = {
 				},
 				'reports': {
 					id: 'reports', title: 'REPORTING', align: 'right', fixed: true,
-					content: 'Reports let you schedule an email with an executive summary.'
+					content: 'Reports let create and schedule a customized executive summary.'
+				},
+				'reportsNew': {
+					id: 'report_new', title: 'NEW REPORT', align: 'left', queue: 'reports',
+					content: 'Click to create a report.'
+				},
+				'reportsName': {
+					id: 'report_name', title: 'REPORT NAME', align: 'bottom',
+					content: 'Give the report a meaningful name that you\'ll recognize later.'
 				},
 				'reportsSchedule': {
-					id: 'reports_schedule', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
-					content: 'Decide how often you\'d like to receive a report.',
+					id: 'report_schedule', title: 'SCHEDULE REPORT', align: 'right', emphasize: false,
+					content: 'Define when you\'d like to automatically receive the report.'
+				},
+				'reportsMails': {
+					id: 'emailList', title: 'SCHEDULE REPORT', align: 'top', emphasize: false,
+					content: 'Add all email addresses that should receive the report.',
 					actions: [
-						{ title: 'Next', state: 'reportsFrequency' }
+						{ title: 'Next', state: 'reportsFrequency'}
 					]
 				},
 				'reportsFrequency': {
-					id: 'reports_frequency', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
+					id: 'report_frequency', title: 'SCHEDULE REPORT', align: 'top', emphasize: false,
 					content: 'Choose between daily, weekly, or monthly reports.',
 					actions: [
-						{ title: 'Next', state: 'reportsMails' }
+						{ title: 'Next', state: 'reportsSave' }
 					]
 				},
-				'reportsMails': {
-					id: 'reports_mails', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
-					content: 'Add all email addresses that should receive the report.',
-					actions: [
-						{ title: 'Next', state: 'reportsDownload'}
-					]
+				'reportsSave': {
+					id: 'report_save', title: 'SAVE REPORT', align: 'left',
+					content: 'Click to save the Report.'
 				},
 				'reportsDownload': {
 					id: 'reports_download', title: 'DOWNLOAD REPORT', align: 'right',
@@ -708,7 +717,8 @@ export const onboarding = {
 				devices: ['bestDevice', 'query', 'queryResults', 'enforcements', 'dashboardBack'],
 				enforcements: ['enforcementNew', 'settings'],
 				dashboard: ['adapters', 'dashboardManaged', 'dashboardWizard'],
-				dashboardWizard: ['wizardIntersect', 'wizardModule', 'wizardMain', 'wizardSecond', 'wizardName']
+				dashboardWizard: ['wizardIntersect', 'wizardModule', 'wizardMain', 'wizardSecond', 'wizardName'],
+				reports: ['reportsNew', 'tourFinale']
 			}
 		}
 	},
