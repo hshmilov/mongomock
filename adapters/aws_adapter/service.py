@@ -44,7 +44,7 @@ PROXY = 'proxy'
 GET_ALL_REGIONS = 'get_all_regions'
 REGIONS_NAMES = ['us-west-2', 'us-west-1', 'us-east-2', 'us-east-1', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1',
                  'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'cn-north-1', 'eu-central-1', 'eu-west-1',
-                 'eu-west-2', 'eu-west-3', 'sa-east-1', 'us-gov-west-1']
+                 'eu-west-2', 'eu-west-3', 'sa-east-1', 'us-gov-west-1', 'ap-east-1', 'eu-north-1', 'us-gov-east-1']
 PAGE_NUMBER_FLOOD_PROTECTION = 9000
 AWS_ENDPOINT_FOR_REACHABILITY_TEST = f'https://apigateway.us-east-2.amazonaws.com/'   # endpoint for us-east-2
 BOTO3_FILTERS_LIMIT = 100
