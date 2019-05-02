@@ -322,7 +322,7 @@ def historical():
                     history = dateutil.parser.parse(history)
                 except Exception:
                     return return_error('Specified date is invalid')
-                logger.info(f"historical for {history}")
+                logger.info(f'historical for {history}')
             return func(self, history=history, *args, **kwargs)
 
         return actual_wrapper
@@ -521,16 +521,16 @@ def get_entities(limit: int, skip: int,
                                   default_sort)
     except PyMongoError:
         try:
-            logger.exception("Find couldn't handle the weight! Going to slow path")
+            logger.exception('Find couldn\'t handle the weight! Going to slow path')
             data_list = _perform_aggregation(entity_views_db,
                                              limit, skip, view_filter, sort,
                                              db_projection, entity_type,
                                              default_sort)
         except Exception:
-            logger.exception("Exception when using perform aggregation")
+            logger.exception('Exception when using perform aggregation')
             raise
     except Exception:
-        logger.exception("Exception when using perform find")
+        logger.exception('Exception when using perform find')
         raise
 
     for entity in data_list:
@@ -754,7 +754,7 @@ def is_subjson(subset, superset):
 
 
 def merge_entities_fields(entities_data, fields):
-    """ 
+    """
         find all entities that are subset of other entites, and merge them.
     """
     results = []

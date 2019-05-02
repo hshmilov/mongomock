@@ -32,6 +32,7 @@ class ReportsPage(EntitiesPage):
     EMAIL_DESCRIPTION_CSS = '.email-description'
     REPORT_TITLE_CSS = '.report-title'
     SEND_MAIL_BUTTON_ID = 'test-report'
+    REPORT_DOWNLOAD_ID = 'reports_download'
 
     @property
     def url(self):
@@ -83,6 +84,10 @@ class ReportsPage(EntitiesPage):
     def fill_email_subject(self, subject):
         report_subject_element = self.driver.find_element_by_id(self.EMAIL_SUBJECT_ID)
         self.fill_text_by_element(report_subject_element, subject)
+
+    def get_email_subject(self):
+        report_subject_element = self.driver.find_element_by_id(self.EMAIL_SUBJECT_ID)
+        return report_subject_element.get_attribute('value')
 
     def fill_email(self, email):
         element = self.find_chips_by_label(self.EMAIL_BOX_RECIPIENTS)
@@ -161,3 +166,30 @@ class ReportsPage(EntitiesPage):
 
     def is_save_button_disabled(self):
         return self.is_element_disabled(self.get_save_button())
+
+    def click_report_download(self):
+        self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID).click()
+
+    def create_report(self, report_name,
+                      add_dashboard=True,
+                      query_name=None,
+                      add_scheduling=False,
+                      email_subject=None,
+                      emails=None,
+                      period=ReportFrequency.daily):
+        self.switch_to_page()
+        self.wait_for_table_to_load()
+        self.click_new_report()
+        self.fill_report_name(report_name)
+        if add_dashboard:
+            self.click_include_dashboard()
+        if query_name:
+            self.click_include_queries()
+            self.select_saved_view(query_name)
+        if add_scheduling:
+            self.click_add_scheduling()
+            self.fill_email_subject(email_subject)
+            for email in emails:
+                self.fill_email(email)
+            self.select_frequency(period)
+        self.click_save()

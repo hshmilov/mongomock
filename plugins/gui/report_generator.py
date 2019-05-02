@@ -8,6 +8,15 @@ from math import pi, cos, sin, floor
 from datetime import datetime
 import logging
 
+from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION
+from axonius.entities import EntityType
+from axonius.logging.metric_helper import log_metric
+from axonius.plugin_base import PluginBase
+from axonius.utils import gui_helpers
+from axonius.utils.axonius_query_language import parse_filter
+from gui.gui_logic import filter_utils
+from gui.gui_logic.adapter_data import adapter_data
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -15,14 +24,18 @@ GREY_COLOUR = '#DEDEDE'
 
 
 class ReportGenerator(object):
-    def __init__(self, report_data, template_path, output_path='/tmp/', host='localhost'):
+    def __init__(self, report, dashboard, adapters, default_sort, template_path, output_path='/tmp/', host='localhost'):
         """
 
-        :param report_data:
+        :param report:
         :param template_path:
         :param output_path:
         """
-        self.report_data = report_data
+        self.report = report
+        self.dashboard = dashboard
+        self.adapters = adapters
+        self.default_sort = default_sort
+        self.report_data = self.get_report_data(self.report)
         self.template_path = template_path
         self.output_path = output_path
         self.host = host
@@ -45,6 +58,29 @@ class ReportGenerator(object):
             'head': self._get_template('view_data/table_head'),
             'data': self._get_template('view_data/table_data')
         }
+
+    def get_report_data(self, report):
+        """
+        Generates the report data from the report.
+        :return: the generated report data.
+        """
+        saved_views = report['views'] if report else None
+        include_dashboard = report['include_dashboard'] if report.get('include_dashboard') else False
+        include_all_saved_views = report['include_all_saved_views'] if report.get('include_all_saved_views') else False
+        include_saved_views = report['include_saved_views'] if report.get('include_saved_views') else False
+        report_data = {
+            'include_dashboard': include_dashboard,
+            'adapter_devices': adapter_data.call_uncached(EntityType.Devices) if include_dashboard else None,
+            'adapter_users': adapter_data.call_uncached(EntityType.Users) if include_dashboard else None,
+            'custom_charts': list(self.dashboard) if include_dashboard else None,
+            'views_data':
+                self._get_saved_views_data(include_all_saved_views, saved_views) if include_saved_views else None
+        }
+        if not include_saved_views:
+            log_metric(logger, 'query.report', None)
+        if report.get('adapters'):
+            report_data['adapter_data'] = self.adapters
+        return report_data
 
     def generate_report_pdf(self):
         """
@@ -390,3 +426,77 @@ class ReportGenerator(object):
             render_params['link_end'] = '</a>'
             render_params['view_all'] = f' - {render_params["link_start"]}view all{render_params["link_end"]}'
         return self.templates['view'].render(render_params)
+
+    def _get_saved_views_data(self, include_all_saved_views=True, saved_queries=None):
+        """
+        For each entity in system, fetch all saved views.
+        For each view, fetch first page of entities - filtered, projected, sorted_endpoint according to it's definition.
+
+        :return: Lists of the view names along with the list of results and list of field headers, with pretty names.
+        """
+        logger.info('Getting views data')
+        views_data = []
+        query_per_entity = {}
+        for saved_query in saved_queries:
+            entity = saved_query['entity']
+            name = saved_query['name']
+            if entity not in query_per_entity:
+                query_per_entity[entity] = []
+            query_per_entity[entity].append(name)
+        saved_views_filter = None
+        if include_all_saved_views:
+            saved_views_filter = gui_helpers.filter_archived({
+                'query_type': 'saved',
+                '$or': [
+                    {
+                        'predefined': False
+                    },
+                    {
+                        'predefined': {
+                            '$exists': False
+                        }
+                    }
+                ]
+            })
+        for entity in EntityType:
+            field_to_title = self._get_field_titles(entity)
+            # Fetch only saved views that were added by user, excluding out-of-the-box queries
+            if query_per_entity.get(entity.name.lower()) and not include_all_saved_views:
+                saved_views_filter = filter_utils.filter_by_name(query_per_entity[entity.name.lower()])
+
+            if not saved_views_filter:
+                continue
+
+            saved_views = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity].find(saved_views_filter)
+            for view_doc in saved_views:
+                try:
+                    view = view_doc.get('view')
+                    if view:
+                        filter_query = view.get('query', {}).get('filter', '')
+                        log_metric(logger, 'query.report', filter_query)
+                        field_list = view.get('fields', [])
+                        views_data.append({
+                            'name': view_doc.get('name'), 'entity': entity.value,
+                            'fields': [{field_to_title.get(field, field): field} for field in field_list],
+                            'data': list(gui_helpers.get_entities(limit=view.get('pageSize', 20),
+                                                                  skip=0,
+                                                                  view_filter=parse_filter(filter_query),
+                                                                  sort=gui_helpers.get_sort(view),
+                                                                  projection={field: 1 for field in field_list},
+                                                                  entity_type=entity,
+                                                                  default_sort=self.default_sort))
+                        })
+                except Exception:
+                    logger.exception('Problem with View {} ViewDoc {}'.format(view_doc.get('name'), str(view_doc)))
+        logger.info('query.saved_views {}'.format(views_data))
+        return views_data
+
+    def _get_field_titles(self, entity):
+        current_entity_fields = gui_helpers.entity_fields(entity)
+        name_to_title = {}
+        for field in current_entity_fields['generic']:
+            name_to_title[field['name']] = field['title']
+        for type in current_entity_fields['specific']:
+            for field in current_entity_fields['specific'][type]:
+                name_to_title[field['name']] = field['title']
+        return name_to_title

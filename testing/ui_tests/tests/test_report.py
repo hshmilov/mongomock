@@ -1,17 +1,18 @@
 import os
 import re
 
+from services.adapters import stresstest_scanner_service, stresstest_service
 from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
+from ui_tests.pages.reports_page import ReportFrequency
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import EmailSettings
 
 
 class TestReport(TestBase):
-    PERIOD_DAILY = 'period-daily'
-    PERIOD_WEEKLY = 'period-weekly'
-    PERIOD_DAILY = 'period-daily'
     DISABLED_CLASS = 'disabled'
     REPORT_SUBJECT = 'axonius report subject'
+    TEST_REPORT_EDIT = 'test report edit'
+    TEST_REPORT_EDIT_QUERY = 'test report edit query'
 
     def test_report_name(self):
         self.reports_page.get_to_new_report_page()
@@ -22,13 +23,16 @@ class TestReport(TestBase):
         self.reports_page.click_include_queries()
         self.reports_page.click_add_query()
         assert self.reports_page.get_queries_count() == 2
+        self.reports_page.click_add_query()
+        assert self.reports_page.get_queries_count() == 3
 
     def test_remove_query(self):
         self.reports_page.get_to_new_report_page()
         self.reports_page.click_include_queries()
         self.reports_page.click_add_query()
+        self.reports_page.click_add_query()
         self.reports_page.click_remove_query(1)
-        assert self.reports_page.get_queries_count() == 1
+        assert self.reports_page.get_queries_count() == 2
 
     def test_add_scheduling(self):
         smtp_service = SMTPService()
@@ -59,13 +63,13 @@ class TestReport(TestBase):
             recipient = generate_random_valid_email()
             self.reports_page.fill_email(recipient)
 
-            self.reports_page.select_frequency(self.PERIOD_DAILY)
+            self.reports_page.select_frequency(ReportFrequency.daily)
             self.reports_page.click_save()
             self.reports_page.wait_for_table_to_load()
             self.reports_page.wait_for_report_generation(report_name)
             self.reports_page.click_report(report_name)
             self.reports_page.wait_for_spinner_to_end()
-            assert self.reports_page.is_frequency_set(self.PERIOD_DAILY)
+            assert self.reports_page.is_frequency_set(ReportFrequency.daily)
             assert self.reports_page.is_generated()
 
     def test_save_disabled(self):
@@ -180,3 +184,49 @@ class TestReport(TestBase):
         toggle = self.settings_page.find_send_emails_toggle()
         self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
         self.settings_page.click_save_button()
+
+    def test_create_and_edit_report(self):
+        smtp_service = SMTPService()
+        smtp_service.take_process_ownership()
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        with smtp_service.contextmanager(), stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(
+                take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
+
+            self.base_page.run_discovery()
+
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            toggle = self.settings_page.find_send_emails_toggle()
+            self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
+            self.settings_page.fill_email_host(smtp_service.fqdn)
+            self.settings_page.fill_email_port(smtp_service.port)
+            self.settings_page.save_and_wait_for_toaster()
+
+            data_query = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(data_query)
+            self.devices_page.enter_search()
+            self.devices_page.click_save_query()
+            self.devices_page.fill_query_name(self.TEST_REPORT_EDIT_QUERY)
+            self.devices_page.click_save_query_save_button()
+            recipient = generate_random_valid_email()
+
+            self.reports_page.create_report(self.TEST_REPORT_EDIT, True, self.TEST_REPORT_EDIT_QUERY, True,
+                                            self.TEST_REPORT_EDIT, [recipient], ReportFrequency.weekly)
+            self.reports_page.wait_for_table_to_load()
+            self.reports_page.click_report(self.TEST_REPORT_EDIT)
+            self.reports_page.wait_for_spinner_to_end()
+            self.reports_page.select_frequency(ReportFrequency.monthly)
+            new_subject = self.TEST_REPORT_EDIT + '_changed'
+            self.reports_page.fill_email_subject(new_subject)
+            self.reports_page.click_save()
+            self.reports_page.wait_for_table_to_load()
+            self.reports_page.click_report(self.TEST_REPORT_EDIT)
+            self.reports_page.wait_for_spinner_to_end()
+
+            assert self.reports_page.is_frequency_set(ReportFrequency.monthly)
+            assert self.reports_page.get_email_subject() == new_subject

@@ -4187,7 +4187,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def _get_saved_views_data(self, include_all_saved_views=True, saved_queries=None):
         """
-        *** Currently this function is unused ***
         For each entity in system, fetch all saved views.
         For each view, fetch first page of entities - filtered, projected, sorted_endpoint according to it's definition.
 
@@ -4401,26 +4400,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return: the generated report file path.
         """
         logger.info('Starting to generate report')
-        saved_views = report['views'] if report else None
-        include_dashboard = report.get('include_dashboard', False)
-        include_all_saved_views = report.get('include_all_saved_views', False)
-        include_saved_views = report.get('include_saved_views', False)
-        report_data = {
-            'include_dashboard': include_dashboard,
-            'adapter_devices': adapter_data.call_uncached(EntityType.Devices) if include_dashboard else None,
-            'adapter_users': adapter_data.call_uncached(EntityType.Users) if include_dashboard else None,
-            'custom_charts': list(self._get_dashboard()) if include_dashboard else None,
-            'views_data':
-                self._get_saved_views_data(include_all_saved_views, saved_views) if include_saved_views else None
-        }
-        if not include_saved_views:
-            log_metric(logger, 'query.report', None)
-        if report.get('adapters'):
-            report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
+        dashboard = self._get_dashboard()
+        adapters = self._get_adapter_data(report['adapters']) if report.get('adapters') else None
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
         server_name = system_config.get('server_name', 'localhost')
+        default_sort = self._system_settings['defaultSort']
         logger.info(f'All data for report gathered - about to generate for server {server_name}')
-        return ReportGenerator(report_data, 'gui/templates/report/', host=server_name).render_html(datetime.now())
+        return ReportGenerator(report,
+                               dashboard,
+                               adapters,
+                               default_sort,
+                               'gui/templates/report/',
+                               host=server_name).render_html(datetime.now())
 
     @gui_add_rule_logged_in('test_exec_report', methods=['POST'],
                             required_permissions={Permission(PermissionType.Reports,
