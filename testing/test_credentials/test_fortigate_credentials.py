@@ -4,7 +4,7 @@
 # The ssl cert of our router is not signed so verify_ssl is False.
 client_details = {
     'host': '192.168.10.1',
-    'port': '443',
+    'port': 443,
     'username': 'axonius-readonly',
     'password': 'Password2',
     'verify_ssl': False,

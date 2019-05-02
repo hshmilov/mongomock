@@ -73,6 +73,8 @@ class EnforcementsPage(EntitiesPage):
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
     ENFORCEMENTS_CHECKBOX = 'div.x-checkbox-container'
+    TRIGGER_SECTION_CHECKBOX_XPATH = '//div[@class=\'header\' and child::*[@class=\'title\' and ' \
+                                     'text()=\'{section_name}\']]//div[@class=\'x-checkbox-container\']'
     ABOVE_INPUT_CSS = '.config .config-item .above'
     BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[@title=\'{enforcement_name}\']'
@@ -210,11 +212,14 @@ class EnforcementsPage(EntitiesPage):
     def check_enforcement_checkbox(self, text):
         self.find_element_by_text(text).click()
 
+    def check_config_section(self, section_name):
+        self.driver.find_element_by_xpath(self.TRIGGER_SECTION_CHECKBOX_XPATH.format(section_name=section_name)).click()
+
     def check_scheduling(self):
-        self.check_enforcement_checkbox('Add Scheduling')
+        self.check_config_section('Add Scheduling')
 
     def check_conditions(self):
-        self.check_enforcement_checkbox('Add Conditions')
+        self.check_config_section('Add Conditions')
 
     def check_condition_added(self):
         self.check_enforcement_checkbox(Trigger.NewEntities)
@@ -368,7 +373,8 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text('You do not have permission to access the Enforcements screen')
         self.click_ok_button()
 
-    def create_basic_enforcement(self, enforcement_name, enforcement_view, schedule=True, enforce_added=False):
+    def create_basic_enforcement(self, enforcement_name, enforcement_view, schedule=True, enforce_added=False,
+                                 save=True):
         self.switch_to_page()
         # for some reason, this switch_to_page doesn't work from here sometimes
         time.sleep(1)
@@ -381,7 +387,8 @@ class EnforcementsPage(EntitiesPage):
         if schedule:
             self.check_scheduling()
         self.select_saved_view(enforcement_view)
-        self.save_trigger()
+        if save:
+            self.save_trigger()
 
     def create_notifying_enforcement(self,
                                      enforcement_name,
@@ -391,8 +398,7 @@ class EnforcementsPage(EntitiesPage):
                                      above=0,
                                      below=0):
 
-        self.create_basic_enforcement(enforcement_name, enforcement_view)
-        self.select_trigger()
+        self.create_basic_enforcement(enforcement_name, enforcement_view, save=False)
         self.check_conditions()
         if added:
             self.check_condition_added()
@@ -435,9 +441,7 @@ class EnforcementsPage(EntitiesPage):
 
     def create_run_wmi_enforcement(self):
         self.switch_to_page()
-        self.create_basic_enforcement(
-            ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_SAVED_QUERY_NAME, enforce_added=False
-        )
+        self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_SAVED_QUERY_NAME)
         self.add_run_wmi_scan(ENFORCEMENT_WMI_EVERY_CYCLE)
         self.add_tag_entities(name='Great Success', tag='Great Success', action_cond=self.SUCCESS_ACTIONS_TEXT)
         self.click_save_button()

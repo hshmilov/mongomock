@@ -48,8 +48,7 @@ class TestEnforcementNoQuery(TestBase):
         assert old_length == new_length
 
     def test_enforcement_invalid(self):
-        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
-        self.enforcements_page.select_trigger()
+        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY, save=False)
         self.enforcements_page.check_conditions()
 
         # Check negative values
