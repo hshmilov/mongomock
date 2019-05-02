@@ -23,7 +23,7 @@
             }),
             navigateNotification(notificationId) {
                 this.fetchNotification(notificationId)
-                this.$router.push({path: `/notification/${notificationId}`})
+                this.$router.push({path: `/notifications/${notificationId}`})
             }
         },
         mounted() {
