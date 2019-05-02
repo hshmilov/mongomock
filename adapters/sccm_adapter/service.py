@@ -104,7 +104,7 @@ class SccmAdapter(AdapterBase):
             )
             connection.set_credentials(username=client_config[consts.USER], password=client_config[consts.PASSWORD])
             with connection:
-                pass  # check that the connection credentials are valid
+                next(connection.query(consts.SCCM_QUERY.format('')))  # Just try to get one result
             return connection
         except Exception as err:
             message = (
@@ -112,7 +112,10 @@ class SccmAdapter(AdapterBase):
                 f"database: {str(client_config[consts.SCCM_DATABASE])}"
             )
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            if 'permission was denied' in str(repr(err)).lower():
+                raise ClientConnectionException(f'Error connecting to SCCM: {str(err)}')
+            else:
+                raise ClientConnectionException(get_exception_string())
 
     def _query_devices_by_client(self, client_name, client_data):
         try:

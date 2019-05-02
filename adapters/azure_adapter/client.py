@@ -47,11 +47,14 @@ class AzureClient(object):
     def get_virtual_machines(self):
         subnets = {}
         for vm in self.compute.virtual_machines.list_all():
-            vm_dict = vm.as_dict()
-            vm_dict['network_profile']['network_interfaces'] = [
-                self._get_iface_dict(iface, subnets) for iface in vm.network_profile.network_interfaces
-            ]
-            yield vm_dict
+            try:
+                vm_dict = vm.as_dict()
+                vm_dict['network_profile']['network_interfaces'] = [
+                    self._get_iface_dict(iface, subnets) for iface in vm.network_profile.network_interfaces
+                ]
+                yield vm_dict
+            except Exception:
+                logger.exception(f'Failed fetching azure vm')
 
     def _get_iface_dict(self, iface_link, subnets):
         try:
@@ -60,7 +63,7 @@ class AzureClient(object):
                                                         iface_id['networkInterfaces'])
         except Exception as e:
             if 'was not found' not in str(e):
-                logger.exception(f'While getting interface {iface_link.id}')
+                logger.exception(f'While getting interface {iface_link}')
             iface_dict = iface_link.as_dict()
             iface_dict['error'] = str(e)
             return iface_dict
@@ -82,13 +85,15 @@ class AzureClient(object):
         return ip_configuration_dict
 
     def _get_public_ip_address_dict(self, ip_address_link):
+        if not ip_address_link:
+            return dict()
         try:
             ip_address_id = self.split_id(ip_address_link.id)
             ip_address = self.network.public_ip_addresses.get(ip_address_id['resourceGroups'],
                                                               ip_address_id['publicIPAddresses'])
         except Exception as e:
             if 'was not found' not in str(e):
-                logger.exception(f'While getting public ip address {ip_address_link.id}')
+                logger.exception(f'While getting public ip address {ip_address_link}')
             ip_address_dict = ip_address_link.as_dict()
             ip_address_dict['error'] = str(e)
             return ip_address_dict
@@ -98,6 +103,8 @@ class AzureClient(object):
         return ip_address_dict
 
     def _get_subnet_dict(self, subnet_link, subnets):
+        if not subnet_link:
+            return dict()
         if subnet_link.id in subnets:
             return subnets[subnet_link.id]
         try:
@@ -106,7 +113,7 @@ class AzureClient(object):
                                               subnet_id['subnets'])
         except Exception as e:
             if 'was not found' not in str(e):
-                logger.exception(f'While getting subnet {subnet_link.id}')
+                logger.exception(f'While getting subnet {subnet_link}')
             subnet_dict = subnet_link.as_dict()
             subnet_dict['error'] = str(e)
             return subnet_dict

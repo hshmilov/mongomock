@@ -34,6 +34,8 @@ class PuppetConnection(object):
 
         self._base_puppet_url = f"{consts.PUPPET_CONNECTION_METHOD}{self.puppet_server_address}" + \
                                 consts.PUPPET_PORT_STRING
+        # Do a basic request just to test connectivity
+        self._session.get(f'{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes', timeout=(5, 30))
 
     def get_device_list(self):
         """ This function returns a json with all the data about all the devices in the server.

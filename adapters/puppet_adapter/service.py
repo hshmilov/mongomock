@@ -109,7 +109,7 @@ class PuppetAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Puppet Server
         """
-        return list(client_data.get_device_list())
+        yield from client_data.get_device_list()
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:

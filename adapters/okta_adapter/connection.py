@@ -169,7 +169,7 @@ class OktaConnection:
                 if self.__fetch_apps:
                     self._get_apps_async(users_page)
                 for user_raw in users_page:
-                    if user_raw.get('id'):
+                    if user_raw.get('id') and users_to_group.get(user_raw.get('id')):
                         user_raw['groups_data'] = list(users_to_group.get(user_raw.get('id')))
                 yield from users_page
                 page_count += 1
