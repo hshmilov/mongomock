@@ -248,7 +248,7 @@
       },
       getDetails(item, field) {
         if (field.name === 'adapters') {
-          return [...item['adapters']].reverse().map(adapter => [adapter])
+          return [...item['adapters']].sort().map(adapter => [adapter])
         }
         return item[`${field.name}_details`]
       }
