@@ -229,4 +229,4 @@ class FortigateAdapter(AdapterBase, Configurable):
     def _on_config_update(self, config):
         self.__dhcp_lease_time = config.get(consts.DHCP_LEASE_TIME, consts.DEFAULT_DHCP_LEASE_TIME)
         self.__interfaces_exclude_list = [interface.strip() for interface
-                                          in (config.get('interfaces_exclude_list') or '').strip(',') if interface]
+                                          in (config.get('interfaces_exclude_list') or '').split(',') if interface]
