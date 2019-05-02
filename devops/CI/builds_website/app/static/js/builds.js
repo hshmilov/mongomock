@@ -374,26 +374,26 @@
         var cloud_state = inst['cloud']['state'];
         if (cloud_state !== 'terminated' && cloud_state !== 'shutting-down' && cloud_state !== 'pending') {
             actions_data = [
-                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate " + inst_name + "?", function (yes_function) { return terminate_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]
+                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate " + inst_name + "?", function (yes_function) { return terminate_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)]
             ];
 
              if (cloud_state === "running") {
-                 actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop " + inst_name + "?", function (yes_function) { return stop_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]);
+                 actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop " + inst_name + "?", function (yes_function) { return stop_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)]);
              }
              else {
-                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]);
+                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)]);
              }
 
              var bot_monitoring = inst['db']['bot_monitoring'];
 
             if (bot_monitoring === "false"){
                 actions_data.unshift(["Enable Bot Monitoring",
-                    wrap_modal_with_td("Are you sure you want to enable the bot monitoring for " + inst_name + "?", function(yes_function) { return enable_bot_monitoring(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)
+                    wrap_modal_with_td("Are you sure you want to enable the bot monitoring for " + inst_name + "?", function(yes_function) { return enable_bot_monitoring(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)
                 ]);
             }
             else {
                 actions_data.unshift(["Disable Bot Monitoring",
-                    wrap_modal_with_td("Are you sure you want to disable the bot monitoring for " + inst_name + "?", function(yes_function) { return disable_bot_monitoring(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)
+                    wrap_modal_with_td("Are you sure you want to disable the bot monitoring for " + inst_name + "?", function(yes_function) { return disable_bot_monitoring(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)
                 ]);
             }
         }
@@ -510,15 +510,15 @@
         var cloud_state = inst['cloud']['state'];
         if (cloud_state !== 'terminated' && cloud_state !== 'shutting-down' && cloud_state !== 'pending') {
             actions_data = [
-                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate " + inst_name + "?", function (yes_function) { return terminate_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)],
-                ["Terminate Group", wrap_modal_with_td("Are you sure you want to terminate " + group_name + "?", function (yes_function) { return terminate_group(yes_function, group_name);}, [], undefined, group_name)]
+                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate " + inst_name + "?", function (yes_function) { return terminate_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)],
+                ["Terminate Group", wrap_modal_with_td("Are you sure you want to terminate " + group_name + "?", function (yes_function) { return terminate_group(yes_function, group_name);}, [], undefined)]
             ];
 
              if (cloud_state === "running") {
-                 actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop " + inst_name + "?", function (yes_function) { return stop_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]);
+                 actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop " + inst_name + "?", function (yes_function) { return stop_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)]);
              }
              else {
-                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]);
+                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)]);
              }
         }
 
