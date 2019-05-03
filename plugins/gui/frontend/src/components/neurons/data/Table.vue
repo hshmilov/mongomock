@@ -5,7 +5,7 @@
   >
     <x-table-wrapper
       :title="tableTitle"
-      :count="count"
+      :count="count.data_to_show"
       :loading="loading"
       :error="content.error"
     >
@@ -165,7 +165,7 @@
         return this.moduleState.content
       },
       count () {
-        return this.moduleState.count.data || this.moduleState.count.data_to_show
+        return this.moduleState.count
       },
       view () {
         return this.moduleState.view
@@ -194,8 +194,9 @@
         return this.pageData.map(item => item[this.idField])
       },
       pageCount () {
-        if (!this.count) return 1
-        return Math.ceil(this.count / this.view.pageSize) - 1
+        let count = this.count.data || this.count.data_to_show
+        if (!count) return 1
+        return Math.ceil(count / this.view.pageSize) - 1
       },
       pageLinkNumbers () {
         // Page numbers that can be navigated to, should include 3 before current and 3 after
@@ -225,7 +226,7 @@
       selectionCount () {
         if (!this.value) return 0
         if (this.allSelected) {
-          return this.count - this.value.ids.length
+          return this.count.data - this.value.ids.length
         }
         return this.value.ids.length
       },
@@ -343,12 +344,12 @@
         this.timer = setTimeout(fetchAuto, this.refresh * 1000)
       },
       onUpdateSelection (selectedList) {
-        if (!this.allSelected && selectedList.length === this.count) {
+        if (!this.allSelected && selectedList.length === this.count.data) {
           this.allSelected = true
         }
         let newIds = this.selectionExcludePage.concat(
           this.allSelected ? this.pageIds.filter(item => !selectedList.includes(item)) : selectedList)
-        if (this.allSelected && newIds.length === this.count) {
+        if (this.allSelected && newIds.length === this.count.data) {
           this.allSelected = false
           newIds = []
         }
