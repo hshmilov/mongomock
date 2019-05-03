@@ -39,10 +39,10 @@ export const updateDataCountQuick = (state, payload) => {
 	count.rule = clearUrlFromQuick(payload.rule)
 
 	if (payload.data !== undefined) {
-		if (count.data === undefined) {
+		if (count.data == undefined) {
 					count.data = payload.data
 					count.data_to_show = payload.data
-					if (payload.data === '1000') {
+					if (payload.data == '1000') {
 							count.data_to_show = '> 1000, loading...'
 					}
 			}
