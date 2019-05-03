@@ -142,6 +142,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
 
     def create_device(self, raw_device_data):
         device = self._new_device_adapter()
+        last_seen = None
 
         uuid = raw_device_data.get('uuid')
         if uuid:
@@ -191,6 +192,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
         if last_scan is not None and last_scan != '':
             try:
                 last_scan_date = datetime.fromtimestamp(int(last_scan))
+                last_seen = last_scan_date
                 device.last_seen = last_scan_date    # The best we have
                 device.last_scan = last_scan_date
             except Exception:
@@ -213,13 +215,19 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
         if last_auth_run is not None and last_auth_run != '':
             try:
                 device.last_auth_run = datetime.fromtimestamp(int(last_auth_run))
+                if not last_seen or last_seen < device.last_auth_run:
+                    last_seen = device.last_auth_run
+                    device.last_seen = last_seen
             except Exception:
                 logger.error(f'Couldn\'t parse last auth run {last_auth_run}')
 
         last_unauth_run = raw_device_data.get('lastUnauthRun')
-        if last_unauth_run is not None and last_unauth_run != '':
+        if last_unauth_run:
             try:
-                device.last_auth_run = datetime.fromtimestamp(int(last_unauth_run))
+                device.last_unauth_run = datetime.fromtimestamp(int(last_unauth_run))
+                if not last_seen or last_seen < device.last_unauth_run:
+                    last_seen = device.last_unauth_run
+                    device.last_seen = last_seen
             except Exception:
                 logger.error(f'Couldn\'t parse last unauth run {last_unauth_run}')
 
