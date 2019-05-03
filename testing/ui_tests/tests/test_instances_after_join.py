@@ -4,13 +4,14 @@ import time
 
 import paramiko
 import pytest
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.wait import wait_until
+from services.adapters.ad_service import AdService
+from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_nexpose_credentials import client_details
 from ui_tests.tests.instances_test_base import TestInstancesBase
-from services.adapters.ad_service import AdService
-from services.adapters.json_file_service import JsonFileService
 
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
 
@@ -67,6 +68,8 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.instances_page.wait_until_node_appears_in_table(NODE_NAME)
 
     def check_password_change(self):
+        # Wait for node to change node_maker password after connection.
+        wait_until(lambda: self.instances_page.get_node_password(NODE_NAME) != '', exc_list=[NoSuchElementException])
         with pytest.raises(paramiko.ssh_exception.AuthenticationException):
             self.connect_node_maker(self._instances[0])
 
