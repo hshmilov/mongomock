@@ -69,6 +69,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._clients_lock = RLock()
         self._clients = {}
         self._clients_collection = self._get_collection('clients')
+        self.__is_in_mock_mode = os.environ.get('AXONIUS_MOCK_MODE') == 'TRUE'
+        self.__adapter_mock = AdapterMock(self)
 
         self._send_reset_to_ec()
 
@@ -79,9 +81,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._thread_pool = LoggedThreadPoolExecutor(max_workers=50)
 
         self.__last_fetch_time = None
-
-        self.__is_in_mock_mode = os.environ.get('AXONIUS_MOCK_MODE') == 'TRUE'
-        self.__adapter_mock = AdapterMock(self)
 
     def _on_config_update(self, config):
         logger.info(f"Loading AdapterBase config: {config}")
