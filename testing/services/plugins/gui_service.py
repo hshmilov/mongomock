@@ -600,6 +600,9 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def get_signup_collection(self):
         return self.db.client[self.plugin_name][Signup.SignupCollection]
 
+    def get_report_pdf(self, report_name, *vargs, **kwargs):
+        return self.get('export_report/{}'.format(report_name), session=self._session, *vargs, **kwargs)
+
     def get_saved_views(self):
 
         user_view = self.db.get_collection('gui', 'user_views')

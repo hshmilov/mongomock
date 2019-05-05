@@ -8,7 +8,6 @@ from math import pi, cos, sin, floor
 from datetime import datetime
 import logging
 
-from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION
 from axonius.entities import EntityType
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase
