@@ -36,25 +36,19 @@ class SMTPService(WeaveService):
     def get_dockerfile(self, *args, **kwargs):
         return fr'''
         FROM golang:1.11.2
-             
-        WORKDIR /go/src/app
-        RUN curl https://glide.sh/get | sh
-        RUN git clone https://github.com/flashmob/go-guerrilla.git || echo failed
 
-        WORKDIR /go/src/app/go-guerrilla
+        WORKDIR /go/src
+        RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
         
-        RUN glide install
-        RUN make dependencies || echo dependencies failed
-        RUN make guerrillad | echo guerrillad failed
+        RUN git clone --depth=50 --branch=master https://github.com/flashmob/go-guerrilla.git github.com/flashmob/go-guerrilla
         
-        # it fails if you don't play with it, like a lovely girl, you need to persuade it
+        WORKDIR /go/src/github.com/flashmob/go-guerrilla
         
-        RUN make dependencies || echo dependencies failed
-        RUN make guerrillad || echo guerrillad failed
-        
+        RUN make guerrillad || echo dependencies failed
+
         COPY goguerrilla ./
         
-        CMD ["/go/src/app/go-guerrilla/guerrillad", "serve"]
+        CMD ["/go/src/github.com/flashmob/go-guerrilla/guerrillad", "serve"]
         '''[1:]
 
     @retry(stop_max_attempt_number=200, wait_fixed=500)
