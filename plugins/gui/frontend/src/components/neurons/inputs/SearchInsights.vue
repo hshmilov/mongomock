@@ -74,6 +74,7 @@
     mounted() {
       if (this.$route.query.search) {
         this.searchValue = this.$route.query.search
+        this.onClick()
       }
     },
     methods: {
