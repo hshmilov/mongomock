@@ -106,6 +106,10 @@
       first: {
         type: Boolean,
         default: false
+      },
+      rebuild: {
+        type: Boolean,
+        default: false
       }
     },
     data () {
@@ -165,7 +169,7 @@
       }
     },
     updated () {
-      if (this.autoQuery) {
+      if (this.autoQuery || this.rebuild) {
           this.compileExpression()
       }
       if (this.first) {
@@ -248,7 +252,7 @@
         } else {
           this.condition = condition
         }
-        if (this.autoQuery) {
+        if (this.autoQuery || this.rebuild) {
           this.compileExpression()
         }
       },
