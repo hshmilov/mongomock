@@ -70,8 +70,18 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
     def check_password_change(self):
         # Wait for node to change node_maker password after connection.
         wait_until(lambda: self.instances_page.get_node_password(NODE_NAME) != '', exc_list=[NoSuchElementException])
-        with pytest.raises(paramiko.ssh_exception.AuthenticationException):
+        try:
+            self.logger.info(
+                f'{NODE_NAME} node_maker password changed to:{self.instances_page.get_node_password(NODE_NAME)}')
+            self.logger.info('Trying to connect to node_maker with old password')
             self.connect_node_maker(self._instances[0])
+            pytest.xfail('No exception was raised while trying connect to node with old password.')
+        except paramiko.ssh_exception.AuthenticationException:
+            self.logger.info('Failed to connect node with old password as expected.')
+        except Exception as exc:
+            self.logger.exception(
+                'Failed to connect to node with old password as expected but a bad exception was raised.')
+            raise
 
         # Note that the usage of "{}" instead of NODE_NAME is due to a bug that is
         # caused because of the restart_system_on_boot because the master is derived
