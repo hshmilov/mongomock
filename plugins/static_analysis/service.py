@@ -501,7 +501,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                         user = user[0]
                         user_department = user.get_first_data('user_department')
                         if user_department:
-                            device_last_used_users_departments.update(set(user_department))
+                            device_last_used_users_departments.add(user_department)
                         users_to_department[last_used_user] = user_department
 
             # Now that we have all departments for this device lets add the appropriate adapterdata.
