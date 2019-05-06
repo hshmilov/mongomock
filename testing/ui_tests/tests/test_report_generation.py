@@ -75,6 +75,9 @@ class TestReportGeneration(TestBase):
             decoded_links = map(urllib.parse.unquote, links)
             assert any(self.TEST_REPORT_QUERY_NAME in link for link in decoded_links)
 
+            third_page = doc.pages[2]
+            assert third_page.extractText().count('avigdor') == 10
+
     def _extract_report_pdf_doc(self, report_name):
         self.reports_page.switch_to_page()
         self.reports_page.wait_for_table_to_load()
