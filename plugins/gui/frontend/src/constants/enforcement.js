@@ -66,7 +66,7 @@ export const actionsMeta = {
         title: 'Create ServiceNow Incident'
     },
     create_service_now_incident_per_entity: {
-        title: 'Create ServiceNow Incident Per Entity'
+        title: 'Create ServiceNow Incident per Entity'
     },
     create_jira_incident: {
         title: 'Create Jira Issue'
@@ -81,7 +81,7 @@ export const actionsMeta = {
         title: 'Send CSV to Share'
     },
     send_email_to_entities: {
-        title: 'Send Email To Entities'
+        title: 'Send Email to Entities'
     },
     notify_syslog: {
         title: 'Send to Syslog System'
