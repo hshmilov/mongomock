@@ -216,6 +216,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self.__ldap_page_size = config.get('ldap_page_size', DEFAULT_LDAP_PAGE_SIZE)
         self.__ldap_connection_timeout = config.get('ldap_connection_timeout', DEFAULT_LDAP_CONNECTION_TIMEOUT)
         self.__ldap_recieve_timeout = config.get('ldap_recieve_timeout', DEFAULT_LDAP_RECIEVE_TIMEOUT)
+        self.__ldap_field_to_exclude = config.get('ldap_field_to_exclude') or []
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
 
         # Change interval of report generation thread
@@ -965,6 +966,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     no_timestamp_count += 1
 
                 device = self._new_device_adapter()
+                if self.__ldap_field_to_exclude:
+                    ad_object_category = device_raw.get('objectCategory') or ''
+                    if isinstance(ad_object_category, str) and ad_object_category.strip():
+                        ad_object_category = ad_object_category.strip()
+                        if any(item.strip() and item.strip() in ad_object_category
+                               for item in self.__ldap_field_to_exclude):
+                            logger.debug(f'Skipping device {device_raw.get("distinguishedName")}, excluded')
+                            continue
+
                 device.ad_dc_source = device_raw.get('AXON_DC_ADDR')
                 self._parse_generic_ad_raw_data(device, device_raw)
                 try:
@@ -1673,9 +1683,17 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     'type': 'number'
                 },
                 {
-                    'name': 'ldap_receive_timeout',
+                    'name': 'ldap_recieve_timeout',
                     'title': 'LDAP socket receive timeout (seconds)',
                     'type': 'number'
+                },
+                {
+                    'name': 'ldap_field_to_exclude',
+                    'title': 'Devices to exclude by objectCategory',
+                    'type': 'array',
+                    'items': {
+                        'type': 'string'
+                    }
                 }
             ],
             "required": [
@@ -1687,7 +1705,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 'ldap_page_size',
                 'add_ip_conflict',
                 'ldap_connection_timeout',
-                'ldap_receive_timeout',
+                'ldap_recieve_timeout',
                 'verbose_auth_notifications'
             ],
             "pretty_name": "Active Directory Configuration",
@@ -1706,7 +1724,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             'should_get_nested_groups_for_user': True,
             'ldap_page_size': DEFAULT_LDAP_PAGE_SIZE,
             'ldap_connection_timeout': DEFAULT_LDAP_CONNECTION_TIMEOUT,
-            'ldap_receive_timeout': DEFAULT_LDAP_RECIEVE_TIMEOUT,
+            'ldap_recieve_timeout': DEFAULT_LDAP_RECIEVE_TIMEOUT,
+            'ldap_field_to_exclude': []
         }
 
     @classmethod
