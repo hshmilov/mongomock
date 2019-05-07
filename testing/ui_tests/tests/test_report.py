@@ -186,9 +186,9 @@ class TestReport(TestBase):
             self.reports_page.wait_for_table_to_load()
             self.reports_page.click_report(self.TEST_REPORT_EDIT)
             self.reports_page.wait_for_spinner_to_end()
-            self.reports_page.select_frequency(ReportFrequency.monthly)
             new_subject = self.TEST_REPORT_EDIT + '_changed'
             self.reports_page.fill_email_subject(new_subject)
+            self.reports_page.select_frequency(ReportFrequency.monthly)
             self.reports_page.click_save()
             self.reports_page.wait_for_table_to_load()
             self.reports_page.wait_for_spinner_to_end()

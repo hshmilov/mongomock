@@ -343,13 +343,15 @@ class ReportGenerator(object):
         Create a bar for each item of given data, with width according to its count and relative to the largest data.
         Combine create bars to a histogram, with remainder indicating amount of bars not shown due to limit.
 
-        :param data:
-        :param limit: How many bars to show - textual takes up double row per bar
-        :param textual:
+        :param data: the data object that contain the value and the name (description)
         :return:
         """
         value = data[0].get('value', 0)
         title = data[0].get('name', 0)
+        try:
+            value = str(value) if str(value).isnumeric() else '{0:.2f}'.format(value)
+        except ValueError:
+            logger.error('The summary chart value is not numeric')
 
         return self.templates['summary'].render({'value': value,
                                                  'title': title})
