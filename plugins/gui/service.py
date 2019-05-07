@@ -4848,22 +4848,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         signup_collection = self._get_collection(Signup.SignupCollection)
         signup = signup_collection.find_one({})
         if signup:
-            customer = signup.get(Signup.CompanyField, 'signup-not-set')
-            if customer in [SIGNUP_TEST_CREDS[Signup.CompanyField], SIGNUP_TEST_COMPANY_NAME]:
+            customer = signup.get(Signup.CompanyField, 'company-not-set')
+            if not customer or customer in [SIGNUP_TEST_CREDS[Signup.CompanyField], SIGNUP_TEST_COMPANY_NAME]:
                 return
-        else:
-            customer = 'not-set'
-        # referrer
-        values['tid'] = 'UA-137924837-1'
-        values['dr'] = f'https://{customer}'
-        values['dh'] = customer
-        if 'dl' in values:
-            del values['dl']
-        response = requests.request(request.method,
-                                    path,
-                                    params=values)
-        if response.status_code != 200:
-            logger.error('Failed to submit ga data {response}')
+
+            # referrer
+            values['tid'] = 'UA-137924837-1'
+            values['dr'] = f'https://{customer}'
+            values['dh'] = customer
+            if 'dl' in values:
+                del values['dl']
+            response = requests.request(request.method,
+                                        path,
+                                        params=values)
+            if response.status_code != 200:
+                logger.error('Failed to submit ga data {response}')
 
     @property
     def plugin_subtype(self) -> PluginSubtype:
