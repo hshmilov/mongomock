@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    zscaler_adapter: {
+        title: 'Zscaler Adapter - BETA',
+        description: 'Zscaler Web Security, part of the Zscaler Cloud Security Platform, is a secure Internet and web gateway delivered as a service, stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more.'
+    },
     alertlogic_adapter: {
         title: 'Alert Logic - BETA',
         description: 'Alert Logic provides threat, log, and web security management solution.'

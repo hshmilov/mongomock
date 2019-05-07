@@ -257,19 +257,34 @@ class RESTConnection(ABC):
                                              json=request_json, data=request_data,
                                              timeout=self._session_timeout, proxies=self._proxies,
                                              auth=auth_dict)
+        except requests.HTTPError as e:
+            self._handle_http_error(e)
+
+        return self._handle_response(response,
+                                     raise_for_status=raise_for_status,
+                                     use_json_in_response=use_json_in_response,
+                                     return_response_raw=return_response_raw)
+
+    @staticmethod
+    def _handle_http_error(error):
+        try:
+            # Try get the error if it comes back.
+            try:
+                rp = error.response.json()
+            except Exception:
+                rp = str(error.response.content)
+            message = f'{str(error)}: {rp}'
+        except Exception:
+            message = str(error)
+        raise RESTRequestException(message)
+
+    def _handle_response(self, response, raise_for_status=True, use_json_in_response=True, return_response_raw=False):
+        try:
             if raise_for_status:
                 response.raise_for_status()
         except requests.HTTPError as e:
-            try:
-                # Try get the error if it comes back.
-                try:
-                    rp = response.json()
-                except Exception:
-                    rp = str(response.content)
-                message = f'{str(e)}: {rp}'
-            except Exception:
-                message = str(e)
-            raise RESTRequestException(message)
+            self._handle_http_error(e)
+
         if use_json_in_response:
             try:
                 return response.json()
