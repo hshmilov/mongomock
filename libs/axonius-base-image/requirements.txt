@@ -10,7 +10,7 @@ requests==2.18.4
 JSON-log-formatter==0.2.0
 promise==2.1
 pyasn1==0.3.7
-ldap3==2.3
+ldap3==2.5
 dnspython==1.15.0
 boto3==1.9.22
 namedlist==1.7
