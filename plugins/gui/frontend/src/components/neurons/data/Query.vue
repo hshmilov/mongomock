@@ -169,7 +169,7 @@
                 let patternParts = []
                 this.selected.forEach((field) => {
                     // Filter fields containing image data, since it is not relevant for searching
-                    if (field === 'image') return
+                    if (field.includes('image')) return
                     patternParts.push(field + ' == regex("{val}", "i")')
                 })
                 return patternParts.join(' or ')

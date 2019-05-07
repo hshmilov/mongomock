@@ -54,6 +54,7 @@ class EntitiesPage(Page):
     TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
     TABLE_ROW_CHECKBOX_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
+    TABLE_ROW_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_HEADER_XPATH = '//div[@class=\'table-container\']/table/thead/tr'
@@ -394,6 +395,9 @@ class EntitiesPage(Page):
     def click_save_query(self):
         self.driver.find_element_by_id(self.SAVE_QUERY_ID).click()
 
+    def is_save_query_disabled(self):
+        return 'disabled' in self.driver.find_element_by_id(self.SAVE_QUERY_ID).get_attribute('class')
+
     def fill_query_name(self, name):
         self.fill_text_field_by_element_id(self.SAVE_QUERY_NAME_ID, name)
 
@@ -407,13 +411,16 @@ class EntitiesPage(Page):
         self.driver.find_element_by_id(self.SAVE_QUERY_SAVE_BUTTON_ID).click()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
+    def save_query(self, query_name):
+        self.click_save_query()
+        self.fill_query_name(query_name)
+        self.click_save_query_save_button()
+
     def run_filter_and_save(self, query_name, query_filter):
         self.fill_filter(query_filter)
         self.enter_search()
         self.wait_for_table_to_load()
-        self.click_save_query()
-        self.fill_query_name(query_name)
-        self.click_save_query_save_button()
+        self.save_query(query_name)
 
     def customize_view_and_save(self, query_name, page_size, sort_field, toggle_columns, query_filter):
         self.select_page_size(page_size)
@@ -646,3 +653,13 @@ class EntitiesPage(Page):
 
     def find_missing_email_server_notification(self):
         return self.find_element_by_text(self.MISSING_EMAIL_SETTINGS_TEXT)
+
+    def click_expand_row(self, index=1):
+        self.driver.find_element_by_css_selector(self.TABLE_ROW_EXPAND_CSS.format(child_index=index)).click()
+
+    def get_column_data_count_true(self, col_name):
+        col_position = self.count_sort_column(col_name)
+        if not col_position:
+            return []
+        return [len(el.find_elements_by_css_selector('.x-boolean-view .checkmark')) for el in
+                self.driver.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]

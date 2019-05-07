@@ -1,5 +1,7 @@
 import datetime
 from typing import List
+import pytest
+from selenium.common.exceptions import NoSuchElementException
 
 from retrying import retry
 from flaky import flaky
@@ -222,18 +224,11 @@ class TestEnforcementActions(TestBase):
         smtp_service.take_process_ownership()
 
         with smtp_service.contextmanager():
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-            toggle = self.settings_page.find_send_emails_toggle()
-            self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
-            self.settings_page.fill_email_host(smtp_service.fqdn)
-            self.settings_page.fill_email_port(smtp_service.port)
-            self.settings_page.save_and_wait_for_toaster()
+            self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
 
             self.devices_page.switch_to_page()
-            self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME,
-                                                  AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
-                                                                                JSON_ADAPTER_FILTER))
+            self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, AD_LAST_OR_ADDED_QUERY.format(
+                added_filter=self.devices_page.JSON_ADAPTER_FILTER))
             self.enforcements_page.switch_to_page()
             self.enforcements_page.click_new_enforcement()
             self.enforcements_page.wait_for_spinner_to_end()
@@ -241,21 +236,42 @@ class TestEnforcementActions(TestBase):
             self.enforcements_page.select_trigger()
             self.enforcements_page.check_scheduling()
             self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.check_conditions()
             self.enforcements_page.save_trigger()
             self.enforcements_page.add_send_email()
             recipient = generate_random_valid_email()
             customized_body = 'What a beautiful and insightful alert sent by email directly from the enforcement ' \
                               'center of the best Cybersecurity Asset Management system. Axonius is the most ' \
                               'confident place to secure your precious network assets.'
-            self.enforcements_page.email_recipients('Special Customized Email', recipient,
-                                                    customized_body)
+            self.enforcements_page.fill_send_email_config('Special Customized Email', recipient,
+                                                          customized_body)
             self.enforcements_page.click_save_button()
             self.base_page.run_discovery()
             smtp_service.verify_email_send(recipient)
+        self.settings_page.remove_email_server()
 
-        self.settings_page.switch_to_page()
-        self.settings_page.click_global_settings()
-        toggle = self.settings_page.find_send_emails_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
-        self.settings_page.click_save_button()
+    def test_enforcement_email_validation(self):
+        smtp_service = SMTPService()
+        smtp_service.take_process_ownership()
+
+        with smtp_service.contextmanager():
+            self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
+
+            self.devices_page.switch_to_page()
+            self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, AD_LAST_OR_ADDED_QUERY.format(
+                added_filter=self.devices_page.JSON_ADAPTER_FILTER))
+            self.enforcements_page.switch_to_page()
+            self.enforcements_page.click_new_enforcement()
+            self.enforcements_page.wait_for_spinner_to_end()
+            self.enforcements_page.fill_enforcement_name(ENFORCEMENT_NAME)
+            self.enforcements_page.select_trigger()
+            self.enforcements_page.check_scheduling()
+            self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
+            self.enforcements_page.save_trigger()
+            self.enforcements_page.add_send_email()
+            with pytest.raises(NoSuchElementException):
+                self.enforcements_page.fill_send_email_config('Special Customized Email')
+                # Bad - means the form is valid although is is missing required fields
+
+            # Good - means the button is disabled, as wanted
+            assert self.enforcements_page.find_disabled_save_action()
+        self.settings_page.remove_email_server()

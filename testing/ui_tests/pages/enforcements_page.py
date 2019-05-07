@@ -56,8 +56,8 @@ class ActionCategory:
 
 
 class EnforcementsPage(EntitiesPage):
-    ENFORCEMENT_NAME_ID = 'enforcement_name'
     NEW_ENFORCEMENT_BUTTON = '+ New Enforcement'
+    ENFORCEMENT_NAME_ID = 'enforcement_name'
     TRIGGER_CONTAINER_CSS = '.x-trigger'
     TRIGGER_CONF_CONTAINER_CSS = '.x-trigger-config'
     MAIN_ACTION_TEXT = 'main action'
@@ -513,12 +513,13 @@ class EnforcementsPage(EntitiesPage):
         self.fill_text_field_by_css_selector(self.TABLE_SEARCH_INPUT, text)
         self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))
 
-    def email_recipients(self, name, recipient, body=None):
+    def fill_send_email_config(self, name, recipient=None, body=None):
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.fill_text_field_by_css_selector('.md-input', recipient, context=self.find_field_by_label('Recipients'))
+        if recipient:
+            self.fill_text_field_by_css_selector('.md-input', recipient, context=self.find_field_by_label('Recipients'))
         if body:
             custom_message_element = self.driver.find_element_by_xpath(
                 self.DIV_BY_LABEL_TEMPLATE.format(label_text='Custom Message (up to 200 characters)')
@@ -527,3 +528,10 @@ class EnforcementsPage(EntitiesPage):
             assert custom_message_element.find_element_by_tag_name('textarea').get_attribute('value') == body[:200]
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
+
+    def find_disabled_save_action(self):
+        return self.driver.find_element_by_css_selector(self.ACTION_CONF_CONTAINER_CSS).find_element_by_xpath(
+            self.DISABLED_BUTTON_XPATH.format(button_text=self.SAVE_BUTTON))
+
+    def find_existing_trigger(self):
+        return self.wait_for_element_present_by_text('Trigger')

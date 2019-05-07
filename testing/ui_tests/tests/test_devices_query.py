@@ -12,6 +12,7 @@ class TestDevicesQuery(TestBase):
     SEARCH_TEXT_WINDOWS = 'windows'
     SEARCH_TEXT_TESTDOMAIN = 'testdomain'
     ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
+    SAVED_QUERY_NAME = 'query to save'
 
     def test_bad_subnet(self):
         self.dashboard_page.switch_to_page()
@@ -71,6 +72,8 @@ class TestDevicesQuery(TestBase):
         self.devices_page.fill_filter(self.SEARCH_TEXT_TESTDOMAIN)
         self.devices_page.open_search_list()
         self.devices_page.select_search_everywhere()
+        self._check_search_text_result(self.SEARCH_TEXT_TESTDOMAIN)
+        self.devices_page.click_query_wizard()
         self._check_search_text_result(self.SEARCH_TEXT_TESTDOMAIN)
 
     def _test_comp_op_change(self):
@@ -419,3 +422,25 @@ class TestDevicesQuery(TestBase):
         self.devices_page.select_query_adapter(self.users_page.VALUE_ADAPTERS_AD, parent=expressions[0])
         fields = list(self.devices_page.get_all_fields_in_field_selection())
         assert 'AD Use DES Key Only' in fields
+
+    def test_save_query(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        self.devices_page.add_query_expression()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 2
+        self.devices_page.toggle_left_bracket(expressions[0])
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
+        self.devices_page.fill_query_value(DEVICE_THIRD_IP, expressions[0])
+        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[1])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
+        self.devices_page.fill_query_value(DEVICE_MAC, expressions[1])
+        self.devices_page.toggle_right_bracket(expressions[1])
+        assert not self.devices_page.is_save_query_disabled()
+
+        self.devices_page.toggle_right_bracket(expressions[1])
+        assert self.devices_page.is_save_query_disabled()
+        self.devices_page.toggle_right_bracket(expressions[1])
+        assert not self.devices_page.is_save_query_disabled()

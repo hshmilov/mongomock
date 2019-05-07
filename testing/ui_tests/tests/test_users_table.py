@@ -6,6 +6,8 @@ class TestUsersTable(TestEntitiesTable):
     USER_NAME_COLUMN = 'User Name'
     DOMAIN_COLUMN = 'Domain'
     MAIL_COLUMN = 'Mail'
+    ADMIN_COLUMN = 'Is Admin'
+    LAST_SEEN_COLUMN = 'Last Seen In Domain'
     QUERY_FILTER_USERNAME = 'specific_data.data.username%20%3D%3D%20regex(%22m%22)'
     QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
                    'data.domain,specific_data.data.last_seen,specific_data.data.is_admin,labels'
@@ -106,3 +108,20 @@ class TestUsersTable(TestEntitiesTable):
                                               self.QUERY_FIELDS,
                                               self.QUERY_FILTER_USERNAME)
         self.users_page.assert_csv_match_ui_data(result)
+
+    def test_user_expand_row(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        self.users_page.query_user_name_contains('avidor')
+        self.users_page.click_expand_row()
+
+        user_names = self.users_page.get_column_data(self.USER_NAME_COLUMN)[0].split('\n')
+        assert len(user_names) == 3
+        assert f'{user_names[2]}, {user_names[1]}' == user_names[0]
+
+        last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
+        assert len(last_seens) == 3
+        assert f'{last_seens[2]}, {last_seens[1]}' == last_seens[0]
+
+        assert self.users_page.get_column_data_count_true(self.ADMIN_COLUMN)[0] == 2

@@ -142,7 +142,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
 
     vlan_list = ListField(DeviceAdapterVlan, 'Vlans', description='A list of vlans in this interface')
 
-    # Operational status enum from cisco reference, which is industry standart.
+    # Operational status enum from Cisco reference, which is industry standard.
     operational_status = Field(
         str, "Operational Status", enum=["Up", "Down", "Testing", "Unknown", "Dormant", "Nonpresent", "LowerLayerDown"]
     )

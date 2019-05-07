@@ -39,14 +39,7 @@ class TestReport(TestBase):
         smtp_service.take_process_ownership()
 
         with smtp_service.contextmanager():
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-
-            self.settings_page.set_send_emails_toggle()
-
-            self.settings_page.fill_email_host(EmailSettings.host)
-            self.settings_page.fill_email_port(EmailSettings.port)
-            self.settings_page.save_and_wait_for_toaster()
+            self.settings_page.add_email_server(EmailSettings.host, EmailSettings.port)
 
             self.reports_page.get_to_new_report_page()
             report_name = 'test_scheduling'
@@ -71,6 +64,7 @@ class TestReport(TestBase):
             self.reports_page.wait_for_spinner_to_end()
             assert self.reports_page.is_frequency_set(ReportFrequency.daily)
             assert self.reports_page.is_generated()
+        self.settings_page.remove_email_server()
 
     def test_save_disabled(self):
         self.reports_page.switch_to_page()
@@ -100,17 +94,7 @@ class TestReport(TestBase):
         smtp_service.take_process_ownership()
 
         with smtp_service.contextmanager():
-            self.settings_page.switch_to_page()
-            # to stop "No report generated. Press "Discover Now" to generate."
-            self.base_page.run_discovery()
-
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-            toggle = self.settings_page.find_send_emails_toggle()
-            self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
-            self.settings_page.fill_email_host(smtp_service.fqdn)
-            self.settings_page.fill_email_port(smtp_service.port)
-            self.settings_page.click_save_button()
+            self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
 
             self.reports_page.switch_to_page()
             self.reports_page.click_new_report()
@@ -131,27 +115,14 @@ class TestReport(TestBase):
 
             smtp_service.verify_email_send(recipient)
 
-        self.settings_page.switch_to_page()
-        self.settings_page.click_global_settings()
-        toggle = self.settings_page.find_send_emails_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
-        self.settings_page.click_save_button()
+        self.settings_page.remove_email_server()
 
     def test_test_now_with_tls_email_server(self):
         smtp_service = SMTPService()
         smtp_service.take_process_ownership()
 
         with smtp_service.contextmanager():
-            self.settings_page.switch_to_page()
-            # to stop "No report generated. Press "Discover Now" to generate."
-            self.base_page.run_discovery()
-
-            self.settings_page.switch_to_page()
-            self.settings_page.click_global_settings()
-            toggle = self.settings_page.find_send_emails_toggle()
-            self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
-            self.settings_page.fill_email_host(smtp_service.fqdn)
-            self.settings_page.fill_email_port(smtp_service.port)
+            self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
             goguerrilla_basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                '../../services/standalone_services/goguerrilla'))
 
@@ -178,12 +149,7 @@ class TestReport(TestBase):
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
             smtp_service.verify_email_send(recipient)
-
-        self.settings_page.switch_to_page()
-        self.settings_page.click_global_settings()
-        toggle = self.settings_page.find_send_emails_toggle()
-        self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
-        self.settings_page.click_save_button()
+        self.settings_page.remove_email_server()
 
     def test_create_and_edit_report(self):
         smtp_service = SMTPService()
@@ -225,6 +191,7 @@ class TestReport(TestBase):
             self.reports_page.fill_email_subject(new_subject)
             self.reports_page.click_save()
             self.reports_page.wait_for_table_to_load()
+            self.reports_page.wait_for_spinner_to_end()
             self.reports_page.click_report(self.TEST_REPORT_EDIT)
             self.reports_page.wait_for_spinner_to_end()
 

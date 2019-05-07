@@ -505,3 +505,17 @@ class SettingsPage(Page):
         if days_remaining is not None:
             self.fill_datepicker_date(datetime.now() + timedelta(days_remaining))
             self.close_datepicker()
+
+    def add_email_server(self, host, port):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.click_toggle_button(self.find_send_emails_toggle(), make_yes=True, scroll_to_toggle=False)
+        self.fill_email_host(host)
+        self.fill_email_port(port)
+        self.save_and_wait_for_toaster()
+
+    def remove_email_server(self):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.click_toggle_button(self.find_send_emails_toggle(), make_yes=False, scroll_to_toggle=False)
+        self.save_and_wait_for_toaster()

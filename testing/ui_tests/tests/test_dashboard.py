@@ -11,7 +11,8 @@ class TestDashboard(TestBase):
                       ' or specific_data.data.adapter_properties == "Manager")))'
     COVERED_QUERY = '((specific_data.data.adapter_properties == "Agent" '\
                     'or specific_data.data.adapter_properties == "Manager"))'
-    SUMMARY_CARD_QUERY = 'specific_data.data.hostname == exists(true)'
+    SUMMARY_CARD_QUERY_DEVICES = 'specific_data.data.hostname == exists(true)'
+    SUMMARY_CARD_QUERY_USERS = 'specific_data.data.logon_count == exists(true) and specific_data.data.logon_count > 0'
     OS_WINDOWS_QUERY = 'specific_data.data.os.type == "Windows"'
     LAST_SEEN_7_DAY_QUERY = 'specific_data.data.last_seen < date("NOW - 7d")'
     INTERSECTION_QUERY = f'({OS_WINDOWS_QUERY}) and ({LAST_SEEN_7_DAY_QUERY})'
@@ -20,7 +21,8 @@ class TestDashboard(TestBase):
     NO_OS_QUERY = 'not (specific_data.data.os.type == exists(true))'
     SEGMENTATION_PIE_CARD_QUERY = 'specific_data.data.hostname == '
     LONG_TEXT_FOR_CARD_TITLE = 'a very long chart name with more than 30 characters in the chart title'
-    TEST_SUMMARY_TITLE = 'test summary'
+    TEST_SUMMARY_TITLE_DEVICES = 'test summary devices'
+    TEST_SUMMARY_TITLE_USERS = 'test summary users'
     TEST_INTERSECTION_TITLE = 'test intersection'
     TEST_SEGMENTATION_HISTOGRAM_TITLE = 'test segmentation histogram'
     TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
@@ -124,28 +126,40 @@ class TestDashboard(TestBase):
     def test_dashboard_summary_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', self.TEST_SUMMARY_TITLE)
+        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', self.TEST_SUMMARY_TITLE_DEVICES)
         self.dashboard_page.wait_for_spinner_to_end()
-        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE)
+        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_DEVICES)
         result_count = int(summary_chart.text)
         summary_chart.click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() == result_count
-        assert self.devices_page.find_search_value() == self.SUMMARY_CARD_QUERY
+        assert self.devices_page.find_search_value() == self.SUMMARY_CARD_QUERY_DEVICES
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.remove_card(self.TEST_SUMMARY_TITLE)
+        self.dashboard_page.remove_card(self.TEST_SUMMARY_TITLE_DEVICES)
+
+        self.dashboard_page.add_summary_card('Users', 'Logon Count', 'Count', self.TEST_SUMMARY_TITLE_USERS)
+        self.dashboard_page.wait_for_spinner_to_end()
+        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_USERS)
+        result_count = int(summary_chart.text)
+        summary_chart.click()
+        self.users_page.wait_for_table_to_load()
+        assert self.users_page.count_entities() == result_count
+        assert self.users_page.find_search_value() == self.SUMMARY_CARD_QUERY_USERS
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.remove_card(self.TEST_SUMMARY_TITLE_USERS)
 
     def test_new_chart_stress(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         for i in range(10):
-            self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', f'{self.TEST_SUMMARY_TITLE}{i}')
+            self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count',
+                                                 f'{self.TEST_SUMMARY_TITLE_DEVICES}{i}')
             self.dashboard_page.wait_for_spinner_to_end()
-            self.dashboard_page.get_card(f'{self.TEST_SUMMARY_TITLE}{i}')
+            self.dashboard_page.get_card(f'{self.TEST_SUMMARY_TITLE_DEVICES}{i}')
         last_card = self.dashboard_page.get_all_cards()[-1]
         assert self.dashboard_page.get_title_from_card(last_card) == 'New Chart'
         for j in range(10):
-            self.dashboard_page.remove_card(f'{self.TEST_SUMMARY_TITLE}{j}')
+            self.dashboard_page.remove_card(f'{self.TEST_SUMMARY_TITLE_DEVICES}{j}')
             self.dashboard_page.wait_for_spinner_to_end()
 
     def test_dashboard_segmentation_chart(self):
@@ -219,3 +233,28 @@ class TestDashboard(TestBase):
         assert users_tables_count == dashboard_users_table_count
         assert self.users_page.find_search_value() == string_to_search
         assert any(user_name in s for s in self.users_page.get_all_table_rows()[0])
+
+    def test_dashboard_search_url(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.driver.get(f'{self.driver.current_url}dashboard/explorer?search=dc')
+        self.dashboard_page.wait_for_table_to_load()
+        wait_until(self._does_user_appear)
+        assert self.dashboard_page.get_all_tables_counters() == [4, 0]
+
+    def test_dashboard_single_demo_view(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.switch_to_page()
+
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_load()
+        self.devices_queries_page.wait_for_spinner_to_end()
+        assert len(self.devices_queries_page.find_query_name_by_part('DEMO')) == 1
+
+        self.dashboard_page.switch_to_page()
+        self.driver.refresh()
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_load()
+        self.devices_queries_page.wait_for_spinner_to_end()
+        assert len(self.devices_queries_page.find_query_name_by_part('DEMO')) == 1
