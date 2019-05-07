@@ -37,7 +37,7 @@ from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts import adapter_consts
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
+from axonius.consts.gui_consts import (ADAPTERS_DATA,
                                        EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
                                        EXEC_REPORT_THREAD_ID,
@@ -62,7 +62,8 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        FeatureFlagsNames,
                                        REPORTS_DELETED,
                                        SIGNUP_TEST_CREDS,
-                                       SIGNUP_TEST_COMPANY_NAME)
+                                       SIGNUP_TEST_COMPANY_NAME,
+                                       ENCRYPTION_KEY_PATH)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,

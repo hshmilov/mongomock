@@ -3,8 +3,6 @@ import subprocess
 import time
 from pathlib import Path
 
-import urllib3
-
 CORTEX_PATH = Path('/home/ubuntu/cortex')
 AXONIUS_SETTINGS_PATH = CORTEX_PATH / '.axonius_settings'
 BOOTED_FOR_PRODUCTION_MARKER_PATH = AXONIUS_SETTINGS_PATH / '.booted_for_production'

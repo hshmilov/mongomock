@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from axonius_system import CORTEX_PATH, CUSTOMER_CONF_RELATIVE_PATH
+from system_consts import CORTEX_PATH, CUSTOMER_CONF_RELATIVE_PATH
 from exclude_helper import EXCLUDE_LIST_KEY, ADD_TO_EXCLUDE_KEY, REMOVE_FROM_EXCLUDE_KEY
 from ui_tests.tests.ui_test_base import TestBase
 

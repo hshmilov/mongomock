@@ -16,7 +16,7 @@ def destroy(keep_diag=True, keep_tunnel=True):
     host connection(running container and the image)
     """
     client = docker.from_env()
-    instances_dockers_container_names_substrings_to_keep = ['tunnler', 'weave', 'grid']
+    instances_dockers_container_names_substrings_to_keep = ['tunnler', 'weave', 'grid', 'proxy-socat']
     instances_docker_tag_substring_to_keep = ['socat', 'weave', 'selenium']
 
     for container in client.containers.list():

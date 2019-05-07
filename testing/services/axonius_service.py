@@ -1,22 +1,19 @@
-import stat
-
 import pytest
 import glob
 import importlib
 import inspect
 import os
 import random
-import shlex
 import string
 import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
 
+from axonius.consts.gui_consts import ENCRYPTION_KEY_FILENAME
 from axonius.consts.plugin_consts import (AXONIUS_NETWORK,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
-                                          ENCRYPTION_KEY_FILENAME,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS,
                                           WEAVE_NETWORK, WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
@@ -27,6 +24,7 @@ from services.plugins.aggregator_service import AggregatorService
 from services.plugins.core_service import CoreService
 from services.plugins.execution_service import ExecutionService
 from services.plugins.gui_service import GuiService
+from services.plugins.master_proxy_service import MasterProxyService
 from services.plugins.mongo_service import MongoService
 from services.plugins.reports_service import ReportsService
 from services.plugins.static_correlator_service import StaticCorrelatorService
@@ -57,9 +55,18 @@ class AxoniusService:
         self.static_correlator = StaticCorrelatorService()
         self.static_users_correlator = StaticUsersCorrelatorService()
         self.reports = ReportsService()
+        self.master_proxy = MasterProxyService()
 
-        self.axonius_services = [self.db, self.core, self.aggregator, self.scheduler, self.gui, self.execution,
-                                 self.static_correlator, self.static_users_correlator, self.reports]
+        self.axonius_services = [self.db,
+                                 self.core,
+                                 self.aggregator,
+                                 self.scheduler,
+                                 self.gui,
+                                 self.execution,
+                                 self.static_correlator,
+                                 self.static_users_correlator,
+                                 self.reports,
+                                 self.master_proxy]
 
     @classmethod
     def get_is_network_exists(cls):

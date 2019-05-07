@@ -13,7 +13,8 @@
       "static_correlator",
       "static_users_correlator",
       "system_scheduler",
-      "mongo"
+      "mongo",
+      "master_proxy"
     ],
     "remove-from-exclude": []
   }

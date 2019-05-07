@@ -3,7 +3,6 @@ import subprocess
 from services.docker_service import DockerService
 from pathlib import Path
 import json
-import os
 import urllib.parse
 
 

@@ -1,13 +1,12 @@
 from pathlib import Path
 
 # PATHS #
+
 VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
 SHARED_READONLY_DIR_NAME = 'shared_readonly_files'
 SHARED_READONLY_FULL_PATH = Path('/home/axonius') / SHARED_READONLY_DIR_NAME
 AXONIUS_SETTINGS_DIR_NAME = '.axonius_settings'
 METADATA_PATH = SHARED_READONLY_FULL_PATH / '__build_metadata'
-ENCRYPTION_KEY_FILENAME = '.__key'
-ENCRYPTION_KEY_PATH = SHARED_READONLY_FULL_PATH / ENCRYPTION_KEY_FILENAME
 
 # SERVICES #
 CORE_UNIQUE_NAME = 'core'

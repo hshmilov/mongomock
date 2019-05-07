@@ -151,6 +151,8 @@ DOCKER_PORTS = {
     'saltstack-enterprise-adapter':     6681,
     'symantec-cloud-workload-adapter':  6682,
     'alertlogic-adapter':               6683,
+    'master-proxy':                     8888,  # reserved
+    'ssh-socat':                        9958,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
