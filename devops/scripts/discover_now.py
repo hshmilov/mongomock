@@ -4,7 +4,7 @@ import sys
 import argparse
 import time
 from datetime import datetime
-from system_consts import NODE_MARKER_PATH
+from axonius.consts.system_consts import NODE_MARKER_PATH
 
 from axonius.consts.scheduler_consts import Phases
 from services.plugins.system_scheduler_service import SystemSchedulerService

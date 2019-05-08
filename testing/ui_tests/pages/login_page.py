@@ -1,4 +1,5 @@
 from ui_tests.pages.page import Page
+from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 
 
 class LoginPage(Page):
@@ -12,7 +13,7 @@ class LoginPage(Page):
     LOGIN_WITH_OKTA_BUTTON_CLASS = 'x-button link'
     OKTA_LOGIN_PASSWORD_ID = 'okta-signin-password'
     OKTA_LOGIN_USERNAME_ID = 'okta-signin-username'
-    OKTA_URL = 'okta.axonius.local'
+    OKTA_URL = f'okta.{AXONIUS_DNS_SUFFIX}'
     OKTA_SUBMIT_BUTTON_ID = 'okta-signin-submit'
 
     @property

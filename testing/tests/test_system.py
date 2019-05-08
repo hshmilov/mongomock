@@ -5,10 +5,10 @@ import pytest
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.utils.wait import wait_until
-from system_consts import (CUSTOMER_CONF_PATH,
-                           NODE_CONF_PATH,
-                           NODE_MARKER_PATH,
-                           SYSTEM_CONF_PATH)
+from axonius.consts.system_consts import (CUSTOMER_CONF_PATH,
+                                          NODE_CONF_PATH,
+                                          NODE_MARKER_PATH,
+                                          SYSTEM_CONF_PATH)
 from axonius_system import process_exclude_from_config
 from devops.axonius_system import main as system_main
 from exclude_helper import ExcludeHelper

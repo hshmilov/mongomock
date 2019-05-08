@@ -12,7 +12,7 @@ from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
                                                 BOOTED_FOR_PRODUCTION_MARKER_PATH,
                                                 CORTEX_PATH)
 from services.axonius_service import get_service
-from system_consts import NODE_MARKER_PATH
+from axonius.consts.system_consts import NODE_MARKER_PATH
 
 
 def shut_down_system():

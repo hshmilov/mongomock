@@ -1,7 +1,7 @@
 import json
 
 from ui_tests.tests.ui_test_base import TestBase
-from system_consts import METADATA_PATH
+from axonius.consts.system_consts import METADATA_PATH
 
 
 class TestAbout(TestBase):
