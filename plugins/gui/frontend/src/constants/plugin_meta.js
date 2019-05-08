@@ -5,19 +5,19 @@ export const pluginMeta = {
     },
     alertlogic_adapter: {
         title: 'Alert Logic - BETA',
-        description: 'Alert Logic provides threat, log, and web security management solution.'
+        description: 'Alert Logic provides vulnerability and asset visibility, endpoint protection, threat detection, incident management, and a web application firewall.'
     },
     nmap_adapter: {
         title: 'Nmap Security Scanner',
-        description: 'Nmap security scanner is a free and open source utility for network discovery and security auditing.'
+        description: 'Nmap Security Scanner is a free and open source utility for network discovery and security auditing.'
     },
     symantec_cloud_workload_adapter: {
         title: 'Symantec Cloud Workload Protection (CWP)',
         description: 'Symantec Cloud Workload Protection (CWP) automates security policy enforcement to protect public cloud workloads.'
     },
     cloudflare_adapter: {
-        title: 'CloudFlare DNS',
-        description: 'Cloudflare DNS runs one of the largest authoritative DNS networks in the world.'
+        title: 'Cloudflare DNS',
+        description: 'Cloudflare DNS runs one of the largest DNS networks in the world.'
     },
     saltstack_enterprise_adapter: {
         title: 'SaltStack Enterprise',
@@ -223,8 +223,8 @@ export const pluginMeta = {
         description: 'Claroty discovers assets and monitors communication patterns for ICS networks.'                      
     },
     solarwinds_orion_adapter: {
-        title: 'Solarwinds Network Performance Monitor',
-        description: 'Solarwinds Network Performance Monitor is a unified IT systems management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hybrid environment, or in the cloud.'
+        title: 'SolarWinds Network Performance Monitor',
+        description: 'SolarWinds Network Performance Monitor is a unified IT systems management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hybrid environment, or in the cloud.'
     },
     pingidentity_adapter: {
         title: 'Ping Identity',
