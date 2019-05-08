@@ -78,11 +78,11 @@ export const reports = {
         },
         [ SAVE_REPORT ] ({dispatch}, report) {
             /*
-                Update an existing Report, if given an id, or create a new one otherwise
+                Update the existing reports table and Remove the current report from the store
              */
-            let handleSuccess = (id) => {
+            let handleSuccess = () => {
                 dispatch(FETCH_DATA_CONTENT, { module: 'reports', skip: 0 })
-                dispatch(FETCH_REPORT, id)
+                dispatch(FETCH_REPORT)
             }
 
             if (report.uuid && report.uuid !== 'new') {
@@ -92,7 +92,7 @@ export const reports = {
                     data: report
                 }).then((response) => {
                     if (response.status === 200) {
-                        return handleSuccess(report.uuid)
+                        return handleSuccess()
                     }
                 })
             } else {
@@ -102,7 +102,7 @@ export const reports = {
                     data: report
                 }).then((response) => {
                     if (response.status === 201 && response.data) {
-                        handleSuccess(response.data.uuid)
+                        handleSuccess()
                         return response.data
                     }
                 })
