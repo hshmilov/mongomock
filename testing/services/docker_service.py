@@ -36,7 +36,6 @@ class DockerService(AxonService):
         self._process_owner = False
         self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
         self.override_exposed_port = False
-        self.last_start_args = {}
 
     def take_process_ownership(self):
         self._process_owner = True
@@ -244,7 +243,6 @@ else:
               extra_flags=None,
               docker_internal_env_vars=None,
               run_env=None):
-        last_start_args = locals()  # This has to be the first line in the function, to get all the
         assert mode in ('prod', '')
         assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
 
@@ -413,9 +411,7 @@ else:
         Take notice that the constructor already calls 'start' method. So use this function only
         after manual stop
         """
-        start_args = self.last_start_args.copy()
-        start_args.update(kwargs)
-        self.start(**start_args)
+        self.start(**kwargs)
         self.wait_for_service()
 
     def get_file_contents_from_container(self, file_path):
