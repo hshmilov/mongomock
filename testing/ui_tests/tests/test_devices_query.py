@@ -1,3 +1,6 @@
+from datetime import datetime
+from uuid import uuid4
+
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_test_base import TestBase
 from services.plugins.general_info_service import GeneralInfoService
@@ -444,3 +447,49 @@ class TestDevicesQuery(TestBase):
         assert self.devices_page.is_save_query_disabled()
         self.devices_page.toggle_right_bracket(expressions[1])
         assert not self.devices_page.is_save_query_disabled()
+
+    def test_quick_count(self):
+        """
+        Tests that before calculating the whole count of the query, a quick >1000 is shown
+        """
+        devices_count = 100 * 1000  # 100k
+        db = self.axonius_system.get_devices_db()
+
+        def generate_fake_device(id_):
+            return {
+                'internal_axon_id': uuid4().hex,
+                'accurate_for_datetime': datetime.now(),
+                'adapters': [
+                    {
+                        'client_used': 'yes',
+                        'plugin_type': 'Adapter',
+                        'plugin_name': 'stresstest_adapter',
+                        'plugin_unique_name': 'stresstest_adapter_0',
+                        'type': 'entitydata',
+                        'accurate_for_datetime': datetime.now(),
+                        'data': {
+                            'random_text_for_love_and_prosperity': '19',
+                            'id': f'yay-{id_}',
+                            'pretty_id': f'AX-{id_}'
+                        }
+                    }
+                ],
+                'tags': [],
+                'adapter_list_length': 1
+            }
+
+        # inserting a lot of devices
+        db.insert_many(generate_fake_device(x)
+                       for x
+                       in range(devices_count))
+
+        # carefully chosen to be damn slow
+        slow_query = ' and '.join(f'adapters_data.stresstest_adapter.random_text_for_love_and_prosperity != "{x}"'
+                                  for x
+                                  in range(10))
+
+        self.devices_page.switch_to_page()
+        self.devices_page.fill_filter(slow_query)
+        self.devices_page.enter_search()
+        wait_until(lambda: '> 1000' in self.devices_page.get_raw_count_entities())
+        assert self.devices_page.count_entities() == devices_count

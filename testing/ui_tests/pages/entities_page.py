@@ -243,9 +243,12 @@ class EntitiesPage(Page):
     def find_search_value(self):
         return self.find_query_search_input().get_attribute('value')
 
+    def get_raw_count_entities(self) -> str:
+        return self.driver.find_element_by_css_selector(self.TABLE_COUNT_CSS).text
+
     def count_entities(self):
-        wait_until(lambda: 'loading' not in self.driver.find_element_by_css_selector(self.TABLE_COUNT_CSS).text)
-        match_count = re.search(r'\((\d+)\)', self.driver.find_element_by_css_selector(self.TABLE_COUNT_CSS).text)
+        wait_until(lambda: 'loading' not in self.get_raw_count_entities())
+        match_count = re.search(r'\((\d+)\)', self.get_raw_count_entities())
         assert match_count and len(match_count.groups()) == 1
         return int(match_count.group(1))
 
