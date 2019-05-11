@@ -44,6 +44,7 @@ PROXY_FOR_ADAPTERS = 'proxy_for_adapters'
 
 NOTIFICATIONS_SETTINGS = 'notifications_settings'
 NOTIFY_ADAPTERS_FETCH = 'notify_adapters_fetch'
+ADAPTERS_ERRORS_MAIL_ADDRESS = 'adapter_errors_mail_address'
 CORRELATION_SETTINGS = 'correlation_settings'
 CORRELATE_BY_EMAIL_PREFIX = 'correlate_by_email_prefix'
 AGGREGATION_SETTINGS = 'aggregation_settings'

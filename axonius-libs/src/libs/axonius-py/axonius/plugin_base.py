@@ -59,6 +59,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NODE_ID, NODE_INIT_NAME,
                                           NOTIFICATIONS_SETTINGS,
                                           NOTIFY_ADAPTERS_FETCH,
+                                          ADAPTERS_ERRORS_MAIL_ADDRESS,
                                           PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           PROXY_ADDR,
@@ -2401,6 +2402,7 @@ class PluginBase(Configurable, Feature):
         self._email_settings = config['email_settings']
         self._https_logs_settings = config['https_log_settings']
         self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
+        self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
         self._jira_settings = config['jira_settings']
 
@@ -2691,6 +2693,11 @@ class PluginBase(Configurable, Feature):
                             "name": NOTIFY_ADAPTERS_FETCH,
                             "title": "Notify On Adapters Fetch",
                             "type": "bool"
+                        },
+                        {
+                            'name': ADAPTERS_ERRORS_MAIL_ADDRESS,
+                            'title': 'Adapters Errors Mail Address',
+                            'type': 'string'
                         }
                     ],
                     "name": NOTIFICATIONS_SETTINGS,
@@ -2776,7 +2783,8 @@ class PluginBase(Configurable, Feature):
 
             },
             NOTIFICATIONS_SETTINGS: {
-                NOTIFY_ADAPTERS_FETCH: False
+                NOTIFY_ADAPTERS_FETCH: False,
+                ADAPTERS_ERRORS_MAIL_ADDRESS: None
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False

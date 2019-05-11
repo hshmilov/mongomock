@@ -373,6 +373,27 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
         """
+
+        def _update_client_status(status, error_msg=None):
+            """
+            Update client document matching given match object with given status, to indicate method's result
+
+            :param client_id: Mongo ObjectId
+            :param status: String representing current status
+            :return:
+            """
+            with self._clients_lock:
+                if error_msg:
+                    result = self._clients_collection.update_one({'client_id': client_name},
+                                                                 {'$set': {'status': status, 'error': error_msg}})
+                else:
+                    result = self._clients_collection.update_one({'client_id': client_name},
+                                                                 {'$set': {'status': status}})
+
+                if not result or result.matched_count != 1:
+                    raise adapter_exceptions.CredentialErrorException(
+                        f"Could not update client {client_name} with status {status}")
+
         current_time = datetime.utcnow()
         # Checking that it's either the first time since a new client was added.
         # Or that the __next_fetch_timedelta has passed since last fetch.
@@ -394,12 +415,40 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         if check_fetch_time:
             self.__last_fetch_time = current_time
-
         if client_name:
-            devices_count = self._save_data_from_plugin(
-                client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
-            users_count = self._save_data_from_plugin(
-                client_name, self._get_data_by_client(client_name, EntityType.Users), EntityType.Users)
+            try:
+                devices_count = self._save_data_from_plugin(
+                    client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
+                users_count = self._save_data_from_plugin(
+                    client_name, self._get_data_by_client(client_name, EntityType.Users), EntityType.Users)
+            except Exception as e:
+                with self._clients_lock:
+                    current_client = self._clients_collection.find_one({'client_id': client_name})
+                    if not current_client or not current_client.get("client_config"):
+                        # No credentials to attempt reconnection
+                        raise adapter_exceptions.CredentialErrorException(
+                            "No credentials found for client {0}. Reason: {1}".format(client_name, str(e)))
+                try:
+                    with self._clients_lock:
+                        self._clients[client_name] = self.__connect_client_facade(current_client["client_config"])
+                except Exception as e2:
+                    # No connection to attempt querying
+                    self.create_notification(f"Adapter {self.plugin_name} had connection error to "
+                                             f"server with the ID {client_name}.",
+                                             str(e2))
+                    self.send_external_info_log(f'Adapter {self.plugin_name} had connection error'
+                                                f' to server with the ID {client_name}. Error is {str(e2)}')
+                    if self.mail_sender and self._adapter_errors_mail_address:
+                        email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
+                                                           [self._adapter_errors_mail_address])
+                        email.send(f'Adapter {self.plugin_name} had connection error'
+                                   f' to server with the ID {client_name}. Error is {str(e2)}')
+
+                    logger.exception(
+                        "Problem establishing connection for client {0}. Reason: {1}".format(client_name, str(e2)))
+                    _update_client_status("error", str(e2))
+                    raise
+            _update_client_status("success", '')
         else:
             devices_count = sum(
                 self._save_data_from_plugin(*data, EntityType.Devices) for data in self._query_data(EntityType.Devices))
@@ -951,25 +1000,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :raises Exception: If client connection or client data query errored 3 times
         """
 
-        def _update_client_status(status, error_msg=None):
-            """
-            Update client document matching given match object with given status, to indicate method's result
-
-            :param client_id: Mongo ObjectId
-            :param status: String representing current status
-            :return:
-            """
-            with self._clients_lock:
-                if error_msg:
-                    result = self._clients_collection.update_one({'client_id': client_id},
-                                                                 {'$set': {'status': status, 'error': error_msg}})
-                else:
-                    result = self._clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
-
-                if not result or result.matched_count != 1:
-                    raise adapter_exceptions.CredentialErrorException(
-                        f"Could not update client {client_id} with status {status}")
-
         def _get_raw_and_parsed_data():
             mapping = {
                 EntityType.Devices: (self._route_query_devices_by_client(), self._parse_devices_raw_data_hook),
@@ -1003,40 +1033,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             logger.info("Got parsed")
             return _raw_data, _parsed_data
 
-        try:
-            self._save_field_names_to_db(entity_type)
-            raw_data, parsed_data = _get_raw_and_parsed_data()
-        except Exception as e:
-            with self._clients_lock:
-                current_client = self._clients_collection.find_one({'client_id': client_id})
-                if not current_client or not current_client.get("client_config"):
-                    # No credentials to attempt reconnection
-                    raise adapter_exceptions.CredentialErrorException(
-                        "No credentials found for client {0}. Reason: {1}".format(client_id, str(e)))
-            try:
-                with self._clients_lock:
-                    self._clients[client_id] = self.__connect_client_facade(current_client["client_config"])
-            except Exception as e2:
-                # No connection to attempt querying
-                self.create_notification(f"Adapter {self.plugin_name} had connection error to "
-                                         f"server with the ID {client_id}.",
-                                         str(e2))
-                self.send_external_info_log(f'Adapter {self.plugin_name} had connection error'
-                                            f' to server with the ID {client_id}.', 'info')
-                logger.exception(
-                    "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
-
-                _update_client_status("error", str(e2))
-                raise
-            else:
-                try:
-                    raw_data, parsed_data = _get_raw_and_parsed_data()
-                except Exception as e3:
-                    # No devices despite a working connection
-                    logger.exception(f"Problem querying {entity_type} for client {client_id}")
-                    _update_client_status("error", str(e3))
-                    raise
-        _update_client_status("success", '')
+        self._save_field_names_to_db(entity_type)
+        raw_data, parsed_data = _get_raw_and_parsed_data()
         return [], parsed_data  # AD-HOC: Not returning any raw values
 
     def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[Any, Dict[str, Any]]]:
