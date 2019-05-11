@@ -222,11 +222,11 @@ class EpoAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         mc = client(client_data[EPO_HOST], client_data[EPO_PORT],
                     client_data[USER], client_data[PASS])
-        table = mc.run("core.listTables", table=LEAF_NODE_TABLE)
-
-        all_linked_tables = get_all_linked_tables(table)
 
         try:
+            table = mc.run("core.listTables", table=LEAF_NODE_TABLE)
+
+            all_linked_tables = get_all_linked_tables(table)
             # all devices are fetched at once so no progress is logged
             raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
         except Exception as e:

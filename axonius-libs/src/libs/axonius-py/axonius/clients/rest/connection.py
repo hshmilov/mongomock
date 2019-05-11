@@ -49,7 +49,7 @@ class RESTConnection(ABC):
         :param headers: passed to `requests1 as is
         :param use_domain_path: If this is true we take the path from the url and not from url_base_prefix
         """
-        self._domain = domain
+        self._domain = domain.strip()
         self._username = username
         self._password = password
         self._apikey = apikey

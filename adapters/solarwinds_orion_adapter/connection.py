@@ -1,4 +1,6 @@
 import logging
+from urllib3.util.url import parse_url
+
 
 import requests
 from orionsdk import SwisClient
@@ -10,7 +12,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class SolarwindsConnection:
     def __init__(self, domain, username, password, verify_ssl):
-        self.domain = domain
+        self.domain = parse_url(domain).host
         self.username = username
         self.password = password
         self.verify_ssl = verify_ssl
@@ -116,4 +118,13 @@ class SolarwindsConnection:
                     yield device_raw, 'lan'
         except Exception:
             logger.exception(f'Problem getting lan info')
+        try:
+            dhcp_results = self.client.query('Select IPAddress, MAC, LeaseExpires, '
+                                             'DhcpClientName, Vendor, MachineType, '
+                                             'Description, DisplayName  from IPAM.IPNode')
+            if dhcp_results and dhcp_results.get('results'):
+                for device_raw in dhcp_results.get('results'):
+                    yield device_raw, 'dhcp'
+        except Exception:
+            logger.exception(f'Problem getting dhcp info')
         logger.info('Parsed all of the device data from the Orion DB')

@@ -60,6 +60,53 @@ class OracleCloudAdapter(AdapterBase):
             raise ClientConnectionException(str(e))
 
     @staticmethod
+    def _get_devices_by_compartment(compute_client, virtual_network_client, comparment_id):
+        # Gets a list of all the instances in the current compartment
+        all_instances = oci.pagination.list_call_get_all_results(compute_client.list_instances,
+                                                                 compartment_id=comparment_id).data
+        for instance_raw in all_instances:
+            try:
+                # This gets general information about the instance (name, id, etc.)
+                instance_general_info = compute_client.get_instance(instance_raw.id).data
+                # This gets network information for the instance (ip and mac addresses, etc.)
+                vnic_attachments = oci.pagination.list_call_get_all_results(
+                    compute_client.list_vnic_attachments,
+                    compartment_id=instance_raw.compartment_id,
+                    instance_id=instance_raw.id
+                ).data
+                try:
+                    vnics = [virtual_network_client.get_vnic(
+                        va.vnic_id).data for va in vnic_attachments]
+                except Exception:
+                    logger.exception(f'Problem getting nics')
+                    vnics = []
+                raw_device = dict()
+                raw_device['general_info'] = instance_general_info
+                raw_device['network_info'] = vnics
+                yield raw_device
+            except Exception:
+                logger.exception(f'Failed to connect to device: {instance_raw}.')
+
+    @staticmethod
+    def _get_all_data_by_compartment(identity_client, compute_client, virtual_network_client, comparment_id):
+        all_compartments = oci.pagination.list_call_get_all_results(identity_client.list_compartments,
+                                                                    compartment_id=comparment_id).data
+        for compartment in all_compartments:
+            try:
+                yield from OracleCloudAdapter._get_devices_by_compartment(compute_client,
+                                                                          virtual_network_client,
+                                                                          compartment.id)
+            except Exception:
+                logger.exception(f'Problem with compartment {compartment}')
+            try:
+                yield from OracleCloudAdapter._get_all_data_by_compartment(identity_client,
+                                                                           compute_client,
+                                                                           virtual_network_client,
+                                                                           compartment.id)
+            except Exception:
+                logger.exception(f'Problem with  sub compartment {compartment}')
+
+    @staticmethod
     def _query_devices_by_client(client_name, client_data):
         """
         Get all devices from a specific  domain
@@ -70,31 +117,16 @@ class OracleCloudAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         # Oracle Cloud instances are stored in compartments. We must get a list of all compartments.
-        all_compartments = client_data['identity_client'].list_compartments(client_data['tenancy']).data
-        for compartment in all_compartments:
-            try:
-                # Gets a list of all the instances in the current compartment
-                all_instances = client_data['compute_client'].list_instances(compartment.compartment_id).data
-                for instance_raw in all_instances:
-                    try:
-                        # This gets general information about the instance (name, id, etc.)
-                        instance_general_info = client_data['compute_client'].get_instance(instance_raw.id).data
-                        # This gets network information for the instance (ip and mac addresses, etc.)
-                        vnic_attachments = oci.pagination.list_call_get_all_results(
-                            client_data['compute_client'].list_vnic_attachments,
-                            compartment_id=instance_raw.compartment_id,
-                            instance_id=instance_raw.id
-                        ).data
-                        vnics = [client_data['virtual_network_client'].get_vnic(
-                            va.vnic_id).data for va in vnic_attachments]
-                        raw_device = dict()
-                        raw_device['general_info'] = instance_general_info
-                        raw_device['network_info'] = vnics
-                        yield raw_device
-                    except Exception:
-                        logger.exception(f'Failed to connect to device: {instance_raw}.')
-            except Exception:
-                logger.exception(f'Problem with compartment {compartment}')
+        yield from OracleCloudAdapter._get_all_data_by_compartment(client_data['identity_client'],
+                                                                   client_data['compute_client'],
+                                                                   client_data['virtual_network_client'],
+                                                                   client_data['tenancy'])
+        try:
+            yield from OracleCloudAdapter._get_devices_by_compartment(client_data['compute_client'],
+                                                                      client_data['virtual_network_client'],
+                                                                      client_data['tenancy'])
+        except Exception:
+            logger.exception(f'Problem get instances for tenant')
 
     @staticmethod
     def _clients_schema():

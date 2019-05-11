@@ -766,6 +766,14 @@ def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
 
 
+def get_hostname_no_localhost(adapter_device):
+    if not get_hostname(adapter_device):
+        return None
+    if get_hostname(adapter_device).split('.')[0].lower() == 'localhost':
+        return None
+    return get_hostname(adapter_device)
+
+
 def get_nessus_no_scan_id(adapter_device):
     nessus_no_scan_id = adapter_device['data'].get('nessus_no_scan_id')
     if nessus_no_scan_id:

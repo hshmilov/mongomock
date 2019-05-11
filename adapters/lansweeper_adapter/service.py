@@ -68,10 +68,49 @@ class LansweeperAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
-    # pylint: disable=R0912
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     @staticmethod
     def _query_devices_by_client(client_name, client_data):
         with client_data:
+
+            asset_processes_dict = dict()
+            try:
+                for asset_processes_data in client_data.query(consts.PROCESSES_QUERY):
+                    asset_id = asset_processes_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_processes_dict:
+                        asset_processes_dict[asset_id] = []
+                    asset_processes_dict[asset_id].append(asset_processes_data)
+            except Exception:
+                logger.exception(f'Problem getting query processes')
+
+            autoruns_id_to_autoruns_data_dict = dict()
+            try:
+                for autoruns_data in client_data.query(consts.QUERY_AUTORUNS_3):
+                    autoruns_id_to_autoruns_data_dict[autoruns_data.get('AutorunUNI')] = autoruns_data
+            except Exception:
+                logger.exception(f'Problem getting query autoruns 3')
+
+            autoruns_id_to_autoruns_loc_dict = dict()
+            try:
+                for autoruns_loc in client_data.query(consts.QUERY_AUTORUNS_2):
+                    autoruns_id_to_autoruns_loc_dict[autoruns_loc.get('LocationID')] = autoruns_loc
+            except Exception:
+                logger.exception(f'Problem getting query autoruns 2')
+
+            asset_autoruns_dict = dict()
+            try:
+                for asset_autoruns_data in client_data.query(consts.QUERY_AUTORUNS):
+                    asset_id = asset_autoruns_data.get('AssetID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_autoruns_dict:
+                        asset_autoruns_dict[asset_id] = []
+                    asset_autoruns_dict[asset_id].append(asset_autoruns_data)
+            except Exception:
+                logger.exception(f'Problem getting query autoruns')
+
             bios_data_dict = dict()
             try:
                 for bios_data in client_data.query(consts.BIOS_QUERY):
@@ -133,7 +172,9 @@ class LansweeperAdapter(AdapterBase):
                        soft_id_to_soft_data_dict,
                        asset_hotfix_dict,
                        hotfix_id_to_hotfix_data_dict,
-                       asset_reg_dict, bios_data_dict)
+                       asset_reg_dict, bios_data_dict,
+                       asset_autoruns_dict, autoruns_id_to_autoruns_data_dict, autoruns_id_to_autoruns_loc_dict,
+                       asset_processes_dict)
 
     @staticmethod
     def _clients_schema():
@@ -176,6 +217,10 @@ class LansweeperAdapter(AdapterBase):
                 hotfix_id_to_hotfix_data_dict,
                 asset_reg_dict,
                 bios_data_dict,
+                asset_autoruns_dict,
+                autoruns_id_to_autoruns_data_dict,
+                autoruns_id_to_autoruns_loc_dict,
+                asset_processes_dict
         ) in devices_raw_data:
             try:
                 device = self._new_device_adapter()
@@ -192,6 +237,13 @@ class LansweeperAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem parsing bios data for {device_raw}')
                 try:
+                    asset_processes_list = asset_processes_dict.get(device_raw.get('AssetID'))
+                    if isinstance(asset_processes_list, list):
+                        for process_data in asset_processes_list:
+                            device.add_process(name=process_data.get('ExecutablePath'))
+                except Exception:
+                    logger.exception(f'Problem getting processes data for {device_raw}')
+                try:
                     asset_software_list = asset_software_dict.get(device_raw.get('AssetID'))
                     if isinstance(asset_software_list, list):
                         for asset_software in asset_software_list:
@@ -207,6 +259,25 @@ class LansweeperAdapter(AdapterBase):
                                     )
                 except Exception:
                     logger.exception(f'Problem adding software to {device_raw}')
+                try:
+                    asset_autoruns_list = asset_autoruns_dict.get(device_raw.get('AssetID'))
+                    if isinstance(asset_autoruns_list, list):
+                        for asset_autorun in asset_autoruns_list:
+                            autorun_caption = None
+                            autorun_command = None
+                            autorun_location = None
+                            autorun_uni_id = asset_autorun.get('AutorunUNI')
+                            autorun_loc_id = asset_autorun.get('LocationID')
+                            if autorun_uni_id and autoruns_id_to_autoruns_data_dict.get(autorun_uni_id):
+                                autorun_caption = autoruns_id_to_autoruns_data_dict.get(autorun_uni_id).get('Caption')
+                                autorun_command = autoruns_id_to_autoruns_data_dict.get(autorun_uni_id).get('Command')
+                            if autorun_loc_id and autoruns_id_to_autoruns_loc_dict.get(autorun_loc_id):
+                                autorun_location = autoruns_id_to_autoruns_loc_dict.get(autorun_loc_id).get('Location')
+                            device.add_autorun_data(autorun_location=autorun_location,
+                                                    autorun_caption=autorun_caption,
+                                                    autorun_command=autorun_command)
+                except Exception:
+                    logger.exception(f'Problem adding autoruns to {device_raw}')
 
                 try:
                     asset_hotfix_list = asset_hotfix_dict.get(device_raw.get('AssetID'))

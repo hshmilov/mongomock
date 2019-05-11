@@ -14,6 +14,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class OracleVmAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type', enum=['OracleServer', 'VMMachine'])
         run_state = Field(str, 'Run State')

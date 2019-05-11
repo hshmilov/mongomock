@@ -25,6 +25,8 @@ USERS_NEEDED_FIELDS = ['id', 'username', 'mail', 'name']
 
 # pylint: disable=R1702,R0201,R0912,R0915,R0914
 class CsvAdapter(AdapterBase):
+    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24
+
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         file_name = Field(str, 'CSV File Name')
@@ -175,7 +177,7 @@ class CsvAdapter(AdapterBase):
                     logger.error(f'no user id for {user_raw}, continuing')
                     continue
 
-                user_obj.id = user_id
+                user_obj.id = file_name + '_' + user_id
                 user_obj.username = vals.get('username')
                 user_obj.first_name = vals.get('first_name')
                 user_obj.last_name = vals.get('last_name')
@@ -227,7 +229,7 @@ class CsvAdapter(AdapterBase):
                     logger.error(f'can not get device id for {device_raw}, continuing')
                     continue
 
-                device.id = device_id
+                device.id = file_name + '_' + device_id
                 device.device_serial = vals.get('serial')
                 device.name = vals.get('name')
                 hostname = vals.get('hostname')

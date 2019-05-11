@@ -103,7 +103,7 @@ class ZscalerAdapter(AdapterBase):
                     'name': 'apikey',
                     'title': 'API Key',
                     'type': 'string',
-                    'format': 'Password',
+                    'format': 'password',
                 },
                 {
                     'name': 'verify_ssl',
@@ -120,6 +120,7 @@ class ZscalerAdapter(AdapterBase):
                 'domain',
                 'username',
                 'password',
+                'apikey',
                 'verify_ssl'
             ],
             'type': 'array'

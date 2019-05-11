@@ -248,7 +248,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
                 device.has_compliance = False
             else:
                 logger.error(f'hasCompliance should be yes/no but its {has_compliance}')
-
+        try:
+            test = device.id
+        except Exception:
+            device.id = (hostname or '') + '_' + (raw_device_data.get('macAddress') or '') + '_' + (str(ips))
         device.set_raw(raw_device_data)
         return device
 

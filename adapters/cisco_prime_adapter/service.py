@@ -146,7 +146,8 @@ class CiscoPrimeAdapter(AdapterBase):
     def _clients_schema(self):
         return {
             'items': [
-                {'name': 'url', 'title': 'url', 'type': 'string', 'description': 'Cisco Prime Infrastructure url'},
+                {'name': 'url', 'title': 'Cisco Prime Infrastructure Url',
+                 'type': 'string', 'description': 'Cisco Prime Infrastructure url'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
             ],

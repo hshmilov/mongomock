@@ -304,6 +304,12 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     sw_license = Field(str, 'License')
 
 
+class DeviceAdapterAutorunData(SmartJsonClass):
+    autorun_location = Field(str, 'Autorun Location')
+    autorun_caption = Field(str, 'Autorun Caption')
+    autorun_command = Field(str, 'Autorun Command')
+
+
 class DeviceAdapterSoftwareCVE(SmartJsonClass):
     """ A definition for a CVE that is available for a software"""
 
@@ -409,6 +415,7 @@ class DeviceAdapter(SmartJsonClass):
     installed_software = ListField(
         DeviceAdapterInstalledSoftware, "Installed Software", json_format=JsonArrayFormat.table
     )
+    autoruns_data = ListField(DeviceAdapterAutorunData, 'Autoruns Data', json_format=JsonArrayFormat.table)
     software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software", json_format=JsonArrayFormat.table)
     security_patches = ListField(
         DeviceAdapterSecurityPatch, "OS Security Patches", json_format=JsonArrayFormat.table
@@ -827,6 +834,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_connected_hardware(self, **kwargs):
         self.connected_hardware.append(DeviceAdapterConnectedHardware(**kwargs))
+
+    def add_autorun_data(self, **kwargs):
+        self.autoruns_data.append(DeviceAdapterAutorunData(**kwargs))
 
     def add_installed_software(self, **kwargs):
         arch_translate_dict = {

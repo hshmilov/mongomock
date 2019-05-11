@@ -1,4 +1,12 @@
 export const pluginMeta = {
+    datto_rmm_adapter: {
+        title: 'Datto RMM - BETA',
+        description: 'Datto RMM (formerly Autotask Endpoint Management) is a cloud-based Remote Monitoring and Management (RMM) platform that provides device auditing, real-time monitoring, and automatic patching.'
+    },
+    ca_cmdb_adapter: {
+        title: 'CA Service Management - BETA',
+        description: 'CA Service Management is an IT service management (ITSM) solution that offers incident management and IT asset management.'
+    },
     zscaler_adapter: {
         title: 'Zscaler Adapter - BETA',
         description: 'Zscaler Web Security, part of the Zscaler Cloud Security Platform, is a secure Internet and web gateway delivered as a service, stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more.'

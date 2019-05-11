@@ -35,7 +35,7 @@ class ArmisConnection(RESTConnection):
         while offset < MAX_NUMBER_OF_DEVICES:
             try:
                 response = (self._get('devices/',
-                                      url_params={'id': -1,
+                                      url_params={'search': ' ',
                                                   'from': offset, 'length': DEVICE_PER_PAGE}).get('data')
                             or {}).get('data')
                 if not response:

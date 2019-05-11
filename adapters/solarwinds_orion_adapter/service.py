@@ -147,6 +147,18 @@ class SolarwindsOrionAdapter(AdapterBase):
         device.set_raw(device_raw)
         return device
 
+    def _create_dhcp_device(self, device_raw):
+        device = self._new_device_adapter()
+        if not device_raw.get('MAC'):
+            logger.debug(f'Bad device with no mac {device_raw}')
+            return None
+        device.id = (device_raw.get('MAC') or '') + '_' + (device_raw.get('DisplayName') or '')
+        ips = [device_raw.get('IPAddress')] if device_raw.get('IPAddress') else None
+        device.add_nic(mac=device_raw.get('MAC'), ips=ips)
+        device.description = device_raw.get('Description')
+        device.set_raw(device_raw)
+        return device
+
     def _create_lan_device(self, device_raw):
         device = self._new_device_adapter()
         if not device_raw.get('MACAddress'):
@@ -254,6 +266,8 @@ class SolarwindsOrionAdapter(AdapterBase):
                 device = self._create_wifi_device(raw_device_data)
             elif device_type == 'lan':
                 device = self._create_lan_device(raw_device_data)
+            elif device_type == 'dhcp':
+                device = self._create_dhcp_device(raw_device_data)
             if device:
                 yield device
 

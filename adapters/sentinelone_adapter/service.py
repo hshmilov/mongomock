@@ -217,8 +217,11 @@ class SentineloneAdapter(AdapterBase):
             device.domain = device_raw.get('domain')
             ad_domain = ''
             try:
-                ad_nodes_names = (device_raw.get('activeDirectory') or {}).get('computerDistinguishedName') or ''
+                ad_data = device_raw.get('activeDirectory') or {}
+                ad_nodes_names = ad_data.get('computerDistinguishedName') or ''
                 ad_domain = convert_ldap_searchpath_to_domain_name(ad_nodes_names)
+                ad_users_names = ad_data.get('lastUserDistinguishedName') or ''
+                ad_user_domain = convert_ldap_searchpath_to_domain_name(ad_users_names)
             except Exception:
                 logger.exception(f'Problem getting SentinelOne AD info {device_raw}')
             if computer_name:
@@ -238,7 +241,12 @@ class SentineloneAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem adding nic {str(interface)} to SentinelOne')
             try:
-                device.last_used_users = (device_raw.get('lastLoggedInUserName') or '').split(',')
+                if device_raw.get('lastLoggedInUserName'):
+                    username = device_raw.get('lastLoggedInUserName')
+                    if ad_user_domain:
+                        device.last_used_users = [f'{username}@{ad_user_domain}']
+                    else:
+                        device.last_used_users = [username]
             except Exception:
                 logger.exception(f'Problem with adding users to {device_raw}')
             try:

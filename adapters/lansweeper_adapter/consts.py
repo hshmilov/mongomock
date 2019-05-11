@@ -13,6 +13,10 @@ QUERY_HOTFIX = 'Select * from tblQuickFixEngineeringHist'
 QUERY_HOTFIX_2 = 'Select * from tblQuickFixEngineeringUni'
 QUERY_REGISTRY = 'Select * from tblRegistry'
 BIOS_QUERY = 'Select * from tblBIOS'
+QUERY_AUTORUNS = 'Select * from tblAutorun'
+QUERY_AUTORUNS_2 = 'Select * from tblAutorunLoc'
+QUERY_AUTORUNS_3 = 'Select * from tblAutorunUni'
+PROCESSES_QUERY = 'Select * from tblProcesses'
 LANSWEEPER_TYPE_DICT = {'-1': 'Windows',
                         '0': 'Unknown',
                         '1': 'Network device',

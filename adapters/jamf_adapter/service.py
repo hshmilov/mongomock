@@ -414,8 +414,10 @@ class JamfAdapter(AdapterBase, Configurable):
                     device.phone_number = general_info.get('phone_number') or None
 
                     try:
-                        device.add_nic(general_info.get('wifi_mac_address', ''), [general_info.get('ip_address', '')])
-                        device.add_nic(general_info.get('bluetooth_mac_address', ''))
+                        if general_info.get('ip_address'):
+                            device.add_public_ip(general_info.get('ip_address'))
+                        device.add_nic(general_info.get('wifi_mac_address'))
+                        device.add_nic(general_info.get('bluetooth_mac_address'))
                     except Exception:
                         logger.exception(f"Problem parsing nic's of mobile device")
 

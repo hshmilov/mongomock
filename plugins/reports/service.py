@@ -424,7 +424,7 @@ class ReportsService(Triggerable, PluginBase):
         if conditions.previous_entities and diff_dict.removed:
             triggered.add(TriggeredReason.previous_entities)
 
-        if conditions.above is not None and len(current_result) > int(conditions.above):
+        if conditions.above is not None and len(current_result) > int(conditions.above) and int(conditions.above) > 0:
             triggered.add(TriggeredReason.above)
 
         if conditions.below is not None and len(current_result) < int(conditions.below):

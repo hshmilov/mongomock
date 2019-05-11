@@ -42,7 +42,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_hostname_or_serial, compare_hostname_serial,
                                    is_from_twistlock_or_aws, get_nessus_no_scan_id, compare_nessus_no_scan_id,
                                    is_domain_valid, compare_uuid, get_uuid,
-                                   is_from_azure_ad, get_azure_ad_id, compare_azure_ad_id)
+                                   is_from_azure_ad, get_azure_ad_id, compare_azure_ad_id, get_hostname_no_localhost)
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -220,7 +220,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [],
+                                      [lambda x: x.get('plugin_name') == 'illusive_adapter'],
                                       [compare_last_used_users,
                                        not_aruba_adapters,
                                        serials_do_not_contradict],
@@ -337,7 +337,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         In order to lower the false positive rate we don't use the normalized hostname but rather the full one
         """
         logger.info('Starting to correlate on Hostname-AD-JAMF')
-        filtered_adapters_list = filter(get_hostname, adapters_to_correlate)
+        filtered_adapters_list = filter(get_hostname_no_localhost, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
                                       [compare_hostname],

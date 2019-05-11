@@ -10,7 +10,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from samange_adapter.connection import SamangeConnection
 from samange_adapter.client_id import get_client_id
 
@@ -23,6 +23,7 @@ class SamangeAdapter(AdapterBase):
         owner = Field(str, 'Owner')
         updated_at = Field(datetime.datetime, 'Updated At')
         department = Field(str, 'Department')
+        videos_name = ListField(str, 'Video Displays Name')
 
     class MyUserAdapter(UserAdapter):
         pass
@@ -211,6 +212,14 @@ class SamangeAdapter(AdapterBase):
                             logger.exception(f'Problem adding hidden software to {device_raw}')
                 except Exception:
                     logger.exception(f'Problem getting software for {device_raw}')
+                try:
+                    videos_data = device_raw.get('videos')
+                    if isinstance(videos_data, list):
+                        for video_data in videos_data:
+                            if video_data.get('name'):
+                                device.videos_name.append(video_data.get('name'))
+                except Exception:
+                    logger.exception(f'Problem getting videos {device_raw}')
                 device.set_raw(device_raw)
                 yield device
             except Exception:

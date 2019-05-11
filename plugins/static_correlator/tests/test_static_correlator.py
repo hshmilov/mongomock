@@ -680,7 +680,7 @@ def test_rule_correlate_with_juniper():
 
 
 def test_rule_correlate_hostname_user():
-    device1 = get_raw_device(plugin_name='junos_adapter', device_id='SomeDeviceId', hostname='Ofir',
+    device1 = get_raw_device(plugin_name='illusive_adapter', device_id='SomeDeviceId', hostname='Ofir',
                              more_params=[('last_used_users', ['ofir'])])
     device2 = get_raw_device(plugin_name='juniper_adapter', device_id='SomeDeviceId', hostname='ofir',
                              more_params=[('last_used_users', ['Ofir']), ('device_type', 'Juniper Space Device')])

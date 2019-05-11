@@ -11,6 +11,7 @@ import requests
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.consts import DEFAULT_TIMEOUT
+from axonius.clients.rest.connection import RESTConnection
 from axonius.utils import json
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -36,6 +37,7 @@ class CiscoPrimeException(Exception):
 
 class CiscoPrimeClient:
     def __init__(self, url, username, password):
+        url = RESTConnection.build_url(url).strip('/')
         self._url = url
         self._username = username
         self._password = password

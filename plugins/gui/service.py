@@ -158,7 +158,7 @@ DEVICE_ADVANCED_FILEDS = ['installed_software', 'software_cves',
                           'security_patches', 'available_security_patches', 'network_interfaces',
                           'users', 'connected_hardware', 'local_admins', 'hard_drives', 'connected_devices',
                           'plugin_and_severities', 'tenable_sources', 'registry_information', 'processes',
-                          'services', 'shares', 'port_security', 'direct_connected_devices']
+                          'services', 'shares', 'port_security', 'direct_connected_devices', 'autoruns_data']
 
 USER_ADVANCED_FILEDS = ['associated_devices']
 
