@@ -40,7 +40,10 @@
         :id="item[idField]"
         :key="item[idField]"
         class="x-row"
-        :class="{ clickable: onClickRow && !readOnly.includes(item[idField]) }"
+        :class="{
+          clickable: onClickRow && !readOnly.includes(item[idField]),
+          selected: selected.includes(item[idField])
+        }"
         @click="clickRow(item[idField])"
       >
         <td
@@ -294,6 +297,10 @@
       &.clickable:hover {
         cursor: pointer;
         box-shadow: 0 2px 16px -4px $grey-4;
+      }
+
+      &.selected {
+        background-color: rgba($theme-blue, 0.2);
       }
 
       .array {
