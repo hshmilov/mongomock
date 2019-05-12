@@ -104,7 +104,8 @@ class SccmAdapter(AdapterBase):
             )
             connection.set_credentials(username=client_config[consts.USER], password=client_config[consts.PASSWORD])
             with connection:
-                next(connection.query(consts.SCCM_QUERY.format('')))  # Just try to get one result
+                for device_raw in connection.query('select ResourceID from v_R_SYSTEM'):
+                    break
             return connection
         except Exception as err:
             message = (
