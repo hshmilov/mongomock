@@ -4861,7 +4861,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 del values['dl']
             response = requests.request(request.method,
                                         path,
-                                        params=values)
+                                        params=values,
+                                        timeout=(10, 30)
+                                        )
             if response.status_code != 200:
                 logger.error('Failed to submit ga data {response}')
 
