@@ -1,9 +1,6 @@
 import json
 import os
-import shlex
-import subprocess
 import time
-from contextlib import contextmanager
 from typing import Dict
 
 import gridfs
@@ -15,7 +12,6 @@ from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           VERSION_COLLECTION)
-from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.files import CONFIG_FILE_NAME
@@ -25,7 +21,6 @@ from services.debug_template import (py_charm_debug_port_template,
 from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
-from test_helpers.exceptions import DockerException
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from test_helpers.log_tester import LogTester
 
@@ -64,10 +59,6 @@ class PluginService(WeaveService):
     def volumes_override(self):
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', 'src', 'libs'))
         return [f'{self.service_dir}:/home/axonius/app/{self.package_name}', f'{libs}:/home/axonius/libs:ro']
-
-    @property
-    def should_register_unique_dns(self):
-        return True
 
     def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, **kwargs):
         if headers is None:
@@ -119,12 +110,6 @@ class PluginService(WeaveService):
         result = core_service.register(self.api_key, unique_name)
         return result.status_code == 200
 
-    def is_unique_dns_registered(self):
-        if self.docker_network == WEAVE_NETWORK:
-            return super().is_unique_dns_registered()
-        else:
-            return self.fqdn in self.inspect[0]['NetworkSettings']['Networks']['axonius']['Aliases']
-
     def trigger_execute(self, blocking: bool):
         response = requests.post(
             self.req_url + f'/trigger/execute?blocking={blocking}',
@@ -139,41 +124,6 @@ class PluginService(WeaveService):
 
     def is_up(self):
         return self._is_service_alive() and "Plugin" in self.get_supported_features()
-
-    @property
-    def fqdn(self):
-        try:
-            return f'{self.unique_name}.{AXONIUS_DNS_SUFFIX}'
-        except DockerException:
-            return super().fqdn
-
-    def start_and_wait(self, **kwargs):
-        super().start_and_wait(**kwargs)
-        self.register_unique_dns()
-
-    def register_unique_dns(self):
-        # No need to do this if old and new name are similar (like aggregator)
-        if self.container_name == self.unique_name:
-            return
-
-        if self.docker_network == WEAVE_NETWORK:
-            # Remove old dns entry from weave
-            dns_remove_command = shlex.split(f'weave dns-remove {self.id}')
-            subprocess.check_call(dns_remove_command)
-
-            # Add new unique dns entry to weave
-            dns_add_command = shlex.split(
-                f'weave dns-add {self.id} -h {self.fqdn}')
-
-            subprocess.check_call(dns_add_command)
-        else:
-            # Remove container with old dns entry from network
-            disconnect_to_network_command = f'docker network disconnect {self.docker_network} {self.container_name}'
-            subprocess.check_call(shlex.split(disconnect_to_network_command))
-
-            # Add container with new unique dns entry to network
-            connect_to_network_command = f'docker network connect --alias {self.fqdn} {self.docker_network} {self.container_name}'
-            subprocess.check_call(shlex.split(connect_to_network_command))
 
     def _is_service_alive(self):
         try:
@@ -278,12 +228,6 @@ class PluginService(WeaveService):
     def get_file_content_from_db(self, uuid):
         oid = ObjectId(uuid)
         return gridfs.GridFS(self.db.client[self.unique_name]).get(oid).read()
-
-    @contextmanager
-    def contextmanager(self, *, should_delete=True, take_ownership=False):
-        with super().contextmanager(should_delete=should_delete, take_ownership=take_ownership):
-            self.register_unique_dns()
-            yield self
 
 
 class AdapterService(PluginService):

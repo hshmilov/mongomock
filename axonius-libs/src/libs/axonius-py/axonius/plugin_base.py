@@ -1047,7 +1047,6 @@ class PluginBase(Configurable, Feature):
         version_object = {"plugin_name": self.plugin_name,
                           "plugin_unique_name": self.plugin_unique_name,
                           "plugin": self.version,
-                          "node_id": self.node_id,
                           "axonius-libs": self.lib_version}
 
         return jsonify(version_object)

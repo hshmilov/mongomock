@@ -101,9 +101,6 @@ class AdapterTestBase:
     def test_check_registration(self):
         assert self.adapter_service.is_plugin_registered(self.axonius_system.core)
 
-    def test_unique_dns(self):
-        assert self.adapter_service.is_unique_dns_registered()
-
     @flaky(max_runs=2)
     def test_check_reachability(self):
         assert self.adapter_service.is_client_reachable(self.some_client_details)

@@ -2,7 +2,7 @@ import requests
 
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
-from axonius.consts.system_consts import NODE_MARKER_PATH
+from devops.system_consts import NODE_MARKER_PATH
 
 CONTAINER_NAME = 'master-proxy'
 

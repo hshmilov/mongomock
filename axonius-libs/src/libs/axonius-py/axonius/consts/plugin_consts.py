@@ -62,3 +62,7 @@ AXONIUS_USER_NAME = '_axonius'
 
 X_UI_USER = 'x-ui-user'
 X_UI_USER_SOURCE = 'x-ui-user-source'
+
+AXONIUS_NETWORK = 'axonius'
+WEAVE_NETWORK = 'axonius-weave'
+WEAVE_PATH = '/usr/local/bin/weave'

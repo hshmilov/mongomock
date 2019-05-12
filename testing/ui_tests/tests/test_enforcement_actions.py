@@ -3,15 +3,13 @@ from typing import List
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
-from flaky import flaky
 from retrying import retry
+from flaky import flaky
 
-from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.wait import wait_until
 from services.adapters.json_file_service import JsonFileService
-from services.standalone_services.smtp_server import (SMTPService,
-                                                      generate_random_valid_email)
 from services.standalone_services.syslog_server import SyslogService
+from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
 from ui_tests.tests.ui_test_base import TestBase
 
 ENFORCEMENT_NAME = 'Special enforcement name'
@@ -124,7 +122,7 @@ class TestEnforcementActions(TestBase):
             self.settings_page.click_global_settings()
             toggle = self.settings_page.find_syslog_toggle()
             self.settings_page.click_toggle_button(toggle, make_yes=True)
-            self.settings_page.fill_syslog_host(f'{syslog_server.name}.{AXONIUS_DNS_SUFFIX}')
+            self.settings_page.fill_syslog_host(f'{syslog_server.name}.axonius.local')
             self.settings_page.fill_syslog_port(syslog_server.tcp_port)
             self.settings_page.select_syslog_ssl('Unencrypted')
             self.settings_page.click_save_button()

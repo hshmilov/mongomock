@@ -9,13 +9,13 @@ from services.axonius_service import get_service
 import subprocess
 
 from services.standalone_services.mockingbird_service import MOCKINGBIRD_SERVICE
-from axonius.consts.system_consts import (METADATA_PATH,
-                                          AXONIUS_MOCK_DEMO_ENV_VAR,
-                                          SYSTEM_CONF_PATH,
-                                          CUSTOMER_CONF_PATH,
-                                          NODE_MARKER_PATH,
-                                          NODE_CONF_PATH,
-                                          CORTEX_PATH)
+from system_consts import (METADATA_PATH,
+                           AXONIUS_MOCK_DEMO_ENV_VAR,
+                           SYSTEM_CONF_PATH,
+                           CUSTOMER_CONF_PATH,
+                           NODE_MARKER_PATH,
+                           NODE_CONF_PATH,
+                           CORTEX_PATH)
 
 
 def main(command):
@@ -152,10 +152,8 @@ def system_entry_point(args):
 
         # Optimization - async build first
         axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild)
-        axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip,
-                                      expose_db=args.expose_db,
-                                      env_vars=args.env,
-                                      internal_service_white_list=internal_services)
+        axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db,
+                                      env_vars=args.env, internal_service_white_list=internal_services)
         axonius_system.start_plugins(adapter_names=args.adapters,
                                      plugin_names=args.services,
                                      standalone_services_names=standalone_services,

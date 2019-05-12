@@ -7,15 +7,14 @@ import sys
 from datetime import datetime, timedelta
 
 import pytest
-from passlib.hash import bcrypt
 from retrying import retry
+from passlib.hash import bcrypt
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 import conftest
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
-from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
+from axonius.consts.gui_consts import FeatureFlagsNames, FEATURE_FLAGS_CONFIG
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
 from services.axonius_service import get_service
@@ -28,7 +27,6 @@ from ui_tests.pages.dashboard_page import DashboardPage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
 from ui_tests.pages.enforcements_page import EnforcementsPage
-from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.my_account_page import MyAccountPage
 from ui_tests.pages.notification_page import NotificationPage
@@ -36,6 +34,7 @@ from ui_tests.pages.reports_page import ReportsPage
 from ui_tests.pages.settings_page import SettingsPage
 from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
+from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.tests.ui_consts import ROOT_DIR
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
@@ -98,7 +97,7 @@ class TestBase:
             self.driver = webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
                                            desired_capabilities=self._get_desired_capabilities())
             logger.info('After webdriver.Remote')
-            self.base_url = f'https://gui.{AXONIUS_DNS_SUFFIX}'
+            self.base_url = 'https://gui.axonius.local'
 
     @staticmethod
     def _get_desired_capabilities():
