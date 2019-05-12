@@ -228,7 +228,7 @@
       permissionSchema () {
         return {
           items: [
-            this.permissionSchemeItem('Dashboard', ['Restricted']),
+            this.permissionSchemeItem('Dashboard', ['Restricted'], 'ReadOnly'),
             this.permissionSchemeItem('Devices'),
             this.permissionSchemeItem('Users'),
             this.permissionSchemeItem('Adapters'),
@@ -318,14 +318,16 @@
         createRole: CREATE_ROLE, removeRole: REMOVE_ROLE,
         getDefaultRole: GET_DEFAULT_ROLE, updateDefaultRole: UPDATE_DEFAULT_ROLE
       }),
-      permissionSchemeItem (name, exclude = []) {
+      permissionSchemeItem (name, exclude = [], default_value = '') {
         let currentPermissionTypes = this.permissionLevels
         if (exclude.length) {
           currentPermissionTypes = currentPermissionTypes.filter(type => !exclude.includes(type.name))
         }
         return {
-          name, title: name, type: 'string',
-          enum: currentPermissionTypes, default: 'Restricted'
+          name, title: name,
+          type: 'string',
+          enum: currentPermissionTypes,
+          default: default_value || 'Restricted'
         }
       },
       openCreateUser () {

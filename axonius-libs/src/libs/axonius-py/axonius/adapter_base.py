@@ -82,6 +82,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         self.__last_fetch_time = None
 
+        # This will trigger an 'adapter page' cache clear for better CI stability
+        self._request_gui_dashboard_cache_clear()
+
     def _on_config_update(self, config):
         logger.info(f"Loading AdapterBase config: {config}")
 

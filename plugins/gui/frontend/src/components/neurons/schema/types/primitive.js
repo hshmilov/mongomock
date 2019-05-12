@@ -80,6 +80,7 @@ export default {
 	created() {
 		if (this.schema.default) {
 			this.data = this.schema.default
+			this.$emit('input', this.data)
 		}
 		if (this.value !== undefined && this.value !== null) {
 			this.data = this.value

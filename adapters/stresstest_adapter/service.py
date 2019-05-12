@@ -170,6 +170,12 @@ class StresstestAdapter(AdapterBase):
                     "name": "name",
                     "title": "Server Name",
                     "type": "string"
+                },
+                {
+                    "name": "default",
+                    "title": "Testing default value",
+                    "type": "number",
+                    "default": 5
                 }
             ],
             "required": [

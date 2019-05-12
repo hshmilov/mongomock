@@ -1,3 +1,4 @@
+import time
 from services.adapters.stresstest_service import StresstestService
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -60,3 +61,53 @@ class TestHyperlinks(TestBase):
 
             # assert that the filter works
             assert self.devices_page.count_entities() == 1
+
+    def test_default_values(self):
+        stresstest_name = 'stresstest_adapter'
+
+        self.settings_page.switch_to_page()
+        try:
+            with StresstestService().contextmanager(take_ownership=True) as service:
+                clients_db = service.self_database['clients']
+                self.adapters_page.switch_to_page()
+                self.adapters_page.wait_for_adapter(stresstest_name)
+                self.adapters_page.click_adapter(stresstest_name)
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_table_to_load()
+                self.adapters_page.click_new_server()
+                self.adapters_page.fill_creds(**{
+                    'device_count': 1,
+                    'name': 'testing default value'
+                })
+                self.adapters_page.click_save()
+                self.adapters_page.wait_for_spinner_to_end()
+                time.sleep(3)
+                assert clients_db.count_documents({
+                    'client_config.default': 5,
+                    'client_config.device_count': 1,
+                    'client_config.name': 'testing default value'
+                }, limit=1) == 1
+
+                self.adapters_page.switch_to_page()
+                self.adapters_page.wait_for_adapter(stresstest_name)
+                self.adapters_page.click_adapter(stresstest_name)
+                self.adapters_page.wait_for_spinner_to_end()
+                self.adapters_page.wait_for_table_to_load()
+                self.adapters_page.click_new_server()
+
+                self.adapters_page.fill_creds(**{
+                    'device_count': 2,
+                    'name': 'lol lol lol',
+                    'default': 10
+                })
+                self.adapters_page.click_save()
+                self.adapters_page.wait_for_spinner_to_end()
+                time.sleep(3)
+
+                assert clients_db.count_documents({
+                    'client_config.default': 10,
+                    'client_config.device_count': 2,
+                    'client_config.name': 'lol lol lol'
+                }, limit=1) == 1
+        finally:
+            clients_db.delete_many({})

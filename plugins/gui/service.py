@@ -2349,6 +2349,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if email_settings and email_settings.get('enabled') is True:
                 if not email_settings.get('smtpHost') or not email_settings.get('smtpPort'):
                     return return_error('Host and Port are required to connect to email server', 400)
+
                 email_server = EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
                                            email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
                                            ssl_state=SSLState[email_settings.get(
@@ -2358,7 +2359,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                            certfile_data=self._grab_file_contents(email_settings.get('cert_file'),
                                                                                   stored_locally=False),
                                            ca_file_data=self._grab_file_contents(email_settings.get('ca_file'),
-                                                                                 stored_locally=False), )
+                                                                                 stored_locally=False))
                 try:
                     with email_server:
                         # Just to test connection

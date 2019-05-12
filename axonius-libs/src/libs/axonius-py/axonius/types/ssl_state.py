@@ -33,7 +33,7 @@ COMMON_SSL_CONFIG_SCHEMA = [
         'title': 'Use SSL for connection',
         'type': 'string',
         'enum': [SSLState.Unencrypted.name, SSLState.Verified.name, SSLState.Unverified.name],
-        'default': SSLState.Unverified.name,
+        'default': SSLState.Unencrypted.name,
     },
     {
         'name': 'ca_file',

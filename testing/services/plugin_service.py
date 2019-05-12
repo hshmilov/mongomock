@@ -213,6 +213,10 @@ class PluginService(WeaveService):
         return self.db.get_collection(self.plugin_name, VERSION_COLLECTION)
 
     @property
+    def self_database(self):
+        return self.db.client[self.unique_name]
+
+    @property
     def db_schema_version(self):
         res = self.__version_collection.find_one({'name': 'schema'})
         if not res:

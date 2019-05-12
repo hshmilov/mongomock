@@ -30,9 +30,9 @@ class EmailServer:
         :param ca_file_data: CA File to trust in TLS
         :param str source: An email address to send emails from (currently defaults to system@axonius.com).
         """
-        if source is None:
+        if not source:
             source = email_consts.mail_from_address
-        if user is not None:
+        if user:
             password = password or ''
         logger.info(f'email host: {host}')
         self.host = host
@@ -76,6 +76,7 @@ class EmailServer:
                 server.login(self.user, self.password)
         except Exception:
             logger.exception('Exception was raised while trying to connect to e-mail server and send e-mail.')
+            logger.info(f'On {self.host}, {self.port}')
             raise
         self.smtp = server
 
