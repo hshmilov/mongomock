@@ -110,6 +110,14 @@ def has_principle_name(adapters):
     return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('ad_user_principal_name'))  # not none
 
 
+def has_username(adapters):
+    return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('username'))  # not none
+
+
+def has_ad_display_name(adapters):
+    return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('ad_display_name'))  # not none
+
+
 def normalize_mail(adapter_data):
     mail = adapter_data.get('mail')
     if not mail:
@@ -152,7 +160,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
 
     @property
     def _correlation_preconditions(self):
-        return [has_email, has_principle_name]
+        return [has_email, has_principle_name, has_username, has_ad_display_name]
 
     def _correlate_ad_upn(self, entities):
         logger.info('Starting to correlate on ad upn')
