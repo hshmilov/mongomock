@@ -4,6 +4,7 @@
     v-model="data"
     md-placeholder="Add..."
     :md-format="undoInsert"
+    :md-static="readOnly"
     :class="{selected: allSelected}"
     @md-click="editChip"
     @keydown.native="processInsertChip"
@@ -41,6 +42,9 @@
       errorItems: {
         type: Array,
         default: () => []
+      },
+      readOnly: {
+        default: false
       }
     },
     data() {
@@ -73,6 +77,9 @@
         return ''
       },
       editChip(text, index) {
+        if(this.readOnly){
+          return
+        }
         this.chips.inputValue = text
         this.data.splice(index, 1)
         this.editedIndex = index

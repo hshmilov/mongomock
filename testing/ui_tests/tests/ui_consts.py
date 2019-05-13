@@ -16,6 +16,7 @@ LOGGED_IN_MARKER = Path(ROOT_DIR) / AXONIUS_SETTINGS_DIR_NAME / '.logged_in'
 GUI_LOG_PATH = os.path.join(ROOT_DIR, 'logs', 'gui', 'gui.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
+READ_ONLY_USERNAME = 'ReadOnlyUser'
 FIRST_NAME = 'FirstName'
 LAST_NAME = 'LastName'
 TAG_NAME = 'lalala'

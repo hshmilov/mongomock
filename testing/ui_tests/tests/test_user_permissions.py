@@ -1,10 +1,19 @@
 import pytest
+
 from selenium.common.exceptions import NoSuchElementException
+
+from services.adapters import stresstest_service, stresstest_scanner_service
+from services.standalone_services.smtp_server import SMTPService, generate_random_valid_email
+from ui_tests.pages.reports_page import ReportFrequency
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestUserPermissions(TestBase):
+    REPORT_SUBJECT = 'axonius read only report subject'
+    TEST_REPORT_READ_ONLY_QUERY = 'query for read only test'
+    TEST_REPORT_READ_ONLY_NAME = 'report name read only'
+
     def test_new_user_is_restricted(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
@@ -188,3 +197,62 @@ class TestUserPermissions(TestBase):
         self.settings_page.remove_role()
         self.settings_page.click_done()
         self.settings_page.wait_for_role_removed_toaster()
+
+    def test_new_read_only_user_for_reports(self):
+        smtp_service = SMTPService()
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        with smtp_service.contextmanager(take_ownership=True), stress.contextmanager(take_ownership=True), \
+                stress_scanner.contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
+            self.base_page.run_discovery()
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            toggle = self.settings_page.find_send_emails_toggle()
+            self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
+            self.settings_page.fill_email_host(smtp_service.fqdn)
+            self.settings_page.fill_email_port(smtp_service.port)
+            self.settings_page.save_and_wait_for_toaster()
+
+            data_query = 'specific_data.data.name == regex(\' no\', \'i\')'
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(data_query)
+            self.devices_page.enter_search()
+            self.devices_page.click_save_query()
+            self.devices_page.fill_query_name(self.TEST_REPORT_READ_ONLY_QUERY)
+            self.devices_page.click_save_query_save_button()
+            recipient = generate_random_valid_email()
+
+            self.reports_page.create_report(self.TEST_REPORT_READ_ONLY_NAME, True, self.TEST_REPORT_READ_ONLY_QUERY,
+                                            True, self.REPORT_SUBJECT, [recipient], ReportFrequency.weekly)
+            self.reports_page.wait_for_table_to_load()
+
+            # to fill up devices and users
+            self.base_page.run_discovery()
+
+            self.settings_page.switch_to_page()
+            self.settings_page.click_manage_users_settings()
+            self.settings_page.create_new_user(ui_consts.READ_ONLY_USERNAME,
+                                               ui_consts.NEW_PASSWORD,
+                                               ui_consts.FIRST_NAME,
+                                               ui_consts.LAST_NAME)
+
+            self.settings_page.wait_for_user_created_toaster()
+
+            for label in self.settings_page.get_permission_labels():
+                self.settings_page.select_permissions(label, self.settings_page.READ_ONLY_PERMISSION)
+
+            self.settings_page.click_save_manage_users_settings()
+
+            self.login_page.logout()
+            self.login_page.wait_for_login_page_to_load()
+            self.login_page.login(username=ui_consts.READ_ONLY_USERNAME, password=ui_consts.NEW_PASSWORD)
+
+            self.reports_page.switch_to_page()
+            self.reports_page.is_disabled_new_report_button()
+            self.reports_page.click_report(self.TEST_REPORT_READ_ONLY_NAME)
+            self.reports_page.wait_for_spinner_to_end()
+
+            assert self.reports_page.is_form_disabled()

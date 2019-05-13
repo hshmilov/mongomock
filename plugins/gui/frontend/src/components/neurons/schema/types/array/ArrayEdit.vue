@@ -66,6 +66,7 @@
         :error-items="invalidStringItems"
         :class="{'error-border': !stringListValid}"
         @focusout.native="() => validateStringList()"
+        :readOnly="readOnly"
       />
     </template>
   </div>

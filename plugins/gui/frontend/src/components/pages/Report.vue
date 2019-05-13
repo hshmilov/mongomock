@@ -40,14 +40,14 @@
           <x-checkbox
             v-model="report.include_dashboard"
             value="IncludeDashboard"
-            :read-only="readOnly"
+            :read-only="isReadOnly"
             label="Include dashboard charts"
             class="item"
           />
           <x-checkbox
             v-model="report.include_saved_views"
             value="IncludeSavedViews"
-            :read-only="readOnly"
+            :read-only="isReadOnly"
             label="Include Saved Queries data"
             class="item"
             @change="validateSavedQueries"
@@ -67,7 +67,7 @@
                     :options="entityOptions"
                     type="icon"
                     placeholder="mod"
-                    :read-only="readOnly"
+                    :read-only="isReadOnly"
                     minimal
                     @input="onEntityChange($event, i)"
                   />
@@ -76,7 +76,7 @@
                     :options="viewOptions(i)"
                     searchable
                     placeholder="query name"
-                    :read-only="readOnly"
+                    :read-only="isReadOnly"
                     class="query-name"
                     @input="onQueryNameChange($event, i)"
                   />
@@ -84,6 +84,7 @@
                     link
                     class="query-remove"
                     @click="() => removeQuery(i)"
+                    :disabled="isReadOnly"
                   >x</x-button>
                 </div>
               </div>
@@ -91,6 +92,7 @@
                 light
                 class="query-add"
                 @click="addQuery"
+                :disabled="isReadOnly"
               >+</x-button>
             </div>
           </div>
@@ -99,7 +101,7 @@
           <div class="header">
             <x-checkbox
               v-model="report.add_scheduling"
-              :read-only="readOnly"
+              :read-only="isReadOnly"
               value="AddScheduling"
               @change="onAddScheduling"
             />
@@ -116,7 +118,7 @@
               v-if="report.add_scheduling"
               v-model="report.mail_properties"
               :schema="mailSchema"
-              :read-only="readOnly"
+              :read-only="isReadOnly"
               @validate="onValidate"
               ref="mail_ref"
             />

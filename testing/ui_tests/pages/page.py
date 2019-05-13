@@ -400,6 +400,26 @@ class Page:
         except ElementNotVisibleException:
             logger.info(f'Failed to find element with text {text}')
 
+    def find_element_parent_by_text(self, text, element=None):
+        # Selenium using XPATH 1.0 which doesn't support escaping of string literals
+        if not element:
+            element = self.driver
+        if '"' in text and '\'' in text:
+            raise ValueError(f'{text} contains both \' and "')
+        if '"' in text:
+            return element.find_element_by_xpath(f'//*[contains(text(), \'{text}\')]/..')
+        return element.find_element_by_xpath(f'//*[contains(text(), "{text}")]/..')
+
+    def find_element_preceding_by_text(self, text, element=None):
+        # Selenium using XPATH 1.0 which doesn't support escaping of string literals
+        if not element:
+            element = self.driver
+        if '"' in text and '\'' in text:
+            raise ValueError(f'{text} contains both \' and "')
+        if '"' in text:
+            return element.find_element_by_xpath(f'//*[contains(text(), \'{text}\')]/preceding-sibling::div')
+        return element.find_element_by_xpath(f'//*[contains(text(), "{text}")]/preceding-sibling::div')
+
     def find_elements_by_xpath(self, xpath, element=None):
         if not element:
             element = self.driver

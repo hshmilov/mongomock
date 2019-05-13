@@ -26,7 +26,9 @@ class ReportsPage(EntitiesPage):
     EMAIL_BOX_RECIPIENTS = 'Recipients'
     EDIT_REPORT_XPATH = '//div[@title=\'{report_name}\']'
     EMAIL_SUBJECT_ID = 'mailSubject'
+    SELECT_VIEW_ENTITY_ELEMENT_CSS = '.saved-query .x-select-symbol'
     SELECT_VIEW_ENTITY_CSS = '.saved-query .x-select-symbol .x-select-trigger'
+    SELECT_VIEW_NAME_ELEMENT_CSS = '.saved-query .query-name'
     SELECT_VIEW_NAME_CSS = '.saved-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
     EMAIL_DESCRIPTION_CSS = '.email-description'
@@ -194,3 +196,29 @@ class ReportsPage(EntitiesPage):
                 self.fill_email(email)
             self.select_frequency(period)
         self.click_save()
+
+    def is_dashboard_checkbox_disabled(self):
+        return self.is_element_disabled(self.find_element_parent_by_text(self.INCLUDE_DASHBOARD_CHECKBOX))
+
+    def is_include_saved_queries_checkbox_disabled(self):
+        return self.is_element_disabled(self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX))
+
+    def is_saved_queries_disabled(self):
+        if not self.is_element_disabled(self.driver.find_element_by_css_selector(self.SELECT_VIEW_ENTITY_ELEMENT_CSS)):
+            return False
+        return self.is_element_disabled(self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS))
+
+    def is_email_config_disabled(self):
+        return self.is_element_disabled(self.find_element_preceding_by_text(self.ADD_SCHEDULING_CHECKBOX))
+
+    def is_email_subject_disabled(self):
+        return not self.driver.find_element_by_id(self.EMAIL_SUBJECT_ID).is_enabled()
+
+    def is_form_disabled(self):
+        disabled_list = [self.is_dashboard_checkbox_disabled(),
+                         self.is_include_saved_queries_checkbox_disabled(),
+                         self.is_saved_queries_disabled(),
+                         self.is_email_config_disabled(),
+                         self.is_email_subject_disabled(),
+                         self.is_save_button_disabled()]
+        return all(disabled_list)

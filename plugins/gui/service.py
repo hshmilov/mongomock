@@ -4308,7 +4308,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                         next_run_time=datetime.now(),
                                         name=exec_report_generate_pdf_thread_id,
                                         id=exec_report_generate_pdf_thread_id,
-                                        max_instances=1)
+                                        max_instances=1,
+                                        coalesce=True)
             self._job_scheduler.start()
         else:
             exec_report_generate_pdf_job.modify(next_run_time=datetime.now())
