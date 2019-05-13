@@ -71,7 +71,9 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           X_UI_USER,
                                           X_UI_USER_SOURCE,
                                           PROXY_VERIFY,
-                                          PROXY_FOR_ADAPTERS, GLOBAL_KEYVAL_COLLECTION)
+                                          PROXY_FOR_ADAPTERS,
+                                          GLOBAL_KEYVAL_COLLECTION,
+                                          NODE_USER_PASSWORD)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -1530,6 +1532,43 @@ class PluginBase(Configurable, Feature):
             logger.info(f"Finished inserting {entity_type} of client {client_name}")
 
         return inserted_data_count
+
+    def _get_nodes_table(self):
+        db_connection = self._get_db_connection()
+        nodes = []
+        for current_node in db_connection['core']['configs'].distinct('node_id'):
+            node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
+            if node_data is not None:
+                nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}),
+                              'tags': node_data.get('tags', {}),
+                              'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
+                                  'last_seen'], NODE_USER_PASSWORD: node_data.get(NODE_USER_PASSWORD, '')})
+            else:
+                nodes.append({'node_id': current_node, 'node_name': current_node, 'tags': {},
+                              'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
+                                  'last_seen'], NODE_USER_PASSWORD: ''})
+        return nodes
+
+    # pylint: disable=useless-else-on-loop
+    def _node_name_to_node_id(self, node_name):
+        instances = self._get_nodes_table()
+        for instance in instances:
+            if instance.get('node_name') == node_name:
+                return instance.get('node_id')
+        else:
+            raise RuntimeError(f'Unable to find node id for node "{node_name}"')
+    # pylint: enable=useless-else-on-loop
+
+    def _get_adapter_unique_name(self, adapter_name, node_name):
+        node_id = self._node_name_to_node_id(node_name)
+
+        response = self.request_remote_plugin(
+            f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}')
+
+        if response.status_code != 200 or not response.text:
+            raise RuntimeError(f'Unable to find adapter for instance "{node_name}"')
+
+        return response.json().get(PLUGIN_UNIQUE_NAME)
 
     def _create_axonius_entity(
             self, client_name, data, entity_type: EntityType, plugin_identity: Tuple[str, str, str]

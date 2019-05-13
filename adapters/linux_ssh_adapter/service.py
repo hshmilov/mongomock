@@ -10,8 +10,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.linux_ssh.consts import (DEFAULT_NETWORK_TIMEOUT,
                                               DEFAULT_POOL_SIZE, DEFAULT_PORT,
                                               HOSTNAME, IS_SUDOER, PASSWORD,
-                                              PORT, PRIVATE_KEY, ACTION_SCHEMA,
-                                              USERNAME)
+                                              PORT, PRIVATE_KEY, ADAPTER_SCHEMA,
+                                              USERNAME, INSTANCE, DEFAULT_INSTANCE)
 from axonius.clients.linux_ssh.data import LinuxDeviceAdapter
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
@@ -39,12 +39,14 @@ class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
 
     def _prepare_client_config(self, client_config):
         client_config = copy.copy(client_config)
-        if PORT not in client_config:
+        if not client_config.get(PORT):
             client_config[PORT] = DEFAULT_PORT
-        if PASSWORD not in client_config:
+        if not client_config.get(PASSWORD):
             client_config[PASSWORD] = ''
         if IS_SUDOER not in client_config:
             client_config[IS_SUDOER] = True
+        if INSTANCE not in client_config:
+            client_config[INSTANCE] = DEFAULT_INSTANCE
         key = client_config.get(PRIVATE_KEY)
         client_config[PRIVATE_KEY] = self._grab_file_contents(key) if key else None
 
@@ -95,11 +97,7 @@ class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
 
         :return: JSON scheme
         """
-        schema = copy.deepcopy(ACTION_SCHEMA)
-        schema['items'].insert(0, {'name': HOSTNAME, 'title': 'Host Name', 'type': 'string'})
-        schema['required'].insert(0, HOSTNAME)
-
-        return schema
+        return ADAPTER_SCHEMA
 
     def _parse_raw_data(self, devices_raw_data):
         device = self._new_device_adapter()

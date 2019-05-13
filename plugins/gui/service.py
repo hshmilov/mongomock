@@ -17,6 +17,7 @@ from uuid import uuid4
 
 import gridfs
 import ldap3
+import OpenSSL
 import pymongo
 import requests
 from apscheduler.executors.pool import \
@@ -29,41 +30,36 @@ from flask import (after_this_request, has_request_context, jsonify,
                    make_response, redirect, request, send_file, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
-import OpenSSL
+
+from onelogin.saml2.auth import OneLogin_Saml2_Auth
+from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
-from axonius.consts import adapter_consts
+from axonius.consts import adapter_consts, report_consts
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import (ADAPTERS_DATA,
+from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
-                                       EXEC_REPORT_THREAD_ID,
                                        EXEC_REPORT_GENERATE_PDF_THREAD_ID,
+                                       EXEC_REPORT_THREAD_ID,
                                        LOGGED_IN_MARKER_PATH,
                                        PREDEFINED_ROLE_ADMIN,
                                        PREDEFINED_ROLE_READONLY,
                                        PREDEFINED_ROLE_RESTRICTED,
-                                       RANGE_UNIT_DAYS, ROLES_COLLECTION,
-                                       SPECIFIC_DATA,
+                                       PROXY_ERROR_MESSAGE, RANGE_UNIT_DAYS,
+                                       REPORTS_DELETED, ROLES_COLLECTION,
+                                       SIGNUP_TEST_COMPANY_NAME,
+                                       SIGNUP_TEST_CREDS, SPECIFIC_DATA,
                                        TEMP_MAINTENANCE_THREAD_ID,
                                        USERS_COLLECTION,
-                                       USERS_CONFIG_COLLECTION,
-                                       ChartFuncs,
-                                       ChartMetrics,
-                                       ChartRangeTypes,
-                                       ChartRangeUnits,
-                                       ChartViews,
-                                       Signup,
-                                       ResearchStatus,
-                                       PROXY_ERROR_MESSAGE,
-                                       FeatureFlagsNames,
-                                       REPORTS_DELETED,
-                                       SIGNUP_TEST_CREDS,
-                                       SIGNUP_TEST_COMPANY_NAME,
-                                       ENCRYPTION_KEY_PATH)
+                                       USERS_CONFIG_COLLECTION, ChartFuncs,
+                                       ChartMetrics, ChartRangeTypes,
+                                       ChartRangeUnits, ChartViews,
+                                       FeatureFlagsNames, ResearchStatus,
+                                       Signup)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -73,28 +69,32 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, NODE_ID, NODE_NAME,
-                                          NODE_USER_PASSWORD, NOTES_DATA_TAG,
-                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
+                                          NOTES_DATA_TAG, PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          SYSTEM_SETTINGS,
-                                          PROXY_SETTINGS)
+                                          SYSTEM_SETTINGS)
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
+                                          ACTIONS_MAIN_FIELD,
+                                          ACTIONS_POST_FIELD,
+                                          ACTIONS_SUCCESS_FIELD,
+                                          LAST_TRIGGERED_FIELD,
+                                          LAST_UPDATE_FIELD, NOT_RAN_STATE,
+                                          TIMES_TRIGGERED_FIELD,
+                                          TRIGGERS_FIELD)
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
-from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
-                                          ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD,
-                                          LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, LAST_UPDATE_FIELD,
-                                          NOT_RAN_STATE)
-
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.fields import Field
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
-from axonius.mixins.triggerable import Triggerable, TriggerStates, StoredJobStateCompletion, RunIdentifier
+from axonius.mixins.triggerable import (RunIdentifier,
+                                        StoredJobStateCompletion, Triggerable,
+                                        TriggerStates)
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelationReason,
@@ -114,19 +114,18 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        add_labels_to_entities,
                                        beautify_user_entry, check_permissions,
                                        deserialize_db_permissions,
-                                       get_entity_labels,
-                                       get_historized_filter, entity_fields)
+                                       entity_fields, get_entity_labels,
+                                       get_historized_filter)
 from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.mongo_chunked import get_chunks_length
-from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.mongo_escaping import escape_dict
+from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
-from axonius.consts import report_consts
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
@@ -141,9 +140,6 @@ from gui.gui_logic.historical_dates import (all_historical_dates,
 from gui.gui_logic.views_data import get_views, get_views_count
 from gui.okta_login import OidcData, try_connecting_using_okta
 from gui.report_generator import ReportGenerator
-from onelogin.saml2.auth import OneLogin_Saml2_Auth
-from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
-
 
 # pylint: disable=line-too-long,superfluous-parens,too-many-statements,too-many-lines,keyword-arg-before-vararg,invalid-name,too-many-instance-attributes,inconsistent-return-statements,no-self-use,dangerous-default-value,unidiomatic-typecheck,inconsistent-return-statements,no-else-return,no-self-use,unnecessary-pass,useless-return,cell-var-from-loop,logging-not-lazy,singleton-comparison,redefined-builtin,comparison-with-callable,too-many-return-statements,too-many-boolean-expressions,logging-format-interpolation,fixme
 
@@ -4778,18 +4774,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def _instances(self):
         if request.method == 'GET':
             db_connection = self._get_db_connection()
-            nodes = []
-            for current_node in db_connection['core']['configs'].distinct('node_id'):
-                node_data = db_connection['core']['nodes_metadata'].find_one({'node_id': current_node})
-                if node_data is not None:
-                    nodes.append({'node_id': current_node, 'node_name': node_data.get('node_name', {}),
-                                  'tags': node_data.get('tags', {}),
-                                  'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
-                                      'last_seen'], NODE_USER_PASSWORD: node_data.get(NODE_USER_PASSWORD, '')})
-                else:
-                    nodes.append({'node_id': current_node, 'node_name': current_node, 'tags': {},
-                                  'last_seen': self.request_remote_plugin(f'nodes/last_seen/{current_node}').json()[
-                                      'last_seen'], NODE_USER_PASSWORD: ''})
+            nodes = self._get_nodes_table()
             system_config = db_connection['gui']['system_collection'].find_one({'type': 'server'}) or {}
             return jsonify({'instances': nodes, 'connection_data': {'key': self.encryption_key,
                                                                     'host': system_config.get('server_name',
