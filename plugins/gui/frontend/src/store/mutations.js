@@ -40,12 +40,12 @@ export const updateDataCountQuick = (state, payload) => {
 
 	if (payload.data !== undefined) {
 		if (count.data == undefined) {
-					count.data = payload.data
-					count.data_to_show = payload.data
-					if (payload.data == '1000') {
-							count.data_to_show = '> 1000, loading...'
-					}
+			count.data = payload.data
+			count.data_to_show = payload.data
+			if (payload.data == '1000') {
+				count.data_to_show = '> 1000, loading...'
 			}
+		}
 	}
 }
 
@@ -128,7 +128,7 @@ export const updateDataFields = (state, payload) => {
 	fields.fetching = payload.fetching
 	fields.error = payload.error
 	if (payload.data) {
-		fields.data = { generic: payload.data.generic, specific: {}, schema: payload.data.schema}
+		fields.data = { generic: payload.data.generic, specific: {}, schema: payload.data.schema }
 		Object.keys(payload.data.specific).forEach((name) => {
 			let pluginMetadata = pluginMeta[name]
 			if (!pluginMetadata)
@@ -179,14 +179,14 @@ export const updateAddedDataLabels = (state, payload) => {
 			return {name: label, title: label}
 		}))
 
-	let content = [...state[payload.module].content.data]
-	content.forEach(function (entity) {
-		if (!isEntitySelected(entity.internal_axon_id, data.entities)) return
+	state[payload.module].content.data = state[payload.module].content.data.map(entity => {
+		if (!isEntitySelected(entity.internal_axon_id, data.entities)) return entity
 		if (!entity.labels) entity.labels = []
 
-		entity.labels = Array.from(new Set([ ...entity.labels, ...data.labels ]))
+		return {
+			...entity, labels: Array.from(new Set([ ...entity.labels, ...data.labels ]))
+		}
 	})
-	state[payload.module].content.data = content
 
 	let current = state[payload.module].current.data
 	if (current && current.internal_axon_id && isEntitySelected(current.internal_axon_id, data.entities)) {
@@ -210,13 +210,13 @@ export const updateRemovedDataLabels = (state, payload) => {
 		return exists
 	})
 
-	let content = [...state[payload.module].content.data]
-	content.forEach((entity) => {
-		if (!isEntitySelected(entity.internal_axon_id, data.entities)) return
-		if (!entity.labels) { return }
-		entity.labels = entity.labels.filter((label) => !data.labels.includes(label))
+	state[payload.module].content.data = state[payload.module].content.data.map(entity => {
+		if (!isEntitySelected(entity.internal_axon_id, data.entities) || !entity.labels) return entity
+
+		return {
+			...entity, labels: entity.labels.filter((label) => !data.labels.includes(label))
+		}
 	})
-	state[payload.module].content.data = content
 
 	let current = state[payload.module].current.data
 	if (current && current.internal_axon_id && isEntitySelected(current.internal_axon_id, data.entities) && current.labels) {

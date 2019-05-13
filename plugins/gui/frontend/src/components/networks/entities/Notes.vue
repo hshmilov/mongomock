@@ -7,11 +7,9 @@
                 <x-button @click="createNote" :disabled="readOnly">+ Note</x-button>
             </div>
         </div>
-        <x-table-wrapper>
-            <x-table slot="table" :data="noteData" :fields="noteSchema" :sort="sort" v-model="readOnly? undefined : selectedNotes"
-                     :on-click-row="readOnly? undefined : editNote" :on-click-col="sortNotes"
-                     :read-only="readOnlyNotes"/>
-        </x-table-wrapper>
+        <x-table :data="noteData" :fields="noteSchema" :sort="sort" v-model="readOnly? undefined : selectedNotes"
+                 :on-click-row="readOnly? undefined : editNote" :on-click-col="sortNotes"
+                 :read-only="readOnlyNotes"/>
         <x-modal v-if="removeNoteModal.active" approve-text="Delete" @confirm="removeNotes"
                  @close="closeRemoveNotesModal">
             <div slot="body">You are about to remove {{selectedNotes.length}} notes. Are you sure?</div>
@@ -211,7 +209,7 @@
             }
         }
 
-        .x-striped-table {
+        .x-table {
             th:nth-child(3) {
                 width: 200px;
             }

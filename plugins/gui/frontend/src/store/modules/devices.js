@@ -1,7 +1,9 @@
 
 export const devicesFields = [
-	'adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.os.type',
-	'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'
+	'adapters', 'specific_data.data.hostname', 'specific_data.data.name',
+	'specific_data.data.last_seen', 'specific_data.data.os.type',
+	'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac',
+	'labels'
 ]
 
 export const devices = {

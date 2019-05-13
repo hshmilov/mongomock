@@ -970,8 +970,11 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
                     current_entity[mongo_projection[field]] = current_entity[field]
                     del current_entity[field]
                     if isinstance(current_entity[mongo_projection[field]], list):
-                        canonized_values = [str(val) for val in current_entity[mongo_projection[field]]]
-                        current_entity[mongo_projection[field]] = ','.join(canonized_values)
+                        canonized_values = [val.strftime('%Y-%m-%d %H:%M:%S')
+                                            if isinstance(val, datetime)
+                                            else str(val)
+                                            for val in current_entity[mongo_projection[field]]]
+                        current_entity[mongo_projection[field]] = ', '.join(canonized_values)
 
         dw = csv.DictWriter(string_output, mongo_projection.values())
         dw.writeheader()

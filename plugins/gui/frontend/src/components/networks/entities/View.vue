@@ -29,9 +29,8 @@
                     <x-tab v-for="item, i in entityGenericAdvancedRegular" :title="item.title" :id="item.name"
                            :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
-                        <x-table-wrapper v-if="tableView && item.schema.format && item.schema.format === 'table'">
-                            <x-table slot="table" :data="item.data" :fields="existFields(item)"/>
-                        </x-table-wrapper>
+                        <x-table v-if="tableView && item.schema.format && item.schema.format === 'table'"
+                                 :data="item.data" :fields="existFields(item)"/>
                         <x-list :data="item.data" :schema="item.schema" v-else/>
                     </x-tab>
                 </x-tabs>
@@ -53,9 +52,7 @@
                            :id="`ecdata_${i}`"
                            :key="`ecdata_${i}`"
                            :selected="!i">
-                        <x-table-wrapper>
-                            <x-table :data="processTaskActions(item.actions)" :fields="ecActionFields"/>
-                        </x-table-wrapper>
+                        <x-table :data="processTaskActions(item.actions)" :fields="ecActionFields"/>
                     </x-tab>
                 </x-tabs>
             </x-tab>
@@ -89,7 +86,6 @@
     import xTabs from '../../axons/tabs/Tabs.vue'
     import xTab from '../../axons/tabs/Tab.vue'
     import xTable from '../../axons/tables/Table.vue'
-    import xTableWrapper from '../../axons/tables/TableWrapper.vue'
     import xButton from '../../axons/inputs/Button.vue'
     import xModal from '../../axons/popover/Modal.vue'
     import xToast from '../../axons/popover/Toast.vue'
@@ -116,7 +112,7 @@
     export default {
         name: 'x-entity-view',
         components: {
-            xTabs, xTab, xList, xTable, xTableWrapper, xButton, xModal, xToast,
+            xTabs, xTab, xList, xTable, xButton, xModal, xToast,
             xCalendar, xCustom, xTagModal, xNotes, xCustomFields, PulseLoader
         },
         props: {module: {required: true}, readOnly: {default: false}},
@@ -429,10 +425,6 @@
                     .server-info {
                         text-transform: uppercase;
                     }
-                }
-
-                .x-table-wrapper .table-header {
-                    background-color: white;
                 }
 
                 .x-list {

@@ -13,13 +13,7 @@
                 <slot name="actions"/>
             </div>
         </div>
-        <div class="table-container" :tabindex="-1" ref="greatTable">
-            <div class="table-title"></div>
-            <div class="table-data">
-                <slot name="table"/>
-            </div>
-
-        </div>
+        <slot name="table"/>
     </div>
 </template>
 
@@ -29,7 +23,7 @@
 
     export default {
         name: 'x-table-wrapper',
-        components: {PulseLoader, xSearchInput},
+        components: {PulseLoader},
         props: {
             title: {}, loading: {default: false}, count: {}, error: {}
         },
@@ -37,9 +31,6 @@
             return {
                 searchValue: ''
             }
-        },
-        mounted() {
-            this.$refs.greatTable.focus()
         }
     }
 </script>
@@ -84,28 +75,6 @@
                 grid-auto-flow: column;
                 grid-template-columns: max-content;
                 grid-gap: 8px;
-            }
-        }
-
-        .table-container {
-            position: relative;
-            height: calc(100% - 48px);
-            padding-top: 30px;
-            overflow: auto;
-
-            .table-title {
-                height: 30px;
-                position: absolute;
-                top: 0;
-                right: 0;
-                left: 0;
-            }
-            .table-data {
-                height: 100%;
-                overflow: auto;
-                width: max-content;
-                min-width: 100%;
-                border-top: 2px dashed $grey-2;
             }
         }
     }

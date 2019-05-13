@@ -5,7 +5,7 @@ from copy import copy
 from selenium.common.exceptions import NoSuchElementException
 
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.pages.page import X_BODY
+from ui_tests.pages.page import PAGE_BODY
 
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
@@ -88,7 +88,7 @@ class AdaptersPage(EntitiesPage):
         self.click_button_by_id(self.NEW_SERVER_BUTTON_ID,
                                 call_space=False,
                                 should_scroll_into_view=False,
-                                scroll_into_view_container=X_BODY)
+                                scroll_into_view_container=PAGE_BODY)
 
     def click_advanced_settings(self):
         self.find_element_by_text('Advanced Settings').click()

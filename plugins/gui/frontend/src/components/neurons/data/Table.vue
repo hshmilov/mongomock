@@ -44,7 +44,12 @@
         :on-click-col="onClickSort"
         :on-click-all="onClickAll"
         @input="onUpdateSelection"
-      />
+      >
+        <slot
+          slot-scope="props"
+          v-bind="props"
+        />
+      </x-table>
     </x-table-wrapper>
     <div class="x-pagination">
       <div class="x-sizes">

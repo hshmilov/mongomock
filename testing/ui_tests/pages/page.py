@@ -63,8 +63,8 @@ return (function(el, container){
 BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-button'
 BUTTON_TYPE_A = 'a'
-X_BODY = '.x-page > .body'
-BODY = '.body'
+PAGE_BODY = '.x-page > .body'
+TAB_BODY = '.x-tabs > .body'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
@@ -458,7 +458,7 @@ class Page:
                             make_yes=True,
                             ignore_exc=False,
                             scroll_to_toggle=True,
-                            window=X_BODY):
+                            window=PAGE_BODY):
         is_selected = self.is_toggle_selected(toggle)
 
         if (make_yes and not is_selected) or (not make_yes and is_selected):

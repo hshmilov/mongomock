@@ -51,6 +51,11 @@
           @click="navigateSavedQueries"
         >Saved Queries</x-button>
       </template>
+        <x-table-data
+          slot-scope="props"
+          :module="module"
+          v-bind="props"
+        />
     </x-table>
   </div>
 </template>
@@ -59,6 +64,7 @@
   import xHistoricalDate from '../../neurons/inputs/HistoricalDate.vue'
   import xQuery from '../../neurons/data/Query.vue'
   import xTable from '../../neurons/data/Table.vue'
+  import xTableData from './TableData.vue'
   import xActionMenu from './ActionMenu.vue'
   import xFieldConfig from './FieldConfig.vue'
   import xButton from '../../axons/inputs/Button.vue'
@@ -69,7 +75,9 @@
 
   export default {
     name: 'XEntityTable',
-    components: { xHistoricalDate, xQuery, xTable, xActionMenu, xFieldConfig, xButton },
+    components: {
+      xHistoricalDate, xQuery, xTable, xTableData, xActionMenu, xFieldConfig, xButton
+    },
     props: { module: { required: true } },
     computed: {
       ...mapState({

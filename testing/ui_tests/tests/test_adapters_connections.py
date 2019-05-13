@@ -1,7 +1,7 @@
 from flaky import flaky
 
 from services.adapters.cisco_service import CiscoService
-from ui_tests.pages.page import X_BODY
+from ui_tests.pages.page import PAGE_BODY
 from ui_tests.tests.ui_test_base import TestBase
 
 JSON_ADAPTER_SEARCH = 'json'
@@ -32,7 +32,7 @@ class TestAdapters(TestBase):
                         self.adapters_page.click_save()
 
                     element = self.adapters_page.find_element_by_text('asdf0')
-                    self.adapters_page.scroll_into_view(element, X_BODY)
+                    self.adapters_page.scroll_into_view(element, PAGE_BODY)
                 finally:
                     self.adapters_page.clean_adapter_servers(CISCO_NAME)
         finally:

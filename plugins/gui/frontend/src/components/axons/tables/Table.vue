@@ -1,137 +1,132 @@
 <template>
-  <table class="x-striped-table">
-    <thead>
-      <tr class="clickable">
-        <th
-          v-if="value"
-          class="w-14"
-        >
-          <div class="data-title">
-            <x-checkbox
-              :data="allSelected"
-              :indeterminate="partSelected"
-              @change="onSelectAll"
-            />
-          </div>
-        </th>
-        <th v-if="expandable">
-          <div class="data-title">&nbsp;</div>
-        </th>
-        <th
-          v-for="field in dataField"
-          :key="field.name"
-          nowrap
-          :class="{sortable: onClickCol}"
-          @click="clickCol(field.name)"
-          @keyup.enter.stop="clickCol(field.name)"
-        >{{ field.title }}
-          <div class="data-title">
-            <img
-              v-if="field.logo"
-              class="logo md-image"
-              :src="require(`Logos/adapters/${field.logo}.png`)"
-              height="20"
-              :alt="field.title"
-            >{{ field.title }}<div
-              v-if="onClickCol"
-              :class="`x-sort ${sortClass(field.name)}`"
-            />
-          </div>
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr
-        v-for="item in data"
-        :id="item[idField]"
-        :key="item[idField]"
-        class="x-row"
-        :class="{
-          clickable: onClickRow && !readOnly.includes(item[idField]),
-          selected: selected.includes(item[idField])
-        }"
-        @click="clickRow(item[idField])"
-      >
-        <td
-          v-if="value"
-          class="w-14"
-        >
-          <x-checkbox
-            v-model="selected"
-            :value="item[idField]"
-            :read-only="readOnly.includes(item[idField])"
-            @change="onSelect"
-          />
-        </td>
-        <td v-if="expandable">
-          <md-icon
-            v-if="expanded.includes(item[idField])"
-            @click.native.stop="collapseRow(item[idField])
-            ">expand_less</md-icon>
-          <md-icon
-            v-else
-            @click.native.stop="expandRow(item[idField])"
-          >expand_more</md-icon>
-        </td>
-        <td
-          v-for="field in dataField"
-          :key="field.name"
-          nowrap
-        >
-          <component
-            :is="field.type"
-            :schema="field"
-            :value="processDataValue(item, field)"
-          />
-          <div class="details-container">
-            <transition name="slide-fade">
-              <div
-                v-if="expandable && expanded.includes(item[idField])"
-                class="details"
-              >
-                <component
-                  v-for="(detail, index) in getDetails(item, field)"
-                  :key="index"
-                  :is="field.type"
-                  :schema="field"
-                  :value="detail"
-                  class="detail"
+  <div class="x-table">
+    <div class="header-container"></div>
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr class="clickable">
+            <th
+              v-if="value"
+              class="w-14"
+            >
+              <div class="data-title">
+                <x-checkbox
+                  :data="allSelected"
+                  :indeterminate="partSelected"
+                  @change="onSelectAll"
                 />
               </div>
-            </transition>
-          </div>
-        </td>
-      </tr>
-      <template v-if="pageSize">
-        <tr
-          v-for="n in pageSize - data.length"
-          :key="n"
-          class="x-row"
-        >
-          <td v-if="value">&nbsp;</td>
-          <td v-if="expandable">&nbsp;</td>
-          <td
-            v-for="field in fields"
-            :key="field.name"
-          >&nbsp;</td>
-        </tr>
-      </template>
-    </tbody>
-  </table>
+            </th>
+            <th v-if="expandable">
+              <div class="data-title">&nbsp;</div>
+            </th>
+            <th
+              v-for="{name, title, logo} in dataFields"
+              :key="name"
+              nowrap
+              :class="{sortable: onClickCol}"
+              @click="clickCol(name)"
+              @keyup.enter.stop="clickCol(name)"
+            >{{ title }}
+              <div class="data-title">
+                <img
+                  v-if="logo"
+                  class="logo md-image"
+                  :src="require(`Logos/adapters/${logo}.png`)"
+                  height="20"
+                  :alt="title"
+                >{{ title }}<div
+                  v-if="onClickCol"
+                  :class="`x-sort ${sortClass(name)}`"
+                />
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="item in data"
+            :id="item[idField]"
+            :key="item[idField]"
+            class="x-row"
+            :class="{
+              clickable: onClickRow && !readOnly.includes(item[idField]),
+              selected: selected.includes(item[idField])
+            }"
+            @click="clickRow(item[idField])"
+            @mouseenter="enterRow(item[idField])"
+            @mouseleave="leaveRow"
+          >
+            <td
+              v-if="value"
+              class="w-14"
+            >
+              <x-checkbox
+                v-model="selected"
+                :value="item[idField]"
+                :read-only="readOnly.includes(item[idField])"
+                @change="onSelect"
+              />
+            </td>
+            <td v-if="expandable">
+              <md-icon
+                v-if="expanded.includes(item[idField])"
+                class="active"
+                @click.native.stop="collapseRow(item[idField])"
+                >expand_less</md-icon>
+              <md-icon
+                v-else
+                @click.native.stop="expandRow(item[idField])"
+              >expand_more</md-icon>
+            </td>
+            <td
+              v-for="schema in dataFields"
+              :key="schema.name"
+              nowrap
+            >
+              <slot
+                :schema="schema"
+                :data="item"
+                :sort="sort"
+                :hover-row="hovered === item[idField]"
+                :expand-row="expanded.includes(item[idField])"
+              >
+                <x-table-data
+                  :schema="schema"
+                  :data="item"
+                  :sort="sort"
+                />
+              </slot>
+            </td>
+          </tr>
+          <template v-if="pageSize">
+            <tr
+              v-for="n in pageSize - data.length"
+              :key="n"
+              class="x-row"
+            >
+              <td v-if="value">&nbsp;</td>
+              <td v-if="expandable">&nbsp;</td>
+              <td
+                v-for="field in fields"
+                :key="field.name"
+              >&nbsp;</td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
 </template>
 
 <script>
   import xCheckbox from '../inputs/Checkbox.vue'
-  import string from '../../neurons/schema/types/string/StringView.vue'
-  import number from '../../neurons/schema/types/numerical/NumberView.vue'
-  import integer from '../../neurons/schema/types/numerical/IntegerView.vue'
-  import bool from '../../neurons/schema/types/boolean/BooleanView.vue'
-  import file from '../../neurons/schema/types/array/FileView.vue'
-  import array from '../../neurons/schema/types/array/ArrayTableView.vue'
+  import xTableData from './TableData.vue'
 
   export default {
     name: 'XTable',
-    components: { xCheckbox, string, integer, number, bool, file, array },
+    components: { xCheckbox, xTableData },
     props: {
       fields: {
         type: Array,
@@ -183,6 +178,7 @@
     data () {
       return {
         selected: [],
+        hovered: null,
         expanded: []
       }
     },
@@ -196,7 +192,7 @@
       partSelected () {
         return this.selected.length && this.selected.length < this.data.length
       },
-      dataField () {
+      dataFields () {
         return this.fields.map(field => {
           return {
             ...field,
@@ -241,137 +237,120 @@
       onSelect () {
         this.$emit('input', this.selected)
       },
-      processDataValue (item, field) {
-        if (!field.name) return item
-        let value = item[field.name]
-        if (Array.isArray(value) && this.sort && field.name === this.sort.field && !this.sort.desc) {
-          return [...value].reverse()
-        }
-        return field.name.split('->').reduce((item, field_segment) => item[field_segment], item)
+      enterRow(id) {
+        this.hovered = id
+      },
+      leaveRow() {
+        this.hovered = null
       },
       expandRow(id) {
         this.expanded.push(id)
       },
       collapseRow(id) {
         this.expanded = this.expanded.filter(item => item !== id)
-      },
-      getDetails(item, field) {
-        if (field.name === 'adapters') {
-          return [...item['adapters']].sort().map(adapter => [adapter])
-        }
-        return item[`${field.name}_details`]
       }
     }
   }
 </script>
 
 <style lang="scss">
-  .x-striped-table {
-    background: $theme-white;
-    border-collapse: collapse;
+  .x-table {
+    position: relative;
+    height: calc(100% - 48px);
+    padding-top: 30px;
+    overflow: auto;
 
-    thead {
-      th {
-        color: transparent;
-        height: 0;
-        line-height: 0;
-
-        .data-title {
-          position: absolute;
-          color: $theme-black;
-          top: 0;
-          line-height: 28px;
-        }
-
-      }
-    }
-
-    tbody {
-      tr {
-        td {
-          vertical-align: top;
-          line-height: 24px;
-        }
-
-        .svg-bg {
-          fill: $theme-white;
-        }
-      }
-
-      tr:nth-child(odd) {
-        background: rgba($grey-1, 0.6);
-
-        .svg-bg {
-          fill: rgba($grey-1, 0.6);
-        }
-      }
-    }
-
-    .x-row {
+    .header-container {
       height: 30px;
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+    }
+    .table-container {
+      height: 100%;
+      overflow: auto;
+      width: max-content;
+      min-width: 100%;
+      border-top: 2px dashed $grey-2;
+      .table {
+        background: $theme-white;
+        border-collapse: collapse;
 
-      &.clickable:hover {
-        cursor: pointer;
-        box-shadow: 0 2px 16px -4px $grey-4;
-      }
+        thead {
+          th {
+            color: transparent;
+            height: 0;
+            line-height: 0;
 
-      &.selected {
-        background-color: rgba($theme-blue, 0.2);
-      }
+            .data-title {
+              position: absolute;
+              color: $theme-black;
+              top: 0;
+              line-height: 28px;
+            }
 
-      .array {
-        height: 24px;
-
-        .md-chip {
-          background-color: rgba($theme-orange, 0.2);
-          height: 20px;
-          line-height: 20px;
+          }
         }
-      }
 
-      .md-icon {
-        width: 14px;
-        min-width: 14px;
-        &:hover {
-          color: $theme-orange;
-        }
-      }
+        tbody {
+          tr {
+            td {
+              vertical-align: top;
+              line-height: 24px;
+            }
 
-      .details-container {
-        overflow: hidden;
-        margin: 0px -8px;
+            .svg-bg {
+              fill: $theme-white;
+            }
+          }
 
-        .details {
-          margin-top: 8px;
-          display: grid;
-          background-color: rgba($grey-2, 0.6);
+          tr:nth-child(odd) {
+            background: rgba($grey-1, 0.6);
 
-          .detail {
-            height: 30px;
-            display: flex;
-            align-items: center;
-            border-bottom: 2px solid $theme-white;
-            padding: 4px 8px;
-
-            &:last-child {
-              border: none;
+            .svg-bg {
+              fill: rgba($grey-1, 0.6);
             }
           }
         }
 
-        .slide-fade-enter-active {
-          transition: all .4s cubic-bezier(1.0, 0.4, 0.8, 1.0);
-        }
+        .x-row {
+          height: 30px;
 
-        .slide-fade-leave-active {
-          transition: all .2s ease;
-        }
+          .x-data {
+            display: flex;
+          }
 
-        .slide-fade-enter, .slide-fade-leave-to {
-          transform: translateY(-50%);
-          opacity: 0;
+          &.clickable:hover {
+            cursor: pointer;
+            box-shadow: 0 2px 16px -4px $grey-4;
+          }
+
+          &.selected {
+            background-color: rgba($theme-blue, 0.2);
+          }
+
+          .array {
+            min-height: 24px;
+
+            .md-chip {
+              background-color: rgba($theme-orange, 0.2);
+              height: 20px;
+              line-height: 20px;
+            }
+          }
+
+          .md-icon {
+            width: 14px;
+            min-width: 14px;
+            &:hover, &.active {
+              color: $theme-orange;
+            }
+          }
+
         }
       }
     }
   }
+
 </style>

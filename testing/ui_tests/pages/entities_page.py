@@ -57,7 +57,7 @@ class EntitiesPage(Page):
     TABLE_ROW_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
-    TABLE_HEADER_XPATH = '//div[@class=\'table-container\']/div[@class=\'table-data\']/table/thead/tr'
+    TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/div[@class=\'table-container\']/table/thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
     TABLE_HEADER_CELLS_CSS = '.data-title'
@@ -360,7 +360,7 @@ class EntitiesPage(Page):
 
             fields_values = entity.find_elements_by_tag_name('td')[2:]
             assert len(fields_values) == len(column_names), 'nonmatching fields'
-            fields_values = [x.find_element_by_tag_name('div') for x in fields_values]
+            fields_values = [x.find_element_by_css_selector('.x-data > div') for x in fields_values]
             fields_values = [x.get_attribute('title') or x.text for x in fields_values]
             result.append({
                 field_name: field_value
@@ -430,6 +430,7 @@ class EntitiesPage(Page):
         self.click_sort_column(sort_field)
         self.wait_for_table_to_load()
         self.select_columns(toggle_columns)
+        self.wait_for_table_to_load()
         self.run_filter_and_save(query_name, query_filter)
 
     def execute_saved_query(self, query_name):
@@ -510,7 +511,7 @@ class EntitiesPage(Page):
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)
         for index, data_row in enumerate(csv_data_rows):
             for ui_data_row in ui_data_rows[index]:
-                assert normalize_timezone_date(ui_data_row.strip()) in data_row
+                assert normalize_timezone_date(ui_data_row.strip().split(', ')[0]) in data_row
 
     def query_json_adapter(self):
         self.run_filter_query(self.JSON_ADAPTER_FILTER)

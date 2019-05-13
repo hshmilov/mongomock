@@ -115,6 +115,7 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.switch_to_page()
         self.users_page.query_user_name_contains('avidor')
         self.users_page.click_expand_row()
+        self.users_page.find_query_search_input().click()
 
         user_names = self.users_page.get_column_data(self.USER_NAME_COLUMN)[0].split('\n')
         assert len(user_names) == 3
