@@ -164,7 +164,7 @@
 
 <style lang="scss">
     .x-entity-table {
-        height: calc(100% - 36px);
+        height: 100%;
     }
     .table-results-title {
         display: flex;

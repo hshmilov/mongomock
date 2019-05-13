@@ -66,16 +66,16 @@ class SettingsPage(Page):
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
     # those are the fully fledged css selectors for the elements
-    CERT_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+    CERT_ELEMENT_SELECTOR = '#app > .x-page > .body > div > div > div.x-tab.active.global-settings-tab' \
                             ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
                             ' > div:nth-child(4) > div > div > input[type="file"] '
-    PRIVATE_ELEMENT_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+    PRIVATE_ELEMENT_SELECTOR = '#app > .x-page > .body > div > div > div.x-tab.active.global-settings-tab' \
                                ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
                                ' > div:nth-child(5) > div > div > input[type="file"] '
-    CERT_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+    CERT_ELEMENT_FILENAME_SELECTOR = '#app > .x-page > .body > div > div > div.x-tab.active.global-settings-tab' \
                                      ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
                                      ' > div:nth-child(4) > div > div > div.file-name '
-    PRIVATE_ELEMENT_FILENAME_SELECTOR = '#app > div > div.x-body > div > div > div.x-tab.active.global-settings-tab' \
+    PRIVATE_ELEMENT_FILENAME_SELECTOR = '#app > .x-page > .body > div > div > div.x-tab.active.global-settings-tab' \
                                         ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
                                         ' > div:nth-child(5) > div > div > div.file-name '
 

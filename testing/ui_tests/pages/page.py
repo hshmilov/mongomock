@@ -63,7 +63,7 @@ return (function(el, container){
 BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-button'
 BUTTON_TYPE_A = 'a'
-X_BODY = '.x-body'
+X_BODY = '.x-page > .body'
 BODY = '.body'
 TOGGLE_CHECKED_CLASS = 'x-checkbox x-checked'
 TOASTER_CLASS_NAME = 'x-toast'

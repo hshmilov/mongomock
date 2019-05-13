@@ -18,7 +18,7 @@
                 <slot name="action"/>
             </div>
         </div>
-        <div class="x-body">
+        <div class="body">
             <slot/>
         </div>
     </div>
@@ -113,9 +113,9 @@
             }
         }
 
-        .x-body {
+        > .body {
             padding: 0;
-            height: calc(100% - 80px);
+            height: calc(100% - 68px);
             overflow: auto;
             position: relative;
         }

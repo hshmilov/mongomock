@@ -57,11 +57,11 @@ class EntitiesPage(Page):
     TABLE_ROW_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
-    TABLE_HEADER_XPATH = '//div[@class=\'table-container\']/table/thead/tr'
+    TABLE_HEADER_XPATH = '//div[@class=\'table-container\']/div[@class=\'table-data\']/table/thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
-    TABLE_HEADER_CELLS_CSS = 'th'
-    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
+    TABLE_HEADER_CELLS_CSS = '.data-title'
+    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
@@ -70,7 +70,6 @@ class EntitiesPage(Page):
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
-    ALL_COLUMN_NAMES_CSS = 'thead>tr>th'
     ALL_ENTITIES_CSS = 'tbody>tr'
 
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
@@ -305,7 +304,7 @@ class EntitiesPage(Page):
 
     def get_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
-        header_columns = headers.find_elements_by_tag_name('th')
+        header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
         return [head.text.strip() for head in header_columns if head.text.strip()]
 
     def count_sort_column(self, col_name, parent=None):
@@ -351,7 +350,7 @@ class EntitiesPage(Page):
         the respective value
         """
         result = []
-        column_names = [x.text for x in self.driver.find_elements_by_css_selector(self.ALL_COLUMN_NAMES_CSS)
+        column_names = [x.text for x in self.driver.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
                         if x.text.strip()]
         all_entities = self.driver.find_elements_by_css_selector(self.ALL_ENTITIES_CSS)
         for entity in all_entities:

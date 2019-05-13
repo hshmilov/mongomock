@@ -302,7 +302,7 @@ table {
     th {
       text-align: left;
       font-weight: 300;
-      padding: 2px 8px;
+      padding: 0 8px;
     }
   }
   tbody {
@@ -597,7 +597,7 @@ table {
     >.header {
       display: block;
     }
-    .x-body {
+    > .body {
       height: auto;
       flex: 1 0 auto;
     }

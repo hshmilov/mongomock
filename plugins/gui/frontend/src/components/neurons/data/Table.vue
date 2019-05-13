@@ -374,7 +374,7 @@
 
 <style lang="scss">
     .x-data-table {
-        height: calc(100% - 40px);
+        height: calc(100% - 66px);
 
         .selection {
             display: flex;

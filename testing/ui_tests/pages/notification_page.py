@@ -103,8 +103,7 @@ class NotificationPage(Page):
 
     def get_rows_from_notification_table(self):
         rows = self.driver.find_elements_by_css_selector('tr.x-row.clickable')
-        # first one is the title row
-        return [line.text for line in rows[1:]]
+        return [line.text for line in rows]
 
     @staticmethod
     def get_timestamps_from_rows(rows):

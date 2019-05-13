@@ -8,16 +8,17 @@
                 <div v-if="count !== undefined" class="title count">({{ count }})</div>
                 <slot name="state"/>
             </div>
-            <div v-else>
-                <x-search-input v-model="searchValue" @input="$emit('search', $event)" placeholder="Search Notes..."/>
-            </div>
             <div class="error">{{error}}</div>
             <div class="actions">
                 <slot name="actions"/>
             </div>
         </div>
         <div class="table-container" :tabindex="-1" ref="greatTable">
-            <slot name="table"/>
+            <div class="table-title"></div>
+            <div class="table-data">
+                <slot name="table"/>
+            </div>
+
         </div>
     </div>
 </template>
@@ -87,8 +88,25 @@
         }
 
         .table-container {
+            position: relative;
+            height: calc(100% - 48px);
+            padding-top: 30px;
             overflow: auto;
-            max-height: calc(100% - 48px);
+
+            .table-title {
+                height: 30px;
+                position: absolute;
+                top: 0;
+                right: 0;
+                left: 0;
+            }
+            .table-data {
+                height: 100%;
+                overflow: auto;
+                width: max-content;
+                min-width: 100%;
+                border-top: 2px dashed $grey-2;
+            }
         }
     }
 </style>

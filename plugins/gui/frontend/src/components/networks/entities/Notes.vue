@@ -7,9 +7,11 @@
                 <x-button @click="createNote" :disabled="readOnly">+ Note</x-button>
             </div>
         </div>
-        <x-table :data="noteData" :fields="noteSchema" :sort="sort" v-model="readOnly? undefined : selectedNotes"
-                 :on-click-row="readOnly? undefined : editNote" :on-click-col="sortNotes"
-                 :read-only="readOnlyNotes"/>
+        <x-table-wrapper>
+            <x-table slot="table" :data="noteData" :fields="noteSchema" :sort="sort" v-model="readOnly? undefined : selectedNotes"
+                     :on-click-row="readOnly? undefined : editNote" :on-click-col="sortNotes"
+                     :read-only="readOnlyNotes"/>
+        </x-table-wrapper>
         <x-modal v-if="removeNoteModal.active" approve-text="Delete" @confirm="removeNotes"
                  @close="closeRemoveNotesModal">
             <div slot="body">You are about to remove {{selectedNotes.length}} notes. Are you sure?</div>
@@ -28,6 +30,7 @@
 <script>
     import xSearchInput from '../../neurons/inputs/SearchInput.vue'
     import xTable from '../../axons/tables/Table.vue'
+    import xTableWrapper from '../../axons/tables/TableWrapper.vue'
     import xButton from '../../axons/inputs/Button.vue'
     import xModal from '../../axons/popover/Modal.vue'
     import xToast from '../../axons/popover/Toast.vue'
@@ -37,7 +40,7 @@
 
     export default {
         name: 'x-entity-notes',
-        components: {xSearchInput, xTable, xButton, xModal, xToast},
+        components: {xSearchInput, xTable, xTableWrapper, xButton, xModal, xToast},
         props: {
             module: {required: true}, entityId: {required: true}, data: {required: true},
             readOnly: {default: false}

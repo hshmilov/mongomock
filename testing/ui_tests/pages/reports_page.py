@@ -144,6 +144,7 @@ class ReportsPage(EntitiesPage):
         wait_until(lambda: self.click_report_and_check_generation(report_name),
                    total_timeout=60 * 3, interval=2)
         self.refresh()
+        self.wait_for_table_to_load()
 
     def wait_for_send_mail_button(self):
         self.wait_for_element_present_by_id(self.SEND_MAIL_BUTTON_ID)

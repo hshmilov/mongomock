@@ -1,18 +1,22 @@
 <template>
   <table class="x-striped-table">
     <thead>
-      <tr class="x-row clickable">
+      <tr class="clickable">
         <th
           v-if="value"
           class="w-14"
         >
-          <x-checkbox
-            :data="allSelected"
-            :indeterminate="partSelected"
-            @change="onSelectAll"
-          />
+          <div class="data-title">
+            <x-checkbox
+              :data="allSelected"
+              :indeterminate="partSelected"
+              @change="onSelectAll"
+            />
+          </div>
         </th>
-        <th v-if="expandable">&nbsp;</th>
+        <th v-if="expandable">
+          <div class="data-title">&nbsp;</div>
+        </th>
         <th
           v-for="field in dataField"
           :key="field.name"
@@ -20,17 +24,19 @@
           :class="{sortable: onClickCol}"
           @click="clickCol(field.name)"
           @keyup.enter.stop="clickCol(field.name)"
-        >
-          <img
-            v-if="field.logo"
-            class="logo md-image"
-            :src="require(`Logos/adapters/${field.logo}.png`)"
-            height="20"
-            :alt="field.title"
-          >{{ field.title }}<div
-            v-if="onClickCol"
-            :class="`x-sort ${sortClass(field.name)}`"
-          />
+        >{{ field.title }}
+          <div class="data-title">
+            <img
+              v-if="field.logo"
+              class="logo md-image"
+              :src="require(`Logos/adapters/${field.logo}.png`)"
+              height="20"
+              :alt="field.title"
+            >{{ field.title }}<div
+              v-if="onClickCol"
+              :class="`x-sort ${sortClass(field.name)}`"
+            />
+          </div>
         </th>
       </tr>
     </thead>
@@ -265,8 +271,18 @@
     border-collapse: collapse;
 
     thead {
-      tr {
-        border-bottom: 2px dashed $grey-2;
+      th {
+        color: transparent;
+        height: 0;
+        line-height: 0;
+
+        .data-title {
+          position: absolute;
+          color: $theme-black;
+          top: 0;
+          line-height: 28px;
+        }
+
       }
     }
 
