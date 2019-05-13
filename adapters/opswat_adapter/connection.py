@@ -10,7 +10,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class OpswatConnection(RESTConnection):
     """ rest client for Opswat adapter """
 
-    def __init__(self, *args, client_id, client_secret, refresh_token, **kwargs):
+    def __init__(self, *args, client_id, client_secret, **kwargs):
         super().__init__(*args, url_base_prefix='o/',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
@@ -18,7 +18,6 @@ class OpswatConnection(RESTConnection):
         self._client_id = client_id
         self._client_secret = client_secret
         self._token = None
-        self._refresh_token = refresh_token
         self._token_expiration = None
 
     def _assure_token(self):
@@ -26,8 +25,7 @@ class OpswatConnection(RESTConnection):
             response = self._get('oauth/token',
                                  url_params={'client_id': self._client_id,
                                              'client_secret': self._client_secret,
-                                             'grant_type': 'refresh_token',
-                                             'refresh_token': self._refresh_token})
+                                             'grant_type': 'client_credentials'})
             self._token = response['access_token']
             self._token_expiration = datetime.datetime.now() + datetime.timedelta(seconds=response['expires_in'])
 

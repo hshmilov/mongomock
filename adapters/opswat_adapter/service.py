@@ -51,8 +51,7 @@ class OpswatAdapter(AdapterBase):
                                       verify_ssl=client_config['verify_ssl'],
                                       https_proxy=client_config.get('https_proxy'),
                                       client_id=client_config['client_id'],
-                                      client_secret=client_config['client_secret'],
-                                      refresh_token=client_config['refresh_token'])
+                                      client_secret=client_config['client_secret'])
         with connection:
             pass
         return connection
@@ -106,12 +105,6 @@ class OpswatAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
-                    'name': 'refresh_token',
-                    'title': 'Refresh Token',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -126,7 +119,6 @@ class OpswatAdapter(AdapterBase):
                 'domain',
                 'client_id',
                 'client_secret',
-                'refresh_token',
                 'verify_ssl'
             ],
             'type': 'array'
