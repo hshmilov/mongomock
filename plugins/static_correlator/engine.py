@@ -432,7 +432,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_asset_name],
                                       [ips_do_not_contradict_or_mac_intersection,
                                        not_aruba_adapters,
-                                       asset_hostnames_do_not_contradict],
+                                       asset_hostnames_do_not_contradict,
+                                       serials_do_not_contradict],
                                       {'Reason': 'They have the same Asset name'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -451,7 +452,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [ips_do_not_contradict_or_mac_intersection,
                                        not_aruba_adapters,
                                        cloud_id_do_not_contradict,
-                                       asset_hostnames_do_not_contradict],
+                                       asset_hostnames_do_not_contradict,
+                                       serials_do_not_contradict],
                                       {'Reason': 'They have the same SNOW Asset + Hostname name'},
                                       CorrelationReason.StaticAnalysis)
 
