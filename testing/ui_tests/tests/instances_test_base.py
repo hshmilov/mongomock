@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import paramiko
+import pytest
 from retrying import retry
 
 from builds import Builds
@@ -37,9 +38,12 @@ def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
     logger.info(f'/var/log/start_system_on_reboot.log : {restart_log_tail[1]}')
 
 
-def setup_instances(logger, instance_name):
+def setup_instances(logger, instance_name, export_name=None):
     builds_instance = Builds()
-    latest_export = builds_instance.get_latest_daily_export()
+    if export_name:
+        latest_export = builds_instance.get_export_by_name(export_name)
+    else:
+        latest_export = builds_instance.get_latest_daily_export()
     logger.info(f'using {latest_export["version"]} for instances tests')
     instances, _ = builds_instance.create_instances(
         f'test_latest_export_{instance_name} ' + (os.environ.get('TEST_GROUP_NAME') or ''),
@@ -70,7 +74,8 @@ def setup_instances(logger, instance_name):
 class TestInstancesBase(TestBase):
     def setup_method(self, method):
         super().setup_method(method)
-        self._instances = setup_instances(self.logger, self.__class__.__name__)
+        export_name = pytest.config.option.export_name
+        self._instances = setup_instances(self.logger, self.__class__.__name__, export_name=export_name)
 
     def teardown_method(self, method):
         for current_instance in self._instances:

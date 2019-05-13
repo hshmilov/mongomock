@@ -203,6 +203,13 @@ class Builds(BuildsAPI):
                          DAILY_EXPORT_SUFFIX in export['version'] and EXPORT_STATUS == export['status']]
         return daily_exports[0]
 
+    def get_export_by_name(self, name):
+        response = self.get_last_exports()
+        daily_exports = [export for export in response['result'] if
+                         name == export['version'] and EXPORT_STATUS == export['status']]
+        assert len(daily_exports) == 1, f'Export with the name {name} was not found, or multiple exports found'
+        return daily_exports[0]
+
     def get_last_exports(self, limit=10):
         response = self.get('exports', params={'limit': limit})
         return response

@@ -15,6 +15,7 @@ def pytest_addoption(parser):
     add_option('teardown-keep-db', action='store_true', default=False, help='Keep the DB at teardown')
     add_option('browser', action='store', default=CHROME, help='Choose browser')
     add_option('host-hub', action='store_true', default=False, help='Run with hub in host')
+    add_option('export-name', action='store', default=None, help='An export name to use')
 
 
 def pytest_collection_modifyitems(config, items):
