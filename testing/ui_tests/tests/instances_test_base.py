@@ -18,7 +18,7 @@ DEFAULT_IMAGE_USERNAME = 'ubuntu'
 DEFAULT_IMAGE_PASSWORD = 'bringorder'
 AUTO_TEST_VM_KEY_PAIR = 'Auto-Test-VM-Key'
 
-RESTART_LOG_PATH = Path('/var/log/restart_system_on_reboot.log')
+RESTART_LOG_PATH = Path('/var/log/start_system_on_reboot.log')
 
 DEFAULT_LIMIT = 10
 
@@ -34,22 +34,23 @@ def wait_for_booted_for_production(instance: BuildsInstance):
 def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
     get_log_command = f'tail {RESTART_LOG_PATH.absolute().as_posix()}'
     restart_log_tail = instance.ssh(get_log_command)
-    logger.info(f'/var/log/restart_system_on_reboot.log : {restart_log_tail[1]}')
+    logger.info(f'/var/log/start_system_on_reboot.log : {restart_log_tail[1]}')
 
 
-def setup_instances(logger):
+def setup_instances(logger, instance_name):
     builds_instance = Builds()
     latest_export = builds_instance.get_latest_daily_export()
     logger.info(f'using {latest_export["version"]} for instances tests')
     instances, _ = builds_instance.create_instances(
-        'test_latest_export ' + (os.environ.get('TEST_GROUP_NAME') or ''),
+        f'test_latest_export_{instance_name} ' + (os.environ.get('TEST_GROUP_NAME') or ''),
         't2.2xlarge',
         1,
         instance_cloud=Builds.CloudType.AWS,
         instance_image=latest_export['ami_id'],
         predefined_ssh_username=DEFAULT_IMAGE_USERNAME,
         predefined_ssh_password=DEFAULT_IMAGE_PASSWORD,
-        key_name=AUTO_TEST_VM_KEY_PAIR
+        key_name=AUTO_TEST_VM_KEY_PAIR,
+        network_security_options=Builds.NetworkSecurityOptions.NoInternet
     )
 
     for current_instance in instances:
@@ -69,7 +70,7 @@ def setup_instances(logger):
 class TestInstancesBase(TestBase):
     def setup_method(self, method):
         super().setup_method(method)
-        self._instances = setup_instances(self.logger)
+        self._instances = setup_instances(self.logger, self.__class__.__name__)
 
     def teardown_method(self, method):
         for current_instance in self._instances:
