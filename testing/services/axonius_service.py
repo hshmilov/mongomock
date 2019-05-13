@@ -126,10 +126,21 @@ class AxoniusService:
         for service in self.axonius_services:
             service.take_process_ownership()
 
-    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True,
-                       expose_db=False, env_vars=None, internal_service_white_list=None):
-
+    def start_and_wait(
+            self,
+            mode='',
+            allow_restart=False,
+            rebuild=False,
+            hard=False,
+            skip=False,
+            show_print=True,
+            expose_db=False,
+            env_vars=None,
+            internal_service_white_list=None,
+            system_config=None
+    ):
         def _start_service(service_to_start):
+            service_to_start.set_system_config(system_config)
             if skip and service_to_start.get_is_container_up():
                 return
             if expose_db and service_to_start is self.db:
@@ -331,8 +342,20 @@ class AxoniusService:
     def get_standalone_service(cls, name):
         return cls._get_docker_service('standalone_services', name)
 
-    def start_plugins(self, adapter_names, plugin_names, standalone_services_names, mode='', allow_restart=False,
-                      rebuild=False, hard=False, skip=False, show_print=True, env_vars=None):
+    def start_plugins(
+            self,
+            adapter_names,
+            plugin_names,
+            standalone_services_names,
+            mode='',
+            allow_restart=False,
+            rebuild=False,
+            hard=False,
+            skip=False,
+            show_print=True,
+            env_vars=None,
+            system_config=None
+    ):
         plugins = [self.get_adapter(name) for name in adapter_names] + \
                   [self.get_plugin(name) for name in plugin_names] + \
                   [self.get_standalone_service(name) for name in standalone_services_names]
@@ -341,6 +364,7 @@ class AxoniusService:
             for plugin in plugins:
                 plugin.remove_container()
         for plugin in plugins:
+            plugin.set_system_config(system_config)
             plugin.take_process_ownership()
             if plugin.get_is_container_up():
                 if skip:

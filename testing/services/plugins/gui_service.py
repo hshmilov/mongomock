@@ -425,7 +425,10 @@ class GuiService(PluginService):
         :return: list of pairs (exposed_port, inner_port)
         """
         # The only container that listens to 80 and redirects to 80 is the gui, to allow http to https redirection.
-        return [(80, 80)] + super().exposed_ports
+        ports = super().exposed_ports
+        if not self._system_config.get('https-only'):
+            ports += [(80, 80)]
+        return ports
 
     @property
     def volumes_override(self):

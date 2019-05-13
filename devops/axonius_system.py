@@ -143,6 +143,8 @@ def system_entry_point(args):
         args.env.append(AXONIUS_MOCK_DEMO_ENV_VAR)
         standalone_services = [MOCKINGBIRD_SERVICE]
 
+    system_config = get_customer_conf_json()
+
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
@@ -153,7 +155,8 @@ def system_entry_point(args):
         # Optimization - async build first
         axonius_system.build(True, args.adapters, args.services, [], 'prod' if args.prod else '', args.rebuild)
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db,
-                                      env_vars=args.env, internal_service_white_list=internal_services)
+                                      env_vars=args.env, internal_service_white_list=internal_services,
+                                      system_config=system_config)
         axonius_system.start_plugins(adapter_names=args.adapters,
                                      plugin_names=args.services,
                                      standalone_services_names=standalone_services,
@@ -161,7 +164,7 @@ def system_entry_point(args):
                                      allow_restart=args.restart,
                                      hard=args.hard,
                                      skip=args.skip,
-                                     env_vars=args.env)
+                                     env_vars=args.env, system_config=system_config)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
@@ -182,9 +185,13 @@ def process_exclude_from_config(exclude):
     return set(conf_exclude).union(exclude)
 
 
+def get_customer_conf_json():
+    return json.loads(CUSTOMER_CONF_PATH.read_text())
+
+
 def is_demo_instance():
     try:
-        customer_conf = json.loads(CUSTOMER_CONF_PATH.read_text())
+        customer_conf = get_customer_conf_json()
         return customer_conf.get('is_demo', False)
     except Exception:
         return False
@@ -239,6 +246,7 @@ def service_entry_point(target, args):
         adapters = [name for name in adapters if name not in args.exclude]
         standalone_services = [name for name in standalone_services if name not in args.exclude]
 
+    system_config = get_customer_conf_json()
     axonius_system = get_service()
     if args.hard:
         assert args.mode in ('up', 'build')
@@ -253,7 +261,8 @@ def service_entry_point(target, args):
     if args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',
-                                     args.restart, args.rebuild, args.hard, env_vars=args.env)
+                                     args.restart, args.rebuild, args.hard, env_vars=args.env,
+                                     system_config=system_config)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')
