@@ -14,4 +14,4 @@ client_details = {
     'subscription_id': 'ba4aa321-c802-4de2-bb72-ca4c66b5b124',
 }
 
-SOME_DEVICE_ID = '/subscriptions/ba4aa321-c802-4de2-bb72-ca4c66b5b124/resourceGroups/MYRESOURCEGROUP/providers/Microsoft.Compute/virtualMachines/win-test-server'  # win-test-server
+SOME_DEVICE_ID = '/subscriptions/ba4aa321-c802-4de2-bb72-ca4c66b5b124/resourceGroups/MYRESOURCEGROUP/providers/Microsoft.Compute/virtualMachines/Windows10-Test'  # Windows10-Test
