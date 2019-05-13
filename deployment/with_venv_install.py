@@ -199,5 +199,5 @@ def run_discovery():
 def start_axonius():
     print_state('Starting up axonius system')
     from devops.axonius_system import main as system_main
-    system_main('system up --all --prod'.split())
+    system_main('system up --all --prod --restart'.split())
     print_state('System is up')
