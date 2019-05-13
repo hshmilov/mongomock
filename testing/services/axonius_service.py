@@ -3,21 +3,19 @@ import glob
 import importlib
 import inspect
 import os
-import random
-import string
 import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
 
-from axonius.consts.gui_consts import ENCRYPTION_KEY_FILENAME
 from axonius.consts.plugin_consts import (AXONIUS_NETWORK,
-                                          AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS,
                                           WEAVE_NETWORK, WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
+from scripts.instances.instances_consts import SUBNET_IP_RANGE
+from scripts.instances.network_utils import get_encryption_key, restore_master_connection
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugins.aggregator_service import AggregatorService
@@ -32,10 +30,9 @@ from services.plugins.static_users_correlator_service import \
     StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from services.weave_service import is_weave_up
+from system_consts import NODE_MARKER_PATH
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
-
-SUBNET_IP_RANGE = '171.17.0.0/16'
 
 
 def get_service():
@@ -65,8 +62,7 @@ class AxoniusService:
                                  self.execution,
                                  self.static_correlator,
                                  self.static_users_correlator,
-                                 self.reports,
-                                 self.master_proxy]
+                                 self.reports]  # TBD: enable master proxy
 
     @classmethod
     def get_is_network_exists(cls):
@@ -83,31 +79,19 @@ class AxoniusService:
 
         if 'linux' in sys.platform.lower():
             # Getting network encryption key.
-            key_file_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), '..', '..', AXONIUS_SETTINGS_DIR_NAME,
-                             ENCRYPTION_KEY_FILENAME))
-            if os.path.exists(key_file_path):
-                with open(key_file_path, 'r') as encryption_key_file:
-                    encryption_key = encryption_key_file.read()
+            if NODE_MARKER_PATH.is_file():
+                print(f'Running on node. Refreshing master connection')
+                restore_master_connection()
             else:
-                # Creating a new one if it doesn't exist yet.
-                encryption_key = ''.join(random.SystemRandom().choices(string.ascii_uppercase +
-                                                                       string.ascii_lowercase + string.digits, k=32))
-                os.makedirs(
-                    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', AXONIUS_SETTINGS_DIR_NAME)),
-                    exist_ok=True)
-                with open(key_file_path, 'w') as encryption_key_file:
-                    encryption_key_file.write(encryption_key)
+                print(f'Running on master')
+                encryption_key = get_encryption_key()
+                print(f'Creating weave network')
+                weave_launch_command = [WEAVE_PATH, 'launch',
+                                        '--dns-domain="axonius.local"', '--ipalloc-range', SUBNET_IP_RANGE,
+                                        '--password',
+                                        encryption_key.strip()]
 
-                # Making sure that it can be used by node_maker user.
-                os.chmod(key_file_path, 0o646)
-
-            print(f'Creating weave network')
-            weave_launch_command = [WEAVE_PATH, 'launch',
-                                    '--dns-domain="axonius.local"', '--ipalloc-range', SUBNET_IP_RANGE, '--password',
-                                    encryption_key.strip()]
-
-            subprocess.check_call(weave_launch_command)
+                subprocess.check_call(weave_launch_command)
         else:
             print(f'Creating regular axonius network')
             subprocess.check_call(['docker', 'network', 'create', f'--subnet={SUBNET_IP_RANGE}', cls._NETWORK_NAME],

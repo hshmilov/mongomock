@@ -1,9 +1,18 @@
 #!/usr/bin/env python3.6
 
 import argparse
+import subprocess
 import sys
 
 import docker
+
+
+def stop_weave_network():
+    try:
+        print('Stopping weave network (nodes will reconnect on relaunch).')
+        subprocess.check_call('weave stop'.split())
+    except subprocess.CalledProcessError:
+        print('Failed to stop weave network.')
 
 
 def destroy(keep_diag=True, keep_tunnel=True):
@@ -16,8 +25,8 @@ def destroy(keep_diag=True, keep_tunnel=True):
     host connection(running container and the image)
     """
     client = docker.from_env()
-    instances_dockers_container_names_substrings_to_keep = ['tunnler', 'weave', 'grid', 'proxy-socat']
-    instances_docker_tag_substring_to_keep = ['socat', 'weave', 'selenium']
+    instances_dockers_container_names_substrings_to_keep = ['grid']
+    instances_docker_tag_substring_to_keep = ['weave', 'selenium']
 
     for container in client.containers.list():
         if (keep_diag and container.name == 'diagnostics') or (
@@ -63,6 +72,7 @@ def destroy(keep_diag=True, keep_tunnel=True):
                 print(f'Removed {image}')
             except Exception as e:
                 print(f'Error while stopping Image {image} {e}')
+    stop_weave_network()
 
 
 def main():

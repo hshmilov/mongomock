@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 
 
 # note: DO NOT IMPORT ANY EXTERNAL PACKAGE (axonius included) HERE. THIS FILE RUNS BEFORE VENV IS SET!
@@ -50,6 +51,18 @@ def print_state(text):
     reset = '\033[00m'
     light_blue = '\033[94m'
     print(f'{light_blue}{text}{reset}')
+
+
+def run_as_root(args, passwd):
+    sudo = f'sudo -S' if passwd != '' else 'sudo'
+    print(' '.join(sudo.split() + args))
+    proc = subprocess.Popen(sudo.split() + args, stdin=subprocess.PIPE)
+    proc.communicate(passwd.encode() + b'\n')
+
+
+def chown_folder(root_pass, path):
+    cmd = f'chown -R ubuntu:ubuntu {path}'
+    run_as_root(cmd.split(), root_pass)
 
 
 CORTEX_PATH, current_file_system_path, zip_loader = get_resources()

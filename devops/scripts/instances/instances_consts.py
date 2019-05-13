@@ -12,3 +12,4 @@ PASSWORD_GET_URL = 'https://core.axonius.local/api/node/'
 ADAPTER_RESTART_COMMAND = './axonius.sh system up --all --prod --restart --env NODE_INIT_NAME={init_name}'
 MASTER_ADDR_HOST_PATH = AXONIUS_SETTINGS_PATH / '__master'
 ENCRYPTION_KEY_HOST_PATH = AXONIUS_SETTINGS_PATH / ENCRYPTION_KEY_FILENAME
+SUBNET_IP_RANGE = '171.17.0.0/16'

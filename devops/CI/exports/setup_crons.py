@@ -1,5 +1,7 @@
-from deployment.install import create_cronjob, AXONIUS_DEPLOYMENT_PATH
+from deployment.install import AXONIUS_DEPLOYMENT_PATH
 from pathlib import Path
+
+from with_venv_install import create_cronjob
 
 SETUP_NETWORK_SCRIPT_PATH = Path(AXONIUS_DEPLOYMENT_PATH) / 'setup_network.sh'
 SETUP_SWAP_PATH = Path(AXONIUS_DEPLOYMENT_PATH) / 'create_swap.py'
