@@ -59,7 +59,7 @@ export const pluginMeta = {
         description: 'Symantec Endpoint Encryption combines full-disk and removable media encryption with centralized management to protect sensitive information and ensure regulatory compliance.'
     },
     promisec_adapter: {
-        title: 'Promisec Endpoint Manager - BETA',
+        title: 'Promisec Endpoint Manager',
         description: 'Promisec Endpoint Manager is an agentless endpoint detection and remediation solution that detects, analyzes, and remediates abnormalities. \t'
     },
     truefort_adapter: {

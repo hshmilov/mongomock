@@ -126,12 +126,12 @@ class NmapAdapter(ScannerAdapterBase):
                 },
                 {
                     'name': 'nmap_share_username',
-                    'title': 'nmap Share Username',
+                    'title': 'Nmap Share Username',
                     'type': 'string'
                 },
                 {
                     'name': 'nmap_share_password',
-                    'title': 'nmap Share Password',
+                    'title': 'Nmap Share Password',
                     'type': 'string',
                     'format': 'password'
                 },

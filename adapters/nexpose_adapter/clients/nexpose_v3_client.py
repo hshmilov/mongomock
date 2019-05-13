@@ -136,7 +136,7 @@ class NexposeV3Client(NexposeClient):
         try:
             response = requests.get(_parse_dedicated_url(resource), params=params,
                                     auth=(self.username, self.password), verify=self.verify_ssl,
-                                    timeout=(5, 30))
+                                    timeout=(5, 300))
             response.raise_for_status()
             response = response.json()
         except requests.HTTPError as e:
