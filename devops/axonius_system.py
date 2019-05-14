@@ -186,7 +186,10 @@ def process_exclude_from_config(exclude):
 
 
 def get_customer_conf_json():
-    return json.loads(CUSTOMER_CONF_PATH.read_text())
+    try:
+        return json.loads(CUSTOMER_CONF_PATH.read_text())
+    except FileNotFoundError:
+        return dict()
 
 
 def is_demo_instance():
