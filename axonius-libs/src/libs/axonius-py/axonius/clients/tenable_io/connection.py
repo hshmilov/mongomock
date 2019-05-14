@@ -195,7 +195,7 @@ class TenableIoConnection(RESTConnection):
                     continue
                 self._assets_list_dict[asset_id_for_vuln]['vulns_info'].append(vuln_raw)
             except Exception:
-                logger.exception(f'Problem with vuln raw {vuln_raw}')
+                logger.debug(f'Problem with vuln raw {vuln_raw}')
         self._epoch_last_run_time = int(time.time())
         assets_list_dict = self._assets_list_dict
         if not use_cache:
