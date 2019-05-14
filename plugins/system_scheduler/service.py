@@ -320,7 +320,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 if should_fetch_rt_adapter:
                     adapters_to_call = list(self.__get_all_realtime_adapters())
                     if not adapters_to_call:
-                        logger.info('No adapters to call, not doing anything at all')
+                        logger.debug('No adapters to call, not doing anything at all')
                         return
 
                     for adapter_to_call in adapters_to_call:
