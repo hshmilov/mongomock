@@ -1,0 +1,170 @@
+{
+  "variables": {
+    "build_name": "test",
+    "user": null,
+    "password": null,
+    "client_id": "{{env `ARM_CLIENT_ID`}}",
+    "client_secret": "{{env `ARM_CLIENT_SECRET`}}",
+    "subscription_id": "{{env `ARM_SUBSCRIPTION_ID`}}",
+    "tenant_id": "{{env `ARM_TENANT_ID`}}"
+  },
+  "builders": [{
+    "type": "azure-arm",
+
+    "client_id": "{{user `client_id`}}",
+    "client_secret": "{{user `client_secret`}}",
+    "tenant_id": "{{user `tenant_id`}}",
+    "subscription_id": "{{user `subscription_id`}}",
+
+    "managed_image_resource_group_name": "AxoniusReleases",
+    "managed_image_name": "Axonius_{{user `build_name` }}",
+
+    "os_type": "Linux",
+    "image_publisher": "Canonical",
+    "image_offer": "UbuntuServer",
+    "image_sku": "16.04-LTS",
+
+    "os_disk_size_gb": 500,
+
+    "azure_tags": {
+        "dept": "Engineering",
+        "task": "Image deployment"
+    },
+
+    "location": "East US",
+    "vm_size": "Standard_DS2_v2",
+
+    "ssh_username": "{{user `user` }}",
+    "ssh_password": "{{user `password`}}"
+  }],
+  "provisioners": [{
+      "type": "shell",
+      "inline": [
+        "export HISTFILE=/dev/null"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "mkdir -p /home/ubuntu/cortex/devops/scripts/host_installation"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "ip_wizard",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/ip_wizard"
+    },
+    {
+      "type": "file",
+      "source": "weave-2.5.1",
+      "destination": "/home/ubuntu/cortex/devops/scripts/host_installation/weave-2.5.1"
+    },
+    {
+      "type": "shell",
+      "script": "init_host.sh",
+      "remote_folder": "/home/ubuntu/cortex/devops/scripts/host_installation",
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "expect_disconnect": true,
+      "inline": [
+        "reboot"
+      ],
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "file",
+      "pause_before": "10s",
+      "source": "./axonius_{{user `build_name`}}.py",
+      "destination": "/home/ubuntu/axonius_{{user `build_name`}}.py"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "python3 ./axonius_{{user `build_name`}}.py --first-time",
+        "chown -R ubuntu:ubuntu ./cortex"
+      ],
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "./install_chef_client.sh",
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell-local",
+      "command": "wget http://services.axonius.lan:8080/axonius-validator-2.pem -O ./axonius-validator-2.pem"
+    },
+    {
+      "type": "file",
+      "source": "./axonius-validator-2.pem",
+      "destination": "/home/ubuntu/axonius-validator-2.pem"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "touch /home/ubuntu/CHEF_PROVISION.marker"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "./chef_scheduled_provision.sh",
+      "destination": "/home/ubuntu/chef_scheduled_provision.sh"
+    },
+    {
+      "type": "file",
+      "source": "./sched_prov.py",
+      "destination": "/home/ubuntu/sched_prov.py"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "mv /home/ubuntu/chef_scheduled_provision.sh /home/ubuntu/sched_prov.py /etc/cron.d/",
+        "chown root:root /etc/cron.d/chef_scheduled_provision.sh /etc/cron.d/sched_prov.py",
+        "chmod  0700 /etc/cron.d/chef_scheduled_provision.sh /etc/cron.d/sched_prov.py",
+        "crontab -l | { cat; echo \"*/1 * * * * /etc/cron.d/chef_scheduled_provision.sh\"; } | crontab -"
+      ],
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -f /home/ubuntu/axonius_{{user `build_name`}}.py"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "setup_crons.py",
+      "destination": "/home/ubuntu/cortex/setup_crons.py"
+    },
+    {
+      "type": "file",
+      "source": "setup_network.sh",
+      "destination": "/home/ubuntu/cortex/setup_network.sh"
+    },
+    {
+      "type": "file",
+      "source": "create_swap.py",
+      "destination": "/home/ubuntu/cortex/create_swap.py"
+    },
+    {
+      "type": "shell",
+      "remote_folder": "/home/ubuntu/cortex",
+      "inline": [
+        "/home/ubuntu/cortex/venv/bin/python /home/ubuntu/cortex/setup_crons.py",
+        "rm -f setup_network.sh setup_crons.py create_swap.py",
+        "cat /dev/null > /home/ubuntu/.bash_history"
+      ],
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+    "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
+    "inline": [
+      "/usr/sbin/waagent -force -deprovision && export HISTSIZE=0 && sync"
+    ],
+    "inline_shebang": "/bin/sh -x",
+    "type": "shell"
+  }
+  ]
+}
