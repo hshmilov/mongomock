@@ -355,7 +355,6 @@ def test_api_devices():
         test_get_specific_device()
 
 
-@pytest.mark.skip("AX-1901")
 def test_api_users():
     def test_get_all_users():
         axonius_system = get_service()
