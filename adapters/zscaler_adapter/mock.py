@@ -41,9 +41,6 @@ class ZscalerMockConnection(ZscalerConnection):
         super().__init__(*args, **kwargs)
 
     def _post(self, *args, **kwargs):
-        pass
-
-    def _get(self, *args, **kwargs):
         response = requests.Response()
         if self._get_number == 0:
             response.status_code = 429
