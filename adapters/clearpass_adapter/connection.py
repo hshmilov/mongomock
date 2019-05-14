@@ -44,7 +44,7 @@ class ClearpassConnection(RESTConnection):
                     if mac:
                         device_raw['extended_info'] = self._get(f'insight/endpoint/mac/{mac}')
                 except Exception:
-                    logger.exception(f'Problem getting extended info for {device_raw}')
+                    logger.debug(f'Problem getting extended info for {device_raw}')
             yield device_raw, device_type
         count = response['count']
         if count >= MAX_NUMBER_OF_DEVICES:
@@ -66,7 +66,7 @@ class ClearpassConnection(RESTConnection):
                             if mac:
                                 device_raw['extended_info'] = self._get(f'insight/endpoint/mac/{mac}')
                         except Exception:
-                            logger.exception(f'Problem getting extended info for {device_raw}')
+                            logger.debug(f'Problem getting extended info for {device_raw}')
                     yield device_raw, device_type
             except Exception:
                 logger.exception(f'Problem fetching offset {offset}')
