@@ -70,7 +70,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'CarbonblackProtection_Domain',
-                    'title': 'Carbonblack Protection Domain',
+                    'title': 'Carbon Black CB Protection Domain',
                     'type': 'string'
                 },
                 {

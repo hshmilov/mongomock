@@ -99,7 +99,7 @@ class CarbonblackDefenseAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Carbonblack Defense Domain',
+                    'title': 'Carbon Black CB Defense Domain',
                     'type': 'string'
                 },
                 {

@@ -79,7 +79,7 @@ class CarbonblackResponseAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Carbonblack Response Domain',
+                    'title': 'Carbon Black CB Response Domain',
                     'type': 'string'
                 },
                 {
