@@ -44,6 +44,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         first_deployed = Field(datetime.datetime, 'First Deployed')
         created_at = Field(datetime.datetime, 'Created At')
         created_by = Field(str, 'Created By')
+        sys_updated_on = Field(str, 'Updated On')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -218,7 +219,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             try:
                 device.discovery_source = device_raw.get('discovery_source')
                 device.first_discovered = parse_date(device_raw.get('first_discovered'))
-                device.last_discovered = parse_date(device_raw.get('last_discovered'))
+                last_discovered = parse_date(device_raw.get('last_discovered'))
+                device.last_discovered = last_discovered
+                sys_updated_on = parse_date(device_raw.get('sys_updated_on'))
+                device.sys_updated_on = sys_updated_on
+                if last_discovered and sys_updated_on:
+                    device.last_seen = max(sys_updated_on, last_discovered)
+                elif last_discovered or sys_updated_on:
+                    device.last_seen = last_discovered or sys_updated_on
                 device.created_at = parse_date((device_raw.get('sys_created_on')))
                 device.created_by = device_raw.get('sys_created_by')
             except Exception:
