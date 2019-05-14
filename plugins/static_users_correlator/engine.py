@@ -43,6 +43,21 @@ def get_ad_display_name_username(adapter_data):
     return None
 
 
+def get_user_domain(adapter_data):
+    user_domain = adapter_data['data'].get('domain')
+    if user_domain:
+        return user_domain.lower().strip()
+    return None
+
+
+def domain_do_not_contradict(adapter_data1, adapter_data2):
+    domain_1 = get_user_domain(adapter_data1)
+    domain_2 = get_user_domain(adapter_data2)
+    if not domain_1 or not domain_2:
+        return True
+    return domain_1 == domain_2
+
+
 def compare_ad_display_name_username(adapter_data1, adapter_data2):
     ad_display_name_username1 = get_ad_display_name_username(adapter_data1)
     ad_display_name_username2 = get_ad_display_name_username(adapter_data2)
@@ -229,7 +244,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                       [get_ad_display_name],
                                       [compare_ad_display_name],
                                       [],
-                                      [],
+                                      [domain_do_not_contradict],
                                       {'Reason': 'They have the same AD display name'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -243,7 +258,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                       [get_ad_display_name_username],
                                       [compare_ad_display_name_username],
                                       [],
-                                      [],
+                                      [domain_do_not_contradict],
                                       {'Reason': 'They have the same AD display name- username'},
                                       CorrelationReason.StaticAnalysis)
 
