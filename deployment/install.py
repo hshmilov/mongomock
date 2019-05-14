@@ -53,6 +53,10 @@ CHMOD_FILES = [
     os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops/scripts/discover_now.py'),
 ]
 
+LINK_FILES = [
+    os.path.join(AXONIUS_DEPLOYMENT_PATH, 'ax')
+]
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -97,7 +101,11 @@ def load_new_source():
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
         data = zip_loader.get_data(zip_path)
-        open(full_path, 'wb').write(data)
+        if full_path in LINK_FILES:
+            if not os.path.exists(full_path):
+                os.symlink(data, full_path)
+        else:
+            open(full_path, 'wb').write(data)
         # chmod +x for .sh files
         if full_path.endswith('.sh') and sys.platform.startswith('linux'):
             os.chmod(full_path, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
