@@ -156,6 +156,7 @@ DOCKER_PORTS = {
     'zscaler-adapter':                  6686,
     'master-proxy':                     8888,  # reserved
     'ssh-socat':                        9958,
+    'office-scan-adapter':              9959,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

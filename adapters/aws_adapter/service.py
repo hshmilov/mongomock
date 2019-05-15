@@ -1429,6 +1429,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                              DeviceRunningState.Unknown)
                     try:
+                        if POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
+                                               DeviceRunningState.Unknown) != DeviceRunningState.TurnedOn:
+                            device.last_seen = datetime.datetime.now()
+                    except Exception:
+                        logger.exception(f'Problem adding last seen')
+                    try:
                         device.launch_time = parse_date(device_raw.get('LaunchTime'))
                     except Exception:
                         logger.exception(f'Problem getting launch time for {device_raw}')

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    office_scan_adapter: {
+        title: 'Trend Micro OfficeScan - BETA',
+        description: 'Trend Micro OfficeScan uses machine learning to eliminate security gaps across users and endpoints activities by protecting against malware, scripts, injection, ransomware, memory and browser attacks and exploits.'
+    },
     datto_rmm_adapter: {
         title: 'Datto RMM - BETA',
         description: 'Datto RMM (formerly Autotask Endpoint Management) is a cloud-based Remote Monitoring and Management (RMM) platform that provides device auditing, real-time monitoring, and automatic patching.'
