@@ -39,6 +39,7 @@ class GceTag(SmartJsonClass):
     gce_value = Field(str, 'GCE Value')
 
 
+# pylint: disable=too-many-instance-attributes
 class GceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         project_id = Field(str, 'Project ID')
@@ -58,20 +59,39 @@ class GceAdapter(AdapterBase):
         auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
         return auth_file['client_id'] + '_' + auth_file['project_id']
 
-    def _test_reachability(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
         return RESTConnection.test_reachability(GCE_ENDPOINT_FOR_REACHABILITY_TEST)
 
     def _connect_client(self, client_config):
         try:
             auth_file = json.loads(self._grab_file_contents(client_config['keypair_file']))
 
+            # Check access
+            credentials = service_account.Credentials.from_service_account_info(
+                auth_file,
+                scopes=['https://www.googleapis.com/auth/cloudplatformprojects.readonly']
+            )
+            service = discovery.build('cloudresourcemanager', 'v1', credentials=credentials)
+            request = service.projects().list()
+            try:
+                response = request.execute()
+            except Exception as re:
+                logger.exception(f'Failure listing projects')
+                if 'cloud resource manager api has not been used in project' in str(re).lower():
+                    raise ClientConnectionException(f'Cloud Resource Manager API is not enabled.')
+                raise
+            projects = response.get('projects') or []
+            if not projects:
+                raise ClientConnectionException(f'No projects found. Please check the service account permissions')
             return auth_file
         except Exception as e:
-            logger.error('Failed to connect to client {0}'.format(
-                self._get_client_id(client_config)))
-            raise ClientConnectionException(str(e))
+            client_id = self._get_client_id(client_config)
+            logger.error(f'Failed to connect to client {client_id}')
+            raise ClientConnectionException(f'Error: {e}')
 
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         auth_json = client_data
         try:
             credentials = service_account.Credentials.\
@@ -83,16 +103,25 @@ class GceAdapter(AdapterBase):
                 response = request.execute()
                 for project in response['projects']:
                     try:
-                        for device_raw in get_driver(Provider.GCE)(auth_json['client_email'], auth_json['private_key'], project=project.get('projectId')).list_nodes():
+                        for device_raw in get_driver(Provider.GCE)(
+                                auth_json['client_email'],
+                                auth_json['private_key'],
+                                project=project.get('projectId')
+                        ).list_nodes():
                             yield device_raw, project.get('projectId')
                     except Exception:
                         logger.exception(f'Problem with project {project}')
                 request = service.projects().list_next(previous_request=request, previous_response=response)
         except Exception:
-            for device_raw in get_driver(Provider.GCE)(auth_json['client_email'], auth_json['private_key'], project=auth_json['project_id']).list_nodes():
+            for device_raw in get_driver(Provider.GCE)(
+                    auth_json['client_email'],
+                    auth_json['private_key'],
+                    project=auth_json['project_id']
+            ).list_nodes():
                 yield device_raw, auth_json['project_id']
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         return {
             'items': [
                 {
@@ -108,6 +137,7 @@ class GceAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements
     def create_device(self, raw_device_data, project_id):
         device = self._new_device_adapter()
         device.id = raw_device_data.id

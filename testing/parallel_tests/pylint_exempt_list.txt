@@ -30,7 +30,6 @@ adapters/esx_adapter/service.py
 adapters/esx_adapter/vcenter_api.py
 adapters/fireeye_hx_adapter/connection.py
 adapters/fireeye_hx_adapter/service.py
-adapters/gce_adapter/service.py
 adapters/google_mdm_adapter/service.py
 adapters/gotoassist_adapter/connection.py
 adapters/gotoassist_adapter/exceptions.py
