@@ -79,6 +79,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         logger.info(f'Loading SystemScheduler config: {config}')
 
         self.__constant_alerts = config['discovery_settings']['constant_alerts']
+        self.__analyse_reimage = config['discovery_settings']['analyse_reimage']
         self.__system_research_rate = float(config['discovery_settings']['system_research_rate'])
         logger.info(f'Setting research rate to: {self.__system_research_rate}')
         scheduler = getattr(self, '_research_phase_scheduler', None)
@@ -116,6 +117,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             'title': 'Always run Alerts',
                             'type': 'bool',
                             'required': True
+                        },
+                        {
+                            'name': 'analyse_reimage',
+                            'title': 'Tag reimaged devices',
+                            'type': 'bool',
+                            'required': True
                         }
                     ],
                     'name': 'discovery_settings',
@@ -132,7 +139,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             'discovery_settings': {
                 'system_research_rate': 12,
                 'save_history': True,
-                'constant_alerts': False
+                'constant_alerts': False,
+                'analyse_reimage': False
             }
         }
 
@@ -251,16 +259,24 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             # Run Pre Correlation plugins.
             _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation)
-            self._run_plugins(PluginSubtype.PreCorrelation)
+            self._run_plugins(self._get_plugins(PluginSubtype.PreCorrelation))
 
             # Run Correlations.
             _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
-            self._run_plugins(PluginSubtype.Correlator)
+            self._run_plugins(self._get_plugins(PluginSubtype.Correlator))
 
             self._request_gui_dashboard_cache_clear()
 
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
-            self._run_plugins(PluginSubtype.PostCorrelation)
+            post_correlations_plugins = self._get_plugins(PluginSubtype.PostCorrelation)
+
+            if not self.__analyse_reimage:
+                post_correlations_plugins = [x
+                                             for x
+                                             in post_correlations_plugins
+                                             if x[PLUGIN_NAME] != 'reimage_tags_analysis']
+
+            self._run_plugins(post_correlations_plugins)
 
             if self.__save_history:
                 # Save history.
@@ -341,17 +357,19 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             finally:
                 logger.debug('Finished RT cycle')
 
-    def _get_plugins(self, plugin_subtype: PluginSubtype):
+    def _get_plugins(self, plugin_subtype: PluginSubtype) -> list:
         """
         Get registered plugins from core, filtered by plugin_subtype.
         :param plugin_subtype: A plugin_subtype to filter.
         :return:
         """
         registered_plugins = self.get_available_plugins_from_core()
-        return [plugin for plugin in registered_plugins.values() if
-                plugin['plugin_subtype'] == plugin_subtype.value]
+        return [plugin
+                for plugin
+                in registered_plugins.values()
+                if plugin['plugin_subtype'] == plugin_subtype.value]
 
-    def _run_plugins(self, plugin_subtype: PluginSubtype):
+    def _run_plugins(self, plugins_to_run: list):
         """
         Trigger execute asynchronously in filtered plugins.
         :param plugin_subtype: A plugin_subtype to filter.
@@ -368,7 +386,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                         blocking=blocking,
                                         timeout=24 * 3600, stop_on_timeout=True)
 
-        plugins_to_run = self._get_plugins(plugin_subtype)
         with ThreadPoolExecutor() as executor:
 
             future_for_pre_correlation_plugin = {

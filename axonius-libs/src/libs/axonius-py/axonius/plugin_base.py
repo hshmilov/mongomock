@@ -896,7 +896,7 @@ class PluginBase(Configurable, Feature):
                                          args=args,
                                          kwargs=kwargs))
 
-    def get_available_plugins_from_core_uncached(self):
+    def get_available_plugins_from_core_uncached(self) -> list:
         """
         Uncached version for get_available_plugins_from_core
         """
@@ -904,7 +904,7 @@ class PluginBase(Configurable, Feature):
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
-    def get_available_plugins_from_core(self):
+    def get_available_plugins_from_core(self) -> list:
         """
         Gets all running plugins from core by querying core/register
         """
