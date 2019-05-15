@@ -43,6 +43,8 @@ class ReportGenerator(object):
         self.templates = {
             'report': self._get_template('axonius_report'),
             'section': self._get_template('report_section'),
+            'report_summary': self._get_template('report_summary'),
+            'report_charts': self._get_template('report_charts'),
             'card': self._get_template('report_card'),
             'discovery': self._get_template('summary/data_discovery'),
             'pie': self._get_template('summary/pie_chart'),
@@ -102,7 +104,8 @@ class ReportGenerator(object):
 
         if self.report_data.get('include_dashboard'):
             # Add summary section containing dashboard panels, pre- and user-defined
-            sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
+            sections.append(self._create_discovery_summary())
+            sections.append(self._create_dashboard_charts())
 
         # Add section for each adapter with results of its queries
         adapter_data = self.report_data.get('adapter_data')
@@ -139,7 +142,39 @@ class ReportGenerator(object):
         """
         return self.env.get_template(f'{self.template_path}{template_name}.html')
 
-    def _create_summary(self):
+    def _create_discovery_summary(self):
+        """
+        Create HTML part for each of the discovery summary.
+
+        :return:
+        """
+        logger.info('Report Generator, Discovery Summary Section: Begin')
+        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('counters'):
+            # Adding card with histogram comparing amount of devices from each adapter
+            device_discovery = self.templates['card'].render({
+                'title': '  Device Discovery',
+                'content': self._create_adapter_discovery(self.report_data['adapter_devices'], 'devices')
+            })
+            logger.info('Report Generator, Summary Section: Added Adapter Devices Discovery Panel')
+            user_discovery = ''
+            if self.report_data.get('adapter_users') and self.report_data['adapter_users'].get('counters'):
+                # Adding card with histogram comparing amount of devices from each adapter
+                user_discovery = self.templates['card'].render({
+                    'title': 'User Discovery',
+                    'content': self._create_adapter_discovery(self.report_data['adapter_users'], 'users')
+                })
+                logger.info('Report Generator, Summary Section: Added Adapter Users Discovery Panel')
+            return self.templates['section'].render(
+                {'title': 'Discovery Summary', 'content': self.templates['report_summary'].render({
+                    'link_start': f'<a href="https://{self.host}" class="c-blue">',
+                    'title': 'View full Dashboard',
+                    'link_end': '</a>',
+                    'device_discovery': device_discovery,
+                    'user_discovery': user_discovery
+                })})
+        return ''
+
+    def _create_dashboard_charts(self):
         """
         Create HTML part for each of the dashboard predefined charts as well as those defined by user.
 
@@ -147,20 +182,6 @@ class ReportGenerator(object):
         """
         logger.info('Report Generator, Summary Section: Begin')
         summary_content = []
-        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('counters'):
-            # Adding card with histogram comparing amount of devices from each adapter
-            summary_content.append(self.templates['card'].render({
-                'title': 'Device Discovery',
-                'content': self._create_adapter_discovery(self.report_data['adapter_devices'], 'devices')
-            }))
-            logger.info('Report Generator, Summary Section: Added Adapter Devices Discovery Panel')
-            if self.report_data.get('adapter_users') and self.report_data['adapter_users'].get('counters'):
-                # Adding card with histogram comparing amount of devices from each adapter
-                summary_content.append(self.templates['card'].render({
-                    'title': 'User Discovery',
-                    'content': self._create_adapter_discovery(self.report_data['adapter_users'], 'users')
-                }))
-                logger.info('Report Generator, Summary Section: Added Adapter Users Discovery Panel')
         if self.report_data.get('covered_devices'):
             # Adding cards with coverage of network roles
             for coverage_data in self.report_data['covered_devices']:
@@ -204,7 +225,14 @@ class ReportGenerator(object):
                 except Exception:
                     logger.exception(f'Problem adding pie chart to reports with title: {title}')
             logger.info(f'Report Generator, Summary Section: Added {charts_added} Custom Panels')
-        return '\n'.join(summary_content)
+        return self.templates['section'].render({
+            'title': 'Dashboard Charts',
+            'content': self.templates['report_charts'].render({
+                'link_start': f'<a href="https://{self.host}" class="c-blue">',
+                'title': 'View full Dashboard',
+                'link_end': '</a>',
+                'content': '\n'.join(summary_content)
+            })})
 
     def _create_coverage_pie(self, portion):
         """
@@ -268,8 +296,10 @@ class ReportGenerator(object):
         adapters.sort(key=lambda x: x['value'], reverse=True)
         return self.templates['discovery'].render({
             'entities': entity_name, 'entity': entity_name[:-1],
-            'histogram': self._create_histogram(adapters, 6),
-            'seen': discovery_data['seen'], 'unique': discovery_data['unique']
+            'histogram': self._create_histogram(adapters, 12),
+            'seen': discovery_data['seen'],
+            'seen_gross': discovery_data['seen_gross'],
+            'unique': discovery_data['unique']
         })
 
     def _create_query_histogram(self, queries_data):
