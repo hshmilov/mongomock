@@ -11,6 +11,8 @@ from builds.builds_factory import BuildsInstance
 from devops.scripts.instances.start_system_on_first_boot import \
     BOOTED_FOR_PRODUCTION_MARKER_PATH
 from ui_tests.tests.ui_test_base import TestBase
+from axonius.utils.wait import wait_until
+
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
@@ -45,17 +47,22 @@ def setup_instances(logger, instance_name, export_name=None):
     else:
         latest_export = builds_instance.get_latest_daily_export()
     logger.info(f'using {latest_export["version"]} for instances tests')
-    instances, _ = builds_instance.create_instances(
-        f'test_latest_export_{instance_name} ' + (os.environ.get('TEST_GROUP_NAME') or ''),
-        't2.2xlarge',
-        1,
-        instance_cloud=Builds.CloudType.AWS,
-        instance_image=latest_export['ami_id'],
-        predefined_ssh_username=DEFAULT_IMAGE_USERNAME,
-        predefined_ssh_password=DEFAULT_IMAGE_PASSWORD,
-        key_name=AUTO_TEST_VM_KEY_PAIR,
-        network_security_options=Builds.NetworkSecurityOptions.NoInternet
-    )
+
+    def create_instances_helper():
+        ret, _ = builds_instance.create_instances(
+            f'test_latest_export_{instance_name} ' + (os.environ.get('TEST_GROUP_NAME') or ''),
+            't2.2xlarge',
+            1,
+            instance_cloud=Builds.CloudType.AWS,
+            instance_image=latest_export['ami_id'],
+            predefined_ssh_username=DEFAULT_IMAGE_USERNAME,
+            predefined_ssh_password=DEFAULT_IMAGE_PASSWORD,
+            key_name=AUTO_TEST_VM_KEY_PAIR,
+            network_security_options=Builds.NetworkSecurityOptions.NoInternet
+        )
+        return ret
+
+    instances = wait_until(create_instances_helper, check_return_value=True, exc_list=[ValueError], interval=2)
 
     for current_instance in instances:
         current_instance.wait_for_ssh()

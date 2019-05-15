@@ -1,6 +1,6 @@
 import re
 
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
 from axonius.utils.wait import wait_until
 from ui_tests.pages.entities_page import EntitiesPage
@@ -27,7 +27,9 @@ class InstancesPage(EntitiesPage):
         self.click_ok_button()
 
     def click_connect_node(self):
-        self.click_button_by_id(self.CONNECT_NODE_ID)
+        wait_until(lambda: self.click_button_by_id(self.CONNECT_NODE_ID),
+                   exc_list=[StaleElementReferenceException],
+                   check_return_value=False)
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
 
     def is_connect_node_disabled(self):
