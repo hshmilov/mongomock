@@ -75,10 +75,10 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
                 f'{NODE_NAME} node_maker password changed to:{self.instances_page.get_node_password(NODE_NAME)}')
             self.logger.info('Trying to connect to node_maker with old password')
             self.connect_node_maker(self._instances[0])
-            pytest.xfail('No exception was raised while trying connect to node with old password.')
+            pytest.fail('No exception was raised while trying connect to node with old password.')
         except paramiko.ssh_exception.AuthenticationException:
             self.logger.info('Failed to connect node with old password as expected.')
-        except Exception as exc:
+        except Exception:
             self.logger.exception(
                 'Failed to connect to node with old password as expected but a bad exception was raised.')
             raise
