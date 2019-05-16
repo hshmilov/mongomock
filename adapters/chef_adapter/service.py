@@ -7,20 +7,28 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import format_ip, format_mac, is_valid_ip
+from axonius.utils.parsing import format_mac, is_valid_ip
 from chef_adapter.connection import ChefConnection
 from chef_adapter.exceptions import ChefException
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 CHEF_DOMAIN = 'domain'
 ORGANIZATION = 'organization'
 CLIENT_KEY = 'client_key'
 CLIENT = 'client'
 SSL_VERIFY = 'ssl_verify'
+
+
+# pylint: disable=invalid-string-quote
+# pylint: disable=invalid-name
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-nested-blocks
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
 
 
 class ChefAdapter(AdapterBase):
@@ -160,15 +168,16 @@ class ChefAdapter(AdapterBase):
                 device.device_model = systeminfo.get('product_name')
                 device.device_model_family = systeminfo.get('family')
                 device.device_serial = systeminfo.get('serial_number')
+                cpus = device_raw_automatic.get('cpu') or {}
+
                 try:
-                    cpus = device_raw_automatic.get('cpu') or {}
                     device.total_number_of_cores = cpus.get('total')
                     device.total_number_of_physical_processors = cpus.get('real')
                 except Exception as e:
                     logger.warning(f"Problem getting CPUs for {e}")
                 try:
-                    for cpu in (cpus or {}).items():
-                        if 'core_id' in cpu:
+                    for _, cpu in cpus.items():
+                        if isinstance(cpu, dict) and 'core_id' in cpu:
                             device.add_cpu(name=cpu.get('model_name'), ghz=float(cpu.get('mhz') or 0) / 1024.0)
                 except Exception as e:
                     logger.warning(f"Problem with adding CPU to Chef client {e}")
@@ -176,7 +185,7 @@ class ChefAdapter(AdapterBase):
                     if 'uptime_seconds' in device_raw_automatic:
                         try:
                             uptime = datetime.timedelta(seconds=device_raw_automatic['uptime_seconds'])
-                            device.set_boot_time(uptime=datetime.timedelta(seconds=uptime))
+                            device.set_boot_time(uptime=uptime)
                         except Exception:
                             logger.exception('uptime failed')
                     biosinfo = dmi.get('bios') or {}
@@ -261,6 +270,7 @@ class ChefAdapter(AdapterBase):
                     device.set_raw(raw)
 
                     for k, v in features.items():
+                        v = 'not-set' if not v else v
                         device.set_dynamic_field(f'axonius_feature_{k}', str(v))
 
                 yield device
