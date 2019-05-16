@@ -138,6 +138,7 @@ class SymantecCloudWorkloadAdapter(AdapterBase):
                 }
             ],
             'required': [
+                'domain',
                 'domain_id',
                 'customer_id',
                 'client_id',
