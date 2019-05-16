@@ -127,7 +127,8 @@ class DevicesPage(EntitiesPage):
         if query_filter:
             self.click_row_checkbox()
         else:
-            self.select_all_page_rows_checkbox()
+            self.select_all_current_page_rows_checkbox()
+            self.click_select_all_entities()
         self.open_delete_dialog()
         wait_until(lambda: re.match(self.DELETE_DIALOG_TEXT_REGEX, self.read_delete_dialog()) is not None)
         self.confirm_delete()

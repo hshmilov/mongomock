@@ -131,6 +131,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
             local_ad_adapter.stop()
 
             self.adapters_page.remove_server(delete_associated_entities=True)
+            time.sleep(5)
             self.devices_page.delete_devices()
 
             self.axonius_system.take_process_ownership()

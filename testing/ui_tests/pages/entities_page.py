@@ -47,8 +47,11 @@ class EntitiesPage(Page):
     QUERY_LOGIC_AND = 'and'
     QUERY_LOGIC_OR = 'or'
     OUTDATED_TOGGLE_CSS = 'div.md-switch.md-theme-default > div > div'
-    TABLE_SELECT_ALL_CHECKBOX_CSS = 'thead .x-checkbox'
+    TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS = 'thead .x-checkbox'
+    TABLE_SELECT_ALL_CSS = 'div.selection > .x-button.link'
     TABLE_COUNT_CSS = '.table-header .title .count'
+    TABLE_SELECTED_COUNT_CSS = '.table-header > .title > .selection > div'
+    TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .title > .selection > button'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
     TABLE_SECOND_ROW_CSS = 'tbody .x-row.clickable:nth-child(2)'
     TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
@@ -251,6 +254,18 @@ class EntitiesPage(Page):
         assert match_count and len(match_count.groups()) == 1
         return int(match_count.group(1))
 
+    def count_selected_entities(self):
+        wait_until(lambda: 'selected' in self.driver.find_element_by_css_selector(self.TABLE_SELECTED_COUNT_CSS).text)
+        match_count = re.search(r'\[ (.+) selected',
+                                self.driver.find_element_by_css_selector(self.TABLE_SELECTED_COUNT_CSS).text)
+        assert match_count and len(match_count.groups()) == 1
+        return int(match_count.group(1))
+
+    def click_select_all_entities(self):
+        element = self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_BUTTON_CSS)
+        if element.text == 'Select all':
+            self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_BUTTON_CSS).click()
+
     def add_query_expression(self):
         self.driver.find_element_by_css_selector(self.QUERY_ADD_EXPRESSION_CSS).click()
 
@@ -339,15 +354,15 @@ class EntitiesPage(Page):
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
 
-    def select_all_page_rows_checkbox(self):
-        self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_CHECKBOX_CSS).click()
+    def select_all_current_page_rows_checkbox(self):
+        self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS).click()
 
     # retrying because sometimes the table hasn't fully loaded
     @retry(wait_fixed=20, stop_max_delay=3000)
     def get_all_data_proper(self):
         """
         Returns a list of dict where each dict is a dict between a field name (i.e. adapter, asset_name) and
-        the respective value
+        the respective valueTABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS
         """
         result = []
         column_names = [x.text for x in self.driver.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)

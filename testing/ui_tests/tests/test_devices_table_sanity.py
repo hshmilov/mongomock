@@ -1,4 +1,8 @@
 from ui_tests.tests.test_entities_table import TestEntitiesTable
+from services.adapters.aws_service import AwsService
+from test_credentials.test_aws_credentials import client_details
+
+AWS_NAME = 'Amazon Web Services (AWS)'
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -47,3 +51,18 @@ class TestDevicesTable(TestEntitiesTable):
                                                 self.QUERY_FIELDS,
                                                 self.QUERY_FILTER_DEVICES)
         self.devices_page.assert_csv_match_ui_data(result)
+
+    def test_select_all_devices(self):
+        with AwsService().contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(AWS_NAME)
+            client_details[1][0].pop('get_all_regions', None)
+            self.adapters_page.add_server(client_details[1][0], AWS_NAME)
+            self.base_page.run_discovery(wait=True)
+            self.devices_page.switch_to_page()
+            self.devices_page.wait_for_table_to_load()
+            self.devices_page.select_all_current_page_rows_checkbox()
+
+            assert self.devices_page.count_entities() > self.devices_page.count_selected_entities()
+            self.devices_page.click_select_all_entities()
+            assert self.devices_page.count_entities() == self.devices_page.count_selected_entities()
+            self.adapters_page.clean_adapter_servers(AWS_NAME, delete_associated_entities=True)
