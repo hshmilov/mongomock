@@ -31,7 +31,10 @@ class ClearpassConnection(RESTConnection):
     # pylint: disable=arguments-differ
     def get_device_list(self, get_extended_info):
         yield from self._get_device_list_from_api('endpoint', 'endpoint', get_extended_info=get_extended_info)
-        yield from self._get_device_list_from_api('network-device', 'network-device', get_extended_info=False)
+        try:
+            yield from self._get_device_list_from_api('network-device', 'network-device', get_extended_info=False)
+        except Exception:
+            logger.exception('Problem getting networks')
 
     def _get_device_list_from_api(self, api_name, device_type, get_extended_info):
         response = self._get(api_name, url_params={'calculate_count': 'true',

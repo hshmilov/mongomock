@@ -21,6 +21,10 @@ class TaniumConnection(RESTConnection):
             self._session_headers = connection_dict
             self._session_token = self._post('auth', body_params=connection_dict, use_json_in_response=False)
             self._session_headers = {'session': self._session_token}
+            xml_str = self._post('soap', use_json_in_response=False, use_json_in_body=False,
+                                 body_params=consts.GET_DEVICES_BODY_PARAMS)
+            if '403 Forbidden' in xml_str:
+                raise RESTException('Insufficient privilege to get devices')
         else:
             raise RESTException('No user name or password')
 
@@ -38,10 +42,13 @@ class TaniumConnection(RESTConnection):
         clients_xml = []
         for inner_xml in xml_third_block:
             if inner_xml.tag == 'result_object':
-                if not inner_xml[0].tag == 'system_status':
-                    raise RESTException(f'Bad xml forth tag is {inner_xml[0].tag}')
-                clients_xml = inner_xml[0]
-                break
+                try:
+                    if not inner_xml[0].tag == 'system_status':
+                        raise RESTException(f'Bad xml forth tag is {inner_xml[0].tag}')
+                    clients_xml = inner_xml[0]
+                    break
+                except Exception:
+                    pass
         for client_xml in clients_xml:
             try:
                 if client_xml.tag == 'client_status':

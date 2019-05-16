@@ -230,7 +230,7 @@ class NessusAdapter(ScannerAdapterBase):
                     logger.warning(f'Bad device with no id {device_raw}')
                     continue
                 device.nessus_no_scan_id = device_id
-                device.id = str(scan_id) + '_' + device_id
+                device.id = (str(scan_id) + '_' + str(device_id))[:100]
                 device.set_raw(device_raw)
                 yield device
             except Exception:
