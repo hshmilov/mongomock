@@ -223,6 +223,7 @@ def figure_out_os(s):
         os_type = 'VxWorks'
     elif 'windows' in s or ('win' in s and 'darwin' not in s):
         os_type = 'Windows'
+        s = s.replace('windows storage server', 'windows server')
         # XP must reamin the last item in the list because there is a chance it will be found in "s" by chacne
         windows_distribution = ['Vista', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
                                 'Windows Server 2003', 'Win10', 'Win7', 'Win8', 'Windows 2016',
