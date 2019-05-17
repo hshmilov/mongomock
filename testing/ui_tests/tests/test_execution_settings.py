@@ -29,5 +29,5 @@ class TestExecutionSettings(TestBase):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
 
-            wait_until(lambda: check_execution(True), total_timeout=60 * 5, exc_list=[AssertionError],
+            wait_until(lambda: check_execution(True), total_timeout=60 * 5, tolerated_exceptions_list=[AssertionError],
                        check_return_value=False)

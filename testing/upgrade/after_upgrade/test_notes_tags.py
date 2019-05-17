@@ -16,7 +16,7 @@ class TestNotes(TestBase):
         self.devices_page.wait_for_table_to_load()
 
         wait_until(lambda: Notes.note1_text == self.devices_page.get_note_by_text(Notes.note1_text).text,
-                   exc_list=[Exception])
+                   tolerated_exceptions_list=[Exception])
 
     def test_create_tag(self):
         self.devices_page.switch_to_page()
@@ -26,4 +26,4 @@ class TestNotes(TestBase):
         self.devices_page.wait_for_table_to_load()
 
         wait_until(lambda: Tags.tag_1 in self.devices_page.get_first_row_tags(),
-                   exc_list=[Exception])
+                   tolerated_exceptions_list=[Exception])

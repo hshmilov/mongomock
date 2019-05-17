@@ -3,10 +3,9 @@ import subprocess
 import time
 
 import paramiko
-import pytest
 from selenium.common.exceptions import NoSuchElementException
 
-from axonius.utils.wait import wait_until
+from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raised
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_ad_credentials import ad_client1_details
@@ -69,15 +68,19 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
     def check_password_change(self):
         # Wait for node to change node_maker password after connection.
-        wait_until(lambda: self.instances_page.get_node_password(NODE_NAME) != '', exc_list=[NoSuchElementException])
+        wait_until(lambda: self.instances_page.get_node_password(NODE_NAME)
+                   != '', tolerated_exceptions_list=[NoSuchElementException])
         try:
             self.logger.info(
                 f'{NODE_NAME} node_maker password changed to:{self.instances_page.get_node_password(NODE_NAME)}')
+
+            # Since we're waiting for the password to change and the ssh login with the old one to raise an exception.
             self.logger.info('Trying to connect to node_maker with old password')
-            self.connect_node_maker(self._instances[0])
-            pytest.fail('No exception was raised while trying connect to node with old password.')
-        except paramiko.ssh_exception.AuthenticationException:
-            self.logger.info('Failed to connect node with old password as expected.')
+            wait_until(
+                lambda: expect_specific_exception_to_be_raised(lambda: self.connect_node_maker(self._instances[0]),
+                                                               paramiko.ssh_exception.AuthenticationException),
+                total_timeout=60 * 5,
+                error_message='No exception was raised while trying connect to node with old password.')
         except Exception:
             self.logger.exception(
                 'Failed to connect to node with old password as expected but a bad exception was raised.')

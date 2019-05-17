@@ -1,12 +1,13 @@
 import os
+import shlex
 import subprocess
 import sys
 from abc import abstractmethod
 
 from retrying import retry
 
-from axonius.consts.plugin_consts import (AXONIUS_NETWORK, WEAVE_NETWORK,
-                                          WEAVE_PATH)
+from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
+                                          WEAVE_NETWORK, WEAVE_PATH)
 from axonius.utils.debug import COLOR
 from services.axon_service import TimeoutException
 from services.docker_service import DockerService, retry_if_timeout
@@ -63,6 +64,11 @@ class WeaveService(DockerService):
     def is_up(self):
         pass
 
+    def is_unique_dns_registered(self):
+        weave_dns_lookup_command = shlex.split(f'weave dns-lookup {self.fqdn}')
+        dns_lookup_result = subprocess.check_output(weave_dns_lookup_command)
+        return len(dns_lookup_result) > 0
+
     def start(self,
               mode='',
               allow_restart=False,
@@ -80,7 +86,7 @@ class WeaveService(DockerService):
         extra_flags = extra_flags or []
 
         if weave_is_up:
-            dns_search_list = ['axonius.local']
+            dns_search_list = [AXONIUS_DNS_SUFFIX]
             dns_search_list.extend(get_dns_search_list())
             extra_flags.extend([f'--dns-search={dns_search_entry}' for dns_search_entry in dns_search_list])
 

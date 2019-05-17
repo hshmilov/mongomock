@@ -4,6 +4,7 @@ import time
 
 from services.weave_service import is_weave_up, WeaveService
 from services.ports import DOCKER_PORTS
+from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 
 
 # pylint: disable=too-many-locals
@@ -38,7 +39,7 @@ class SeleniumService(WeaveService):
         ]
 
         if not is_weave_up():
-            extra_flags.append('--link=gui:gui.axonius.local')
+            extra_flags.append(f'--link=gui:gui.{AXONIUS_DNS_SUFFIX}')
 
         start_time = time.time()
 

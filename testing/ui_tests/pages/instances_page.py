@@ -28,7 +28,7 @@ class InstancesPage(EntitiesPage):
 
     def click_connect_node(self):
         wait_until(lambda: self.click_button_by_id(self.CONNECT_NODE_ID),
-                   exc_list=[StaleElementReferenceException],
+                   tolerated_exceptions_list=[StaleElementReferenceException],
                    check_return_value=False)
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
 
@@ -52,7 +52,8 @@ class InstancesPage(EntitiesPage):
         # initiates node name change (core/service.py search "Setting node_init_name")
         # is active directory this will have to wait until the duplicate from the node registers in core.
         # We have no way of knowing when this will happen but 10 minutes should do.
-        wait_until(_refresh_and_get_row_by_node_name, check_return_value=False, exc_list=[NoSuchElementException],
+        wait_until(_refresh_and_get_row_by_node_name, check_return_value=False,
+                   tolerated_exceptions_list=[NoSuchElementException],
                    total_timeout=60 * 10)
 
     def get_node_password(self, node_name):

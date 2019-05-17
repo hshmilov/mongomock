@@ -9,13 +9,13 @@ from services.axonius_service import get_service
 import subprocess
 
 from services.standalone_services.mockingbird_service import MOCKINGBIRD_SERVICE
-from system_consts import (METADATA_PATH,
-                           AXONIUS_MOCK_DEMO_ENV_VAR,
-                           SYSTEM_CONF_PATH,
-                           CUSTOMER_CONF_PATH,
-                           NODE_MARKER_PATH,
-                           NODE_CONF_PATH,
-                           CORTEX_PATH)
+from axonius.consts.system_consts import (METADATA_PATH,
+                                          AXONIUS_MOCK_DEMO_ENV_VAR,
+                                          SYSTEM_CONF_PATH,
+                                          CUSTOMER_CONF_PATH,
+                                          NODE_MARKER_PATH,
+                                          NODE_CONF_PATH,
+                                          CORTEX_PATH)
 
 
 def main(command):

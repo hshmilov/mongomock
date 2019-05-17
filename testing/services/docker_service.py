@@ -1,11 +1,14 @@
+import json
 import os
+import shlex
 import subprocess
 from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable
 
-from axonius.consts.plugin_consts import (AXONIUS_NETWORK, WEAVE_NETWORK)
+from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
+                                          WEAVE_NETWORK)
 from axonius.utils.debug import COLOR
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
@@ -36,20 +39,41 @@ class DockerService(AxonService):
         self._process_owner = False
         self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
         self.override_exposed_port = False
+        self._id = None
 
     def take_process_ownership(self):
         self._process_owner = True
 
     @property
+    def id(self):
+        """
+        :return: The current docker service's container id (if it already started).
+        """
+        if not self._id:
+            inspect_command = shlex.split('docker inspect --format="{{.Id}}" ' + self.container_name)
+            self._id = subprocess.check_output(inspect_command).decode('utf-8').strip()
+        return self._id
+
+    @property
+    def inspect(self):
+        inspect_command = shlex.split(f'docker inspect {self.container_name}')
+        container_properties = json.loads(subprocess.check_output(inspect_command))
+        return container_properties
+
+    @property
     def fqdn(self):
         """
-        :return: list of pairs (exposed_port, inner_port)
+        :return: fqdn of the container including our dns domain suffix
         """
-        return f'{self.container_name}.axonius.local'
+        return f'{self.container_name}.{AXONIUS_DNS_SUFFIX}'
 
     @property
     def service_name(self):
         return f'{self.container_name}'.replace('-', '_')
+
+    @property
+    def should_register_unique_dns(self):
+        return False
 
     @property
     def exposed_ports(self):
@@ -303,6 +327,8 @@ else:
         if docker_run_process.returncode != 0:
             all_output = ' '.join([current_output_stream.decode('utf-8') for current_output_stream in all_output])
             raise Exception(f'Failed to start container {self.container_name}', f'failure output is: {all_output}')
+
+        self._id = all_output[0].decode('utf-8')
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows

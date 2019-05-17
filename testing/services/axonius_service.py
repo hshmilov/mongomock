@@ -1,4 +1,3 @@
-import pytest
 import glob
 import importlib
 import inspect
@@ -8,10 +7,12 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-from axonius.consts.plugin_consts import (AXONIUS_NETWORK,
-                                          CONFIGURABLE_CONFIGS_COLLECTION,
-                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS,
-                                          WEAVE_NETWORK, WEAVE_PATH)
+import pytest
+
+from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
+                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS)
+from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
+                                          WEAVE_NETWORK, WEAVE_PATH, NODE_MARKER_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from scripts.instances.instances_consts import SUBNET_IP_RANGE
@@ -30,7 +31,6 @@ from services.plugins.static_users_correlator_service import \
     StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from services.weave_service import is_weave_up
-from system_consts import NODE_MARKER_PATH
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
@@ -38,6 +38,8 @@ from test_helpers.utils import try_until_not_thrown
 def get_service():
     return AxoniusService()
 
+
+# pylint: disable=too-many-instance-attributes
 
 class AxoniusService:
     _NETWORK_NAME = WEAVE_NETWORK if 'linux' in sys.platform.lower() else AXONIUS_NETWORK
@@ -68,9 +70,9 @@ class AxoniusService:
     def get_is_network_exists(cls):
         if cls._NETWORK_NAME == WEAVE_NETWORK:
             return is_weave_up()
-        else:
-            return cls._NETWORK_NAME in subprocess.check_output(['docker', 'network', 'ls', '--filter',
-                                                                 f'name={cls._NETWORK_NAME}']).decode('utf-8')
+
+        return cls._NETWORK_NAME in subprocess.check_output(['docker', 'network', 'ls', '--filter',
+                                                             f'name={cls._NETWORK_NAME}']).decode('utf-8')
 
     @classmethod
     def create_network(cls):
@@ -87,7 +89,7 @@ class AxoniusService:
                 encryption_key = get_encryption_key()
                 print(f'Creating weave network')
                 weave_launch_command = [WEAVE_PATH, 'launch',
-                                        '--dns-domain="axonius.local"', '--ipalloc-range', SUBNET_IP_RANGE,
+                                        f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', SUBNET_IP_RANGE,
                                         '--password',
                                         encryption_key.strip()]
 
@@ -126,6 +128,15 @@ class AxoniusService:
         for service in self.axonius_services:
             service.take_process_ownership()
 
+    def _process_internal_service_white_list(self, internal_service_white_list):
+        if internal_service_white_list is not None:
+            services_to_start = list(
+                [service for service in self.axonius_services if service.service_name in internal_service_white_list])
+        else:
+            services_to_start = list(self.axonius_services)
+
+        return services_to_start
+
     def start_and_wait(
             self,
             mode='',
@@ -139,6 +150,7 @@ class AxoniusService:
             internal_service_white_list=None,
             system_config=None
     ):
+
         def _start_service(service_to_start):
             service_to_start.set_system_config(system_config)
             if skip and service_to_start.get_is_container_up():
@@ -158,11 +170,7 @@ class AxoniusService:
                 service.remove_container()
 
         # Start in parallel
-        if internal_service_white_list is not None:
-            services_to_start = list(
-                [service for service in self.axonius_services if service.service_name in internal_service_white_list])
-        else:
-            services_to_start = list(self.axonius_services)
+        services_to_start = self._process_internal_service_white_list(internal_service_white_list)
 
         mongo_service = next((x for x in services_to_start if x.container_name == 'mongo'), None)
         if mongo_service:
@@ -184,6 +192,8 @@ class AxoniusService:
         # wait for all
         for service in services_to_start:
             service.wait_for_service()
+            if service.should_register_unique_dns:
+                service.register_unique_dns()
 
     def get_devices_db(self):
         return self.db.get_entity_db(EntityType.Devices)
@@ -235,7 +245,7 @@ class AxoniusService:
     def get_device_by_id(self, adapter_name, device_id):
         cond = {
             'adapters': {
-                "$elemMatch": {
+                '$elemMatch': {
                     'data.id': device_id,
                     PLUGIN_UNIQUE_NAME: adapter_name
                 }
@@ -246,7 +256,7 @@ class AxoniusService:
     def get_devices_by_adapter_name(self, adapter_name):
         cond = {
             'adapters': {
-                "$elemMatch": {
+                '$elemMatch': {
                     PLUGIN_UNIQUE_NAME: adapter_name
                 }
             }
@@ -256,7 +266,7 @@ class AxoniusService:
     def get_user_by_id(self, adapter_name, user_id):
         cond = {
             'adapters': {
-                "$elemMatch": {
+                '$elemMatch': {
                     'data.id': user_id,
                     PLUGIN_UNIQUE_NAME: adapter_name
                 }
@@ -281,7 +291,7 @@ class AxoniusService:
         if len(devices) != 1:
             device_ids = [device.get('adapters', [{}])[0].get('data', {}).get('id')
                           for device in self.get_devices_by_adapter_name(plugin_unique_name)]
-            pytest.fail("{0} exists more then once or not in {1}".format(some_device_id, device_ids))
+            pytest.fail('{0} exists more then once or not in {1}'.format(some_device_id, device_ids))
         devices = self.get_device_by_id(plugin_unique_name, some_device_id)
         assert len(devices) == 1
 
@@ -297,11 +307,12 @@ class AxoniusService:
 
     def restart_plugin(self, plugin):
         """
-        :param plugin: plugint to restart
+        :param plugin: plugin to restart
         note: restarting plugin does not delete its volume
         """
         plugin.stop(should_delete=False)
         plugin.start_and_wait()
+
         assert plugin.is_plugin_registered(self.core)
 
     def restart_core(self):
@@ -327,7 +338,7 @@ class AxoniusService:
 
     @staticmethod
     def _get_docker_service(type_name, name):
-        module = importlib.import_module(f"services.{type_name}.{name.lower()}_service")
+        module = importlib.import_module(f'services.{type_name}.{name.lower()}_service')
         return getattr(module, ' '.join(name.lower().split('_')).title().replace(' ', '') + 'Service')()
 
     @classmethod
@@ -356,45 +367,47 @@ class AxoniusService:
             env_vars=None,
             system_config=None
     ):
-        plugins = [self.get_adapter(name) for name in adapter_names] + \
-                  [self.get_plugin(name) for name in plugin_names] + \
-                  [self.get_standalone_service(name) for name in standalone_services_names]
+        all_services_to_start = [self.get_adapter(name) for name in adapter_names] + \
+            [self.get_plugin(name) for name in plugin_names] + \
+            [self.get_standalone_service(name) for name in standalone_services_names]
 
         if allow_restart:
-            for plugin in plugins:
-                plugin.remove_container()
-        for plugin in plugins:
-            plugin.set_system_config(system_config)
-            plugin.take_process_ownership()
-            if plugin.get_is_container_up():
+            for service in all_services_to_start:
+                service.remove_container()
+        for service in all_services_to_start:
+            service.set_system_config(system_config)
+            service.take_process_ownership()
+            if service.get_is_container_up():
                 if skip:
                     continue
-            plugin.start(mode, allow_restart=allow_restart, rebuild=rebuild,
-                         hard=hard, show_print=show_print, docker_internal_env_vars=env_vars)
+            service.start(mode, allow_restart=allow_restart, rebuild=rebuild,
+                          hard=hard, show_print=show_print, docker_internal_env_vars=env_vars)
         timeout = 60
         start = time.time()
         first = True
-        while start + timeout > time.time() and len(plugins) > 0:
-            for plugin in plugins.copy():
+        while start + timeout > time.time() and len(all_services_to_start) > 0:
+            for service in all_services_to_start.copy():
                 try:
-                    plugin.wait_for_service(5 if first else 1)
-                    plugins.remove(plugin)
+                    service.wait_for_service(5 if first else 1)
+                    if service.should_register_unique_dns:
+                        service.register_unique_dns()
+                    all_services_to_start.remove(service)
                 except TimeoutException:
                     pass
                 first = False
-        if len(plugins) > 0:
+        if len(all_services_to_start) > 0:
             # plugins contains failed ones and should be removed to make sure the state is stable for next time.
-            for plugin in plugins:
-                plugin.stop(should_delete=True)
-            raise TimeoutException(repr([plugin.container_name for plugin in plugins]))
+            for service in all_services_to_start:
+                service.stop(should_delete=True)
+            raise TimeoutException(repr([plugin.container_name for plugin in all_services_to_start]))
 
     def stop_plugins(self, adapter_names, plugin_names, standalone_services_names, **kwargs):
-        plugins = [self.get_adapter(name) for name in adapter_names] + \
-                  [self.get_plugin(name) for name in plugin_names] + \
-                  [self.get_standalone_service(name) for name in standalone_services_names]
+        all_services_to_stop = [self.get_adapter(name) for name in adapter_names] + \
+                               [self.get_plugin(name) for name in plugin_names] + \
+                               [self.get_standalone_service(name) for name in standalone_services_names]
 
         async_items = []
-        for plugin in plugins:
+        for plugin in all_services_to_stop:
             plugin.take_process_ownership()
             current = iter(plugin.stop_async(**kwargs))
             next(current)  # actual stop call
@@ -407,9 +420,11 @@ class AxoniusService:
                 pass
 
     def remove_plugin_containers(self, adapter_names, plugin_names):
-        plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+        all_services_containers_to_remove = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name)
+                                                                                                  for name in
+                                                                                                  plugin_names]
 
-        for plugin in plugins:
+        for plugin in all_services_containers_to_remove:
             plugin.remove_container()
 
     def _get_all_docker_services(self, type_name, obj):
@@ -521,8 +536,8 @@ class AxoniusService:
 
     def set_system_settings(self, settings_dict):
         settings = self.db.get_collection(self.gui.unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
-        settings.update_one(filter={"config_name": "GuiService"},
-                            update={"$set": {f"config.{SYSTEM_SETTINGS}": settings_dict}})
+        settings.update_one(filter={'config_name': 'GuiService'},
+                            update={'$set': {f'config.{SYSTEM_SETTINGS}': settings_dict}})
 
     def add_view(self, view_params):
         views = self.db.get_collection(self.gui.unique_name, 'device_views')
@@ -530,5 +545,5 @@ class AxoniusService:
 
     def set_research_rate(self, rate):
         settings = self.db.get_collection(self.scheduler.unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
-        settings.update_one(filter={"config_name": "SystemSchedulerService"},
-                            update={"$set": {"config.system_research_rate": rate}})
+        settings.update_one(filter={'config_name': 'SystemSchedulerService'},
+                            update={'$set': {'config.system_research_rate': rate}})

@@ -28,7 +28,7 @@ class TestDevicesTable(TestEntitiesTable):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
 
-        initial_value = wait_until(self._get_first_hostname, exc_list=(IndexError,))
+        initial_value = wait_until(self._get_first_hostname, tolerated_exceptions_list=[IndexError])
         updated_value = f'{initial_value} improved!'
         self._update_device_field(self.devices_page.FIELD_HOSTNAME_NAME, initial_value, updated_value)
         time.sleep(71)

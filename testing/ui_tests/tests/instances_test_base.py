@@ -62,7 +62,8 @@ def setup_instances(logger, instance_name, export_name=None):
         )
         return ret
 
-    instances = wait_until(create_instances_helper, check_return_value=True, exc_list=[ValueError], interval=2)
+    instances = wait_until(create_instances_helper, check_return_value=True,
+                           tolerated_exceptions_list=[ValueError], interval=2)
 
     for current_instance in instances:
         current_instance.wait_for_ssh()
