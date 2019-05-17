@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    rumble_adapter: {
+        title: 'Rumble Network Discovery',
+        description: 'Rumble is a cloud-based network discovery platform that identifies and monitors network-connected IT assets.'
+    },
     office_scan_adapter: {
         title: 'Trend Micro Apex One (formerly OfficeScan) - BETA',
         description: 'Trend Micro Apex One (formerly OfficeScan) is an endpoint security solution protecting against malware, scripts, injection, ransomware, memory and browser attacks, and exploits.'
