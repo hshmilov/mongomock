@@ -85,7 +85,7 @@ pip2 install --upgrade setuptools
 pip3 install --upgrade setuptools
 pip3 install ipython
 echo "Installing docker-ce..."
-_wait_for_apt install -yq docker-ce=18.03.0~ce-0~ubuntu
+_wait_for_apt install -yq docker-ce=18.06.3~ce~3-0~ubuntu
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
