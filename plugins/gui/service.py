@@ -114,8 +114,8 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        add_labels_to_entities,
                                        beautify_user_entry, check_permissions,
                                        deserialize_db_permissions,
-                                       entity_fields, get_entity_labels,
-                                       get_historized_filter)
+                                       get_entity_labels,
+                                       get_historized_filter, entity_fields, get_connected_user_id)
 from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
@@ -323,7 +323,7 @@ def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, dat
         yield (start, end)
 
 
-if os.environ.get('HOT', None) == 'true':
+if os.environ.get('HOT') == 'true':
     session = None
 
 
@@ -367,14 +367,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'external_default_role': PREDEFINED_ROLE_RESTRICTED
             })
 
-        current_user = self.__users_collection.find_one({'user_name': 'admin'})
+        current_user = self._users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
             # User doesn't exist, this must be the installation process
-            self.__users_collection.update({'user_name': 'admin'}, self.DEFAULT_USER, upsert=True)
+            self._users_collection.update({'user_name': 'admin'}, self.DEFAULT_USER, upsert=True)
 
-        alt_user = self.__users_collection.find_one({'user_name': AXONIUS_USER_NAME})
+        alt_user = self._users_collection.find_one({'user_name': AXONIUS_USER_NAME})
         if alt_user is None:
-            self.__users_collection.update({'user_name': AXONIUS_USER_NAME}, self.ALTERNATIVE_USER, upsert=True)
+            self._users_collection.update({'user_name': AXONIUS_USER_NAME}, self.ALTERNATIVE_USER, upsert=True)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
@@ -395,9 +395,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
         self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
 
-        self.__users_collection = self._get_collection(USERS_COLLECTION)
+        self._users_collection = self._get_collection(USERS_COLLECTION)
         self.__roles_collection = self._get_collection(ROLES_COLLECTION)
         self.__users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
+        self.__dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
 
         self.reports_config_collection.create_index([('name', pymongo.HASHED)])
 
@@ -430,10 +431,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         self._trigger('clear_dashboard_cache', blocking=False)
 
-        if os.environ.get('HOT', None) == 'true':
+        if os.environ.get('HOT') == 'true':
             # pylint: disable=W0603
             global session
-            user_db = self.__users_collection.find_one({'user_name': 'admin'})
+            user_db = self._users_collection.find_one({'user_name': 'admin'})
             user_db['permissions'] = deserialize_db_permissions(user_db['permissions'])
             session = {'user': user_db}
 
@@ -536,8 +537,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
-                    if dashboard_collection.find_one({'name': name}):
+                    if self.__dashboard_collection.find_one({'name': name}):
                         logger.info(f'dashboard with {name} already exists, not adding')
                         continue
 
@@ -570,6 +570,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'view': mongo_view,
             'query_type': 'saved',
             'timestamp': datetime.now(),
+            'user_id': '*',
             'predefined': True
         }, upsert=True)
         logger.info(f'Added view {name} id: {result.upserted_id}')
@@ -601,7 +602,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 logger.info(f'Report with id {report_id} does not exists')
                 return
             name = existed_report['name']
-            result = reports_collection.delete_one({'name': name, '_id': ObjectId(report_id)})
+            reports_collection.delete_one({'name': name, '_id': ObjectId(report_id)})
             exec_report_thread_id = EXEC_REPORT_THREAD_ID.format(name)
             exec_report_job = self._job_scheduler.get_job(exec_report_thread_id)
             if exec_report_job:
@@ -611,18 +612,21 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data,
                                 hide_empty=False):
-        dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
-        existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
+        existed_dashboard_chart = self.__dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
             logger.info(f'Report {dashboard_name} already exists under id: {existed_dashboard_chart["_id"]}')
             return
 
-        result = dashboard_collection.replace_one({'name': dashboard_name},
-                                                  {'name': dashboard_name,
-                                                   'metric': dashboard_metric,
-                                                   'view': dashboard_view,
-                                                   'config': dashboard_data,
-                                                   'hide_empty': hide_empty}, upsert=True)
+        result = self.__dashboard_collection.replace_one({
+            'name': dashboard_name
+        }, {
+            'name': dashboard_name,
+            'metric': dashboard_metric,
+            'view': dashboard_view,
+            'config': dashboard_data,
+            'hide_empty': hide_empty,
+            'user_id': '*'
+        }, upsert=True)
         logger.info(f'Added report {dashboard_name} id: {result.upserted_id}')
 
     def _set_first_time_use(self):
@@ -849,6 +853,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if not view_data.get('view'):
                 return return_error(f'View data is required in order to save one', 400)
             view_data['timestamp'] = datetime.now()
+            view_data['user_id'] = get_connected_user_id()
             update_result = entity_views_collection.find_one_and_replace({
                 'name': view_data['name']
             }, view_data, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
@@ -1044,7 +1049,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         correlation = CorrelationResult(associated_adapters=[], data={
             'reason': 'User correlated those',
             'original_entities': internal_axon_ids,
-            'user_id': session['user']['_id']
+            'user_id': get_connected_user_id()
         }, reason=CorrelationReason.UserManualLink)
         return self.link_adapters(entity_type, correlation, entities_candidates_hint=list(internal_axon_ids))
 
@@ -1814,6 +1819,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             report_to_add = request.get_json()
             reports_collection = self.reports_config_collection
             report_name = report_to_add['name']
+            report_to_add['user_id'] = get_connected_user_id()
             report = reports_collection.find_one({
                 'name': report_name
             })
@@ -1911,6 +1917,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def put_enforcement(self, enforcement_to_add):
         self.__process_enforcement_actions(enforcement_to_add[ACTIONS_FIELD])
+        enforcement_to_add['user_id'] = str(get_connected_user_id())
 
         if enforcement_to_add[TRIGGERS_FIELD] and not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
             enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
@@ -2628,7 +2635,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
             return return_error('remember_me isn\'t boolean', 401)
-        user_from_db = self.__users_collection.find_one(filter_archived({
+        user_from_db = self._users_collection.find_one(filter_archived({
             'user_name': user_name,
             'source': 'internal'  # this means that the user must be a local user and not one from an external service
         }))
@@ -2705,7 +2712,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'user_name': username,
             'source': source
         }
-        user = self.__users_collection.find_one(filter_archived(match_user))
+        user = self._users_collection.find_one(filter_archived(match_user))
         if not user:
             user = {
                 'user_name': username,
@@ -2734,8 +2741,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 }
                 user['permissions'][PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
 
-            self.__users_collection.replace_one(match_user, user, upsert=True)
-            user = self.__users_collection.find_one(filter_archived(match_user))
+            self._users_collection.replace_one(match_user, user, upsert=True)
+            user = self._users_collection.find_one(filter_archived(match_user))
         return user
 
     @gui_helpers.add_rule_unauth('okta-redirect')
@@ -2992,7 +2999,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         if request.method == 'GET':
             return jsonify(beautify_user_entry(n) for n in
-                           self.__users_collection.find(filter_archived(
+                           self._users_collection.find(filter_archived(
                                {
                                    'user_name': {
                                        '$ne': self.ALTERNATIVE_USER['user_name']
@@ -3004,7 +3011,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         post_data = self.get_request_data_as_object()
         post_data['password'] = bcrypt.hash(post_data['password'])
         # Make sure user is unique by combo of name and source (no two users can have same name and same source)
-        if self.__users_collection.find_one(filter_archived(
+        if self._users_collection.find_one(filter_archived(
                 {
                     'user_name': post_data['user_name'],
                     'source': 'internal'
@@ -3023,8 +3030,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         post_data = self.get_request_data_as_object()
 
-        self.__users_collection.update_one({'_id': ObjectId(session['user']['_id'])},
-                                           {'$set': {'additional_userinfo': post_data}})
+        self._users_collection.update_one({
+            '_id': get_connected_user_id()
+        }, {
+            '$set': {
+                'additional_userinfo': post_data
+            }
+        })
         return '', 200
 
     @gui_add_rule_logged_in('system/users/<user_id>/password', methods=['POST'])
@@ -3044,8 +3056,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if not bcrypt.verify(post_data['old'], user['password']):
             return return_error('Given password is wrong')
 
-        self.__users_collection.update_one({'_id': ObjectId(user_id)},
-                                           {'$set': {'password': bcrypt.hash(post_data['new'])}})
+        self._users_collection.update_one({'_id': ObjectId(user_id)},
+                                          {'$set': {'password': bcrypt.hash(post_data['new'])}})
         self.__invalidate_sessions(user_id)
         return '', 200
 
@@ -3061,8 +3073,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         post_data = self.get_request_data_as_object()
-        self.__users_collection.update_one({'_id': ObjectId(user_id)},
-                                           {'$set': post_data})
+        self._users_collection.update_one({'_id': ObjectId(user_id)},
+                                          {'$set': post_data})
         self.__invalidate_sessions(user_id)
         return ''
 
@@ -3073,8 +3085,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         Deletes a user
         """
-        self.__users_collection.update_one({'_id': ObjectId(user_id)},
-                                           {'$set': {'archived': True}})
+        self._users_collection.update_one({'_id': ObjectId(user_id)},
+                                          {'$set': {'archived': True}})
         self.__invalidate_sessions(user_id)
         return ''
 
@@ -3116,7 +3128,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     'archived': True
                 }
             })
-            self.__users_collection.update_many(match_user_role, {
+            self._users_collection.update_many(match_user_role, {
                 '$set': {
                     'role_name': ''
                 }
@@ -3124,7 +3136,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         else:
             # Handling 'PUT' and 'POST' similarly - new role may replace an existing, archived one
             self.__roles_collection.replace_one(match_role, role_data, upsert=True)
-            self.__users_collection.update_many(match_user_role, {
+            self._users_collection.update_many(match_user_role, {
                 '$set': {
                     'permissions': role_data['permissions']
                 }
@@ -3204,9 +3216,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if request.method == 'POST':
             new_token = secrets.token_urlsafe()
             new_api_key = secrets.token_urlsafe()
-            self.__users_collection.update_one(
+            self._users_collection.update_one(
                 {
-                    '_id': session['user']['_id'],
+                    '_id': get_connected_user_id(),
                 },
                 {
                     '$set': {
@@ -3215,8 +3227,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     }
                 }
             )
-        api_data = self.__users_collection.find_one({
-            '_id': session['user']['_id']
+        api_data = self._users_collection.find_one({
+            '_id': get_connected_user_id()
         })
         return jsonify({
             'api_key': api_data['api_key'],
@@ -3317,7 +3329,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         of some "card" (collection of views) in the past
         """
 
-        card = self._get_collection(DASHBOARD_COLLECTION).find_one({'_id': ObjectId(card_uuid)})
+        card = self.__dashboard_collection.find_one({'_id': ObjectId(card_uuid)})
         if not card:
             return return_error('Card doesn\'t exist')
 
@@ -3359,13 +3371,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return jsonify(self._get_dashboard(skip, limit))
 
         # Handle 'POST' request method - save dashboard configuration
-        dashboard_data = self.get_request_data_as_object()
+        dashboard_data = dict(self.get_request_data_as_object())
         if not dashboard_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
         if not dashboard_data.get('config'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
-        update_result = self._get_collection(DASHBOARD_COLLECTION).replace_one(
-            {'name': dashboard_data['name']}, dashboard_data, upsert=True)
+        dashboard_data['user_id'] = get_connected_user_id()
+        update_result = self.__dashboard_collection.replace_one(
+            {
+                'name': dashboard_data['name']
+            }, dashboard_data, upsert=True)
         if not update_result.upserted_id and not update_result.modified_count:
             return return_error('Error saving dashboard chart', 400)
         return str(update_result.upserted_id)
@@ -3436,8 +3451,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         logger.info('Getting dashboard')
-        for dashboard in self._get_collection(DASHBOARD_COLLECTION).find(filter=filter_archived(), skip=skip,
-                                                                         limit=limit):
+        for dashboard in self.__dashboard_collection.find(filter=filter_archived(), skip=skip,
+                                                          limit=limit):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
@@ -4020,7 +4035,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Fetches data, according to definition saved for the dashboard named by given name
         :return:
         """
-        update_result = self._get_collection(DASHBOARD_COLLECTION).update_one(
+        update_result = self.__dashboard_collection.update_one(
             {'_id': ObjectId(dashboard_id)}, {'$set': {'archived': True}})
         if not update_result.modified_count:
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
@@ -4597,7 +4612,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             adapter_devices = adapter_data.call_uncached(EntityType.Devices)
             adapter_users = adapter_data.call_uncached(EntityType.Users)
 
-            log_metric(logger, SystemMetric.GUI_USERS, self.__users_collection.count_documents({}))
+            log_metric(logger, SystemMetric.GUI_USERS, self._users_collection.count_documents({}))
             log_metric(logger, SystemMetric.DEVICES_SEEN, adapter_devices['seen'])
             log_metric(logger, SystemMetric.DEVICES_UNIQUE, adapter_devices['unique'])
 
@@ -4712,7 +4727,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         if request.method == 'DELETE':
             note_ids_list = self.get_request_data_as_object()
-            if not session['user'].get('admin') and session['user'].get('role_name') != PREDEFINED_ROLE_ADMIN:
+            if not current_user.get('admin') and current_user.get('role_name') != PREDEFINED_ROLE_ADMIN:
                 # Validate all notes requested to be removed belong to user
                 for note in notes_list:
                     if note['uuid'] in note_ids_list and note['user_id'] != current_user['_id']:
@@ -4920,8 +4935,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if not new_password:
             return return_error('Passwords do not match', 400)
 
-        self.__users_collection.update_one({'user_name': 'admin'},
-                                           {'$set': {'password': bcrypt.hash(new_password)}})
+        self._users_collection.update_one({'user_name': 'admin'},
+                                          {'$set': {'password': bcrypt.hash(new_password)}})
 
         # we don't want to store creds openly
         signup_data[Signup.NewPassword] = ''

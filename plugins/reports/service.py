@@ -316,7 +316,8 @@ class ReportsService(Triggerable, PluginBase):
                 LAST_UPDATE_FIELD: datetime.datetime.utcnow(),
                 ACTIONS_FIELD: report_data['actions'],
                 'name': report_data['name'],
-                TRIGGERS_FIELD: list(self.__processed_triggers(report_data[TRIGGERS_FIELD]))
+                TRIGGERS_FIELD: list(self.__processed_triggers(report_data[TRIGGERS_FIELD])),
+                'user_id': ObjectId(report_data['user_id'])
             }
 
             # Pushes the resource to the db.

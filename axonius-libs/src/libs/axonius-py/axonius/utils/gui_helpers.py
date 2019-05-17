@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import itertools
+import os
 import time
 import re
 from collections import defaultdict
@@ -13,11 +14,12 @@ from typing import NamedTuple, Iterable, List, Dict
 import cachetools
 import dateutil
 import pymongo
+from bson import ObjectId
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
 from axonius.consts.metric_consts import SystemMetric
 from axonius.entities import EntitiesNamespace
-from flask import request, has_request_context
+from flask import request, has_request_context, session, g
 from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
@@ -330,6 +332,38 @@ def historical():
     return wrap
 
 
+# This is here to support HOT=true for testing
+if os.environ.get('HOT') == 'true':
+    def get_connected_user_id() -> ObjectId:
+        """
+        Returns the current connected user's id
+        """
+        return PluginBase.Instance._users_collection.find_one({'user_name': 'admin'})['_id']
+
+else:
+    def get_connected_user_id() -> ObjectId:
+        """
+        Returns the current connected user's id
+        """
+        if 'api_request_user' in g:
+            return g.api_request_user['_id']
+        return session['user']['_id']
+
+
+@cachetools.cached(cachetools.TTLCache(maxsize=5000, ttl=24 * 3600))
+def translate_user_id_to_user_name(user_id: ObjectId):
+    if user_id == '*':
+        return 'Global'
+    user = PluginBase.Instance._users_collection.find_one({
+        '_id': user_id
+    })
+    if not user:
+        return '[user has been deleted]'
+    user_source = user['source']
+    user_name = user['user_name']
+    return f'{user_source}/{user_name}'
+
+
 def beautify_db_entry(entry):
     """
     Renames the '_id' to 'date_fetched', and stores it as an id to 'uuid' in a dict from mongo
@@ -337,9 +371,15 @@ def beautify_db_entry(entry):
     :param entry: dict from mongodb
     :return: dict
     """
-    tmp = {**entry, **{'date_fetched': entry['_id']}}
+    tmp = {
+        **entry,
+        'date_fetched': entry['_id'],
+    }
     tmp['uuid'] = str(entry['_id'])
     del tmp['_id']
+    user_id = tmp.get('user_id')
+    if user_id is not None:
+        tmp['associated_user_name'] = translate_user_id_to_user_name(user_id)
     return tmp
 
 

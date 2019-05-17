@@ -1,4 +1,5 @@
 import datetime
+import time
 from typing import List
 import pytest
 from selenium.common.exceptions import NoSuchElementException
@@ -85,9 +86,18 @@ class TestEnforcementActions(TestBase):
         self.notification_page.wait_for_count(1)
 
         self.devices_page.switch_to_page()
+
+        # idk why those sleeps are needed
+        time.sleep(1)
+
         self.notification_page.click_notification_peek()
         self.notification_page.click_notification(notification_name)
+        time.sleep(1)
+
         self.driver.back()
+
+        time.sleep(1)
+
         assert self.driver.current_url == self.devices_page.url
 
     def test_notification_timezone(self):

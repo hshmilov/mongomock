@@ -2,7 +2,7 @@ import logging
 import math
 from typing import Iterable
 
-from flask import jsonify, request, has_request_context
+from flask import jsonify, request, has_request_context, g
 from passlib.hash import bcrypt
 
 from axonius.consts.metric_consts import ApiMetric
@@ -42,18 +42,18 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
             user_from_db = users_collection.find_one({'user_name': username})
             if user_from_db is None:
                 logger.info(f'Unknown user {username} tried logging in')
-                return False
+                return None
             if not bcrypt.verify(password, user_from_db['password']):
-                return False
+                return None
             if PluginBase.Instance.trial_expired() and username != AXONIUS_USER_NAME:
-                return False
+                return None
             if user_from_db.get('admin'):
-                return True
+                return user_from_db
             if not check_permissions(deserialize_db_permissions(user_from_db['permissions']),
                                      required_permissions,
                                      request.method):
-                return False
-            return True
+                return None
+            return user_from_db
 
         def check_auth_api_key(api_key, api_secret):
             """
@@ -65,25 +65,29 @@ def basic_authentication(func, required_permissions: Iterable[Permission]):
             })
 
             if not user_from_db:
-                return False
+                return None
             if PluginBase.Instance.trial_expired() and user_from_db['user_name'] != AXONIUS_USER_NAME:
-                return False
+                return None
             if user_from_db.get('admin'):
-                return True
+                return user_from_db
             if not check_permissions(deserialize_db_permissions(user_from_db['permissions']),
                                      required_permissions,
                                      request.method):
-                return False
-            return True
+                return None
+            return user_from_db
 
         api_auth = request.headers.get('api-key'), request.headers.get('api-secret')
         auth = request.authorization
-        if check_auth_api_key(*api_auth) or (auth and check_auth_user(auth.username, auth.password)):
+        user_from_db = check_auth_api_key(*api_auth) or (auth and check_auth_user(auth.username, auth.password))
+        if user_from_db:
 
             if has_request_context():
                 path = request.path
                 cleanpath = remove_ids(path)
                 log_metric(logger, ApiMetric.PUBLIC_REQUEST_PATH, cleanpath, method=request.method)
+
+            # save the associated user for the local request
+            g.api_request_user = user_from_db
 
             return func(self, *args, **kwargs)
 
