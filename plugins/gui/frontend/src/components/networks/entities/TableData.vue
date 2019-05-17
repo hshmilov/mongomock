@@ -148,6 +148,7 @@
             name: 'days', title: 'Days', type: 'integer'
           })
           baseTable.data = baseTable.data.map(item => {
+            if (!item[this.schema.name]) return item
             return {...item,
               days: Math.ceil((new Date() - new Date(item[this.schema.name])) / 60 / 60 / 24 / 1000)
             }
