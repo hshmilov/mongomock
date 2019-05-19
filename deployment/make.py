@@ -173,7 +173,6 @@ def add_source_folder(zip_file, exclude=None):
     install_out_regex = re.compile('deployment/axonius_install[^/]*\.py')
     header = SOURCES_FOLDER_NAME
     files = []
-    links = []
     exclude_files = []
     exclude_folders = []
     if exclude:
@@ -222,18 +221,10 @@ def add_source_folder(zip_file, exclude=None):
         folder_path = os.path.join(CORTEX_PATH, source_path)
         for item in os.listdir(folder_path):
             path = os.path.join(folder_path, item)
-            if os.path.islink(path):
-                add_link(os.path.join(source_path, item), zip_rel_path + '/' + item)
-            elif os.path.isdir(path):
+            if os.path.isdir(path):
                 add_folder(os.path.join(source_path, item), zip_rel_path + '/' + item)
             elif os.path.isfile(path):
                 add_file(os.path.join(source_path, item), zip_rel_path + '/' + item)
-
-    def add_link(source_path, zip_rel_path):
-        if not filter_file(source_path.replace('\\', '/')):
-            return
-        path = os.path.join(CORTEX_PATH, source_path)
-        links.append((zip_rel_path, path))
 
     def add_file(source_path, zip_rel_path):
         if not filter_file(source_path.replace('\\', '/')):
@@ -248,15 +239,6 @@ def add_source_folder(zip_file, exclude=None):
             print(f'{index}.'.ljust(count_max_size) + zip_rel_path[len(header) + 1:])
             index += 1
             zip_file.writestr(zip_rel_path, open(path, 'rb').read())
-
-        for zip_rel_path, path in links:
-            print(f'{index}.'.ljust(count_max_size) + zip_rel_path[len(header) + 1:])
-            index += 1
-            link = zipfile.ZipInfo()
-            link.filename = zip_rel_path
-            link.create_system = 3
-            link.external_attr = 0xA1ED0000
-            zip_file.writestr(link, os.readlink(path))
 
     print_state(f'Collecting sources')
     add_folder('', SOURCES_FOLDER_NAME)
