@@ -8,6 +8,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from zscaler_adapter.connection import ZscalerConnection
 from zscaler_adapter.client_id import get_client_id
 from zscaler_adapter.consts import DEFAULT_DOMAIN
@@ -15,7 +16,7 @@ from zscaler_adapter.consts import DEFAULT_DOMAIN
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ZscalerAdapter(AdapterBase):
+class ZscalerAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         company_name = Field(str, 'Company Name')
         detail = Field(str, 'Detail')
@@ -60,8 +61,7 @@ class ZscalerAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -70,8 +70,19 @@ class ZscalerAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
+        duplicated_macs_list = []
         with client_data:
-            yield from client_data.get_device_list()
+            if self.__ignore_macs_dups:
+                macs_list = []
+                for device_raw in client_data.get_device_list():
+                    mac = device_raw.get('macAddress')
+                    if mac:
+                        if mac in macs_list:
+                            duplicated_macs_list.append(mac)
+                        else:
+                            macs_list.append(mac)
+            for device_raw in client_data.get_device_list():
+                yield device_raw, duplicated_macs_list
 
     @staticmethod
     def _clients_schema():
@@ -127,7 +138,7 @@ class ZscalerAdapter(AdapterBase):
         }
 
     @staticmethod
-    def _create_device(device, device_raw):
+    def _create_device(device, device_raw, duplicated_macs_list=None):
         if not device_raw.get('id'):
             logger.warning(f'Bad device with no ID {device_raw}')
             return None
@@ -137,8 +148,9 @@ class ZscalerAdapter(AdapterBase):
         if device_raw.get('machineHostname'):
             device.id = device.id + '_' + device_raw['machineHostname']
 
-        if device_raw.get('macAddress'):
-            device.add_nic(mac=device_raw.get('macAddress'))
+        mac = device_raw.get('macAddress')
+        if not duplicated_macs_list or (mac and mac not in duplicated_macs_list):
+            device.add_nic(mac=mac)
         device.figure_os(device_raw.get('osVersion'))
         device.hostname = device_raw.get('machineHostname')
         device.device_manufacturer = device_raw.get('manufacturer')
@@ -161,10 +173,10 @@ class ZscalerAdapter(AdapterBase):
         return device
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        for device_raw, duplicated_macs_list in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device = self._create_device(device, device_raw)
+                device = self._create_device(device, device_raw, duplicated_macs_list)
                 if device:
                     yield device
             except Exception:
@@ -173,3 +185,29 @@ class ZscalerAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'ignore_macs_dups',
+                    'title': 'Ignore Duplicated Macs',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'ignore_macs_dups'
+            ],
+            'pretty_name': 'Zscaler Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'ignore_macs_dups': False
+        }
+
+    def _on_config_update(self, config):
+        self.__ignore_macs_dups = config['ignore_macs_dups']
