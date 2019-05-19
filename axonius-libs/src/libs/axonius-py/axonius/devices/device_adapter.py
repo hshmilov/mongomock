@@ -720,7 +720,7 @@ class DeviceAdapter(SmartJsonClass):
                 except (ValueError, TypeError):
                     if logger is None:
                         raise
-                    logger.exception(f'Invalid mac: {repr(mac)}')
+                    logger.info(f'Invalid mac: {repr(mac)}')
         nic = self.__add_ips_and_subnets(nic, ips, subnets)
         if name is not None:
             try:

@@ -172,7 +172,7 @@ class NVDSearcher(object):
 
         empty_strings = ["", "0"]
         if product_name in empty_strings or product_version in empty_strings:
-            logger.error(f"Error, got an empty string. "
+            logger.debug(f"Error, got an empty string. "
                          f"Software details - vendor: {str(vendor_name)} "
                          f"product {str(product_name)} version {str(product_version)}")
             return []

@@ -295,7 +295,7 @@ class JamfConnection(object):
 
                 device['policies'] = list(device_policies.values())
             except Exception as err:
-                logger.exception("An exception occured while getting and parsing device policies.")
+                logger.debug("An exception occured while getting and parsing device policies.")
 
             if device_number % print_modulo == 0:
                 logger.info(f"Got {device_number} devices out of {num_of_devices}.")

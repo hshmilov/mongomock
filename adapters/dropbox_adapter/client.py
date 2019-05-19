@@ -29,9 +29,9 @@ class DropboxConnection(RESTConnection):
         try:
             team_list_response = self._post(name='2/team/devices/list_members_devices')
             team_list = team_list_response.get('devices', [])
-            while team_list_response.get('has_more', False):
+            while team_list_response.get('has_more') and team_list_response.get('cursor'):
                 # make authorization header with cursor, and pass in as argument
-                cursor = team_list_response.get('cursor', None)
+                cursor = team_list_response.get('cursor')
                 if cursor:
                     try:
                         updated_body_params = {'cursor': cursor}
@@ -47,7 +47,13 @@ class DropboxConnection(RESTConnection):
             raise RESTException('Was unable to get the list of member devices')
 
         for team in team_list:
-            desktop_clients = team.get('desktop_clients', [])
-            yield from desktop_clients
-            mobile_clients = team.get('mobile_clients', [])
-            yield from mobile_clients
+            try:
+                desktop_clients = team.get('desktop_clients', [])
+                yield from desktop_clients
+            except Exception:
+                logger.exception(f'Probelm getting desktop for {team}')
+            try:
+                mobile_clients = team.get('mobile_clients', [])
+                yield from mobile_clients
+            except Exception:
+                logger.exception(f'Probelm getting exception for {team}')

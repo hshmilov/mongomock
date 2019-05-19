@@ -8,7 +8,7 @@ IDENTIFIERS = {
     'ip': ['ip', 'ipaddress', 'ipaddresses', 'ips'],
     'subnetmask': ['ipsubnetmask'],
     'model': ['model', 'modelid'],
-    'serial': ['serial', 'serialnumber', 'sn'],
+    'serial': ['serial', 'serialnumber', 'sn', 'hostserialnumber'],
     'os': ['os', 'osname', 'osversion', 'operatingsystem', 'osmode'],
     'kernel': ['kernel', 'kernelversion'],
     'manufacturer': ['manufacturer', 'devicemanufacturer'],

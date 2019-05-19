@@ -26,6 +26,7 @@ class SysaidConnection(RESTConnection):
                                          ]
                                 }
                    )
+        return True
 
     def _connect(self):
         if not self._username or not self._password:

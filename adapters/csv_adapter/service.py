@@ -277,7 +277,7 @@ class CsvAdapter(AdapterBase):
                     if cpu_speed or architecture:
                         device.add_cpu(ghz=cpu_speed / (1024 ** 3), architecture=architecture)
                 except Exception:
-                    logger.exception(f'Problem setting cpu')
+                    logger.debug(f'Problem setting cpu')
 
                 ips = (vals.get('ip') or '').split(',')
                 ips = [ip.strip() for ip in ips if ip.strip()]

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    librenms_adapter: {
+        title: 'LibreNMS - BETA',
+        description: 'LibreNMS is a network monitoring solution that provides autodiscovery for a wide range of network hardware and operating systems including Cisco, Linux, Juniper, Foundry, and more.'
+    },
     rumble_adapter: {
         title: 'Rumble Network Discovery',
         description: 'Rumble is a cloud-based network discovery platform that identifies and monitors network-connected IT assets.'

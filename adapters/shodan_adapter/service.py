@@ -95,7 +95,7 @@ class ShodanAdapter(ScannerAdapterBase):
                             ip_dict[ip].append(match_data)
                     yield ip_dict, shodan_dns_name
                 except Exception:
-                    logger.exception(f'Problem getting cidr {cidr}')
+                    logger.debug(f'Problem getting cidr {cidr}')
 
     @staticmethod
     def _clients_schema():
