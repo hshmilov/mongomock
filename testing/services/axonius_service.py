@@ -388,7 +388,9 @@ class AxoniusService:
         while start + timeout > time.time() and len(all_services_to_start) > 0:
             for service in all_services_to_start.copy():
                 try:
-                    service.wait_for_service(5 if first else 1)
+                    # On heavy systems (especially with nodes) it takes more time for core to respond.
+                    # So we have to give so more time for plugins.
+                    service.wait_for_service(20 if first else 10)
                     if service.should_register_unique_dns:
                         service.register_unique_dns()
                     all_services_to_start.remove(service)
