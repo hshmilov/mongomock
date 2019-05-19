@@ -218,10 +218,12 @@
                     border-radius: 4px;
                     display: grid;
                     grid-template-columns: 1fr 2fr;
+                    max-height: 30vh;
+                    overflow: auto;
                   
                     .x-table {
-                      overflow: visible;
-                      height: 100%;
+                      width: min-content;
+                      height: auto;
                     }
                 }
 
