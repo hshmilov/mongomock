@@ -15,7 +15,7 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
 
 MAX_CHARS = 10 ** 6
-TIMEOUT = 50
+TIMEOUT = 60 * 5
 NODE_NAME = 'node_1'
 NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
 NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
@@ -39,14 +39,19 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
     def node_join(self):
         def read_until(ssh_chan, what):
             data = b''
-            for _ in range(MAX_CHARS):
-                c = ssh_chan.recv(1024)
-                if not c:
-                    raise RuntimeError('Connection Closed')
-                data += c
-                if data.endswith(what):
-                    break
-            return data
+            try:
+                for _ in range(MAX_CHARS):
+                    received = ssh_chan.recv(1024)
+                    if not received:
+                        raise RuntimeError('Connection Closed')
+                    data += received
+                    if data.endswith(what):
+                        break
+                return data
+            except Exception:
+                self.logger.exception(f'failed read_until: {what}')
+                self.logger.error(f'data received until failure: {data}')
+                raise
 
         ip_output = subprocess.check_output(['ip', 'a']).decode('utf-8')
         master_ip_address = re.search(PRIVATE_IP_ADDRESS_REGEX, ip_output).group(1)
