@@ -80,6 +80,9 @@ export const actionsMeta = {
     send_csv_to_share: {
         title: 'Send CSV to Share'
     },
+    send_csv_to_s3: {
+        title: 'Send CSV to S3'
+    },
     send_email_to_entities: {
         title: 'Send Email to Entities'
     },
@@ -139,7 +142,7 @@ export const actionsMeta = {
     },
     notify: {
         title: 'Notify',
-        items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'create_notification', 'slack_send_message', 'send_csv_to_share' ]
+        items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3']
     },
     axonius: {
         title: 'Axonius Utilities',

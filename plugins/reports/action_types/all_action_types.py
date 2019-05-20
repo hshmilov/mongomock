@@ -6,6 +6,7 @@ from reports.action_types.alert.create_servicenow_incident import ServiceNowInci
 from reports.action_types.alert.create_sysaid_incident import SysaidIncidentAction
 from reports.action_types.alert.push_system_notification import SystemNotificationAction
 from reports.action_types.alert.send_csv_to_share import SendCsvToShare
+from reports.action_types.alert.send_csv_to_s3 import SendCsvToS3
 from reports.action_types.alert.send_emails import SendEmailsAction
 from reports.action_types.alert.send_https_log import SendHttpsLogAction
 from reports.action_types.alert.send_slack_message import SlackSendMessageAction
@@ -54,6 +55,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'tenable_io_add_ips_to_target_group': TenableIoAddIPsToTargetGroup,
     'send_email_to_entities': SendEmailToEntities,
     'send_csv_to_share': SendCsvToShare,
+    'send_csv_to_s3': SendCsvToS3,
     'run_wmi_scan': RunWMIScan,
     'run_linux_ssh_scan': RunLinuxSSHScan,
     'create_service_now_incident_per_entity': ServiceNowIncidentPerEntity,
