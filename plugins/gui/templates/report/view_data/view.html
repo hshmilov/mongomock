@@ -1,6 +1,6 @@
-<div class="b-grey p-12 mb-12">
+<div class="b-grey p-12 mb-12 after-break">
     {{link_start}}<h3 class="c-blue mb-0">{{title}}</h3>{{link_end}}
-    <h6 class="mt-0 mb-12">({{cols_current}} columns of {{cols_total}}{{view_all}})</h6>
+    <h6 class="mt-0 mb-12 {{'hide' if row_count == 0 else ''}}">(top {{row_count}} results of {{total_count}} | {{cols_current}} columns of {{cols_total}}{{view_all}})</h6>
 
     <div class="table-container">
         {{content}}

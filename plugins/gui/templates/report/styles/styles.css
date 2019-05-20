@@ -89,6 +89,9 @@ a {
 .bg-orange {
     background-color: #FF7D46;
 }
+.bg-grey {
+    background-color: #DEDEDE;
+}
 
 /* borders */
 .b-grey {
@@ -224,7 +227,7 @@ a {
 }
 .histogram .item {
     position: relative;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     line-height: 24px;
 }
 .histogram .item-bar {
@@ -344,4 +347,8 @@ a {
     content: "";
     display: table;
     clear: both;
+}
+
+.hide {
+    display: none;
 }

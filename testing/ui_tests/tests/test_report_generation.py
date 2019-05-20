@@ -78,6 +78,38 @@ class TestReportGeneration(TestBase):
             third_page = doc.pages[2]
             assert third_page.extractText().count('avigdor') == 10
 
+    def test_saved_views_data_device_query(self):
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
+
+            self.base_page.run_discovery()
+
+            data_query = self.DATA_QUERY
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(data_query)
+            self.devices_page.enter_search()
+            self.devices_page.open_edit_columns()
+            self.devices_page.select_column_name(self.devices_page.FIELD_NETWORK_INTERFACES_MAC)
+            self.devices_page.close_edit_columns()
+            self.devices_page.wait_for_table_to_load()
+            self.devices_page.click_sort_column(self.devices_page.FIELD_ASSET_NAME)
+            self.devices_page.click_save_query()
+            self.devices_page.fill_query_name(self.TEST_REPORT_QUERY_NAME)
+            self.devices_page.click_save_query_save_button()
+
+            self.reports_page.create_report(self.REPORT_NAME, True, self.TEST_REPORT_QUERY_NAME)
+
+            doc = self._extract_report_pdf_doc(self.REPORT_NAME)
+            texts = [page.extractText() for page in doc.pages]
+            text = ' '.join(texts)
+            assert 'Devices - Saved Queries' in text
+            assert 'Users - Saved Queries' not in text
+            assert 'top 10 results of 10' in text
+
     def _extract_report_pdf_doc(self, report_name):
         self.reports_page.switch_to_page()
         self.reports_page.wait_for_table_to_load()

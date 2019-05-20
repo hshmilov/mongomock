@@ -1147,8 +1147,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                               PermissionLevel.ReadOnly)})
     def get_devices_count(self, mongo_filter, history: datetime):
         quick = request.args.get('quick') == 'True'
-        return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Devices),
-                                                  history_date=history, quick=quick))
+        return str(self._get_entity_count(EntityType.Devices, mongo_filter, history, quick))
 
     @gui_add_rule_logged_in('devices/fields',
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
@@ -1291,8 +1290,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                                             PermissionLevel.ReadOnly)})
     def get_users_count(self, mongo_filter, history: datetime):
         quick = request.args.get('quick') == 'True'
-        return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, EntityType.Users),
-                                                  history_date=history, quick=quick))
+        return self._get_entity_count(EntityType.Users, mongo_filter, history, quick)
 
     @gui_add_rule_logged_in('users/fields', required_permissions={
         Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
@@ -4414,16 +4412,16 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return: the generated report file path.
         """
         logger.info('Starting to generate report')
-        dashboard = self._get_dashboard()
-        adapters = self._get_adapter_data(report['adapters']) if report.get('adapters') else None
+        generator_params = {}
+        generator_params['dashboard'] = self._get_dashboard()
+        generator_params['adapters'] = self._get_adapter_data(report['adapters']) if report.get('adapters') else None
+        generator_params['default_sort'] = self._system_settings['defaultSort']
+        generator_params['saved_view_count_func'] = self._get_entity_count
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
         server_name = system_config.get('server_name', 'localhost')
-        default_sort = self._system_settings['defaultSort']
         logger.info(f'All data for report gathered - about to generate for server {server_name}')
         return ReportGenerator(report,
-                               dashboard,
-                               adapters,
-                               default_sort,
+                               generator_params,
                                'gui/templates/report/',
                                host=server_name).render_html(datetime.now())
 
@@ -5192,3 +5190,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'tableView': True
             }
         }
+
+    def _get_entity_count(self, entity, mongo_filter, history, quick):
+        return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, entity),
+                                                  history_date=history, quick=quick))

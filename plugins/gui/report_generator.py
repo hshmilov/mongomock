@@ -1,13 +1,14 @@
-from axonius.consts.gui_consts import ChartViews
-from cairosvg import svg2png
-from weasyprint.fonts import FontConfiguration
-from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML, CSS
 import uuid
 from math import pi, cos, sin, floor
 from datetime import datetime
 import logging
 
+from cairosvg import svg2png
+from jinja2 import Environment, FileSystemLoader
+from weasyprint import HTML, CSS
+from weasyprint.fonts import FontConfiguration
+
+from axonius.consts.gui_consts import ChartViews
 from axonius.entities import EntityType
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase
@@ -23,7 +24,10 @@ GREY_COLOUR = '#DEDEDE'
 
 
 class ReportGenerator(object):
-    def __init__(self, report, dashboard, adapters, default_sort, template_path, output_path='/tmp/', host='localhost'):
+    NUMBER_OF_COLUMNS = 6
+
+    def __init__(self, report, report_params,
+                 template_path, output_path='/tmp/', host='localhost'):
         """
 
         :param report:
@@ -31,9 +35,7 @@ class ReportGenerator(object):
         :param output_path:
         """
         self.report = report
-        self.dashboard = dashboard
-        self.adapters = adapters
-        self.default_sort = default_sort
+        self.report_params = report_params
         self.report_data = self.get_report_data(self.report)
         self.template_path = template_path
         self.output_path = output_path
@@ -57,7 +59,8 @@ class ReportGenerator(object):
             'table': self._get_template('view_data/table'),
             'row': self._get_template('view_data/table_row'),
             'head': self._get_template('view_data/table_head'),
-            'data': self._get_template('view_data/table_data')
+            'data': self._get_template('view_data/table_data'),
+            'adapter_data': self._get_template('view_data/table_adapter_data')
         }
 
     def get_report_data(self, report):
@@ -69,18 +72,19 @@ class ReportGenerator(object):
         include_dashboard = report['include_dashboard'] if report.get('include_dashboard') else False
         include_all_saved_views = report['include_all_saved_views'] if report.get('include_all_saved_views') else False
         include_saved_views = report['include_saved_views'] if report.get('include_saved_views') else False
+        dashboard = list(self.report_params.get('dashboard')) if self.report_params.get('dashboard') else []
         report_data = {
             'include_dashboard': include_dashboard,
             'adapter_devices': adapter_data.call_uncached(EntityType.Devices) if include_dashboard else None,
             'adapter_users': adapter_data.call_uncached(EntityType.Users) if include_dashboard else None,
-            'custom_charts': list(self.dashboard) if include_dashboard else None,
+            'custom_charts': dashboard if include_dashboard else None,
             'views_data':
                 self._get_saved_views_data(include_all_saved_views, saved_views) if include_saved_views else None
         }
         if not include_saved_views:
             log_metric(logger, 'query.report', None)
         if report.get('adapters'):
-            report_data['adapter_data'] = self.adapters
+            report_data['adapter_data'] = self.report_params.get('adapters')
         return report_data
 
     def generate_report_pdf(self):
@@ -117,8 +121,13 @@ class ReportGenerator(object):
 
         # Add section for saved views
         if self.report_data.get('views_data'):
-            sections.append(self.templates['section'].render(
-                {'title': 'Saved Queries', 'content': self._create_data_views()}))
+            entities = [entity.name for entity in EntityType]
+            entities.sort()
+            for entity in entities:
+                if self.report_data['views_data'].get(entity):
+                    sections.append(self.templates['section'].render(
+                        {'title': f'{entity.capitalize()} - Saved Queries',
+                         'content': self._create_data_views(entity)}))
             logger.info(f'Report Generator, Views Section: Added views data section')
 
         # Join all sections as the content of the report
@@ -411,14 +420,15 @@ class ReportGenerator(object):
                     results.append(self._create_data_view(view_data))
         return '\n'.join(results)
 
-    def _create_data_views(self):
+    def _create_data_views(self, entity):
         views = []
         added_views = 0
-        for view_data in self.report_data['views_data']:
+        self.report_data['views_data'][entity].sort(key=lambda x: x['name'])
+        for view_data in self.report_data['views_data'][entity]:
             views.append(self._create_data_view(view_data))
             added_views += 1
 
-        logger.info(f'Report Generator, Saved Views: Added {added_views}')
+        logger.info(f'Report Generator, Saved Views for {entity}: Added {added_views}')
         return '\n'.join(views)
 
     def _create_data_view(self, view_data):
@@ -430,7 +440,7 @@ class ReportGenerator(object):
         :return:
         """
         good_fields = [field for field in view_data['fields'] if list(field.values())[0] != 'specific_data.data.image']
-        current_fields = good_fields[0:6]
+        current_fields = good_fields[0:self.NUMBER_OF_COLUMNS]
         heads = [self.templates['head'].render({'content': list(field.keys())[0]}) for field in current_fields]
         rows = []
         for item in view_data['data']:
@@ -438,18 +448,37 @@ class ReportGenerator(object):
             for field in current_fields:
                 value = item.get(list(field.values())[0], '')
                 if isinstance(value, list):
-                    canonized_value = [str(x) for x in value]
-                    value = ','.join(canonized_value)
+                    if field.get('Adapters'):
+                        canonized_value = []
+                        current_value = []
+                        for x in value:
+                            current_value.append(self.templates['adapter_data'].render({'name': x}))
+                            if len(current_value) == 3:
+                                canonized_value.append(''.join(current_value))
+                                current_value = []
+                        if len(current_value) > 0:
+                            canonized_value.append(''.join(current_value))
+                        value = '<br>'.join(canonized_value)
+                    else:
+                        canonized_value = [str(x) for x in value]
+                        value = ', '.join(canonized_value)
                 item_values.append(self.templates['data'].render({'content': value}))
             rows.append(self.templates['row'].render({'content': '\n'.join(item_values)}))
 
-        render_params = {
-            'title': view_data['name'],
-            'cols_total': len(view_data['fields']), 'cols_current': min(len(good_fields), 6),
-            'content': self.templates['table'].render({
+        table = 'No results found'
+        number_of_rows = len(view_data['data'])
+        if number_of_rows > 0:
+            table = self.templates['table'].render({
                 'head_content': self.templates['row'].render({'content': '\n'.join(heads)}),
                 'body_content': '\n'.join(rows)
             })
+
+        render_params = {
+            'title': view_data['name'],
+            'cols_total': len(view_data['fields']), 'cols_current': min(len(good_fields), self.NUMBER_OF_COLUMNS),
+            'row_count': number_of_rows,
+            'total_count': view_data['count'],
+            'content': table
         }
         if view_data.get('entity'):
             render_params['link_start'] = f'<a href="https://{self.host}/{view_data["entity"]}' \
@@ -466,7 +495,7 @@ class ReportGenerator(object):
         :return: Lists of the view names along with the list of results and list of field headers, with pretty names.
         """
         logger.info('Getting views data')
-        views_data = []
+        views_data = {}
         query_per_entity = {}
         for saved_query in saved_queries:
             entity = saved_query['entity']
@@ -500,13 +529,17 @@ class ReportGenerator(object):
 
             saved_views = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity].find(saved_views_filter)
             for view_doc in saved_views:
+                if not views_data.get(entity.name):
+                    views_data[entity.name] = []
                 try:
                     view = view_doc.get('view')
                     if view:
                         filter_query = view.get('query', {}).get('filter', '')
                         log_metric(logger, 'query.report', filter_query)
                         field_list = view.get('fields', [])
-                        views_data.append({
+                        count = self.report_params['saved_view_count_func'](
+                            entity, parse_filter(filter_query), None, False)
+                        views_data[entity.name].append({
                             'name': view_doc.get('name'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in field_list],
                             'data': list(gui_helpers.get_entities(limit=view.get('pageSize', 20),
@@ -515,7 +548,8 @@ class ReportGenerator(object):
                                                                   sort=gui_helpers.get_sort(view),
                                                                   projection={field: 1 for field in field_list},
                                                                   entity_type=entity,
-                                                                  default_sort=self.default_sort))
+                                                                  default_sort=self.report_params['default_sort'])),
+                            'count': count
                         })
                 except Exception:
                     logger.exception('Problem with View {} ViewDoc {}'.format(view_doc.get('name'), str(view_doc)))
