@@ -121,7 +121,7 @@ class SolarwindsConnection:
         try:
             dhcp_results = self.client.query('Select IPAddress, MAC, LeaseExpires, '
                                              'DhcpClientName, Vendor, MachineType, '
-                                             'Description, DisplayName  from IPAM.IPNode')
+                                             'Description, DisplayName, Status  from IPAM.IPNode')
             if dhcp_results and dhcp_results.get('results'):
                 for device_raw in dhcp_results.get('results'):
                     yield device_raw, 'dhcp'

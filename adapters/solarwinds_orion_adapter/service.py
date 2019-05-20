@@ -149,12 +149,15 @@ class SolarwindsOrionAdapter(AdapterBase):
 
     def _create_dhcp_device(self, device_raw):
         device = self._new_device_adapter()
-        if not device_raw.get('MAC'):
+        if not device_raw.get('MAC') and not device_raw.get('DisplayName'):
             logger.debug(f'Bad device with no mac {device_raw}')
             return None
         device.id = (device_raw.get('MAC') or '') + '_' + (device_raw.get('DisplayName') or '')
         ips = [device_raw.get('IPAddress')] if device_raw.get('IPAddress') else None
+        device.hostname = device_raw.get('DhcpClientName')
         device.add_nic(mac=device_raw.get('MAC'), ips=ips)
+        if device_raw.get('Status') != 1:
+            return None
         device.description = device_raw.get('Description')
         device.set_raw(device_raw)
         return device

@@ -431,6 +431,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         # No credentials to attempt reconnection
                         raise adapter_exceptions.CredentialErrorException(
                             "No credentials found for client {0}. Reason: {1}".format(client_name, str(e)))
+                    if current_client.get('status') != 'success':
+                        raise
                 try:
                     with self._clients_lock:
                         self._clients[client_name] = self.__connect_client_facade(current_client["client_config"])
