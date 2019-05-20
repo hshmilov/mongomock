@@ -402,7 +402,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             # Do we have it? or do we need to create it?
             if len(user) > 1:
                 # Can't be! how can we have a user with the same id? should have been correlated.
-                logger.critical(f'Found a couple of users (expected one) with same id: {username} -> {user}')
+                logger.warning(f'Found a couple of users (expected one) with same id: {username} -> {user}')
                 continue
             elif len(user) == 0:
                 logger.error(f'User {username} should have been created in the view but is not there! Continuing')

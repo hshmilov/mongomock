@@ -285,7 +285,7 @@ class CoreService(PluginBase, Configurable):
             return False
 
         except Exception as e:
-            logger.fatal("Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
+            logger.exception("Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
     def _check_registered_thread(self, *args, **kwargs):
