@@ -83,6 +83,9 @@ class ReportsPage(EntitiesPage):
     def click_add_scheduling(self):
         self.find_element_by_text(self.ADD_SCHEDULING_CHECKBOX).click()
 
+    def is_add_scheduling_selected(self):
+        return self.is_toggle_selected(self.find_element_preceding_by_text(self.ADD_SCHEDULING_CHECKBOX))
+
     def fill_email_subject(self, subject):
         report_subject_element = self.driver.find_element_by_id(self.EMAIL_SUBJECT_ID)
         self.fill_text_by_element(report_subject_element, subject)

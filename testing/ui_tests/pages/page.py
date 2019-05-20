@@ -451,7 +451,7 @@ class Page:
 
     @staticmethod
     def is_toggle_selected(toggle):
-        return toggle.get_attribute('class') == TOGGLE_CHECKED_CLASS
+        return TOGGLE_CHECKED_CLASS in toggle.get_attribute('class')
 
     def click_toggle_button(self,
                             toggle,

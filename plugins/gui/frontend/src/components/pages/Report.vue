@@ -450,6 +450,9 @@
         })
       },
       toggleScheduling () {
+        if(this.isReadOnly){
+          return
+        }
         this.report.add_scheduling = !this.report.add_scheduling
         this.onAddScheduling()
         setTimeout(() => {
