@@ -91,7 +91,7 @@ class LibrenmsAdapter(AdapterBase):
                 {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
-                    'type': 'bool'
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -105,11 +105,11 @@ class LibrenmsAdapter(AdapterBase):
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
-            device_id = device_raw.get('')
+            device_id = device_raw.get('device_id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = str(device_id) + '_' + (device_raw.get('device_id') or 'hostname')
+            device.id = str(device_id) + '_' + (device_raw.get('hostname') or '')
             device.hostname = device_raw.get('hostname')
             device.device_serial = device_raw.get('serial')
             device.figure_os(device_raw.get('os'))

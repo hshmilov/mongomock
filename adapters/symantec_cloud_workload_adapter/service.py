@@ -134,7 +134,7 @@ class SymantecCloudWorkloadAdapter(AdapterBase):
                 {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
-                    'type': 'bool'
+                    'type': 'string'
                 }
             ],
             'required': [

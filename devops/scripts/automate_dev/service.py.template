@@ -94,7 +94,7 @@ class {capital_adapter_name}Adapter(AdapterBase):
                 {{
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
-                    'type': 'bool'
+                    'type': 'string'
                 }}
             ],
             'required': [

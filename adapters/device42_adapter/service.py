@@ -107,7 +107,7 @@ class Device42Adapter(AdapterBase):
                 {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
-                    'type': 'bool'
+                    'type': 'string'
                 }
             ],
             'required': [

@@ -124,7 +124,7 @@ class ZscalerAdapter(AdapterBase, Configurable):
                 {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
-                    'type': 'bool'
+                    'type': 'string'
                 }
             ],
             'required': [
