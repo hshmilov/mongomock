@@ -603,7 +603,7 @@ export const onboarding = {
 				},
 				'dashboard': {
 					id: 'dashboard', title: 'DASHBOARD', align: 'right', fixed: true,
-					content: 'The Axonius cards gives a system-wide snapshot.'
+					content: 'The Axonius Dashboard gives a system-wide snapshot.'
 				},
 				'dashboardManaged': {
 					id: 'managed_device_coverage', title: 'MANAGEMENT COVERAGE', align: 'right', emphasize: false,

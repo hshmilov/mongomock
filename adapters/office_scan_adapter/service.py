@@ -78,7 +78,7 @@ class OfficeScanAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'OfficeScan Domain',
+                    'title': 'Trend Micro Apex One Domain',
                     'type': 'string'
                 },
                 {

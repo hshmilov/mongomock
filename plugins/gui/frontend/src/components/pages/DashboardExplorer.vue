@@ -1,7 +1,7 @@
 <template>
   <x-page
     :breadcrumbs="[
-      { title: 'axonius cards', path: { name: 'Dashboard'}},
+      { title: 'axonius dashboard', path: { name: 'Dashboard'}},
       { title: 'Search' }
     ]"
   >
