@@ -163,7 +163,7 @@ die-on-term = true
 ignore-sigpipe = true
 ignore-write-errors = true
 disable-write-exception = true
-buffer-size = 32768
+buffer-size = 65535
 '''[1:]
 
     def get_main_file(self):

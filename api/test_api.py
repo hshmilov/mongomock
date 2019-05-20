@@ -2,8 +2,10 @@
 # This is a common procedure with pylint and is disabled by default.
 # pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name, too-many-branches
 import logging
+import pytest
 
 from examples.api_usage import RESTExample
+from axoniussdk.client import RESTClient
 from axonius.utils.wait import wait_until
 from services.adapters.ad_service import ad_fixture
 from services.axonius_service import get_service
@@ -15,8 +17,9 @@ from testing.tests.conftest import axonius_fixture
 
 MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3   # the amount of time we expect a cycle to end, without async plugins in bg
 
-
-def test_api(axonius_fixture, general_info_fixture, device_control_fixture, ad_fixture):
+# pylint: disable=redefined-outer-name
+@pytest.fixture(scope='module')
+def axonius_system(axonius_fixture, general_info_fixture, device_control_fixture, ad_fixture):
     axonius_system = get_service()
 
     ad_fixture.add_client(ad_client1_details)
@@ -26,6 +29,10 @@ def test_api(axonius_fixture, general_info_fixture, device_control_fixture, ad_f
     wait_until(lambda: axonius_system.scheduler.log_tester.is_str_in_log('Finished Research Phase Successfully.', 10),
                total_timeout=MAX_TIME_FOR_SYNC_RESEARCH_PHASE)
 
+    return axonius_system
+
+
+def test_api(axonius_system):
     client = RESTExample('https://127.0.0.1',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
                          verify=False)
@@ -35,3 +42,12 @@ def test_api(axonius_fixture, general_info_fixture, device_control_fixture, ad_f
         callback = getattr(client, name)
         callback()
         logging.info('\n\n')
+
+
+def test_big_queries(axonius_system):
+    client = RESTClient('https://127.0.0.1',
+                        auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
+                        verify=False)
+    data = 'a' * (30 * 1024)
+    status, _ = client.get_devices_count(filter_=f'specific_data.data.hostname == "{data}"')
+    assert status == 200
