@@ -116,6 +116,7 @@ class InstanceManager:
             commands = f'{commands} | ts -s'  # ts to print timestamp
         if timeout > 0:
             commands = f'timeout --signal=SIGTERM --kill-after=30 {timeout} {commands}'
+        commands = f'set -o pipefail; {commands}'   # In any way, rc should fail on pipes transfer
         TC.print(f'{instance}: executing {job_name}: {commands}')
         start_time = time.time()
 
