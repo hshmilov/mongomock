@@ -13,6 +13,7 @@
       "static_correlator",
       "static_users_correlator",
       "system_scheduler",
+      "heavy_lifting",
       "mongo",
       "master_proxy"
     ],

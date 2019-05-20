@@ -1,7 +1,5 @@
 import functools
 import logging
-import traceback
-
 
 import threading
 import time

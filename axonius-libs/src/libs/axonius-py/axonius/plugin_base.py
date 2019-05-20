@@ -343,7 +343,7 @@ class PluginBase(Configurable, Feature):
                                        self.plugin_unique_name, self.api_key, self.node_id,
                                        os.environ.get('NODE_INIT_NAME', None))
         if not core_data or core_data['status'] == 'error':
-            raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data['message']))
+            raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data))
         if 'registration' not in self.temp_config:
             self.temp_config['registration'] = {}
 

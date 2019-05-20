@@ -501,7 +501,7 @@ def get_entities(limit: int, skip: int,
                  run_over_projection=True,
                  history_date: datetime = None,
                  ignore_errors: bool = False,
-                 include_details: bool = False):
+                 include_details: bool = False) -> Iterable[dict]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -969,58 +969,90 @@ def entity_fields(entity_type: EntityType):
     return fields
 
 
-def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType, default_sort=True,
-            history: datetime = None):
+def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
+            default_sort=True, history: datetime = None) -> io.StringIO:
+    """
+    See '_get_csv' docs.
+    Returns a StringIO object - not iterable
+    """
+    s = io.StringIO()
+    list(_get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history))
+    return s
+
+
+def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
+                     default_sort=True, history: datetime = None) -> Iterable[str]:
+    """
+    See '_get_csv' docs.
+    Returns an iterator of string lines
+    """
+
+    class MyStringIo(io.StringIO):
+        """
+        A version of io.StringIO that just returns the strings given, makes _get_csv_iterable return the string
+        that it writes
+        """
+
+        def write(self, x, *args):
+            return x
+
+    s = MyStringIo()
+    return _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history)
+
+
+def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType, file_obj,
+             default_sort=True, history: datetime = None) -> Iterable[None]:
     """
     Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
+    :param file_obj: File obj for output.
     """
     logger.info('Generating csv')
-    string_output = io.StringIO()
-    entities = list(get_entities(None, None, mongo_filter, mongo_sort,
-                                 mongo_projection,
-                                 entity_type,
-                                 default_sort=default_sort,
-                                 run_over_projection=False,
-                                 history_date=history,
-                                 ignore_errors=True))
-    if len(entities) > 0:
-        # Beautifying the resulting csv.
-        mongo_projection.pop('internal_axon_id', None)
-        mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
+    entities = get_entities(None, None, mongo_filter, mongo_sort,
+                            mongo_projection,
+                            entity_type,
+                            default_sort=default_sort,
+                            run_over_projection=False,
+                            history_date=history,
+                            ignore_errors=True)
 
-        # Getting pretty titles for all generic fields as well as specific
-        current_entity_fields = entity_fields(entity_type)
-        for field in current_entity_fields['generic']:
+    # Beautifying the resulting csv.
+    mongo_projection.pop('internal_axon_id', None)
+    mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
+
+    # Getting pretty titles for all generic fields as well as specific
+    current_entity_fields = entity_fields(entity_type)
+    for field in current_entity_fields['generic']:
+        if field['name'] in mongo_projection:
+            mongo_projection[field['name']] = field['title']
+
+    for type_ in current_entity_fields['specific']:
+        for field in current_entity_fields['specific'][type_]:
             if field['name'] in mongo_projection:
-                mongo_projection[field['name']] = field['title']
+                mongo_projection[field['name']] = f"{' '.join(type_.split('_')).capitalize()}: {field['title']}"
 
-        for type_ in current_entity_fields['specific']:
-            for field in current_entity_fields['specific'][type_]:
-                if field['name'] in mongo_projection:
-                    mongo_projection[field['name']] = f"{' '.join(type_.split('_')).capitalize()}: {field['title']}"
+    dw = csv.DictWriter(file_obj, mongo_projection.values())
 
-        for current_entity in entities:
-            current_entity.pop('internal_axon_id', None)
-            current_entity.pop(ADAPTERS_LIST_LENGTH, None)
+    # instead of using `writeheader` so we can get the stirng output here as well
+    yield dw.writerow(dict(zip(dw.fieldnames, dw.fieldnames)))
 
-            for field in mongo_projection.keys():
-                # Replace field paths with their pretty titles
-                if field in current_entity:
-                    current_entity[mongo_projection[field]] = current_entity[field]
-                    del current_entity[field]
-                    if isinstance(current_entity[mongo_projection[field]], list):
-                        canonized_values = [val.strftime('%Y-%m-%d %H:%M:%S')
-                                            if isinstance(val, datetime)
-                                            else str(val)
-                                            for val in current_entity[mongo_projection[field]]]
-                        current_entity[mongo_projection[field]] = ', '.join(canonized_values)
+    for current_entity in entities:
+        current_entity.pop('internal_axon_id', None)
+        current_entity.pop(ADAPTERS_LIST_LENGTH, None)
 
-        dw = csv.DictWriter(string_output, mongo_projection.values())
-        dw.writeheader()
-        dw.writerows(entities)
+        for field in mongo_projection.keys():
+            # Replace field paths with their pretty titles
+            if field in current_entity:
+                current_entity[mongo_projection[field]] = current_entity[field]
+                del current_entity[field]
+                if isinstance(current_entity[mongo_projection[field]], list):
+                    canonized_values = [val.strftime('%Y-%m-%d %H:%M:%S')
+                                        if isinstance(val, datetime)
+                                        else str(val)
+                                        for val in current_entity[mongo_projection[field]]]
+                    current_entity[mongo_projection[field]] = ', '.join(canonized_values)
 
-    return string_output
+        yield dw.writerow(current_entity)
 
 
 def flatten_fields(schema, name='', exclude=[], branched=False):

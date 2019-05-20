@@ -20,7 +20,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import (NODE_ID, NODE_INIT_NAME, NODE_NAME,
                                           NODE_USER_PASSWORD,
                                           PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
-                                          X_UI_USER, X_UI_USER_SOURCE, PROXY_VERIFY)
+                                          X_UI_USER, X_UI_USER_SOURCE, PROXY_VERIFY, HEAVY_LIFTING_PLUGIN_NAME)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -348,9 +348,10 @@ class CoreService(PluginBase, Configurable):
         with self.adapters_lock:  # Locking the adapters list, in case "register" will get called from 2 plugins
             relevant_doc = None
 
-            if PLUGIN_UNIQUE_NAME in data:
+            plugin_unique_name = data.get(PLUGIN_UNIQUE_NAME)
+
+            if plugin_unique_name:
                 # Plugin is trying to register with his own name
-                plugin_unique_name = data[PLUGIN_UNIQUE_NAME]
                 logger.info("Plugin request to register with his own name: {0}".format(plugin_unique_name))
 
                 # Trying to get the configuration of the current plugin
@@ -372,6 +373,11 @@ class CoreService(PluginBase, Configurable):
                 # Checking if this plugin already online for some reason
                 if plugin_unique_name in self.online_plugins:
                     duplicated = self.online_plugins[plugin_unique_name]
+
+                    # HEAVY_LIFTING_PLUGIN_NAME is allowed to have multiples, don't touch that
+                    if plugin_unique_name == HEAVY_LIFTING_PLUGIN_NAME:
+                        return jsonify(relevant_doc)
+
                     if request.remote_addr == duplicated['plugin_ip'] and plugin_port == duplicated['plugin_port']:
                         logger.warn("Pluging {} restarted".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
@@ -458,7 +464,7 @@ class CoreService(PluginBase, Configurable):
                                    replacement=doc,
                                    upsert=True)
 
-            # This time it must work since we enterned the needed document
+            # This time it must work since we entered the needed document
             relevant_doc = self._get_config(plugin_unique_name=plugin_unique_name)
 
             self.online_plugins[plugin_unique_name] = relevant_doc

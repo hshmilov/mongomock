@@ -126,6 +126,10 @@ class DockerService(AxonService):
     def get_max_uwsgi_threads(self) -> int:
         return 100
 
+    @property
+    def get_max_uwsgi_processes(self) -> int:
+        return 1
+
     def get_dockerfile(self, *args, **kwargs):
         return f'''
 FROM axonius/axonius-libs
@@ -148,6 +152,7 @@ module = main:wsgi_app
 
 master = true
 threads = {self.get_max_uwsgi_threads}
+processes = {self.get_max_uwsgi_processes}
 
 socket = /tmp/openresty-uwsgi.sock
 chmod-socket = 666

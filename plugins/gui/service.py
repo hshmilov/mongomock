@@ -133,6 +133,7 @@ from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
+from gui.gui_logic.generate_csv import get_csv_from_heavy_lifting_plugin
 from gui.gui_logic.get_ec_historical_data_for_entity import (TaskData,
                                                              get_all_task_data)
 from gui.gui_logic.historical_dates import (all_historical_dates,
@@ -1124,16 +1125,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_add_rule_logged_in('devices/csv', required_permissions={Permission(PermissionType.Devices,
                                                                             PermissionLevel.ReadOnly)})
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
-        csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices,
-                                         default_sort=self._system_settings.get('defaultSort'),
-                                         history=history)
-        output = make_response(csv_string.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
-        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
-        output.headers['Content-type'] = 'text/csv'
-        return output
+        return get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history,
+                                                 EntityType.Devices, self._system_settings.get('defaultSort'))
 
-    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_add_rule_logged_in('devices/<device_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices,
@@ -1269,13 +1263,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         # Deleting image from the CSV (we dont need this base64 blob in the csv)
         if 'specific_data.data.image' in mongo_projection:
             del mongo_projection['specific_data.data.image']
-        csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users,
-                                         default_sort=self._system_settings['defaultSort'], history=history)
-        output = make_response(csv_string.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
-        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
-        output.headers['Content-type'] = 'text/csv'
-        return output
+
+        return get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history,
+                                                 EntityType.Users, self._system_settings.get('defaultSort'))
 
     @gui_helpers.timed_endpoint()
     @gui_helpers.historical()

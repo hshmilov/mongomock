@@ -23,6 +23,7 @@ from services.plugins.aggregator_service import AggregatorService
 from services.plugins.core_service import CoreService
 from services.plugins.execution_service import ExecutionService
 from services.plugins.gui_service import GuiService
+from services.plugins.heavy_lifting_service import HeavyLiftingService
 from services.plugins.master_proxy_service import MasterProxyService
 from services.plugins.mongo_service import MongoService
 from services.plugins.reports_service import ReportsService
@@ -54,6 +55,7 @@ class AxoniusService:
         self.static_correlator = StaticCorrelatorService()
         self.static_users_correlator = StaticUsersCorrelatorService()
         self.reports = ReportsService()
+        self.heavy_lifting = HeavyLiftingService()
         self.master_proxy = MasterProxyService()
 
         self.axonius_services = [self.db,
@@ -64,6 +66,7 @@ class AxoniusService:
                                  self.execution,
                                  self.static_correlator,
                                  self.static_users_correlator,
+                                 self.heavy_lifting,
                                  self.reports]  # TBD: enable master proxy
 
     @classmethod
