@@ -1,5 +1,10 @@
+from datetime import datetime
+import pytz
+
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from test_credentials.json_file_credentials import USER_NAME_UNICODE
+
+from axonius.utils.parsing import parse_date_with_timezone
 
 
 class TestUsersTable(TestEntitiesTable):
@@ -8,6 +13,7 @@ class TestUsersTable(TestEntitiesTable):
     MAIL_COLUMN = 'Mail'
     ADMIN_COLUMN = 'Is Admin'
     LAST_SEEN_COLUMN = 'Last Seen In Domain'
+    ADAPTERS_COLUMN = 'Adapters'
     QUERY_FILTER_USERNAME = 'specific_data.data.username%20%3D%3D%20regex(%22m%22)'
     QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
                    'data.domain,specific_data.data.last_seen,specific_data.data.is_admin,labels'
@@ -126,3 +132,40 @@ class TestUsersTable(TestEntitiesTable):
         assert f'{last_seens[2]}, {last_seens[1]}' == last_seens[0]
 
         assert self.users_page.get_column_data_count_true(self.ADMIN_COLUMN)[0] == 2
+
+        adapters = self.users_page.get_column_data_titles(self.ADAPTERS_COLUMN)
+        assert len(adapters) == 3
+        assert f'{adapters[1]},{adapters[2]}' == adapters[0]
+
+    @staticmethod
+    def _days_since_date(date_str):
+        difference = pytz.utc.localize(datetime.now()) - parse_date_with_timezone(date_str, 'Israel')
+        return difference.days + 1
+
+    def test_user_expand_cell(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        self.users_page.query_user_name_contains('avidor')
+        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.USER_NAME_COLUMN))
+
+        user_names = self.users_page.get_column_data(self.USER_NAME_COLUMN)[0].split('\n')
+        assert f'{user_names[-1]}, {user_names[-2]}' == user_names[0]
+        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.USER_NAME_COLUMN))
+        self.users_page.wait_close_column_details_popup()
+
+        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
+        last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
+        assert f'{last_seens[-2]}, {last_seens[-4]}' == last_seens[0]
+        assert int(last_seens[-3]) < int(last_seens[-1])
+        assert int(last_seens[-3]) == self._days_since_date(last_seens[-4])
+        assert int(last_seens[-1]) == self._days_since_date(last_seens[-2])
+        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
+        self.users_page.wait_close_column_details_popup()
+
+        self.users_page.query_user_name_contains('ofri')
+        self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
+        last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
+        assert last_seens[-2] == last_seens[0]
+        assert int(last_seens[-1]) == self._days_since_date(last_seens[-2])
+        assert last_seens[-3] == 'Days'

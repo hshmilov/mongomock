@@ -3,6 +3,7 @@ import time
 
 import requests
 from retrying import retry
+from selenium.webdriver.common.action_chains import ActionChains
 
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
@@ -54,10 +55,11 @@ class EntitiesPage(Page):
     TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .title > .selection > button'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
     TABLE_SECOND_ROW_CSS = 'tbody .x-row.clickable:nth-child(2)'
-    TABLE_FIRST_CELL_CSS = f'{TABLE_FIRST_ROW_CSS} td:nth-child(2)'
     TABLE_ROW_CHECKBOX_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
     TABLE_ROW_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
+    TABLE_CELL_CSS = 'tbody .x-row.clickable td:nth-child({cell_index})'
+    TABLE_CELL_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/div[@class=\'table-container\']/table/thead/tr'
@@ -66,6 +68,8 @@ class EntitiesPage(Page):
     TABLE_HEADER_CELLS_CSS = '.data-title'
     TABLE_HEADER_SORT_XPATH = '//th//div[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
+    TABLE_DATA_TITLE_POS_XPATH = '//tr[@id]/td[position()={data_position}]//' \
+                                 'div[@class=\'x-data\' or @class=\'list\']/div'
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
@@ -348,8 +352,15 @@ class EntitiesPage(Page):
         col_position = self.count_sort_column(col_name, parent)
         if not col_position:
             return []
-        return [el.text.strip() for el in
-                parent.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]
+        return [el.text.strip() for el in self.find_elements_by_xpath(
+            self.TABLE_DATA_POS_XPATH.format(data_position=col_position), element=parent)]
+
+    def get_column_data_titles(self, col_name):
+        col_position = self.count_sort_column(col_name)
+        if not col_position:
+            return []
+        return [el.get_attribute('title') for el in self.find_elements_by_xpath(
+            self.TABLE_DATA_TITLE_POS_XPATH.format(data_position=col_position)) if el.get_attribute('title')]
 
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
@@ -675,9 +686,18 @@ class EntitiesPage(Page):
     def click_expand_row(self, index=1):
         self.driver.find_element_by_css_selector(self.TABLE_ROW_EXPAND_CSS.format(child_index=index)).click()
 
+    def click_expand_cell(self, row_index=1, cell_index=1):
+        ActionChains(self.driver).move_to_element(self.driver.find_element_by_css_selector(
+            self.TABLE_CELL_CSS.format(cell_index=cell_index))).perform()
+        self.driver.find_element_by_css_selector(self.TABLE_CELL_EXPAND_CSS.format(
+            row_index=row_index, cell_index=cell_index)).click()
+
     def get_column_data_count_true(self, col_name):
         col_position = self.count_sort_column(col_name)
         if not col_position:
             return []
         return [len(el.find_elements_by_css_selector('.x-boolean-view .checkmark')) for el in
                 self.driver.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]
+
+    def wait_close_column_details_popup(self):
+        self.wait_for_element_absent_by_css('.details-table-container .popup .content .table')

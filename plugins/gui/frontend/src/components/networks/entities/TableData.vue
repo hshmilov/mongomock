@@ -149,8 +149,10 @@
           })
           baseTable.data = baseTable.data.map(item => {
             if (!item[this.schema.name]) return item
+            let itemDate = new Date(item[this.schema.name])
+            itemDate.setMinutes(itemDate.getMinutes() - itemDate.getTimezoneOffset())
             return {...item,
-              days: Math.ceil((new Date() - new Date(item[this.schema.name])) / 60 / 60 / 24 / 1000)
+              days: Math.ceil((new Date().getTime() - itemDate.getTime()) / 60 / 60 / 24 / 1000)
             }
           }).sort((a, b) => a.days - b.days)
         }

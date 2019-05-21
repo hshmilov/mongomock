@@ -58,7 +58,6 @@ client_details = {
                 "domain": "TestDomain.test",
                 "is_admin": true,
                 "mail": "ofri@axonius.com",
-                "last_seen": "2018-04-11 02:13:24.485Z",
                 "last_password_change": "2017-04-11 02:13:24.485Z"
                 },
                 {
