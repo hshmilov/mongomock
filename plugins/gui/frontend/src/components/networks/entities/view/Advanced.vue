@@ -1,20 +1,29 @@
 <template>
-  <x-table
-    :title="schema.title"
-    :module="stateLocation"
-    :static-fields="fields"
-    :static-data="sortedData"
-  >
-    <template slot="actions">
-      <x-button
-        link
-        @click="exportCSV"
-      >Export CSV</x-button>
-    </template>
-  </x-table>
+  <div class="x-entity-advanced">
+    <div class="header">
+      <x-search-input
+        v-model="searchValue"
+        :placeholder="`Search ${schema.title}...`"
+      />
+    </div>
+    <x-table
+      :title="schema.title"
+      :module="stateLocation"
+      :static-fields="fields"
+      :static-data="sortedData"
+    >
+      <template slot="actions">
+        <x-button
+          link
+          @click="exportCSV"
+        >Export CSV</x-button>
+      </template>
+    </x-table>
+  </div>
 </template>
 
 <script>
+  import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
   import xTable from '../../../neurons/data/Table.vue'
   import xButton from '../../../axons/inputs/Button.vue'
 
@@ -25,7 +34,7 @@
   export default {
     name: 'XEntityAdvanced',
     components: {
-      xTable, xButton
+      xSearchInput, xTable, xButton
     },
     props: {
       index: {
@@ -57,6 +66,11 @@
         }
       }
     },
+    data () {
+      return {
+        searchValue: ''
+      }
+    },
     computed: {
       stateLocation () {
         return `${this.module}/current/data/advanced/${this.index}`
@@ -72,8 +86,17 @@
           return !found
         })
       },
+      filteredData() {
+        if (!this.searchValue) return this.mergedData
+        return this.mergedData.filter(item => {
+          return this.fields.filter(field => {
+            if (!item[field.name]) return false
+            return item[field.name].toString().toLowerCase().includes(this.searchValue.toLowerCase())
+          }).length
+        })
+      },
       sortedData () {
-        return [ ...this.mergedData ].sort((first, second) => {
+        return [ ...this.filteredData ].sort((first, second) => {
           if (!this.sort.field) return 1
           first = first[this.sort.field] || ''
           second = second[this.sort.field] || ''
@@ -156,5 +179,12 @@
 </script>
 
 <style lang="scss">
+  .x-entity-advanced {
+    .header {
+      .x-search-input {
+        width: 60%;
+      }
+    }
+  }
 
 </style>
