@@ -125,13 +125,17 @@ class StaticAnalysisService(Triggerable, PluginBase):
             # mongodb throws 'cursor not found' . This happens if we did not fetch a page from mongodb within 10 minutes
             # and this is possible if a page takes at least 10 minutes to process. a page, by default, is 100 documents.
             # to handle this we save all candidates' internal_axon_ids and then fetch them only when needed.
-            for internal_axon_id_doc in list(self.devices_db.find(
-                    parse_filter('specific_data.data.installed_software.name == exists(true)'),
-                    projection={
-                        '_id': False,
-                        'internal_axon_id': True
-                    }
-            )):
+
+            devices_with_installed_software = list(self.devices_db.find(
+                parse_filter('specific_data.data.installed_software.name == exists(true)'),
+                projection={
+                    '_id': False,
+                    'internal_axon_id': True
+                }
+            ))
+            for i, internal_axon_id_doc in enumerate(devices_with_installed_software):
+                if i % 100 == 0 and i > 0:
+                    logger.info(f'1/2: Finished parsing {i} devices')
                 device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
                 self.__analyze_cves_process_devices(convert_db_entity_to_view_entity(device))
 
@@ -144,16 +148,22 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # will never be untagged!
         # this loop will find those devices and search them :)
         with self.__nvd_lock:
-            for internal_axon_id_doc in list(self.devices_db.find(
-                    parse_filter(
-                        f'not (specific_data.data.installed_software.name == exists(true)) and '
-                        f'adapters_data.{self.plugin_name}.software_cves == '
-                        f'match([software_cves == exists(true) and software_cves != []])'),
-                    projection={
-                        '_id': False,
-                        'internal_axon_id': True
-                    }
-            )):
+            devices_with_cves_and_no_software = list(self.devices_db.find(
+                parse_filter(
+                    'not ((specific_data.data.installed_software.name == exists(true) and '
+                    'not specific_data.data.installed_software.name == type(10)) and '
+                    'specific_data.data.installed_software.name != \'\') and '
+                    '((specific_data.data.software_cves.cve_id == exists(true) and '
+                    'not specific_data.data.software_cves.cve_id == type(10)) and '
+                    'specific_data.data.software_cves.cve_id != \'\')'),
+                projection={
+                    '_id': False,
+                    'internal_axon_id': True
+                }
+            ))
+            for i, internal_axon_id_doc in enumerate(devices_with_cves_and_no_software):
+                if i % 100 == 0 and i > 0:
+                    logger.info(f'2/2: Finished parsing {i} devices')
                 device = self.devices_db.find_one({'internal_axon_id': internal_axon_id_doc['internal_axon_id']})
                 self.__analyze_cves_process_devices(convert_db_entity_to_view_entity(device))
 
@@ -162,34 +172,34 @@ class StaticAnalysisService(Triggerable, PluginBase):
         Given an axonius devices, tag it with the appropriate CVEs.
         """
         try:
+            software_cves_ids = set()
+            created_device = self._new_device_adapter()
+            created_device.id = self.plugin_unique_name + '!' + device['internal_axon_id']
+            created_device.software_cves = []
+
             for adapter_device in device.get('specific_data', []):
                 # don't run on ourselves
                 if adapter_device[PLUGIN_NAME] == self.plugin_name:
                     continue
 
                 # this includes both real devices and virtual devices from other plugins
-                created_device = self._new_device_adapter()
-                _id, associated_adapters = _get_id_and_associated_adapter(adapter_device)
-                created_device.id = _id
-                created_device.software_cves = []
-
                 installed_software = adapter_device['data'].get('installed_software', [])
 
                 for found_cve in self.__analyze_cves_process_installed_software(installed_software):
-                    created_device.add_vulnerable_software(**found_cve)
+                    if found_cve['cve_id'] not in software_cves_ids:
+                        software_cves_ids.add(found_cve['cve_id'])
+                        created_device.add_vulnerable_software(**found_cve)
 
-                # Add the final one
-                self.devices.add_adapterdata(
-                    associated_adapters,
-                    created_device.to_dict(),
-                    action_if_exists='update',
-                    # If the tag exists, we update it using deep merge (and not replace it).
-                    client_used=adapter_device.get('client_used'),
-                    additional_data={
-                        'hidden_for_gui': True
-                    }
-                )
-                self._save_field_names_to_db(EntityType.Devices)
+            # Add the final one
+            device_object = list(self.devices.get(internal_axon_id=device['internal_axon_id']))[0]
+            device_object.add_adapterdata(
+                created_device.to_dict(),
+                action_if_exists='update',
+                additional_data={
+                    'hidden_for_gui': True
+                }
+            )
+            self._save_field_names_to_db(EntityType.Devices)
         except Exception:
             logger.exception(f'Exception while processing device {device}')
 
@@ -452,6 +462,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
             # we have a new adapterdata_user, lets add it. we do not give any specific identity
             # since this tag isn't associated to a specific adapter.
+            # Note - no need for action_if_exists='update' - this is an action on user, not device!
             adapterdata_user.id = username
             user.add_adapterdata(
                 adapterdata_user.to_dict(),
