@@ -30,7 +30,7 @@
       :module="module"
       id-field="internal_axon_id"
       :expandable="true"
-      @click-row="configEntity"
+      :on-click-row="configEntity"
       @data="onTableData"
     >
       <template slot="actions">
@@ -71,7 +71,9 @@
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../../store/mutations'
-  import { FETCH_DATA_CONTENT_CSV, FETCH_DATA_FIELDS } from '../../../store/actions'
+  import {
+    FETCH_DATA_CONTENT_CSV, FETCH_DATA_FIELDS, FETCH_DATA_CURRENT
+  } from '../../../store/actions'
 
   export default {
     name: 'XEntityTable',
@@ -130,7 +132,8 @@
     methods: {
       ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
       ...mapActions({
-        fetchContentCSV: FETCH_DATA_CONTENT_CSV, fetchDataFields: FETCH_DATA_FIELDS
+        fetchContentCSV: FETCH_DATA_CONTENT_CSV, fetchDataFields: FETCH_DATA_FIELDS,
+        fetchDataCurrent: FETCH_DATA_CURRENT
       }),
       configEntity (entityId) {
         if (this.hasSelection) return
@@ -140,6 +143,11 @@
           path += `?history=${encodeURIComponent(this.historicalState)}`
         }
         this.$router.push({ path: path })
+        this.fetchDataCurrent({
+          module: this.module,
+          id: entityId,
+          history: this.historicalState
+        })
       },
       updateEntities () {
         this.$refs.table.fetchContentPages(true)

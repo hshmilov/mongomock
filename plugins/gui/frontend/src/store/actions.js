@@ -3,12 +3,14 @@ import Promise from 'promise'
 
 import { INIT_USER } from './modules/auth'
 import {
-	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
-	UPDATE_DATA_DETAILS, UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
-	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
-	UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE, UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED,
-	UPDATE_DATA_HYPERLINKS
+	UPDATE_DATA, UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
+	UPDATE_DATA_VIEWS, ADD_DATA_VIEW, UPDATE_DATA_FIELDS,
+	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS,
+	SELECT_DATA_CURRENT, UPDATE_DATA_CURRENT,
+	UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
+	UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED, UPDATE_DATA_HYPERLINKS, UPDATE_CUSTOM_DATA
 } from './mutations'
+
 
 /*
     A generic wrapper for requests to server.
@@ -95,14 +97,14 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 	module.count.data = undefined
 
 	dispatch(REQUEST_API, {
-		rule: `${payload.module}/count?${params.join('&')}`,
+		rule: `${payload.endpoint || payload.module}/count?${params.join('&')}`,
 		type: UPDATE_DATA_COUNT,
 		payload
 	})
 
 	params.push('quick=True')
 	dispatch(REQUEST_API, {
-		rule: `${payload.module}/count?${params.join('&')}`,
+		rule: `${payload.endpoint || payload.module}/count?${params.join('&')}`,
 		type: UPDATE_DATA_COUNT_QUICK,
 		payload
 	})
@@ -146,10 +148,10 @@ const createContentRequest = (state, payload) => {
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
 export const fetchDataContent = ({state, dispatch}, payload) => {
 	if (!payload.skip) {
-		dispatch(FETCH_DATA_COUNT, { module: payload.module, section: payload.section})
+		dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint})
 	}
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}?${createContentRequest(state, payload)}`,
+		rule: `${payload.endpoint || payload.module}?${createContentRequest(state, payload)}`,
 		type: UPDATE_DATA_CONTENT,
 		payload
 	})
@@ -159,8 +161,7 @@ export const FETCH_DATA_CONTENT_CSV = 'FETCH_DATA_CONTENT_CSV'
 export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 
 	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/csv?${createContentRequest(state, payload)}`,
-		payload: {module: payload.module, skip: payload.skip}
+		rule: `${payload.endpoint || payload.module}/csv?${createContentRequest(state, payload)}`
 	}).then((response) => {
         downloadFile('csv', response)
 	})
@@ -386,51 +387,72 @@ export const enforceData = ({state, dispatch}, payload) => {
 	})
 }
 
-export const FETCH_DATA_BY_ID = 'FETCH_DATA_BY_ID'
-export const fetchDataByID = ({state, dispatch}, payload) => {
+export const FETCH_DATA_CURRENT = 'FETCH_DATA_CURRENT'
+export const fetchDataCurrent = ({state, dispatch, commit}, payload) => {
 	if (!getModule(state, payload)) return
+	commit(SELECT_DATA_CURRENT, payload)
+
 	let rule = `${payload.module}/${payload.id}`
 	if (payload.history) {
 		rule += `?history=${encodeURIComponent(payload.history)}`
 	}
 	return dispatch(REQUEST_API, {
-		rule: rule,
-		type: UPDATE_DATA_BY_ID,
-		payload
+		rule,
+		type: UPDATE_DATA_CURRENT,
+		payload: {
+			module: `${payload.module}/current`
+		}
+	})
+}
+
+export const FETCH_DATA_CURRENT_TASKS = 'FETCH_DATA_CURRENT_TASKS'
+export const fetchDataCurrentTasks = ({state, dispatch, commit}, payload) => {
+	if (!getModule(state, payload)) return
+
+	let rule = `${payload.module}/${payload.id}/tasks`
+	if (payload.history) {
+		rule += `?history=${encodeURIComponent(payload.history)}`
+	}
+	return dispatch(REQUEST_API, {
+		rule,
+		type: UPDATE_DATA,
+		payload: {
+			module: `${payload.module}/current/tasks`
+		}
 	})
 }
 
 export const SAVE_DATA_NOTE = 'SAVE_DATA_NOTE'
-export const saveDataNote = ({state, dispatch}, payload) => {
-    if (!getModule(state, payload)) return
-    if (!payload.entityId) return
-    let rule = `${payload.module}/${payload.entityId}/notes`
-    let method = 'PUT'
-    if (payload.noteId) {
-        rule = `${rule}/${payload.noteId}`
-        method = 'POST'
-    }
-    return dispatch(REQUEST_API, {
-        rule, method,
+export const saveDataNote = ({ state, dispatch }, payload) => {
+	if (!getModule(state, payload)) return
+	if (!payload.entityId) return
+	let rule = `${payload.module}/${payload.entityId}/notes`
+	let method = 'PUT'
+	if (payload.noteId) {
+		rule = `${rule}/${payload.noteId}`
+		method = 'POST'
+	}
+	return dispatch(REQUEST_API, {
+		rule, method,
 		data: {
-            note: payload.note
+			note: payload.note
 		},
-        type: UPDATE_SAVED_DATA_NOTE,
-        payload
-    })
+		type: UPDATE_SAVED_DATA_NOTE,
+		payload
+	})
 }
 
 export const REMOVE_DATA_NOTE = 'REMOVE_DATA_NOTE'
-export const removeDataNote = ({state, dispatch}, payload) => {
-    if (!getModule(state, payload)) return
-    if (!payload.entityId || !payload.noteIdList) return
-    return dispatch(REQUEST_API, {
-        rule: `${payload.module}/${payload.entityId}/notes`,
-        method: 'DELETE',
-        data: payload.noteIdList,
-        type: UPDATE_REMOVED_DATA_NOTE,
+export const removeDataNote = ({ state, dispatch }, payload) => {
+	if (!getModule(state, payload)) return
+	if (!payload.entityId || !payload.noteIdList) return
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/${payload.entityId}/notes`,
+		method: 'DELETE',
+		data: payload.noteIdList,
+		type: UPDATE_REMOVED_DATA_NOTE,
 		payload
-    })
+	})
 }
 
 export const RUN_ACTION = 'RUN_ACTION'
@@ -476,6 +498,8 @@ export const saveCustomData = ({ state, dispatch }, payload) => {
 	return dispatch(REQUEST_API, {
 		rule: `${payload.module}/custom?filter=${encodeURIComponent(module.view.query.filter)}`,
 		method: 'POST',
-		data: payload.data
+		data: payload.data,
+		type: UPDATE_CUSTOM_DATA,
+		payload
 	})
 }

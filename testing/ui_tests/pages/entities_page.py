@@ -64,7 +64,7 @@ class EntitiesPage(Page):
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
     TABLE_HEADER_CELLS_CSS = '.data-title'
-    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
+    TABLE_HEADER_SORT_XPATH = '//th//div[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'

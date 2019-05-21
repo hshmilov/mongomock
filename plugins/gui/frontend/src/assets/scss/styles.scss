@@ -327,10 +327,11 @@ table {
 }
 
 .sortable {
-  .x-sort {
+  .sort {
     position: relative;
     display: inline-block;
     height: 4px;
+    width: 16px;
     margin-left: 8px;
     &.up:before {
       @include triangle('up', $color: $grey-4);
@@ -342,7 +343,7 @@ table {
     }
   }
   &:hover {
-    .x-sort {
+    .sort {
       &.down:before {
         @include triangle('up', $color: rgba($grey-4, 0.6));
         top: -2px;
@@ -392,33 +393,6 @@ table {
   }
   .tooltip-content {
     display: flex;
-  }
-}
-
-.tag {
-  display: inline;
-  border: 1px solid $grey-4;
-  border-right: 0;
-  border-radius: 2px;
-  padding:  4px;
-  margin-right: 8px;
-  position: relative;
-  margin-top: 4px;
-  vertical-align: middle;
-  &:first-of-type {
-    margin-top: 0;
-  }
-  &::after {
-    content: '';
-    position: absolute;
-    transform: rotate(45deg);
-    border-right: 1px solid $grey-4;
-    border-top: 1px solid $grey-4;
-    border-radius: 2px;
-    height: 18px;
-    width: 18px;
-    top: 3px;
-    right: -9px;
   }
 }
 
@@ -552,6 +526,12 @@ table {
 }
 .md-select {
   border-bottom: 1px solid $grey-4;
+}
+
+.md-chip.tag {
+  background-color: rgba($theme-orange, 0.2);
+  height: 20px;
+  line-height: 20px;
 }
 
 /* Common Animations */

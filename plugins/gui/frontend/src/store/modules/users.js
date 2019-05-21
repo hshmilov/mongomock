@@ -1,8 +1,5 @@
 
-export const usersFields = [
-    'adapters', 'specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
-    'specific_data.data.last_seen', 'specific_data.data.is_admin', 'labels'
-]
+import { defaultFields } from '../../constants/entities'
 
 export const users = {
     state: {
@@ -11,7 +8,7 @@ export const users = {
         count: {data: 0, fetching: false, error: ''},
 
         view: {
-            page: 0, pageSize: 20, fields: usersFields, coloumnSizes: [], query: {
+            page: 0, pageSize: 20, fields: defaultFields.users, coloumnSizes: [], query: {
                 filter: '', expressions: [], search: ''
             }, sort: {
                 field: '', desc: true
@@ -43,6 +40,14 @@ export const users = {
 
         labels: {data: [], fetching: false, error: ''},
 
-        current: {fetching: false, data: {}, error: ''}
+        current: {
+            id: '',
+
+            fetching: false, data: {}, error: '',
+
+            tasks: {
+                fetching: false, data: [], error: ''
+            }
+        }
     }
 }

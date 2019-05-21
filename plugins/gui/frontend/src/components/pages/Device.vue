@@ -9,7 +9,7 @@
 
 <script>
     import xPage from '../axons/layout/Page.vue'
-    import xEntityView from '../networks/entities/View.vue'
+    import xEntityView from '../networks/entities/view/Layout.vue'
 
     import {mapState} from 'vuex'
 
@@ -19,15 +19,15 @@
         computed: {
             ...mapState({
                 deviceName(state) {
-                    let current = state.devices.current.data
-                    if (!current || !current.generic) return ''
+                    let current = state.devices.current.data.basic
+                    if (!current) return ''
 
-                    let name = current.generic.basic['specific_data.data.hostname']
+                    let name = current['specific_data.data.hostname']
                     if (!name || !name.length) {
-                        name = current.generic.basic['specific_data.data.name']
+                        name = current['specific_data.data.name']
                     }
                     if (!name || !name.length) {
-                        name = current.generic.basic['specific_data.data.pretty_id']
+                        name = current['specific_data.data.pretty_id']
                     }
                     if (Array.isArray(name) && name.length) {
                         return name[0]

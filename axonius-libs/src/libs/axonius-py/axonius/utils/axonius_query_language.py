@@ -459,6 +459,33 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
     }
 
 
+def convert_db_projection_to_view(projection):
+    if not projection:
+        return None
+
+    view_projection = {}
+    for field, v in projection.items():
+        splitted = field.split('.')
+
+        if field in ['adapters', 'labels']:
+            continue
+
+        if splitted[0] == SPECIFIC_DATA:
+            splitted[0] = 'adapters'
+            view_projection['.'.join(splitted)] = v
+            splitted[0] = 'tags'
+            view_projection['.'.join(splitted)] = v
+        elif splitted[0] == ADAPTERS_DATA:
+            splitted[1] = 'data'
+            splitted[0] = 'adapters'
+            view_projection['.'.join(splitted)] = v
+            splitted[0] = 'tags'
+            view_projection['.'.join(splitted)] = v
+        else:
+            view_projection[field] = v
+    return view_projection
+
+
 def parse_filter_non_entities(filter_str: str, history_date=None):
     """
     Translates a string representing of a filter to a valid MongoDB query for anything but entities

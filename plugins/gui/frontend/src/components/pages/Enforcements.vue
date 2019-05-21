@@ -14,7 +14,7 @@
       module="enforcements"
       title="Enforcement Sets"
       :static-fields="fields"
-      @click-row="navigateEnforcement"
+      :on-click-row="navigateEnforcement"
     >
       <template slot="actions">
         <x-button

@@ -28,7 +28,7 @@
 	import xMenuItem from '../../axons/menus/MenuItem.vue'
     import xActionMenuItem from './ActionMenuItem.vue'
 	import xTagModal from '../popover/TagModal.vue'
-    import xCustomFields from '../../networks/entities/CustomFields.vue'
+    import xCustomFields from '../../networks/entities/view/CustomFields.vue'
     import xButton from '../../axons/inputs/Button.vue'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'

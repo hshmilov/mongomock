@@ -1,9 +1,20 @@
 import { getModule } from './actions'
 import { pluginMeta } from '../constants/plugin_meta'
+import { initCustomData } from '../constants/entities'
 
 export const TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR'
 export const toggleSidebar = (state) => {
     state.interaction.collapseSidebar = !state.interaction.collapseSidebar
+}
+
+export const UPDATE_DATA = 'UPDATE_DATA'
+export const updateData = (state, payload) => {
+	let moduleState = getModule(state, payload)
+	moduleState.fetching = payload.fetching
+	moduleState.error = payload.error
+	if (payload.data) {
+		moduleState.data = payload.data
+	}
 }
 
 export const UPDATE_WINDOW_WIDTH = 'UPDATE_WINDOW_WIDTH'
@@ -171,15 +182,15 @@ const isEntitySelected = (id, entities) => {
 
 export const UPDATE_ADDED_DATA_LABELS = 'UPDATE_ADDED_DATA_LABELS'
 export const updateAddedDataLabels = (state, payload) => {
-	if (!getModule(state, payload)) return
+	let module = getModule(state, payload)
 	let data = payload.data
-	state[payload.module].labels.data = state[payload.module].labels.data
+	module.labels.data = module.labels.data
 		.filter(label => !data.labels.includes(label.name))
 		.concat(data.labels.map((label) => {
 			return {name: label, title: label}
 		}))
 
-	state[payload.module].content.data = state[payload.module].content.data.map(entity => {
+	module.content.data = module.content.data.map(entity => {
 		if (!isEntitySelected(entity.internal_axon_id, data.entities)) return entity
 		if (!entity.labels) entity.labels = []
 
@@ -188,9 +199,9 @@ export const updateAddedDataLabels = (state, payload) => {
 		}
 	})
 
-	let current = state[payload.module].current.data
-	if (current && current.internal_axon_id && isEntitySelected(current.internal_axon_id, data.entities)) {
-		state[payload.module].current.data = { ...current,
+	let current = module.current.data
+	if (module.current.id && isEntitySelected(module.current.id, data.entities)) {
+		module.current.data = { ...current,
 			labels: Array.from(new Set([ ...current.labels, ...data.labels]))
 		}
 	}
@@ -198,19 +209,19 @@ export const updateAddedDataLabels = (state, payload) => {
 
 export const UPDATE_REMOVED_DATA_LABELS = 'UPDATE_REMOVED_DATA_LABELS'
 export const updateRemovedDataLabels = (state, payload) => {
-	if (!getModule(state, payload)) return
+	let module = getModule(state, payload)
 	let data = payload.data
-	state[payload.module].labels.data = state[payload.module].labels.data.filter((label) => {
+	module.labels.data = module.labels.data.filter((label) => {
 		if (!data.labels.includes(label.name)) return true
 		let exists = false
-		state[payload.module].content.data.forEach((entity) => {
+		module.content.data.forEach((entity) => {
 			if (!entity.labels) return
 			exists = exists && entity.labels.includes(label.name)
 		})
 		return exists
 	})
 
-	state[payload.module].content.data = state[payload.module].content.data.map(entity => {
+	module.content.data = module.content.data.map(entity => {
 		if (!isEntitySelected(entity.internal_axon_id, data.entities) || !entity.labels) return entity
 
 		return {
@@ -218,54 +229,74 @@ export const updateRemovedDataLabels = (state, payload) => {
 		}
 	})
 
-	let current = state[payload.module].current.data
-	if (current && current.internal_axon_id && isEntitySelected(current.internal_axon_id, data.entities) && current.labels) {
-		state[payload.module].current.data = { ...current,
+	let current = module.current.data
+	if (module.current.id && isEntitySelected(module.current.id, data.entities) && current.labels) {
+		module.current.data = { ...current,
 			labels: current.labels.filter((label) => !data.labels.includes(label))
 		}
 	}
 }
 
-export const UPDATE_DATA_BY_ID = 'UPDATE_DATA_BY_ID'
-export const updateDataByID = (state, payload) => {
-	if (!getModule(state, payload)) return
-	const current = state[payload.module].current
-	current.fetching = payload.fetching
-	current.error = payload.error
+export const SELECT_DATA_CURRENT = 'SELECT_DATA_CURRENT'
+export const selectDataCurrent = (state, payload) => {
+	getModule(state, payload).current.id = payload.id
+}
+
+export const UPDATE_DATA_CURRENT = 'UPDATE_DATA_CURRENT'
+export const updateDataCurrent = (state, payload) => {
+	let moduleState = getModule(state, payload)
+	moduleState.fetching = payload.fetching
+	moduleState.error = payload.error
 	if (payload.data) {
-		current.data = payload.data
+		moduleState.data = { ...payload.data,
+      advanced: payload.data.advanced.map(item => {
+        return {
+          data: item.data,
+          view: {
+            page: 0, pageSize: 20,
+            coloumnSizes: [], query: {
+              filter: '', expressions: [], search: ''
+            }, sort: {
+              field: '', desc: true
+            },
+            historical: null
+          },
+          schema: item.schema
+        }
+      }, {})
+    }
 	}
 }
 
 export const UPDATE_SAVED_DATA_NOTE = 'UPDATE_SAVED_DATA_NOTE'
 export const updateSavedDataNote = (state, payload) => {
-    let module = getModule(state, payload)
-    if (!payload.fetching && !payload.error) {
-        let notes = module.current.data.generic.data.find(item => item.name === 'Notes')
-        if (payload.noteId) {
-            notes.data = notes.data.map((item) => {
-                if (item.uuid === payload.noteId) {
-                    return { ...item, ...payload.data }
-                }
-                return item
-            })
-        } else {
+	let module = getModule(state, payload)
+	if (!payload.fetching && !payload.error) {
+		let notes = module.current.data.data.find(item => item.name === 'Notes')
+		if (payload.noteId) {
+			notes.data = notes.data.map((item) => {
+				if (item.uuid === payload.noteId) {
+					return { ...item, ...payload.data }
+				}
+				return item
+			})
+		} else {
 			if (!notes) {
 				notes = {
 					name: 'Notes', data: []
 				}
-				module.current.data.generic.data.push(notes)
+				module.current.data.data.push(notes)
 			}
-            notes.data.push(payload.data)
-        }
-    }
+			notes.data.push(payload.data)
+		}
+	}
 }
 
 export const UPDATE_REMOVED_DATA_NOTE = 'UPDATE_REMOVED_DATA_NOTE'
 export const updateRemovedDataNote = (state, payload) => {
     let module = getModule(state, payload)
     if (!payload.fetching && !payload.error) {
-        let notes = module.current.data.generic.data.find(item => item.name === 'Notes')
+        let notes = module.current.data.data.find(item => item.name === 'Notes')
         notes.data = notes.data.filter(note => !payload.noteIdList.includes(note.uuid))
     }
 }
@@ -287,4 +318,24 @@ export const updateSystemExpired = (state, payload) => {
 		state.expired.data = payload.data
 	}
 }
+
+export const UPDATE_CUSTOM_DATA = 'UPDATE_CUSTOM_DATA'
+export const updateCustomData = (state, payload) => {
+	let module = getModule(state, payload)
+	if (!payload.fetching) return
+	let gui_adapter = module.current.data.adapters.find(item => item.name === 'gui')
+	let data = Object.keys(payload.data.data).reduce((map, key) => {
+		map[key.split(' ').join('_').toLowerCase()] = payload.data.data[key]
+		return map
+	}, {})
+	if (gui_adapter) {
+		gui_adapter.data = data
+	} else {
+		module.current.data.adapters.push({
+			...initCustomData(payload.module),
+			data
+		})
+	}
+}
+
 

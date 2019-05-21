@@ -77,17 +77,17 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.customize_view_and_save('test_save_query', 50, self.USER_NAME_COLUMN,
                                                 [self.MAIL_COLUMN, self.DOMAIN_COLUMN],
                                                 self.users_page.JSON_ADAPTER_FILTER)
-        view_data = self.users_page.get_all_data()
+        view_data = self.users_page.get_all_data_proper()
 
         # Load some default view, to see that the saved one changes it
         self.users_page.execute_saved_query('Users Created in Last 30 Days')
-        assert self.users_page.get_all_data() != view_data
+        assert self.users_page.get_all_data_proper() != view_data
 
         self.users_page.clear_filter()
         self.users_page.execute_saved_query('test_save_query')
 
         # Check loaded data is equal to original one whose view was saved
-        assert self.users_page.get_all_data() == view_data
+        assert self.users_page.get_all_data_proper() == view_data
 
     def test_users_advanced_basic(self):
         self.settings_page.switch_to_page()

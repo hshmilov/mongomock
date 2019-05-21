@@ -19,7 +19,6 @@
 
 <script>
     import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
-    import xSearchInput from '../../neurons/inputs/SearchInput.vue'
 
     export default {
         name: 'x-table-wrapper',

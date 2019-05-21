@@ -9,7 +9,7 @@
 
 <script>
     import xPage from '../axons/layout/Page.vue'
-    import xEntityView from '../networks/entities/View.vue'
+    import xEntityView from '../networks/entities/view/Layout.vue'
 
     import {mapState} from 'vuex'
 
@@ -19,10 +19,10 @@
         computed: {
             ...mapState({
                 userName(state) {
-                    let current = state.users.current.data
-                    if (!current || !current.generic) return
+                    let current = state.users.current.data.basic
+                    if (!current) return
 
-                    let name = current.generic.basic['specific_data.data.username']
+                    let name = current['specific_data.data.username']
                     if (!name || !name.length) {
                         return this.$route.params.id
                     }

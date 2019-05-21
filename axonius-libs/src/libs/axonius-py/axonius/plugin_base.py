@@ -1218,7 +1218,7 @@ class PluginBase(Configurable, Feature):
             db_name = self.plugin_unique_name
         return self._get_db_connection()[db_name][collection_name]
 
-    def _get_appropriate_view(self, historical, entity_type: EntityType) -> Collection:
+    def get_appropriate_view(self, historical, entity_type: EntityType) -> Collection:
         if historical:
             return self._historical_entity_views_db_map[entity_type]
         return self._entity_db_map[entity_type]

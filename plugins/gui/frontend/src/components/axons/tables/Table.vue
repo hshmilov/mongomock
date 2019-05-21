@@ -24,11 +24,13 @@
               v-for="{name, title, logo} in dataFields"
               :key="name"
               nowrap
-              :class="{sortable: onClickCol}"
               @click="clickCol(name)"
               @keyup.enter.stop="clickCol(name)"
             >{{ title }}
-              <div class="data-title">
+              <div
+                class="data-title"
+                :class="{sortable: onClickCol}"
+              >
                 <img
                   v-if="logo"
                   class="logo md-image"
@@ -37,7 +39,7 @@
                   :alt="title"
                 >{{ title }}<div
                   v-if="onClickCol"
-                  :class="`x-sort ${sortClass(name)}`"
+                  :class="`sort ${sortClass(name)}`"
                 />
               </div>
             </th>
@@ -116,7 +118,6 @@
         </tbody>
       </table>
     </div>
-
   </div>
 </template>
 
@@ -209,6 +210,7 @@
     methods: {
       clickRow (id) {
         if (!this.onClickRow || this.readOnly.includes(id)) return
+        if (!document.getSelection().isCollapsed) return
 
         this.onClickRow(id)
       },
@@ -288,10 +290,13 @@
               color: $theme-black;
               top: 0;
               line-height: 28px;
+              &.sortable {
+                cursor: pointer;
+              }
             }
-
           }
         }
+
 
         tbody {
           tr {
@@ -332,12 +337,6 @@
 
           .array {
             min-height: 24px;
-
-            .md-chip {
-              background-color: rgba($theme-orange, 0.2);
-              height: 20px;
-              line-height: 20px;
-            }
           }
 
           .md-icon {

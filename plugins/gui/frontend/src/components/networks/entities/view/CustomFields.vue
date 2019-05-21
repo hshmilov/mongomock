@@ -41,12 +41,12 @@
 </template>
 
 <script>
-    import xSelect from '../../axons/inputs/Select.vue'
-    import string from '../../neurons/schema/types/string/StringEdit.vue'
-    import number from '../../neurons/schema/types/numerical/NumberEdit.vue'
-    import integer from '../../neurons/schema/types/numerical/IntegerEdit.vue'
-    import bool from '../../neurons/schema/types/boolean/BooleanEdit.vue'
-    import xButton from '../../axons/inputs/Button.vue'
+    import xSelect from '../../../axons/inputs/Select.vue'
+    import string from '../../../neurons/schema/types/string/StringEdit.vue'
+    import number from '../../../neurons/schema/types/numerical/NumberEdit.vue'
+    import integer from '../../../neurons/schema/types/numerical/IntegerEdit.vue'
+    import bool from '../../../neurons/schema/types/boolean/BooleanEdit.vue'
+    import xButton from '../../../axons/inputs/Button.vue'
 
     export default {
         name: 'x-entity-custom-fields',

@@ -13,11 +13,9 @@ from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 from typing import Dict, Iterable, Tuple
-from uuid import uuid4
 
 import gridfs
 import ldap3
-import OpenSSL
 import pymongo
 import requests
 from apscheduler.executors.pool import \
@@ -30,6 +28,7 @@ from flask import (after_this_request, has_request_context, jsonify,
                    make_response, redirect, request, send_file, session)
 from passlib.hash import bcrypt
 from urllib3.util.url import parse_url
+import OpenSSL
 
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
@@ -69,8 +68,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, NODE_ID, NODE_NAME,
-                                          NOTES_DATA_TAG, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
+                                          PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
@@ -88,7 +86,6 @@ from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.email_server import EmailServer
-from axonius.entities import AXONIUS_ENTITY_BY_CLASS
 from axonius.fields import Field
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
@@ -114,8 +111,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        add_labels_to_entities,
                                        beautify_user_entry, check_permissions,
                                        deserialize_db_permissions,
-                                       get_entity_labels,
-                                       get_historized_filter, entity_fields, get_connected_user_id)
+                                       get_entity_labels, entity_fields, get_connected_user_id)
 from axonius.utils.metric import remove_ids
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
@@ -129,13 +125,13 @@ from axonius.utils.threading import run_and_forget
 from gui.api import API
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
+from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
+                                       entity_notes, entity_notes_update, entity_tasks)
 from gui.gui_logic.adapter_data import adapter_data
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
 from gui.gui_logic.generate_csv import get_csv_from_heavy_lifting_plugin
-from gui.gui_logic.get_ec_historical_data_for_entity import (TaskData,
-                                                             get_all_task_data)
 from gui.gui_logic.historical_dates import (all_historical_dates,
                                             first_historical_date)
 from gui.gui_logic.views_data import get_views, get_views_count
@@ -150,14 +146,6 @@ from gui.report_generator import ReportGenerator
 logger = logging.getLogger(f'axonius.{__name__}')
 
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
-
-DEVICE_ADVANCED_FILEDS = ['installed_software', 'software_cves',
-                          'security_patches', 'available_security_patches', 'network_interfaces',
-                          'users', 'connected_hardware', 'local_admins', 'hard_drives', 'connected_devices',
-                          'plugin_and_severities', 'tenable_sources', 'registry_information', 'processes',
-                          'services', 'shares', 'port_security', 'direct_connected_devices', 'autoruns_data']
-
-USER_ADVANCED_FILEDS = ['associated_devices']
 
 
 def has_customer_login_happened():
@@ -677,86 +665,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'name': PREDEFINED_ROLE_RESTRICTED, 'predefined': True, 'permissions': permissions
             })
 
-    ########
-    # DATA #
-    ########
-
-    def _fetch_historical_entity(self, entity_type: EntityType, entity_id, history_date: datetime = None,
-                                 projection=None):
-        return convert_db_entity_to_view_entity(self._get_appropriate_view(history_date, entity_type).
-                                                find_one(get_historized_filter(
-                                                    {
-                                                        'internal_axon_id': entity_id
-                                                    },
-                                                    history_date), projection=projection))
-
-    def _user_entity_by_id(self, entity_id, history_date: datetime = None):
-        return self._entity_by_id(EntityType.Users, entity_id, USER_ADVANCED_FILEDS, history_date)
-
-    def _device_entity_by_id(self, entity_id, history_date: datetime = None):
-        return self._entity_by_id(EntityType.Devices, entity_id, DEVICE_ADVANCED_FILEDS, history_date)
-
-    def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[], history_date: datetime = None):
-        """
-        Retrieve or delete device by the given id, from current devices DB or update it
-        Currently, update works only for tags because that is the only edit operation user has
-        :return:
-        """
-        entity = self._fetch_historical_entity(entity_type, entity_id, history_date)
-        if entity is None:
-            return return_error('Entity ID wasn\'t found', 404)
-        for specific in entity['specific_data']:
-            if not specific.get('data') or not specific['data'].get('raw'):
-                continue
-            new_raw = {}
-            for k, v in specific['data']['raw'].items():
-                if type(v) != bytes:
-                    new_raw[k] = v
-            specific['data']['raw'] = new_raw
-
-        # Fix notes to have the expected format of user id
-        for item in entity['generic_data']:
-            if item.get('name') == 'Notes' and item.get('data'):
-                item['data'] = [{**note, **{'user_id': str(note['user_id'])}} for note in item['data']]
-
-        generic_fields = gui_helpers.entity_fields(entity_type)['generic']
-        basic_generic_fields = [field['name'] for field in filter(
-            lambda field: field['name'] != 'adapters' and field['name'] != 'labels' and not any(
-                [category in field['name'].split('.') for category in advanced_fields]), generic_fields)]
-
-        def _advanced_generic_data(category):
-            category_schema = next(filter(lambda field: category == field['name'].split('.')[-1], generic_fields), {})
-            if not category_schema:
-                logger.debug(f'category_schema is empty {generic_fields}')
-                return None
-            category_data = gui_helpers.parse_entity_fields(entity, [category_schema['name']])
-            if category_schema['name'] not in category_data:
-                logger.warning(
-                    f'category schema name is not in category data, {category_schema["name"]} : {category_data}')
-                return None
-            # Flatten items of this advanced field list, for presentation in table
-            fields = [field['name'] for field in category_schema['items']]
-            return gui_helpers.merge_entities_fields(category_data[category_schema['name']], fields)
-
-        # Specific is returned as is, to show all adapter datas.
-        # Generic fields are divided to basic which are all merged through all adapter datas
-        # and advanced, of which the main field is merged and data is given in original structure.
-        return jsonify({
-            'specific': entity['specific_data'],
-            'generic': {
-                'basic': gui_helpers.parse_entity_fields(entity, basic_generic_fields),
-                'advanced': [{
-                    'name': category,
-                    'data': _advanced_generic_data(category)
-                } for category in advanced_fields],
-                'data': entity['generic_data']
-            },
-            'labels': entity['labels'],
-            'internal_axon_id': entity['internal_axon_id'],
-            'accurate_for_datetime': entity.get('accurate_for_datetime', None),
-            'tasks': TaskData.schema().dump(list(get_all_task_data(entity['internal_axon_id'])), many=True)
-        })
-
     def _disable_entity(self, entity_type: EntityType, mongo_filter):
         entity_map = {
             EntityType.Devices: ('Devicedisabelable', 'devices/disable'),
@@ -1128,13 +1036,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history,
                                                  EntityType.Devices, self._system_settings.get('defaultSort'))
 
-    @gui_helpers.historical()
-    @gui_add_rule_logged_in('devices/<device_id>', methods=['GET'],
-                            required_permissions={Permission(PermissionType.Devices,
-                                                             PermissionLevel.ReadOnly)})
-    def device_by_id(self, device_id, history: datetime):
-        return self._device_entity_by_id(device_id, history_date=history)
-
     @gui_helpers.filtered_entities()
     @gui_helpers.historical()
     @gui_add_rule_logged_in('devices/count', required_permissions={Permission(PermissionType.Devices,
@@ -1187,16 +1088,52 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def enforce_device(self, mongo_filter):
         return self._enforce_entity(EntityType.Devices, mongo_filter)
 
+    @gui_helpers.timed_endpoint()
+    @gui_helpers.historical()
+    @gui_add_rule_logged_in('devices/<device_id>', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def device_generic(self, device_id, history: datetime):
+        return jsonify(get_entity_data(EntityType.Devices, device_id, history))
+
+    @gui_helpers.timed_endpoint()
+    @gui_helpers.historical()
+    @gui_helpers.sorted_endpoint()
+    @gui_add_rule_logged_in('devices/<device_id>/<field_name>/csv', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def device_generic_field_csv(self, device_id, field_name, mongo_sort, history: datetime):
+        """
+        Create a csv file for a specific field of a specific device
+
+        :param device_id:   internal_axon_id of the Device to create csv for
+        :param field_name:  Field of the Device, containing table data
+        :param mongo_sort:  How to sort the table data of the field
+        :param history:     Fetch the Device according to this past date
+        :return:            Response containing csv data, that can be downloaded into a csv file
+        """
+        csv_string = entity_data_field_csv(EntityType.Devices, device_id, field_name, mongo_sort, history)
+        output = make_response(csv_string.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        field_name = field_name.split('.')[-1]
+        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{field_name}_{timestamp}.csv'
+        output.headers['Content-type'] = 'text/csv'
+        return output
+
+    @gui_helpers.timed_endpoint()
+    @gui_add_rule_logged_in('devices/<device_id>/tasks', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def device_tasks(self, device_id):
+        return jsonify(entity_tasks(device_id))
+
     @gui_add_rule_logged_in('devices/<device_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadWrite)})
     def device_notes(self, device_id):
-        return self._entity_notes(EntityType.Devices, device_id)
+        return entity_notes(EntityType.Devices, device_id, self.get_request_data_as_object())
 
     @gui_add_rule_logged_in('devices/<device_id>/notes/<note_id>', methods=['POST'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              PermissionLevel.ReadWrite)})
     def device_notes_update(self, device_id, note_id):
-        return self._entity_notes_update(EntityType.Devices, device_id, note_id)
+        return entity_notes_update(EntityType.Devices, device_id, note_id, self.get_request_data_as_object()['note'])
 
     @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('devices/custom', methods=['POST'],
@@ -1267,13 +1204,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history,
                                                  EntityType.Users, self._system_settings.get('defaultSort'))
 
-    @gui_helpers.timed_endpoint()
-    @gui_helpers.historical()
-    @gui_add_rule_logged_in('users/<user_id>', methods=['GET'], required_permissions={Permission(PermissionType.Users,
-                                                                                                 PermissionLevel.ReadOnly)})
-    def user_by_id(self, user_id, history: datetime):
-        return self._user_entity_by_id(user_id, history_date=history)
-
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/count', required_permissions={Permission(PermissionType.Users,
@@ -1321,16 +1251,51 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def user_labels(self, mongo_filter):
         return self._entity_labels(self.users_db, self.users, mongo_filter)
 
+    @gui_helpers.timed_endpoint()
+    @gui_helpers.historical()
+    @gui_add_rule_logged_in('users/<user_id>', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
+    def user_generic(self, user_id, history: datetime):
+        return jsonify(get_entity_data(EntityType.Users, user_id, history))
+
+    @gui_helpers.timed_endpoint()
+    @gui_helpers.historical()
+    @gui_helpers.sorted_endpoint()
+    @gui_add_rule_logged_in('users/<user_id>/<field_name>/csv', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+    def user_generic_field_csv(self, user_id, field_name, mongo_sort, history: datetime):
+        """
+        Create a csv file for a specific field of a specific entity
+
+        :param user_id:     internal_axon_id of User to create csv for
+        :param field_name:  Field of the User, containing table data
+        :param mongo_sort:  How to sort the table data of the field
+        :param history:     Fetch the User according to this past date
+        :return:            Response containing csv data, that can be downloaded into a csv file
+        """
+        csv_string = entity_data_field_csv(EntityType.Users, user_id, field_name, mongo_sort, history)
+        output = make_response(csv_string.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+        field_name = field_name.split('.')[-1]
+        output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{field_name}_{timestamp}.csv'
+        output.headers['Content-type'] = 'text/csv'
+        return output
+
+    @gui_helpers.timed_endpoint()
+    @gui_add_rule_logged_in('users/<user_id>/tasks', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
+    def user_tasks(self, user_id):
+        return jsonify(entity_tasks(user_id))
+
     @gui_add_rule_logged_in('users/<user_id>/notes', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
     def user_notes(self, user_id):
-        return self._entity_notes(EntityType.Users, user_id)
+        return entity_notes(EntityType.Users, user_id, self.get_request_data_as_object())
 
     @gui_add_rule_logged_in('users/<user_id>/notes/<note_id>', methods=['POST'],
-                            required_permissions={Permission(PermissionType.Users,
-                                                             PermissionLevel.ReadWrite)})
+                            required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadWrite)})
     def user_notes_update(self, user_id, note_id):
-        return self._entity_notes_update(EntityType.Users, user_id, note_id)
+        return entity_notes_update(EntityType.Users, user_id, note_id, self.get_request_data_as_object()['note'])
 
     @gui_helpers.filtered_entities()
     @gui_add_rule_logged_in('users/custom', methods=['POST'],
@@ -4679,91 +4644,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'entity_sizes': sizes
         })
 
-    ####################
-    # User Notes #
-    ####################
-
-    def _entity_notes(self, entity_type: EntityType, entity_id):
-        """
-        Method for fetching, creating or deleting the notes for a specific entity, by the id given in the rule
-
-        :param entity_type:  Type of entity in subject
-        :param entity_id:    ID of the entity to handle notes of
-        :return:             GET, list of notes for the entity
-        """
-        entity_doc = self._fetch_historical_entity(entity_type, entity_id, None)
-        if not entity_doc:
-            logger.error(f'No entity found with internal_axon_id = {entity_id}')
-            return return_error(f'No entity found with internal_axon_id = {entity_id}', 400)
-
-        entity_obj = AXONIUS_ENTITY_BY_CLASS[entity_type](self, entity_doc)
-        notes_list = entity_obj.get_data_by_name(NOTES_DATA_TAG)
-        if notes_list is None:
-            notes_list = []
-
-        current_user = session['user']
-        if request.method == 'PUT':
-            note_obj = self.get_request_data_as_object()
-            note_obj['user_id'] = current_user['_id']
-            note_obj['user_name'] = f'{current_user["source"]}/{current_user["user_name"]}'
-            note_obj['accurate_for_datetime'] = datetime.now()
-            note_obj['uuid'] = str(uuid4())
-            notes_list.append(note_obj)
-            entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
-            note_obj['user_id'] = str(note_obj['user_id'])
-            return jsonify(note_obj)
-
-        if request.method == 'DELETE':
-            note_ids_list = self.get_request_data_as_object()
-            if not current_user.get('admin') and current_user.get('role_name') != PREDEFINED_ROLE_ADMIN:
-                # Validate all notes requested to be removed belong to user
-                for note in notes_list:
-                    if note['uuid'] in note_ids_list and note['user_id'] != current_user['_id']:
-                        logger.error('Only Administrator can remove another user\'s Note')
-                        return return_error('Only Administrator can remove another user\'s Note', 400)
-            remaining_notes_list = []
-            for note in notes_list:
-                if note['uuid'] not in note_ids_list:
-                    remaining_notes_list.append(note)
-            entity_obj.add_data(NOTES_DATA_TAG, remaining_notes_list, action_if_exists='merge')
-            return ''
-
-    def _entity_notes_update(self, entity_type: EntityType, entity_id, note_id):
-        """
-        Update the content of a specific note attached to a specific entity.
-        This operation will update accurate_for_datetime.
-        If this is called by an Administrator for a note of another user, the user_name will be changed too.
-
-        :param entity_type:
-        :param entity_id:
-        :param note_id:
-        :return:
-        """
-        entity_doc = self._fetch_historical_entity(entity_type, entity_id, None)
-        if not entity_doc:
-            logger.error(f'No entity found with internal_axon_id = {entity_id}')
-            return return_error('No entity found for selected ID', 400)
-
-        entity_obj = AXONIUS_ENTITY_BY_CLASS[entity_type](self, entity_doc)
-        notes_list = entity_obj.get_data_by_name(NOTES_DATA_TAG)
-        note_doc = next(x for x in notes_list if x['uuid'] == note_id)
-        if not note_doc:
-            logger.error(f'Entity with internal_axon_id = {entity_id} has no note at index = {note_id}')
-            return return_error('Selected Note cannot be found for the Entity', 400)
-
-        current_user = session['user']
-        if current_user['_id'] != note_doc['user_id'] and not current_user.get('admin') and \
-                current_user.get('role_name') != PREDEFINED_ROLE_ADMIN:
-            return return_error('Only Administrator can edit another user\'s Note', 400)
-
-        note_doc['note'] = self.get_request_data_as_object()['note']
-        note_doc['user_id'] = current_user['_id']
-        note_doc['user_name'] = f'{current_user["source"]}/{current_user["user_name"]}'
-        note_doc['accurate_for_datetime'] = datetime.now()
-        entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
-        note_doc['user_id'] = str(note_doc['user_id'])
-        return jsonify(note_doc)
-
     #############
     # Instances #
     #############
@@ -5018,14 +4898,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                 }
                             ],
                             'required': ['error', 'warning', 'success']
-                        },
-                        {
-                            'name': 'tableView',
-                            'title': 'Present advanced General Data of entity in a table',
-                            'type': 'bool'
                         }
                     ],
-                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'autoQuery', 'tableView'],
+                    'required': ['refreshRate', 'singleAdapter', 'multiLine', 'defaultSort', 'autoQuery'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -5176,11 +5051,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     'error': 40,
                     'warning': 60,
                     'success': 100,
-                },
-                'tableView': True
+                }
             }
         }
 
     def _get_entity_count(self, entity, mongo_filter, history, quick):
-        return str(gui_helpers.get_entities_count(mongo_filter, self._get_appropriate_view(history, entity),
+        return str(gui_helpers.get_entities_count(mongo_filter, self.get_appropriate_view(history, entity),
                                                   history_date=history, quick=quick))

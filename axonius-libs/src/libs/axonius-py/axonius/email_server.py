@@ -58,6 +58,7 @@ class EmailServer:
             # First activate TLS if available
             if self.__ssl_state != SSLState.Unencrypted:
                 # First with provided TLS data
+                # pylint: disable=W0212
                 context = ssl._create_stdlib_context(
                     certfile=self.__cert_file.name,
                     keyfile=self.__key_file.name,

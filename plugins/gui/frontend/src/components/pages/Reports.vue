@@ -1,6 +1,6 @@
 <template>
     <x-page title="Reports" class="x-reports" :class="{disabled: isReadOnly}" >
-        <x-table module="reports" @click-row="navigateReport" title="Saved Reports" v-model="isReadOnly? undefined: selection">
+        <x-table module="reports" :on-click-row="navigateReport" title="Saved Reports" v-model="isReadOnly? undefined: selection">
             <template slot="actions">
                 <x-button link v-if="hasSelection" @click="remove">Remove</x-button>
                 <x-button @click="navigateReport('new')" id="report_new" :disabled="isReadOnly">+ New Report</x-button>

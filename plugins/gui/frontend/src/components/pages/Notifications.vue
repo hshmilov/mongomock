@@ -1,6 +1,6 @@
 <template>
     <x-page title="notifications">
-        <x-table module="notifications" title="Notifications" @click-row="navigateNotification" ref="table"/>
+        <x-table module="notifications" title="Notifications" :on-click-row="navigateNotification" ref="table"/>
     </x-page>
 </template>
 

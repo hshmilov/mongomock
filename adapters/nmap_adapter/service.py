@@ -43,7 +43,8 @@ class NmapAdapter(ScannerAdapterBase):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config['user_id']
 
     def _test_reachability(self, client_config):
@@ -100,7 +101,8 @@ class NmapAdapter(ScannerAdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         return self.create_nmap_info_from_client_config(client_data)
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         return {
             'items': [
                 {

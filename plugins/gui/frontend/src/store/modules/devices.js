@@ -1,10 +1,5 @@
 
-export const devicesFields = [
-	'adapters', 'specific_data.data.hostname', 'specific_data.data.name',
-	'specific_data.data.last_seen', 'specific_data.data.os.type',
-	'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac',
-	'labels'
-]
+import {defaultFields} from '../../constants/entities'
 
 export const devices = {
 	state: {
@@ -13,7 +8,7 @@ export const devices = {
 		count: { data: 0, fetching: false, error: ''},
 
 		view: {
-			page: 0, pageSize: 20, fields: devicesFields, coloumnSizes: [], query: {
+			page: 0, pageSize: 20, fields: defaultFields.devices, coloumnSizes: [], query: {
 				filter: '', expressions: [], search: ''
 			}, sort: {
 				field: '', desc: true
@@ -45,7 +40,15 @@ export const devices = {
 
 		labels: { data: [], fetching: false, error: ''},
 
-		current: {fetching: false, data: {}, error: ''},
+		current: {
+			id: '',
+
+			fetching: false, data: {}, error: '',
+
+			tasks: {
+				fetching: false, data: [], error: ''
+			}
+		}
 
 	}
 }

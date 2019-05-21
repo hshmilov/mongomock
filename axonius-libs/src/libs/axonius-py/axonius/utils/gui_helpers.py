@@ -28,8 +28,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
-    parse_filter_non_entities
+from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view,
+                                                  parse_filter, parse_filter_non_entities)
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.metric import remove_ids
 from axonius.utils.threading import singlethreaded
@@ -228,26 +228,48 @@ def projected():
     """
     Decorator stating that the view supports ?fields=['name','hostname',['os_type':'OS.type']]
     """
-
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            fields = request.args.get('fields')
-            mongo_fields = None
-            if fields:
-                try:
-                    mongo_fields = {}
-                    for field in fields.split(','):
-                        mongo_fields[field] = 1
-                except json.JSONDecodeError:
-                    pass
-            return func(self, mongo_projection=mongo_fields, *args, **kwargs)
+            return func(self,
+                        mongo_projection=_create_mongo_projection(request.args.get('fields'), True),
+                        *args, **kwargs)
 
         return actual_wrapper
 
     return wrap
 
 
-# Caution! These decorators must come BEFORE @add_rule
+def projected_out():
+    """
+    Decorator stating that the view supports ?fields_out=['name','hostname',['os_type':'OS.type']]
+    """
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            return func(self,
+                        mongo_projection_out=_create_mongo_projection(request.args.get('fields_out'), False),
+                        *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def _create_mongo_projection(field_names, include):
+    """
+
+    :param field_names: List of fields names for the projection
+    :param include:     Whether projection should add the fields or remove them
+    :return:            Dictionary from parsed fields to 1 or -1 according to 'include' param
+    """
+    mongo_projection = None
+    if field_names:
+        try:
+            mongo_projection = {}
+            for field_part in field_names.split(','):
+                mongo_projection[field_part] = 1 if include else 0
+        except json.JSONDecodeError:
+            pass
+    return mongo_projection
 
 
 def paginated(limit_max=PAGINATION_LIMIT_MAX):
@@ -516,41 +538,19 @@ def get_entities(limit: int, skip: int,
     :param ignore_errors: Passed to convert_db_entity_to_view_entity
     :return:
     """
-    db_projection = {}
     if run_over_projection:
         for field in FIELDS_TO_PROJECT_FOR_GUI:
             if projection:
                 projection[field] = 1
 
-    if projection:
-        for field, v in projection.items():
-            splitted = field.split('.')
-
-            if field in ['adapters', 'labels']:
-                continue
-
-            if splitted[0] == SPECIFIC_DATA:
-                splitted[0] = 'adapters'
-                db_projection['.'.join(splitted)] = v
-                splitted[0] = 'tags'
-                db_projection['.'.join(splitted)] = v
-            elif splitted[0] == ADAPTERS_DATA:
-                splitted[1] = 'data'
-
-                splitted[0] = 'adapters'
-                db_projection['.'.join(splitted)] = v
-                splitted[0] = 'tags'
-                db_projection['.'.join(splitted)] = v
-            else:
-                db_projection[field] = v
-
+    db_projection = convert_db_projection_to_view(projection) or {}
     if run_over_projection or projection:
         for field in FIELDS_TO_PROJECT:
             db_projection[field] = 1
 
     _normalize_db_projection_for_aggregation(db_projection)
 
-    entity_views_db = PluginBase.Instance._get_appropriate_view(history_date, entity_type)
+    entity_views_db = PluginBase.Instance.get_appropriate_view(history_date, entity_type)
     view_filter = get_historized_filter(view_filter, history_date)
     logger.debug(f'Fetching data for entity {entity_type.name}')
     limit = limit or 0
@@ -842,7 +842,7 @@ def _filter_out_nonexisting_fields(field_schema: dict, existing_fields: List[str
 
 @singlethreaded()
 @cachetools.cached(cachetools.LRUCache(maxsize=len(EntityType)))
-def _get_generic_fields(entity_type: EntityType):
+def get_generic_fields(entity_type: EntityType):
     """
     Helper for entity_fields
     """
@@ -861,7 +861,7 @@ def entity_fields(entity_type: EntityType):
 
     :return:
     """
-    generic_fields = dict(_get_generic_fields(entity_type))
+    generic_fields = dict(get_generic_fields(entity_type))
     fields_collection = PluginBase.Instance._all_fields_db_map[entity_type]
 
     all_data_from_fields = list(fields_collection.find({}))

@@ -119,6 +119,10 @@
         type: String,
         default: 'uuid'
       },
+      endpoint: {
+        type: String,
+        default: ''
+      },
       value: {
         type: Object,
         default: undefined
@@ -131,9 +135,17 @@
         type: Array,
         default: null
       },
+      staticData: {
+        type: Array,
+        default: null
+      },
       expandable: {
         type: Boolean,
         default: false
+      },
+      onClickRow: {
+        type: Function,
+        default: undefined
       }
     },
     data () {
@@ -167,9 +179,15 @@
         return this.module.charAt(0).toUpperCase() + this.module.slice(1).toLowerCase()
       },
       content () {
+        if (this.staticData) return {fetching: false}
         return this.moduleState.content
       },
+      data () {
+        if (this.staticData) return this.staticData
+        return this.content.data
+      },
       count () {
+        if (this.staticData) return {data_to_show: this.staticData.length}
         return this.moduleState.count
       },
       view () {
@@ -184,7 +202,7 @@
         return this.fields.filter((field) => field.name && this.view.fields.includes(field.name))
       },
       ids () {
-        return this.content.data.map(item => item[this.idField])
+        return this.data.map(item => item[this.idField])
       },
       pageData () {
         let pageId = 0
@@ -193,7 +211,7 @@
             pageId = index
           }
         })
-        return this.content.data.slice(pageId * this.view.pageSize, (pageId + 1) * this.view.pageSize)
+        return this.data.slice(pageId * this.view.pageSize, (pageId + 1) * this.view.pageSize)
       },
       pageIds () {
         return this.pageData.map(item => item[this.idField])
@@ -242,11 +260,12 @@
     },
     watch: {
       view (newView, oldView) {
+        if (this.staticData) return
         if (newView.query.filter !== oldView.query.filter
           || (newView.fields && oldView.fields && newView.fields.length > oldView.fields.length)
           || newView.sort.field !== oldView.sort.field || newView.sort.desc !== oldView.sort.desc
           || Math.abs(newView.page - oldView.page) > 3
-          || this.content.data.length < (newView.page % this.pageLinkNumbers.length) * newView.pageSize
+          || this.data.length < (newView.page % this.pageLinkNumbers.length) * newView.pageSize
           || newView.historical !== oldView.historical) {
 
           this.loading = true
@@ -257,20 +276,24 @@
         if (newLoading) {
           this.clearAllData()
         } else {
-          if (this.content.data && this.content.data.length) {
-            this.$emit('data', this.content.data[0][this.idField])
+          if (this.data && this.data.length) {
+            this.$emit('data', this.data[0][this.idField])
           } else {
             this.$emit('data')
           }
         }
       },
-      refresh (newRefresh) {
-        if (newRefresh) {
+      refresh (newRate) {
+        if (newRate) {
           this.startRefreshTimeout()
         }
       }
     },
     created () {
+      if (this.staticData) {
+        this.loading = false
+        return
+      }
       if (!this.$route.query.view) {
         this.fetchContentPages()
       }
@@ -303,17 +326,13 @@
       },
       fetchContentSegment (skip, limit, isRefresh) {
         return this.fetchContent({
-          module: this.module, section: this.section,
+          module: this.module, endpoint: this.endpoint,
           skip, limit, isRefresh
         }).then(() => {
           if (!this.content.fetching) {
             this.loading = false
           }
         }).catch(() => this.loading = false)
-      },
-      onClickRow (id) {
-        if (!document.getSelection().isCollapsed) return
-        this.$emit('click-row', id)
       },
       onClickSize (size) {
         if (size === this.view.pageSize) return

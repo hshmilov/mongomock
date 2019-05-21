@@ -437,12 +437,15 @@ export const onboarding = {
 					content: 'Click to view in-depth details about this device.'
 				},
 				'adaptersData': {
-					id: 'specific', title: 'ADAPTERS DATA', align: 'right',
-					content: 'Here you can see all device data from its Adapters.'
+					id: 'specific', title: 'ADAPTERS DATA', emphasize: false, align: 'right',
+					content: 'Here you can see a tab for each Adapter composing this device.',
+					actions: [
+						{ title: 'Next', state: 'generalData'}
+					]
 				},
-				'adapterDevice': {
-					title: 'DEVICE ADAPTER', emphasize: false,
-					content: 'You will see a tab for every Adapter that has device data.',
+				'generalData': {
+					id: 'generic', title: 'DEVICE GENERAL', emphasize: false, align: 'right',
+					content: 'You will correlated data for the device with a tab for tabular fields.',
 					actions: [
 						{ title: 'Next', state: 'backDevices'}
 					]

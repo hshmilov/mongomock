@@ -15,6 +15,7 @@ from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        check_permissions,
                                        deserialize_db_permissions)
 from axonius.utils.metric import remove_ids
+from gui.gui_logic.entity_data import (get_entity_data, entity_tasks)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -158,7 +159,7 @@ class API:
     @api_add_rule(f'devices/<device_id>', required_permissions={Permission(PermissionType.Devices,
                                                                            PermissionLevel.ReadOnly)})
     def api_device_by_id(self, device_id):
-        return self._device_entity_by_id(device_id)
+        return self._entity_by_id(EntityType.Devices, device_id)
 
     @gui_helpers.filtered_entities()
     @api_add_rule('devices/labels', methods=['GET', 'POST', 'DELETE'],
@@ -200,7 +201,28 @@ class API:
     @api_add_rule(f'users/<user_id>', required_permissions={Permission(PermissionType.Users,
                                                                        PermissionLevel.ReadOnly)})
     def api_user_by_id(self, user_id):
-        return self._user_entity_by_id(user_id)
+        return self._entity_by_id(EntityType.Users, user_id)
+
+    def _entity_by_id(self, entity_type: EntityType, entity_id):
+        """
+        Create response expected from single entity api endpoint (not broken by feature AX-3867
+
+        """
+        entity_data = get_entity_data(entity_type, entity_id)
+        return jsonify({
+            'specific': entity_data['adapters'],
+            'generic': {
+                'basic': entity_data['basic'],
+                'data': entity_data['data'],
+                'advanced': [{
+                    'name': item['schema']['name'], 'data': item['data']
+                } for item in entity_data['advanced']]
+            },
+            'labels': entity_data['labels'],
+            'accurate_for_datetime': entity_data['updated'],
+            'internal_axon_id': entity_id,
+            'tasks': entity_tasks(entity_id)
+        })
 
     @gui_helpers.filtered_entities()
     @api_add_rule('users/labels', methods=['GET', 'POST', 'DELETE'],

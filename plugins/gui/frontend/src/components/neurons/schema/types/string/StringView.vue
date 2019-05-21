@@ -24,7 +24,10 @@
       @click="onClickLink(hyperlink)"
     >{{ processedData }}</a>
   </div>
-  <md-chip v-else-if="schema.format && schema.format === 'tag'">{{ processedData }}</md-chip>
+  <md-chip
+    class="tag"
+    v-else-if="schema.format && schema.format === 'tag'"
+  >{{ processedData }}</md-chip>
   <div
     v-else-if="processedData"
     :title="completeData"

@@ -12,7 +12,7 @@
         :key="entity['internal_axon_id']"
         id-field="internal_axon_id"
         :module="entity.name"
-        @click-row="configEntity($event, entity.name)"
+        :on-click-row="() => configEntity($event, entity.name)"
       >
         <template slot="actions">
           <x-button
@@ -31,9 +31,7 @@
   import xSearchInsights from '../neurons/inputs/SearchInsights.vue'
   import xTable from '../neurons/data/Table.vue'
   import xButton from '../axons/inputs/Button.vue'
-  import { entities } from '../../constants/entities'
-  import {usersFields} from '../../store/modules/users'
-  import {devicesFields} from '../../store/modules/devices'
+  import { entities, defaultFields } from '../../constants/entities'
 
   import { mapMutations } from 'vuex'
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
@@ -51,12 +49,6 @@
     computed: {
       entities () {
         return entities
-      },
-      entitiesFields () {
-        return {
-          devices: devicesFields,
-          users: usersFields
-        }
       }
     },
     beforeDestroy () {
@@ -66,7 +58,7 @@
           module: entity.name, view: {
             query: {
               filter: ''
-            }, fields: this.entitiesFields[entity.name]
+            }, fields: defaultFields[entity.name]
           }
         })
       })

@@ -20,7 +20,8 @@ import {
   LINK_DATA, linkData,
   UNLINK_DATA, unlinkData,
   ENFORCE_DATA, enforceData,
-  FETCH_DATA_BY_ID, fetchDataByID,
+  FETCH_DATA_CURRENT, fetchDataCurrent,
+  FETCH_DATA_CURRENT_TASKS, fetchDataCurrentTasks,
   SAVE_DATA_NOTE, saveDataNote,
   REMOVE_DATA_NOTE, removeDataNote,
   RUN_ACTION, runAction,
@@ -31,6 +32,7 @@ import {
 } from './actions'
 import {
   TOGGLE_SIDEBAR, toggleSidebar,
+  UPDATE_DATA, updateData,
   UPDATE_LANGUAGE , updateLanguage,
   UPDATE_BRANCH, updateBranch,
   UPDATE_WINDOW_WIDTH, updateWindowWidth,
@@ -46,11 +48,13 @@ import {
   UPDATE_DATA_LABELS, updateDataLabels,
   UPDATE_ADDED_DATA_LABELS, updateAddedDataLabels,
   UPDATE_REMOVED_DATA_LABELS, updateRemovedDataLabels,
-  UPDATE_DATA_BY_ID, updateDataByID,
+  SELECT_DATA_CURRENT, selectDataCurrent,
+  UPDATE_DATA_CURRENT, updateDataCurrent,
   UPDATE_SAVED_DATA_NOTE, updateSavedDataNote,
   UPDATE_REMOVED_DATA_NOTE, updateRemovedDataNote,
   UPDATE_SYSTEM_CONFIG, updateSystemConfig,
-  UPDATE_SYSTEM_EXPIRED, updateSystemExpired
+  UPDATE_SYSTEM_EXPIRED, updateSystemExpired,
+  UPDATE_CUSTOM_DATA, updateCustomData
 } from './mutations'
 import {
   GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
@@ -102,6 +106,7 @@ export default new Vuex.Store({
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,
+    [UPDATE_DATA]: updateData,
     [UPDATE_LANGUAGE]: updateLanguage,
     [UPDATE_BRANCH]: updateBranch,
     [UPDATE_WINDOW_WIDTH]: updateWindowWidth,
@@ -117,11 +122,13 @@ export default new Vuex.Store({
     [UPDATE_DATA_LABELS]: updateDataLabels,
     [UPDATE_ADDED_DATA_LABELS]: updateAddedDataLabels,
     [UPDATE_REMOVED_DATA_LABELS]: updateRemovedDataLabels,
-    [UPDATE_DATA_BY_ID]: updateDataByID,
+    [SELECT_DATA_CURRENT]: selectDataCurrent,
+    [UPDATE_DATA_CURRENT]: updateDataCurrent,
     [UPDATE_SAVED_DATA_NOTE]: updateSavedDataNote,
     [UPDATE_REMOVED_DATA_NOTE]: updateRemovedDataNote,
     [UPDATE_SYSTEM_CONFIG]: updateSystemConfig,
-    [UPDATE_SYSTEM_EXPIRED]: updateSystemExpired
+    [UPDATE_SYSTEM_EXPIRED]: updateSystemExpired,
+    [UPDATE_CUSTOM_DATA]: updateCustomData
   },
   actions: {
     [REQUEST_API]: requestApi,
@@ -142,7 +149,8 @@ export default new Vuex.Store({
     [LINK_DATA]: linkData,
     [UNLINK_DATA]: unlinkData,
     [ENFORCE_DATA]: enforceData,
-    [FETCH_DATA_BY_ID]: fetchDataByID,
+    [FETCH_DATA_CURRENT]: fetchDataCurrent,
+    [FETCH_DATA_CURRENT_TASKS]: fetchDataCurrentTasks,
     [SAVE_DATA_NOTE]: saveDataNote,
     [REMOVE_DATA_NOTE]: removeDataNote,
     [RUN_ACTION]: runAction,

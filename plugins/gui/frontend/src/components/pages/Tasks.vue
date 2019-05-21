@@ -27,7 +27,7 @@
       module="tasks"
       title="Enforcement Tasks"
       :static-fields="fields"
-      @click-row="viewTask"
+      :on-click-row="viewTask"
     />
   </x-page>
 </template>

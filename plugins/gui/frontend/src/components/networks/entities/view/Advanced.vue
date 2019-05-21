@@ -1,0 +1,160 @@
+<template>
+  <x-table
+    :title="schema.title"
+    :module="stateLocation"
+    :static-fields="fields"
+    :static-data="sortedData"
+  >
+    <template slot="actions">
+      <x-button
+        link
+        @click="exportCSV"
+      >Export CSV</x-button>
+    </template>
+  </x-table>
+</template>
+
+<script>
+  import xTable from '../../../neurons/data/Table.vue'
+  import xButton from '../../../axons/inputs/Button.vue'
+
+  import {mapMutations, mapActions} from 'vuex'
+  import {FETCH_DATA_CONTENT_CSV} from '../../../../store/actions'
+  import {UPDATE_DATA_VIEW} from '../../../../store/mutations'
+
+  export default {
+    name: 'XEntityAdvanced',
+    components: {
+      xTable, xButton
+    },
+    props: {
+      index: {
+        type: Number,
+        required: true
+      },
+      module: {
+        type: String,
+        required: true
+      },
+      entityId: {
+        type: String,
+        required: true
+      },
+      schema: {
+        type: Object,
+        required: true
+      },
+      data: {
+        type: Array,
+        default: () => []
+      },
+      sort: {
+        type: Object,
+        default: () => {
+          return {
+            field: '', desc: true
+          }
+        }
+      }
+    },
+    computed: {
+      stateLocation () {
+        return `${this.module}/current/data/advanced/${this.index}`
+      },
+      mergedData () {
+        return this.data.filter(subset => {
+          let found = false
+          this.data.forEach((superset) => {
+            if (subset !== superset && this.isSubset(subset, superset)) {
+              found = true
+            }
+          })
+          return !found
+        })
+      },
+      sortedData () {
+        return [ ...this.mergedData ].sort((first, second) => {
+          if (!this.sort.field) return 1
+          first = first[this.sort.field] || ''
+          second = second[this.sort.field] || ''
+          if (Array.isArray(first)) {
+            first = first[0] || ''
+          }
+          if (Array.isArray(second)) {
+            second = second[0] || ''
+          }
+          if (this.sort.desc) {
+            let temp = first
+            first = second
+            second = temp
+          }
+          if (typeof(first) === 'string') {
+            return (second < first)? -1 : 1
+          }
+          return second - first
+        })
+      },
+      fields () {
+        return this.schema.items.filter(item => this.mergedData.find(currentData => currentData[item.name]))
+          .map(item => {
+            return { ...item, path: [this.module, 'aggregator', ...name.split('.').slice(1)] }
+          })
+      }
+    },
+    mounted () {
+      if (!this.sort.field) {
+        this.updateView({
+          module: this.stateLocation,
+          view: {
+            sort: {
+              field: this.fields[0].name, desc: false
+            }
+          }
+        })
+      }
+    },
+    methods: {
+      ...mapMutations({
+        updateView: UPDATE_DATA_VIEW
+      }),
+      ...mapActions({
+        fetchDataCSV: FETCH_DATA_CONTENT_CSV
+      }),
+      isSubset (subset, superset) {
+        for (let [key, value] of Object.entries(subset)) {
+          if (!superset[key]) return false
+          if (!this.isSubsetValue(value, superset[key])) return false
+        }
+        return true
+      },
+      isSubsetValue (subsetValue, supersetValue) {
+        if (typeof(subsetValue) !== typeof(supersetValue)) return false
+        if (Array.isArray(subsetValue)) {
+          if (subsetValue.length > supersetValue.length) return false
+          subsetValue.forEach(subsetItem => {
+            let found = false
+            supersetValue.forEach(supersetItem => {
+              if (this.isSubsetValue(subsetItem, supersetItem)) found = true
+            })
+            if (!found) return false
+          })
+          return true
+        }
+        if (typeof(value) === 'object') {
+          return this.isSubset(subsetValue, supersetValue)
+        }
+        return (subsetValue === supersetValue)
+      },
+      exportCSV () {
+        this.fetchDataCSV({
+          module: this.stateLocation,
+          endpoint: `${this.module}/${this.entityId}/${this.schema.name}`
+        })
+      }
+    }
+  }
+</script>
+
+<style lang="scss">
+
+</style>

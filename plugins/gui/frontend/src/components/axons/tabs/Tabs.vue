@@ -138,7 +138,7 @@
 
             .body {
                 flex: 1 0 auto;
-                height: calc(100% - 24px);
+                height: 100%;
                 width: calc(100% - 200px);
             }
         }

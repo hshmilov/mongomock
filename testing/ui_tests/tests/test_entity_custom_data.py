@@ -65,7 +65,6 @@ class TestEntityCustomData(TestBase):
 
         # Check all saved
         entities_page.save_custom_data()
-        entities_page.wait_for_spinner_to_end()
         assert entities_page.find_element_by_text(self.CUSTOM_STRING_NAME) \
             and entities_page.find_element_by_text(self.CUSTOM_STRING_VALUE)
         assert entities_page.find_element_by_text(self.CUSTOM_INT_NAME) \

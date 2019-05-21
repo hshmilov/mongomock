@@ -6,12 +6,11 @@
       @keyup.enter.native="onSearchConfirm"
     />
     <x-table
-      slot="table"
       v-model="readOnly? undefined: selection"
       :module="stateLocation"
       title="Saved Queries"
       :static-fields="fields"
-      @click-row="runQuery"
+      :on-click-row="runQuery"
     >
       <template slot="actions">
         <x-button
