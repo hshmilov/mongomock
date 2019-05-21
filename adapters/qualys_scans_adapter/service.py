@@ -174,7 +174,8 @@ class QualysScansAdapter(ScannerAdapterBase):
                 logger.exception(f'Problem getting last seen for {device_raw}')
             device.agent_version = (device_raw.get('agentInfo') or {}).get('agentVersion')
             device.physical_location = (device_raw.get('agentInfo') or {}).get('location')
-            device.set_boot_time(boot_time=parse_date(str(device_raw.get('lastSystemBoot'))))
+            if device_raw.get('lastSystemBoot'):
+                device.set_boot_time(boot_time=parse_date(str(device_raw.get('lastSystemBoot'))))
             device.agent_status = (device_raw.get('agentInfo') or {}).get('status')
             try:
                 for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:

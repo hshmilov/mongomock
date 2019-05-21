@@ -126,7 +126,8 @@ class ArmisAdapter(AdapterBase):
                     logger.exception(f'Problem adding nic to {device_raw}')
                 device.device_manufacturer = device_raw.get('manufacturer')
                 device.device_model = device_raw.get('model')
-                if device_raw.get('name') not in ['iPhone', 'MacBook-Pro']:
+                if device_raw.get('name') not in ['iPhone', 'MacBook-Pro', 'Unknown Device',
+                                                  'MacBook', 'Intel Computer']:
                     device.hostname = device_raw.get('name')
                 device.last_used_users = [device_raw.get('user')] if device_raw.get('user') else None
                 device.device_type = device_raw.get('type')

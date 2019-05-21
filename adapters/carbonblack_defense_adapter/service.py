@@ -8,13 +8,14 @@ from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from carbonblack_defense_adapter.connection import CarbonblackDefenseConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CarbonblackDefenseAdapter(AdapterBase):
+class CarbonblackDefenseAdapter(AdapterBase, Configurable):
 
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
@@ -133,6 +134,7 @@ class CarbonblackDefenseAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -141,6 +143,8 @@ class CarbonblackDefenseAdapter(AdapterBase):
                 device.id = str(device_id) + (device_raw.get('name') or '')
             else:
                 logger.warning(f'Bad device ID {device_raw}')
+                return None
+            if self.__fetch_deregistred is False and device_raw.get('status') == 'DEREGISTERED':
                 return None
             device.basic_device_id = device_id
             hostname = device_raw.get('name')
@@ -193,3 +197,29 @@ class CarbonblackDefenseAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_deregistred',
+                    'title': 'Fetch Deregistred Devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_deregistred'
+            ],
+            'pretty_name': 'Carbonblack Defense Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_deregistred': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_deregistred = config['fetch_deregistred']

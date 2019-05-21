@@ -1,9 +1,11 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.utils.datetime import parse_date
 from axonius.fields import Field
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
@@ -18,6 +20,8 @@ class LibrenmsAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         icon = Field(str, 'Icon')
         location = Field(str, 'Location')
+        notes = Field(str, 'Notes')
+        hardware = Field(str, 'Hardware')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -115,6 +119,9 @@ class LibrenmsAdapter(AdapterBase):
             device.figure_os(device_raw.get('os'))
             device.icon = device_raw.get('icon')
             device.location = device_raw.get('location')
+            device.notes = device_raw.get('notes')
+            device.description = device_raw.get('sysDescr')
+            device.hardware = device_raw.get('hardware')
             mac = device_raw.get('mac')
             if not mac:
                 mac = None
@@ -123,10 +130,16 @@ class LibrenmsAdapter(AdapterBase):
                 ips.extend(device_raw.get('ipv4').split(','))
             if device_raw.get('ipv6') and isinstance(device_raw.get('ipv6'), str):
                 ips.extend(device_raw.get('ipv6').split(','))
+            if device_raw.get('ip') and isinstance(device_raw.get('ip'), str):
+                ips.extend(device_raw.get('ip').split(','))
             if not ips:
                 ips = None
+            if device_raw.get('uptime'):
+                device.set_boot_time(uptime=datetime.timedelta(seconds=int(device_raw.get('uptime'))))
+            device.last_seen = parse_date(device_raw.get('last_discovered'))
             if mac or ips:
                 device.add_nic(mac=mac, ips=ips)
+
             device.set_raw(device_raw)
             return device
         except Exception:
