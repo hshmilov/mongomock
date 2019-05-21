@@ -408,7 +408,9 @@ class RESTConnection(ABC):
             raise RESTAlreadyConnected('Already Connected')
         try:
             self.connect()
-        except Exception:
+        except BaseException:
+            # Note that this has to be BaseException because otherwise if we have a timeout / stopthread here
+            # we have to clean for ourselves
             self.__exit()
             raise
         return self

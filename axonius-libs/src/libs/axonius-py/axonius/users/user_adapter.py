@@ -30,6 +30,7 @@ class UserAdapter(SmartJsonClass):
     organizational_unit = ListField(str, 'Organizational Unit')
     last_seen_in_devices = Field(datetime.datetime, 'Last Seen In Devices')
     last_seen = Field(datetime.datetime, 'Last Seen In Domain')
+    fetch_time = Field(datetime.datetime, 'Fetch Time')
     associated_devices = ListField(UserAdapterDevice, 'Associated Devices',
                                    json_format=JsonArrayFormat.table)
     is_local = Field(bool, 'Is Local')  # If true, its a local user (self.domain == computer). else, its a domain user.

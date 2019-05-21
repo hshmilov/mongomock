@@ -332,6 +332,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         cutoff_last_seen, _ = self.__user_time_cutoff()
 
         for parsed_user in self._route_parse_users_raw_data()(raw_users):
+            parsed_user.fetch_time = datetime.now()
             assert isinstance(parsed_user, UserAdapter)
 
             # There is no such thing as scanners for users, so we always check for id here.
