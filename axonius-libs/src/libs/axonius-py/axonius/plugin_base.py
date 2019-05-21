@@ -736,13 +736,6 @@ class PluginBase(Configurable, Feature):
                                   "exiting. Reason: {0}").format(e))
                 os._exit(1)
 
-    def populate_register_doc(self, register_doc, config_plugin_path):
-        """
-        :param register_doc: hook that allows subclass to populate plugins register doc
-        :param config_plugin_path: path to config file
-        """
-        pass
-
     @retry(wait_fixed=10 * 1000,
            stop_max_delay=60 * 5 * 1000,
            retry_on_exception=retry_if_connection_error)  # Try every 10 seconds for 5 minutes
@@ -762,8 +755,6 @@ class PluginBase(Configurable, Feature):
             "is_debug": is_debug_attached(),
             "supported_features": list(self.supported_features)
         }
-
-        self.populate_register_doc(register_doc, self.config_file_path)
 
         if plugin_unique_name is not None:
             register_doc[PLUGIN_UNIQUE_NAME] = plugin_unique_name

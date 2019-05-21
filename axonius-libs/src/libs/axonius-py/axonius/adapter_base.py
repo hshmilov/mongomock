@@ -14,7 +14,6 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 import func_timeout
 from axonius import adapter_exceptions
-from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE
 from axonius.consts.plugin_subtype import PluginSubtype
@@ -114,6 +113,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self.__fetching_timeout = timedelta(seconds=fetching_timeout) if fetching_timeout else None
 
         self._is_last_seen_prioritized = config.get('last_seen_prioritized', False)
+
+        self.__is_realtime = config.get('realtime_adapter', False)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -1195,8 +1196,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         return (now - self.__user_last_seen_timedelta if self.__user_last_seen_timedelta else None,
                 now - self.__user_last_fetched_timedelta if self.__user_last_fetched_timedelta else None)
 
-    def populate_register_doc(self, register_doc, config_file_path):
-        config = AdapterConfig(config_file_path)
+    def log_if_not_realtime(self, *args, **kwargs):
+        """
+        :param args: same arguments as passed to logger.log
+        :param kwargs: same arguments as passed to logger.log
+        """
+        if not self.__is_realtime:
+            logger.log(*args, **kwargs)
 
     @classmethod
     @abstractmethod
