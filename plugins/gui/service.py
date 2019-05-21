@@ -1839,8 +1839,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 '_id': enforcement['_id'], 'name': enforcement['name'],
                 f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}': actions[ACTIONS_MAIN_FIELD],
                 f'{TRIGGERS_FIELD}.view.name': trigger['view']['name'] if trigger else '',
-                f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger[LAST_TRIGGERED_FIELD] if trigger else '',
-                f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger[TIMES_TRIGGERED_FIELD] if trigger else '',
+                f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger.get(LAST_TRIGGERED_FIELD, '') if trigger else '',
+                f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger.get(TIMES_TRIGGERED_FIELD, '') if trigger else '',
                 LAST_UPDATE_FIELD: enforcement[LAST_UPDATE_FIELD]
             })
 
