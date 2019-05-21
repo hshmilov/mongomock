@@ -14,8 +14,8 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
 
-MAX_CHARS = 10 ** 6
-TIMEOUT = 60 * 5
+MAX_CHARS = 10 ** 9
+SSH_CHANNEL_TIMEOUT = 60 * 35
 NODE_NAME = 'node_1'
 NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
 NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
@@ -29,14 +29,14 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.adapters_page.wait_for_spinner_to_end()
         self.base_page.run_discovery()
 
-        self.node_join()
+        self.join_node()
 
         self.check_password_change()
         self.check_add_adapter_to_node()
         self.check_node_restart()
         self.check_master_disconnect()
 
-    def node_join(self):
+    def join_node(self):
         def read_until(ssh_chan, what):
             data = b''
             try:
@@ -58,7 +58,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         node_join_token = self.instances_page.get_node_join_token()
         ssh_client = self.connect_node_maker(self._instances[0])
         chan = ssh_client.get_transport().open_session()
-        chan.settimeout(TIMEOUT)
+        chan.settimeout(SSH_CHANNEL_TIMEOUT)
         chan.invoke_shell()
         node_join_message = read_until(chan, b'Please enter connection string:')
         self.logger.info(f'node_maker login message: {node_join_message.decode("utf-8")}')
@@ -68,6 +68,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
             self.logger.info(f'node join log: {node_join_log.decode("utf-8")}')
         except Exception:
             self.logger.exception('Failed to connect node.')
+            raise
 
         self.instances_page.wait_until_node_appears_in_table(NODE_NAME)
 
