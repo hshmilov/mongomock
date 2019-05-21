@@ -15,7 +15,8 @@
       "system_scheduler",
       "heavy_lifting",
       "mongo",
-      "master_proxy"
+      "master_proxy",
+      "reimage_tags_analysis"
     ],
     "remove-from-exclude": []
   }
