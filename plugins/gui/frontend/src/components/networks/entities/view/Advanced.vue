@@ -76,10 +76,10 @@
         return `${this.module}/current/data/advanced/${this.index}`
       },
       mergedData () {
-        return this.data.filter(subset => {
+        return this.data.filter((subset, i) => {
           let found = false
-          this.data.forEach((superset) => {
-            if (subset !== superset && this.isSubset(subset, superset)) {
+          this.data.slice(i + 1).forEach(superset => {
+            if (this.isSubset(subset, superset)) {
               found = true
             }
           })
@@ -112,9 +112,9 @@
             second = temp
           }
           if (typeof(first) === 'string') {
-            return (second < first)? -1 : 1
+            return (first < second)? -1 : 1
           }
-          return second - first
+          return first - second
         })
       },
       fields () {
@@ -145,7 +145,7 @@
       }),
       isSubset (subset, superset) {
         for (let [key, value] of Object.entries(subset)) {
-          if (!superset[key]) return false
+          if (value && !superset[key]) return false
           if (!this.isSubsetValue(value, superset[key])) return false
         }
         return true
