@@ -271,7 +271,6 @@
     }
     .table-container {
       height: 100%;
-      overflow: auto;
       width: max-content;
       min-width: 100%;
       border-top: 2px dashed $grey-2;
