@@ -180,6 +180,8 @@
 
 <style lang="scss">
   .x-entity-advanced {
+    height: calc(100% - 30px);
+
     .header {
       .x-search-input {
         width: 60%;

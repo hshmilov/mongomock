@@ -230,46 +230,20 @@ def projected():
     """
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            return func(self,
-                        mongo_projection=_create_mongo_projection(request.args.get('fields'), True),
-                        *args, **kwargs)
+            mongo_projection = None
+            field_names = request.args.get('fields')
+            if field_names:
+                try:
+                    mongo_projection = {}
+                    for field_part in field_names.split(','):
+                        mongo_projection[field_part] = 1
+                except json.JSONDecodeError:
+                    pass
+            return func(self, mongo_projection=mongo_projection, *args, **kwargs)
 
         return actual_wrapper
 
     return wrap
-
-
-def projected_out():
-    """
-    Decorator stating that the view supports ?fields_out=['name','hostname',['os_type':'OS.type']]
-    """
-    def wrap(func):
-        def actual_wrapper(self, *args, **kwargs):
-            return func(self,
-                        mongo_projection_out=_create_mongo_projection(request.args.get('fields_out'), False),
-                        *args, **kwargs)
-
-        return actual_wrapper
-
-    return wrap
-
-
-def _create_mongo_projection(field_names, include):
-    """
-
-    :param field_names: List of fields names for the projection
-    :param include:     Whether projection should add the fields or remove them
-    :return:            Dictionary from parsed fields to 1 or -1 according to 'include' param
-    """
-    mongo_projection = None
-    if field_names:
-        try:
-            mongo_projection = {}
-            for field_part in field_names.split(','):
-                mongo_projection[field_part] = 1 if include else 0
-        except json.JSONDecodeError:
-            pass
-    return mongo_projection
 
 
 def paginated(limit_max=PAGINATION_LIMIT_MAX):

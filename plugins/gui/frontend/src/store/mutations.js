@@ -199,10 +199,10 @@ export const updateAddedDataLabels = (state, payload) => {
 		}
 	})
 
-	let current = module.current.data
+	let currentData = module.current.data
 	if (module.current.id && isEntitySelected(module.current.id, data.entities)) {
-		module.current.data = { ...current,
-			labels: Array.from(new Set([ ...current.labels, ...data.labels]))
+		module.current.data = { ...currentData,
+			labels: Array.from(new Set([ ...currentData.labels, ...data.labels]))
 		}
 	}
 }
@@ -229,10 +229,10 @@ export const updateRemovedDataLabels = (state, payload) => {
 		}
 	})
 
-	let current = module.current.data
-	if (module.current.id && isEntitySelected(module.current.id, data.entities) && current.labels) {
-		module.current.data = { ...current,
-			labels: current.labels.filter((label) => !data.labels.includes(label))
+	let currentData = module.current.data
+	if (module.current.id && isEntitySelected(module.current.id, data.entities) && currentData.labels) {
+		module.current.data = { ...currentData,
+			labels: currentData.labels.filter((label) => !data.labels.includes(label))
 		}
 	}
 }
