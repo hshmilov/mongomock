@@ -31,6 +31,7 @@ class NotifySyslogAction(ActionTypeAlert):
                 }
             ],
             'required': [
+                'severity'
             ],
             'type': 'array'
         }
