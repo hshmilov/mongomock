@@ -23,7 +23,7 @@ class TaniumConnection(RESTConnection):
             self._session_headers = {'session': self._session_token}
             xml_str = self._post('soap', use_json_in_response=False, use_json_in_body=False,
                                  body_params=consts.GET_DEVICES_BODY_PARAMS)
-            if '403 Forbidden' in xml_str:
+            if '403 Forbidden' in str(xml_str):
                 raise RESTException('Insufficient privilege to get devices')
         else:
             raise RESTException('No user name or password')
