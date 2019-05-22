@@ -40,7 +40,7 @@
         },
         data() {
             return {
-                selection: {ids: [], include: true}
+                selection: {ids: []}
             }
         },
         methods: {
@@ -54,7 +54,7 @@
             },
             remove() {
                 this.removeReports(this.selection)
-                this.selection = {ids: [], include: true}
+                this.selection = {ids: [] }
             }
         },
         created() {

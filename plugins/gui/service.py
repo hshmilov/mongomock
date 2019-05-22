@@ -584,6 +584,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def _delete_report_configs(self, reports):
         reports_collection = self.reports_config_collection
+        reports['ids'] = [ObjectId(id) for id in reports['ids']]
         ids = self.get_selected_ids(reports_collection, reports, {})
         for report_id in ids:
             existed_report = reports_collection.find_one({'_id': ObjectId(report_id)})
