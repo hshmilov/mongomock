@@ -139,8 +139,9 @@ class TestUsersTable(TestEntitiesTable):
 
     @staticmethod
     def _days_since_date(date_str):
-        difference = pytz.utc.localize(datetime.now()) - parse_date_with_timezone(date_str, 'Israel')
-        return difference.days + 1
+        date_obj = parse_date_with_timezone(date_str, 'Israel').astimezone(pytz.utc).replace(hour=0, minute=0, second=0)
+        now_obj = pytz.utc.localize(datetime.utcnow()).replace(hour=0, minute=0, second=0)
+        return (now_obj - date_obj).days
 
     def test_user_expand_cell(self):
         self.settings_page.switch_to_page()
