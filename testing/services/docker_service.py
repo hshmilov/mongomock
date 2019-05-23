@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable
 
+from retrying import retry
+
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           WEAVE_NETWORK)
 from axonius.utils.debug import COLOR
@@ -445,6 +447,7 @@ else:
         self.start(**kwargs)
         self.wait_for_service()
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5)
     def get_file_contents_from_container(self, file_path):
         """
         Gets the contents of an internal file.
@@ -461,7 +464,7 @@ else:
             raise
 
         if p.returncode != 0:
-            raise DockerException('Failed to run \'cat\' on docker {0}'.format(self.container_name))
+            raise DockerException(f'Failed to run "cat" on {self.container_name}: {str(out)}\n{str(err)}')
 
         return out, err, p.returncode
 
@@ -477,7 +480,7 @@ else:
         (out, err) = p.communicate(timeout=60)
 
         if p.returncode != 0:
-            raise DockerException('Failed to run {0} on docker {1}'.format(command, self.container_name))
+            raise DockerException(f'Failed to run "{command}"" on {self.container_name}: {str(out)}\n{str(err)}')
 
         return out, err, p.returncode
 

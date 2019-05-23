@@ -1,8 +1,8 @@
-import os
 import time
 
 import psutil
 import pymongo
+from retrying import retry
 
 from axonius.plugin_base import EntityType
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_NAME,
@@ -36,6 +36,10 @@ class MongoService(WeaveService):
     def image(self):
         return 'mongo:4.0'
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5)
+    def configure_replica_set(self):
+        self.run_command_in_container("mongo /docker-entrypoint-initdb.d/configure_replica_set.js")
+
     def start(self, mode='',
               allow_restart=False,
               rebuild=False,
@@ -45,7 +49,7 @@ class MongoService(WeaveService):
         self.wait_for_service()
         print("Mongo master is online")
 
-        self.run_command_in_container("mongo /docker-entrypoint-initdb.d/configure_replica_set.js")
+        self.configure_replica_set()
         # The sleep here is only relevant to the core, because it runs first.
         # The intention of this sleep is to allow the DB to initialize itself properly and then
         # accessing it without specifying a replicaSet will work.
