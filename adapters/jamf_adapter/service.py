@@ -441,7 +441,8 @@ class JamfAdapter(AdapterBase, Configurable):
                             app_name = app_name[:-len('.app')]
                         device.add_installed_software(
                             name=app_name,
-                            version=app.get('version', app.get('application_version', ''))
+                            version=app.get('version', app.get('application_version', '')),
+                            path=app.get('path', '')
                         )
                     except Exception:
                         logger.exception(f"Problem adding app {str(app)} to device")

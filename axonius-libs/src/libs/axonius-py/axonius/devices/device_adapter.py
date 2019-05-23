@@ -302,6 +302,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     publisher = Field(str, 'Software Publisher')
     cve_count = Field(str, 'CVE Count')
     sw_license = Field(str, 'License')
+    path = Field(str, 'Software Path')
 
 
 class DeviceAdapterAutorunData(SmartJsonClass):
