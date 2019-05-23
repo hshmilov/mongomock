@@ -274,6 +274,7 @@
       width: max-content;
       min-width: 100%;
       border-top: 2px dashed $grey-2;
+      overflow: hidden auto;
       .table {
         background: $theme-white;
         border-collapse: collapse;

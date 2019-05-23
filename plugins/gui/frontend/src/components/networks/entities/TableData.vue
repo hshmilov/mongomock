@@ -156,7 +156,11 @@
             return {...item,
               days: Math.ceil((nowDate.getTime() - itemDate.getTime()) / 60 / 60 / 24 / 1000)
             }
-          }).sort((a, b) => a.days - b.days)
+          }).sort((a, b) => {
+            if (a.days === undefined) return 1
+            if (b.days === undefined) return -1
+            return a.days - b.days
+          })
         }
         return baseTable
       },
