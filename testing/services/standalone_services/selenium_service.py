@@ -84,6 +84,6 @@ class SeleniumService(WeaveService):
         return 'elgalu/selenium'
 
     # pylint: disable=arguments-differ
-    def wait_for_service(self, **kwargs):
-        super().wait_for_service(**kwargs)
+    def wait_for_service(self, *args, **kwargs):
+        super().wait_for_service(*args, **kwargs)
         subprocess.check_output(['docker', 'exec', self.container_name, 'wait_all_done', '60s'])

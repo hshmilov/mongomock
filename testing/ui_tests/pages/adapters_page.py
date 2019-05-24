@@ -176,6 +176,7 @@ class AdaptersPage(EntitiesPage):
         dict_ = copy(ad_client)
         dict_.pop('use_ssl', None)
         dict_.pop('fetch_disabled_users', None)
+        dict_.pop('verify_ssl', None)
 
         self.fill_creds(**dict_)
         self.click_save()

@@ -1,4 +1,6 @@
 import os
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -8,11 +10,11 @@ from retrying import retry
 
 from builds import Builds
 from builds.builds_factory import BuildsInstance
-from devops.scripts.instances.start_system_on_first_boot import \
-    BOOTED_FOR_PRODUCTION_MARKER_PATH
+from devops.scripts.instances.start_system_on_first_boot import BOOTED_FOR_PRODUCTION_MARKER_PATH
+from test_credentials.test_nexpose_credentials import client_details
+
 from ui_tests.tests.ui_test_base import TestBase
 from axonius.utils.wait import wait_until
-
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
@@ -24,6 +26,13 @@ AUTO_TEST_VM_KEY_PAIR = 'Auto-Test-VM-Key'
 RESTART_LOG_PATH = Path('/var/log/start_system_on_reboot.log')
 
 DEFAULT_LIMIT = 10
+
+MAX_CHARS = 10 ** 9
+SSH_CHANNEL_TIMEOUT = 60 * 35
+NODE_NAME = 'node_1'
+NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
+NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
+PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
 
 
 @retry(stop_max_attempt_number=90, wait_fixed=1000 * 20)
@@ -101,3 +110,59 @@ class TestInstancesBase(TestBase):
         client.connect(instance.ip, username=NODE_MAKER_USERNAME, password=password, timeout=60,
                        auth_timeout=60, look_for_keys=False, allow_agent=False)
         return client
+
+    def join_node(self):
+        def read_until(ssh_chan, what):
+            data = b''
+            try:
+                for _ in range(MAX_CHARS):
+                    received = ssh_chan.recv(1024)
+                    if not received:
+                        raise RuntimeError('Connection Closed')
+                    data += received
+                    if data.endswith(what):
+                        break
+                return data
+            except Exception:
+                self.logger.exception(f'failed read_until: {what}')
+                self.logger.error(f'data received until failure: {data}')
+                raise
+
+        ip_output = subprocess.check_output(['ip', 'a']).decode('utf-8')
+        master_ip_address = re.search(PRIVATE_IP_ADDRESS_REGEX, ip_output).group(1)
+        node_join_token = self.instances_page.get_node_join_token()
+        ssh_client = self.connect_node_maker(self._instances[0])
+        chan = ssh_client.get_transport().open_session()
+        chan.settimeout(SSH_CHANNEL_TIMEOUT)
+        chan.invoke_shell()
+        node_join_message = read_until(chan, b'Please enter connection string:')
+        self.logger.info(f'node_maker login message: {node_join_message.decode("utf-8")}')
+        chan.sendall(f'{master_ip_address} {node_join_token} {NODE_NAME}\n')
+        try:
+            node_join_log = read_until(chan, b'Node successfully joined Axonius cluster.\n')
+            self.logger.info(f'node join log: {node_join_log.decode("utf-8")}')
+        except Exception:
+            self.logger.exception('Failed to connect node.')
+            raise
+
+        self.instances_page.wait_until_node_appears_in_table(NODE_NAME)
+
+    def _add_nexpose_adadpter_and_discover_devices(self):
+        # Using nexpose on all these test since i do not raise
+        # nexpose as part of the tests so the only nexpose adapter present
+        # should be from the node (and the client add should only have that option)
+        # and for any reason it is not present than we have an instances bug.
+        self.adapters_page.add_server(client_details, adapter_name=NEXPOSE_ADAPTER_NAME)
+        self.adapters_page.wait_for_spinner_to_end()
+        self.base_page.run_discovery()
+        wait_until(lambda: self._check_device_count() > 1, total_timeout=90, interval=20)
+
+    def _check_device_count(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.refresh()
+        self.devices_page.run_filter_query(NEXPOSE_ADAPTER_FILTER)
+        return self.devices_page.count_entities()
+
+    def _delete_nexpose_adapter_and_data(self):
+        self.adapters_page.remove_server(adapter_name=NEXPOSE_ADAPTER_NAME, delete_associated_entities=True)
+        wait_until(lambda: self._check_device_count() == 0, total_timeout=90, interval=20)
