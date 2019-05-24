@@ -117,22 +117,39 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
     # Make a flat list of all fields under requested tabular field
     fields = next(flatten_fields(field['items']) for field in get_generic_fields(entity_type)['items']
                   if field['name'] == field_name)
-    field_title_by_name = {
-        field['name']: field['title'] for field in fields
+    field_by_name = {
+        field['name']: field for field in fields
     }
     entity_field_data = merge_entities_fields(
-        parse_entity_fields(entity, [field_name_full]).get(field_name_full, []), field_title_by_name.keys())
+        parse_entity_fields(entity, [field_name_full]).get(field_name_full, []), field_by_name.keys())
     if not len(entity_field_data):
         return string_output
 
+    field_by_name = {
+        field: field_by_name[field] for field in field_by_name.keys()
+        if any(data.get(field) is not None for data in entity_field_data)
+    }
     if mongo_sort:
-        entity_field_data.sort(key=lambda row: row.get(request.args.get('sort'), ''),
+        sort_field = request.args.get('sort')
+        default_value = None
+        if field_by_name[sort_field]['type'] == 'string':
+            if field_by_name[sort_field].get('format') and 'date' in field_by_name[sort_field]['format']:
+                default_value = datetime.min
+            else:
+                default_value = ''
+        elif field_by_name[sort_field]['type'] in ['integer', 'number']:
+            default_value = 0
+        elif field_by_name[sort_field]['type'] == 'bool':
+            default_value = False
+        elif field_by_name[sort_field]['type'] == 'array':
+            default_value = []
+        entity_field_data.sort(key=lambda row: row.get(sort_field, default_value),
                                reverse=request.args.get('desc') == '1')
     for data in entity_field_data:
-        for field in field_title_by_name.keys():
+        for field in field_by_name.keys():
             # Replace field paths with their pretty titles
             if field in data:
-                field_title = field_title_by_name[field]
+                field_title = field_by_name[field]['title']
                 data[field_title] = data[field]
                 del data[field]
                 if isinstance(data[field_title], list):
@@ -143,7 +160,7 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
                                         for val in data[field_title]]
                     data[field_title] = ', '.join(canonized_values)
 
-    dw = csv.DictWriter(string_output, field_title_by_name.values())
+    dw = csv.DictWriter(string_output, [field['title'] for field in field_by_name.values()])
     dw.writeheader()
     dw.writerows(entity_field_data)
     return string_output

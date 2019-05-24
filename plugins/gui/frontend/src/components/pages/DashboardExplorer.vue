@@ -9,10 +9,10 @@
     <div class="explorer-results">
       <x-table
         v-for="entity in entities"
-        :key="entity['internal_axon_id']"
+        :key="entity.name"
         id-field="internal_axon_id"
         :module="entity.name"
-        :on-click-row="() => configEntity($event, entity.name)"
+        :on-click-row="(id) => configEntity(id, entity.name)"
       >
         <template slot="actions">
           <x-button

@@ -78,11 +78,16 @@
       mergedData () {
         return this.data.filter((subset, i) => {
           let found = false
-          this.data.slice(i + 1).forEach(superset => {
-            if (this.isSubset(subset, superset)) {
-              found = true
+          let j = 0
+          while (!found && j < this.data.length) {
+            if (i !== j) {
+              let superset = this.data[j]
+              if ((this.isSubset(subset, superset)) && (!this.isEqual(subset, superset) || j > i)) {
+                found = true
+              }
             }
-          })
+            j++
+          }
           return !found
         })
       },
@@ -167,6 +172,19 @@
           return this.isSubset(subsetValue, supersetValue)
         }
         return (subsetValue === supersetValue)
+      },
+      isEqual (value1, value2) {
+        if (!value1 && !value2) return true
+        if ((!value1 && value2) || (value1 && !value2) || (typeof(value1) !== typeof(value2))) return false
+        if (Array.isArray(value1)) {
+          if (value1.length !== value2.length) return false
+          return value1.filter((item1, i) => !this.isEqual(item1, value2[i])).length === 0
+        }
+        if (typeof(value1) === 'object') {
+          if (Object.keys(value1).length !== Object.keys(value2).length) return false
+          return Object.keys(value1).filter(key => !this.isEqual(value1[key], value2[key]))
+        }
+        return value1 === value2
       },
       exportCSV () {
         this.fetchDataCSV({
