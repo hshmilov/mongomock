@@ -235,6 +235,16 @@ class TestBase:
     def setup_method(self, method):
         logger.info(f'starting setup_method {method.__name__}')
         self.logger = logger
+        self.setup_browser()
+
+        self.username = DEFAULT_USER['user_name']
+        self.password = DEFAULT_USER['password']
+        self.axonius_system = get_service()
+
+        self.login()
+        logger.info(f'finishing setup_method {method.__name__}')
+
+    def setup_browser(self):
         self._initialize_driver()
 
         # mac issues, maximize is not working on mac anyway now
@@ -244,14 +254,12 @@ class TestBase:
         self.driver.implicitly_wait(0.3)
         self.driver.set_page_load_timeout(30)
         self.driver.set_script_timeout(30)
-
-        self.username = DEFAULT_USER['user_name']
-        self.password = DEFAULT_USER['password']
-        self.axonius_system = get_service()
-
         self.register_pages()
-        self.login()
-        logger.info(f'finishing setup_method {method.__name__}')
+
+    def restart_browser(self):
+        self.driver.quit()
+        self.setup_browser()
+        self.driver.get(self.base_url)
 
     def teardown_method(self, method):
         logger.info(f'starting teardown_method {method.__name__}')

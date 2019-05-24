@@ -93,7 +93,12 @@ class TestFeatureFlags(TestBase):
         self.settings_page.save_and_wait_for_toaster()
 
     def _change_expiration_date(self, days_remaining=None, existing=True):
-        self.login_page.logout()
+        try:
+            self.login_page.find_disabled_login_button()
+        except NoSuchElementException:
+            # We are logged in - need to logout
+            self.login_page.logout()
+
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
         self.settings_page.switch_to_page()
@@ -115,5 +120,15 @@ class TestFeatureFlags(TestBase):
 
         self._change_expiration_date()
         self.dashboard_page.find_no_trial_banner()
+
         self._change_expiration_date(-1, existing=False)
         assert self.dashboard_page.find_trial_expired_banner()
+        self.restart_browser()
+        self._change_expiration_date()
+        self.dashboard_page.find_no_trial_banner()
+
+        self._change_expiration_date(-1, existing=False)
+        assert self.dashboard_page.find_trial_expired_banner()
+        self.restart_browser()
+        self._change_expiration_date(3)
+        self.dashboard_page.find_no_trial_banner()

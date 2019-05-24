@@ -612,7 +612,7 @@ class Page:
         self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS,
                                              normalize_timezone_date(date_to_fill.date().isoformat()))
         # Sleep through the time it takes the date picker to react to the filled date
-        time.sleep(0.5)
+        time.sleep(0.6)
 
     def close_datepicker(self):
         try:

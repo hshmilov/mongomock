@@ -31,6 +31,7 @@ class DashboardPage(Page):
     CHART_TITLE_ID = 'chart_name'
     SUMMARY_CARD_TEXT_CSS = '{id} > div.x-summary > div.summary'
     CARD_CLOSE_BTN_CSS = '{id} > div.header > button.remove'
+    BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
 
     @property
     def root_page_css(self):
@@ -257,11 +258,18 @@ class DashboardPage(Page):
 
     def find_trial_remainder_banner(self, remainder_count):
         msg = 'days remaining in your Axonius evaluation'
+        # Expected color of the banner according UIs thresholds
+        color = '208, 1, 27' if (remainder_count <= 7) else (
+            '246, 166, 35' if remainder_count <= 14 else '71, 150, 228')
         try:
-            return self.wait_for_element_present_by_text(f'{remainder_count} {msg}')
+            banner = self.wait_for_element_present_by_xpath(
+                self.BANNER_BY_TEXT_XPATH.format(banner_text=f'{remainder_count} {msg}'))
         except TimeoutException:
             # Currently there is a bug, probably if it is running in midnight AX-3730
-            return self.wait_for_element_present_by_text(f'{remainder_count + 1} {msg}')
+            banner = self.wait_for_element_present_by_text(
+                self.BANNER_BY_TEXT_XPATH.format(banner_text=f'{remainder_count + 1} {msg}'))
+        assert banner.value_of_css_property('background-color') == f'rgba({color}, 1)'
+        return banner
 
     def find_trial_expired_banner(self):
         return self.wait_for_element_present_by_text(
