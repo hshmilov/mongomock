@@ -1157,7 +1157,8 @@ def contain_jamf_generic_names(adapter_device):
     hostname = get_hostname(adapter_device)
     if not hostname:
         return False
-    if 'MacBook Pro (' in hostname or 'MacBook-Pro' in hostname or 'localhost' in hostname:
+    if 'MacBook' in hostname or 'MBP' in hostname or 'localhost' in hostname or\
+            'iPad' in hostname or 'iPhone' in hostname or 'iMac' in hostname or 'mini' in hostname:
         return True
     return False
 

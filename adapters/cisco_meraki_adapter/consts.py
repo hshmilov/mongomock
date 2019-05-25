@@ -1,6 +1,6 @@
 DEVICE_TYPE = 'Cisco Device'
-CLIENT_TYPE = 'client_type'
-MDM_TYPE = 'mdm_type'
+CLIENT_TYPE = 'Client Type'
+MDM_TYPE = 'Mdm Type'
 MDM_FIELDS = 'ip,' \
              'systemType,' \
              'availableDeviceCapacity,' \

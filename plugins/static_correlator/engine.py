@@ -29,14 +29,13 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    ips_do_not_contradict_or_mac_intersection,
                                    is_azuread_or_ad_and_have_name,
                                    is_only_host_adapter_not_localhost,
-                                   is_different_plugin, is_from_ad_or_jamf,
+                                   is_different_plugin,
                                    is_from_juniper_and_asset_name,
                                    is_junos_space_device,
                                    is_old_device, is_sccm_or_ad, is_snow_device,
                                    is_splunk_vpn, normalize_adapter_devices,
                                    serials_do_not_contradict, compare_macs_or_one_is_jamf,
                                    not_aruba_adapters, cloud_id_do_not_contradict,
-                                   not_contain_generic_jamf_names,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
                                    get_hostname_or_serial, compare_hostname_serial,
@@ -254,6 +253,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlate_hostname_only_host_adapter(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname-only')
         filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
+        filtered_adapters_list = filter(lambda x: not x.get(NORMALIZED_MACS) or not get_normalized_ip(x),
+                                        filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
@@ -346,15 +347,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         AD correlation is a little more loose - we allow correlation based on hostname alone.
         In order to lower the false positive rate we don't use the normalized hostname but rather the full one
         """
-        logger.info('Starting to correlate on Hostname-AD-JAMF')
+        logger.info('Starting to correlate on Hostname-AD')
         filtered_adapters_list = filter(get_hostname_no_localhost, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
                                       [compare_hostname],
-                                      [is_from_ad_or_jamf],
-                                      [not_aruba_adapters,
-                                       serials_do_not_contradict,
-                                       not_contain_generic_jamf_names],
+                                      [lambda x: x.get('plugin_name') == ACTIVE_DIRECTORY_PLUGIN_NAME],
+                                      [not_aruba_adapters],
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 

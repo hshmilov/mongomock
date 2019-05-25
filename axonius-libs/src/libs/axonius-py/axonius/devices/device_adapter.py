@@ -295,7 +295,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     name = Field(str, "Software Name")
     version = Field(str, "Software Version")
     architecture = Field(
-        str, "Software Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all"]
+        str, "Software Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all", 'i686']
     )
     description = Field(str, "Software Description")
     vendor = Field(str, "Software Vendor")
@@ -384,8 +384,8 @@ class ServiceData(SmartJsonClass):
 
 
 class TenableVulnerability(SmartJsonClass):
-    plugin = Field(str, 'plugin')
-    severity = Field(str, 'severity')
+    plugin = Field(str, 'Plugin')
+    severity = Field(str, 'Severity')
 
 
 class TenableSource(SmartJsonClass):
