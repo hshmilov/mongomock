@@ -14,6 +14,8 @@ from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME
 class TestInstancesAfterNodeJoin(TestInstancesBase):
 
     def test_instances_after_join(self):
+        self.put_customer_conf_file()
+
         # Adding adapter and data for later usage.
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.wait_for_spinner_to_end()

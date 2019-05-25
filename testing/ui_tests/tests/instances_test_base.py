@@ -1,3 +1,4 @@
+import io
 import os
 import re
 import subprocess
@@ -8,13 +9,14 @@ import paramiko
 import pytest
 from retrying import retry
 
+from axonius.consts.system_consts import CUSTOMER_CONF_PATH
+from axonius.utils.wait import wait_until
 from builds import Builds
 from builds.builds_factory import BuildsInstance
-from devops.scripts.instances.start_system_on_first_boot import BOOTED_FOR_PRODUCTION_MARKER_PATH
+from devops.scripts.instances.start_system_on_first_boot import \
+    BOOTED_FOR_PRODUCTION_MARKER_PATH
 from test_credentials.test_nexpose_credentials import client_details
-
 from ui_tests.tests.ui_test_base import TestBase
-from axonius.utils.wait import wait_until
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
@@ -26,13 +28,147 @@ AUTO_TEST_VM_KEY_PAIR = 'Auto-Test-VM-Key'
 RESTART_LOG_PATH = Path('/var/log/start_system_on_reboot.log')
 
 DEFAULT_LIMIT = 10
-
 MAX_CHARS = 10 ** 9
 SSH_CHANNEL_TIMEOUT = 60 * 35
 NODE_NAME = 'node_1'
 NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
 NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
+
+CUSTOMER_CONF = '''
+{
+  "exclude-list": {
+    "add-to-exclude": [
+      "nessus",
+      "carbonblack_defense",
+      "minerva",
+      "desktop_central",
+      "tenable_io",
+      "clearpass",
+      "device42",
+      "symantec_cloud_workload",
+      "cisco_meraki",
+      "paloalto_panorama",
+      "infinite_sleep",
+      "openstack",
+      "quest_kace",
+      "alibaba",
+      "tripwire_enterprise",
+      "jamf",
+      "azure",
+      "cisco_prime",
+      "observeit",
+      "alertlogic",
+      "lansweeper",
+      "nmap",
+      "duo",
+      "unifi",
+      "promisec",
+      "symantec_ee",
+      "proxmox",
+      "kaseya",
+      "aws",
+      "mssql",
+      "blackberry_uem",
+      "azure_ad",
+      "aruba",
+      "gotoassist",
+      "cynet",
+      "riverbed",
+      "sentinelone",
+      "ibm_tivoli_taddm",
+      "okta",
+      "chef",
+      "redseal",
+      "armis",
+      "qualys_scans",
+      "truefort",
+      "illusive",
+      "fireeye_hx",
+      "traiana_lab_machines",
+      "malwarebytes",
+      "sccm",
+      "twistlock",
+      "linux_ssh",
+      "cybereason",
+      "foreman",
+      "esx",
+      "bluecat",
+      "bomgar",
+      "checkpoint_r80",
+      "junos",
+      "fortigate",
+      "juniper",
+      "nimbul",
+      "infoblox",
+      "epo",
+      "google_mdm",
+      "mobi_control",
+      "cisco_amp",
+      "dynatrace",
+      "logrhythm",
+      "deep_security",
+      "absolute",
+      "carbonblack_response",
+      "forcepoint_csv",
+      "sophos",
+      "zabbix",
+      "mobileiron",
+      "cisco_umbrella",
+      "tenable_security_center",
+      "saltstack_enterprise",
+      "cloudflare",
+      "json_file",
+      "stresstest",
+      "softlayer",
+      "opswat",
+      "saltstack",
+      "counter_act",
+      "qcore",
+      "splunk",
+      "divvycloud",
+      "airwatch",
+      "cylance",
+      "redcloack",
+      "cisco_ise",
+      "dropbox",
+      "spacewalk",
+      "carbonblack_protection",
+      "oracle_vm",
+      "redcanary",
+      "stresstest_scanner",
+      "eset",
+      "ensilo",
+      "service_now",
+      "puppet",
+      "code42",
+      "hyper_v",
+      "gce",
+      "csv",
+      "snipeit",
+      "sysaid",
+      "oracle_cloud",
+      "nessus_csv",
+      "claroty",
+      "symantec",
+      "stresstest_users",
+      "datadog",
+      "symantec_altiris",
+      "tanium",
+      "crowd_strike",
+      "bigfix",
+      "shodan",
+      "cisco",
+      "cloudpassage",
+      "webroot",
+      "samange",
+      "bitdefender",
+      "secdo"
+    ],
+    "remove-from-exclude": []
+  }
+}
+'''
 
 
 @retry(stop_max_attempt_number=90, wait_fixed=1000 * 20)
@@ -146,6 +282,11 @@ class TestInstancesBase(TestBase):
             raise
 
         self.instances_page.wait_until_node_appears_in_table(NODE_NAME)
+
+    def put_customer_conf_file(self):
+        instance = self._instances[0]
+        instance.put_file(file_object=io.StringIO(CUSTOMER_CONF),
+                          remote_file_path=str(CUSTOMER_CONF_PATH))
 
     def _add_nexpose_adadpter_and_discover_devices(self):
         # Using nexpose on all these test since i do not raise

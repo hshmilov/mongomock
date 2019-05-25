@@ -478,7 +478,9 @@ def main():
             def get_ui_tests_jobs():
                 ui_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['ui']))
 
-                slow_modules = ['test_instances_after_join.py', 'test_instances_before_join.py']
+                slow_modules = ['test_instances_after_join.py',
+                                'test_instances_before_join.py',
+                                'test_instances_upgrade.py']
                 for slow in slow_modules[:]:
                     if slow in ui_tests:
                         ui_tests.remove(slow)

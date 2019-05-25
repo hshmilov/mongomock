@@ -7,6 +7,8 @@ from ui_tests.tests.instances_test_base import (NODE_MAKER_USERNAME,
 class TestInstancesBeforeNodeJoin(TestInstancesBase):
 
     def test_instances_user_before_join(self):
+        self.put_customer_conf_file()
+
         # Test that user exists and we can connect to it
         self.check_instances_user_existance()
 
