@@ -301,6 +301,8 @@ def figure_out_os(s):
             distribution = "(?) " + distribution
     elif 'mikrotik' in s.lower():
         os_type = 'Mikrotik'
+    elif 'f5 networks big-ip' == s.lower():
+        os_type = 'F5 Networks Big-IP'
 
     return {"type": os_type,
             "distribution": distribution,

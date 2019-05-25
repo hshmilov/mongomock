@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    bitsight_adapter: {
+        title: 'BitSight Security Ratings',
+        description: 'BitSight Security Ratings are a data-driven and dynamic measurement of an organization’s cybersecurity performance.'
+    },
     librenms_adapter: {
         title: 'LibreNMS',
         description: 'LibreNMS is a network monitoring solution that provides autodiscovery for a wide range of network hardware and operating systems including Cisco, Linux, Juniper, Foundry, and more.'

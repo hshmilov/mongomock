@@ -1,4 +1,5 @@
 import logging
+from urllib3.util.url import parse_url
 from proxmoxer import ProxmoxAPI
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -33,7 +34,9 @@ class ProxmoxAdapter(AdapterBase):
     @staticmethod
     def _connect_client(client_config):
         try:
-            ProxmoxAPI(client_config['domain'], user=client_config['username'],
+            domain = client_config['domain']
+            domain = parse_url(domain).host
+            ProxmoxAPI(domain, user=client_config['username'],
                        password=client_config['password'], verify_ssl=client_config['verify_ssl'],
                        port=client_config['port']).nodes.get()
             return client_config
@@ -53,7 +56,9 @@ class ProxmoxAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        proxmox = ProxmoxAPI(client_data['domain'], user=client_data['username'],
+        domain = client_data['domain']
+        domain = parse_url(domain).host
+        proxmox = ProxmoxAPI(domain, user=client_data['username'],
                              password=client_data['password'], verify_ssl=client_data['verify_ssl'],
                              port=client_data['port'])
         for resource in proxmox.cluster.resources.get():

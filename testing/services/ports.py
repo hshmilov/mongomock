@@ -161,6 +161,7 @@ DOCKER_PORTS = {
     'ssh-socat':                        9958,
     'office-scan-adapter':              9959,
     'librenms-adapter':                 9960,
+    'bitsight-adapter':                 9961,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
