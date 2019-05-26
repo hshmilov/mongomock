@@ -48,6 +48,7 @@ class StaticUsersCorrelatorService(CorrelatorBase):
                                 'username': '$$adapter.data.username',
                                 'ad_display_name': '$$adapter.data.ad_display_name',
                                 'mail': '$$adapter.data.mail',
+                                'domain': '$$adapter.data.domain',
 
                             }
                         }
