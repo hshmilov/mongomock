@@ -5,7 +5,7 @@ export const pluginMeta = {
     },
     librenms_adapter: {
         title: 'LibreNMS',
-        description: 'LibreNMS is a network monitoring solution that provides autodiscovery for a wide range of network hardware and operating systems including Cisco, Linux, Juniper, Foundry, and more.'
+        description: 'LibreNMS is a network monitoring solution that provides auto-discovery for network hardware and operating systems including Cisco, Linux, Juniper, Foundry, and more.'
     },
     rumble_adapter: {
         title: 'Rumble Network Discovery',
@@ -307,8 +307,8 @@ export const pluginMeta = {
         description: 'VMWare AirWatch provides of enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
     },
     fireeye_hx_adapter: {
-        title: 'FireEye Helix Security Platform',
-        description: 'FireEye Helix Security Platform proactively inspects, analyzes, and contains known and unknown threats on endpoints.'
+        title: 'FireEye Endpoint Security (formerly HX)',
+        description: 'FireEye Endpoint Security (formerly HX) detects and protects against unknown endpoint threats and exploits with integrated threat intelligence.'
     },
     aws_adapter: {
         title: 'Amazon Web Services (AWS)',
