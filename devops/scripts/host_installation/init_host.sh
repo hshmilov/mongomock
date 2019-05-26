@@ -17,6 +17,28 @@ function _wait_for_apt {
 
 }
 
+function fail {
+  echo $1 >&2
+  exit 1
+}
+
+function retry {
+  local n=1
+  local max=5
+  local delay=5
+  while true; do
+    "$@" && break || {
+      if [[ $n -lt $max ]]; then
+        ((n++))
+        echo "Command failed. Attempt $n/$max:"
+        sleep $delay;
+      else
+        fail "The command has failed after $n attempts."
+      fi
+    }
+  done
+}
+
 set -e
 
 # Notice! This image initializes a plain host image to include all the requirements of Axonius.
@@ -58,11 +80,11 @@ _wait_for_apt upgrade -yq -f
 echo "Done upgrading"
 _wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-add-apt-repository \
+retry timeout 20 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
-add-apt-repository -y ppa:jonathonf/python-3.6
+retry timeout 20 add-apt-repository -y ppa:jonathonf/python-3.6
 _wait_for_apt update
 echo "Installing various dependencies..."
 _wait_for_apt install -yq sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386
