@@ -27,6 +27,7 @@ def retry_if_timeout(exception):
 class DockerService(AxonService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__()
+        self._system_config = dict()
         self.container_name = container_name
         self.cortex_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
@@ -520,3 +521,7 @@ else:
             yield self
         finally:
             self.stop(should_delete=should_delete)
+
+    def set_system_config(self, system_config):
+        if system_config:
+            self._system_config = system_config

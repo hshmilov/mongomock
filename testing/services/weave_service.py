@@ -50,11 +50,6 @@ class WeaveService(DockerService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__(container_name, service_dir)
         self._number_of_tries = 0
-        self._system_config = dict()
-
-    def set_system_config(self, system_config):
-        if system_config:
-            self._system_config = system_config
 
     @property
     def docker_network(self):
