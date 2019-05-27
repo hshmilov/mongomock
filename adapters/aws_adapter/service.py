@@ -1485,6 +1485,8 @@ class AwsAdapter(AdapterBase, Configurable):
                                 )
                                 if ips:
                                     device.add_nic(ips=ips)
+                                    for ip_elb in ips:
+                                        device.add_public_ip(ip_elb)
                             except Exception:
                                 logger.exception(f'Error parsing lb: {lb_raw}')
                     except Exception:
