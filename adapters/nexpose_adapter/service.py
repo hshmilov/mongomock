@@ -68,7 +68,6 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-        self.num_of_simultaneous_devices = int(self.config["DEFAULT"]["num_of_simultaneous_devices"])
 
     def _clients_schema(self):
         return {
@@ -138,9 +137,9 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         try:
-            return nexpose_clients.NexposeV3Client(self.num_of_simultaneous_devices, **client_config)
+            return nexpose_clients.NexposeV3Client(self.__num_of_simultaneous_devices, **client_config)
         except ClientConnectionException:
-            return nexpose_clients.NexposeV2Client(self.num_of_simultaneous_devices, **client_config)
+            return nexpose_clients.NexposeV2Client(self.__num_of_simultaneous_devices, **client_config)
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get(NEXPOSE_HOST), client_config.get(NEXPOSE_PORT))
@@ -161,6 +160,11 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_tags',
                     'title': 'Fetch Tags',
                     'type': 'bool'
+                },
+                {
+                    'name': 'num_of_simultaneous_devices',
+                    'title': 'Number Of Simultaneous Device',
+                    'type': 'integer'
                 }
             ],
             "required": [
@@ -173,8 +177,10 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_tags': True
+            'fetch_tags': True,
+            'num_of_simultaneous_devices': 50
         }
 
     def _on_config_update(self, config):
         self.__fetch_tags = config['fetch_tags']
+        self.__num_of_simultaneous_devices = config['num_of_simultaneous_devices']
