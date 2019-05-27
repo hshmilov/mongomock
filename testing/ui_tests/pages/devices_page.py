@@ -136,3 +136,11 @@ class DevicesPage(EntitiesPage):
 
     def get_fetch_time(self):
         return self.driver.find_element_by_css_selector('[format="date-time"] > label[for="fetch_time"] + div').text
+
+    def create_saved_query(self, data_query, query_name):
+        self.switch_to_page()
+        self.fill_filter(data_query)
+        self.enter_search()
+        self.click_save_query()
+        self.fill_query_name(query_name)
+        self.click_save_query_save_button()

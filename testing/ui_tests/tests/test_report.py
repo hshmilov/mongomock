@@ -16,6 +16,7 @@ class TestReport(TestBase):
     TEST_REPORT_EDIT_QUERY = 'test report edit query'
     TEST_REPORT_READ_ONLY_NAME = 'report for read only'
     TEST_REPORT_READ_ONLY_QUERY = 'query for read only test'
+    TEST_DOWNLOAD_NOW_NAME = 'test download now'
 
     def test_report_name(self):
         self.reports_page.get_to_new_report_page()
@@ -73,6 +74,21 @@ class TestReport(TestBase):
         self.reports_page.switch_to_page()
         self.reports_page.get_to_new_report_page()
         assert self.reports_page.is_save_button_disabled()
+
+    def test_download_now(self):
+        self.reports_page.get_to_new_report_page()
+
+        self.reports_page.fill_report_name(self.TEST_DOWNLOAD_NOW_NAME)
+        self.reports_page.click_include_dashboard()
+        assert not self.reports_page.is_report_download_shown()
+        self.reports_page.click_save()
+        self.reports_page.wait_for_table_to_load()
+
+        self.reports_page.wait_for_report_generation(self.TEST_DOWNLOAD_NOW_NAME)
+        self.reports_page.click_report(self.TEST_DOWNLOAD_NOW_NAME)
+        self.reports_page.wait_for_spinner_to_end()
+        assert self.reports_page.is_report_download_shown()
+        self.reports_page.click_report_download()
 
     def test_save_enabled_all_saved_queries(self):
         self.reports_page.get_to_new_report_page()
@@ -184,8 +200,10 @@ class TestReport(TestBase):
             self.devices_page.click_save_query_save_button()
             recipient = generate_random_valid_email()
 
-            self.reports_page.create_report(self.TEST_REPORT_EDIT, True, self.TEST_REPORT_EDIT_QUERY, True,
-                                            self.TEST_REPORT_EDIT, [recipient], ReportFrequency.weekly)
+            self.reports_page.create_report(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
+                                            queries=[{'entity': 'Devices', 'name': self.TEST_REPORT_EDIT_QUERY}],
+                                            add_scheduling=True, email_subject=self.TEST_REPORT_EDIT,
+                                            emails=[recipient], period=ReportFrequency.weekly)
             self.reports_page.wait_for_table_to_load()
             self.reports_page.click_report(self.TEST_REPORT_EDIT)
             self.reports_page.wait_for_spinner_to_end()
@@ -212,8 +230,9 @@ class TestReport(TestBase):
             self.settings_page.fill_email_port(smtp_service.port)
             self.settings_page.save_and_wait_for_toaster()
             recipient = generate_random_valid_email()
-            self.reports_page.create_report(self.TEST_REPORT_READ_ONLY_NAME, True, None,
-                                            True, self.REPORT_SUBJECT, [recipient], ReportFrequency.weekly)
+            self.reports_page.create_report(report_name=self.TEST_REPORT_READ_ONLY_NAME, add_dashboard=True,
+                                            queries=None, add_scheduling=True, email_subject=self.REPORT_SUBJECT,
+                                            emails=[recipient], period=ReportFrequency.weekly)
             self.reports_page.wait_for_table_to_load()
             # to fill up devices and users
             self.base_page.run_discovery()

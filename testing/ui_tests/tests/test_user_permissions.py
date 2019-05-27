@@ -223,10 +223,12 @@ class TestUserPermissions(TestBase):
             self.devices_page.click_save_query()
             self.devices_page.fill_query_name(self.TEST_REPORT_READ_ONLY_QUERY)
             self.devices_page.click_save_query_save_button()
+            self.devices_page.wait_for_table_to_load()
             recipient = generate_random_valid_email()
-
-            self.reports_page.create_report(self.TEST_REPORT_READ_ONLY_NAME, True, self.TEST_REPORT_READ_ONLY_QUERY,
-                                            True, self.REPORT_SUBJECT, [recipient], ReportFrequency.weekly)
+            queries = [{'entity': 'Devices', 'name': self.TEST_REPORT_READ_ONLY_QUERY}]
+            self.reports_page.create_report(report_name=self.TEST_REPORT_READ_ONLY_NAME, add_dashboard=True,
+                                            queries=queries, add_scheduling=True, email_subject=self.REPORT_SUBJECT,
+                                            emails=[recipient], period=ReportFrequency.weekly)
             self.reports_page.wait_for_table_to_load()
 
             # to fill up devices and users

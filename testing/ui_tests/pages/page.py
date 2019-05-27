@@ -12,9 +12,9 @@ from selenium.common.exceptions import (ElementNotVisibleException,
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
+from axonius.utils.parsing import normalize_timezone_date
 from services.axon_service import TimeoutException
 from ui_tests.tests.ui_consts import TEMP_FILE_PREFIX
-from axonius.utils.parsing import normalize_timezone_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -492,6 +492,25 @@ class Page:
             next(el for el in self.driver.find_elements_by_css_selector(selected_option_css_selector) if
                  el.text == choice).click()
 
+    def select_option_from_multiple(self,
+                                    index,
+                                    dropdown_css_selector,
+                                    text_box_css_selector,
+                                    selected_option_css_selector,
+                                    choice,
+                                    parent=None,
+                                    partial_text=True):
+        if not parent:
+            parent = self.driver
+        parent.find_elements_by_css_selector(dropdown_css_selector)[index].click()
+        text_box = self.driver.find_element_by_css_selector(text_box_css_selector)
+        self.send_keys(text_box, choice)
+        if partial_text:
+            self.driver.find_element_by_css_selector(selected_option_css_selector).click()
+        else:
+            next(el for el in self.driver.find_elements_by_css_selector(selected_option_css_selector) if
+                 el.text == choice).click()
+
     def select_option_without_search(self,
                                      dropdown_css_selector,
                                      selected_options_css_selector,
@@ -506,6 +525,22 @@ class Page:
                 option.click()
                 return option
         return None
+
+    def select_option_without_search_from_multiple(self,
+                                                   index,
+                                                   dropdown_css_selector,
+                                                   selected_options_css_selector,
+                                                   text,
+                                                   parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_elements_by_css_selector(dropdown_css_selector)[index].click()
+        options = self.driver.find_elements_by_css_selector(selected_options_css_selector)
+        for option in options:
+            if option.text == text:
+                option.click()
+                return option
+        raise AssertionError(f'Could not find option {text}')
 
     @staticmethod
     def key_down_enter(element):

@@ -167,31 +167,42 @@ class ReportsPage(EntitiesPage):
         self.select_option(self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_SELECTED_OPTION_CSS,
                            text)
 
+    def select_saved_view_from_multiple(self, index, text, entity='Devices'):
+        self.select_option_without_search_from_multiple(index, self.SELECT_VIEW_ENTITY_CSS,
+                                                        self.DROPDOWN_SELECTED_OPTION_CSS, entity)
+        self.select_option_from_multiple(index, self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS,
+                                         self.DROPDOWN_SELECTED_OPTION_CSS, text)
+
     def find_email_sent_toaster(self):
         return self.wait_for_toaster('Email sent successfully')
 
     def is_save_button_disabled(self):
         return self.is_element_disabled(self.get_save_button())
 
+    def is_report_download_shown(self):
+        try:
+            self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID)
+        except NoSuchElementException:
+            return False
+        return True
+
     def click_report_download(self):
         self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID).click()
 
-    def create_report(self, report_name,
-                      add_dashboard=True,
-                      query_name=None,
-                      add_scheduling=False,
-                      email_subject=None,
-                      emails=None,
-                      period=ReportFrequency.daily):
+    def create_report(self, report_name, add_dashboard=True, queries=None, add_scheduling=False, email_subject=None,
+                      emails=None, period=ReportFrequency.daily):
         self.switch_to_page()
         self.wait_for_table_to_load()
         self.click_new_report()
         self.fill_report_name(report_name)
         if add_dashboard:
             self.click_include_dashboard()
-        if query_name:
+        if queries:
             self.click_include_queries()
-            self.select_saved_view(query_name)
+            for index, query in enumerate(queries):
+                self.select_saved_view_from_multiple(index, query['name'], query['entity'])
+                if index < len(queries) - 1:
+                    self.click_add_query()
         if add_scheduling:
             self.click_add_scheduling()
             self.fill_email_subject(email_subject)
