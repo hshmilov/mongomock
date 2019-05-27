@@ -266,7 +266,7 @@ class DashboardPage(Page):
                 self.BANNER_BY_TEXT_XPATH.format(banner_text=f'{remainder_count} {msg}'))
         except TimeoutException:
             # Currently there is a bug, probably if it is running in midnight AX-3730
-            banner = self.wait_for_element_present_by_text(
+            banner = self.wait_for_element_present_by_xpath(
                 self.BANNER_BY_TEXT_XPATH.format(banner_text=f'{remainder_count + 1} {msg}'))
         assert banner.value_of_css_property('background-color') == f'rgba({color}, 1)'
         return banner

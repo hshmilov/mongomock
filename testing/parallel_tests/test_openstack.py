@@ -30,3 +30,11 @@ class TestOpenStackAdapter(AdapterTestBase):
     @pytest.mark.skip(reason="Upgrading our test openstack env")
     def test_check_reachability(self):
         pass
+
+    @pytest.mark.skip('Slow')
+    def test_removing_adapter_creds_with_devices(self):
+        pass
+
+    @pytest.mark.skip('Slow')
+    def test_removing_adapter_creds_with_users(self):
+        pass

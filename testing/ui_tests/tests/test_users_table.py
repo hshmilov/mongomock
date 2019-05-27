@@ -143,6 +143,10 @@ class TestUsersTable(TestEntitiesTable):
         now_obj = pytz.utc.localize(datetime.utcnow()).replace(hour=0, minute=0, second=0)
         return (now_obj - date_obj).days
 
+    def _check_last_seen(self, num, last_seens):
+        days = self._days_since_date(last_seens[-num])
+        assert int(last_seens[-num + 1]) in (days, days + 1)
+
     def test_user_expand_cell(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -159,8 +163,8 @@ class TestUsersTable(TestEntitiesTable):
         last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
         assert f'{last_seens[-2]}, {last_seens[-4]}' == last_seens[0]
         assert int(last_seens[-3]) < int(last_seens[-1])
-        assert int(last_seens[-3]) == self._days_since_date(last_seens[-4])
-        assert int(last_seens[-1]) == self._days_since_date(last_seens[-2])
+        self._check_last_seen(4, last_seens)
+        self._check_last_seen(2, last_seens)
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
         self.users_page.wait_close_column_details_popup()
 
@@ -168,5 +172,5 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
         last_seens = self.users_page.get_column_data(self.LAST_SEEN_COLUMN)[0].split('\n')
         assert last_seens[-2] == last_seens[0]
-        assert int(last_seens[-1]) == self._days_since_date(last_seens[-2])
+        self._check_last_seen(2, last_seens)
         assert last_seens[-3] == 'Days'
