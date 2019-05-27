@@ -1,6 +1,6 @@
 import logging
 
-from flask import Response, request
+from flask import Response
 
 from axonius.entities import EntityType
 from axonius.utils import gui_helpers
@@ -20,7 +20,7 @@ class HeavyLiftingService(PluginBase):
 
     @add_rule('generate_csv', methods=['POST'])
     def generate_csv(self):
-        kwargs = dict(request.get_json(silent=True))
+        kwargs = dict(self.get_request_data_as_object())
         kwargs['entity_type'] = EntityType(kwargs['entity_type'])
 
         res_iterator = gui_helpers.get_csv_iterable(**kwargs)

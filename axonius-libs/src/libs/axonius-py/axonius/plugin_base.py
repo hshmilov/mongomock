@@ -842,7 +842,10 @@ class PluginBase(Configurable, Feature):
         """
         return request.headers.get('x-unique-plugin-name'), request.headers.get('x-plugin-name')
 
-    def request_remote_plugin(self, resource, plugin_unique_name=None, method='get', **kwargs) -> requests.Response:
+    def request_remote_plugin(self, resource,
+                              plugin_unique_name=None,
+                              method='get',
+                              **kwargs) -> requests.Response:
         """
         Provides an interface to access other plugins, with the current plugin's API key.
         :type resource: str
@@ -874,7 +877,14 @@ class PluginBase(Configurable, Feature):
             headers[X_UI_USER] = user
             headers[X_UI_USER_SOURCE] = user_source
 
-        return requests.request(method, url, headers=headers, **kwargs)
+        data = kwargs.pop('data', None)
+        json_data = kwargs.pop('json', None)
+
+        if json_data:
+            data = json.dumps(json_data, default=json_util.default)
+            headers['Content-Type'] = 'application/json'
+
+        return requests.request(method, url, headers=headers, data=data, **kwargs)
 
     def async_request_remote_plugin(self, *args, **kwargs) -> Promise:
         """
