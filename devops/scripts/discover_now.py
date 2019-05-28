@@ -10,7 +10,7 @@ from axonius.consts.scheduler_consts import Phases
 from services.plugins.system_scheduler_service import SystemSchedulerService
 
 
-WAIT_TIMEOUT = 60 * 25
+WAIT_TIMEOUT = 60 * 60
 
 
 def main(should_wait=False, seconds=WAIT_TIMEOUT):
