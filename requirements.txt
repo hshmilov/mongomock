@@ -67,6 +67,7 @@ orionsdk==0.0.6
 flasgger==0.9.0
 python-dateutil==2.7.3
 duo-client==3.3.0
+ncclient==0.6.4
 junos-eznc==2.1.8
 aiohttp==3.3.2
 apache-libcloud==2.3.0
