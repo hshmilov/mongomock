@@ -76,6 +76,7 @@
         return `${this.module}/current/data/advanced/${this.index}`
       },
       mergedData () {
+        return true;
         return this.data.filter((subset, i) => {
           let found = false
           let j = 0
