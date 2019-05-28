@@ -71,6 +71,9 @@ class ReportsPage(EntitiesPage):
     def click_include_dashboard(self):
         self.find_element_by_text(self.INCLUDE_DASHBOARD_CHECKBOX).click()
 
+    def is_include_dashboard(self):
+        return self.is_toggle_selected(self.find_element_preceding_by_text(self.INCLUDE_DASHBOARD_CHECKBOX))
+
     def click_add_query(self):
         self.driver.find_element_by_css_selector(self.QUERY_ADD_CLASS).click()
 
@@ -173,6 +176,9 @@ class ReportsPage(EntitiesPage):
         self.select_option_from_multiple(index, self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS,
                                          self.DROPDOWN_SELECTED_OPTION_CSS, text)
 
+    def get_saved_view(self):
+        return self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS).text
+
     def find_email_sent_toaster(self):
         return self.wait_for_toaster('Email sent successfully')
 
@@ -194,6 +200,7 @@ class ReportsPage(EntitiesPage):
         self.switch_to_page()
         self.wait_for_table_to_load()
         self.click_new_report()
+        self.wait_for_spinner_to_end()
         self.fill_report_name(report_name)
         if add_dashboard:
             self.click_include_dashboard()

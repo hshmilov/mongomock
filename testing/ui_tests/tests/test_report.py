@@ -14,6 +14,7 @@ class TestReport(TestBase):
     REPORT_SUBJECT = 'axonius report subject'
     TEST_REPORT_EDIT = 'test report edit'
     TEST_REPORT_EDIT_QUERY = 'test report edit query'
+    TEST_REPORT_EDIT_QUERY1 = 'test report edit query1'
     TEST_REPORT_READ_ONLY_NAME = 'report for read only'
     TEST_REPORT_READ_ONLY_QUERY = 'query for read only test'
     TEST_DOWNLOAD_NOW_NAME = 'test download now'
@@ -191,13 +192,11 @@ class TestReport(TestBase):
             self.settings_page.fill_email_port(smtp_service.port)
             self.settings_page.save_and_wait_for_toaster()
 
-            data_query = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
-            self.devices_page.switch_to_page()
-            self.devices_page.fill_filter(data_query)
-            self.devices_page.enter_search()
-            self.devices_page.click_save_query()
-            self.devices_page.fill_query_name(self.TEST_REPORT_EDIT_QUERY)
-            self.devices_page.click_save_query_save_button()
+            data_query1 = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
+            self.devices_page.create_saved_query(data_query1, self.TEST_REPORT_EDIT_QUERY)
+            data_query2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
+            self.devices_page.create_saved_query(data_query2, self.TEST_REPORT_EDIT_QUERY1)
+
             recipient = generate_random_valid_email()
 
             self.reports_page.create_report(report_name=self.TEST_REPORT_EDIT, add_dashboard=True,
@@ -207,6 +206,8 @@ class TestReport(TestBase):
             self.reports_page.wait_for_table_to_load()
             self.reports_page.click_report(self.TEST_REPORT_EDIT)
             self.reports_page.wait_for_spinner_to_end()
+            self.reports_page.click_include_dashboard()
+            self.reports_page.select_saved_view(self.TEST_REPORT_EDIT_QUERY1, 'Devices')
             new_subject = self.TEST_REPORT_EDIT + '_changed'
             self.reports_page.fill_email_subject(new_subject)
             self.reports_page.select_frequency(ReportFrequency.monthly)
@@ -216,8 +217,10 @@ class TestReport(TestBase):
             self.reports_page.click_report(self.TEST_REPORT_EDIT)
             self.reports_page.wait_for_spinner_to_end()
 
+            assert not self.reports_page.is_include_dashboard()
             assert self.reports_page.is_frequency_set(ReportFrequency.monthly)
             assert self.reports_page.get_email_subject() == new_subject
+            assert self.reports_page.get_saved_view() == self.TEST_REPORT_EDIT_QUERY1
 
     def test_read_only_click_add_scheduling(self):
         smtp_service = SMTPService()
