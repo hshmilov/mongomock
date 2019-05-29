@@ -275,3 +275,35 @@ class TestReport(TestBase):
 
             self.reports_page.click_add_scheduling()
             assert self.reports_page.is_add_scheduling_selected()
+
+    def test_remove_reports(self):
+        self.reports_page.switch_to_page()
+        self.reports_page.create_report(report_name='test1', add_dashboard=True)
+        self.reports_page.create_report(report_name='test2', add_dashboard=True)
+        self.reports_page.create_report(report_name='test3', add_dashboard=True)
+        self.reports_page.create_report(report_name='test4', add_dashboard=True)
+        self.reports_page.create_report(report_name='test5', add_dashboard=True)
+
+        assert self.reports_page.get_report_count() == 5
+        self.reports_page.click_select_report(1)
+        self.reports_page.click_select_report(3)
+        self.reports_page.click_remove_reports()
+        self.reports_page.wait_for_spinner_to_end()
+
+        assert self.reports_page.get_report_count() == 3
+
+    def test_remove_reports_after_select_all(self):
+        self.reports_page.switch_to_page()
+        self.reports_page.create_report(report_name='test1', add_dashboard=True)
+        self.reports_page.create_report(report_name='test2', add_dashboard=True)
+        self.reports_page.create_report(report_name='test3', add_dashboard=True)
+        self.reports_page.create_report(report_name='test4', add_dashboard=True)
+        self.reports_page.create_report(report_name='test5', add_dashboard=True)
+
+        assert self.reports_page.get_report_count() == 5
+        self.reports_page.click_select_all_reports()
+        self.reports_page.click_select_report(1)
+        self.reports_page.click_select_report(3)
+        self.reports_page.click_remove_reports()
+        self.reports_page.wait_for_spinner_to_end()
+        assert self.reports_page.get_report_count() == 2

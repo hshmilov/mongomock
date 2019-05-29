@@ -12,6 +12,7 @@ class ReportFrequency:
 
 class ReportsPage(EntitiesPage):
     NEW_REPORT_BUTTON = '+ New Report'
+    REMOVE_REPORTS_BUTTON = 'Remove'
     REPORT_CSS = '.x-report'
     REPORT_NAME_ID = 'report_name'
     REPORT_FREQUENCY = 'report_frequency'
@@ -56,8 +57,23 @@ class ReportsPage(EntitiesPage):
         self.wait_for_element_present_by_css(self.REPORT_CSS)
         self.wait_for_spinner_to_end()
 
+    def click_remove_reports(self):
+        self.find_remove_reports_button().click()
+
+    def click_select_all_reports(self):
+        self.select_all_current_page_rows_checkbox()
+
+    def click_select_report(self, index):
+        self.click_row_checkbox(index)
+
     def find_new_report_button(self):
         return self.get_button(self.NEW_REPORT_BUTTON)
+
+    def find_remove_reports_button(self):
+        return self.get_button(self.REMOVE_REPORTS_BUTTON, button_class='x-button link')
+
+    def get_report_count(self):
+        return self.count_entities()
 
     def is_disabled_new_report_button(self):
         return self.is_element_disabled(self.find_element_by_text(self.NEW_REPORT_BUTTON))
