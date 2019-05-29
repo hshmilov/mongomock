@@ -23,6 +23,17 @@ class TestReport(TestBase):
         self.reports_page.get_to_new_report_page()
         self.reports_page.fill_report_name('test')
 
+    def test_duplicate_report_name(self):
+        test_name = 'test1'
+        self.reports_page.create_report(test_name, add_dashboard=True, wait_for_toaster=True)
+        self.reports_page.create_report(test_name, add_dashboard=True, wait_for_toaster=False)
+        self.reports_page.wait_for_before_save_finished_toaster()
+        assert self.reports_page.is_name_already_exists_error_appear()
+        self.reports_page.fill_report_name('test2')
+        assert self.reports_page.get_error_text() == ''
+        self.reports_page.click_save()
+        self.reports_page.wait_for_report_is_saved_toaster()
+
     def test_add_saved_query(self):
         self.reports_page.get_to_new_report_page()
         self.reports_page.click_include_queries()
@@ -212,6 +223,7 @@ class TestReport(TestBase):
             self.reports_page.fill_email_subject(new_subject)
             self.reports_page.select_frequency(ReportFrequency.monthly)
             self.reports_page.click_save()
+            self.reports_page.wait_for_report_is_saved_toaster()
             self.reports_page.wait_for_table_to_load()
             self.reports_page.wait_for_spinner_to_end()
             self.reports_page.click_report(self.TEST_REPORT_EDIT)

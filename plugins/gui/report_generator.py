@@ -334,8 +334,9 @@ class ReportGenerator(object):
                 continue
             count = item.get('value', 0)
             width = ((180 * count) / max)
-            if item.get('meta'):
-                count = f'{count} ({item["meta"]})'
+            if item.get('meta') and item['meta'] != count:
+                meta = item['meta']
+                count = f'{count} ({meta})'
             parameters = {'quantity': count, 'width': width, 'name': item['name']}
             if textual:
                 parameters['title'] = item['name']

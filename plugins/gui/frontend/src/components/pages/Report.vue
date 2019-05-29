@@ -6,10 +6,7 @@
       { title: name }]"
   >
     <x-box>
-      <div
-        v-if="loading"
-        class="v-spinner-bg"
-      />
+      <div v-if="loading || viewsLoading" class="v-spinner-bg" />
       <pulse-loader
         :loading="loading"
         color="#FF7D46"
@@ -26,6 +23,7 @@
             :disabled="isReadOnly"
             class="report-name-textbox"
             @input="tour({name: 'reportsSchedule'})"
+            @keyup="onNameChanged"
           >
           <input
             v-else
@@ -83,16 +81,16 @@
                   <x-button
                     link
                     class="query-remove"
-                    @click="() => removeQuery(i)"
                     :disabled="isReadOnly"
+                    @click="() => removeQuery(i)"
                   >x</x-button>
                 </div>
               </div>
               <x-button
                 light
                 class="query-add"
-                @click="addQuery"
                 :disabled="isReadOnly"
+                @click="addQuery"
               >+</x-button>
             </div>
           </div>
@@ -242,7 +240,7 @@
         downloading: false,
         queryValidity: false,
         scheduleValidity: false,
-        toastTimeout: 50000,
+        toastTimeout: 5000,
         message: null,
         validity: {
           fields: [], error: ''
@@ -319,7 +317,7 @@
             return false
           }
         }
-        return true
+        return !this.validity.error;
       },
       error () {
         if (!this.report.name) {
@@ -330,13 +328,13 @@
         }
         if (this.report.include_saved_views) {
           if (!this.queryValidity) {
-            return 'The "Saved Queries" are invalid'
+            return 'Configuration for “include Saved Queries data” is invalid'
           }
         }
         if (this.report.add_scheduling) {
           return this.validity.error
         }
-        return ''
+        return this.validity.error;
       },
       mailSchema () {
         return {
@@ -472,7 +470,7 @@
                 self.message = 'Email sent successfully'
               })
             }).catch((error) => {
-              this.message = error.response.data.message
+              this.validity.error = error.response.data.message
             })
           }, 2000)
         })
@@ -482,10 +480,14 @@
         let self = this
         this.saveReport(this.report).then(
                 () => {
-                  self.exit()
+                  self.message = 'Report is saved and being generated in the background'
+                  setTimeout(() => self.exit(), 2500)
                 }
         ).catch((error) => {
-          this.message = error.response.data
+          if (error.response.status === 400)
+            this.validity.fields.push('name')
+          this.validity.error = error.response.data
+          this.message = ''
         })
       },
       exit () {
@@ -522,6 +524,12 @@
           })
         }
         return views
+      },
+      onNameChanged(){
+        if(this.validity.error && this.validity.fields.length == 1 && this.validity.fields[0] === 'name'){
+          this.validity.error = ''
+          this.validity.fields.pop()
+        }
       },
       validateEmail () {
         if (this.report.mail_properties.mailSubject && this.report.mail_properties.emailList.length > 0) {

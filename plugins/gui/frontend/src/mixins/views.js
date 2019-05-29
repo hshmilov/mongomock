@@ -4,6 +4,11 @@ import {FETCH_DATA_VIEWS} from '../store/actions'
 import {entities} from '../constants/entities'
 
 export default {
+    data () {
+        return {
+            viewsLoading: false
+        }
+    },
     computed: {
         ...mapState({
             views(state) {
@@ -39,8 +44,13 @@ export default {
         fetchViews: FETCH_DATA_VIEWS
     }),
     created() {
+        this.viewsLoading = true
+        let promises = [];
         this.entityList.forEach(module => {
-            this.fetchViews({module, type: 'saved'})
+            promises.push(this.fetchViews({module, type: 'saved'}))
+        })
+        Promise.all(promises).then(() => {
+            this.viewsLoading = false
         })
     }
 }

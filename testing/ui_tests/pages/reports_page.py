@@ -35,6 +35,10 @@ class ReportsPage(EntitiesPage):
     REPORT_TITLE_CSS = '.report-title'
     SEND_MAIL_BUTTON_ID = 'test-report'
     REPORT_DOWNLOAD_ID = 'reports_download'
+    REPORT_IS_SAVED_TOASTER = 'Report is saved and being generated in the background'
+    ERROR_TEXT_CSS = '.error-text'
+    BEFORE_SAVE_MESSAGE = 'Saving the report...'
+    REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
 
     @property
     def url(self):
@@ -50,6 +54,7 @@ class ReportsPage(EntitiesPage):
         self.wait_for_element_present_by_text(self.NEW_REPORT_BUTTON)
         self.find_new_report_button().click()
         self.wait_for_element_present_by_css(self.REPORT_CSS)
+        self.wait_for_spinner_to_end()
 
     def find_new_report_button(self):
         return self.get_button(self.NEW_REPORT_BUTTON)
@@ -60,6 +65,7 @@ class ReportsPage(EntitiesPage):
     def get_to_new_report_page(self):
         self.switch_to_page()
         self.click_new_report()
+        self.wait_for_spinner_to_end()
 
     def fill_report_name(self, name):
         report_name_element = self.driver.find_element_by_id(self.REPORT_NAME_ID)
@@ -196,7 +202,7 @@ class ReportsPage(EntitiesPage):
         self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID).click()
 
     def create_report(self, report_name, add_dashboard=True, queries=None, add_scheduling=False, email_subject=None,
-                      emails=None, period=ReportFrequency.daily):
+                      emails=None, period=ReportFrequency.daily, wait_for_toaster=True):
         self.switch_to_page()
         self.wait_for_table_to_load()
         self.click_new_report()
@@ -217,6 +223,12 @@ class ReportsPage(EntitiesPage):
                 self.fill_email(email)
             self.select_frequency(period)
         self.click_save()
+        if wait_for_toaster:
+            self.wait_for_report_is_saved_toaster()
+
+    def wait_for_report_is_saved_toaster(self):
+        self.wait_for_toaster(self.REPORT_IS_SAVED_TOASTER)
+        self.wait_for_toaster_to_end(self.REPORT_IS_SAVED_TOASTER)
 
     def is_dashboard_checkbox_disabled(self):
         return self.is_element_disabled(self.find_element_parent_by_text(self.INCLUDE_DASHBOARD_CHECKBOX))
@@ -243,3 +255,12 @@ class ReportsPage(EntitiesPage):
                          self.is_email_subject_disabled(),
                          self.is_save_button_disabled()]
         return all(disabled_list)
+
+    def get_error_text(self):
+        return self.driver.find_element_by_css_selector(self.ERROR_TEXT_CSS).text
+
+    def wait_for_before_save_finished_toaster(self):
+        self.wait_for_toaster_to_end(self.BEFORE_SAVE_MESSAGE)
+
+    def is_name_already_exists_error_appear(self):
+        return self.get_error_text() == self.REPORT_NAME_DUPLICATE_ERROR

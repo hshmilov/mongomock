@@ -35,6 +35,24 @@ export default {
         }),
         updateEmptySettings(name) {
             if (!this.globalSettings[name]) {
+                if(this.emptySettings[name]){
+                    setTimeout(() => {
+                        this.updateEmptyStates({
+                            settings: Object.keys(this.emptySettings).reduce((map, currentName) => {
+                                map[currentName] = currentName === name ? false : this.emptySettings[currentName]
+                                return map
+                            }, {})
+                        })
+                        setTimeout(() => {
+                            this.updateEmptyStates({
+                                settings: Object.keys(this.emptySettings).reduce((map, currentName) => {
+                                    map[currentName] = currentName === name
+                                    return map
+                                }, {})
+                            })
+                        })
+                    })
+                }
                 this.updateEmptyStates({
                     settings: Object.keys(this.emptySettings).reduce((map, currentName) => {
                         map[currentName] = currentName === name

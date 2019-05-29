@@ -1777,7 +1777,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 'name': report_name
             })
             if report:
-                return f'Report with "{report_name}" name already exists', 400
+                return 'Report name already taken by another report', 400
 
             report_to_add['last_updated'] = datetime.now()
             upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
