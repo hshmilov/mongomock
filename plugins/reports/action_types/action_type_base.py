@@ -3,7 +3,7 @@ import traceback
 from abc import ABC, abstractmethod
 from typing import Set, List, Iterable
 
-from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
+from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.types.enforcement_classes import Trigger, ActionRunResults, EntitiesResult, EntityResult, TriggeredReason
@@ -90,7 +90,7 @@ class ActionTypeBase(ABC):
 
     def _generate_query_link(self, view_name):
         # Getting system config from the gui.
-        system_config = self._plugin_base._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME).find_one(
+        system_config = self._plugin_base._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME).find_one(
             {'type': 'server'}) or {}
         return 'https://{}/{}?view={}'.format(
             system_config.get('server_name', 'localhost'), self._entity_type.value, view_name)

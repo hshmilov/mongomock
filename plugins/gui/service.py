@@ -65,14 +65,14 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
                                           DASHBOARD_COLLECTION,
-                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_NAME,
+                                          DEVICE_CONTROL_PLUGIN_NAME, GUI_PLUGIN_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, NODE_ID, NODE_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          SYSTEM_SETTINGS)
+                                          SYSTEM_SETTINGS, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTIONS_MAIN_FIELD,
@@ -377,8 +377,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             })
 
     def __init__(self, *args, **kwargs):
-        super().__init__(get_local_config_file(__file__),
-                         requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
+        super().__init__(get_local_config_file(__file__), *args, requested_unique_plugin_name=GUI_PLUGIN_NAME, **kwargs)
         self.__all_sessions = {}
         self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
@@ -734,7 +733,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         Trigger selected Enforcement with a static list of entities, as selected by user
         """
         post_data = request.get_json()
-        response = self._trigger_remote_plugin('reports', 'run', blocking=False, data={
+        response = self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', blocking=False, data={
             'report_name': post_data['enforcement'],
             'input': {
                 'entity': entity_type.name,
@@ -1875,7 +1874,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         if enforcement_to_add[TRIGGERS_FIELD] and not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
             enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
-        response = self.request_remote_plugin('reports', 'reports', method='put', json=enforcement_to_add)
+        response = self.request_remote_plugin('reports', REPORTS_PLUGIN_NAME, method='put', json=enforcement_to_add)
         return response.text, response.status_code
 
     def delete_enforcement(self, enforcement_selection):
@@ -1885,7 +1884,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             logger.error('No enforcement provided to be deleted')
             return ''
 
-        response = self.request_remote_plugin('reports', 'reports', method='DELETE',
+        response = self.request_remote_plugin('reports', REPORTS_PLUGIN_NAME, method='DELETE',
                                               json=enforcement_selection['ids'] if enforcement_selection['include']
                                               else [str(report['_id'])
                                                     for report in self.enforcements_collection.find({
@@ -2222,10 +2221,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         for plugin in plugins_from_db:
             # TODO check supported features
             if plugin['plugin_type'] != 'Plugin' or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME,
-                                                                              'gui',
+                                                                              GUI_PLUGIN_NAME,
                                                                               'watch_service',
-                                                                              'execution',
-                                                                              'system_scheduler']:
+                                                                              EXECUTION_PLUGIN_NAME,
+                                                                              SYSTEM_SCHEDULER_PLUGIN_NAME]:
                 continue
 
             processed_plugin = {'plugin_name': plugin['plugin_name'],
@@ -2344,7 +2343,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_add_rule_logged_in('plugins/configs/gui/FeatureFlags', methods=['POST', 'GET'], enforce_trial=False)
     def plugins_configs_feature_flags(self):
-        plugin_name = GUI_NAME
+        plugin_name = GUI_PLUGIN_NAME
         config_name = FeatureFlags.__name__
 
         if request.method == 'GET':
@@ -4312,7 +4311,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self._delete_last_report(report_name)
 
         db_connection = self._get_db_connection()
-        fs = gridfs.GridFS(db_connection[GUI_NAME])
+        fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
         written_file_id = fs.put(report, filename=report_name)
         logger.info('Report successfully placed in the db')
         return str(written_file_id)
@@ -4330,7 +4329,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 if uuid != None:
                     logger.info(f'DELETE: {uuid}')
                     db_connection = self._get_db_connection()
-                    fs = gridfs.GridFS(db_connection[GUI_NAME])
+                    fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
                     fs.delete(ObjectId(uuid))
 
     @gui_add_rule_logged_in('export_report/<report_name>', required_permissions={Permission(PermissionType.Dashboard,
@@ -4358,7 +4357,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         uuid = report['uuid']
         report_path = f'/tmp/axonius-{name}_{datetime.now()}.pdf'
         db_connection = self._get_db_connection()
-        with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_content:
+        with gridfs.GridFS(db_connection[GUI_PLUGIN_NAME]).get(ObjectId(uuid)) as report_content:
             open(report_path, 'wb').write(report_content.read())
             return report_path
 

@@ -356,6 +356,24 @@ class AxoniusService:
     def get_standalone_service(cls, name):
         return cls._get_docker_service('standalone_services', name)
 
+    def register_unique_dns(self, adapter_names,
+                            plugin_names,
+                            standalone_services_names,
+                            system_base=False,
+                            system_config=None):
+        all_services_to_start = [self.get_adapter(name) for name in adapter_names] + \
+                                [self.get_plugin(name) for name in plugin_names] + \
+                                [self.get_standalone_service(name) for name in standalone_services_names]
+
+        if system_base:
+            all_services_to_start += self.axonius_services
+
+        for service in all_services_to_start:
+            service.set_system_config(system_config)
+            service.take_process_ownership()
+            if service.get_is_container_up() and service.should_register_unique_dns:
+                service.register_unique_dns()
+
     def start_plugins(
             self,
             adapter_names,

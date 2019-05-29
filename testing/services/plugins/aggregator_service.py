@@ -12,7 +12,7 @@ from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.entities import EntityType
 from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
 from services.plugin_service import API_KEY_HEADER, PluginService
-from axonius.consts.plugin_consts import GUI_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ADAPTERS_LIST_LENGTH
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ADAPTERS_LIST_LENGTH
 from axonius.consts.gui_consts import USERS_COLLECTION
 import requests
 
@@ -101,7 +101,7 @@ class AggregatorService(PluginService):
                 EntityType.Users: aggregator_db['users_db'],
                 EntityType.Devices: aggregator_db['devices_db'],
             }
-            for system_user in self.db.client[GUI_NAME][USERS_COLLECTION].find({}):
+            for system_user in self.db.client[GUI_PLUGIN_NAME][USERS_COLLECTION].find({}):
                 for entity_type in EntityType:
                     entity_db_map[entity_type].update_many({
                         'tags.name': 'Notes',

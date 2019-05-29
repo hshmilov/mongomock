@@ -13,10 +13,11 @@ from axonius.consts.system_consts import CUSTOMER_CONF_PATH
 from axonius.utils.wait import wait_until
 from builds import Builds
 from builds.builds_factory import BuildsInstance
-from devops.scripts.instances.start_system_on_first_boot import \
+from devops.scripts.instances.system_boot import \
     BOOTED_FOR_PRODUCTION_MARKER_PATH
 from test_credentials.test_nexpose_credentials import client_details
 from ui_tests.tests.ui_test_base import TestBase
+from deployment.install import SYSTEM_BOOT_CRON_SCRIPT_PATH
 
 NODE_MAKER_USERNAME = 'node_maker'
 NODE_MAKER_PASSWORD = 'M@ke1tRain'
@@ -25,7 +26,7 @@ DEFAULT_IMAGE_USERNAME = 'ubuntu'
 DEFAULT_IMAGE_PASSWORD = 'bringorder'
 AUTO_TEST_VM_KEY_PAIR = 'Auto-Test-VM-Key'
 
-RESTART_LOG_PATH = Path('/var/log/start_system_on_reboot.log')
+RESTART_LOG_PATH = Path(f'/var/log/{os.path.basename(SYSTEM_BOOT_CRON_SCRIPT_PATH).split(".")[0]}.log')
 
 DEFAULT_LIMIT = 10
 MAX_CHARS = 10 ** 9
@@ -183,7 +184,7 @@ def wait_for_booted_for_production(instance: BuildsInstance):
 def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
     get_log_command = f'tail {RESTART_LOG_PATH.absolute().as_posix()}'
     restart_log_tail = instance.ssh(get_log_command)
-    logger.info(f'/var/log/start_system_on_reboot.log : {restart_log_tail[1]}')
+    logger.info(f'{RESTART_LOG_PATH} : {restart_log_tail[1]}')
 
 
 def setup_instances(logger, instance_name, export_name=None):

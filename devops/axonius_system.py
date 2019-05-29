@@ -21,7 +21,7 @@ from axonius.consts.system_consts import (METADATA_PATH,
 def main(command):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} [-h] {system,adapter,service} [<args>]
-       {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
+       {name} system [-h] {up,down,build,register} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]
        {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
        {name} ls
@@ -68,7 +68,7 @@ def system_entry_point(args):
 {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]"""[1:].
                                      replace('{name}', os.path.basename(__file__)))
-    parser.add_argument('mode', choices=['up', 'down', 'build'])
+    parser.add_argument('mode', choices=['up', 'down', 'build', 'register'])
     parser.add_argument('--all', action='store_true', default=False, help='All adapters and services')
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
@@ -170,6 +170,12 @@ def system_entry_point(args):
         print(f'Stopping system and {args.adapters + args.services}')
         axonius_system.stop_plugins(args.adapters, args.services, [], should_delete=False)
         axonius_system.stop(should_delete=False)
+    elif args.mode == 'register':
+        print(f'Registering system and {args.adapters + args.services}')
+        axonius_system.register_unique_dns(system_base=True,
+                                           adapter_names=args.adapters,
+                                           plugin_names=args.services,
+                                           standalone_services_names=standalone_services, system_config=system_config)
     else:
         assert not args.restart and not args.skip
         print(f'Building system and {args.adapters + args.services}')
@@ -205,7 +211,7 @@ def service_entry_point(target, args):
 {name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('name')
-    parser.add_argument('mode', choices=['up', 'down', 'build'])
+    parser.add_argument('mode', choices=['up', 'down', 'build', 'register'])
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
@@ -270,6 +276,9 @@ def service_entry_point(target, args):
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')
         axonius_system.stop_plugins(adapters, services, standalone_services, should_delete=False)
+    elif args.mode == 'register':
+        print(f'Registering {args.name}')
+        axonius_system.register_unique_dns(adapters, services, standalone_services, system_config=system_config)
     else:
         assert not args.restart
         print(f'Building {args.name}')

@@ -12,12 +12,13 @@ from install import (TEMPORAL_PATH,
                      INSTANCES_SETUP_SCRIPT_PATH,
                      INSTANCE_CONNECT_USER_PASSWORD,
                      DELETE_INSTANCES_USER_CRON_SCRIPT_PATH,
-                     START_SYSTEM_ON_FIRST_BOOT_CRON_SCRIPT_PATH,
+                     SYSTEM_BOOT_CRON_SCRIPT_PATH,
                      INSTANCE_SETTINGS_DIR_NAME,
                      BOOTED_FOR_PRODUCTION_MARKER_PATH,
                      DEPLOYMENT_FOLDER_PATH,
                      chown_folder,
-                     set_special_permissions)
+                     set_special_permissions,
+                     OLD_CRONJOBS)
 from scripts.instances.instances_consts import SUBNET_IP_RANGE
 from utils import AXONIUS_DEPLOYMENT_PATH, print_state, current_file_system_path, VENV_WRAPPER, run_as_root
 
@@ -93,16 +94,21 @@ def setup_instances_user():
                     shell=True)
 
 
-def create_cronjob(script_path, cronjob_timing, specific_run_env=''):
+def create_cronjob(script_path, cronjob_timing, specific_run_env='', keep_script_location=False):
     print_state(f'Creating {script_path} cronjob')
-    crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}/etc/cron.d/{script_name} > ' \
-                      '/var/log/{log_name} 2>&1"; }} | crontab -'
+    if keep_script_location:
+        crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}{script_name} > ' \
+                          '/var/log/{log_name} 2>&1"; }} | crontab -'
+    else:
+        crontab_command = 'crontab -l | {{ cat; echo "{timing} {specific_run_env}/etc/cron.d/{script_name} > ' \
+                          '/var/log/{log_name} 2>&1"; }} | crontab -'
 
-    shutil.copyfile(script_path,
-                    f'/etc/cron.d/{os.path.basename(script_path)}')
-    subprocess.check_call(
-        ['chown', 'root:root', f'/etc/cron.d/{os.path.basename(script_path)}'])
-    subprocess.check_call(['chmod', '0700', f'/etc/cron.d/{os.path.basename(script_path)}'])
+        shutil.copyfile(script_path,
+                        f'/etc/cron.d/{os.path.basename(script_path)}')
+        subprocess.check_call(
+            ['chown', 'root:root', f'/etc/cron.d/{os.path.basename(script_path)}'])
+        subprocess.check_call(['chmod', '0700', f'/etc/cron.d/{os.path.basename(script_path)}'])
+
     try:
         cron_jobs = subprocess.check_output(['crontab', '-l']).decode('utf-8')
     except subprocess.CalledProcessError as exc:
@@ -111,16 +117,25 @@ def create_cronjob(script_path, cronjob_timing, specific_run_env=''):
     if specific_run_env != '':
         specific_run_env += ' '
 
+    script_path = os.path.basename(script_path) if not keep_script_location else script_path
+
     if os.path.basename(script_path) not in cron_jobs:
-        subprocess.check_call(crontab_command.format(timing=cronjob_timing, script_name=os.path.basename(script_path),
+        subprocess.check_call(crontab_command.format(timing=cronjob_timing, script_name=script_path,
                                                      log_name=f'{os.path.basename(script_path).split(".")[0]}.log',
                                                      specific_run_env=specific_run_env),
                               shell=True)
 
 
+def cleanup_old_cronjobs():
+    remove_cron_command = 'crontab -l | grep -v \'{cronjob_name}\' | crontab -'
+    for cronjob_name in OLD_CRONJOBS:
+        subprocess.check_call(remove_cron_command.format(cronjob_name=cronjob_name), shell=True)
+
+
 def setup_instances_cronjobs():
+    cleanup_old_cronjobs()
     create_cronjob(DELETE_INSTANCES_USER_CRON_SCRIPT_PATH, '*/1 * * * *', specific_run_env='/usr/local/bin/python3')
-    create_cronjob(START_SYSTEM_ON_FIRST_BOOT_CRON_SCRIPT_PATH, '@reboot', specific_run_env='/usr/local/bin/python3')
+    create_cronjob(SYSTEM_BOOT_CRON_SCRIPT_PATH, '@reboot', keep_script_location=True)
 
 
 def push_old_instances_settings():

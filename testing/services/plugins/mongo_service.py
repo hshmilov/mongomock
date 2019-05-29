@@ -5,7 +5,7 @@ import pymongo
 from retrying import retry
 
 from axonius.plugin_base import EntityType
-from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_NAME,
+from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION)
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
@@ -156,16 +156,16 @@ class MongoService(WeaveService):
             return self.client[AGGREGATOR_PLUGIN_NAME]['historical_devices_db_view']
 
     def gui_users_collection(self):
-        return self.client[GUI_NAME]['users']
+        return self.client[GUI_PLUGIN_NAME]['users']
 
     def gui_config_collection(self):
-        return self.client[GUI_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
+        return self.client[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
 
     def get_gui_entity_fields(self, entity_type: EntityType):
         if entity_type == EntityType.Users:
-            return self.client[GUI_NAME]['users_fields']
+            return self.client[GUI_PLUGIN_NAME]['users_fields']
         if entity_type == EntityType.Devices:
-            return self.client[GUI_NAME]['devices_fields']
+            return self.client[GUI_PLUGIN_NAME]['devices_fields']
 
     def gui_reports_config_collection(self):
-        return self.client[GUI_NAME]['reports_config']
+        return self.client[GUI_PLUGIN_NAME]['reports_config']

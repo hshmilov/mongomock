@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import time
-from pathlib import Path
-
-CORTEX_PATH = Path('/home/ubuntu/cortex')
-AXONIUS_SETTINGS_PATH = CORTEX_PATH / '.axonius_settings'
-BOOTED_FOR_PRODUCTION_MARKER_PATH = AXONIUS_SETTINGS_PATH / '.booted_for_production'
+from devops.scripts.instances.instances_consts import BOOTED_FOR_PRODUCTION_MARKER_PATH, CORTEX_PATH
 
 
 def raise_system():
@@ -29,13 +25,20 @@ def chown_cortex():
     subprocess.check_call(['chown', '-R', 'ubuntu:ubuntu', CORTEX_PATH])
 
 
-def main():
-    # Checks if this is a first boot for a machine (meaning it's new.)
-    if BOOTED_FOR_PRODUCTION_MARKER_PATH.exists():
-        return
+def set_unique_dns():
+    subprocess.check_call(['./axonius.sh', 'system', 'register', '--all'],
+                          cwd=str(CORTEX_PATH))
 
+
+def main():
     # Waiting for weave network to be stable.
     wait_until_machine_is_ready()
+
+    # Checks if this is a first boot for a machine (meaning it's new.)
+    if BOOTED_FOR_PRODUCTION_MARKER_PATH.exists():
+        set_unique_dns()
+        print('System Is Registered.')
+        return
 
     raise_system()
     chown_cortex()

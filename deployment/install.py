@@ -35,8 +35,7 @@ INSTANCES_SCRIPT_PATH = 'devops/scripts/instances'
 WEAVE_PATH = '/usr/local/bin/weave'
 DELETE_INSTANCES_USER_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
                                                       'delete_instances_user.py')
-START_SYSTEM_ON_FIRST_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
-                                                           'start_system_on_first_boot.py')
+SYSTEM_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'machine_boot.sh')
 INSTANCES_SETUP_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH, 'setup_node.py')
 INSTANCE_SETTINGS_DIR_NAME = '.axonius_settings'
 AXONIUS_SETTINGS_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME)
@@ -52,6 +51,8 @@ CHMOD_FILES = [
     os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops/scripts/log_utils/raw_log.py'),
     os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops/scripts/discover_now.py'),
 ]
+
+OLD_CRONJOBS = ['restart_system_on_reboot', 'start_system_on_first_boot']
 
 
 def main():

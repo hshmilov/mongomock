@@ -54,7 +54,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORE_UNIQUE_NAME,
                                           CORRELATE_BY_EMAIL_PREFIX,
                                           CORRELATION_SETTINGS,
-                                          GUI_NAME,
+                                          GUI_PLUGIN_NAME,
                                           MAX_WORKERS,
                                           NODE_ID, NODE_INIT_NAME,
                                           NOTIFICATIONS_SETTINGS,
@@ -73,7 +73,9 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PROXY_VERIFY,
                                           PROXY_FOR_ADAPTERS,
                                           GLOBAL_KEYVAL_COLLECTION,
-                                          NODE_USER_PASSWORD)
+                                          NODE_USER_PASSWORD,
+                                          REPORTS_PLUGIN_NAME,
+                                          EXECUTION_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -451,7 +453,7 @@ class PluginBase(Configurable, Feature):
         }
 
         # GUI Stuff
-        gui_db_connection = self._get_db_connection()[GUI_NAME]
+        gui_db_connection = self._get_db_connection()[GUI_PLUGIN_NAME]
         user_view = gui_db_connection["user_views"]
         device_view = gui_db_connection["device_views"]
 
@@ -980,7 +982,7 @@ class PluginBase(Configurable, Feature):
         Sometimes the system will make changes that will need to trigger a dashboard change
         :param clear_slow: Whether or not to also clear cache for historical dashboards that rarely change
         """
-        self._trigger_remote_plugin(GUI_NAME, 'clear_dashboard_cache', blocking=False,
+        self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'clear_dashboard_cache', blocking=False,
                                     data={
                                         'clear_slow': clear_slow
                                     })
@@ -1154,7 +1156,7 @@ class PluginBase(Configurable, Feature):
         uri = f"action/{action_type}?axon_id={axon_id}"
 
         result = self.request_remote_plugin(uri,
-                                            plugin_unique_name='execution',
+                                            plugin_unique_name=EXECUTION_PLUGIN_NAME,
                                             method='POST',
                                             data=json.dumps(data))
 
@@ -2227,7 +2229,7 @@ class PluginBase(Configurable, Feature):
         :return: List of affected entities
         """
         # all labels belong to GUI
-        additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = GUI_NAME, GUI_NAME
+        additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = GUI_PLUGIN_NAME, GUI_PLUGIN_NAME
         additional_data['label_value'] = label if is_enabled else ''
 
         result = self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None,
@@ -2519,7 +2521,7 @@ class PluginBase(Configurable, Feature):
         """
         Check whether system has a trial expiration that has passed
         """
-        feature_flags_config = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_NAME).find_one({
+        feature_flags_config = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME).find_one({
             'config_name': FEATURE_FLAGS_CONFIG
         })
         if not feature_flags_config['config'].get(FeatureFlagsNames.TrialEnd):

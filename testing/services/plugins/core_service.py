@@ -1,7 +1,7 @@
 import requests
 import traceback
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 
@@ -33,7 +33,7 @@ class CoreService(PluginService):
             if current_config:
                 maintenance_config = current_config['config'].get('maintenance_settings')
                 if maintenance_config:
-                    self.db.get_collection(GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION).insert_one({
+                    self.db.get_collection(GUI_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION).insert_one({
                         'type': 'maintenance',
                         'provision': maintenance_config.get('analytics', True),
                         'analytics': maintenance_config.get('analytics', True),

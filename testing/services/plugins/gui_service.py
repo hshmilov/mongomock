@@ -11,7 +11,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           DASHBOARD_COLLECTION,
-                                          GUI_NAME,
+                                          GUI_PLUGIN_NAME,
                                           PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           MAINTENANCE_TYPE,
@@ -206,7 +206,7 @@ class GuiService(PluginService):
                 p.name: PermissionLevel.Restricted.name for p in PermissionType
             }
             permissions[PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
-            self.db.get_collection(GUI_NAME, ROLES_COLLECTION).update_one({
+            self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).update_one({
                 'name': PREDEFINED_ROLE_RESTRICTED
             }, {
                 '$set': {
@@ -218,13 +218,14 @@ class GuiService(PluginService):
             config_match = {
                 'config_name': CONFIG_CONFIG
             }
-            current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+            current_config = self.db.get_collection(
+                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
             if current_config:
                 current_config_google = current_config['config']['google_login_settings']
                 if current_config_google.get('client_id'):
                     current_config_google['client'] = current_config_google['client_id']
                     del current_config_google['client_id']
-                    self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
                         config_match, current_config)
 
             self.db_schema_version = 4
@@ -246,7 +247,7 @@ class GuiService(PluginService):
                                     },
                                     {
                                         PLUGIN_NAME: {
-                                            '$ne': GUI_NAME
+                                            '$ne': GUI_PLUGIN_NAME
                                         }
                                     }
                                 ]
@@ -255,8 +256,8 @@ class GuiService(PluginService):
                     },
                     update={
                         '$set': {
-                            f'tags.$[i].{PLUGIN_NAME}': GUI_NAME,
-                            f'tags.$[i].{PLUGIN_UNIQUE_NAME}': GUI_NAME
+                            f'tags.$[i].{PLUGIN_NAME}': GUI_PLUGIN_NAME,
+                            f'tags.$[i].{PLUGIN_UNIQUE_NAME}': GUI_PLUGIN_NAME
                         }
                     },
                     array_filters=[
@@ -264,7 +265,7 @@ class GuiService(PluginService):
                             '$and': [
                                 {
                                     f'i.{PLUGIN_NAME}': {
-                                        '$ne': GUI_NAME
+                                        '$ne': GUI_PLUGIN_NAME
                                     }
                                 },
                                 {
@@ -289,13 +290,14 @@ class GuiService(PluginService):
             config_match = {
                 'config_name': CONFIG_CONFIG
             }
-            current_config = self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+            current_config = self.db.get_collection(
+                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
             if current_config:
                 current_config_okta = current_config['config']['okta_login_settings']
                 if current_config_okta.get('gui_url'):
                     current_config_okta['gui2_url'] = current_config_okta['gui_url']
                     del current_config_okta['gui_url']
-                    self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
                         config_match, current_config)
             self.db_schema_version = 6
         except Exception as e:
@@ -305,12 +307,12 @@ class GuiService(PluginService):
         print('upgrade to schema 7')
         try:
             # If Instances screen default doesn't exist add it with Resticted default.
-            self.db.get_collection(GUI_NAME, ROLES_COLLECTION).update_many(
+            self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).update_many(
                 {f'permissions.{PermissionType.Instances.name}': {'$exists': False}},
                 {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
 
             # Update Admin role with ReadWrite
-            self.db.get_collection(GUI_NAME, ROLES_COLLECTION).find_one_and_update(
+            self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).find_one_and_update(
                 {'name': PREDEFINED_ROLE_ADMIN},
                 {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.ReadWrite.name}})
             self.db_schema_version = 7
@@ -321,14 +323,14 @@ class GuiService(PluginService):
         print('upgrade to schema 8')
         try:
             # If Instances screen default doesn't exist add it with Resticted default.
-            self.db.get_collection(GUI_NAME, USERS_COLLECTION).update_many(
+            self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
                 {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
                  '$or': [{'admin': False}, {'admin': {'$exists': False}}],
                  'role_name': {'$ne': PREDEFINED_ROLE_ADMIN}},
                 {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
 
             # Update Admin role with ReadWrite
-            self.db.get_collection(GUI_NAME, USERS_COLLECTION).update_many(
+            self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
                 {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
                  '$or': [{'admin': False}, {'admin': {'$exists': False}}],
                  'role_name': PREDEFINED_ROLE_ADMIN},
@@ -342,7 +344,7 @@ class GuiService(PluginService):
         try:
 
             # All non-admin Users - change any Alerts screen permissions to be under Enforcements screen
-            users_col = self.db.get_collection(GUI_NAME, USERS_COLLECTION)
+            users_col = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
             regular_users = users_col.find({
                 '$or': [{
                     'admin': False
@@ -368,7 +370,7 @@ class GuiService(PluginService):
                 })
 
             # Roles - change any Alerts screen permissions to be under Enforcements screen
-            roles_col = self.db.get_collection(GUI_NAME, ROLES_COLLECTION)
+            roles_col = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
             for role in roles_col.find({}):
                 permissions = role['permissions']
                 if role['name'] == PREDEFINED_ROLE_ADMIN:
@@ -409,7 +411,7 @@ class GuiService(PluginService):
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
         locked_actions
         """
-        self.db.get_collection(GUI_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
             'config_name': FEATURE_FLAGS_CONFIG
         }, {
             '$addToSet': {

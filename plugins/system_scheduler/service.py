@@ -11,7 +11,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from axonius.adapter_base import AdapterBase
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
-    STATIC_CORRELATOR_PLUGIN_NAME, CORE_UNIQUE_NAME
+    STATIC_CORRELATOR_PLUGIN_NAME, CORE_UNIQUE_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME, STATIC_ANALYSIS_PLUGIN_NAME, \
+    GENERAL_INFO_PLUGIN_NAME
 from axonius.consts.scheduler_consts import SchedulerState
 
 from axonius.plugin_exceptions import PhaseExecutionException
@@ -28,7 +29,7 @@ from flask import jsonify
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # Plugins that should always run async
-ALWAYS_ASYNC_PLUGINS = ['static_analysis', 'general_info']
+ALWAYS_ASYNC_PLUGINS = [STATIC_ANALYSIS_PLUGIN_NAME, GENERAL_INFO_PLUGIN_NAME]
 
 
 class SystemSchedulerService(Triggerable, PluginBase, Configurable):
@@ -274,7 +275,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 post_correlations_plugins = [x
                                              for x
                                              in post_correlations_plugins
-                                             if x[PLUGIN_NAME] != 'reimage_tags_analysis']
+                                             if x[PLUGIN_NAME] != REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME]
 
             self._run_plugins(post_correlations_plugins)
 

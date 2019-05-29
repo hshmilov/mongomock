@@ -11,13 +11,17 @@ METADATA_PATH = SHARED_READONLY_FULL_PATH / '__build_metadata'
 # SERVICES #
 CORE_UNIQUE_NAME = 'core'
 AGGREGATOR_PLUGIN_NAME = 'aggregator'
-GUI_NAME = 'gui'
+GUI_PLUGIN_NAME = 'gui'
 STATIC_CORRELATOR_PLUGIN_NAME = 'static_correlator'
 STATIC_USERS_CORRELATOR_PLUGIN_NAME = 'static_users_correlator'
 SYSTEM_SCHEDULER_PLUGIN_NAME = 'system_scheduler'
 DEVICE_CONTROL_PLUGIN_NAME = 'device_control'
 GENERAL_INFO_PLUGIN_NAME = 'general_info'
 HEAVY_LIFTING_PLUGIN_NAME = 'heavy_lifting_plugin'
+STATIC_ANALYSIS_PLUGIN_NAME = 'static_analysis'
+REPORTS_PLUGIN_NAME = 'reports'
+REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME = 'reimage_tags_analysis'
+EXECUTION_PLUGIN_NAME = 'execution'
 
 # ADAPTERS #
 ACTIVE_DIRECTORY_PLUGIN_NAME = 'active_directory_adapter'

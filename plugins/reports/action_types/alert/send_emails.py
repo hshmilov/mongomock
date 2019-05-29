@@ -5,7 +5,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 
 
-from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
+from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME
 
 from axonius.consts.report_consts import LOGOS_PATH
 from axonius.entities import EntityType
@@ -325,7 +325,7 @@ class SendEmailsAction(ActionTypeAlert):
 
     def __generate_entity_link(self, entity_id):
         # Getting system config from the gui.
-        system_config = self._plugin_base._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME).find_one(
+        system_config = self._plugin_base._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME).find_one(
             {'type': 'server'}) or {}
         return 'https://{}/{}/{}'.format(
             system_config.get('server_name', 'localhost'), self._entity_type.value, entity_id)

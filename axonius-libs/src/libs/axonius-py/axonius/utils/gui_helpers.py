@@ -24,7 +24,7 @@ from pymongo.errors import PyMongoError
 from retry.api import retry_call
 
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME, GUI_NAME)
+                                          PLUGIN_UNIQUE_NAME, GUI_PLUGIN_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
@@ -922,7 +922,7 @@ def entity_fields(entity_type: EntityType):
             continue
 
         plugin_fields_existing = per_adapter_exist_field.get(plugin_unique_name)
-        if plugin_fields_existing and plugin_name != GUI_NAME:
+        if plugin_fields_existing and plugin_name != GUI_PLUGIN_NAME:
             # We don't filter out GUI fields
             # https://axonius.atlassian.net/browse/AX-3113
             _filter_out_nonexisting_fields(plugin_fields_record['schema'], set(plugin_fields_existing['fields']))
