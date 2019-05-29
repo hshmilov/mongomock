@@ -163,7 +163,8 @@ CUSTOMER_CONF = '''
       "webroot",
       "samange",
       "bitdefender",
-      "secdo"
+      "secdo",
+      "bitsight"
     ],
     "remove-from-exclude": []
   }
