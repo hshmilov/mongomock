@@ -1,7 +1,9 @@
-DEVOPS=$(realpath $(dirname ${BASH_SOURCE[0]}))
-ORIG_PATH=$PATH
+case "${SHELL##*/}" in
+ zsh) DEVOPS="$(cd "$(dirname "${0:A}")" && pwd)" ;;
+   *) DEVOPS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" ;;
+esac
 
-if [ `echo $PATH | grep  devops` ] ; then
+if echo "$PATH" | grep -q devops; then
     echo "Already set"
 else
     PATH=$DEVOPS:$DEVOPS/scripts:$DEVOPS/scripts/automate_dev/:$DEVOPS/scripts/log_utils/:$PATH
