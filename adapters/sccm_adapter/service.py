@@ -6,15 +6,13 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.smart_json_class import SmartJsonClass
-from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import get_organizational_units_from_dn, get_exception_string
-from axonius.clients.mssql.connection import MSSQLConnection
-import sccm_adapter.consts as consts
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import get_exception_string, get_organizational_units_from_dn
+from axonius.utils.parsing import get_organizational_units_from_dn, get_exception_string, is_valid_ipv6
+import sccm_adapter.consts as consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -58,7 +56,7 @@ class SccmVm(SmartJsonClass):
     vm_timestamp = Field(str, 'VM Timestamp')
 
 
-class SccmAdapter(AdapterBase):
+class SccmAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         resource_id = Field(str, 'Resource ID')
         top_user = Field(str, 'Top Console User')
@@ -363,6 +361,8 @@ class SccmAdapter(AdapterBase):
                         mac, ips = nic.split('@')
                         mac = mac.strip()
                         ips = [ip.strip() for ip in ips.split(', ')]
+                        if self.__exclude_ipv6:
+                            ips = [ip for ip in ips if not is_valid_ipv6(ip)]
                         mac_total.append(mac)
                         ips_total.extend(ips)
                         device.add_nic(mac, ips)
@@ -389,6 +389,8 @@ class SccmAdapter(AdapterBase):
                         ips_empty_mac.extend(ip_raw.split(','))
                         ips_empty_mac = list(set([ip.strip() for ip in ips_empty_mac if ip.strip()]))
                         ips_empty_mac = list(set(ips_empty_mac) - set(ips_total))
+                        if self.__exclude_ipv6:
+                            ips_empty_mac = [ip for ip in ips_empty_mac if not is_valid_ipv6(ip)]
                         device.add_nic(None, ips_empty_mac)
                 except Exception:
                     logger.exception(f'Problem getting IP for {device_raw}')
@@ -561,3 +563,27 @@ class SccmAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'exclude_ipv6',
+                    'title': 'Exclude IPv6 addresses',
+                    'type': 'bool'
+                },
+            ],
+            "required": [],
+            "pretty_name": "SCCM Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'exclude_ipv6': False,
+        }
+
+    def _on_config_update(self, config):
+        self.__exclude_ipv6 = config['exclude_ipv6']

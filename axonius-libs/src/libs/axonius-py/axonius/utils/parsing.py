@@ -392,6 +392,32 @@ def is_valid_ip(ip):
         return False
 
 
+def is_valid_ipv4(ip):
+    """Check if an ip address is in valid IPv4 format.
+
+    :param ip: IP address to check.
+    :type ip: str
+    :rtype: bool
+    """
+    try:
+        return isinstance(ipaddress.ip_address(ip), ipaddress.IPv4Address)
+    except Exception:
+        return False
+
+
+def is_valid_ipv6(ip):
+    """Check if an ip address is in valid IPv6 format.
+
+    :param ip: IP address to check.
+    :type ip: str
+    :rtype: bool
+    """
+    try:
+        return isinstance(ipaddress.ip_address(ip), ipaddress.IPv6Address)
+    except Exception:
+        return False
+
+
 def format_mac(mac: str):
     if mac is None or mac == '':
         return None
