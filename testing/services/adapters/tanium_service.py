@@ -9,7 +9,7 @@ class TaniumService(AdapterService):
         super().__init__('tanium')
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope='module', autouse=True)
 def tanium_fixture(request):
     service = TaniumService()
     initialize_fixture(request, service)

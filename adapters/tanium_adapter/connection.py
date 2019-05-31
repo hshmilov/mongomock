@@ -11,22 +11,23 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class TaniumConnection(RESTConnection):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(url_base_prefix='/', *args, **kwargs)
-        self._permanent_headers = {'Content-Type': 'text/xml; charset=utf-8', 'Accept': '*/*'}
+        super().__init__(*args,
+                         url_base_prefix='/',
+                         headers={'Content-Type': 'text/xml; charset=utf-8', 'Accept': '*/*'},
+                         **kwargs)
 
     def _connect(self):
-        if self._username is not None and self._password is not None:
-            connection_dict = {'username': base64.b64encode(self._username.encode('utf-8')).decode('utf-8'),
-                               'password': base64.b64encode(self._password.encode('utf-8')).decode('utf-8')}
-            self._session_headers = connection_dict
-            self._session_token = self._post('auth', body_params=connection_dict, use_json_in_response=False)
-            self._session_headers = {'session': self._session_token}
-            xml_str = self._post('soap', use_json_in_response=False, use_json_in_body=False,
-                                 body_params=consts.GET_DEVICES_BODY_PARAMS)
-            if '403 Forbidden' in str(xml_str):
-                raise RESTException('Insufficient privilege to get devices')
-        else:
+        if not self._username or not self._password:
             raise RESTException('No user name or password')
+        connection_dict = {'username': base64.b64encode(self._username.encode('utf-8')).decode('utf-8'),
+                           'password': base64.b64encode(self._password.encode('utf-8')).decode('utf-8')}
+        self._session_headers = connection_dict
+        self._session_token = self._post('auth', body_params=connection_dict, use_json_in_response=False)
+        self._session_headers = {'session': self._session_token}
+        xml_str = self._post('soap', use_json_in_response=False, use_json_in_body=False,
+                             body_params=consts.GET_DEVICES_BODY_PARAMS)
+        if '403 Forbidden' in str(xml_str):
+            raise RESTException('Insufficient privilege to get devices')
 
     def get_device_list(self):
         xml = ET.fromstring(self._post('soap', use_json_in_response=False, use_json_in_body=False,

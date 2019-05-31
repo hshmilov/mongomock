@@ -64,6 +64,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                 username=client_config[consts.USERNAME],
                 password=client_config[consts.PASSWORD],
                 verify_ssl=client_config.get('verify_ssl') or False,
+                https_proxy=client_config.get('https_proxy')
             )
             with connection:
                 pass
@@ -91,6 +92,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                 {'name': consts.USERNAME, 'title': 'User Name', 'type': 'string'},
                 {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
+                {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'}
             ],
             'required': [consts.QUALYS_SCANS_DOMAIN, consts.USERNAME, consts.PASSWORD, consts.VERIFY_SSL],
             'type': 'array',

@@ -1,4 +1,3 @@
-DEFAULT_TANIUM_PORT = '443'
 GET_DEVICES_BODY_PARAMS = '<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" ' \
                           'xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:' \
                           'xsi="http://www.w3.org/2001/XMLSchema-instance">' \

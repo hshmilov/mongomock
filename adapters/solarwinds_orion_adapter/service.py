@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -17,7 +18,7 @@ SOLARWINDS_PORT = 17778
 # pylint: disable=too-many-instance-attributes,too-many-branches,too-many-statements
 
 
-class SolarwindsOrionAdapter(AdapterBase):
+class SolarwindsOrionAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         uri = Field(str, 'URI')
         ip_address_guid = Field(str, 'IP Address GUID')
@@ -78,7 +79,7 @@ class SolarwindsOrionAdapter(AdapterBase):
         :return: device list of the patrolling user's devices
         """
         client_data.connect()
-        yield from client_data.get_device_list()
+        yield from client_data.get_device_list(fetch_ipam=self.__fetch_ipam)
 
     def _clients_schema(self):
         """
@@ -279,3 +280,29 @@ class SolarwindsOrionAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_ipam',
+                    'title': 'Fetch IPAM',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_ipam'
+            ],
+            'pretty_name': 'Solarwinds Orion Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_ipam': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_ipam = config['fetch_ipam']

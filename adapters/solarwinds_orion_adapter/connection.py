@@ -38,7 +38,7 @@ class SolarwindsConnection:
         except Exception as e:
             raise ValueError(f'Error connecting to the server: {str(e)}')
 
-    def get_device_list(self):
+    def get_device_list(self, fetch_ipam=True):
         """
         Makes an SQL query using the SwisClient API that obtains the following
         information about each node in the network.
@@ -119,12 +119,13 @@ class SolarwindsConnection:
         except Exception:
             logger.exception(f'Problem getting lan info')
         try:
-            dhcp_results = self.client.query('Select IPAddress, MAC, LeaseExpires, '
-                                             'DhcpClientName, Vendor, MachineType, '
-                                             'Description, DisplayName, Status  from IPAM.IPNode')
-            if dhcp_results and dhcp_results.get('results'):
-                for device_raw in dhcp_results.get('results'):
-                    yield device_raw, 'dhcp'
+            if fetch_ipam:
+                dhcp_results = self.client.query('Select IPAddress, MAC, LeaseExpires, '
+                                                 'DhcpClientName, Vendor, MachineType, '
+                                                 'Description, DisplayName, Status  from IPAM.IPNode')
+                if dhcp_results and dhcp_results.get('results'):
+                    for device_raw in dhcp_results.get('results'):
+                        yield device_raw, 'dhcp'
         except Exception:
             logger.exception(f'Problem getting dhcp info')
         logger.info('Parsed all of the device data from the Orion DB')

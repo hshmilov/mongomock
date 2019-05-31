@@ -374,7 +374,6 @@ testing/services/adapters/chef_service.py
 testing/services/adapters/cisco_meraki_service.py
 testing/services/adapters/cisco_prime_service.py
 testing/services/adapters/cisco_service.py
-testing/services/adapters/tanium_service.py
 testing/services/adapters/csv_service.py
 testing/services/adapters/cylance_service.py
 testing/services/adapters/desktop_central_service.py
