@@ -22,8 +22,8 @@ class MasterProxyService(WeaveService):
                                     timeout=(10, 60))
             if response.status_code == 200:
                 print(f'proxy started ok')
-            else:
-                print(f'ERROR - failed to start {CONTAINER_NAME} - {response}')
+                return True
+            print(f'ERROR - failed to start {CONTAINER_NAME} - {response}')
         except Exception as e:
             print(f'ERROR - failed to start proxy - {e}')
 
@@ -31,7 +31,7 @@ class MasterProxyService(WeaveService):
         return True
 
     def __init__(self):
-        super().__init__(CONTAINER_NAME, service_dir='services/standalone_services')
+        super().__init__(CONTAINER_NAME, service_dir='services/plugins/master_proxy')
 
     @staticmethod
     def port():
@@ -48,3 +48,13 @@ class MasterProxyService(WeaveService):
     @property
     def volumes_override(self):
         return []
+
+    def get_main_file(self):
+        return ''
+
+    def get_uwsgi_file(self):
+        return ''
+
+    @property
+    def _additional_parameters(self):
+        return ['ANY']

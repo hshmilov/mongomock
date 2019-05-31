@@ -14,5 +14,6 @@ RUN apk add --no-cache \
 	tinyproxy
 
 COPY run.sh /opt/docker-tinyproxy/run.sh
+RUN chmod +x /opt/docker-tinyproxy/run.sh
 
 ENTRYPOINT ["/opt/docker-tinyproxy/run.sh"]

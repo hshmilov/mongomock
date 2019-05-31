@@ -1,5 +1,6 @@
 import io
 
+from services.ports import DOCKER_PORTS
 from test_helpers.machines import PROXY_PORT, PROXY_IP
 from ui_tests.tests.instances_test_base import TestInstancesBase
 
@@ -37,4 +38,10 @@ class TestInstancesUpgrade(TestInstancesBase):
         rc, out = instance.ssh(f'bash {upgrade_script_path}')
         if rc != 0:
             self.logger.info(f'ERROR: FAILED TO UPGRADE {out}')
+        assert rc == 0
+
+        port = DOCKER_PORTS['master-proxy']
+        rc, out = instance.ssh(f'export https_proxy=https://localhost:{port} && curl https://manage.chef.io')
+        if rc != 0:
+            self.logger.info(f'proxy failed: {out}')
         assert rc == 0

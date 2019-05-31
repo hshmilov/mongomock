@@ -12,11 +12,13 @@ import pytest
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          WEAVE_NETWORK, WEAVE_PATH, NODE_MARKER_PATH)
+                                          NODE_MARKER_PATH, WEAVE_NETWORK,
+                                          WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from scripts.instances.instances_consts import SUBNET_IP_RANGE
-from scripts.instances.network_utils import get_encryption_key, restore_master_connection
+from scripts.instances.network_utils import (get_encryption_key,
+                                             restore_master_connection)
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugins.aggregator_service import AggregatorService
@@ -24,13 +26,12 @@ from services.plugins.core_service import CoreService
 from services.plugins.execution_service import ExecutionService
 from services.plugins.gui_service import GuiService
 from services.plugins.heavy_lifting_service import HeavyLiftingService
-from services.plugins.master_proxy_service import MasterProxyService
 from services.plugins.mongo_service import MongoService
 from services.plugins.reports_service import ReportsService
 from services.plugins.static_correlator_service import StaticCorrelatorService
-from services.plugins.static_users_correlator_service import \
-    StaticUsersCorrelatorService
+from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
+from services.plugins.master_proxy_service import MasterProxyService
 from services.weave_service import is_weave_up
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
@@ -67,7 +68,8 @@ class AxoniusService:
                                  self.static_correlator,
                                  self.static_users_correlator,
                                  self.heavy_lifting,
-                                 self.reports]  # TBD: enable master proxy
+                                 self.reports,
+                                 self.master_proxy]
 
     @classmethod
     def get_is_network_exists(cls):
