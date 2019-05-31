@@ -23,7 +23,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 GREY_COLOUR = '#DEDEDE'
 
 
-class ReportGenerator(object):
+class ReportGenerator:
     NUMBER_OF_COLUMNS = 6
 
     def __init__(self, report, report_params,
@@ -48,6 +48,7 @@ class ReportGenerator(object):
             'report_summary': self._get_template('report_summary'),
             'report_charts': self._get_template('report_charts'),
             'card': self._get_template('report_card'),
+            'card_break': self._get_template('report_card_break'),
             'discovery': self._get_template('summary/data_discovery'),
             'pie': self._get_template('summary/pie_chart'),
             'pie_slice': self._get_template('summary/pie_slice'),
@@ -205,9 +206,11 @@ class ReportGenerator(object):
 
         if self.report_data.get('custom_charts'):
             charts_added = 0
+            page_height = 0
             for i, custom_chart in enumerate(self.report_data['custom_charts']):
                 title = custom_chart.get('name', f'Custom Chart {i}')
                 try:
+                    line_height = 0
                     chart_data = custom_chart.get('data')
                     chart_value = None
                     if chart_data and chart_data[0] and not type(chart_data[0]) == list and chart_data[0].get('value'):
@@ -218,19 +221,36 @@ class ReportGenerator(object):
                     content = None
                     if custom_chart['view'] == ChartViews.histogram.name:
                         content = self._create_query_histogram(custom_chart['data'])
+                        if len(chart_data) >= 5:
+                            chart_height = 275
+                        else:
+                            chart_height = 27 + len(chart_data) * 55
                     elif custom_chart['view'] == ChartViews.pie.name:
                         query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
-                        byte_string = self._create_query_pie(custom_chart['data'])
+                        if len(custom_chart['data']) == 2:
+                            portion = next((x for x in chart_data if not x.get('remainder')), None)
+                            byte_string = self._create_coverage_pie(portion['value'])
+                        else:
+                            byte_string = self._create_query_pie(custom_chart['data'])
                         if byte_string == '':
                             continue
                         svg2png(bytestring=byte_string, write_to=query_pie_filename)
+                        chart_height = 240
                         content = f'<img src="{query_pie_filename}">'
                     elif custom_chart['view'] == ChartViews.summary.name:
                         content = self._create_summary_chart(custom_chart['data'])
                     if not content:
                         continue
                     charts_added += 1
-                    summary_content.append(self.templates['card'].render({'title': title, 'content': content}))
+                    if line_height == 0 or line_height > chart_height:
+                        line_height = chart_height
+                    if page_height + line_height > 755:
+                        page_height = 0
+                        summary_content.append(self.templates['card_break'].render())
+                    if charts_added % 2 == 0:
+                        page_height += line_height
+                    summary_content.append(self.templates['card'].render({'title': title,
+                                                                          'content': content}))
                 except Exception:
                     logger.exception(f'Problem adding pie chart to reports with title: {title}')
             logger.info(f'Report Generator, Summary Section: Added {charts_added} Custom Panels')
@@ -254,7 +274,11 @@ class ReportGenerator(object):
         """
         colours = ['#D0011B', '#F6A623', '#4796E4', '#0FBC18']
         slice_defs = self._calculate_pie_slices([1 - portion, portion])
-        slices = [self.templates['pie_slice'].render({'path': slice_defs[0]['path'], 'colour': GREY_COLOUR})]
+        slices = [self.templates['pie_slice'].render({'path': slice_defs[0]['path'],
+                                                      'colour': GREY_COLOUR,
+                                                      'text': f'{round((1 - portion) * 100)}%' if portion else '',
+                                                      'x': slice_defs[0]['text_x'],
+                                                      'y': slice_defs[0]['text_y']})]
         if portion:
             slice_def = slice_defs[1]
             slices.append(self.templates['pie_slice'].render({

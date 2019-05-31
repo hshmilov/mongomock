@@ -201,6 +201,9 @@ a {
 .after-break {
     page-break-after: always;
 }
+.before-break {
+    page-break-before: always;
+}
 
 
 /* COMPONENTS */
