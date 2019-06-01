@@ -164,13 +164,17 @@ echo "Installing swap"
 if [ $(cat /etc/fstab | grep swapfile | wc -l) -ne 0 ]; then
     echo "Swap file exists"
 else
-    fallocate -l 64G /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    echo /swapfile swap swap defaults 0 0 >> /etc/fstab
-    echo "Done installing swap file, free -h:"
-    free -h
+    if [[ $* == *--no-swap* ]]; then
+        echo "--no-swap was requested, not allocating swap"
+    else
+        fallocate -l 64G /swapfile
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo /swapfile swap swap defaults 0 0 >> /etc/fstab
+        echo "Done installing swap file, free -h:"
+        free -h
+    fi
 fi
 touch $INIT_FILE
 echo "Done successfully"
