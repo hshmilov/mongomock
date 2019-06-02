@@ -130,9 +130,6 @@ else
     systemctl daemon-reload
     systemctl restart docker
     docker info | grep "Root Dir"
-    mkdir -p $storage_mount/cortex
-    chmod 777 $storage_mount/cortex
-    ln -s $storage_mount/cortex /home/ubuntu/cortex
 fi
 
 information "Installing Axonius"
