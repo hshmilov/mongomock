@@ -13,6 +13,7 @@ logger = logging.getLogger(f'axonius.{{__name__}}')
 
 
 class {capital_adapter_name}Adapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         # AUTOADAPTER - add here device fields if needed
         pass

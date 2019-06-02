@@ -162,6 +162,7 @@ DOCKER_PORTS = {
     'office-scan-adapter':              9959,
     'librenms-adapter':                 9960,
     'bitsight-adapter':                 9961,
+    'endgame-adapter':                  9962,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

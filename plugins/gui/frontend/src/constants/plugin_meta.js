@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    endgame_adapter: {
+        title: 'Endgame',
+        description: 'Endgame is an endpoint protection platform that combines complete on-line and off-line protection against exploits, phishing, malware, ransomware, fileless attacks.'
+    },
     bitsight_adapter: {
         title: 'BitSight Security Ratings',
         description: 'BitSight Security Ratings are a data-driven and dynamic measurement of an organization’s cybersecurity performance.'
