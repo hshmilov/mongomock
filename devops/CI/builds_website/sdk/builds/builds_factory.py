@@ -210,7 +210,7 @@ class Builds(BuildsAPI):
         assert len(daily_exports) == 1, f'Export with the name {name} was not found, or multiple exports found'
         return daily_exports[0]
 
-    def get_last_exports(self, limit=10):
+    def get_last_exports(self, limit=50):
         response = self.get('exports', params={'limit': limit})
         return response
 
