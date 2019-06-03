@@ -114,6 +114,10 @@ class Page:
 
     FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
 
+    DROPDOWN_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
+    DROPDOWN_SELECTED_OPTIONS_CSS = 'div.x-select-options'
+    DROPDOWN_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
+
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url

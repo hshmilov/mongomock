@@ -59,6 +59,7 @@ class SettingsPage(Page):
     SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
     BAD_PROXY_TOASTER = PROXY_ERROR_MESSAGE
     SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'
+    SELECT_USER_ROLE_CSS = '.user-permissions .user-role .x-select'
     SELECT_OPTION_CSS = 'div.x-select-option'
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
@@ -106,13 +107,17 @@ class SettingsPage(Page):
     def click_new_user(self):
         self.click_button('+ New User')
 
-    def fill_new_user_details(self, username, password, first_name=None, last_name=None):
+    def fill_new_user_details(self, username, password, first_name=None, last_name=None, role_name=None):
         self.fill_text_field_by_element_id('user_name', username)
         self.fill_text_field_by_element_id('password', password)
         if first_name:
             self.fill_text_field_by_element_id('first_name', first_name)
         if last_name:
             self.fill_text_field_by_element_id('last_name', last_name)
+        if role_name:
+            self.select_option_without_search('.x-users-roles .modal-user .x-select',
+                                              self.DROPDOWN_SELECTED_OPTION_CSS,
+                                              role_name)
 
     def click_create_user(self):
         self.click_button(self.CREATE_USER_BUTTON)
@@ -123,9 +128,9 @@ class SettingsPage(Page):
     def find_password_input(self):
         return self.driver.find_element_by_id('password')
 
-    def create_new_user(self, username, password, first_name=None, last_name=None):
+    def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None):
         self.click_new_user()
-        self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name)
+        self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name, role_name=role_name)
         self.click_create_user()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
@@ -430,6 +435,11 @@ class SettingsPage(Page):
     def wait_for_user_removed_toaster(self):
         self.wait_for_toaster('User removed.')
 
+    def remove_user(self):
+        self.click_remove_user()
+        self.click_confirm_remove_user()
+        self.wait_for_user_removed_toaster()
+
     def click_roles_button(self):
         self.click_button_by_id('config-roles')
 
@@ -447,6 +457,9 @@ class SettingsPage(Page):
 
     def select_role(self, role_text):
         self.select_option_without_search(self.SELECT_ROLE_CSS, self.SELECT_OPTION_CSS, role_text)
+
+    def select_user_role(self, role_name):
+        self.select_option_without_search(self.SELECT_USER_ROLE_CSS, self.SELECT_OPTION_CSS, role_name)
 
     def fill_role_name(self, text):
         self.fill_text_field_by_css_selector('input.name-role', text)

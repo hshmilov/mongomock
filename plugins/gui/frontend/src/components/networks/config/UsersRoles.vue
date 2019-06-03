@@ -70,6 +70,7 @@
     </div>
     <x-modal
       v-if="userToCreate"
+      class="modal-user"
       @close="closeCreateUser"
       @confirm="performCreateUser"
     >

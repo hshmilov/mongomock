@@ -12,10 +12,6 @@ from ui_tests.pages.page import Page
 
 
 class EntitiesPage(Page):
-    DROPDOWN_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
-    DROPDOWN_SELECTED_OPTIONS_CSS = 'div.x-select-options'
-    DROPDOWN_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
-
     EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = 'div.x-dropdown.x-select.x-select-symbol'
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.x-filter .x-expression'

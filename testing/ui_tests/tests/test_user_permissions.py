@@ -258,3 +258,56 @@ class TestUserPermissions(TestBase):
             self.reports_page.wait_for_spinner_to_end()
 
             assert self.reports_page.is_form_disabled()
+
+    def test_new_user_with_role(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+
+        # Create user with Restricted role and check permissions correct also after refresh
+        self.settings_page.create_new_user(ui_consts.RESTRICTED_USERNAME,
+                                           ui_consts.NEW_PASSWORD,
+                                           ui_consts.FIRST_NAME,
+                                           ui_consts.LAST_NAME,
+                                           self.settings_page.RESTRICTED_ROLE)
+        self.settings_page.wait_for_user_created_toaster()
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION
+        self.settings_page.refresh()
+        self.settings_page.click_manage_users_settings()
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION
+
+        # Change to Read Only role, save the user and check permissions correct also after refresh
+        self.settings_page.select_user_role(self.settings_page.READ_ONLY_ROLE)
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
+        self.settings_page.click_save_manage_users_settings()
+        self.settings_page.refresh()
+        self.settings_page.click_manage_users_settings()
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
+
+        self.settings_page.remove_user()
+        # Create user with Read Only role and check permissions correct also after refresh
+        self.settings_page.create_new_user(ui_consts.READ_ONLY_USERNAME,
+                                           ui_consts.NEW_PASSWORD,
+                                           ui_consts.FIRST_NAME,
+                                           ui_consts.LAST_NAME,
+                                           self.settings_page.READ_ONLY_ROLE)
+        self.settings_page.wait_for_user_created_toaster()
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
+        self.settings_page.refresh()
+        self.settings_page.click_manage_users_settings()
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.READ_ONLY_PERMISSION
+
+        # Change to Read Only role, save the user and check permissions correct also after refresh
+        self.settings_page.select_user_role(self.settings_page.RESTRICTED_ROLE)
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION
+        self.settings_page.click_save_manage_users_settings()
+        self.settings_page.refresh()
+        self.settings_page.click_manage_users_settings()
+        for label in self.settings_page.get_permission_labels():
+            assert self.settings_page.get_permissions_text(label) == self.settings_page.RESTRICTED_PERMISSION
