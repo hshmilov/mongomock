@@ -769,10 +769,17 @@ def is_subjson(subset, superset):
 
 def merge_entities_fields(entities_data, fields):
     """
-        find all entities that are subset of other entites, and merge them.
+        find all entities that are subset of other entities, and merge them.
     """
     results = []
     parsed_entities_data = [parse_entity_fields(entity_data, fields) for entity_data in entities_data]
+    # Sort list values in order to check equality of content, regardless different order
+    for entity_data in parsed_entities_data:
+        for value in entity_data.values():
+            if not isinstance(value, list):
+                continue
+            value.sort()
+
     for subset_candidate in parsed_entities_data:
         for superset_candidate in parsed_entities_data:
             if subset_candidate == superset_candidate:

@@ -244,8 +244,8 @@ def test_merge_list_logic():
     fields = ['object_test.list_test', 'object_test.test']
     result = merge_entities_fields(
         list(map(lambda x: x.to_dict(), [device, device2, device3, device4, device5])), fields)
-    assert result == [{'object_test.list_test': ['asdf4', 'qwer', 'asdfqwer']},
-                      {'object_test.list_test': ['asdf', 'qwer', 'asdfqwer'], 'object_test.test': 'asdf'}]
+    assert result == [{'object_test.list_test': ['asdf4', 'asdfqwer', 'qwer']},
+                      {'object_test.list_test': ['asdf', 'asdfqwer', 'qwer'], 'object_test.test': 'asdf'}]
 
     device = MyDeviceAdapter(set(), set())
     device.object_test = MyObject()
@@ -271,6 +271,17 @@ def test_merge_list_logic():
     result = merge_entities_fields(
         list(map(lambda x: x.to_dict(), [device2, device])), fields)
     assert result == [{'object_test.list_test': ['a']}]
+
+    device1 = MyDeviceAdapter(set(), set())
+    device1.object_test = MyObject()
+    device1.object_test.list_test = ['b', 'a', 'c']
+
+    device2 = MyDeviceAdapter(set(), set())
+    device2.object_test = MyObject()
+    device2.object_test.list_test = ['b', 'c', 'a']
+    result = merge_entities_fields(
+        list(map(lambda x: x.to_dict(), [device2, device1])), fields)
+    assert result == [{'object_test.list_test': ['a', 'b', 'c']}]
 
 
 def test_hostname_obj():
