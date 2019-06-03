@@ -770,9 +770,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return str(update_result['_id'])
 
         if method == 'DELETE':
-            query_ids = self.get_selected_ids(entity_views_collection, self.get_request_data_as_object(), mongo_filter)
-            entity_views_collection.update_many({'_id': {'$in': [ObjectId(i) for i in query_ids]}},
-                                                {'$set': {'archived': True}})
+            selection = self.get_request_data_as_object()
+            selection['ids'] = [ObjectId(i) for i in selection['ids']]
+            query_ids = self.get_selected_ids(entity_views_collection, selection, mongo_filter)
+            entity_views_collection.update_many({
+                '_id': {
+                    '$in': query_ids
+                }
+            }, {
+                '$set': {
+                    'archived': True
+                }
+            })
             return ''
 
     def _entity_labels(self, db, namespace, mongo_filter):
