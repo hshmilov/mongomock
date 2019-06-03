@@ -126,6 +126,7 @@ class CiscoIseAdapter(AdapterBase):
             logger.exception(f'Problem with fetching CiscoIse Endpoint for {device_raw}')
             return None
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_network_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -151,10 +152,14 @@ class CiscoIseAdapter(AdapterBase):
                 for iface in device_raw.get('NetworkDeviceIPList', []):
                     if not iface:
                         continue
-                    ip = iface.get('NetworkDeviceIP', {}).get('ipaddress')
-                    if ip:
-                        ips.append(ip)
-                if ip:
+                    ips_raw = iface.get('NetworkDeviceIP', {})
+                    if not isinstance(ips_raw, list):
+                        ips_raw = [ips_raw]
+                    for ip_raw in ips_raw:
+                        ip = ip_raw.get('ipaddress')
+                        if ip:
+                            ips.append(ip)
+                if ips:
                     device.add_ips_and_macs(ips=ips)
             except Exception:
                 logger.exception(f'Unable to set networkdeviceIPList {device_raw.get("NetworkDeviceIPList")}')
