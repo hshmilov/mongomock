@@ -2261,9 +2261,16 @@ class PluginBase(Configurable, Feature):
     def update_config(self):
         return self._update_config_inner()
 
+    def _global_config_updated(self):
+        """
+        hook that is called when global settings are updated
+        """
+        pass
+
     def _update_config_inner(self):
         self.renew_config_from_db()
         self.__renew_global_settings_from_db()
+        self._global_config_updated()
         return ""
 
     def create_jira_ticket(self, porject_key, summary, description, issue_type):
@@ -2447,6 +2454,7 @@ class PluginBase(Configurable, Feature):
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
         self._jira_settings = config['jira_settings']
+        self._proxy_settings = config[PROXY_SETTINGS]
 
         self._aggregation_max_workers = None
         try:

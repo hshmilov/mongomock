@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from axonius.consts.gui_consts import ENCRYPTION_KEY_FILENAME
+from axonius.consts.gui_consts import ENCRYPTION_KEY_FILENAME, PROXY_DATA_FILE
 from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
 
 CORTEX_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', '..'))
@@ -13,3 +13,4 @@ ADAPTER_RESTART_COMMAND = './axonius.sh system up --all --prod --restart --env N
 MASTER_ADDR_HOST_PATH = AXONIUS_SETTINGS_PATH / '__master'
 ENCRYPTION_KEY_HOST_PATH = AXONIUS_SETTINGS_PATH / ENCRYPTION_KEY_FILENAME
 SUBNET_IP_RANGE = '171.17.0.0/16'
+PROXY_DATA_HOST_PATH = AXONIUS_SETTINGS_PATH / PROXY_DATA_FILE

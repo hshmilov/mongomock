@@ -58,7 +58,7 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        ChartMetrics, ChartRangeTypes,
                                        ChartRangeUnits, ChartViews,
                                        FeatureFlagsNames, ResearchStatus,
-                                       Signup)
+                                       Signup, PROXY_DATA_PATH)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -72,7 +72,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          SYSTEM_SETTINGS, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME)
+                                          SYSTEM_SETTINGS, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME, PROXY_VERIFY)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTIONS_MAIN_FIELD,
@@ -1542,6 +1542,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             def reset_cache_soon():
                 time.sleep(5)
                 entity_fields.clean_cache()
+
             if self.__is_system_first_use:
                 run_and_forget(reset_cache_soon())
 
@@ -1750,6 +1751,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 if report.get('mail_properties'):
                     beautify_object['mailSubject'] = report.get('mail_properties').get('mailSubject')
             return gui_helpers.beautify_db_entry(beautify_object)
+
         reports_collection = self.reports_config_collection
         result = [beautify_report(enforcement) for enforcement in reports_collection.find(
             mongo_filter).sort(sort).skip(skip).limit(limit)]
@@ -2349,6 +2351,25 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         return ''
+
+    def store_proxy_data(self, proxy_settings):
+        try:
+
+            # This string is used by chef!
+            proxy_string = to_proxy_string(proxy_settings)
+            verify = proxy_settings[PROXY_VERIFY]
+
+            proxy_json = {
+                'creds': proxy_string,
+                'verify': verify
+            }
+
+            proxy_data = json.dumps(proxy_json)
+            PROXY_DATA_PATH.write_text(proxy_data)  # saving proxy data to a folder readable from outside
+            logger.info(f'updating proxy settings: {proxy_settings}')
+
+        except Exception:
+            logger.exception(f'Failed to set proxy settings from gui {proxy_settings}')
 
     @gui_add_rule_logged_in('plugins/configs/gui/FeatureFlags', methods=['POST', 'GET'], enforce_trial=False)
     def plugins_configs_feature_flags(self):
@@ -4784,6 +4805,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     content='The metadata URL provided is invalid.',
                     severity_type='error'
                 )
+
+    def _global_config_updated(self):
+        self.store_proxy_data(self._proxy_settings)
 
     @property
     def _maintenance_config(self):

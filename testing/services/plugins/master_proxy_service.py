@@ -18,7 +18,7 @@ class MasterProxyService(WeaveService):
     def is_up(self):
         try:
             response = requests.get('https://manage.chef.io',
-                                    proxies={'https_proxy': f'https://127.0.0.1:{self.port()}'},
+                                    proxies={'https': f'https://127.0.0.1:{self.port()}'},
                                     timeout=(10, 60))
             if response.status_code == 200:
                 print(f'proxy started ok')

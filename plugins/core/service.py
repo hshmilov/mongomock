@@ -1,5 +1,4 @@
 import configparser
-import json
 import logging
 import threading
 import uuid
@@ -17,16 +16,19 @@ from pymongo import ReturnDocument
 from requests.exceptions import ConnectionError, ReadTimeout, Timeout
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.plugin_consts import (NODE_ID, NODE_INIT_NAME, NODE_NAME,
+from axonius.consts.plugin_consts import (NODE_ID,
+                                          NODE_INIT_NAME,
+                                          NODE_NAME,
                                           NODE_USER_PASSWORD,
-                                          PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
-                                          X_UI_USER, X_UI_USER_SOURCE, PROXY_VERIFY, HEAVY_LIFTING_PLUGIN_NAME)
+                                          PLUGIN_UNIQUE_NAME,
+                                          X_UI_USER,
+                                          X_UI_USER_SOURCE,
+                                          HEAVY_LIFTING_PLUGIN_NAME)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
 from axonius.utils.files import get_local_config_file
 from axonius.utils.mongo_administration import set_mongo_parameter
-from axonius.utils.proxy_utils import to_proxy_string
 from core.exceptions import PluginNotFoundError
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -597,22 +599,6 @@ class CoreService(PluginBase, Configurable):
 
     def _on_config_update(self, config):
         logger.info(f"Loading core config: {config}")
-        self._proxy_settings = config[PROXY_SETTINGS]
-
-        try:
-            # This string is used by chef!
-            with open('/tmp/proxy_data.txt', 'w') as f:
-                proxy_string = to_proxy_string(self._proxy_settings)
-                verify = self._proxy_settings[PROXY_VERIFY]
-
-                proxy_json = {
-                    'creds': proxy_string,
-                    'verify': verify
-                }
-
-                f.write(json.dumps(proxy_json))
-        except Exception as e:
-            logger.error(f'Failed to set proxy settings from gui {e} {self._proxy_settings}')
 
         def update_plugin(plugin_name):
             try:

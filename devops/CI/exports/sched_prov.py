@@ -36,8 +36,15 @@ def run_command(cmd, **kwargs):
 
 def read_proxy_data():
     try:
-        proxy_data = run_command('docker exec core cat /tmp/proxy_data.txt', stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE).stdout.decode().strip()
+        # harcoded path since this script doesn't has the venv
+        new_proxy_data_file = Path('/home/ubuntu/cortex/.axonius_settings/proxy_data.json')
+        if new_proxy_data_file.is_file():
+            proxy_data = new_proxy_data_file.read_text()
+        else:  # backward compatibility
+            proxy_data = run_command('docker exec core cat /tmp/proxy_data.txt', stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE).stdout.decode()
+
+        proxy_data = proxy_data.strip()
         try:
             as_dict = json.loads(proxy_data)
             proxy_creds = as_dict['creds']

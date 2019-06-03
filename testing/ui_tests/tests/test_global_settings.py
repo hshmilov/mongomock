@@ -1,7 +1,9 @@
 from axonius.utils.wait import wait_until
+from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
 from services.plugins.gui_service import GuiService
 from services.standalone_services.smtp_server import SMTPService
 from test_helpers.log_tester import LogTester
+from test_helpers.machines import PROXY_IP, PROXY_PORT
 from ui_tests.tests.ui_consts import GUI_LOG_PATH
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -97,13 +99,13 @@ class TestGlobalSettings(TestBase):
         self.settings_page.wait_for_spinner_to_end()
 
         self.settings_page.set_proxy_settings_enabled()
-        self.settings_page.fill_proxy_address('10.0.236.211')
-        self.settings_page.fill_proxy_port('8888')
+        self.settings_page.fill_proxy_address(PROXY_IP)
+        port = str(PROXY_PORT)
+        self.settings_page.fill_proxy_port(port)
         self.settings_page.save_and_wait_for_toaster()
 
-        (content, _, _) = self.axonius_system.core.get_file_contents_from_container('/tmp/proxy_data.txt')
-        content = content.decode().strip()
-        assert content == '{"creds": "10.0.236.211:8888", "verify": true}'
+        content = PROXY_DATA_HOST_PATH.read_text().strip()
+        assert content == '{"creds": "IP:PORT", "verify": true}'.replace('IP', PROXY_IP).replace('PORT', port)
 
     def test_bad_proxy_settings(self):
         self.settings_page.switch_to_page()
