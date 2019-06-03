@@ -217,7 +217,9 @@
             fields() {
                 return this.schema.items.filter(item => this.mergedData.find(currentData => currentData[item.name]))
                     .map(item => {
-                        return {...item, path: [this.module, 'aggregator', ...name.split('.').slice(1)]}
+                        return {...item, path: [
+                          this.module, 'aggregator', 'data', this.schema.name
+                        ]}
                     })
             }
         },
