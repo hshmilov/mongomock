@@ -88,7 +88,7 @@
             },
             valueSchema() {
                 if (this.fieldSchema && this.fieldSchema.type === 'array'
-                    && ['contains', 'equals', 'subnet'].includes(this.condition.compOp)) {
+                    && ['contains', 'equals', 'subnet', 'notInSubnet'].includes(this.condition.compOp)) {
                     return this.fieldSchema.items
                 }
                 if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
@@ -124,7 +124,9 @@
                 return {
                     count_equals: 'count =',
                     count_below: 'count <',
-                    count_above: 'count >'
+                    count_above: 'count >',
+                    notInSubnet: 'not in subnet',
+                    subnet: 'in subnet',
                 }
             },
             opsList() {
@@ -186,18 +188,65 @@
                     return ''
                 }
             },
+            convertSubnetToRaw(val) {
+                if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
+                    return []
+                }
+                try {
+                    let subnetInfo = IP.cidrSubnet(val)
+                    return [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)]
+                } catch (err) {
+                    return []
+                }
+                return []
+            },
+            formatNotInSubnet() {
+                let subnets = this.condition.value.split(',')
+                let rawIpsArray = []
+                let result = [[0, 0xffffffff]]
+                for (var i = 0; i < subnets.length; i++) {
+                    let subnet = subnets[i].trim()
+                    if (subnet === '') {
+                        continue
+                    }
+                    let rawIps = this.convertSubnetToRaw(subnet)
+                    if (rawIps.length == 0) {
+                        return `Invalid "${subnet}", Specify <address>/<CIDR>`
+                    }
+                    rawIpsArray.push(rawIps)
+
+                }
+                rawIpsArray = rawIpsArray.sort((range1,range2) => {return range1[0]-range2[0]})  
+                rawIpsArray.forEach(range => {
+                    let lastRange = result.pop(-1)
+                    let new1 = [lastRange[0], range[0]]
+                    let new2 = [range[1], lastRange[1]]
+                    result.push(new1)
+                    result.push(new2)
+                })
+                result = result.map(range => {return `${this.condition.field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`}).join(' or ')
+                result = `(${result})`
+                this.processedValue = result
+                return ''
+            },
+            formatInSubnet() {
+                let subnet = this.condition.value
+                let rawIps = this.convertSubnetToRaw(subnet)
+
+                if (rawIps.length == 0) {
+                    return 'Specify <address>/<CIDR> to filter IP by subnet'
+                }
+                this.processedValue = rawIps
+                return ''
+            },
             formatCondition() {
                 this.processedValue = ''
-                if (this.fieldSchema.format && this.fieldSchema.format === 'ip' && this.condition.compOp === 'subnet') {
-                    let val = this.condition.value
-                    if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
-                        return 'Specify <address>/<CIDR> to filter IP by subnet'
+                if (this.fieldSchema.format && this.fieldSchema.format === 'ip') {
+                    if (this.condition.compOp === 'subnet') {
+                        return this.formatInSubnet()
                     }
-                    try {
-                        let subnetInfo = IP.cidrSubnet(val)
-                        this.processedValue = [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)]
-                    } catch (err) {
-                        return 'Specify <address>/<CIDR> to filter IP by subnet'
+                    if (this.condition.compOp === 'notInSubnet') {
+                        return this.formatNotInSubnet()
                     }
                 }
                 if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.condition.value) {
