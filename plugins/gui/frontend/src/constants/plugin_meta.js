@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    censys_adapter: {
+        title: 'Censys',
+        description: 'Censys monitors infrastructure and discovers unknown assets anywhere on the Internet.'
+    },
     endgame_adapter: {
         title: 'Endgame',
         description: 'Endgame is an endpoint protection platform that combines complete on-line and off-line protection against exploits, phishing, malware, ransomware, fileless attacks.'

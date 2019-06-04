@@ -163,6 +163,7 @@ DOCKER_PORTS = {
     'librenms-adapter':                 9960,
     'bitsight-adapter':                 9961,
     'endgame-adapter':                  9962,
+    'censys-adapter':                   9963,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
