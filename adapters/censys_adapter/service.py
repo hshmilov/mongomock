@@ -160,6 +160,7 @@ class CensysAdapter(ScannerAdapterBase):
                 }
             ],
             'required': [
+                'domain',
                 'api_id',
                 'api_secret',
                 'search_type',
