@@ -239,7 +239,12 @@ export const updateRemovedDataLabels = (state, payload) => {
 
 export const SELECT_DATA_CURRENT = 'SELECT_DATA_CURRENT'
 export const selectDataCurrent = (state, payload) => {
-	getModule(state, payload).current.id = payload.id
+	let module = getModule(state, payload)
+	module.current.id = payload.id
+	if (!payload.id) {
+		module.current.data = {}
+		module.current.tasks.data = []
+	}
 }
 
 export const UPDATE_DATA_CURRENT = 'UPDATE_DATA_CURRENT'
@@ -322,7 +327,7 @@ export const updateSystemExpired = (state, payload) => {
 export const UPDATE_CUSTOM_DATA = 'UPDATE_CUSTOM_DATA'
 export const updateCustomData = (state, payload) => {
 	let module = getModule(state, payload)
-	if (!payload.fetching) return
+	if (!payload.fetching || !module.current.data.adapters) return
 	let gui_adapter = module.current.data.adapters.find(item => item.name === 'gui')
 	let data = Object.keys(payload.data.data).reduce((map, key) => {
 		map[key.split(' ').join('_').toLowerCase()] = payload.data.data[key]

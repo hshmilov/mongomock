@@ -102,8 +102,9 @@
   import xEntityTags from './Tags.vue'
   import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
-  import { mapState, mapGetters, mapActions } from 'vuex'
+  import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
   import { SINGLE_ADAPTER } from '../../../../store/getters'
+  import {SELECT_DATA_CURRENT} from '../../../../store/mutations'
   import { FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS, FETCH_DATA_CURRENT_TASKS } from '../../../../store/actions'
 
   export default {
@@ -194,11 +195,21 @@
         history: this.history
       })
     },
-    methods: mapActions({
-      fetchDataCurrent: FETCH_DATA_CURRENT,
-      fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
-      fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS
-    })
+    beforeDestroy() {
+      this.selectCurrentEntity({
+        module: this.module, id: ''
+      })
+    },
+    methods: {
+      ...mapMutations({
+        selectCurrentEntity: SELECT_DATA_CURRENT,
+      }),
+      ...mapActions({
+         fetchDataCurrent: FETCH_DATA_CURRENT,
+         fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
+         fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS
+       })
+    }
   }
 </script>
 

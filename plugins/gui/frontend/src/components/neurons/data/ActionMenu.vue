@@ -83,11 +83,10 @@
             }
         },
         methods: {
-            ...mapActions(
-                {
-                    disableData: DISABLE_DATA,
-                    deleteData: DELETE_DATA,
-                    saveCustomData: SAVE_CUSTOM_DATA
+            ...mapActions({
+                disableData: DISABLE_DATA,
+                deleteData: DELETE_DATA,
+                saveCustomData: SAVE_CUSTOM_DATA
             }),
             activate(item) {
             	if (!item || !item.activate) return
