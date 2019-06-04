@@ -1,10 +1,46 @@
-import requests
+import json
+from pathlib import Path
 
+import requests
+from urllib3 import ProxyManager
+
+from axonius.consts.system_consts import NODE_MARKER_PATH
+from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
-from axonius.consts.system_consts import NODE_MARKER_PATH
 
 CONTAINER_NAME = 'master-proxy'
+CONF_TEMPLATE_FILE = Path('tinyproxy.conf.in')
+CONF_FILE = Path('tinyproxy.conf')
+
+CREDS = 'creds'
+VERIFY = 'verify'
+
+
+def read_proxy_data():
+    try:
+        port = DOCKER_PORTS['master-proxy']
+        if NODE_MARKER_PATH.is_file():
+            print('running on node, work with master-proxy')
+            return {CREDS: f'localhost:{port}', VERIFY: False}
+
+        proxy_data_file = PROXY_DATA_HOST_PATH
+        if proxy_data_file.is_file():
+            proxy_data = proxy_data_file.read_text().strip()
+            as_dict = json.loads(proxy_data)
+            proxy_creds = as_dict.get(CREDS, '')
+            print(f'Got proxy line={proxy_creds}')
+
+            # invoking this one only to validate that the proxy string format is a valid proxy string
+            ProxyManager(f'http://{proxy_creds}')
+            return as_dict
+
+        print(f'no proxy data found in {proxy_data_file}')
+        return None
+
+    except Exception as e:
+        print(f'Failed to process proxy line {e}')
+        return None
 
 
 class MasterProxyService(WeaveService):
@@ -13,6 +49,14 @@ class MasterProxyService(WeaveService):
         if NODE_MARKER_PATH.is_file():
             print(f'master-proxy should not run on node')
         else:
+            # process template
+            template = (Path(self.service_dir) / CONF_TEMPLATE_FILE).read_text()
+            proxy_data = read_proxy_data()
+            if proxy_data and proxy_data.get(CREDS):
+                proxy = proxy_data[CREDS]
+                template += f'\nupstream {proxy}\n'
+            (Path(self.service_dir) / CONF_FILE).write_text(template)
+
             super().start(*args, **kwargs)
 
     def is_up(self):
@@ -47,7 +91,7 @@ class MasterProxyService(WeaveService):
 
     @property
     def volumes_override(self):
-        return []
+        return [f'{self.service_dir}/{CONF_FILE}:/etc/tinyproxy/tinyproxy.conf']
 
     def get_main_file(self):
         return ''

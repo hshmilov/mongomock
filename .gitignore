@@ -350,3 +350,4 @@ devops/CI/builds_website/app/db/*
 devops/CI/builds_website/secrets/*
 devops/CI/builds_website/app/test.py
 devops/CI/builds_website/.idea/*
+testing/services/plugins/master_proxy/tinyproxy.conf

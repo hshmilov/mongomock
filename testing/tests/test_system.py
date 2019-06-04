@@ -2,6 +2,7 @@ import random
 import time
 
 import pytest
+import requests
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.utils.wait import wait_until
@@ -18,6 +19,7 @@ from services.adapters.stresstest_scanner_service import (StresstestScanner_fixt
                                                           StresstestScannerService)
 from services.adapters.stresstest_service import (Stresstest_fixture,
                                                   StresstestService)
+from services.ports import DOCKER_PORTS
 from test_credentials import test_infinite_sleep_credentials
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from services.axonius_service import get_service
@@ -181,3 +183,10 @@ def test_exclude_config_quick():
     finally:
         if CUSTOMER_CONF_PATH.is_file():
             CUSTOMER_CONF_PATH.unlink()
+
+
+def test_master_proxy():
+    port = DOCKER_PORTS['master-proxy']
+    assert requests.get('https://manage.chef.io',
+                        proxies={'https': f'https://localhost:{port}'},
+                        timeout=(20, 90)).status_code == 200

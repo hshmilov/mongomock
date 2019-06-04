@@ -10,20 +10,11 @@ from pathlib import Path
 
 from urllib3 import ProxyManager
 
-if os.geteuid() != 0:
-    print('This script should run as root')
-    sys.exit(-1)
-
 PIDFILE = Path('/tmp/sched_prov.pid')
 PROVISION_MARKER = Path('/home/ubuntu/CHEF_PROVISION.marker')
-
-if PIDFILE.is_file():
-    print(f'{PIDFILE} already exists')
-    sys.exit(-1)
-
-if not PROVISION_MARKER.is_file():
-    print(f'{PROVISION_MARKER} does not exist, already provisioned')
-    sys.exit(-1)
+NODE_MARKER_PATH_HOST = '/home/ubuntu/cortex/.axonius_settings/connected_to_master.marker'
+CREDS = 'creds'
+VERIFY = 'verify'
 
 
 def chech_command_status(cmd, **kwargs):
@@ -34,8 +25,17 @@ def run_command(cmd, **kwargs):
     return subprocess.run(shlex.split(cmd), **kwargs)
 
 
+def is_this_node_host():
+    return Path(NODE_MARKER_PATH_HOST).is_file()
+
+
 def read_proxy_data():
     try:
+
+        if is_this_node_host():
+            print('running on node')
+            return {CREDS: 'localhost:8888', VERIFY: False}
+
         # harcoded path since this script doesn't has the venv
         new_proxy_data_file = Path('/home/ubuntu/cortex/.axonius_settings/proxy_data.json')
         if new_proxy_data_file.is_file():
@@ -47,11 +47,11 @@ def read_proxy_data():
         proxy_data = proxy_data.strip()
         try:
             as_dict = json.loads(proxy_data)
-            proxy_creds = as_dict['creds']
+            proxy_creds = as_dict[CREDS]
         except Exception as e:
             # backward compatibility, when the file was a single proxy_line
             proxy_creds = proxy_data
-            as_dict = {'creds': proxy_data, 'verify': True}
+            as_dict = {CREDS: proxy_data, VERIFY: True}
 
         print(f'Got proxy line={proxy_creds}')
         # invoking this one only to validate that the proxy string format is a valid proxy string
@@ -80,14 +80,14 @@ def provision():
                           f'automatic_attribute_blacklist [["filesystem", "by_mountpoint"], ["filesystem", "by_pair"]]']
 
     proxy_data = read_proxy_data()
-    proxy_line = proxy_data['creds']
+    proxy_line = proxy_data[CREDS]
     if proxy_line:
         http_proxy = f'http://{proxy_line}'
         https_proxy = f'https://{proxy_line}'
         client_rb_template.append(f'http_proxy "{http_proxy}"')
         client_rb_template.append(f'https_proxy "{https_proxy}"')
 
-        if proxy_data['verify'] is False:
+        if proxy_data[VERIFY] is False:
             client_rb_template.append(f'ssl_verify_mode :verify_none')
 
     client_rb.write_text('\n'.join(client_rb_template))
@@ -107,8 +107,25 @@ def provision():
     run_command('/usr/sbin/service chef-client restart')
 
 
-try:
-    PIDFILE.touch()
-    provision()
-finally:
-    PIDFILE.unlink()
+def main():
+    if os.geteuid() != 0:
+        print('This script should run as root')
+        sys.exit(-1)
+
+    if PIDFILE.is_file():
+        print(f'{PIDFILE} already exists')
+        sys.exit(-1)
+
+    if not PROVISION_MARKER.is_file():
+        print(f'{PROVISION_MARKER} does not exist, already provisioned')
+        sys.exit(-1)
+
+    try:
+        PIDFILE.touch()
+        provision()
+    finally:
+        PIDFILE.unlink()
+
+
+if __name__ == '__main__':
+    main()

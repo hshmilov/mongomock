@@ -1,6 +1,3 @@
-from test_helpers.machines import PROXY_IP, PROXY_PORT
-
-
 client_details = {
     "host": "192.168.20.24",
     "username": "Administrator",
