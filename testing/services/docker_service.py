@@ -9,6 +9,9 @@ from typing import Iterable
 
 from retrying import retry
 
+from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
+                                          NODE_ID_ENV_VAR_NAME,
+                                          NODE_ID_FILENAME)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           WEAVE_NETWORK)
 from axonius.utils.debug import COLOR
@@ -261,6 +264,10 @@ else:
                 env_variables.extend(['--env', env])
 
         env_variables.extend(['--env', 'DOCKER=true'])
+        node_id_path = Path(
+            os.path.abspath(os.path.join(self.cortex_root_dir, AXONIUS_SETTINGS_DIR_NAME, NODE_ID_FILENAME)))
+        if node_id_path.is_file():
+            env_variables.extend(['--env', f'{NODE_ID_ENV_VAR_NAME}={node_id_path.read_text().strip()}'])
 
         return env_variables
 

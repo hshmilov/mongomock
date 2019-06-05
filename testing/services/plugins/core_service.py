@@ -1,7 +1,10 @@
+import os
+
 import requests
 import traceback
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, \
+    AXONIUS_SETTINGS_DIR_NAME
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 
@@ -55,6 +58,18 @@ class CoreService(PluginService):
             params[UNIQUE_KEY_PARAM] = plugin_name
 
         return requests.get(self.req_url + "/register", headers=headers, params=params)
+
+    @property
+    def volumes_override(self):
+        # Creating a settings dir outside of cortex (on production machines
+        # this will be /home/ubuntu/.axonius_settings) for login marker and weave encryption key.
+        settings_path = os.path.abspath(os.path.join(self.cortex_root_dir, AXONIUS_SETTINGS_DIR_NAME))
+        os.makedirs(settings_path, exist_ok=True)
+        container_settings_dir_path = os.path.join('/home/axonius/', AXONIUS_SETTINGS_DIR_NAME)
+        volumes = [f'{settings_path}:{container_settings_dir_path}']
+
+        volumes.extend(super().volumes_override)
+        return volumes
 
     def _is_service_alive(self):
         try:

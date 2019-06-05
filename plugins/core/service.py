@@ -1,5 +1,6 @@
 import configparser
 import logging
+import os
 import threading
 import uuid
 from datetime import datetime
@@ -23,7 +24,9 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           PLUGIN_UNIQUE_NAME,
                                           X_UI_USER,
                                           X_UI_USER_SOURCE,
-                                          HEAVY_LIFTING_PLUGIN_NAME)
+                                          HEAVY_LIFTING_PLUGIN_NAME,
+                                          NODE_ID_PATH,
+                                          NODE_ID_ENV_VAR_NAME)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -55,16 +58,18 @@ class CoreService(PluginBase, Configurable):
         temp_config.read(VOLATILE_CONFIG_PATH)
         try:
             api_key = temp_config['registration']['api_key']
-            node_id = temp_config['registration'][NODE_ID]
+            node_id = temp_config['registration'][NODE_ID] or os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         except KeyError:
             # We should generate a new api_key and save it
             api_key = uuid.uuid4().hex
-            node_id = uuid.uuid4().hex
+            node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None) or uuid.uuid4().hex
             temp_config['registration'] = {}
             temp_config['registration']['api_key'] = api_key
             temp_config['registration'][NODE_ID] = node_id
         with open(VOLATILE_CONFIG_PATH, 'w') as temp_config_file:
             temp_config.write(temp_config_file)
+        with open(NODE_ID_PATH, 'w') as node_id_file:
+            node_id_file.write(node_id)
 
         # In order to avoid, deletion before initialization of adapter, we add this flag
         self.did_adapter_registered = False
@@ -336,14 +341,19 @@ class CoreService(PluginBase, Configurable):
         # method == POST
         data = self.get_request_data_as_object()
 
-        plugin_name = data['plugin_name']
-        plugin_type = data['plugin_type']
-        plugin_subtype = data['plugin_subtype']
-        plugin_port = data['plugin_port']
-        supported_features = data['supported_features']
-        plugin_is_debug = data.get('is_debug', False)
-        node_id = data.get(NODE_ID)
-        node_init_name = data.get(NODE_INIT_NAME)
+        try:
+            plugin_name = data['plugin_name']
+            plugin_type = data['plugin_type']
+            plugin_subtype = data['plugin_subtype']
+            plugin_port = data['plugin_port']
+            supported_features = data['supported_features']
+            plugin_is_debug = data.get('is_debug', False)
+            node_id = data[NODE_ID]
+            node_init_name = data.get(NODE_INIT_NAME)
+        except KeyError:
+            logger.exception('Data is missing on register POST request. Registration Failed!')
+            logger.info(f'data: {data}')
+            raise
 
         logger.info(f"Got registration request : {data} from {request.remote_addr}")
 
@@ -363,7 +373,7 @@ class CoreService(PluginBase, Configurable):
                     api_key = data['api_key']
                     # Checking that this plugin has the correct api key
                     if api_key != relevant_doc['api_key']:
-                        if data.get(NODE_ID) != self.node_id:
+                        if data[NODE_ID] != self.node_id:
                             # This is not the correct api key, decline registration
                             return return_error('Duplicate plugin unique name.', 409)
                         return return_error('Wrong API key', 400)
@@ -424,7 +434,7 @@ class CoreService(PluginBase, Configurable):
                     'db_password': plugin_password,
                     'last_seen': datetime.utcnow(),
                     'status': 'ok',
-                    NODE_ID: node_id or self.node_id
+                    NODE_ID: node_id
                 }
 
                 if plugin_is_debug:
@@ -438,7 +448,7 @@ class CoreService(PluginBase, Configurable):
                 doc['plugin_subtype'] = plugin_subtype
                 doc['plugin_type'] = plugin_type
                 doc['supported_features'] = supported_features
-                doc[NODE_ID] = node_id or self.node_id
+                doc[NODE_ID] = node_id
 
             # The next section is trying to find plugins with same ip address and port. If there are such we have
             # a major problem since the core cant access both of the plugins.

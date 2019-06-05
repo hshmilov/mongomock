@@ -6,6 +6,9 @@ VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
 SHARED_READONLY_DIR_NAME = 'shared_readonly_files'
 SHARED_READONLY_FULL_PATH = Path('/home/axonius') / SHARED_READONLY_DIR_NAME
 AXONIUS_SETTINGS_DIR_NAME = '.axonius_settings'
+AXONIUS_SETTINGS_PATH = Path('/home/axonius/') / AXONIUS_SETTINGS_DIR_NAME
+NODE_ID_FILENAME = '.node_id'
+NODE_ID_PATH = AXONIUS_SETTINGS_PATH / NODE_ID_FILENAME
 METADATA_PATH = SHARED_READONLY_FULL_PATH / '__build_metadata'
 
 # SERVICES #
@@ -36,6 +39,7 @@ NODE_USER_PASSWORD = 'node_user_password'
 NODE_INIT_NAME = 'node_init_name'
 NODE_NAME = 'node_name'
 NOTES_DATA_TAG = 'Notes'
+NODE_ID_ENV_VAR_NAME = 'NODE_ID'
 
 # SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'

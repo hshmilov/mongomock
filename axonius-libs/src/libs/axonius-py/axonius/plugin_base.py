@@ -75,7 +75,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           GLOBAL_KEYVAL_COLLECTION,
                                           NODE_USER_PASSWORD,
                                           REPORTS_PLUGIN_NAME,
-                                          EXECUTION_PLUGIN_NAME)
+                                          EXECUTION_PLUGIN_NAME,
+                                          NODE_ID_ENV_VAR_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -300,7 +301,7 @@ class PluginBase(Configurable, Feature):
         self.plugin_name = os.path.basename(self.__adapter_base_directory)
         self.plugin_unique_name = None
         self.api_key = None
-        self.node_id = None
+        self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         self.__mongo_client = None
 
         # MyDeviceAdapter things.
@@ -762,10 +763,11 @@ class PluginBase(Configurable, Feature):
             register_doc[PLUGIN_UNIQUE_NAME] = plugin_unique_name
             if api_key is not None:
                 register_doc['api_key'] = api_key
-            if node_id is not None:
-                register_doc[NODE_ID] = node_id
             if node_init_name is not None:
                 register_doc[NODE_INIT_NAME] = node_init_name
+
+        if node_id is not None:
+            register_doc[NODE_ID] = node_id
 
         try:
             response = requests.post(core_address, data=json.dumps(register_doc))
