@@ -144,3 +144,7 @@ class DevicesPage(EntitiesPage):
         self.click_save_query()
         self.fill_query_name(query_name)
         self.click_save_query_save_button()
+
+    def get_value_for_label_in_device_page(self, label_text):
+        text = self.driver.find_element_by_xpath(self.DIV_BY_LABEL_TEMPLATE.format(label_text=label_text)).text
+        return text.split('\n')[1]  # [0] is the label itself

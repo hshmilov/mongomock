@@ -233,6 +233,14 @@ class TestDashboard(TestBase):
         assert users_tables_count == dashboard_users_table_count
         assert self.users_page.find_search_value() == string_to_search
         assert any(user_name in s for s in self.users_page.get_all_table_rows()[0])
+        self.users_page.page_back()
+        device_id = self.devices_page.find_first_id()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        assert device_id in self.driver.current_url
+        hostname = self.devices_page.get_value_for_label_in_device_page(self.devices_page.FIELD_HOSTNAME_TITLE)
+        assert hostname == 'EC2AMAZ-61GTBER.TestDomain.test'
 
     def test_dashboard_search_url(self):
         self.dashboard_page.switch_to_page()
