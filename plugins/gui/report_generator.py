@@ -113,9 +113,9 @@ class ReportGenerator:
             sections.append(self._create_dashboard_charts())
 
         # Add section for each adapter with results of its queries
-        adapter_data = self.report_data.get('adapter_data')
-        if adapter_data:
-            for adapter in adapter_data:
+        data = self.report_data.get('adapter_data')
+        if data:
+            for adapter in data:
                 sections.append(self.templates['section'].render(
                     {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'], adapter['views'])}))
                 logger.info(f'Report Generator, Adapter Section: Added {adapter["name"]} section')
@@ -211,9 +211,11 @@ class ReportGenerator:
                 title = custom_chart.get('name', f'Custom Chart {i}')
                 try:
                     line_height = 0
+                    chart_height = 0
                     chart_data = custom_chart.get('data')
                     chart_value = None
-                    if chart_data and chart_data[0] and not type(chart_data[0]) == list and chart_data[0].get('value'):
+                    if chart_data and chart_data[0] and isinstance(chart_data[0], dict) \
+                            and chart_data[0].get('value'):
                         chart_value = chart_data[0]['value']
                     if not custom_chart.get('metric') or not chart_data \
                             or (custom_chart.get('hide_empty') and chart_data and chart_value in [0, 1]):
@@ -226,29 +228,14 @@ class ReportGenerator:
                         else:
                             chart_height = 27 + len(chart_data) * 55
                     elif custom_chart['view'] == ChartViews.pie.name:
-                        query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
-                        if len(custom_chart['data']) == 2:
-                            portion = next((x for x in chart_data if not x.get('remainder')), None)
-                            byte_string = self._create_coverage_pie(portion['value'])
-                        else:
-                            byte_string = self._create_query_pie(custom_chart['data'])
-                        if byte_string == '':
-                            continue
-                        svg2png(bytestring=byte_string, write_to=query_pie_filename)
-                        chart_height = 240
-                        content = f'<img src="{query_pie_filename}">'
+                        chart_height, content = self._create_pie_chart(chart_data, chart_height, content, custom_chart)
                     elif custom_chart['view'] == ChartViews.summary.name:
                         content = self._create_summary_chart(custom_chart['data'])
                     if not content:
                         continue
                     charts_added += 1
-                    if line_height == 0 or line_height > chart_height:
-                        line_height = chart_height
-                    if page_height + line_height > 755:
-                        page_height = 0
-                        summary_content.append(self.templates['card_break'].render())
-                    if charts_added % 2 == 0:
-                        page_height += line_height
+                    line_height, page_height = self._calculate_height(chart_height, charts_added,
+                                                                      line_height, page_height, summary_content)
                     summary_content.append(self.templates['card'].render({'title': title,
                                                                           'content': content}))
                 except Exception:
@@ -262,6 +249,31 @@ class ReportGenerator:
                 'link_end': '</a>',
                 'content': '\n'.join(summary_content)
             })})
+
+    def _calculate_height(self, chart_height, charts_added, line_height, page_height, summary_content):
+        if line_height == 0 or line_height > chart_height:
+            line_height = chart_height
+        # Avoid a chart behind the footer
+        if page_height + line_height > 755:
+            page_height = 0
+            summary_content.append(self.templates['card_break'].render())
+        if charts_added % 2 == 0:
+            page_height += line_height
+        return line_height, page_height
+
+    def _create_pie_chart(self, chart_data, chart_height, content, custom_chart):
+        query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
+        # Create a coverage chart if there is only 2 portions of the data
+        if len(custom_chart['data']) == 2:
+            portion = next((x['value'] for x in chart_data if not x.get('remainder')), None)
+            byte_string = self._create_coverage_pie(portion)
+        else:
+            byte_string = self._create_query_pie(custom_chart['data'])
+        if byte_string != '':
+            svg2png(bytestring=byte_string, write_to=query_pie_filename)
+            chart_height = 240
+            content = f'<img src="{query_pie_filename}">'
+        return chart_height, content
 
     def _create_coverage_pie(self, portion):
         """
@@ -311,7 +323,8 @@ class ReportGenerator:
             })
         return slices
 
-    def _calculate_coordinates(self, portion):
+    @staticmethod
+    def _calculate_coordinates(portion):
         """
         :param portion: Wanted percentage for the slice
         :return: (x, y) for the point on the circle that represents given portion
@@ -327,11 +340,12 @@ class ReportGenerator:
         """
         adapters = discovery_data['counters']
         adapters.sort(key=lambda x: x['value'], reverse=True)
+        seen_gross = discovery_data['seen_gross']
         return self.templates['discovery'].render({
             'entities': entity_name, 'entity': entity_name[:-1],
             'histogram': self._create_histogram(adapters, 12),
             'seen': discovery_data['seen'],
-            'seen_gross': discovery_data['seen_gross'],
+            'seen_gross': f'({seen_gross})' if seen_gross != discovery_data['seen'] else '',
             'unique': discovery_data['unique']
         })
 
@@ -349,15 +363,15 @@ class ReportGenerator:
         :return:
         """
         bars = []
-        max = data[0].get('value', 1)
+        max_value = data[0].get('value', 1)
         for item in data[1:]:
-            if item.get('value', 1) > max:
-                max = item['value']
+            if item.get('value', 1) > max_value:
+                max_value = item['value']
         for item in data[:limit]:
             if not item.get('name'):
                 continue
             count = item.get('value', 0)
-            width = ((180 * count) / max)
+            width = ((180 * count) / max_value)
             if item.get('meta') and item['meta'] != count:
                 meta = item['meta']
                 count = f'{count} ({meta})'
@@ -365,11 +379,13 @@ class ReportGenerator:
             if textual:
                 parameters['title'] = item['name']
                 parameters['class'] = 'd-none'
+                parameters['textual'] = 'textual'
             bars.append(self.templates['histogram_bar'].render(parameters))
         if not bars:
             return ''
-        return self.templates['histogram'].render({'content': '\n'.join(bars),
-                                                   'remainder': f'+{len(data) - limit}' if len(data) > limit else ''})
+        return self.templates['histogram'].render(
+            {'content': '\n'.join(bars),
+             'remainder': f'Top {limit} of {len(data)}' if len(data) > limit else ''})
 
     def _create_query_pie(self, queries_data):
         """
@@ -389,8 +405,8 @@ class ReportGenerator:
             parameters = {'path': slice_def['path'],
                           'colour': 'url(#intersection)' if queries[i].get('intersection') else colours[
                               i % len(colours)]}
-            if i:
-                parameters['text'] = f'{round(portions[i] * 100)}%' if i else ''
+            if i >= 0:
+                parameters['text'] = f'{round(portions[i] * 100)}%'
                 parameters['x'] = slice_def['text_x']
                 parameters['y'] = slice_def['text_y']
             slices.append(self.templates['pie_slice'].render(parameters))
@@ -436,9 +452,9 @@ class ReportGenerator:
                 'colour': 'red' if query.get('negative', False) else 'orange'
             }))
         if views is not None:
-            for client_name, views in views.items():
+            for client_name, item_views in views.items():
                 results.append(f'<h3>{client_name}</h3>')
-                for view_data in views:
+                for view_data in item_views:
                     if not view_data.get('name') or not view_data.get('data'):
                         continue
 
@@ -464,7 +480,11 @@ class ReportGenerator:
         :param viewa_data:
         :return:
         """
-        good_fields = [field for field in view_data['fields'] if list(field.values())[0] != 'specific_data.data.image']
+        view_data['fields'] = [field for field in view_data['fields'] if
+                               list(field.values())[0] != 'specific_data.data.last_seen_in_devices']
+        good_fields = [field for field in view_data['fields'] if
+                       list(field.values())[0] != 'specific_data.data.image' and
+                       list(field.values())[0] != 'specific_data.data.last_seen_in_devices']
         current_fields = good_fields[0:self.NUMBER_OF_COLUMNS]
         heads = [self.templates['head'].render({'content': list(field.keys())[0]}) for field in current_fields]
         rows = []
@@ -474,19 +494,12 @@ class ReportGenerator:
                 value = item.get(list(field.values())[0], '')
                 if isinstance(value, list):
                     if field.get('Adapters'):
-                        canonized_value = []
-                        current_value = []
-                        for x in value:
-                            current_value.append(self.templates['adapter_data'].render({'name': x}))
-                            if len(current_value) == 3:
-                                canonized_value.append(''.join(current_value))
-                                current_value = []
-                        if len(current_value) > 0:
-                            canonized_value.append(''.join(current_value))
-                        value = '<br>'.join(canonized_value)
+                        value = self._create_adapters_cell(value)
                     else:
                         canonized_value = [str(x) for x in value]
                         value = ', '.join(canonized_value)
+                if isinstance(value, datetime):
+                    value = value.strftime('%Y-%m-%d %H:%M:%S')
                 item_values.append(self.templates['data'].render({'content': value}))
             rows.append(self.templates['row'].render({'content': '\n'.join(item_values)}))
 
@@ -497,7 +510,6 @@ class ReportGenerator:
                 'head_content': self.templates['row'].render({'content': '\n'.join(heads)}),
                 'body_content': '\n'.join(rows)
             })
-
         render_params = {
             'title': view_data['name'],
             'cols_total': len(view_data['fields']), 'cols_current': min(len(good_fields), self.NUMBER_OF_COLUMNS),
@@ -511,6 +523,19 @@ class ReportGenerator:
             render_params['link_end'] = '</a>'
             render_params['view_all'] = f' - {render_params["link_start"]}view all{render_params["link_end"]}'
         return self.templates['view'].render(render_params)
+
+    def _create_adapters_cell(self, value):
+        canonized_value = []
+        current_value = []
+        for x in value:
+            current_value.append(self.templates['adapter_data'].render({'name': x}))
+            if len(current_value) == 3:
+                canonized_value.append(''.join(current_value))
+                current_value = []
+        if len(current_value) > 0:
+            canonized_value.append(''.join(current_value))
+        value = '<br>'.join(canonized_value)
+        return value
 
     def _get_saved_views_data(self, include_all_saved_views=True, saved_queries=None):
         """
@@ -577,16 +602,17 @@ class ReportGenerator:
                             'count': count
                         })
                 except Exception:
-                    logger.exception('Problem with View {} ViewDoc {}'.format(view_doc.get('name'), str(view_doc)))
-        logger.info('query.saved_views {}'.format(views_data))
+                    logger.exception(f'Problem with View {view_doc["name"]} ViewDoc {str(view_doc)}')
+        logger.info(f'query.saved_views {views_data}')
         return views_data
 
-    def _get_field_titles(self, entity):
+    @staticmethod
+    def _get_field_titles(entity):
         current_entity_fields = gui_helpers.entity_fields(entity)
         name_to_title = {}
         for field in current_entity_fields['generic']:
             name_to_title[field['name']] = field['title']
-        for type in current_entity_fields['specific']:
-            for field in current_entity_fields['specific'][type]:
+        for entity_type in current_entity_fields['specific']:
+            for field in current_entity_fields['specific'][entity_type]:
                 name_to_title[field['name']] = field['title']
         return name_to_title
