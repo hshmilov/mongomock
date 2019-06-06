@@ -79,17 +79,16 @@
       mergedData () {
         // returns a "merged" version of the data:
         // "if a row is a full subset of another row, do not show it"
-
         let localData = [...this.data]
-
         let totalExcludedSet = new Set()
+        let stringFields = this.schema.items.filter(x => x.type === 'string' && !x.name.includes('.'))
 
         // out of all fields, on the topmost level, which are scalars (specifically a string)
         // those that are unique (and non-null) are never a superset or a subset of any other row
         // this code will find those unique ones and add them to 'totalExcludedSet', so they will
         // not take place in the rest of the algorithm.
         // this is O(n)
-        this.schema.items.filter(x => x.type === 'string').forEach(schema_item => {
+        stringFields.forEach(schema_item => {
           let fieldName = schema_item.name
 
           let excludedSet = {}
@@ -114,7 +113,7 @@
         // value, try to see if the whole row is also a subset or a superset, and if it does, mark them.
         // This reduces the amount of checks we do later.
         // This is O(n^2) where (n) is the maximal amount of identical values.
-        this.schema.items.filter(x => x.type === 'string').forEach(schema_item => {
+        stringFields.forEach(schema_item => {
           let fieldName = schema_item.name
           let d = {}
 
@@ -155,10 +154,8 @@
         // hide show the subset.
         let result = Array.from(totalExcludedSet).map(index => localData[index])
         localData.forEach((x, index) => {
-          if (x === undefined) return
-          if (totalExcludedSet.has(index)) {
-            return
-          }
+          if (x === undefined || totalExcludedSet.has(index)) return
+
           let found = false
           for (let i = 0; i < result.length; ++i) {
             if (this.isSubset(result[i], x)) {
@@ -209,7 +206,8 @@
         })
       },
       fields () {
-        return this.schema.items.filter(item => this.mergedData.find(currentData => currentData[item.name]))
+        return this.schema.items
+        .filter(item => !Array.isArray(item['items']) && this.mergedData.find(currentData => !this.isEmpty(currentData[item.name])))
           .map(item => {
             return { ...item, path: [this.module, 'aggregator', 'data', this.schema.name] }
           })
@@ -234,6 +232,9 @@
       ...mapActions({
         fetchDataCSV: FETCH_DATA_CONTENT_CSV
       }),
+      isEmpty(value) {
+              return value === undefined || value === null || value === ''
+            },
       isSubset (subset, superset) {
         for (let [key, value] of Object.entries(subset)) {
           if (value && !superset[key]) return false
@@ -245,14 +246,16 @@
         if (typeof (subsetValue) !== typeof (supersetValue)) return false
         if (Array.isArray(subsetValue)) {
           if (subsetValue.length > supersetValue.length) return false
-          return subsetValue.reduce((found, subsetItem) => {
+          for (let i = 0; i < subsetValue.length; i++) {
+            let found = false
             supersetValue.forEach(supersetItem => {
-              if (this.isSubsetValue(subsetItem, supersetItem)) found = true
+              if (this.isSubsetValue(subsetValue[i], supersetItem)) found = true
             })
-            return found
-          }, false)
+            if (!found) return false
+          }
+          return true
         }
-        if (typeof (value) === 'object') {
+        if (typeof (subsetValue) === 'object') {
           return this.isSubset(subsetValue, supersetValue)
         }
         return (subsetValue === supersetValue)

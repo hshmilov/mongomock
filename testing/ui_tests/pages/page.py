@@ -111,12 +111,17 @@ class Page:
 
     CHECKBOX_BY_PARENT_ID = '//div[@id=\'{parent_id}\']/div[contains(@class, \'x-checkbox\')]' \
                             '//input[@type=\'checkbox\']'
+    TABLE_ALL_CHECKBOX_CSS = 'thead tr th:nth-child(1) .x-checkbox'
+    TABLE_ROW_CHECKBOX_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
 
     FIELD_WITH_LABEL_XPATH = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'md-field\')]'
 
     DROPDOWN_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     DROPDOWN_SELECTED_OPTIONS_CSS = 'div.x-select-options'
     DROPDOWN_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
+
+    TAB_HEADER_XPATH = '//div[contains(@class, \'x-tabs\')]/ul/li[contains(@class, \'header-tab\') and ' \
+                       './/text()=\'{tab_title}\']'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -584,6 +589,9 @@ class Page:
             extracted_counters.append(self.extract_first_int(counter.text))
         return extracted_counters
 
+    def get_table_count(self):
+        return int(self.driver.find_element_by_css_selector(self.TABLE_COUNTER).text[1:-1])
+
     def page_back(self):
         self.driver.back()
 
@@ -615,7 +623,7 @@ class Page:
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()
 
     def click_tab(self, tab_title):
-        self.find_element_by_text(tab_title).click()
+        self.driver.find_element_by_xpath(self.TAB_HEADER_XPATH.format(tab_title=tab_title)).click()
 
     def find_vertical_tabs(self):
         vertical_tabs = []
@@ -683,3 +691,9 @@ class Page:
 
     def find_checkbox_by_parent_id(self, parent_id):
         return self.driver.find_element_by_xpath(self.CHECKBOX_BY_PARENT_ID.format(parent_id=parent_id))
+
+    def click_row_checkbox(self, index=1):
+        self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index)).click()
+
+    def click_table_checkbox(self):
+        self.driver.find_element_by_css_selector(self.TABLE_ALL_CHECKBOX_CSS).click()

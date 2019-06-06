@@ -161,11 +161,36 @@ class MongoService(WeaveService):
     def gui_config_collection(self):
         return self.client[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
 
-    def get_gui_entity_fields(self, entity_type: EntityType):
-        if entity_type == EntityType.Users:
-            return self.client[GUI_PLUGIN_NAME]['users_fields']
-        if entity_type == EntityType.Devices:
-            return self.client[GUI_PLUGIN_NAME]['devices_fields']
+    def remove_gui_dynamic_fields(self, entity_type: EntityType):
+        fields_collection_name = 'users_fields' if (entity_type == EntityType.Users) else 'devices_fields'
+        fields_collection = self.client[AGGREGATOR_PLUGIN_NAME][fields_collection_name]
+
+        fields_collection.update_one({
+            'name': 'dynamic',
+            'plugin_unique_name': GUI_PLUGIN_NAME
+        }, {
+            '$set': {
+                'schema.items': []
+            }
+        })
+        fields_collection.update_one({
+            'name': 'exist',
+            'plugin_unique_name': GUI_PLUGIN_NAME
+        }, {
+            '$set': {
+                'fields': []
+            }
+        })
+
+    def restore_gui_entity_views(self, entity_type: EntityType):
+        views_collection_name = 'user_views' if (entity_type == EntityType.Users) else 'device_views'
+        self.client[GUI_PLUGIN_NAME][views_collection_name].update_many({
+            'archived': True
+        }, {
+            '$set': {
+                'archived': False
+            }
+        })
 
     def gui_reports_config_collection(self):
         return self.client[GUI_PLUGIN_NAME]['reports_config']

@@ -1,4 +1,6 @@
-from selenium.common.exceptions import ElementNotVisibleException, NoSuchElementException
+from selenium.common.exceptions import (ElementNotVisibleException,
+                                        ElementNotInteractableException,
+                                        NoSuchElementException)
 
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME
@@ -27,7 +29,7 @@ class TestEntityCustomData(TestBase):
         try:
             entities_page.click_advanced_view()
             assert False
-        except ElementNotVisibleException:
+        except (ElementNotVisibleException, ElementNotInteractableException):
             # Advanced not available on Custom Data tab
             pass
         try:

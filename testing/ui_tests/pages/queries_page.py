@@ -36,6 +36,7 @@ class QueriesPage(Page):
 
     def remove_selected_queries(self):
         self.find_element_by_text(self.REMOVE_BUTTON).click()
+        self.wait_for_element_absent_by_css('.x-checkbox.x-checked')
 
     def enforce_selected_query(self):
         self.find_element_by_text(self.test_base.enforcements_page.NEW_ENFORCEMENT_BUTTON).click()

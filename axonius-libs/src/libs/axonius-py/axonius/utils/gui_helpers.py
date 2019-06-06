@@ -776,7 +776,7 @@ def merge_entities_fields(entities_data, fields):
     # Sort list values in order to check equality of content, regardless different order
     for entity_data in parsed_entities_data:
         for value in entity_data.values():
-            if not isinstance(value, list):
+            if not value or not isinstance(value, list) or isinstance(value[0], dict):
                 continue
             value.sort()
 

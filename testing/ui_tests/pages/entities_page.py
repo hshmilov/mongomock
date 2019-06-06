@@ -51,14 +51,17 @@ class EntitiesPage(Page):
     TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .title > .selection > button'
     TABLE_FIRST_ROW_CSS = 'tbody .x-row.clickable'
     TABLE_SECOND_ROW_CSS = 'tbody .x-row.clickable:nth-child(2)'
-    TABLE_ROW_CHECKBOX_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(1) .x-checkbox'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
     TABLE_ROW_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
     TABLE_CELL_CSS = 'tbody .x-row.clickable td:nth-child({cell_index})'
     TABLE_CELL_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
+    TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
+                             '//div[@class=\'table-container\']//tr[@class=\'x-row\']'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/div[@class=\'table-container\']/table/thead/tr'
+    TABLE_HEADER_FIELD_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
+                               '//div[@class=\'table-container\']//thead/tr'
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
     TABLE_HEADER_CELLS_CSS = '.data-title'
@@ -85,6 +88,8 @@ class EntitiesPage(Page):
     NOTES_TAB_CSS = 'li#notes'
     TAGS_TAB_CSS = 'li#tags'
     CUSTOM_DATA_TAB_CSS = 'li#gui_unique'
+    GENERAL_DATA_TAB_TITLE = 'General Data'
+    ADAPTERS_DATA_TAB_TITLE = 'Adapters Data'
 
     NOTES_CREATED_TOASTER = 'New note was created'
     NOTES_EDITED_TOASTER = 'Existing note was edited'
@@ -212,9 +217,6 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).click()
         self.wait_for_spinner_to_end()
 
-    def click_row_checkbox(self, index=1):
-        self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index)).click()
-
     def click_specific_row_checkbox(self, field_name, field_value):
         values = self.get_column_data(field_name)
         row_num = values.index(field_value)
@@ -322,6 +324,11 @@ class EntitiesPage(Page):
         header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
         return [head.text.strip() for head in header_columns if head.text.strip()]
 
+    def get_field_columns_header_text(self):
+        headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_FIELD_XPATH)
+        header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
+        return [head.text.strip() for head in header_columns if head.text.strip()]
+
     def count_sort_column(self, col_name, parent=None):
         # Return the position of given col_name in list of column headers, 1-based
         if not parent:
@@ -360,6 +367,13 @@ class EntitiesPage(Page):
 
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
+
+    def get_field_data(self):
+        return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
+
+    def get_field_table_data(self):
+        return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]
+                for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
 
     def select_all_current_page_rows_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS).click()
@@ -467,6 +481,12 @@ class EntitiesPage(Page):
     def approve_remove_selected(self):
         self.find_element_by_text(self.DELETE_BUTTON).click()
 
+    def click_general_tab(self):
+        self.click_tab(self.GENERAL_DATA_TAB_TITLE)
+
+    def click_adapters_tab(self):
+        self.click_tab(self.ADAPTERS_DATA_TAB_TITLE)
+
     def click_notes_tab(self):
         self.driver.find_element_by_css_selector(self.NOTES_TAB_CSS).click()
 
@@ -513,16 +533,26 @@ class EntitiesPage(Page):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        return session.get(
-            f'https://127.0.0.1/api/{entity_type}/csv?fields={fields}&filter={filters}')
+        return session.get(f'https://127.0.0.1/api/{entity_type}/csv?fields={fields}&filter={filters}')
 
-    def assert_csv_match_ui_data(self, result):
+    def generate_csv_field(self, entity_type, entity_id, field_name, sort, desc=False):
+        session = requests.Session()
+        cookies = self.driver.get_cookies()
+        for cookie in cookies:
+            session.cookies.set(cookie['name'], cookie['value'])
+        return session.get(
+            f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv?sort={sort}&desc={1 if desc else 0}')
+
+    def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None):
         all_csv_rows = result.text.split('\r\n')
         csv_headers = all_csv_rows[0].split(',')
         csv_data_rows = all_csv_rows[1:-1]
 
-        ui_headers = self.get_columns_header_text()
-        ui_data_rows = [row.split('\n')[1:] for row in self.get_all_data()]
+        if not ui_headers:
+            ui_headers = self.get_columns_header_text()
+        if not ui_data:
+            ui_data = self.get_all_data()
+        ui_data_rows = [row.split('\n')[1:] for row in ui_data]
         # we don't writ image to csv
         if 'Image' in ui_headers:
             ui_headers.remove('Image')
@@ -534,6 +564,9 @@ class EntitiesPage(Page):
         for index, data_row in enumerate(csv_data_rows):
             for ui_data_row in ui_data_rows[index]:
                 assert normalize_timezone_date(ui_data_row.strip().split(', ')[0]) in data_row
+
+    def assert_csv_field_match_ui_data(self, result):
+        self.assert_csv_match_ui_data(result, self.get_field_data(), self.get_field_columns_header_text())
 
     def query_json_adapter(self):
         self.run_filter_query(self.JSON_ADAPTER_FILTER)

@@ -1,6 +1,8 @@
 import time
 from services.adapters.stresstest_service import StresstestService
+from services.adapters.cisco_service import CiscoService
 from ui_tests.tests.ui_test_base import TestBase
+from devops.scripts.automate_dev import credentials_inputer
 
 
 class TestHyperlinks(TestBase):
@@ -111,3 +113,25 @@ class TestHyperlinks(TestBase):
                 }, limit=1) == 1
         finally:
             clients_db.delete_many({})
+
+    def test_entity_field_links(self):
+        self.enforcements_page.switch_to_page()
+        with CiscoService().contextmanager(take_ownership=True):
+            credentials_inputer.main()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.click_query_wizard()
+            self.devices_page.select_query_field(self.devices_page.FIELD_CONNECTED_DEVICES)
+            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+            self.devices_page.click_search()
+            self.devices_page.wait_for_table_to_load()
+            self.devices_page.click_row()
+            self.devices_page.wait_for_spinner_to_end()
+            self.devices_page.click_general_tab()
+            self.devices_page.click_tab(self.devices_page.FIELD_CONNECTED_DEVICES)
+            link = self.devices_page.driver.find_element_by_css_selector(
+                '.x-entity-general .x-tab.active .table-container .x-row td a')
+            link_text = link.text
+            link.click()
+            self.devices_page.wait_for_table_to_load()
+            assert link_text in self.devices_page.get_column_data(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)

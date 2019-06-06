@@ -1,5 +1,6 @@
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from services.adapters.aws_service import AwsService
+from services.plugins.general_info_service import GeneralInfoService
 from test_credentials.test_aws_credentials import client_details
 
 AWS_NAME = 'Amazon Web Services (AWS)'
@@ -51,6 +52,82 @@ class TestDevicesTable(TestEntitiesTable):
                                                 self.QUERY_FIELDS,
                                                 self.QUERY_FILTER_DEVICES)
         self.devices_page.assert_csv_match_ui_data(result)
+
+    def test_device_table_field_export(self):
+        self.enforcements_page.switch_to_page()
+        with GeneralInfoService().contextmanager(take_ownership=True):
+            self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.click_query_wizard()
+            self.devices_page.select_query_field(self.devices_page.FIELD_USERS_USERNAME)
+            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+            self.devices_page.click_search()
+            self.devices_page.wait_for_table_to_load()
+            self.devices_page.click_row()
+            self.devices_page.wait_for_spinner_to_end()
+            self.devices_page.click_general_tab()
+
+            # Test export csv of Network Interfaces
+            self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
+            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+                'devices',
+                self.driver.current_url.split('/')[-1],
+                self.devices_page.FIELD_NETWORK_INTERFACES_NAME,
+                self.devices_page.FIELD_MAC_NAME
+            ))
+            # Test with sort of 'array' field
+            self.devices_page.click_sort_column(self.devices_page.FIELD_IPS)
+            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+                'devices',
+                self.driver.current_url.split('/')[-1],
+                self.devices_page.FIELD_NETWORK_INTERFACES_NAME,
+                self.devices_page.FIELD_IPS_NAME,
+                desc=True
+            ))
+
+            # Test export csv of Users
+            self.devices_page.click_tab(self.devices_page.FIELD_USERS)
+            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+                'devices',
+                self.driver.current_url.split('/')[-1],
+                self.devices_page.FIELD_USERS_NAME,
+                self.devices_page.FIELD_SID_NAME
+            ))
+            # Test with sort of 'datetime' field
+            self.devices_page.click_sort_column(self.devices_page.FIELD_USERS_LAST_USE)
+            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+                'devices',
+                self.driver.current_url.split('/')[-1],
+                self.devices_page.FIELD_USERS_NAME,
+                self.devices_page.FIELD_USERS_LAST_USE_NAME,
+                desc=True
+            ))
+            # Test with sort of 'bool' field
+            self.devices_page.click_sort_column(self.devices_page.FIELD_USERS_LOCAL)
+            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+                'devices',
+                self.driver.current_url.split('/')[-1],
+                self.devices_page.FIELD_USERS_NAME,
+                self.devices_page.FIELD_USERS_LOCAL_NAME,
+                desc=True
+            ))
+
+    def test_device_table_field(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.query_json_adapter()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_general_tab()
+
+        # Test merged rows of Network Interfaces
+        self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
+        field_data = self.devices_page.get_field_table_data()
+        assert ['06:3A:9B:D7:D7:A8', '10.0.2.1\n10.0.2.2', '10.0.2.0/24', 'vlan0, vlan1', '1, 2'] == field_data[0]
+        assert ['06:3A:9B:D7:D7:A8', '10.0.2.3', '', 'vlan0, vlan1', '1, 2'] == field_data[1]
 
     def test_select_all_devices(self):
         with AwsService().contextmanager(take_ownership=True):

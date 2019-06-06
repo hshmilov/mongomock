@@ -75,10 +75,12 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
         if _is_table(schema):
             schema_name = f'specific_data.data.{schema["name"]}'
             advanced_field_data = parse_entity_fields(entity, [schema_name]).get(schema_name)
+            flat_schema = {**schema, 'items': flatten_fields(schema['items'])}
             if advanced_field_data:
                 advanced_data.append({
-                    'schema': {**schema, 'items': flatten_fields(schema['items'])},
-                    'data': advanced_field_data
+                    'schema': flat_schema,
+                    'data': [parse_entity_fields(row, [field['name'] for field in flat_schema['items']])
+                             for row in advanced_field_data]
                 })
         else:
             basic_fields.append(schema)
@@ -119,6 +121,7 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
                   if field['name'] == field_name)
     field_by_name = {
         field['name']: field for field in fields
+        if not isinstance(field.get('items'), list)
     }
     entity_field_data = merge_entities_fields(
         parse_entity_fields(entity, [field_name_full]).get(field_name_full, []), field_by_name.keys())

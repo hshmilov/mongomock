@@ -215,8 +215,11 @@ class TestBase:
         self.axonius_system.get_system_users_db().update_one(
             {'user_name': DEFAULT_USER['user_name']}, {'$set': {'password': bcrypt.hash(DEFAULT_USER['password'])}})
 
-        self.axonius_system.db.get_gui_entity_fields(EntityType.Users).delete_many({})
-        self.axonius_system.db.get_gui_entity_fields(EntityType.Devices).delete_many({})
+        self.axonius_system.db.remove_gui_dynamic_fields(EntityType.Users)
+        self.axonius_system.db.remove_gui_dynamic_fields(EntityType.Devices)
+
+        self.axonius_system.db.restore_gui_entity_views(EntityType.Users)
+        self.axonius_system.db.restore_gui_entity_views(EntityType.Devices)
 
         self.axonius_system.db.gui_config_collection().update_one({
             'config_name': FEATURE_FLAGS_CONFIG

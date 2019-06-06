@@ -59,6 +59,44 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_spinner_to_end()
         assert not len(self.devices_page.get_column_data(self.devices_page.FIELD_OS_TYPE))
 
+    def test_saved_queries_remove(self):
+        self.settings_page.switch_to_page()
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_load()
+        self.devices_queries_page.wait_for_spinner_to_end()
+        data_count = self.devices_queries_page.get_table_count()
+
+        def _remove_queries_wait_count(data_count):
+            self.devices_queries_page.remove_selected_queries()
+            wait_until(lambda: self.devices_queries_page.get_table_count() == data_count)
+            return data_count
+
+        # Test remove a few (select each one)
+        all_data = self.devices_queries_page.get_all_table_rows()
+        self.devices_queries_page.click_row_checkbox(1)
+        self.devices_queries_page.click_row_checkbox(2)
+        self.devices_queries_page.click_row_checkbox(3)
+        data_count = _remove_queries_wait_count(data_count - 3)
+        current_data = self.devices_queries_page.get_all_table_rows()
+        if len(current_data) == 20:
+            current_data = current_data[:-3]
+        assert current_data == all_data[3:]
+
+        # Test remove all but some (select all and exclude 3 rows)
+        all_data = self.devices_queries_page.get_all_table_rows()
+        self.devices_queries_page.click_table_checkbox()
+        self.devices_queries_page.click_row_checkbox(3)
+        self.devices_queries_page.click_row_checkbox(6)
+        self.devices_queries_page.click_row_checkbox(9)
+        _remove_queries_wait_count(data_count - 17)
+        assert self.devices_queries_page.get_all_table_rows()[:3] == [all_data[2], all_data[5], all_data[8]]
+
+        # Test remove all
+        self.devices_queries_page.click_table_checkbox()
+        self.devices_queries_page.click_button('Select all', partial_class=True)
+        _remove_queries_wait_count(0)
+        assert self.devices_queries_page.get_all_table_rows() == []
+
     def _check_search_text_result(self, text):
         self.devices_page.wait_for_table_to_load()
         all_data = self.devices_page.get_all_data()

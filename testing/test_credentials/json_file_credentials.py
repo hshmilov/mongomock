@@ -14,8 +14,7 @@ DEVICE_FIRST_VLAN_TAGID = '1'
 client_details = {
     DEVICES_DATA: FileForCredentialsMock(DEVICES_DATA, '''
     {
-        "devices" : [
-            {
+        "devices" : [{
             "id": "cb_id1",
             "name": "CB 1",
             "hostname": "CB First",
@@ -31,13 +30,36 @@ client_details = {
                 }]
             }, {
                 "ips": ["''' + DEVICE_THIRD_IP + '''"]
+            }, {
+                "mac": "''' + DEVICE_MAC + '''",
+                "ips": ["''' + DEVICE_FIRST_IP + '''"],
+                "ips_raw": [167772673]
+            }, {
+                "mac": "''' + DEVICE_MAC + '''",
+                "ips": ["''' + DEVICE_SECOND_IP + '''", "''' + DEVICE_FIRST_IP + '''"],
+                "ips_raw": [167772674, 167772673]
+            }, {
+                "mac": "''' + DEVICE_MAC + '''",
+                "ips": ["''' + DEVICE_THIRD_IP + '''"],
+                "vlan_list": [{
+                    "name": "''' + DEVICE_FIRST_VLAN_NAME + '''", "tagid": ''' + DEVICE_FIRST_VLAN_TAGID + '''
+                }, {
+                    "name": "''' + DEVICE_SECOND_VLAN_NAME + '''", "tagid": 2
+                }]
+            }, {
+                "mac": "''' + DEVICE_MAC + '''",
+                "ips": ["''' + DEVICE_SECOND_IP + '''"],
+                "vlan_list": [{
+                    "name": "''' + DEVICE_FIRST_VLAN_NAME + '''"
+                }, {
+                    "tagid": 2
+                }]
             }],
             "av_status": "active",
             "last_contact": "-",
             "sensor_version": "0.4.1",
             "test_enforcement_change" : 5
-            }
-        ],
+        }],
        "fields" : ["id", "network_interfaces", "av_status", "last_contact", "sensor_version", "name", "hostname", 
                    "test_enforcement_change"],
        "additional_schema" : [

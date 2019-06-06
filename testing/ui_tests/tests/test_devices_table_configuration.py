@@ -59,11 +59,12 @@ class TestDevicesTable(TestEntitiesTable):
             first_id = self.devices_page.find_first_id()
             self.devices_page.click_row()
             assert f'devices/{first_id}' in self.driver.current_url
-            self.devices_page.click_tab('Adapters Data')
+            self.devices_page.wait_for_spinner_to_end()
+            self.devices_page.click_adapters_tab()
             assert len(self.devices_page.find_vertical_tabs()) == 2
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS)
-            self.devices_page.click_tab('General Data')
+            self.devices_page.click_general_tab()
             assert self.devices_page.find_vertical_tabs() == ['Basic Info', 'Network Interfaces']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME)
             assert not self.devices_page.find_element_by_text(self.devices_page.FIELD_AVSTATUS).is_displayed()
@@ -84,7 +85,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_row()
             assert f'devices/{first_id}' in self.driver.current_url
             self.devices_page.wait_for_table_to_load()
-            self.devices_page.click_tab('Adapters Data')
+            self.devices_page.click_adapters_tab()
             assert self.devices_page.find_vertical_tabs() == ['WMI Info',
                                                               'Microsoft Active Directory (AD)',
                                                               'Custom Data']
@@ -96,7 +97,7 @@ class TestDevicesTable(TestEntitiesTable):
                 # If it causes blank pages, we need to remove this and find and alternative (long wait before this)
                 self.driver.refresh()
                 self.devices_page.wait_for_table_to_load()
-                self.devices_page.click_tab('General Data')
+                self.devices_page.click_general_tab()
                 return 'Installed Software' in self.devices_page.find_vertical_tabs()
 
             wait_until(_check_installed_software, check_return_value=True, total_timeout=60 * 3)
