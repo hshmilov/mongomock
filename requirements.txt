@@ -70,7 +70,7 @@ duo-client==3.3.0
 ncclient==0.6.4
 junos-eznc==2.1.8
 aiohttp==3.3.2
-apache-libcloud==2.3.0
+apache-libcloud==2.4.0
 passlib==1.7.1
 pylint==2.3.0
 pylint_quotes==0.1.9

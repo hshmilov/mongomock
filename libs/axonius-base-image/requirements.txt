@@ -59,7 +59,7 @@ python-dateutil==2.7.3
 duo-client==3.3.0
 ncclient==0.6.4
 junos-eznc==2.1.8
-apache-libcloud==2.3.0
+apache-libcloud==2.4.0
 faker==0.8.17
 aliyun-python-sdk-core-v3==2.9.0
 aliyun-python-sdk-ecs==4.9.5
