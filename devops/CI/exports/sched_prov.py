@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import sys
 import shutil
+import urllib.request
 from pathlib import Path
 
 from urllib3 import ProxyManager
@@ -62,12 +63,27 @@ def read_proxy_data():
         return None
 
 
+def is_local_node():
+    try:
+        # no-venv, can not import request and the url
+        return json.loads(urllib.request.urlopen('http://services.axonius.lan:8080/axonius-local.json').read()
+                          .decode())['local'] is True
+    except Exception:
+        return False
+
+
 def provision():
     if chech_command_status('pgrep -x chef-client') == 0:
         print('chef client already running')
     else:
         print('starting provision sequence')
-    node_name = 'node-' + ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=8))
+
+    random_part = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=8))
+
+    if is_local_node():
+        node_name = 'node-ax-' + random_part
+    else:
+        node_name = 'node-' + random_part
 
     shutil.rmtree('/etc/chef')
     Path('/etc/chef').mkdir(mode=0o750)
