@@ -159,7 +159,7 @@ class TestCode:
     @staticmethod
     def test_formatting():
         child = subprocess.Popen(
-            ['/bin/bash', '-c', 'git ls-files | grep "\\.py" | xargs autopep8 --max-line-length 120 --diff'],
+            ['/bin/bash', '-c', 'git ls-files | grep "\\.py$" | xargs autopep8 --max-line-length 120 --diff'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=ABSOLUTE_ROOT_DIR
@@ -174,7 +174,7 @@ class TestCode:
     @staticmethod
     def test_bare_except():
         child = subprocess.Popen(
-            ['/bin/bash', '-c', 'git ls-files | grep "\\.py" | xargs autopep8 --select=E722 --diff -a'],
+            ['/bin/bash', '-c', 'git ls-files | grep "\\.py$" | xargs autopep8 --select=E722 --diff -a'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=ABSOLUTE_ROOT_DIR
@@ -190,7 +190,7 @@ class TestCode:
     def test_crlf():
         child = subprocess.Popen(
             ['/bin/bash', '-c',
-             'git ls-files | grep -E "(\\.py|\\.sh|\\.yml|Dockerfile)" | xargs grep $(printf "\r") -r'],
+             'git ls-files | grep -E "(\\.py$|\\.sh|\\.yml|Dockerfile)" | xargs grep $(printf "\r") -r'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=ABSOLUTE_ROOT_DIR
