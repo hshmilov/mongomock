@@ -199,6 +199,11 @@
             first = second
             second = temp
           }
+          let firstDate = new Date(first)
+          let secondDate = new Date(second)
+          if (firstDate.getDate() && secondDate.getDate()) {
+            return (firstDate < secondDate)? -1 : 1
+          }
           if (typeof (first) === 'string') {
             return (first < second) ? -1 : 1
           }
