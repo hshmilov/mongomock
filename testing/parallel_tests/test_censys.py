@@ -38,3 +38,20 @@ class TestCensysAdapter(AdapterTestBase):
     @pytest.mark.skip('Skip because of 250 calls/month Censys API limit')
     def test_check_reachability(self):
         pass
+
+    # Override some others and skip them
+    @pytest.mark.skip('Skip because of 250 calls/month Censys API limit')
+    def test_fetch_users(self):
+        pass
+
+    @pytest.mark.skip('Skip because of 250 calls/month Censys API limit')
+    def test_removing_adapter_creds_with_devices(self):
+        pass
+
+    @pytest.mark.skip('Skip because of 250 calls/month Censys API limit')
+    def test_removing_adapter_creds_with_users(self):
+        pass
+
+    @pytest.mark.skip('Skip because of 250 calls/month Censys API limit')
+    def test_bad_client(self):
+        pass
