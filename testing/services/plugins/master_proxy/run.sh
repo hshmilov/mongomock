@@ -10,7 +10,7 @@
 # Global vars
 PROG_NAME='DockerTinyproxy'
 PROXY_CONF='/etc/tinyproxy/tinyproxy.conf'
-TAIL_LOG='/var/log/tinyproxy/tinyproxy.log'
+TAIL_LOG="/home/axonius/logs/master-proxy.rawtext.log"
 
 # Usage: screenOut STATUS message
 screenOut() {

@@ -1,17 +1,21 @@
 import json
+import os
 from pathlib import Path
 
 import requests
 from urllib3 import ProxyManager
 
+from axonius.consts import plugin_consts
 from axonius.consts.system_consts import NODE_MARKER_PATH
-from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
+from scripts.instances.instances_consts import (AXONIUS_SETTINGS_PATH,
+                                                PROXY_DATA_HOST_PATH)
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
 
 CONTAINER_NAME = 'master-proxy'
 CONF_TEMPLATE_FILE = Path('tinyproxy.conf.in')
 CONF_FILE = Path('tinyproxy.conf')
+MASTER_PROXY_LOGFILE = 'master-proxy.rawtext.log'
 
 CREDS = 'creds'
 VERIFY = 'verify'
@@ -51,10 +55,14 @@ class MasterProxyService(WeaveService):
         else:
             # process template
             template = (Path(self.service_dir) / CONF_TEMPLATE_FILE).read_text()
+            os.makedirs(self.log_dir, exist_ok=True)
+            (Path(self.log_dir) / MASTER_PROXY_LOGFILE).touch(exist_ok=True)
             proxy_data = read_proxy_data()
             if proxy_data and proxy_data.get(CREDS):
                 proxy = proxy_data[CREDS]
                 template += f'\nupstream {proxy}\n'
+
+            template += f'\nLogFile "/home/axonius/logs/{MASTER_PROXY_LOGFILE}"\n'
             (Path(self.service_dir) / CONF_FILE).write_text(template)
 
             super().start(*args, **kwargs)
@@ -86,12 +94,10 @@ class MasterProxyService(WeaveService):
         return [(self.port(), self.port())]
 
     @property
-    def volumes(self):
-        return []
-
-    @property
     def volumes_override(self):
-        return [f'{self.service_dir}/{CONF_FILE}:/etc/tinyproxy/tinyproxy.conf']
+
+        return [f'{self.service_dir}/{CONF_FILE}:/etc/tinyproxy/tinyproxy.conf',
+                f'{AXONIUS_SETTINGS_PATH}:{plugin_consts.AXONIUS_SETTINGS_PATH}']
 
     def get_main_file(self):
         return ''

@@ -13,7 +13,9 @@ RUN apk add --no-cache \
 	bash \
 	tinyproxy
 
+RUN mkdir -p /home/axonius/logs
 COPY run.sh /opt/docker-tinyproxy/run.sh
 RUN chmod +x /opt/docker-tinyproxy/run.sh
+
 
 ENTRYPOINT ["/opt/docker-tinyproxy/run.sh"]
