@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field
@@ -13,7 +14,7 @@ from tanium_adapter.connection import TaniumConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class TaniumAdapter(AdapterBase):
+class TaniumAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
 
@@ -57,7 +58,7 @@ class TaniumAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Tanium Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(do_pagination=self.__do_pagination)
 
     def _clients_schema(self):
         """
@@ -136,3 +137,29 @@ class TaniumAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'do_pagination',
+                    'title': 'Do Pagination',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'do_pagination'
+            ],
+            'pretty_name': 'Tanium Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'do_pagination': False
+        }
+
+    def _on_config_update(self, config):
+        self.__do_pagination = config['do_pagination']

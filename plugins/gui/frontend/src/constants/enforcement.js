@@ -29,6 +29,9 @@ export const actionsMeta = {
     cybereason_unisolate: {
         title: 'Unisolate in Cybereason Deep Detect & Respond'
     },
+    sentinelone_initiate_scan_action: {
+        title: 'Initiate Sentinelone Scan'
+    },
     scan_with_qualys: {
         title: 'Add to Qualys Cloud Platform'
     },
@@ -114,7 +117,7 @@ export const actionsMeta = {
     },
     isolate_edr: {
         title: 'Isolate Device in EDR',
-        items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy']
+        items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy', 'sentinelone_initiate_scan_action']
     },
     scan_va: {
         title: 'Add Device to VA Scan',

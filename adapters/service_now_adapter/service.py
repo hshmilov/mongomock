@@ -282,7 +282,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the ServiceNow Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(fetch_users_info_for_devices=self.__fetch_users_info_for_devices)
 
     def _query_users_by_client(self, key, data):
         if self.__fetch_users:
@@ -446,6 +446,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'title': 'Should Fetch Users'
                 },
                 {
+                    'name': 'fetch_users_info_for_devices',
+                    'type': 'bool',
+                    'title': 'Fetch Users Info For Devices'
+                },
+                {
                     'name': 'fetch_ips',
                     'type': 'bool',
                     'title': 'Should Fetch IPs'
@@ -463,9 +468,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'fetch_users': True,
-            'fetch_ips': True
+            'fetch_ips': True,
+            'fetch_users_info_for_devices': True
         }
 
     def _on_config_update(self, config):
         self.__fetch_users = config['fetch_users']
         self.__fetch_ips = config['fetch_ips']
+        self.__fetch_users_info_for_devices = config['fetch_users_info_for_devices']

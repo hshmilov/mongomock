@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.plugin_base import add_rule, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import (convert_ldap_searchpath_to_domain_name,
@@ -22,6 +23,7 @@ class SentineloneAdapter(AdapterBase):
         agent_version = Field(str, 'Agent Version')
         active_state = Field(str, 'Active State')
         is_active = Field(bool, 'Is Active')
+        basic_device_id = Field(str, 'Basic ID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -32,17 +34,21 @@ class SentineloneAdapter(AdapterBase):
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
+    @staticmethod
+    def get_connection(client_config):
+        connection = SentinelOneConnection(domain=client_config['domain'],
+                                           https_proxy=client_config.get('https_proxy'),
+                                           username=client_config.get('username'),
+                                           password=client_config.get('password'),
+                                           verify_ssl=client_config['verify_ssl'],
+                                           apikey=client_config.get('token'))
+        with connection:
+            pass  # check that the connection credentials are valid
+        return connection
+
     def _connect_client(self, client_config):
         try:
-            connection = SentinelOneConnection(domain=client_config['domain'],
-                                               https_proxy=client_config.get('https_proxy'),
-                                               username=client_config.get('username'),
-                                               password=client_config.get('password'),
-                                               verify_ssl=client_config['verify_ssl'],
-                                               apikey=client_config.get('token'))
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -108,6 +114,22 @@ class SentineloneAdapter(AdapterBase):
             ],
             'type': 'array'
         }
+
+    @add_rule('initiate_scan', methods=['POST'])
+    def initiate_scan(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            sentinelone_dict = self.get_request_data_as_object()
+            device_id = sentinelone_dict.get('device_id')
+            client_id = sentinelone_dict.get('client_id')
+            sentinelone_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with sentinelone_obj:
+                sentinelone_obj.initiate_scan(device_id)
+        except Exception as e:
+            logger.exception(f'Problem during isolating changes')
+            return return_error(str(e), 500)
+        return '', 200
 
     # pylint: disable=R0912,R0915
     def _create_device_v1(self, device_raw):
@@ -207,6 +229,7 @@ class SentineloneAdapter(AdapterBase):
                 logger.warning(f'Bad device with no id {device_raw}')
                 return None
             device.id = device_id + computer_name
+            device.basic_device_id = device_id
             device.agent_version = device_raw.get('agentVersion')
             try:
                 device.last_seen = parse_date(device_raw.get('lastActiveDate'))
@@ -216,6 +239,7 @@ class SentineloneAdapter(AdapterBase):
                 device.add_public_ip(device_raw.get('externalIp'))
             device.domain = device_raw.get('domain')
             ad_domain = ''
+            ad_user_domain = None
             try:
                 ad_data = device_raw.get('activeDirectory') or {}
                 ad_nodes_names = ad_data.get('computerDistinguishedName') or ''

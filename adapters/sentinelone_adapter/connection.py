@@ -133,3 +133,8 @@ class SentinelOneConnection(RESTConnection):
             yield from self._get_device_list_v2()
         elif self.__api_version == consts.V1:
             yield from self._get_device_list_v1()
+
+    def initiate_scan(self, device_id):
+        self._post('web/api/v2.0/agents/actions/initiate-scan',
+                   body_params={'filter': {'ids': [device_id]},
+                                'data': {}})

@@ -34,6 +34,7 @@ class GuiService(PluginService):
         local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
         self.is_dev = os.path.isdir(local_npm) and os.path.isdir(local_dist)
 
+    # pylint: disable=too-many-branches
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 1:
@@ -58,8 +59,10 @@ class GuiService(PluginService):
             self._update_schema_version_10()
         if self.db_schema_version < 11:
             self._update_schema_version_11()
+        if self.db_schema_version < 12:
+            self._update_schema_version_12()
 
-        if self.db_schema_version != 11:
+        if self.db_schema_version != 12:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -405,6 +408,11 @@ class GuiService(PluginService):
             self.db_schema_version = 11
         except Exception as e:
             print(f'Exception while upgrading gui db to version 11. Details: {e}')
+
+    def _update_schema_version_12(self):
+        print('Upgrade to schema 12')
+        self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
+        self.db_schema_version = 12
 
     def _update_default_locked_actions(self, new_actions):
         """

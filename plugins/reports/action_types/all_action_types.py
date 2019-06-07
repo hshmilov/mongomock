@@ -29,6 +29,7 @@ from reports.action_types.base.tag_all_entities import TagAllEntitiesAction
 from reports.action_types.base.tenable_io_add_ips_to_asset import TenableIoAddIPsToTargetGroup
 from reports.action_types.base.tenable_sc_add_ips_to_asset import TenableScAddIPsToAsset
 from reports.action_types.base.untag_all_entities import UntagAllEntitiesAction
+from reports.action_types.base.sentinelone_initiate_scan import SentineloneInitiateScanAction
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_service_now_computer': ServiceNowComputerAction,
@@ -59,4 +60,5 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'run_wmi_scan': RunWMIScan,
     'run_linux_ssh_scan': RunLinuxSSHScan,
     'create_service_now_incident_per_entity': ServiceNowIncidentPerEntity,
+    'sentinelone_initiate_scan_action': SentineloneInitiateScanAction
 }

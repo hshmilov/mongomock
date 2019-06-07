@@ -27,6 +27,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         agent_version = Field(str, 'Agent Version')
         status = Field(str, 'Status')
         risk_and_name_list = ListField(str, 'CSV - Vulnerability Details')
+        tenable_sources = ListField(TenableSource, 'Tenable Source')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -117,7 +118,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             logger.info(f'Got {len(devices_list)} assets, starting agents')
             agents_list = client_data.get_agents()
             logger.info(f'Got {len(agents_list)} agents')
-            return [devices_list, agents_list]
+            return [devices_list, agents_list, client_data]
         finally:
             client_data.close()
 
@@ -167,7 +168,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             'type': 'array'
         }
 
-    def _parse_export_device(self, device_id, device_raw):
+    def _parse_export_device(self, device_id, device_raw, client_data):
         device = self._new_device_adapter()
         device.id = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
@@ -202,10 +203,41 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         for vuln_raw in vulns_info:
             try:
                 severity = vuln_raw.get('severity', '')
-                plugin_name = vuln_raw.get('plugin', {}).get('name', '')
+                plugin_name = vuln_raw.get('plugin', {}).get('name')
+                plugin_id = vuln_raw.get('plugin', {}).get('id')
+                plugin_data = []
+                cpe = None
+                cve = None
+                cvss_base_score = None
+                exploit_available = None
+                synopsis = None
+                see_also = None
+                if plugin_id:
+                    plugin_data = client_data.get_plugin_info(plugin_id)
+                try:
+                    for attribute_plugin in plugin_data:
+                        try:
+                            if attribute_plugin.get('attribute_name') == 'cpe':
+                                cpe = attribute_plugin.get('attribute_value')
+                            elif attribute_plugin.get('attribute_name') == 'cve':
+                                cve = attribute_plugin.get('attribute_value')
+                            elif attribute_plugin.get('attribute_name') == 'cvss_base_score':
+                                cvss_base_score = float(attribute_plugin.get('attribute_value'))
+                            elif attribute_plugin.get('attribute_name') == 'exploit_available':
+                                exploit_available = attribute_plugin.get('attribute_value').lower() == 'true'
+                            elif attribute_plugin.get('attribute_name') == 'synopsis':
+                                synopsis = attribute_plugin.get('attribute_value')
+                            elif attribute_plugin.get('attribute_name') == 'see_also':
+                                see_also = attribute_plugin.get('attribute_value')
+                        except Exception:
+                            logger.exception(f'Problem with attribute {attribute_plugin}')
+                except Exception:
+                    logger.exception(f'Problem with plugin data {plugin_data}')
                 if f'{plugin_name}__{severity}' not in plugin_and_severity:
                     plugin_and_severity.append(f'{plugin_name}__{severity}')
-                    device.add_tenable_vuln(plugin=plugin_name, severity=severity)
+                    device.add_tenable_vuln(plugin=plugin_name, severity=severity, cpe=cpe, cve=cve,
+                                            cvss_base_score=cvss_base_score, exploit_available=exploit_available,
+                                            synopsis=synopsis, see_also=see_also)
             except Exception:
                 logger.exception(f'Problem getting vuln raw {vuln_raw}')
 
@@ -226,17 +258,23 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         return device
 
     def _parse_raw_data(self, devices_raw_data_all):
-        devices_raw_data, agents_data = devices_raw_data_all
-        devices_raw_data, connection_type = devices_raw_data
-        if connection_type == 'export':
-            for device_id, device_raw in devices_raw_data:
-                try:
-                    yield self._parse_export_device(device_id, device_raw)
-                except Exception:
-                    logger.exception(f'Problem with parsing device {device_raw}')
-        elif connection_type == 'csv':
-            yield from self._parse_raw_data_csv(devices_raw_data)
-        yield from self._parse_agents(agents_data)
+        client_data = None
+        try:
+            devices_raw_data, agents_data, client_data = devices_raw_data_all
+            client_data.connect()
+            devices_raw_data, connection_type = devices_raw_data
+            if connection_type == 'export':
+                for device_id, device_raw in devices_raw_data:
+                    try:
+                        yield self._parse_export_device(device_id, device_raw, client_data)
+                    except Exception:
+                        logger.exception(f'Problem with parsing device {device_raw}')
+            elif connection_type == 'csv':
+                yield from self._parse_raw_data_csv(devices_raw_data)
+            yield from self._parse_agents(agents_data)
+        finally:
+            if client_data:
+                client_data.close()
 
     def _parse_agents(self, agents_data):
         try:

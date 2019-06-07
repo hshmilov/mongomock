@@ -38,11 +38,15 @@ class ServiceNowConnection(RESTConnection):
             yield user_to_yield
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_users_info_for_devices=False):
         tables_devices = []
         users_table = []
         try:
-            users_table = list(self.__get_devices_from_table(consts.USERS_TABLE))
+            if fetch_users_info_for_devices:
+                users_table = list(self.__get_devices_from_table(consts.USERS_TABLE))
+            else:
+                users_table = []
         except Exception:
             logger.exception(f'Problem getting users')
 

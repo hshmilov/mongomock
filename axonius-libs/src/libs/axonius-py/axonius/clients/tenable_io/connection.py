@@ -18,6 +18,7 @@ class TenableIoConnection(RESTConnection):
                                   'Accept': 'application/json'},
                          **kwargs)
         self._access_key = access_key
+        self.plugins_dict = dict()
         self._secret_key = secret_key
         self._epoch_last_run_time = 0
         self._assets_list_dict = None
@@ -215,6 +216,19 @@ class TenableIoConnection(RESTConnection):
             sleep_times += 1
         return make_dict_from_csv(self._get(f'workbenches/export/{file_id}/download',
                                             use_json_in_response=False).decode('utf-8'))
+
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
+    def get_plugin_info(self, plugin_id):
+        try:
+            if self.plugins_dict.get(plugin_id):
+                return self.plugins_dict[plugin_id]
+            plugin_raw_data = self._get(f'plugins/plugin/{plugin_id}')
+            if isinstance(plugin_raw_data.get('attributes'), list):
+                self.plugins_dict[plugin_id] = plugin_raw_data.get('attributes')
+                return self.plugins_dict[plugin_id]
+        except Exception:
+            logger.exception(f'Problem getting plugin data for {plugin_id}')
+        return None
 
     def get_agents(self):
         agents_raw = []

@@ -386,6 +386,12 @@ class ServiceData(SmartJsonClass):
 class TenableVulnerability(SmartJsonClass):
     plugin = Field(str, 'Plugin')
     severity = Field(str, 'Severity')
+    cpe = Field(str, 'Cpe')
+    cve = Field(str, 'CVE')
+    cvss_base_score = Field(float, 'CVSS Base Score')
+    exploit_available = Field(bool, 'Exploit Available')
+    synopsis = Field(str, 'Synopsis')
+    see_also = Field(str, 'See Also')
 
 
 class TenableSource(SmartJsonClass):
@@ -508,10 +514,8 @@ class DeviceAdapter(SmartJsonClass):
     dns_servers = ListField(str, 'DNS Servers')
     dhcp_servers = ListField(str, 'DHCP Servers')
     uuid = Field(str, 'UUID')
-    plugin_and_severities = ListField(TenableVulnerability, 'Plugins and Severities',
+    plugin_and_severities = ListField(TenableVulnerability, 'Plugins Information',
                                       json_format=JsonArrayFormat.table)
-    tenable_sources = ListField(TenableSource, 'Tenable Source',
-                                json_format=JsonArrayFormat.table)
     registry_information = ListField(
         RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
     )

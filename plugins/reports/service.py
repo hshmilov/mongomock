@@ -161,7 +161,7 @@ class ReportsService(Triggerable, PluginBase):
                 to_run = ((sublist['name'], item['name'])
                           for sublist in reports
                           for item in sublist[TRIGGERS_FIELD])
-                pool.starmap_async(run_specific_configuration, to_run).wait(timeout=3600)
+                pool.starmap_async(run_specific_configuration, to_run).wait(timeout=36000)
             return ''
 
         if job_name == 'run':
