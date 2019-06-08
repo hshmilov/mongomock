@@ -228,6 +228,7 @@ def projected():
     """
     Decorator stating that the view supports ?fields=['name','hostname',['os_type':'OS.type']]
     """
+
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
             mongo_projection = None
@@ -684,6 +685,7 @@ def parse_entity_fields(entity_data, fields, include_details=False):
                             containing a list of values for the field per adapter that composes the entity
     :return:                Mapping of a field path to it's value list as found in the entity_data
     """
+
     def _extract_name(field_path):
         """
         Try to match given field path with the prefix of specific_data, meaning it is a generic field
@@ -1089,7 +1091,7 @@ def get_entity_labels(db) -> List[str]:
 
 
 def add_labels_to_entities(db, namespace: EntitiesNamespace, entities: Iterable[str], labels: Iterable[str],
-                           to_delete: bool):
+                           to_delete: bool, is_huge: bool = False):
     """
     Add new tags to the list of given devices or remove tags from the list of given devices
     :param db: the entities view db
@@ -1097,6 +1099,7 @@ def add_labels_to_entities(db, namespace: EntitiesNamespace, entities: Iterable[
     :param entities: list of internal_axon_id to tag
     :param labels: list of labels to add or remove
     :param to_delete: whether to remove the labels or to add them
+    :param is_huge: If True, will use heavy_lifting plugin for assistance
     """
     entities_from_db = db.find(
         filter={
@@ -1114,7 +1117,7 @@ def add_labels_to_entities(db, namespace: EntitiesNamespace, entities: Iterable[
                  entity['adapters'][0]['data']['id']) for entity in entities_from_db]
 
     namespace.add_many_labels(entities, labels=labels,
-                              are_enabled=not to_delete)
+                              are_enabled=not to_delete, is_huge=is_huge)
 
 
 def timed_endpoint():

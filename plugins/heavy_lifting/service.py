@@ -25,3 +25,10 @@ class HeavyLiftingService(PluginBase):
 
         res_iterator = gui_helpers.get_csv_iterable(**kwargs)
         return Response(res_iterator)
+
+    @add_rule('tag_entities', methods=['POST'])
+    def tag_entities(self):
+        kwargs = dict(self.get_request_data_as_object())
+        kwargs['entity'] = EntityType(kwargs['entity'])
+
+        return self.add_many_labels_to_entity(**kwargs)

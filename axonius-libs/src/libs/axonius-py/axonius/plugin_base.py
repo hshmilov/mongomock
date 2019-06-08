@@ -76,7 +76,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NODE_USER_PASSWORD,
                                           REPORTS_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME,
-                                          NODE_ID_ENV_VAR_NAME)
+                                          NODE_ID_ENV_VAR_NAME, HEAVY_LIFTING_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -1563,6 +1563,7 @@ class PluginBase(Configurable, Feature):
                 return instance.get('node_id')
         else:
             raise RuntimeError(f'Unable to find node id for node "{node_name}"')
+
     # pylint: enable=useless-else-on-loop
 
     def _get_adapter_unique_name(self, adapter_name, node_name):
@@ -2205,19 +2206,45 @@ class PluginBase(Configurable, Feature):
                                                        entity_to_split=axonius_entity)
                 self.__archive_axonius_device(plugin_unique_name, adapter_id, _entities_db, session)
 
+    def __add_many_labels_to_entity_huge(self, entity: EntityType, identity_by_adapter, labels,
+                                         are_enabled=True):
+        """
+        See add_many_labels_to_entity for all the docs
+        This is the optional optimization that delegates the work to the heavy lifting plugin because
+        sometimes adding a lot of tags can take a long while on a non-SMP process.
+        """
+        for label in labels:
+
+            def perform_tag(specific_identities_chunk: Iterable[dict]):
+                try:
+                    return self.request_remote_plugin('tag_entities', HEAVY_LIFTING_PLUGIN_NAME,
+                                                      'post', json={
+                                                          'entity': entity.value,
+                                                          'identity_by_adapter': list(specific_identities_chunk),
+                                                          'labels': [label],
+                                                          'are_enabled': are_enabled,
+                                                          'is_huge': False
+                                                      }).json()
+                except Exception:
+                    logger.exception(f'Problem adding label: {label}')
+
+            yield from self._common_executor.map(perform_tag, chunks(1000, identity_by_adapter))
+
     def add_many_labels_to_entity(self, entity: EntityType, identity_by_adapter, labels,
-                                  are_enabled=True) -> List[dict]:
+                                  are_enabled=True, is_huge: bool = False) -> List[dict]:
         """
         Tag many devices with many tags. if is_enabled = False, the labels are grayed out.
+        :param is_huge: If True, will use heavy_lifting plugin for assistance
         :return: List of affected entities
         """
+        if is_huge:
+            return list(self.__add_many_labels_to_entity_huge(entity, identity_by_adapter, labels, are_enabled))
 
         def perform_many_tags():
             for label in labels:
                 for specific_identity in identity_by_adapter:
                     try:
                         yield from self.add_label_to_entity(entity, [specific_identity], label, are_enabled)
-
                     except Exception:
                         logger.exception(f'Problem adding label: {label} with identity: {specific_identity}')
 

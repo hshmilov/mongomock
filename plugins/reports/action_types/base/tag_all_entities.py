@@ -41,5 +41,5 @@ class TagAllEntitiesAction(ActionTypeBase):
             return []
         db = self._plugin_base._entity_db_map[self._entity_type]
         namespace = self._plugin_base._namespaces[self._entity_type]
-        add_labels_to_entities(db, namespace, self._internal_axon_ids, [self._config['tag_name']], False)
+        add_labels_to_entities(db, namespace, self._internal_axon_ids, [self._config['tag_name']], False, is_huge=True)
         return generic_success(self._internal_axon_ids)

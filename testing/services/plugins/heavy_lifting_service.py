@@ -10,11 +10,11 @@ class HeavyLiftingService(PluginService):
     @property
     def get_max_uwsgi_threads(self) -> int:
         # A couple of threads so this will keep answering core
-        return 5
+        return 3
 
     @property
     def get_max_uwsgi_processes(self) -> int:
-        return 4
+        return 8
 
 
 @pytest.fixture(scope='module')
