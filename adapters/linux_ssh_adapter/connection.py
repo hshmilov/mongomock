@@ -21,7 +21,8 @@ class LinuxSshConnection:
                  password=None,
                  key=None,
                  is_sudoer=False,
-                 timeout=DEFAULT_NETWORK_TIMEOUT):
+                 timeout=DEFAULT_NETWORK_TIMEOUT,
+                 passphrase=None):
 
         if password is None and key is None:
             raise ClientConnectionException('password/key is required')
@@ -32,6 +33,7 @@ class LinuxSshConnection:
         self._password = password
         self._key = key
         self._timeout = timeout
+        self._passphrase = passphrase
 
         self._is_sudoer = is_sudoer
 
@@ -44,7 +46,8 @@ class LinuxSshConnection:
                              password=self._password,
                              key_filename=key_filename,
                              look_for_keys=False,
-                             timeout=self._timeout)
+                             timeout=self._timeout,
+                             passphrase=self._passphrase)
 
     def _connect(self):
         self._client = paramiko.SSHClient()

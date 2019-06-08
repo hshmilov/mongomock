@@ -13,6 +13,7 @@ PORT = 'port'
 PRIVATE_KEY = 'private_key'
 IS_SUDOER = 'is_sudoer'
 INSTANCE = 'instance'
+PASSPHRASE = 'passphrase'
 
 BASE_SCHEMA = {
     'items': [
@@ -21,8 +22,15 @@ BASE_SCHEMA = {
         {
             'name': PRIVATE_KEY,
             'title': 'Private Key',
-            'description': 'SSH Private key for authentication',
+            'description': 'SSH Private Key for authentication',
             'type': 'file',
+        },
+        {
+            'name': PASSPHRASE,
+            'title': 'Private Key Passphrase',
+            'description': 'SSH Private Key passphrase',
+            'type': 'string',
+            'format': 'password',
         },
         {
             'name': PORT,

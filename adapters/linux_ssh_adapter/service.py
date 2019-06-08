@@ -11,14 +11,17 @@ from axonius.clients.linux_ssh.consts import (DEFAULT_NETWORK_TIMEOUT,
                                               DEFAULT_POOL_SIZE, DEFAULT_PORT,
                                               HOSTNAME, IS_SUDOER, PASSWORD,
                                               PORT, PRIVATE_KEY, ADAPTER_SCHEMA,
-                                              USERNAME, INSTANCE, DEFAULT_INSTANCE)
+                                              USERNAME, INSTANCE, DEFAULT_INSTANCE,
+                                              PASSPHRASE)
 from axonius.clients.linux_ssh.data import LinuxDeviceAdapter
+from axonius.clients.linux_ssh.ppk import ppkraw_to_openssh
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from linux_ssh_adapter.client_id import get_client_id
 from linux_ssh_adapter.connection import LinuxSshConnection
 from linux_ssh_adapter.execution import LinuxSshExectionMixIn
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -47,8 +50,21 @@ class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
             client_config[IS_SUDOER] = True
         if INSTANCE not in client_config:
             client_config[INSTANCE] = DEFAULT_INSTANCE
+        if not client_config.get(PASSPHRASE):
+            client_config[PASSPHRASE] = None
         key = client_config.get(PRIVATE_KEY)
         client_config[PRIVATE_KEY] = self._grab_file_contents(key) if key else None
+
+        try:
+            if client_config[PRIVATE_KEY]:
+                ssh_key = client_config[PRIVATE_KEY].decode()
+                if 'BEGIN' not in ssh_key:
+                    ssh_key = ppkraw_to_openssh(ssh_key, client_config[PASSPHRASE] or '')
+                    if ssh_key:
+                        client_config[PRIVATE_KEY] = ssh_key.encode()
+                        client_config[PASSPHRASE] = None  # don't pass passphrase to paramiko
+        except Exception:
+            logger.exception('Failed to convert to ppk')
 
         return client_config
 
@@ -69,6 +85,7 @@ class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
                                     password=client_config[PASSWORD],
                                     key=client_config[PRIVATE_KEY],
                                     is_sudoer=client_config[IS_SUDOER],
+                                    passphrase=client_config[PASSPHRASE],
                                     timeout=self._timeout) as connection:
                 return connection
         except Exception as e:
