@@ -184,8 +184,13 @@ class GCPComputeManager:
     def terminate_many_nodes(self, nodes_ids: List[str]):
         # Note: This does not handle public ips!
         nodes = []
+        failed_nodes = []
         for node_id in nodes_ids:
-            nodes.append(self.client.ex_get_node(node_id, zone='all'))
+            try:
+                nodes.append(self.client.ex_get_node(node_id, zone='all'))
+            except Exception:
+                failed_nodes.append(node_id)
 
         results = self.client.ex_destroy_multiple_nodes(nodes)
         assert all(results), f'Not all nodes are terminated: {results}'
+        assert not failed_nodes, f'There are some nodes we could not get: {str(failed_nodes)}'
