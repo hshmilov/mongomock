@@ -17,6 +17,9 @@ export const actionsMeta = {
     run_linux_ssh_scan : {
         title: 'Run Linux SSH Scan'
     },
+    shodan_enrichment: {
+        title: 'Enrich Device Data by Shodan'
+    },
     carbonblack_isolate: {
         title: 'Isolate in Carbon Black CB Response'
     },
@@ -143,6 +146,10 @@ export const actionsMeta = {
         title: 'Create Incident',
         items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident']
     },
+    enrich_device_data: {
+        title: 'Enrich Device Data',
+        items: ['shodan_enrichment'],
+    },
     notify: {
         title: 'Notify',
         items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3']
@@ -161,7 +168,7 @@ export const failCondition = 'failure'
 export const postCondition = 'post'
 
 export const actionCategories = [
-    'deploy_software', 'run_command', 'isolate_edr', 'scan_va',
+    'deploy_software', 'run_command', 'isolate_edr', 'scan_va','enrich_device_data',
     'patch_device', 'block_fw', 'create_cmdb_computer', 'manage_directory',
     'notify', 'create_incident', 'axonius'
 ]

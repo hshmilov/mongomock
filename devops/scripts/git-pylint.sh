@@ -72,7 +72,7 @@ case $i in
     EXIT=0
     DELETE=1
     PARALLEL=1
-    BEAUTIFY=1
+    BEAUTIFY=0
     shift
     ;;
     *)

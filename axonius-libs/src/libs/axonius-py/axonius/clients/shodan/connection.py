@@ -1,11 +1,12 @@
 import time
 
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.shodan.consts import DEFAULT_DOMAIN
 
 
 class ShodanConnection(RESTConnection):
-    def __init__(self, *args, domain_prefered=None, **kwargs):
-        super().__init__(*args, url_base_prefix='shodan', domain=domain_prefered or 'api.shodan.io',
+    def __init__(self, *args, domain_prefered=DEFAULT_DOMAIN, **kwargs):
+        super().__init__(*args, url_base_prefix='shodan', domain=domain_prefered,
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)

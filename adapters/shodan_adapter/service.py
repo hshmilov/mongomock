@@ -9,13 +9,15 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.clients.shodan.connection import ShodanConnection
+from axonius.clients.shodan.consts import DEFAULT_DOMAIN
 from axonius.utils.parsing import make_dict_from_csv
 from shodan_adapter.client_id import get_client_id
+from shodan_adapter.execution import ShodanExecutionMixIn
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ShodanAdapter(ScannerAdapterBase):
+class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
@@ -110,7 +112,7 @@ class ShodanAdapter(ScannerAdapterBase):
                     'name': 'domain',
                     'title': 'Shodan Domain',
                     'type': 'string',
-                    'default': 'api.shodan.io'
+                    'default': DEFAULT_DOMAIN,
                 },
                 {
                     'name': 'cidr',
