@@ -147,12 +147,15 @@ class ReportsService(Triggerable, PluginBase):
         if job_name == 'execute':
             with ThreadPool(10) as pool:
                 def run_specific_configuration(report_name, configuration_name):
-                    self._trigger('run',
-                                  priority=True,
-                                  post_json={
-                                      'report_name': report_name,
-                                      'configuration_name': configuration_name
-                                  })
+                    try:
+                        self._trigger('run',
+                                      priority=True,
+                                      post_json={
+                                          'report_name': report_name,
+                                          'configuration_name': configuration_name
+                                      })
+                    except Exception:
+                        logger.exception(f'Exception when running {report_name} {configuration_name}')
 
                 reports = self.__reports_collection.find(projection={
                     'name': 1,

@@ -230,7 +230,8 @@ class Triggerable(Feature, ABC):
             logger.debug(message)
         else:
             logger.info(message)
-        return self._trigger(job_name, blocking, priority, request.get_json(silent=True), timeout)
+        res = self._trigger(job_name, blocking, priority, request.get_json(silent=True), timeout)
+        return normalize_triggerable_request_result(res)
 
     @add_rule('wait/<job_name>', methods=['GET'])
     def wait_for_job(self, job_name):
@@ -354,7 +355,7 @@ class Triggerable(Feature, ABC):
             # known pylint bug - https://www.logilab.org/ticket/3207
             raise failed  # pylint: disable=E0702
 
-        return normalize_triggerable_request_result(result)
+        return result
 
     def _trigger(self, job_name='execute', blocking=True, priority=False, post_json=None, timeout=None):
         state = StoredJobState(job_name=job_name,
@@ -387,7 +388,7 @@ class Triggerable(Feature, ABC):
             if promise.is_rejected or isinstance(promise.value, Exception):
                 logger.error(f'Exception on wait: {promise.value}', exc_info=promise.value)
                 return 'Error has occurred', 500
-            return normalize_triggerable_request_result(promise.value or '')
+            return promise.value or ''
         return ''
 
     def __perform_trigger(self, job_name, job_state, post_json, db_state: StoredJobState):
