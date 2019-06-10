@@ -23,7 +23,8 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 URL = "https://localhost/api/version?whoami=periodic_api_version_runner"
-SLEEP_COUNT = 10  # In seconds.
+SLEEP_COUNT = 60  # In seconds.
+ERROR_SLEEP_COUNT = 5  # In seconds.
 DEBUG = False
 
 
@@ -42,7 +43,9 @@ def main():
             debug_print("Got status {0}.".format(r.status_code))
         except Exception as e:
             debug_print("Got exception {0}".format(e))
-        time.sleep(SLEEP_COUNT)
+            time.sleep(ERROR_SLEEP_COUNT)
+        else:
+            time.sleep(SLEEP_COUNT)
 
 
 if __name__ == '__main__':
