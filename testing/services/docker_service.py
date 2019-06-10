@@ -13,7 +13,7 @@ from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
                                           NODE_ID_ENV_VAR_NAME,
                                           NODE_ID_FILENAME)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          WEAVE_NETWORK)
+                                          WEAVE_NETWORK, LOGS_PATH_HOST)
 from axonius.utils.debug import COLOR
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
@@ -37,7 +37,7 @@ class DockerService(AxonService):
         if not (Path(self.cortex_root_dir) / 'venv').is_dir:
             raise RuntimeError(f'Cortex dir is wrong ... {self.cortex_root_dir}')
 
-        self.log_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'logs', self.container_name))
+        self.log_dir = str(LOGS_PATH_HOST / self.container_name)
         self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'uploaded_files'))
         self.shared_readonly_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'shared_readonly_files'))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))

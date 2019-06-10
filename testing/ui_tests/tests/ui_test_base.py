@@ -14,7 +14,7 @@ from selenium import webdriver
 import conftest
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
-from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
+from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
 from services.axonius_service import get_service
@@ -38,7 +38,7 @@ from ui_tests.pages.users_page import UsersPage
 from ui_tests.tests.ui_consts import ROOT_DIR
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
-LOGS_FOLDER = os.path.join(ROOT_DIR, 'logs', 'ui_logger')
+LOGS_FOLDER = os.path.join(LOGS_PATH_HOST, 'ui_logger')
 DOCKER_NETWORK_DEFAULT_GATEWAY = '172.17.0.1'
 
 

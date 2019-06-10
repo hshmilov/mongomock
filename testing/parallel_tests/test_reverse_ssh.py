@@ -1,7 +1,7 @@
 import json
 import re
-from pathlib import Path
 
+from axonius.consts.system_consts import LOGS_PATH_HOST
 from axonius.utils.wait import wait_until
 from services.plugins.diagnostics_service import DiagnosticsService
 from test_credentials.test_reverse_ssh_creds import (TEST_STUNNEL_CREDS, TEST_PROXY_STRING)
@@ -16,7 +16,7 @@ def test_no_proxy():
     diag_env_file = diag.diag_env_file
     diag_env_file.write_text(json.dumps(TEST_STUNNEL_CREDS))
     with diag.contextmanager(take_ownership=True):
-        docker_log = LogTester(Path(diag.cortex_root_dir) / 'logs' / 'diagnostics' / 'diagnostics.docker.log')
+        docker_log = LogTester(LOGS_PATH_HOST / 'diagnostics' / 'diagnostics.docker.log')
         wait_until(lambda: docker_log.is_pattern_in_log(SUCCESS_LOG_1, 1), tolerated_exceptions_list=[Exception])
 
 
@@ -27,6 +27,6 @@ def test_with_proxy():
     creds['HTTPS_PROXY'] = TEST_PROXY_STRING
     diag_env_file.write_text(json.dumps(creds))
     with diag.contextmanager(take_ownership=True):
-        docker_log = LogTester(Path(diag.cortex_root_dir) / 'logs' / 'diagnostics' / 'diagnostics.docker.log')
+        docker_log = LogTester(LOGS_PATH_HOST / 'diagnostics' / 'diagnostics.docker.log')
         wait_until(lambda: docker_log.is_pattern_in_log(SUCCESS_LOG_PROXY, 10), tolerated_exceptions_list=[Exception])
         wait_until(lambda: docker_log.is_pattern_in_log(SUCCESS_LOG_1, 3), tolerated_exceptions_list=[Exception])

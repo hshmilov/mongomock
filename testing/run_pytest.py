@@ -6,7 +6,9 @@ from typing import List, AnyStr
 
 import pytest
 
-LOGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'logs'))
+from axonius.consts.system_consts import LOGS_PATH_HOST
+
+LOGS_DIR = LOGS_PATH_HOST
 VALID_RC_FOR_PYTEST = [0, 1]  # https://docs.pytest.org/en/latest/usage.html#possible-exit-codes
 
 
@@ -16,8 +18,8 @@ def run_pytest(pytest_args: List[AnyStr]):
     :param pytest_args: a list of paths or additional arguments to pytest
     :return:
     """
-    xml_file = '_'.join([arg for arg in pytest_args if not arg.startswith('-')])\
-        .replace('./', '').replace(' ', '_').replace('/', '_').replace('\\', '_').replace('-', '_').replace('=', '_')\
+    xml_file = '_'.join([arg for arg in pytest_args if not arg.startswith('-')]) \
+        .replace('./', '').replace(' ', '_').replace('/', '_').replace('\\', '_').replace('-', '_').replace('=', '_') \
         .replace('::', '_')
     xml_file = f'{xml_file}.xml' if xml_file else f'{time.time()}.xml'
     xml_file = os.path.join(LOGS_DIR, xml_file)

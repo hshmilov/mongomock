@@ -10,6 +10,8 @@ from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
 
 # Sadly we are very far from cortex.
 CORTEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', '..', '..')
+PYRUN_PATH_HOST = Path(CORTEX_PATH) / 'pyrun.sh'
+LOGS_PATH_HOST = Path(CORTEX_PATH) / 'logs'
 
 METADATA_PATH = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
 SYSTEM_CONF_PATH = Path(CORTEX_PATH) / 'system_conf.json'
@@ -20,7 +22,6 @@ AXONIUS_MOCK_DEMO_ENV_VAR = 'AXONIUS_MOCK_MODE=TRUE'
 CONNECTED_TO_MASTER_FILE = 'connected_to_master.marker'
 NODE_MARKER_RELATIVE_PATH = Path(AXONIUS_SETTINGS_DIR_NAME) / CONNECTED_TO_MASTER_FILE
 NODE_MARKER_PATH = Path(CORTEX_PATH) / NODE_MARKER_RELATIVE_PATH
-
 
 AXONIUS_NETWORK = 'axonius'
 WEAVE_NETWORK = 'axonius-weave'

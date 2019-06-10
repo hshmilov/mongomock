@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME
+from axonius.consts.system_consts import LOGS_PATH_HOST
 
 INCORRECT_PASSWORD = 'Incorrect!'
 UNMATCHED_PASSWORD1 = 'Unmatched!'
@@ -13,7 +14,7 @@ VALID_EMAIL = 'lalala@lalala.com'
 
 ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..')
 LOGGED_IN_MARKER = Path(ROOT_DIR) / AXONIUS_SETTINGS_DIR_NAME / '.logged_in'
-GUI_LOG_PATH = os.path.join(ROOT_DIR, 'logs', 'gui', 'gui.axonius.log')
+GUI_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'gui', 'gui.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
 READ_ONLY_USERNAME = 'ReadOnlyUser'

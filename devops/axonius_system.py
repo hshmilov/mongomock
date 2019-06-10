@@ -17,6 +17,8 @@ from axonius.consts.system_consts import (METADATA_PATH,
                                           NODE_CONF_PATH,
                                           CORTEX_PATH)
 
+from devops.scripts.watchdog import watchdog_main
+
 
 def main(command):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
@@ -61,6 +63,14 @@ class ExtendAction(argparse.Action):
         items = getattr(namespace, self.dest) or []
         items.extend(values)
         setattr(namespace, self.dest, items)
+
+
+def restart_watchdogs():
+    watchdog_main.run_tasks('restart')
+
+
+def stop_watchdogs():
+    watchdog_main.run_tasks('stop')
 
 
 def system_entry_point(args):
@@ -165,11 +175,13 @@ def system_entry_point(args):
                                      hard=args.hard,
                                      skip=args.skip,
                                      env_vars=args.env, system_config=system_config)
+        restart_watchdogs()
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
         axonius_system.stop_plugins(args.adapters, args.services, [], should_delete=False)
         axonius_system.stop(should_delete=False)
+        stop_watchdogs()
     elif args.mode == 'register':
         print(f'Registering system and {args.adapters + args.services}')
         axonius_system.register_unique_dns(system_base=True,

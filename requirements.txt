@@ -98,3 +98,4 @@ deepdiff==3.3.0
 jira==2.0.0
 pysnmp==4.4.4
 PyPDF2==1.26.0
+daemonocle==1.0.1
