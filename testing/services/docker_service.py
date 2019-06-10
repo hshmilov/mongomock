@@ -130,7 +130,7 @@ class DockerService(AxonService):
 
     @property
     def get_max_uwsgi_threads(self) -> int:
-        return 100
+        return 70
 
     @property
     def get_max_uwsgi_processes(self) -> int:
