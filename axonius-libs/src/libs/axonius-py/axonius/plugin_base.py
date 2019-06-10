@@ -2252,11 +2252,14 @@ class PluginBase(Configurable, Feature):
         return result
 
     def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True,
-                            additional_data={}) -> List[dict]:
+                            additional_data=None) -> List[dict]:
         """
         A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out.
         :return: List of affected entities
         """
+        if additional_data is None:
+            additional_data = {}
+
         # all labels belong to GUI
         additional_data[PLUGIN_UNIQUE_NAME], additional_data[PLUGIN_NAME] = GUI_PLUGIN_NAME, GUI_PLUGIN_NAME
         additional_data['label_value'] = label if is_enabled else ''
@@ -2265,21 +2268,25 @@ class PluginBase(Configurable, Feature):
                            additional_data)
         return result
 
-    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data={},
+    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data, additional_data=None,
                            action_if_exists='replace') -> List[dict]:
         """
         A shortcut to __tag with type "data"
         :return: List of affected entities
         """
+        if additional_data is None:
+            additional_data = {}
         result = self._tag(entity, identity_by_adapter, name, data, "data", action_if_exists, None, additional_data)
         return result
 
     def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data,
-                                  action_if_exists="replace", client_used=None, additional_data={}) -> List[dict]:
+                                  action_if_exists="replace", client_used=None, additional_data=None) -> List[dict]:
         """
         A shortcut to __tag with type "adapterdata"
         :return: List of affected entities
         """
+        if additional_data is None:
+            additional_data = {}
         result = self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
                            action_if_exists, client_used, additional_data)
         for key in data:

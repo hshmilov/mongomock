@@ -2,7 +2,7 @@ import itertools
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import DefaultDict, List, Tuple
+from typing import DefaultDict, List, Tuple, Iterable
 
 from axonius.entities import EntityType
 from axonius.utils.parsing import normalize_hostname, compare_normalized_hostnames
@@ -78,6 +78,31 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
 
         logger.info(f'Performed {count_of_labels} labels, thresholds are - {old_threshold}, {new_threshold}')
 
+    def __get_devices_from_db(self) -> Iterable[dict]:
+        """
+        Returns all devices that might qualify for a reimage tag
+        :return:
+        """
+        return self.devices_db.find(
+            parse_filter('((specific_data.data.network_interfaces.manufacturer == exists(true) and not '
+                         'specific_data.data.network_interfaces.manufacturer == type(10)) and '
+                         'specific_data.data.network_interfaces.manufacturer != "") and '  # mac manufacturer exists
+                         '((specific_data.data.hostname == exists(true) and not '
+                         'specific_data.data.hostname == type(10)) and '
+                         'specific_data.data.hostname != "") and '  # hostname exists
+                         '(specific_data.data.last_seen == exists(true) and not '
+                         'specific_data.data.last_seen == type(10)) and '  # last_seen exists
+                         f'specific_data.data.adapter_properties == "{AdapterProperty.Agent.name}"'),  # Agent
+            projection={
+                '_id': False,
+                'adapters.data.network_interfaces.mac': True,
+                'adapters.data.hostname': True,
+                'adapters.data.last_seen': True,
+                'adapters.data.adapter_properties': True,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': True,
+                f'adapters.data.id': True
+            })
+
     def __get_devices_by_macs(self) -> DefaultDict[str, List[Tuple[datetime, dict]]]:
         """
         Returns a dict between mac to list of associated adapter devices and their max_last_seen
@@ -85,25 +110,7 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
         # mac -> list of associated adapter devices and their max_last_seen
         macs: DefaultDict[str, List[Tuple[datetime, dict]]] = defaultdict(list)
 
-        for axonius_device in list(self.devices_db.find(
-                parse_filter('((specific_data.data.network_interfaces.manufacturer == exists(true) and not '
-                             'specific_data.data.network_interfaces.manufacturer == type(10)) and '
-                             'specific_data.data.network_interfaces.manufacturer != "") and '  # mac manufacturer exists
-                             '((specific_data.data.hostname == exists(true) and not '
-                             'specific_data.data.hostname == type(10)) and '
-                             'specific_data.data.hostname != "") and '  # hostname exists
-                             '(specific_data.data.last_seen == exists(true) and not '
-                             'specific_data.data.last_seen == type(10)) and '  # last_seen exists
-                             f'specific_data.data.adapter_properties == "{AdapterProperty.Agent.name}"'),  # Agent
-                projection={
-                    '_id': False,
-                    'adapters.data.network_interfaces.mac': True,
-                    'adapters.data.hostname': True,
-                    'adapters.data.last_seen': True,
-                    'adapters.data.adapter_properties': True,
-                    f'adapters.{PLUGIN_UNIQUE_NAME}': True,
-                    f'adapters.data.id': True
-                })):
+        for axonius_device in self.__get_devices_from_db():
             max_last_seen = max(axonius_device['adapters'],
                                 key=lambda x: x['data'].get(LAST_SEEN_FIELD, datetime.min))['data'].get(LAST_SEEN_FIELD)
             if not max_last_seen:
