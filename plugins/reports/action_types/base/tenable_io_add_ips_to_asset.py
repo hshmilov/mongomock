@@ -70,9 +70,9 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                     'type': 'bool'
                 },
                 {
-                    'name': 'override',
+                    'name': 'override_ips',
+                    'title': 'Override Current IPs List',
                     'type': 'bool',
-                    'title': 'Override Current IPs List'
                 }
             ],
             'required': [
@@ -81,7 +81,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                 'use_private_ips',
                 'use_public_ips',
                 'use_adapter',
-                'override'
+                'override_ips'
 
             ],
             'type': 'array'
@@ -100,6 +100,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             'verify_ssl': False,
             'domain': None,
             'https_proxy': None,
+            'override_ips': False
         }
 
     # pylint: disable=R0912,R0914,R0915,R1702
@@ -113,7 +114,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                                          self._config['use_private_ips'])
         target_group_name = self._config['target_group_name']
         create_new_asset = self._config['create_new_asset']
-        override = self._config.get('override') or False
+        override = self._config.get('override_ips') or False
         action_name = 'create_target_group_with_ips' if create_new_asset else 'add_ips_to_target_group'
         tenable_io_dict = {'ips': list(ips), 'target_group_name': target_group_name, 'override': override}
         if self._config['use_adapter'] is True:

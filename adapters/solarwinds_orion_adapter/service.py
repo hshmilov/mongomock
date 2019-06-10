@@ -237,6 +237,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
 
             mac_addresses = raw_device_data.get('MacAddresses') or []
             ip_address = raw_device_data.get('IPAddress') or []
+            device.device_manufacturer = raw_device_data.get('Vendor')
             device.add_ips_and_macs(mac_addresses, ip_address)
             sw_list = raw_device_data.get('sw_list')
             if sw_list and isinstance(sw_list, list):

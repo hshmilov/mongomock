@@ -70,9 +70,9 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                     'type': 'bool'
                 },
                 {
-                    'name': 'override',
+                    'name': 'override_ips',
+                    'title': 'Override Current IPs List',
                     'type': 'bool',
-                    'title': 'Override Current IPs List'
                 }
             ],
             'required': [
@@ -81,7 +81,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                 'use_private_ips',
                 'use_public_ips',
                 'use_adapter',
-                'override'
+                'override_ips'
 
             ],
             'type': 'array'
@@ -99,7 +99,8 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'domain': None,
             'https_proxy': None,
             'username': None,
-            'password': None
+            'password': None,
+            'override_ips': False
         }
 
     # pylint: disable=R0912,R0914,R0915,R1702
@@ -113,7 +114,7 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                                          self._config['use_private_ips'])
         asset_name = self._config['asset_name']
         create_new_asset = self._config['create_new_asset']
-        override = self._config.get('override') or False
+        override = self._config.get('override_ips') or False
         action_name = 'create_asset_with_ips' if create_new_asset else 'add_ips_to_asset'
         tenable_sc_dict = {'ips': list(ips), 'asset_name': asset_name, override: override}
         if self._config['use_adapter'] is True:

@@ -79,7 +79,7 @@ class SolarwindsConnection:
         logger.info('Added mac address data to corresponding node')
 
         try:
-            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, CPUCount, IPAddressGUID,
+            node_results = self.client.query("""SELECT NodeID, IPAddress, Location, CPUCount, IPAddressGUID, Vendor,
                                             NodeName, Uri, CPULoad, MemoryUsed, MemoryAvailable, PercentMemoryAvailable, 
                                             PercentMemoryUsed, IPAddressType, Caption, NodeDescription, Description, 
                                             SysObjectID FROM Orion.Nodes""")
