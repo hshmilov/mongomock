@@ -81,6 +81,9 @@ a {
 .c-red {
     color: #D0011B;
 }
+.c-black {
+    color: #1D222C;
+}
 
 /* Backgrounds */
 .bg-black {
@@ -100,14 +103,26 @@ a {
 }
 
 /* Fonts */
+.f-14 {
+    font-size: 14px
+}
 .f-18 {
     font-size: 18px
 }
 .f-20 {
     font-size: 20px
 }
+.f-28 {
+    font-size: 28px;
+}
+.f-48 {
+    font-size: 48px;
+}
 .f-72 {
     font-size: 72px;
+}
+.f-100 {
+    font-size: 100px;
 }
 
 /* Line heights */
@@ -205,6 +220,56 @@ a {
     page-break-before: always;
 }
 
+/* COVER */
+
+.cover h1{
+    width: 100%;
+    height: 350px;
+    background-image: url('../icons/cover_bg.png');
+    background-size: cover;
+    text-align: center;
+    padding-top: 150px;
+}
+
+.cover h3 {
+    margin-top: -30px;
+    text-align: center;
+}
+
+.cover .logo {
+    width: 60px;
+    height: 60px;
+    background-image: url('../icons/logo-icon.svg');
+    background-size: cover;
+    display: inline-block;
+    vertical-align: top;
+}
+
+.cover .break{
+    height: 305px;
+}
+
+.cover .generated-date{
+    margin-left: 20px;
+}
+
+/* TABLE OF CONTENT */
+.toc .content-list {
+    margin-top: 100px;
+    list-style-type: none;
+}
+.toc .content-list li{
+    padding: 10px;
+}
+.toc .content-list li::before{
+    content: '';
+    display: inline-block;
+    height: 20px;
+    width: 20px;
+    background-image: url('../icons/logo-black.svg');
+    background-size: cover;
+    list-style-type: none;
+}
 
 /* COMPONENTS */
 
@@ -228,8 +293,6 @@ a {
 }
 .discovery-charts .card h3 {
     height: 24px;
-    margin-block-end: 0px;
-    margin-bottom: -2px;
 }
 .card:nth-child(odd) {
     margin-right: 12px;
@@ -238,7 +301,24 @@ a {
     width: 672px;
     height: 100%;
 }
-
+.card .legend {
+    list-style-type: square;
+    text-align: left;
+}
+.card .legend .multi-colored{
+    list-style-type: none;
+}
+.card .legend .multi-colored::before{
+    background: repeating-linear-gradient(45deg,#15C59E, #1593C5 4px, #15C59E 4px, #1593C5 8px);
+    content: "\2022";
+    color: transparent;
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    margin-left: -17px;
+    list-style-type: none;
+    border-radius: 5px;
+}
 .histogram {
     text-align: left;
 }

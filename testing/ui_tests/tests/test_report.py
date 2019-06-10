@@ -121,12 +121,8 @@ class TestReport(TestBase):
         self.reports_page.find_missing_email_server_notification()
 
     def test_test_now_with_email_server(self):
-        smtp_service = SMTPService()
-        smtp_service.take_process_ownership()
-
-        with smtp_service.contextmanager():
+        with SMTPService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
-
             self.reports_page.switch_to_page()
             self.reports_page.click_new_report()
             recipient = generate_random_valid_email()
@@ -140,6 +136,7 @@ class TestReport(TestBase):
             self.reports_page.wait_for_report_generation(recipient)
 
             self.reports_page.click_report(recipient)
+            self.reports_page.wait_for_spinner_to_end()
             self.reports_page.wait_for_send_mail_button()
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
@@ -149,10 +146,7 @@ class TestReport(TestBase):
         self.settings_page.remove_email_server()
 
     def test_test_now_with_tls_email_server(self):
-        smtp_service = SMTPService()
-        smtp_service.take_process_ownership()
-
-        with smtp_service.contextmanager():
+        with SMTPService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
             goguerrilla_basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                '../../services/standalone_services/goguerrilla'))
@@ -176,6 +170,7 @@ class TestReport(TestBase):
             self.reports_page.click_save()
             self.reports_page.wait_for_report_generation(recipient)
             self.reports_page.click_report(recipient)
+            self.reports_page.wait_for_spinner_to_end()
             self.reports_page.wait_for_send_mail_button()
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()

@@ -48,11 +48,16 @@ class ReportGenerator:
             'report_summary': self._get_template('report_summary'),
             'report_charts': self._get_template('report_charts'),
             'card': self._get_template('report_card'),
+            'cover': self._get_template('report_cover'),
+            'toc': self._get_template('toc/toc'),
+            'toc_line': self._get_template('toc/toc_line'),
             'card_break': self._get_template('report_card_break'),
             'discovery': self._get_template('summary/data_discovery'),
             'pie': self._get_template('summary/pie_chart'),
             'pie_slice': self._get_template('summary/pie_slice'),
             'pie_gradient': self._get_template('summary/pie_gradient'),
+            'pie_legend': self._get_template('summary/pie_legend'),
+            'pie_legend_line': self._get_template('summary/pie_legend_line'),
             'histogram': self._get_template('summary/histogram_chart'),
             'histogram_bar': self._get_template('summary/histogram_bar'),
             'summary': self._get_template('summary/summary'),
@@ -107,10 +112,26 @@ class ReportGenerator:
     def render_html(self, current_time):
         sections = []
 
+        time = current_time.strftime('%c')
+        timezone = current_time.strftime('%Z')
+
+        report_cover = self.templates['cover'].render({
+            'title': self.report['name'],
+            'generated_date': f'{time} {timezone}'
+        })
+
+        toc_lines = []
+
         if self.report_data.get('include_dashboard'):
             # Add summary section containing dashboard panels, pre- and user-defined
-            sections.append(self._create_discovery_summary())
-            sections.append(self._create_dashboard_charts())
+            discover_summary = self._create_discovery_summary()
+            if discover_summary:
+                toc_lines.append('Discovery Summary')
+                sections.append(discover_summary)
+            dashboard_charts = self._create_dashboard_charts()
+            if dashboard_charts:
+                toc_lines.append('Dashboard Charts')
+                sections.append(dashboard_charts)
 
         # Add section for each adapter with results of its queries
         data = self.report_data.get('adapter_data')
@@ -126,14 +147,19 @@ class ReportGenerator:
             entities.sort()
             for entity in entities:
                 if self.report_data['views_data'].get(entity):
+                    title = f'{entity.capitalize()} - Saved Queries'
+                    toc_lines.append(title)
                     sections.append(self.templates['section'].render(
-                        {'title': f'{entity.capitalize()} - Saved Queries',
+                        {'title': title,
                          'content': self._create_data_views(entity)}))
             logger.info(f'Report Generator, Views Section: Added views data section')
 
+        toc_lines_html = '\n'.join([self.templates['toc_line'].render({'title': line}) for line in toc_lines])
+        toc_html = self.templates['toc'].render({'content': toc_lines_html})
+        sections.insert(0, toc_html)
         # Join all sections as the content of the report
         html_data = self.templates['report'].render(
-            {'date': current_time.strftime('%d/%m/%Y'), 'content': '\n'.join(sections)})
+            {'cover': report_cover, 'date': current_time.strftime('%d/%m/%Y'), 'content': '\n'.join(sections)})
         timestamp = current_time.strftime('%d%m%Y-%H%M%S')
         temp_html_filename = f'{self.output_path}axonius-report_{timestamp}.html'
         with open(temp_html_filename, 'wb') as file:
@@ -196,22 +222,20 @@ class ReportGenerator:
             # Adding cards with coverage of network roles
             for coverage_data in self.report_data['covered_devices']:
                 coverage_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
-                svg2png(bytestring=self._create_coverage_pie(coverage_data['portion']), write_to=coverage_pie_filename)
+                pie_chart, legend = self._create_coverage_pie(coverage_data['portion'])
+                svg2png(bytestring=pie_chart, write_to=coverage_pie_filename)
                 summary_content.append(self.templates['card'].render({
                     'title': f'{coverage_data["title"]} Coverage',
-                    'content': f'<img src="{coverage_pie_filename}">'
+                    'content': f'<img src="{coverage_pie_filename}">{legend}'
                 }))
             logger.info(
                 f'Report Generator, Summary Section: Added {len(self.report_data["covered_devices"])} Coverage Panels')
 
         if self.report_data.get('custom_charts'):
             charts_added = 0
-            page_height = 0
             for i, custom_chart in enumerate(self.report_data['custom_charts']):
                 title = custom_chart.get('name', f'Custom Chart {i}')
                 try:
-                    line_height = 0
-                    chart_height = 0
                     chart_data = custom_chart.get('data')
                     chart_value = None
                     if chart_data and chart_data[0] and isinstance(chart_data[0], dict) \
@@ -223,19 +247,16 @@ class ReportGenerator:
                     content = None
                     if custom_chart['view'] == ChartViews.histogram.name:
                         content = self._create_query_histogram(custom_chart['data'])
-                        if len(chart_data) >= 5:
-                            chart_height = 275
-                        else:
-                            chart_height = 27 + len(chart_data) * 55
                     elif custom_chart['view'] == ChartViews.pie.name:
-                        chart_height, content = self._create_pie_chart(chart_data, chart_height, content, custom_chart)
+                        content = self._create_pie_chart(chart_data, content, custom_chart)
                     elif custom_chart['view'] == ChartViews.summary.name:
                         content = self._create_summary_chart(custom_chart['data'])
                     if not content:
                         continue
                     charts_added += 1
-                    line_height, page_height = self._calculate_height(chart_height, charts_added,
-                                                                      line_height, page_height, summary_content)
+                    if charts_added == 5:
+                        summary_content.append(self.templates['card_break'].render())
+                        charts_added = 0
                     summary_content.append(self.templates['card'].render({'title': title,
                                                                           'content': content}))
                 except Exception:
@@ -250,78 +271,17 @@ class ReportGenerator:
                 'content': '\n'.join(summary_content)
             })})
 
-    def _calculate_height(self, chart_height, charts_added, line_height, page_height, summary_content):
-        if line_height == 0 or line_height > chart_height:
-            line_height = chart_height
-        # Avoid a chart behind the footer
-        if page_height + line_height > 755:
-            page_height = 0
-            summary_content.append(self.templates['card_break'].render())
-        if charts_added % 2 == 0:
-            page_height += line_height
-        return line_height, page_height
-
-    def _create_pie_chart(self, chart_data, chart_height, content, custom_chart):
+    def _create_pie_chart(self, chart_data, content, custom_chart):
         query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
         # Create a coverage chart if there is only 2 portions of the data
         if len(custom_chart['data']) == 2:
-            portion = next((x['value'] for x in chart_data if not x.get('remainder')), None)
-            byte_string = self._create_coverage_pie(portion)
+            byte_string, legend = self._create_coverage_pie(chart_data)
         else:
-            byte_string = self._create_query_pie(custom_chart['data'])
+            byte_string, legend = self._create_query_pie(chart_data)
         if byte_string != '':
             svg2png(bytestring=byte_string, write_to=query_pie_filename)
-            chart_height = 240
-            content = f'<img src="{query_pie_filename}">'
-        return chart_height, content
-
-    def _create_coverage_pie(self, portion):
-        """
-        Create a slice for the given portion, filled with a colour representing the quarter it is in
-        and with the percentage as a text to present..
-        Then, create a second slice with the remainder of the portion, coloured grey.
-
-        :param portion:
-        :return:
-        """
-        colours = ['#D0011B', '#F6A623', '#4796E4', '#0FBC18']
-        slice_defs = self._calculate_pie_slices([1 - portion, portion])
-        slices = [self.templates['pie_slice'].render({'path': slice_defs[0]['path'],
-                                                      'colour': GREY_COLOUR,
-                                                      'text': f'{round((1 - portion) * 100)}%' if portion else '',
-                                                      'x': slice_defs[0]['text_x'],
-                                                      'y': slice_defs[0]['text_y']})]
-        if portion:
-            slice_def = slice_defs[1]
-            slices.append(self.templates['pie_slice'].render({
-                'path': slice_def['path'], 'colour': colours[int(floor(portion * 3.9))],
-                'text': f'{round(portion * 100)}%' if portion else '',
-                'x': slice_def['text_x'], 'y': slice_def['text_y']
-            }))
-
-        return self.templates['pie'].render({'content': '\n'.join(slices)})
-
-    def _calculate_pie_slices(self, portions):
-        """
-        Calculate each slice's path, which starts at previous slice's position, arches to the point calculated
-        by adding current portion and ends in the center of the circle.
-
-        :param portions:
-        :return:
-        """
-        slices = []
-        cumulative_portion = 0
-        for portion in portions:
-            (start_x, start_y) = self._calculate_coordinates(cumulative_portion)
-            cumulative_portion += portion / 2
-            (middle_x, middle_y) = self._calculate_coordinates(cumulative_portion)
-            cumulative_portion += portion / 2
-            (end_x, end_y) = self._calculate_coordinates(cumulative_portion)
-            slices.append({
-                'path': f'M {start_x} {start_y} A 1 1 0 {1 if portion > .5 else 0} 1 {end_x} {end_y} L 0 0',
-                'text_x': middle_x * 0.7, 'text_y': middle_y * (0.8 if middle_y > 0 else 0.5)
-            })
-        return slices
+            content = f'<img src="{query_pie_filename}">{legend}'
+        return content
 
     @staticmethod
     def _calculate_coordinates(portion):
@@ -350,7 +310,7 @@ class ReportGenerator:
         })
 
     def _create_query_histogram(self, queries_data):
-        return self._create_histogram(queries_data, 4, True)
+        return self._create_histogram(queries_data, 5, True)
 
     def _create_histogram(self, data, limit, textual=False):
         """
@@ -397,26 +357,98 @@ class ReportGenerator:
         """
         queries = [item for item in queries_data[1:] if item.get('value')]
         queries.insert(0, queries_data[0])
-        portions = [item['value'] for item in queries]
+        portions = [{'portion': item['value'], 'title': item['name'], 'remainder': False} for item in queries]
 
         colours = [GREY_COLOUR, '#15C59E', '#15ACB2', '#1593C5', '#B932BB', '#8A32BB', '#5A32BB']
         slices = []
+        legend_lines = ''
         for i, slice_def in enumerate(self._calculate_pie_slices(portions)):
+            portion_value = slice_def['portion']
             parameters = {'path': slice_def['path'],
                           'colour': 'url(#intersection)' if queries[i].get('intersection') else colours[
                               i % len(colours)]}
             if i >= 0:
-                parameters['text'] = f'{round(portions[i] * 100)}%'
+                parameters['text'] = f'{round(portion_value * 100)}%'
                 parameters['x'] = slice_def['text_x']
                 parameters['y'] = slice_def['text_y']
             slices.append(self.templates['pie_slice'].render(parameters))
+            legend_colour = parameters['colour']
+            legend_lines += self.templates['pie_legend_line'].render({
+                'color': '' if queries[i].get('intersection') else f'color:{legend_colour}',
+                'title': slice_def['title'],
+                'class': 'multi-colored' if queries[i].get('intersection') else ''
+            })
 
         if not slices:
             return ''
         return self.templates['pie'].render({
             'defs': self.templates['pie_gradient'].render({'colour1': colours[1], 'colour2': colours[3]}),
             'content': '\n'.join(slices)
-        })
+        }), self.templates['pie_legend'].render({'legend_lines': legend_lines})
+
+    def _create_coverage_pie(self, chart_data):
+        """
+        Create a slice for the given portion, filled with a colour representing the quarter it is in
+        and with the percentage as a text to present..
+        Then, create a second slice with the remainder of the portion, coloured grey.
+
+        :param portion:
+        :return:
+        """
+        portions = []
+        for chart_row in chart_data:
+            portions.append({
+                'portion': chart_row['value'],
+                'title': chart_row['name'],
+                'remainder': chart_row.get('remainder')
+            })
+        colours = ['#D0011B', '#F6A623', '#4796E4', '#0FBC18']
+        slice_defs = self._calculate_pie_slices(portions)
+        legend_lines = ''
+        slices = []
+        for slice_def in slice_defs:
+            portion = slice_def['portion']
+            if slice_def.get('remainder'):
+                current_colour = GREY_COLOUR
+            else:
+                current_colour = colours[int(floor(portion * 3.9))]
+            slices.append(self.templates['pie_slice'].render({
+                'path': slice_def['path'], 'colour': current_colour,
+                'text': f'{round(portion * 100)}%' if portion else '',
+                'x': slice_def['text_x'], 'y': slice_def['text_y']
+            }))
+            legend_lines += self.templates['pie_legend_line'].render({
+                'color': f'color:{current_colour}',
+                'title': slice_def['title']
+            })
+        return self.templates['pie'].render({'content': '\n'.join(slices)}), \
+            self.templates['pie_legend'].render({'legend_lines': legend_lines})
+
+    def _calculate_pie_slices(self, portions):
+        """
+        Calculate each slice's path, which starts at previous slice's position, arches to the point calculated
+        by adding current portion and ends in the center of the circle.
+
+        :param portions:
+        :return:
+        """
+        slices = []
+        cumulative_portion = 0
+        for portion in portions:
+            portion_value = portion['portion']
+            (start_x, start_y) = self._calculate_coordinates(cumulative_portion)
+            cumulative_portion += portion_value / 2
+            (middle_x, middle_y) = self._calculate_coordinates(cumulative_portion)
+            cumulative_portion += portion_value / 2
+            (end_x, end_y) = self._calculate_coordinates(cumulative_portion)
+            slices.append({
+                'path': f'M {start_x} {start_y} A 1 1 0 {1 if portion_value > .5 else 0} 1 {end_x} {end_y} L 0 0',
+                'text_x': middle_x * 0.7, 'text_y': middle_y * (0.8 if middle_y > 0 else 0.5),
+                'title': portion['title'],
+                'remainder': portion['remainder'],
+                'portion': portion_value
+            })
+        return slices
 
     def _create_summary_chart(self, data):
         """

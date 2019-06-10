@@ -6,20 +6,26 @@
     <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body>
-    <header class="header bg-black">
-        <div class="logo">
-            <img src="icons/logo-icon.svg" height="48px">
-            <img src="icons/logo-text.svg" height="20px" class="mt-8">
+    <article id="cover">
+        {{cover}}
+    </article>
+    <article id="content">
+        <header class="header bg-black">
+            <div class="logo">
+                <img src="icons/logo-icon.svg" height="48px">
+                <img src="icons/logo-text.svg" height="20px" class="mt-8">
+            </div>
+        </header>
+
+        <div class="content">
+        {{content}}
         </div>
-    </header>
-    <div class="content">
-    {{content}}
-    </div>
-    <footer class="footer bg-black">
-        <div class="logo">
-            <img src="icons/logo-icon.svg" height="36px">
-            <img src="icons/logo-text.svg" height="20px" class="m-8">
-        </div>
-    </footer>
+        <footer class="footer bg-black">
+            <div class="logo">
+                <img src="icons/logo-icon.svg" height="36px">
+                <img src="icons/logo-text.svg" height="20px" class="m-8">
+            </div>
+        </footer>
+    </article>
 </body>
 </html>

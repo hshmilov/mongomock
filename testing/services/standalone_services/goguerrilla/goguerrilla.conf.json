@@ -17,7 +17,7 @@
         {
             "is_enabled" : true,
             "host_name":"0.0.0.0",
-            "max_size": 1000000,
+            "max_size": 10000000,
             "timeout":180,
             "listen_interface":"0.0.0.0:25",
             "max_clients": 1000,

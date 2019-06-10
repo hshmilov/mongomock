@@ -69,8 +69,9 @@ class TestReportGeneration(TestBase):
 
             decoded_links = map(urllib.parse.unquote, links)
             assert any(self.TEST_REPORT_QUERY_NAME in link for link in decoded_links)
-            third_page = doc.pages[2]
-            assert third_page.extractText().count('avigdor') == 10
+            for page in doc.pages:
+                if page.extractText().count('self.TEST_REPORT_QUERY_NAME') > 0:
+                    assert page.extractText().count('avigdor') == 10
 
     def test_saved_views_data_device_no_dashboard_query(self):
         stress = stresstest_service.StresstestService()
