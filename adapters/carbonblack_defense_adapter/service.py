@@ -47,6 +47,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                     client_id,
                     {'raw': [], 'parsed': [device.to_dict()]},
                     EntityType.Devices, False)
+                self._save_field_names_to_db(EntityType.Devices)
         except Exception as e:
             logger.exception(f'Problem during isolating changes')
             return return_error(str(e), 500)

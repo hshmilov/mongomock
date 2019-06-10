@@ -371,6 +371,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                             client_id,
                             {'raw': [], 'parsed': [device_dict]},
                             EntityType.Devices, False)
+                        self._save_field_names_to_db(EntityType.Devices)
                         to_correlate = request_json.get('to_ccorrelate')
                         if isinstance(to_correlate, dict):
                             to_correlate_plugin_unique_name = to_correlate.get('to_correlate_plugin_unique_name')

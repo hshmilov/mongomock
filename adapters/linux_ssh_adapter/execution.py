@@ -140,7 +140,7 @@ class LinuxSshExectionMixIn(Triggerable):
                                         {'raw': [], 'parsed': [new_device.to_dict()]},
                                         EntityType.Devices,
                                         False)
-
+            self._save_field_names_to_db(EntityType.Devices)
             self._correlate_scan_if_needed(device, new_device)
             return (device.internal_axon_id, {'success': True, 'value': 'Linux SSH scan success'})
         except Exception as e:
