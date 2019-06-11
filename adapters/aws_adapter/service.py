@@ -7,7 +7,7 @@ import json
 import functools
 import datetime
 from enum import Enum, auto
-from typing import Dict
+from typing import Dict, Tuple
 
 import boto3
 import kubernetes
@@ -89,40 +89,60 @@ class AwsSSMSchemas(Enum):
 def get_paginated_next_token_api(func):
     next_token = None
     page_number = 0
+    next_token_name = None
 
     while page_number < PAGE_NUMBER_FLOOD_PROTECTION:
         page_number += 1
         if next_token:
-            result = func(nextToken=next_token)
+            result = func(**{next_token_name: next_token})
         else:
             result = func()
 
         yield result
 
-        next_token = result.get('nextToken')
+        if result.get('nextToken'):
+            next_token_name = 'nextToken'
+        elif result.get('NextToken'):
+            next_token_name = 'NextToken'
+
+        if next_token_name:
+            next_token = result.get(next_token_name)
         if not next_token:
             break
+
+    if page_number == PAGE_NUMBER_FLOOD_PROTECTION:
+        logger.critical('AWS Pagination: reached page flood protection count')
 
 
 def get_paginated_marker_api(func):
     marker = None
+    marker_name = None
     page_number = 0
 
     while page_number < PAGE_NUMBER_FLOOD_PROTECTION:
         page_number += 1
         if marker:
-            result = func(Marker=marker)
+            result = func(**{marker_name: marker})
         else:
             result = func()
 
         yield result
 
-        if result.get('IsTruncated') is True:
-            marker = result.get('Marker')
+        if result.get('IsTruncated') is True or result.get('isTruncated') is True:
+            if result.get('Marker'):
+                marker_name = 'Marker'
+            elif result.get('marker'):
+                marker_name = 'marker'
+
+            if marker_name:
+                marker = result.get(marker_name)
             if not marker:
                 break
         else:
             break
+
+    if page_number == PAGE_NUMBER_FLOOD_PROTECTION:
+        logger.critical('AWS Pagination: reached page flood protection count')
 
 
 def _describe_images_from_client_by_id(ec2_client, amis):
@@ -215,6 +235,29 @@ class AWSLoadBalancer(SmartJsonClass):
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
 
 
+class SSMComplianceSummary(SmartJsonClass):
+    compliance_type = Field(str, 'Compliance Type')
+    status = Field(str, 'Status')
+    overall_severity = Field(str, 'Overall Severity')
+    last_execution = Field(datetime.datetime, 'Last Execution Time')
+
+    compliant_count = Field(int, 'Compliant Count')
+    compliant_critical_count = Field(int, 'Compliant Critical Count')
+    compliant_high_count = Field(int, 'Compliant High Count')
+    compliant_medium_count = Field(int, 'Compliant Medium Count')
+    compliant_low_count = Field(int, 'Compliant Low Count')
+    compliant_informational_count = Field(int, 'Compliant Informational Count')
+    compliant_unspecified_count = Field(int, 'Compliant Unspecified Count')
+
+    non_compliant_count = Field(int, 'Non Compliant Count')
+    non_compliant_critical_count = Field(int, 'Non Compliant Critical Count')
+    non_compliant_high_count = Field(int, 'Non Compliant High Count')
+    non_compliant_medium_count = Field(int, 'Non Compliant Medium Count')
+    non_compliant_low_count = Field(int, 'Non Compliant Low Count')
+    non_compliant_informational_count = Field(int, 'Non Compliant Informational Count')
+    non_compliant_unspecified_count = Field(int, 'Non Compliant Unspecified Count')
+
+
 class SSMInfo(SmartJsonClass):
     ping_status = Field(str, 'Ping Status')
     last_ping_date = Field(datetime.datetime, 'Last Ping Date')
@@ -225,6 +268,11 @@ class SSMInfo(SmartJsonClass):
     association_status = Field(str, 'Association Status')
     last_association_execution_date = Field(datetime.datetime, 'Last Association Execution Date')
     last_successful_association_execution_date = Field(datetime.datetime, 'Last Successful Association Execution Date')
+    patch_group = Field(str, 'Patch Group')
+    baseline_id = Field(str, 'Patch Baseline Id')
+    baseline_name = Field(str, 'Patch Baseline Name')
+    baseline_description = Field(str, 'Patch Baseline Description')
+    compliance_summaries = ListField(SSMComplianceSummary, 'Compliance')
 
 
 class AwsAdapter(AdapterBase, Configurable):
@@ -233,7 +281,11 @@ class AwsAdapter(AdapterBase, Configurable):
         aws_region = Field(str, 'Region')
         aws_source = Field(str, 'Source')    # Specifiy if it is from a user, a role, or what.
         aws_availability_zone = Field(str, 'Availability Zone')
-        aws_device_type = Field(str, 'Device Type (EC2/ECS/EKS/Managed)', enum=['EC2', 'ECS', 'EKS', 'Managed'])
+        aws_device_type = Field(
+            str,
+            'Device Type (EC2/ECS/EKS/Managed/NAT)',
+            enum=['EC2', 'ECS', 'EKS', 'Managed', 'NAT']
+        )
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
         # EC2-specific fields
@@ -354,7 +406,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 sts_client = current_session.client('sts', config=client_config.get(AWS_CONFIG))
                 assumed_role_object = sts_client.assume_role(
                     RoleArn=role_arn,
-                    DurationSeconds=60 * 60 * 1,    # 3 hours of a session
+                    DurationSeconds=60 * 60 * 1,    # 1 hours of a session
                     RoleSessionName="Axonius"
                 )
 
@@ -601,6 +653,36 @@ class AwsAdapter(AdapterBase, Configurable):
                         if schema_name:
                             schemas_names.append(schema_name)
 
+                # Next, get all patch group to patch baseline mappings
+                patch_groups_to_patch_baseline = dict()
+                try:
+                    for patch_group_page in get_paginated_next_token_api(ssm.describe_patch_groups):
+                        for patch_group_page_mapping in patch_group_page['Mappings']:
+                            try:
+                                patch_group_name = patch_group_page_mapping['PatchGroup']
+                                patch_groups_to_patch_baseline[patch_group_name] = patch_group_page_mapping
+                            except Exception:
+                                logger.exception(f'Can not parse patch group page mapping {patch_group_page_mapping}')
+                except Exception:
+                    logger.exception(f'Problem getting patches')
+
+                # Next, get all compliance summaries
+                resource_id_to_compliance_summaries = dict()
+                try:
+                    for compliance_summary_page in get_paginated_next_token_api(ssm.list_resource_compliance_summaries):
+                        for resource_compliance_summary in compliance_summary_page['ResourceComplianceSummaryItems']:
+                            try:
+                                resource_id = resource_compliance_summary.get('ResourceId')
+                                resource_type = resource_compliance_summary.get('ResourceType')
+                                if resource_type == 'ManagedInstance' and resource_id:
+                                    if resource_id not in resource_id_to_compliance_summaries:
+                                        resource_id_to_compliance_summaries[resource_id] = []
+                                    resource_id_to_compliance_summaries[resource_id].append(resource_compliance_summary)
+                            except Exception:
+                                logger.exception(f'Can not parse patch group page mapping {patch_group_page_mapping}')
+                except Exception:
+                    logger.exception(f'Problem getting complaince summary')
+
                 for iid, iid_basic_data in all_instances.items():
                     raw_instance = dict()
                     raw_instance['basic_data'] = iid_basic_data
@@ -620,14 +702,35 @@ class AwsAdapter(AdapterBase, Configurable):
 
                     # Also, pull the patches for ths instance
                     all_patches = []
-                    for patch_page in get_paginated_next_token_api(
-                        functools.partial(ssm.describe_instance_patches, InstanceId=iid)
-                    ):
-                        all_patches.extend(patch_page.get('Patches') or [])
+                    try:
+                        for patch_page in get_paginated_next_token_api(
+                            functools.partial(ssm.describe_instance_patches, InstanceId=iid)
+                        ):
+                            all_patches.extend(patch_page.get('Patches') or [])
 
-                    if all_patches:
-                        raw_instance['patches'] = all_patches
-                    yield raw_instance
+                        if all_patches:
+                            raw_instance['patches'] = all_patches
+                    except Exception:
+                        logger.exception(f'Problem getting patches')
+
+                    # Pull the tags for this resource. This does not support pagination.
+                    try:
+                        if iid.startswith('mi-'):
+                            raw_tags = ssm.list_tags_for_resource(
+                                ResourceType='ManagedInstance', ResourceId=iid)['TagList']
+                        else:
+                            raw_tags = client_data.get('ec2').describe_tags(
+                                Filters=[{'Name': 'resource-id', 'Values': [iid]}]
+                            )['Tags']
+
+                        raw_instance['tags'] = {item.get('Key'): item.get('Value') for item in raw_tags}
+                    except Exception:
+                        logger.exception(f'Problem getting ssm tags')
+
+                    # Get compliance summaries
+                    raw_instance['compliance_summary'] = resource_id_to_compliance_summaries.get(iid)
+
+                    yield raw_instance, patch_groups_to_patch_baseline
             except Exception:
                 logger.exception(f'Problem fetching data for ssm')
 
@@ -819,10 +922,19 @@ class AwsAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem with Shodan')
 
+                nat_gateways = []
+                try:
+                    if self.__fetch_nat:
+                        for nat_gateways_page in get_paginated_next_token_api(ec2_client_data.describe_nat_gateways):
+                            nat_gateways.extend(nat_gateways_page.get('NatGateways') or [])
+                except Exception:
+                    logger.exceptionf('Problem getting NAT Gateways')
+
                 raw_data['ec2'] = reservations
                 raw_data['vpcs'] = described_vpcs
                 raw_data['security_groups'] = security_groups_dict
                 raw_data['subnets'] = subnets_dict
+                raw_data['nat'] = nat_gateways
             except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
                     botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
                 raise CredentialErrorException(repr(e))
@@ -1256,6 +1368,7 @@ class AwsAdapter(AdapterBase, Configurable):
         instance_profiles_dict = devices_raw_data.get('instance_profiles') or {}
         elb_by_ip = devices_raw_data.get('elb_by_ip') or {}
         elb_by_iid = devices_raw_data.get('elb_by_iid') or {}
+        nat_gateways = devices_raw_data.get('nat') or {}
 
         ec2_id_to_ips = dict()
         private_ips_to_ec2 = dict()
@@ -1329,11 +1442,61 @@ class AwsAdapter(AdapterBase, Configurable):
 
                             security_group_raw = security_group_dict.get(security_group.get('GroupId'))
                             if security_group_raw and isinstance(security_group_raw, dict):
+                                outbound_rules = __make_ip_rules_list(security_group_raw.get('IpPermissionsEgress'))
+                                inbound_rules = __make_ip_rules_list(security_group_raw.get('IpPermissions'))
                                 device.add_aws_security_group(name=security_group.get('GroupName'),
-                                                              outbound=__make_ip_rules_list(
-                                                                  security_group_raw.get('IpPermissionsEgress')),
-                                                              inbound=__make_ip_rules_list(
-                                                                  security_group_raw.get('IpPermissions')))
+                                                              outbound=outbound_rules,
+                                                              inbound=inbound_rules)
+
+                                try:
+                                    all_rules_lists = [(outbound_rules, 'EGRESS'), (inbound_rules, 'INGRESS')]
+                                    for rule_list, direction in all_rules_lists:
+                                        for rule in rule_list:
+                                            try:
+                                                from_port = rule.from_port
+                                            except Exception:
+                                                from_port = None
+
+                                            try:
+                                                to_port = rule.to_port
+                                            except Exception:
+                                                to_port = None
+
+                                            try:
+                                                protocol = rule.ip_protocol
+                                            except Exception:
+                                                protocol = None
+
+                                            try:
+                                                targets = []
+                                                raw_targets = rule.ip_ranges
+                                                for raw_target in raw_targets:
+                                                    if '_Description:' in raw_target:
+                                                        cidr, desc = raw_target.split('_Description:')
+                                                        final_string = cidr
+                                                        if desc:
+                                                            final_string += f' ({desc})'
+
+                                                        targets.append(final_string)
+                                                    else:
+                                                        targets.append(raw_target)
+                                            except Exception:
+                                                logger.exception('Problem parsing raw targets')
+                                                targets = []
+
+                                            for target in targets:
+                                                device.add_firewall_rule(
+                                                    name=security_group_raw.get('GroupName'),
+                                                    source='AWS Instance Security Group',
+                                                    type='Allow',
+                                                    direction=direction,
+                                                    target=target,
+                                                    protocol=protocol,
+                                                    from_port=from_port,
+                                                    to_port=to_port
+                                                )
+                                except Exception:
+                                    logger.exception(f'Could not add generic firewall rules')
                             else:
                                 device.add_aws_security_group(name=security_group.get('GroupName'))
                     except Exception:
@@ -1581,7 +1744,7 @@ class AwsAdapter(AdapterBase, Configurable):
                         except Exception:
                             logger.exception(f'Problem parsing eks pod: {pod_raw}')
         except Exception:
-            logger.exception(f'Problem parsing eks data {devices_raw_data.get("eks")}')
+            logger.exception(f'Problem parsing eks data')
 
         try:
             # clusters contains a list of cluster dicts, each one of them
@@ -1819,10 +1982,55 @@ class AwsAdapter(AdapterBase, Configurable):
                         )
                         yield device
         except Exception:
-            logger.exception(f'Problem parsing ecs data {devices_raw_data.get("ecs")}')
+            logger.exception(f'Problem parsing ecs data')
 
-    def _parse_raw_data_inner_ssm(self, device_raw_data: Dict[str, Dict], aws_source):
+        try:
+            if nat_gateways:
+                for nat_gateway_raw in nat_gateways:
+                    device = self._new_device_adapter()
+                    device.id = nat_gateway_raw['NatGatewayId']
 
+                    device.aws_source = aws_source
+                    device.aws_region = aws_region
+                    device.account_tag = account_tag
+                    device.aws_device_type = 'NAT'
+
+                    tags_dict = {i['Key']: i['Value'] for i in nat_gateway_raw.get('Tags', {})}
+                    for key, value in tags_dict.items():
+                        device.add_aws_ec2_tag(key=key, value=value)
+                        device.add_key_value_tag(key, value)
+
+                    vpc_id = nat_gateway_raw.get('VpcId')
+                    if vpc_id and isinstance(vpc_id, str):
+                        vpc_id = vpc_id.lower()
+                        device.vpc_id = vpc_id
+                        device.vpc_name = vpcs_by_id.get(vpc_id)
+
+                    subnet_id = nat_gateway_raw.get('SubnetId')
+                    if subnet_id:
+                        device.subnet_id = subnet_id
+                        device.subnet_name = (subnets_by_id.get(subnet_id) or {}).get('name')
+                    device.name = tags_dict.get('Name')
+
+                    for nat_gateway_nic in (nat_gateway_raw.get('NatGatewayAddresses') or []):
+                        private_ip = nat_gateway_nic.get('PrivateIp')
+                        public_ip = nat_gateway_nic.get('PublicIp')
+                        ips = []
+                        if private_ip:
+                            ips.append(private_ip)
+                        if public_ip:
+                            ips.append(public_ip)
+                            device.add_public_ip(public_ip)
+                        device.add_nic(ips=ips)
+
+                    device.set_raw(nat_gateway_raw)
+                    yield device
+        except Exception:
+            logger.exception(f'Problem parsing nat gateways')
+
+    def _parse_raw_data_inner_ssm(self, device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict]], aws_source):
+
+        device_raw_data, patch_group_to_patch_baseline_mapping = device_raw_data_all
         basic_data = device_raw_data.get('basic_data')
         if not basic_data:
             logger.warning('Wierd device, no basic data!')
@@ -1860,6 +2068,54 @@ class AwsAdapter(AdapterBase, Configurable):
             basic_data.get('LastAssociationExecutionDate'))
         ssm_data.last_successful_association_execution_date = parse_date(
             basic_data.get('LastSuccessfulAssociationExecutionDate'))
+
+        patch_group = (device_raw_data.get('tags') or {}).get('Patch Group')
+        ssm_data.patch_group = patch_group
+
+        patch_baseline_info = (patch_group_to_patch_baseline_mapping.get(patch_group) or {})
+        patch_baseline_identity = patch_baseline_info.get('BaselineIdentity') or {}
+        if patch_baseline_identity:
+            ssm_data.baseline_id = patch_baseline_identity.get('BaselineId')
+            ssm_data.baseline_name = patch_baseline_identity.get('BaselineName')
+            ssm_data.baseline_description = patch_baseline_identity.get('BaselineDescription')
+
+        # Compliance
+        compliance_summary = device_raw_data.get('compliance_summary')
+        if compliance_summary:
+            try:
+                for compliance_item_summary in compliance_summary:
+                    execution_summary = compliance_item_summary.get('ExecutionSummary') or {}
+
+                    compliant_summary = compliance_item_summary.get('CompliantSummary') or {}
+                    compliant_severity_summary = compliant_summary.get('SeveritySummary')
+
+                    non_compliant_summary = compliance_item_summary.get('NonCompliantSummary') or {}
+                    non_compliant_severity_summary = non_compliant_summary.get('SeveritySummary')
+
+                    ssm_data.compliance_summaries.append(
+                        SSMComplianceSummary(
+                            compliance_type=compliance_item_summary.get('ComplianceType'),
+                            status=compliance_item_summary.get('Status'),
+                            overall_severity=compliance_item_summary.get('OverallSeverity'),
+                            last_execution=parse_date(execution_summary.get('ExecutionTime')),
+                            compliant_count=compliant_summary.get('CompliantCount'),
+                            compliant_critical_count=compliant_severity_summary.get('CriticalCount'),
+                            compliant_high_count=compliant_severity_summary.get('HighCount'),
+                            compliant_medium_count=compliant_severity_summary.get('MediumCount'),
+                            compliant_low_count=compliant_severity_summary.get('LowCount'),
+                            compliant_informational_count=compliant_severity_summary.get('InformationalCount'),
+                            compliant_unspecified_count=compliant_severity_summary.get('UnspecifiedCount'),
+                            non_compliant_count=non_compliant_summary.get('NonCompliantCount'),
+                            non_compliant_critical_count=non_compliant_severity_summary.get('CriticalCount'),
+                            non_compliant_high_count=non_compliant_severity_summary.get('HighCount'),
+                            non_compliant_medium_count=non_compliant_severity_summary.get('MediumCount'),
+                            non_compliant_low_count=non_compliant_severity_summary.get('LowCount'),
+                            non_compliant_informational_count=non_compliant_severity_summary.get('InformationalCount'),
+                            non_compliant_unspecified_count=non_compliant_severity_summary.get('UnspecifiedCount')
+                        )
+                    )
+            except Exception:
+                logger.exception(f'Problem parsing compliance summary')
 
         applications = device_raw_data.get(AwsSSMSchemas.Application.value)
         if isinstance(applications, list):
@@ -1984,6 +2240,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_instance_roles = config.get('fetch_instance_roles') or False
         self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
+        self.__fetch_nat = config.get('fetch_nat') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
 
@@ -2017,6 +2274,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_nat',
+                    'title': 'Fetch information about NAT Gateways',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -2034,6 +2296,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_instance_roles',
                 'fetch_load_balancers',
                 'fetch_ssm',
+                'fetch_nat',
                 'verbose_auth_notifications'
             ],
             "pretty_name": "AWS Configuration",
@@ -2048,6 +2311,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_instance_roles': False,
             'fetch_load_balancers': False,
             'fetch_ssm': False,
+            'fetch_nat': False,
             'verbose_auth_notifications': False,
             'shodan_key': None
         }

@@ -400,6 +400,17 @@ class TenableSource(SmartJsonClass):
     source = Field(str, 'Source')
 
 
+class FirewallRule(SmartJsonClass):
+    name = Field(str, 'Name')
+    source = Field(str, 'Source')
+    type = Field(str, 'Allow / Deny', enum=['Allow', 'Deny'])
+    direction = Field(str, 'Direction', enum=['INGRESS', 'EGRESS'])
+    target = Field(str, 'Target')   # Target. This could be ip rage / security group / service account / tag / ...
+    protocol = Field(str, 'Protocol')
+    from_port = Field(int, 'From port')
+    to_port = Field(int, 'To port')
+
+
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
     name = Field(str, 'Asset Name')
@@ -519,6 +530,7 @@ class DeviceAdapter(SmartJsonClass):
     registry_information = ListField(
         RegistryInfomation, 'Registry Information', json_format=JsonArrayFormat.table
     )
+    firewall_rules = ListField(FirewallRule, 'Firewall Rules', json_format=JsonArrayFormat.table)
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
     def generate_direct_connected_devices(self):
@@ -883,6 +895,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_service(self, **kwargs):
         self.services.append(ServiceData(**kwargs))
+
+    def add_firewall_rule(self, **kwargs):
+        self.firewall_rules.append(FirewallRule(**kwargs))
 
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name

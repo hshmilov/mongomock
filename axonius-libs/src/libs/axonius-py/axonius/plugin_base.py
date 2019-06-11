@@ -2631,11 +2631,6 @@ class PluginBase(Configurable, Feature):
                             'name': PROXY_VERIFY,
                             'title': 'Verify ssl',
                             'type': 'bool'
-                        },
-                        {
-                            'name': PROXY_FOR_ADAPTERS,
-                            'title': 'Should adapters use this proxy?',
-                            'type': 'bool'
                         }
                     ]
                 },
@@ -2864,9 +2859,7 @@ class PluginBase(Configurable, Feature):
                 PROXY_PORT: 8080,
                 PROXY_USER: '',
                 PROXY_PASSW: '',
-                PROXY_VERIFY: True,
-                PROXY_FOR_ADAPTERS: True
-
+                PROXY_VERIFY: True
             },
             NOTIFICATIONS_SETTINGS: {
                 NOTIFY_ADAPTERS_FETCH: False,
