@@ -6,6 +6,7 @@ import sys
 
 from axonius.consts.system_consts import PYRUN_PATH_HOST
 
+WATCHDOG_MAIN_SCRIPT_PATH = os.path.abspath(__file__)
 TASKS_DIR = Path(os.path.abspath(os.path.dirname(__file__))) / 'tasks'
 
 

@@ -4,8 +4,8 @@ import requests
 from axonius.consts.system_consts import NODE_MARKER_PATH
 from scripts.watchdog.watchdog_task import WatchdogTask
 
-SLEEP_SECONDS = 5
-ERROR_MSG = 'UI is not responding'
+SLEEP_SECONDS = 60 * 5
+ERROR_MSG = 'UI is not responding'  # do not modify this string. used for alerts
 NODE_MSG = 'this watchdog will not run on node'
 
 
@@ -18,6 +18,7 @@ class GuiAliveTask(WatchdogTask):
 
         while True:
             time.sleep(SLEEP_SECONDS)
+            self.report_info(f'{self.name} is running')
             try:
                 response = requests.get(f'https://localhost', verify=False, timeout=(10, 30))
                 if response.status_code != 200:

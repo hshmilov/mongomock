@@ -52,8 +52,6 @@ CHMOD_FILES = [
     os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops/scripts/discover_now.py'),
 ]
 
-OLD_CRONJOBS = ['restart_system_on_reboot', 'start_system_on_first_boot']
-
 
 def main():
     parser = argparse.ArgumentParser()

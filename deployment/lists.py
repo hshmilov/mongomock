@@ -34,3 +34,5 @@ DIRS_EXCLUDE_GLOBAL = ['venv',
                        'plugins/gui/frontend/node_modules',
                        'plugins/gui/frontend/dist',
                        'testing/test_credentials']
+
+OLD_CRONJOBS = ['restart_system_on_reboot', 'start_system_on_first_boot']

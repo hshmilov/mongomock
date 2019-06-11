@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import zipfile
 
+from axonius.consts.system_consts import PYRUN_PATH_HOST
 from install import (TEMPORAL_PATH,
                      AXONIUS_SETTINGS_PATH,
                      INSTANCE_CONNECT_USER_NAME,
@@ -17,8 +18,9 @@ from install import (TEMPORAL_PATH,
                      BOOTED_FOR_PRODUCTION_MARKER_PATH,
                      DEPLOYMENT_FOLDER_PATH,
                      chown_folder,
-                     set_special_permissions,
-                     OLD_CRONJOBS)
+                     set_special_permissions)
+from lists import OLD_CRONJOBS
+from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
 from scripts.instances.instances_consts import SUBNET_IP_RANGE
 from utils import AXONIUS_DEPLOYMENT_PATH, print_state, current_file_system_path, VENV_WRAPPER, run_as_root
 
@@ -127,15 +129,26 @@ def create_cronjob(script_path, cronjob_timing, specific_run_env='', keep_script
 
 
 def cleanup_old_cronjobs():
-    remove_cron_command = 'crontab -l | grep -v \'{cronjob_name}\' | crontab -'
     for cronjob_name in OLD_CRONJOBS:
-        subprocess.check_call(remove_cron_command.format(cronjob_name=cronjob_name), shell=True)
+        remove_cronjob(cronjob_name)
 
 
 def setup_instances_cronjobs():
     cleanup_old_cronjobs()
     create_cronjob(DELETE_INSTANCES_USER_CRON_SCRIPT_PATH, '*/1 * * * *', specific_run_env='/usr/local/bin/python3')
     create_cronjob(SYSTEM_BOOT_CRON_SCRIPT_PATH, '@reboot', keep_script_location=True)
+
+
+def remove_cronjob(cronjob_name):
+    remove_cron_command = 'crontab -l | grep -v \'{cronjob_name}\' | crontab -'
+    subprocess.check_call(remove_cron_command.format(cronjob_name=cronjob_name), shell=True)
+
+
+def create_system_cronjobs():
+    remove_cronjob(WATCHDOG_CRON_SCRIPT_PATH)
+    create_cronjob(script_path=WATCHDOG_CRON_SCRIPT_PATH,
+                   cronjob_timing='0 * * * *',
+                   specific_run_env=str(PYRUN_PATH_HOST))
 
 
 def push_old_instances_settings():
@@ -159,6 +172,7 @@ def setup_instances():
 def setup_host():
     setup_instances()
     reset_network()
+    create_system_cronjobs()
 
 
 def set_booted_for_production():
