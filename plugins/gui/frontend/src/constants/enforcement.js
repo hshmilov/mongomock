@@ -87,7 +87,7 @@ export const actionsMeta = {
         title: 'Send CSV to Share'
     },
     send_csv_to_s3: {
-        title: 'Send CSV to S3'
+        title: 'Send CSV to Amazon S3'
     },
     send_email_to_entities: {
         title: 'Send Email to Entities'

@@ -145,7 +145,7 @@ class TestCode:
         broken_files_list = _get_unexpected_pylint_state(is_success_expected=True)
         invalid_files = bool(broken_files_list)
         assert not invalid_files, \
-            'Broken files found: {}'.format('\n'.join([file_desc[0] for file_desc in broken_files_list]))
+            'Broken files found: {}'.format('\n'.join([':'.join(file_desc) for file_desc in broken_files_list]))
 
     @staticmethod
     def test_no_proper_files_in_exempt_list():

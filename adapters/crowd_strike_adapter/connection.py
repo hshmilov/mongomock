@@ -18,7 +18,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=too-many-statements
 class CrowdStrikeConnection(RESTConnection):
     def __init__(self, *args, **kwargs):
-        kwargs.pop('headers', None)
         super().__init__(*args, **kwargs, headers={'Accept': 'application/json'})
         self.last_token_fetch = None
 

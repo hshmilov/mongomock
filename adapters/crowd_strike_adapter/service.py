@@ -41,9 +41,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         try:
             connection = CrowdStrikeConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
                                                username=client_config['username'], password=client_config['apikey'],
-                                               https_proxy=client_config.get('https_proxy'),
-                                               headers={'Content-Type': 'application/json',
-                                                        'Accept': 'application/json'})
+                                               https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

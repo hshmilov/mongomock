@@ -164,6 +164,7 @@ DOCKER_PORTS = {
     'bitsight-adapter':                 9961,
     'endgame-adapter':                  9962,
     'censys-adapter':                   9963,
+    'paloalto-cortex-adapter':          9964,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
