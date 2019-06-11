@@ -147,8 +147,9 @@ def remove_cronjob(cronjob_name):
 def create_system_cronjobs():
     remove_cronjob(WATCHDOG_CRON_SCRIPT_PATH)
     create_cronjob(script_path=WATCHDOG_CRON_SCRIPT_PATH,
-                   cronjob_timing='0 * * * *',
-                   specific_run_env=str(PYRUN_PATH_HOST))
+                   cronjob_timing='*/15 * * * *',
+                   specific_run_env=str(PYRUN_PATH_HOST),
+                   keep_script_location=True)
 
 
 def push_old_instances_settings():

@@ -99,7 +99,8 @@ def load_new_source():
         open(full_path, 'wb').write(data)
         # chmod +x for .sh files
         if full_path.endswith('.sh') and sys.platform.startswith('linux'):
-            os.chmod(full_path, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+            os.chmod(full_path, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC |
+                     stat.S_IXGRP | stat.S_IXOTH | stat.S_IRGRP | stat.S_IROTH)
 
 
 def install_requirements():
