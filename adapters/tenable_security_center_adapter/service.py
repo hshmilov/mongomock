@@ -7,6 +7,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import add_rule, return_error
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
@@ -16,7 +17,7 @@ from axonius.clients.tenable_sc.connection import \
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class TenableSecurityCenterAdapter(ScannerAdapterBase):
+class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         repository_name = Field(str, 'Repository Name')
         score = Field(int, 'Score')
@@ -184,6 +185,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
             logger.warning(f'Couldn\'t parse hostname from netbios name {netbios_name}')
 
         hostname = raw_device_data.get('dnsName') or hostname_by_netbios
+        if not raw_device_data.get('macAddress') and not hostname and self.__drop_only_ip_devices:
+            return None
         device.hostname = hostname
         uuid = raw_device_data.get('uuid')
         if uuid:
@@ -266,3 +269,29 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'drop_only_ip_devices',
+                    'title': 'Drop Devices With Only IP',
+                    'type': 'bool'
+                }
+            ],
+            "required": [
+                'drop_only_ip_devices',
+            ],
+            "pretty_name": "Tenable.sc Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'drop_only_ip_devices': False
+        }
+
+    def _on_config_update(self, config):
+        self.__drop_only_ip_devices = config['drop_only_ip_devices']

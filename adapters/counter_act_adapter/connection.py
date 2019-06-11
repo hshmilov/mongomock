@@ -38,5 +38,5 @@ class CounterActConnection(RESTConnection):
                 href = device_raw.get('_links').get('self').get('href')
                 device_raw['extra'] = self._get(href, force_full_url=True)
             except Exception:
-                logger.exception(f'Problem get more data for {device_raw}')
+                logger.debug(f'Problem get more data for {device_raw}')
             yield device_raw

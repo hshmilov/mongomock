@@ -117,7 +117,10 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
             try:
                 if api_client_class is None:
                     api_client_class = getattr(nexpose_clients, f"NexposeV{device_raw['API']}Client")
-                yield api_client_class.parse_raw_device(device_raw, self._new_device_adapter)
+                device = api_client_class.parse_raw_device(device_raw, self._new_device_adapter,
+                                                           drop_only_ip_devices=self.__drop_only_ip_devices)
+                if device:
+                    yield device
             except Exception as err:
                 logger.exception(
                     f"Caught exception from parsing using the API version: "
@@ -165,10 +168,17 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
                     'name': 'num_of_simultaneous_devices',
                     'title': 'Number Of Simultaneous Device',
                     'type': 'integer'
+                },
+                {
+                    'name': 'drop_only_ip_devices',
+                    'title': 'Drop Devices With Only IP',
+                    'type': 'bool'
                 }
             ],
             "required": [
-                'fetch_tags'
+                'fetch_tags',
+                'drop_only_ip_devices',
+                'num_of_simultaneous_devices'
             ],
             "pretty_name": "Nexpose Configuration",
             "type": "array"
@@ -178,9 +188,11 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'fetch_tags': True,
-            'num_of_simultaneous_devices': 50
+            'num_of_simultaneous_devices': 50,
+            'drop_only_ip_devices': False
         }
 
     def _on_config_update(self, config):
         self.__fetch_tags = config['fetch_tags']
         self.__num_of_simultaneous_devices = config['num_of_simultaneous_devices']
+        self.__drop_only_ip_devices = config['drop_only_ip_devices']

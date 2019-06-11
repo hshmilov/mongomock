@@ -3433,7 +3433,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         If 'uncached' is True, then this will return a non cached version
         :return:
         """
-        logger.info('Getting dashboard')
+        logger.debug('Getting dashboard')
         for dashboard in self.__dashboard_collection.find(filter=filter_archived(), skip=skip,
                                                           limit=limit):
             if not dashboard.get('name'):

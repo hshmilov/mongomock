@@ -45,6 +45,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         created_at = Field(datetime.datetime, 'Created At')
         created_by = Field(str, 'Created By')
         sys_updated_on = Field(str, 'Updated On')
+        used_for = Field(str, 'Used For')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -237,7 +238,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem adding disk stuff to {device_raw}')
             device.domain = device_raw.get('dns_domain')
-
+            device.used_for = device_raw.get('used_for')
             device.set_raw(device_raw)
             return device
         except Exception:

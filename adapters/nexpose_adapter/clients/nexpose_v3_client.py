@@ -157,7 +157,7 @@ class NexposeV3Client(NexposeClient):
         return True
 
     @staticmethod
-    def parse_raw_device(device_raw, device_class):
+    def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False):
         last_seen = device_raw.get('history', [])[-1].get('date')
 
         last_seen = super(NexposeV3Client, NexposeV3Client).parse_raw_device_last_seen(last_seen)
@@ -167,10 +167,15 @@ class NexposeV3Client(NexposeClient):
                                    device_raw.get('osFingerprint', {}).get('architecture', '')]))
         device.last_seen = last_seen
         device.id = str(device_raw['id']) + (device_raw.get('hostName') or '')
+        got_mac = False
         for address in device_raw.get('addresses', []):
+            if address.get('mac'):
+                got_mac = True
             device.add_nic(address.get('mac'), [address.get('ip')] if ('ip' in address and
                                                                        isinstance(address.get('ip'), str) and
                                                                        address.get('ip') != '0.0.0.0') else [])
+        if not device_raw.get('hostName') and not got_mac and drop_only_ip_devices:
+            return None
         device.hostname = device_raw.get('hostName', '')
         risk_score = device_raw.get('riskScore')
         if risk_score is not None:
