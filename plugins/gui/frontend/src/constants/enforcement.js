@@ -119,7 +119,7 @@ export const actionsMeta = {
         items: ['run_command_windows', 'run_command_linux', 'run_wmi_scan', 'run_linux_ssh_scan']
     },
     isolate_edr: {
-        title: 'Isolate Device in EDR',
+        title: 'Execute Endpoint Security Agent Action',
         items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'carbonblack_defense_change_policy', 'sentinelone_initiate_scan_action']
     },
     scan_va: {

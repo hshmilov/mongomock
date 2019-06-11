@@ -47,7 +47,7 @@ class ActionCategory:
     Deploy = 'Deploy Software'
     Run = 'Run Command'
     Notify = 'Notify'
-    Isolate = 'Isolate Device in EDR'
+    Isolate = 'Execute Endpoint Security Agent Action'
     Enrichment = 'Enrich Device Data'
     Utils = 'Axonius Utilities'
     Scan = 'Add Device to VA Scan'
