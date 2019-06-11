@@ -2072,6 +2072,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         response.raise_for_status()
         return response.json()
 
+    @gui_add_rule_logged_in('cache/<cache_name>/delete')
+    def _clean_cache(self, cache_name):
+        if cache_name == 'reports_actions':
+            logger.info('Cleaning _get_actions_from_reports_plugin cache async...')
+            try:
+                self._get_actions_from_reports_plugin.update_cache()
+            except Exception as e:
+                logger.exception(f'Exception while cleaning cache for {cache_name}')
+                return jsonify({'status': False, 'exception': str(e)})
+            return jsonify({'status': True})
+
+        return jsonify({'status': False})
+
     @gui_add_rule_logged_in('enforcements/actions', required_permissions={Permission(PermissionType.Enforcements,
                                                                                      PermissionLevel.ReadOnly)})
     def actions(self):

@@ -13,6 +13,8 @@ import boto3
 import kubernetes
 import botocore.exceptions
 from botocore.config import Config
+from botocore.credentials import RefreshableCredentials
+from botocore.session import get_session
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (AdapterException,
@@ -350,6 +352,57 @@ class AwsAdapter(AdapterBase, Configurable):
         self._connect_client_once(client_config, True)
         return client_config
 
+    def get_assumed_session(self, role_arn: str, region, client_config: dict):
+        """STS Role assume a boto3.Session
+
+        With automatic credential renewal.
+        Notes: We have to poke at botocore internals a few times
+        """
+        session_credentials = RefreshableCredentials.create_from_metadata(
+            metadata=functools.partial(
+                self.boto3_role_credentials_metadata_maker, role_arn, client_config)(),
+            refresh_using=functools.partial(
+                self.boto3_role_credentials_metadata_maker, role_arn, client_config),
+            method='sts-assume-role'
+        )
+        role_session = get_session()
+        role_session._credentials = session_credentials
+        role_session.set_config_variable('region', region)
+        return boto3.Session(botocore_session=role_session)
+
+    @staticmethod
+    def boto3_role_credentials_metadata_maker(role_arn: str, client_config: dict):
+        """
+        Generates a "metadata" dict creator that is used to initialize auto-refreshing sessions.
+        This is done to support auto-refreshing role-sessions; When we assume a role, we have to put a duration
+        for it. when it expires, the internal botocore class will auto refresh it. This is the refresh function.
+        for more information look at: https://dev.to/li_chastina/auto-refresh-aws-tokens-using-iam-role-and-boto3-2cjf
+        :param role_arn: the name of the role to assume
+        :param client_config: client_config from _connect_client_once (includes access keys, regions,
+                              proxy settings etc)
+        :return:
+        """
+        current_session = boto3.Session(
+            aws_access_key_id=client_config.get(AWS_ACCESS_KEY_ID),
+            aws_secret_access_key=client_config.get(AWS_SECRET_ACCESS_KEY),
+        )
+        sts_client = current_session.client('sts', config=client_config.get(AWS_CONFIG))
+        assumed_role_object = sts_client.assume_role(
+            RoleArn=role_arn,
+            DurationSeconds=60 * 15,  # The minimum possible, because we want to support any customer config
+            RoleSessionName="Axonius"
+        )
+
+        response = assumed_role_object['Credentials']
+
+        credentials = {
+            "access_key": response.get("AccessKeyId"),
+            "secret_key": response.get("SecretAccessKey"),
+            "token": response.get("SessionToken"),
+            "expiry_time": response.get("Expiration").isoformat(),
+        }
+        return credentials
+
     def _connect_client_once(self, client_config, should_validate: bool):
         """
         Generates credentials and optionally tries to test them
@@ -368,7 +421,6 @@ class AwsAdapter(AdapterBase, Configurable):
         else:
             roles_to_assume_file = ''
         roles_to_assume_list = []
-        roles_temp_credentials = {}
 
         # Input validation
         failed_arns = []
@@ -394,30 +446,6 @@ class AwsAdapter(AdapterBase, Configurable):
                 f'Invalid role arns found. Please specify a comma-delimited list of valid role arns. '
                 f'Invalid arns: {", ".join(failed_arns)}')
 
-        # Get all the temporary credentials for this role
-        for role_arn in roles_to_assume_list:
-            try:
-                # for each role, we have to create a new session in which we are logged in with the current IAM
-                # user. if we try to assume two roles one after the other we would have a mixed set of privileges.
-                current_session = boto3.Session(
-                    aws_access_key_id=client_config.get(AWS_ACCESS_KEY_ID),
-                    aws_secret_access_key=client_config.get(AWS_SECRET_ACCESS_KEY),
-                )
-                sts_client = current_session.client('sts', config=client_config.get(AWS_CONFIG))
-                assumed_role_object = sts_client.assume_role(
-                    RoleArn=role_arn,
-                    DurationSeconds=60 * 60 * 1,    # 1 hours of a session
-                    RoleSessionName="Axonius"
-                )
-
-                roles_temp_credentials[role_arn] = assumed_role_object['Credentials']
-                clients_dict[role_arn] = dict()
-            except Exception as e:
-                logger.exception(f'Error while assuming role {role_arn}')
-                # We prefer showing this message one by one because we want to show the exception.
-                # If we would have shown all failed roles at once this would be a huge string...
-                raise ClientConnectionException(f'Can not assume role {role_arn}: {str(e)}')
-
         if (client_config.get(GET_ALL_REGIONS) or False) is False:
             if not client_config.get(REGION_NAME):
                 raise ClientConnectionException('No region was chosen')
@@ -435,40 +463,38 @@ class AwsAdapter(AdapterBase, Configurable):
         clients_dict[aws_access_key_id] = dict()
         failed_connections = []
         for region in regions_to_pull_from:
-            # we need to get the data for this IAM account and for the roles applied.
-            current_client_config = client_config.copy()
-            current_client_config[REGION_NAME] = region
-
             current_try = f'IAM User {aws_access_key_id} with region {region}'
-            clients_dict[aws_access_key_id][region] = current_client_config
+            permanent_session = boto3.Session(
+                aws_access_key_id=client_config.get(AWS_ACCESS_KEY_ID),
+                aws_secret_access_key=client_config.get(AWS_SECRET_ACCESS_KEY),
+                region_name=region
+            )
+            clients_dict[aws_access_key_id][region] = permanent_session
             try:
                 if should_validate:
-                    self._test_ec2_connection(current_client_config)
+                    self._test_ec2_connection(permanent_session, config=client_config.get(AWS_CONFIG))
                     should_validate = False  # if even one connection succeeds, do not check anything else
             except Exception as e:
                 logger.exception(f'Problem with iam user for region {region}')
                 failed_connections.append(f'{current_try}: {str(e)}')
 
-            for role_arn, role_credentials in roles_temp_credentials.items():
-                # Note! using the same client_config or current_client_config will result in an error since
-                # we are changing this dict, which is in use by the reuslt of self._connect_client_by_source!
-                # thus, eks for example, could get later different credentials than it needs.
-                # so always have a .copy() here!
-                current_try = f'IAM Role {role_arn} with region {region}'
-                current_client_config = client_config.copy()
-                current_client_config[REGION_NAME] = region
-                current_client_config[AWS_ACCESS_KEY_ID] = role_credentials['AccessKeyId']
-                current_client_config[AWS_SECRET_ACCESS_KEY] = role_credentials['SecretAccessKey']
-                current_client_config[AWS_SESSION_TOKEN] = role_credentials['SessionToken']
-
-                clients_dict[role_arn][region] = current_client_config
+            for role_arn in roles_to_assume_list:
                 try:
-                    if should_validate:
-                        self._test_ec2_connection(current_client_config)
-                        should_validate = False  # if even one connection succeeds, do not check anything else
+                    current_try = f'IAM Role {role_arn} with region {region}'
+                    auto_refresh_session = self.get_assumed_session(role_arn, region, client_config)
+                    if role_arn not in clients_dict:
+                        clients_dict[role_arn] = dict()
+                    clients_dict[role_arn][region] = auto_refresh_session
+                    try:
+                        if should_validate:
+                            self._test_ec2_connection(auto_refresh_session, config=client_config.get(AWS_CONFIG))
+                            should_validate = False  # if even one connection succeeds, do not check anything else
+                    except Exception as e:
+                        logger.exception(f'problem with role {role_arn} for region {region}')
+                        failed_connections.append(f'{current_try}: {str(e)}')
                 except Exception as e:
-                    logger.exception(f'problem with role {role_arn} for region {region}')
-                    failed_connections.append(f'{current_try}: {str(e)}')
+                    logger.exception(f'Error assuming role {role_arn}')
+                    raise ClientConnectionException(f'Error assuming role {role_arn}: {str(e)}')
 
         # If should_validate remained True, it means nothing has passed any validation.
         # It its False, then something passed validation, or we did not require any.
@@ -478,53 +504,38 @@ class AwsAdapter(AdapterBase, Configurable):
             # we show the first one which usually indicates the problem.
             raise ClientConnectionException(f'Failed connecting to aws: {failed_connections[0]}')
 
-        return clients_dict
+        return clients_dict, client_config
 
     @staticmethod
-    def _get_boto3_config_from_client_config(client_config):
-        params = dict()
-        params[REGION_NAME] = client_config[REGION_NAME]
-        params[AWS_CONFIG] = client_config.get(AWS_CONFIG)
-        params[AWS_SESSION_TOKEN] = client_config.get(AWS_SESSION_TOKEN)
-
-        # If the user does not provide credentials boto3 tries to search for other paths, such as the attached iam
-        # role
-        if client_config.get(AWS_ACCESS_KEY_ID):
-            params[AWS_ACCESS_KEY_ID] = client_config.get(AWS_ACCESS_KEY_ID)
-            params[AWS_SECRET_ACCESS_KEY] = client_config.get(AWS_SECRET_ACCESS_KEY)
-
-        return params
-
-    def _test_ec2_connection(self, client_config):
-        params = self._get_boto3_config_from_client_config(client_config)
+    def _test_ec2_connection(session, **extra_params):
         try:
-            boto3_client_ec2 = boto3.client('ec2', **params)
+            boto3_client_ec2 = session.client('ec2', **extra_params)
             boto3_client_ec2.describe_instances(DryRun=True)
         except Exception as e:
             if 'Request would have succeeded, but DryRun flag is set.' not in str(e):
                 raise
 
-    def _connect_client_by_source(self, client_config):
-        params = self._get_boto3_config_from_client_config(client_config)
+    def _connect_client_by_source(self, session: boto3.Session, region_name: str, client_config: dict):
+        params = {AWS_CONFIG: client_config.get(AWS_CONFIG), REGION_NAME: region_name}
         clients = dict()
         errors = dict()
 
         try:
-            c = boto3.client('ec2', **params)
+            c = session.client('ec2', **params)
             c.describe_instances()
             clients['ec2'] = c
         except Exception as e:
             errors['ec2'] = str(e)
 
         try:
-            c = boto3.client('ecs', **params)
+            c = session.client('ecs', **params)
             c.list_clusters()
             clients['ecs'] = c
         except Exception as e:
             errors['ecs'] = str(e)
 
         try:
-            c = boto3.client('eks', **params)
+            c = session.client('eks', **params)
             c.list_clusters()
             clients['eks'] = c
         except Exception as e:
@@ -533,28 +544,28 @@ class AwsAdapter(AdapterBase, Configurable):
                 errors['eks'] = str(e)
 
         try:
-            c = boto3.client('iam', **params)
+            c = session.client('iam', **params)
             c.list_roles()
             clients['iam'] = c
         except Exception as e:
             errors['iam'] = str(e)
 
         try:
-            c = boto3.client('elb', **params)
+            c = session.client('elb', **params)
             c.describe_load_balancers()
             clients['elbv1'] = c
         except Exception as e:
             errors['elbv1'] = str(e)
 
         try:
-            c = boto3.client('elbv2', **params)
+            c = session.client('elbv2', **params)
             c.describe_load_balancers()
             clients['elbv2'] = c
         except Exception as e:
             errors['elbv2'] = str(e)
 
         try:
-            c = boto3.client('ssm', **params)
+            c = session.client('ssm', **params)
             c.get_inventory_schema()
             clients['ssm'] = c
         except Exception as e:
@@ -574,7 +585,7 @@ class AwsAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data_credentials):
         # we must re-create all credentials (const and temporary)
         https_proxy = client_data_credentials.get(PROXY)
-        client_data = self._connect_client_once(client_data_credentials, False)
+        client_data, client_config = self._connect_client_once(client_data_credentials, False)
         # First, we must get clients for everything we need
         client_data_aws_clients = dict()
         successful_connections = []
@@ -587,7 +598,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 current_try = f'{account}_{region_name}'
                 try:
                     client_data_aws_clients[account][region_name], warnings = \
-                        self._connect_client_by_source(client_data_by_region)
+                        self._connect_client_by_source(client_data_by_region, region_name, client_config)
                     successful_connections.append(current_try)
                     if warnings:
                         for service_name, service_error in warnings.items():
