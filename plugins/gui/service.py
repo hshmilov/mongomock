@@ -4490,28 +4490,34 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if self.trial_expired():
             logger.error('Report email not sent - system trial has expired')
             return
-
         report_name = report['name']
+        logger.info(f'_send_report_thread for the "{report_name}" report started')
         lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
         self.exec_report_locks[report_name] = lock
         with lock:
             report_path = self._get_existing_executive_report(report_name)
             if self.mail_sender:
-                mail_properties = report['mail_properties']
-                subject = mail_properties.get('mailSubject')
-                logger.info(mail_properties)
-                if mail_properties.get('emailList'):
-                    email = self.mail_sender.new_email(subject,
-                                                       mail_properties.get('emailList', []),
-                                                       cc_recipients=mail_properties.get('emailListCC', []))
-                    with open(report_path, 'rb') as report_file:
-                        email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), bytes(report_file.read()))
-                    email.send(EXEC_REPORT_EMAIL_CONTENT)
-                    report[report_consts.LAST_TRIGGERED_FIELD] = datetime.now()
-                    self._upsert_report_config(report_name, report, False)
+                try:
+                    mail_properties = report['mail_properties']
+                    subject = mail_properties.get('mailSubject')
+                    logger.info(mail_properties)
+                    if mail_properties.get('emailList'):
+                        email = self.mail_sender.new_email(subject,
+                                                           mail_properties.get('emailList', []),
+                                                           cc_recipients=mail_properties.get('emailListCC', []))
+                        with open(report_path, 'rb') as report_file:
+                            email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), bytes(report_file.read()))
+                        email.send(EXEC_REPORT_EMAIL_CONTENT)
+                        report[report_consts.LAST_TRIGGERED_FIELD] = datetime.now()
+                        self._upsert_report_config(report_name, report, False)
+                        logger.info(f'The "{report_name}" report was sent')
+                except Exception:
+                    logger.info(f'Failed to send an Email for the "{report_name}" report')
+                    raise
             else:
                 logger.info('Email cannot be sent because no email server is configured')
                 raise RuntimeWarning('No email server configured')
+        logger.info(f'_send_report_thread for the "{report_name}" report ended')
 
     def _stop_temp_maintenance(self):
         if self.trial_expired():
