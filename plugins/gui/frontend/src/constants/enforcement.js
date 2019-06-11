@@ -33,7 +33,7 @@ export const actionsMeta = {
         title: 'Unisolate in Cybereason Deep Detect & Respond'
     },
     sentinelone_initiate_scan_action: {
-        title: 'Initiate Sentinelone Scan'
+        title: 'Initiate SentinelOne Scan'
     },
     scan_with_qualys: {
         title: 'Add to Qualys Cloud Platform'
