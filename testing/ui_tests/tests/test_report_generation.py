@@ -127,6 +127,34 @@ class TestReportGeneration(TestBase):
             assert self.TEST_REPORT_QUERY_NAME1 not in text
             assert self.TEST_REPORT_QUERY_NAME2 in text
 
+    def test_report_cover_and_toc_chart_legend(self):
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
+
+            self.base_page.run_discovery()
+
+            report_name = 'report cover test'
+            self.reports_page.create_report(report_name=report_name, add_dashboard=True)
+
+            doc = self._extract_report_pdf_doc(report_name)
+
+            assert doc.pages[0].extractText().count(report_name) == 1
+            assert doc.pages[0].extractText().count('Generated on') == 1
+
+            toc_page = doc.pages[1]
+
+            assert toc_page.extractText().count('Discovery Summary') == 1
+            assert toc_page.extractText().count('Dashboard Charts') == 1
+            assert toc_page.extractText().count('Saved Queries') == 0
+
+            dashboard_chart_page = doc.pages[3]
+
+            assert dashboard_chart_page.extractText().count('Managed Devices') == 1
+
     def _extract_report_pdf_doc(self, report_name):
         self.reports_page.switch_to_page()
         self.reports_page.wait_for_table_to_load()
