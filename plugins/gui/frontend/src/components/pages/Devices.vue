@@ -11,7 +11,7 @@
     import xToast from '../axons/popover/Toast.vue'
 
     import {mapState, mapMutations} from 'vuex'
-    import {CHANGE_TOUR_STATE, UPDATE_TOUR_STATE} from '../../store/modules/onboarding'
+    import {CHANGE_TOUR_STATE} from '../../store/modules/onboarding'
 
     export default {
         name: 'x-devices',
@@ -29,7 +29,9 @@
             }
         },
         methods: {
-            ...mapMutations({changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE}),
+            ...mapMutations({
+              changeState: CHANGE_TOUR_STATE
+            }),
             updateDeviceState(deviceId) {
                 if (!this.tourDevices || !this.tourDevices.length) return
                 if (this.tourDevices[0] === 'bestDevice') {

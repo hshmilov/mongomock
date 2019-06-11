@@ -4,13 +4,14 @@ import secrets
 
 import requests
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION,
-
+                                       DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
+                                       DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL,
+                                       DASHBOARD_SPACE_TYPE_DEFAULT, DASHBOARD_SPACE_TYPE_PERSONAL,
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
                                        FEATURE_FLAGS_CONFIG, Signup, EXEC_REPORT_TITLE)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
-                                          DASHBOARD_COLLECTION,
                                           GUI_PLUGIN_NAME,
                                           PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
@@ -411,8 +412,27 @@ class GuiService(PluginService):
 
     def _update_schema_version_12(self):
         print('Upgrade to schema 12')
-        self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
-        self.db_schema_version = 12
+        try:
+            self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
+            dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+            dashboard_spaces_collection.insert_many([{
+                'name': DASHBOARD_SPACE_DEFAULT,
+                'type': DASHBOARD_SPACE_TYPE_DEFAULT
+            }, {
+                'name': DASHBOARD_SPACE_PERSONAL,
+                'type': DASHBOARD_SPACE_TYPE_PERSONAL
+            }])
+            default_id = dashboard_spaces_collection.find_one({
+                'name': DASHBOARD_SPACE_DEFAULT
+            })['_id']
+            self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many({}, {
+                '$set': {
+                    'space': default_id
+                }
+            })
+            self.db_schema_version = 12
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 12. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

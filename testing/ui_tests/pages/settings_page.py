@@ -61,6 +61,7 @@ class SettingsPage(Page):
     SELECT_ROLE_CSS = 'div.x-dropdown.x-select.select-role'
     SELECT_USER_ROLE_CSS = '.user-permissions .user-role .x-select'
     SELECT_OPTION_CSS = 'div.x-select-option'
+    ADMIN_ROLE = 'Admin'
     READ_ONLY_ROLE = 'Read Only User'
     RESTRICTED_ROLE = 'Restricted User'
     USE_PROXY = 'Proxy Enabled'

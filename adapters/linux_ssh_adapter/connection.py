@@ -40,6 +40,7 @@ class LinuxSshConnection:
         self._client = None
 
     def __connect(self, key_filename=None):
+        # pylint: disable=E1123
         self._client.connect(hostname=self._hostname,
                              port=self._port,
                              username=self._username,

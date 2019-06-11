@@ -13,9 +13,9 @@
 </template>
 
 <script>
-    import xSelect from '../../axons/inputs/Select.vue'
-    import xButton from '../../axons/inputs/Button.vue'
-    import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
+    import xSelect from '../../../axons/inputs/Select.vue'
+    import xButton from '../../../axons/inputs/Button.vue'
+    import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
     import chartMixin from './chart'
 
     const dashboardView = {name: '', entity: ''}

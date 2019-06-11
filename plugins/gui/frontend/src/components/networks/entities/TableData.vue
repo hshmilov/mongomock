@@ -20,7 +20,7 @@
         <div
           ref="popup"
           class="popup"
-          :class="{ top, left }"
+          :class="{ top: position.top, left: position.left }"
           @click.stop=""
         >
           <transition name="horizontal-fade">
@@ -99,7 +99,10 @@
     data () {
       return {
         expandData: false,
-        calcPosition: false
+        position: {
+          top: false,
+          left: false
+        }
       }
     },
     computed: {
@@ -163,24 +166,17 @@
           })
         }
         return baseTable
-      },
-      top () {
-        if (!this.calcPosition || !this.$refs.popup) return false
-        return (this.$refs.popup.getBoundingClientRect().bottom > window.innerHeight - 80)
-      },
-      left () {
-        if (!this.calcPosition || !this.$refs.popup) return false
-        return (this.$refs.popup.getBoundingClientRect().right > window.innerWidth - 24)
       }
     },
     methods: {
       toggleCell () {
         this.expandData = !this.expandData
-      }
-    },
-    updated() {
-      if (this.expandData) {
-        this.calcPosition = true
+        if (this.expandData) {
+          this.$nextTick(() => {
+            this.position.top = Boolean(this.$refs.popup.getBoundingClientRect().bottom > window.innerHeight - 80)
+            this.position.left = Boolean(this.$refs.popup.getBoundingClientRect().right > window.innerWidth - 24)
+          })
+        }
       }
     }
   }

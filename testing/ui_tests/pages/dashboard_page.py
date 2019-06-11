@@ -1,4 +1,5 @@
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
 
 from ui_tests.pages.page import Page
 from services.axon_service import TimeoutException
@@ -19,7 +20,7 @@ class DashboardPage(Page):
     SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(2)'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(3)'
     SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(1)'
-    NEW_CARD_WIZARD_CSS = '#dashboard_wizard'
+    NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
     INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS = '#intersectingSecond > div'
@@ -32,6 +33,12 @@ class DashboardPage(Page):
     SUMMARY_CARD_TEXT_CSS = '{id} > div.x-summary > div.summary'
     CARD_CLOSE_BTN_CSS = '{id} > div.header > button.remove'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
+
+    SPACES_XPATH = '//div[@class=\'x-spaces\']'
+    ACTIVE_SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[@class=\'header-tab active\']'
+    SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
+    SPACE_HEADER_CSS = '.x-spaces .x-tabs .header-tab:nth-child({tab_index})'
+    NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
 
     @property
     def root_page_css(self):
@@ -58,7 +65,7 @@ class DashboardPage(Page):
         return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')
 
     def find_new_chart_card(self):
-        return self.driver.find_element_by_css_selector('div.x-card.chart-new.print-exclude')
+        return self.driver.find_element_by_css_selector('.x-tab.active div.x-card.chart-new.print-exclude')
 
     def find_device_discovery_card(self):
         return self.driver.find_elements_by_css_selector('div.x-card.x-discovery-card')[0]
@@ -214,7 +221,7 @@ class DashboardPage(Page):
 
     @staticmethod
     def get_card_id_css_from_title(card_title):
-        id_string = '_'.join(card_title.split(' '))
+        id_string = '_'.join(card_title.split(' ')).lower()
         return f'#{id_string}'
 
     @staticmethod
@@ -246,6 +253,10 @@ class DashboardPage(Page):
         assert card.find_element_by_css_selector('.x-button.link').text == '+'
 
     @staticmethod
+    def assert_plus_button_disabled_in_card(card):
+        assert card.find_element_by_css_selector('.x-button.link.disabled').text == '+'
+
+    @staticmethod
     def find_adapter_in_card(card, adapter):
         return card.find_element_by_css_selector(f'div[title={adapter}]')
 
@@ -274,3 +285,61 @@ class DashboardPage(Page):
     def find_trial_expired_banner(self):
         return self.wait_for_element_present_by_text(
             'Axonius evaluation period has expired. Please reach out to your Account Manager.')
+
+    def find_active_space_header_title(self):
+        return self.driver.find_element_by_xpath(self.ACTIVE_SPACE_HEADERS_XPATH).text
+
+    def find_space_header(self, index=1):
+        return self.find_elements_by_xpath(self.SPACE_HEADERS_XPATH)[index - 1]
+
+    def find_space_header_title(self, index=1):
+        return self.find_space_header(index).find_element_by_tag_name('div').text
+
+    def save_space_name(self, space_name):
+        name_input = self.wait_for_element_present_by_id(self.RENAME_TAB_INPUT_ID)
+        self.fill_text_by_element(name_input, space_name)
+        self.click_button(self.OK_BUTTON)
+        self.wait_for_modal_close()
+
+    def find_add_space(self):
+        return self.driver.find_element_by_xpath(self.NEW_SPACE_BUTTON_XPATH)
+
+    def add_new_space(self, space_name):
+        self.find_add_space().click()
+        self.save_space_name(space_name)
+
+    def is_missing_add_space(self):
+        try:
+            self.find_add_space()
+        except NoSuchElementException:
+            # Good, indeed missing
+            return True
+        return False
+
+    def rename_space(self, space_name, index=2):
+        # Default 2 since 1 is not renamable
+        ActionChains(self.driver).double_click(self.find_space_header(index)).perform()
+        self.save_space_name(space_name)
+
+    def remove_space(self, index=3):
+        # Default 3 since 1 and 2 are note removable
+        space_header = self.find_space_header(index)
+        ActionChains(self.driver).move_to_element(space_header).perform()
+        space_header.find_element_by_css_selector('.x-button.link').click()
+        self.wait_for_element_absent_by_css(self.SPACE_HEADER_CSS.format(tab_index=index))
+
+    def is_missing_space(self, space_name):
+        try:
+            self.find_element_by_text(space_name)
+        except NoSuchElementException:
+            # Good, we want it gone
+            return True
+        return False
+
+    def is_missing_panel(self, panel_name):
+        try:
+            self.driver.find_element_by_css_selector(f'.x-tab.active {self.get_card_id_css_from_title(panel_name)}')
+        except NoSuchElementException:
+            # Good, it is missing
+            return True
+        return False

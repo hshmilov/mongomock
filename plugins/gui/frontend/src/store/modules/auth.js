@@ -1,4 +1,8 @@
 import { REQUEST_API } from '../actions'
+import {entities} from '../../constants/entities'
+
+export const IS_ENTITY_RESTRICTED = 'IS_ENTITY_RESTRICTED'
+export const IS_ENTITY_EDITABLE = 'IS_ENTITY_EDITABLE'
 
 export const GET_USER = 'GET_USER'
 export const LOGIN = 'LOGIN'
@@ -28,6 +32,10 @@ export const GET_DEFAULT_ROLE = 'GET_DEFAULT_ROLE'
 export const SET_DEFAULT_ROLE = 'SET_DEFAULT_ROLE'
 export const UPDATE_DEFAULT_ROLE = 'UPDATE_DEFAULT_ROLE'
 
+const findEntityTitle = (entityName) => {
+  return entities.find(entityType => entityType.name === entityName).title
+}
+
 export const auth = {
   state: {
     currentUser: { fetching: false, data: {}, error: '' },
@@ -36,6 +44,24 @@ export const auth = {
     allRoles: { fetching: false, data: [], error: '' },
     defaultRole: { fetching: false, data: '', error: '' },
     signup: { fetching: false, data: null, error: '' }
+  },
+  getters: {
+    [IS_ENTITY_RESTRICTED] (state) {
+      return (entity) => {
+        if (!entity) return
+        let user = state.currentUser.data
+        if (!user || !user.permissions) return true
+        return user.permissions[findEntityTitle(entity)] === 'Restricted'
+      }
+    },
+    [IS_ENTITY_EDITABLE] (state) {
+      return (entity) => {
+        if (!entity) return
+        let user = state.currentUser.data
+        if (!user || !user.permissions) return true
+        return user.permissions[findEntityTitle(entity)] === 'ReadWrite' || user.admin
+      }
+    }
   },
   mutations: {
     [SET_USER] (state, payload) {

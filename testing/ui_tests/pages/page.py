@@ -123,6 +123,8 @@ class Page:
     TAB_HEADER_XPATH = '//div[contains(@class, \'x-tabs\')]/ul/li[contains(@class, \'header-tab\') and ' \
                        './/text()=\'{tab_title}\']'
 
+    RENAME_TAB_INPUT_ID = 'rename_tab'
+
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url

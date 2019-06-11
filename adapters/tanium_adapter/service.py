@@ -21,7 +21,8 @@ class TaniumAdapter(AdapterBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config['domain']
 
     @staticmethod
@@ -60,7 +61,8 @@ class TaniumAdapter(AdapterBase, Configurable):
         with client_data:
             yield from client_data.get_device_list(do_pagination=self.__do_pagination)
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         """
         The schema TaniumAdapter expects from configs
 

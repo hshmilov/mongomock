@@ -23,13 +23,14 @@
     props: {
       value: {
         type: String,
-        required: true
+        default: ''
       },
       timed: {
         type: Boolean,
         default: true
       },
       timeout: {
+        type: Number,
         default: 4000
       }
     },

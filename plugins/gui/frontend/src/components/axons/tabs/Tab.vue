@@ -29,7 +29,15 @@
         type: String,
         default: ''
       },
-      outdated: {
+      disabled: {
+        type: Boolean,
+        default: false
+      },
+      editable: {
+        type: Boolean,
+        default: false
+      },
+      removable: {
         type: Boolean,
         default: false
       }

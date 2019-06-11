@@ -616,7 +616,7 @@ export const onboarding = {
 					]
 				},
 				'dashboardManagedQuery': {
-					id: 'managed_device_coverage', title: 'MANAGEMENT COVERAGE', align: 'bottom',
+					id: 'managed_device_coverage', title: 'MANAGEMENT COVERAGE', align: 'bottom', emphasize: false,
 					content: 'Click to see unmanaged devices.'
 				},
 				'dashboardBack': {
@@ -720,7 +720,7 @@ export const onboarding = {
 				devices: ['bestDevice', 'query', 'queryResults', 'enforcements', 'dashboardBack'],
 				enforcements: ['enforcementNew', 'settings'],
 				dashboard: ['adapters', 'dashboardManaged', 'dashboardWizard'],
-				dashboardWizard: ['wizardIntersect', 'wizardModule', 'wizardMain', 'wizardSecond', 'wizardName'],
+				dashboardWizard: ['wizardIntersect', 'wizardModule', 'wizardMain', 'wizardSecond', 'wizardName', 'dashboardChart'],
 				reports: ['reportsNew', 'tourFinale']
 			}
 		}

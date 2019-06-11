@@ -1,52 +1,132 @@
 <template>
-    <div class="x-tabs" :class="{ vertical }">
-        <ul class="header">
-            <li v-for="tab in tabs" v-if="tab.id !== undefined" @click="selectTab(tab.id)" :id="tab.id"
-                class="header-tab" :class="{active: tab.isActive, disabled: tab.outdated}">
-                <x-title v-if="tab.logo" :logo="tab.logo" >{{ tab.title }}</x-title>
-                <div v-else>{{ tab.title }}</div>
-            </li>
-        </ul>
-        <div class="body">
-            <slot></slot>
-        </div>
+  <div
+    class="x-tabs"
+    :class="{ vertical }"
+  >
+    <ul class="header">
+      <li
+        v-for="tab in validTabs"
+        :id="tab.id"
+        :key="tab.id"
+        class="header-tab"
+        :class="{active: tab.isActive, disabled: tab.disabled}"
+        @click="selectTab(tab.id)"
+        @dblclick="() => renameTab(tab)"
+      >
+        <x-title
+          v-if="tab.logo"
+          :logo="tab.logo"
+        >{{ tab.title }}</x-title>
+        <div v-else>{{ tab.title }}</div>
+        <x-button
+          v-if="tab.removable"
+          link
+          @click.stop="() => removeTab(tab)"
+        >x</x-button>
+      </li>
+      <li
+        v-if="extendable"
+        class="add-tab"
+        @click="$emit('add')"
+      >+</li>
+    </ul>
+    <div class="body">
+      <slot />
     </div>
+    <x-modal
+      v-if="tabToRename.id"
+      size="md"
+      @confirm="confirmRenameTab"
+      @close="cancelRenameTab"
+    >
+      <div slot="body">
+        <label for="rename_tab">Rename:</label>
+        <input
+          id="rename_tab"
+          type="text"
+          v-model="tabToRename.name"
+        />
+      </div>
+    </x-modal>
+  </div>
 </template>
 
 <script>
-    import xTitle from '../layout/Title.vue'
+  import xTitle from '../layout/Title.vue'
+  import xButton from '../inputs/Button.vue'
+  import xModal from '../popover/Modal.vue'
 
-    export default {
-        name: 'x-tabs',
-        components: {
-            xTitle
-        },
-        props: {vertical: {default: false}},
-        data() {
-            return {
-                tabs: []
-            }
-        },
-        methods: {
-            selectTab(selectedId) {
-                let found = false
-                this.tabs.forEach((tab) => {
-                    tab.isActive = (tab.id === selectedId)
-                    if (tab.isActive) found = true
-                })
-                if (!found) {
-                    this.tabs[0].isActive = true
-                }
-                this.$emit('click', selectedId)
-            }
-        },
-        created() {
-            this.tabs = this.$children
-        },
-        updated() {
-            this.$emit('updated')
+  export default {
+    name: 'XTabs',
+    components: {
+      xTitle, xButton, xModal
+    },
+    props: {
+      vertical: {
+        type: Boolean,
+        default: false
+      },
+      extendable: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data () {
+      return {
+        tabs: [],
+        tabToRename: {id: '', name: ''}
+      }
+    },
+    computed: {
+      validTabs () {
+        return this.tabs.filter(tab => tab.id !== undefined)
+      }
+    },
+    created () {
+      this.tabs = this.$children
+    },
+    updated () {
+      this.$emit('updated')
+    },
+    methods: {
+      selectTab (selectedId) {
+        let found = false
+        this.tabs.forEach((tab) => {
+          tab.isActive = (tab.id === selectedId)
+          if (tab.isActive) found = true
+        })
+        if (!found) {
+          this.tabs[0].isActive = true
         }
+        this.$emit('click', selectedId)
+      },
+      renameTab (tab) {
+        if (!tab.editable) return
+        this.tabToRename = {
+          id:tab.id, name: tab.title
+        }
+      },
+      renameTabById (tabId) {
+        this.renameTab(this.validTabs.find(tab => tab.id === tabId))
+      },
+      confirmRenameTab () {
+        this.$emit('rename', {
+          id: this.tabToRename.id,
+          name: this.tabToRename.name
+        })
+        this.cancelRenameTab()
+      },
+      cancelRenameTab () {
+        this.tabToRename = {id: '', name: ''}
+      },
+      removeTab (tab) {
+        this.$emit('remove', tab.id)
+        if (tab.isActive && this.tabs.length) {
+          this.selectTab(this.tabs[0].id)
+        }
+      }
     }
+  }
 </script>
 
 <style lang="scss">
@@ -68,6 +148,20 @@
 
                 img {
                     margin-right: 4px;
+                }
+
+                .x-button {
+                  display: none;
+                  padding: 0;
+                  position: absolute;
+                  right: 0;
+                  z-index: 1000;
+                  cursor: pointer;
+                }
+                &:hover {
+                  .x-button {
+                    display: block;
+                  }
                 }
 
                 &.active {
@@ -95,6 +189,18 @@
                     border-top-right-radius: 50%;
                 }
             }
+
+            .add-tab {
+                padding: 0 36px;
+                line-height: 42px;
+                color: $theme-orange;
+                font-weight: 500;
+                font-size: 20px;
+                cursor: pointer;
+                &:hover {
+                    text-shadow: $text-shadow;
+                }
+            }
         }
 
         > .body {
@@ -105,6 +211,12 @@
             border-bottom-left-radius: 4px;
             padding: 12px;
             overflow: auto;
+        }
+
+        .x-modal {
+          #rename_tab {
+            margin-left: 12px;
+          }
         }
 
         &.vertical {

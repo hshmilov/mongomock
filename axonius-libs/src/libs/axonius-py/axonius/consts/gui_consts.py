@@ -147,3 +147,15 @@ SIGNUP_TEST_CREDS = {Signup.CompanyField: 'test_company',
                      Signup.UserName: 'admin'
                      }
 SIGNUP_TEST_COMPANY_NAME = 'singnup_test_company_name'
+
+#########################
+# Dashboard consts #
+#########################
+
+DASHBOARD_COLLECTION = 'dashboard'
+DASHBOARD_SPACES_COLLECTION = 'dashboard_spaces'
+DASHBOARD_SPACE_DEFAULT = 'Axonius Dashboard'
+DASHBOARD_SPACE_PERSONAL = 'My Dashboard'
+DASHBOARD_SPACE_TYPE_DEFAULT = 'default'
+DASHBOARD_SPACE_TYPE_PERSONAL = 'personal'
+DASHBOARD_SPACE_TYPE_CUSTOM = 'custom'

@@ -1,9 +1,10 @@
 import time
-
 import pytest
 
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD, FIRST_NAME, LAST_NAME)
 from axonius.utils.wait import wait_until
+from axonius.consts.gui_consts import (DASHBOARD_SPACE_DEFAULT, DASHBOARD_SPACE_PERSONAL)
 
 
 class TestDashboard(TestBase):
@@ -26,6 +27,11 @@ class TestDashboard(TestBase):
     TEST_INTERSECTION_TITLE = 'test intersection'
     TEST_SEGMENTATION_HISTOGRAM_TITLE = 'test segmentation histogram'
     TEST_SEGMENTATION_PIE_TITLE = 'test segmentation pie'
+
+    COVERAGE_SPACE_NAME = 'Coverage Dashboard'
+    VULNERABILITY_SPACE_NAME = 'Vulnerability Dashboard'
+    CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
+    PERSONAL_SPACE_PANEL_NAME = 'Private Segment OS'
 
     @pytest.mark.skip('TBD')
     def test_system_empty_state(self):
@@ -266,3 +272,70 @@ class TestDashboard(TestBase):
         self.devices_queries_page.wait_for_table_to_load()
         self.devices_queries_page.wait_for_spinner_to_end()
         assert len(self.devices_queries_page.find_query_name_by_part('DEMO')) == 1
+
+    def test_dashboard_spaces(self):
+        # Default space and Personal space existing
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.switch_to_page()
+        assert self.dashboard_page.find_active_space_header_title() == DASHBOARD_SPACE_DEFAULT
+        assert self.dashboard_page.find_space_header_title() == DASHBOARD_SPACE_PERSONAL
+
+        # Add new space and name it
+        self.dashboard_page.add_new_space(self.COVERAGE_SPACE_NAME)
+        assert self.dashboard_page.find_space_header_title(3) == self.COVERAGE_SPACE_NAME
+
+        # Rename an existing space
+        self.dashboard_page.rename_space(self.VULNERABILITY_SPACE_NAME, 3)
+        assert self.dashboard_page.find_space_header_title(3) == self.VULNERABILITY_SPACE_NAME
+        assert self.dashboard_page.is_missing_space(self.COVERAGE_SPACE_NAME)
+        self.dashboard_page.add_new_space(self.COVERAGE_SPACE_NAME)
+
+        # Add a panel to a custom space
+        self.dashboard_page.find_space_header(3).click()
+        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.CUSTOM_SPACE_PANEL_NAME)
+        segment_card = self.dashboard_page.get_card(self.CUSTOM_SPACE_PANEL_NAME)
+        assert segment_card and self.dashboard_page.get_histogram_chart_from_card(segment_card)
+        self.dashboard_page.find_space_header(2).click()
+        assert self.dashboard_page.is_missing_panel(self.CUSTOM_SPACE_PANEL_NAME)
+        self.dashboard_page.find_space_header(1).click()
+        assert self.dashboard_page.is_missing_panel(self.CUSTOM_SPACE_PANEL_NAME)
+
+        # Add a panel to the Personal space and check hidden from other user
+        self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.PERSONAL_SPACE_PANEL_NAME)
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.create_new_user(READ_WRITE_USERNAME, NEW_PASSWORD,
+                                           FIRST_NAME, LAST_NAME,
+                                           role_name=self.settings_page.ADMIN_ROLE)
+        self.settings_page.create_new_user(READ_ONLY_USERNAME, NEW_PASSWORD,
+                                           FIRST_NAME, LAST_NAME,
+                                           role_name=self.settings_page.READ_ONLY_ROLE)
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=READ_WRITE_USERNAME, password=NEW_PASSWORD)
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.find_space_header(1).click()
+        assert self.dashboard_page.is_missing_panel(self.PERSONAL_SPACE_PANEL_NAME)
+        assert not self.dashboard_page.is_missing_space(self.VULNERABILITY_SPACE_NAME)
+        self.dashboard_page.find_space_header(3).click()
+        assert not self.dashboard_page.is_missing_panel(self.CUSTOM_SPACE_PANEL_NAME)
+        self.dashboard_page.remove_card(self.CUSTOM_SPACE_PANEL_NAME)
+        assert not self.dashboard_page.is_missing_space(self.COVERAGE_SPACE_NAME)
+        self.dashboard_page.remove_space(3)
+        self.dashboard_page.rename_space(self.VULNERABILITY_SPACE_NAME, 3)
+
+        # Remove a space
+        assert self.dashboard_page.is_missing_space(self.COVERAGE_SPACE_NAME)
+        self.dashboard_page.remove_space(3)
+        assert self.dashboard_page.is_missing_space(self.VULNERABILITY_SPACE_NAME)
+
+        # Login with Read Only user and see it cannot add a space
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=READ_ONLY_USERNAME, password=NEW_PASSWORD)
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.find_space_header(1).click()
+        assert self.dashboard_page.is_missing_panel(self.PERSONAL_SPACE_PANEL_NAME)
+        self.dashboard_page.assert_plus_button_disabled_in_card(self.dashboard_page.find_new_chart_card())
+        assert self.dashboard_page.is_missing_add_space()

@@ -34,14 +34,14 @@
 </template>
 
 <script>
-    import xSelect from '../../axons/inputs/Select.vue'
-    import xButton from '../../axons/inputs/Button.vue'
-    import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
-    import xDateEdit from '../../neurons/schema/types/string/DateEdit.vue'
+    import xSelect from '../../../axons/inputs/Select.vue'
+    import xButton from '../../../axons/inputs/Button.vue'
+    import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
+    import xDateEdit from '../../../neurons/schema/types/string/DateEdit.vue'
     import chartMixin from './chart'
 
     import {mapState, mapActions} from 'vuex'
-    import {FETCH_FIRST_HISTORICAL_DATE} from '../../../store/modules/constants'
+    import {FETCH_FIRST_HISTORICAL_DATE} from '../../../../store/modules/constants'
 
     const dashboardView = {name: '', entity: ''}
     export default {

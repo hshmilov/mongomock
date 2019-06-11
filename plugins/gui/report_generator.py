@@ -15,7 +15,7 @@ from axonius.plugin_base import PluginBase
 from axonius.utils import gui_helpers
 from axonius.utils.axonius_query_language import parse_filter
 from gui.gui_logic import filter_utils
-from gui.gui_logic.adapter_data import adapter_data
+from gui.gui_logic.dashboard_data import adapter_data
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

@@ -28,10 +28,12 @@ class SentineloneAdapter(AdapterBase):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    def _get_client_id(self, client_config):
+    @staticmethod
+    def _get_client_id(client_config):
         return client_config['domain']
 
-    def _test_reachability(self, client_config):
+    @staticmethod
+    def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
     @staticmethod
@@ -55,7 +57,8 @@ class SentineloneAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    def _query_devices_by_client(self, client_name, client_data):
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
         """
         Get all devices from a specific SentinelOne domain
 
@@ -67,7 +70,8 @@ class SentineloneAdapter(AdapterBase):
         with client_data:
             yield from client_data.get_device_list()
 
-    def _clients_schema(self):
+    @staticmethod
+    def _clients_schema():
         """
         The schema SentinelOneAdapter expects from configs
 

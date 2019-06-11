@@ -6,12 +6,18 @@ export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE'
 export const FETCH_DISCOVERY_DATA = 'FETCH_DISCOVERY_DATA'
 export const UPDATE_DISCOVERY_DATA = 'UPDATE_DISCOVERY_DATA'
 
-export const FETCH_DASHBOARD = 'FETCH_DASHBOARD'
-export const UPDATE_DASHBOARD = 'UPDATE_DASHBOARD'
-export const SAVE_DASHBOARD = 'SAVE_DASHBOARD'
+export const FETCH_DASHBOARD_SPACES = 'FETCH_DASHBOARD_SPACES'
+export const UPDATE_DASHBOARD_SPACES = 'UPDATE_DASHBOARD_SPACES'
+export const SAVE_DASHBOARD_SPACE = 'SAVE_DASHBOARD_SPACE'
+export const UPDATE_ADDED_SPACE = 'UPDATE_ADDED_SPACE'
+export const CHANGE_DASHBOARD_SPACE = 'CHANGE_DASHBOARD_SPACE'
+export const UPDATE_CHANGED_SPACE = 'UPDATE_CHANGED_SPACE'
+export const REMOVE_DASHBOARD_SPACE = 'REMOVE_DASHBOARD_SPACE'
+export const UPDATE_REMOVED_SPACE = 'UPDATE_REMOVED_SPACE'
 
-export const REMOVE_DASHBOARD = 'REMOVE_DASHBOARD'
-export const UPDATE_REMOVED_DASHBOARD = 'UPDATE_REMOVED_DASHBOARD'
+export const SAVE_DASHBOARD_PANEL = 'SAVE_DASHBOARD_PANEL'
+export const REMOVE_DASHBOARD_PANEL = 'REMOVE_DASHBOARD_PANEL'
+export const UPDATE_REMOVED_PANEL = 'UPDATE_REMOVED_PANEL'
 
 export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
 
@@ -25,7 +31,7 @@ export const dashboard = {
 			devices: {data: {}, fetching: false, error: ''},
 			users: {data: {}, fetching: false, error: '' }
 		},
-		charts: { data: [], fetching: false, error: '' },
+		spaces: { data: [], fetching: false, error: '' },
 		firstUse: { data: null, fetching: false, error: '' }
 	},
 	mutations: {
@@ -48,27 +54,34 @@ export const dashboard = {
 				state.dataDiscovery[payload.module].data = { ...payload.data }
 			}
 		},
-		[ UPDATE_DASHBOARD ] (state, payload) {
-			state.charts.fetching = payload.fetching
-			state.charts.error = payload.error
+		[ UPDATE_DASHBOARD_SPACES ] (state, payload) {
+			state.spaces.fetching = payload.fetching
+			state.spaces.error = payload.error
 			if (!payload.data) {
-                return
-            }
-            if (!state.charts.data.length) {
-                state.charts.data = payload.data
-            } else {
-                payload.data.forEach((item, index) => {
-                    if (payload.skip + index < state.charts.data.length) {
-                        state.charts.data[payload.skip + index] = item
-                    } else {
-                        state.charts.data.push(item)
-                    }
-                })
-                state.charts.data = [ ...state.charts.data ]
-            }
+					return
+			}
+			state.spaces.data = payload.data
 		},
-		[ UPDATE_REMOVED_DASHBOARD ] (state, dashboardId) {
-			state.charts.data = state.charts.data.filter(dashboard => dashboard.uuid !== dashboardId)
+		[ UPDATE_ADDED_SPACE ] (state, payload) {
+			state.spaces.data.push(payload)
+		},
+		[ UPDATE_CHANGED_SPACE ] (state, payload) {
+			state.spaces.data = state.spaces.data.map(space => {
+				if (space.uuid !== payload.id) return space
+
+				return {...space, name: payload.name}
+			})
+		},
+		[ UPDATE_REMOVED_SPACE ] (state, spaceId) {
+			state.spaces.data = state.spaces.data.filter(space => space.uuid !== spaceId)
+		},
+		[ UPDATE_REMOVED_PANEL ] (state, dashboardId) {
+			state.spaces.data = state.spaces.data.map(space => {
+				return {
+					...space,
+					panels: space.panels.filter(dashboard => dashboard.uuid !== dashboardId)
+				}
+			})
 		},
 		[ UPDATE_DASHBOARD_FIRST_USE] (state, payload) {
             state.firstUse.fetching = payload.fetching
@@ -93,53 +106,79 @@ export const dashboard = {
 				payload
 			})
 		},
-		[ FETCH_DASHBOARD ] ({dispatch}, payload) {
-			if (!payload) {
-				payload = {}
-            }
-            if (!payload.skip) {
-				payload.skip = 0
-            }
-            if (!payload.limit) {
-				payload.limit = 2
-            }
+		[ FETCH_DASHBOARD_SPACES ] ({dispatch}, payload) {
 			return dispatch(REQUEST_API, {
-				rule: `dashboard?skip=${payload.skip}&limit=${payload.limit}`,
-				type: UPDATE_DASHBOARD,
-                payload
-			}).then(response => {
-                if (response.data && response.data.length === payload.limit) {
-                    dispatch(FETCH_DASHBOARD, { ...payload,
-                        skip: payload.skip + payload.limit
-                    })
-                }
-            })
+				rule: 'dashboard/spaces',
+				type: UPDATE_DASHBOARD_SPACES,
+				payload
+			})
 		},
-		[ SAVE_DASHBOARD ] ({dispatch}, payload) {
+		[ SAVE_DASHBOARD_SPACE ] ({dispatch, commit}, name) {
 			return dispatch(REQUEST_API, {
-				rule: 'dashboard',
+				rule: 'dashboard/spaces',
 				method: 'POST',
-				data: payload
-			}).then((response) => {
+				data: {
+					name
+				}
+			}).then(response => {
 				if (response.status === 200 && response.data) {
-					dispatch(FETCH_DASHBOARD)
+					commit(UPDATE_ADDED_SPACE, {
+						uuid: response.data, name,
+						type: 'custom', panels: []
+					})
+				}
+				return response.data
+			})
+		},
+		[ CHANGE_DASHBOARD_SPACE ] ({dispatch, commit}, payload) {
+			return dispatch(REQUEST_API, {
+				rule: `dashboard/spaces/${payload.id}`,
+				method: 'PUT',
+				data: {
+					name: payload.name
+				}
+			}).then(response => {
+				if (response.status === 200) {
+					commit(UPDATE_CHANGED_SPACE, payload)
 				}
 			})
 		},
-		[ REMOVE_DASHBOARD ] ({dispatch, commit}, dashboardId) {
-			if (!dashboardId) return
+		[ REMOVE_DASHBOARD_SPACE ] ({dispatch, commit}, spaceId) {
 			return dispatch(REQUEST_API, {
-				rule: `dashboard/${dashboardId}`,
+				rule: `dashboard/spaces/${spaceId}`,
+				method: 'DELETE'
+			}).then(response => {
+				if (response.status === 200) {
+					commit(UPDATE_REMOVED_SPACE, spaceId)
+				}
+			})
+		},
+		[ SAVE_DASHBOARD_PANEL ] ({dispatch}, payload) {
+			return dispatch(REQUEST_API, {
+				rule: `dashboard/spaces/${payload.space}/panels`,
+				method: 'POST',
+				data: payload.data
+			}).then(response => {
+				if (response.status === 200 && response.data) {
+					dispatch(FETCH_DASHBOARD_SPACES)
+				}
+				return response
+			})
+		},
+		[ REMOVE_DASHBOARD_PANEL ] ({dispatch, commit}, panelId) {
+			if (!panelId) return
+			return dispatch(REQUEST_API, {
+				rule: `dashboard/panels/${panelId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response.status === 200) {
-					commit(UPDATE_REMOVED_DASHBOARD, dashboardId)
+					commit(UPDATE_REMOVED_PANEL, panelId)
 				}
 			})
 		},
-		[ FETCH_HISTORICAL_SAVED_CARD ] ({ dispatch }, payload) {
+		[ FETCH_HISTORICAL_SAVED_CARD ] ({ dispatch }, {cardId, date}) {
 			return dispatch(REQUEST_API, {
-				rule: `saved_card_results/${encodeURI(payload.cardUuid)}?date_to=${encodeURI(payload.date)} 23:59:59&date_from=${encodeURI(payload.date)}`,
+				rule: `saved_card_results/${encodeURI(cardId)}?date_to=${encodeURI(date)} 23:59:59&date_from=${encodeURI(date)}`
 			})
 		},
 		[ FETCH_DASHBOARD_FIRST_USE ] ({ dispatch }) {

@@ -18,6 +18,7 @@ GUI_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'gui', 'gui.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
 READ_ONLY_USERNAME = 'ReadOnlyUser'
+READ_WRITE_USERNAME = 'ReadWriteUser'
 FIRST_NAME = 'FirstName'
 LAST_NAME = 'LastName'
 TAG_NAME = 'lalala'

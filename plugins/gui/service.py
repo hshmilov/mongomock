@@ -58,13 +58,14 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        ChartMetrics, ChartRangeTypes,
                                        ChartRangeUnits, ChartViews,
                                        FeatureFlagsNames, ResearchStatus,
+                                       DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
+                                       DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
                                        Signup, PROXY_DATA_PATH)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
-                                          DASHBOARD_COLLECTION,
                                           DEVICE_CONTROL_PLUGIN_NAME, GUI_PLUGIN_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, NODE_ID, NODE_NAME,
@@ -127,7 +128,7 @@ from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.gui_logic.entity_data import (get_entity_data, entity_data_field_csv,
                                        entity_notes, entity_notes_update, entity_tasks)
-from gui.gui_logic.adapter_data import adapter_data
+from gui.gui_logic.dashboard_data import adapter_data
 from gui.gui_logic.ec_helpers import extract_actions_from_ec
 from gui.gui_logic.fielded_plugins import get_fielded_plugins
 from gui.gui_logic.filter_utils import filter_archived
@@ -387,6 +388,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.__roles_collection = self._get_collection(ROLES_COLLECTION)
         self.__users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
         self.__dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
+        self.__dashboard_spaces_collection = self._get_collection(DASHBOARD_SPACES_COLLECTION)
 
         self.reports_config_collection.create_index([('name', pymongo.HASHED)])
 
@@ -519,6 +521,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             config = configparser.ConfigParser()
             config.read(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                      f'configs/{default_dashboard_charts_ini_path}')))
+            default_space = self.__dashboard_spaces_collection.find_one({
+                'type': 'default'
+            })
+            if not default_space:
+                logger.error('This Axonius is missing the default Dashboard')
+                return
 
             for name, data in config.items():
                 if name == 'DEFAULT':
@@ -533,7 +541,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                  dashboard_metric=data['metric'],
                                                  dashboard_view=data['view'],
                                                  dashboard_data=json.loads(data['config']),
-                                                 hide_empty=bool(data.get('hide_empty', 0)))
+                                                 hide_empty=bool(data.get('hide_empty', 0)),
+                                                 space_id=default_space['_id'])
                 except Exception as e:
                     logger.exception(f'Error adding default dashboard chart {name}. Reason: {repr(e)}')
         except Exception as e:
@@ -600,7 +609,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return REPORTS_DELETED
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data,
-                                hide_empty=False):
+                                hide_empty=False, space_id=None):
         existed_dashboard_chart = self.__dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
             logger.info(f'Report {dashboard_name} already exists under id: {existed_dashboard_chart["_id"]}')
@@ -614,7 +623,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'view': dashboard_view,
             'config': dashboard_data,
             'hide_empty': hide_empty,
-            'user_id': '*'
+            'user_id': '*',
+            'space': space_id
         }, upsert=True)
         logger.info(f'Added report {dashboard_name} id: {result.upserted_id}')
 
@@ -3345,28 +3355,111 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def all_historical_dates(self):
         return jsonify(all_historical_dates())
 
-    @gui_helpers.paginated()
-    @gui_add_rule_logged_in('dashboard', methods=['POST', 'GET'],
+    @gui_add_rule_logged_in('dashboard/spaces', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)},
                             enforce_trial=False)
-    def get_dashboard(self, skip, limit):
-        if request.method == 'GET':
-            return jsonify(self._get_dashboard(skip, limit))
+    def get_dashboard_data(self):
+        """
+        GET all the saved spaces and the list of panels attached to them.
+            For the space with type 'personal', screen out those created by a different user from the one logged in.
 
-        # Handle 'POST' request method - save dashboard configuration
+        POST a new space that will have the type 'custom'
+
+        :return:
+        """
+        if request.method == 'GET':
+            space_to_panels = defaultdict(list)
+            for panel in self._get_dashboard():
+                space_to_panels[str(panel['space'])].append(panel)
+
+            def _get_space_panels(space_id, space_name):
+                panels = space_to_panels.get(str(space_id), [])
+                if space_name != DASHBOARD_SPACE_PERSONAL:
+                    return panels
+                return [panel for panel in panels if panel['user_id'] == get_connected_user_id()]
+
+            return jsonify([{
+                'uuid': str(space['_id']),
+                'name': space['name'],
+                'type': space['type'],
+                'panels': _get_space_panels(space['_id'], space['name'])
+            } for space in self.__dashboard_spaces_collection.find(filter_archived())])
+
+        # Handle 'POST' request method - save new custom dashboard space
+        space_data = dict(self.get_request_data_as_object())
+        space_data['type'] = DASHBOARD_SPACE_TYPE_CUSTOM
+        insert_result = self.__dashboard_spaces_collection.insert_one(space_data)
+        if not insert_result or not insert_result.inserted_id:
+            return return_error(f'Could not create a new space named {space_data["name"]}')
+        return str(insert_result.inserted_id)
+
+    @gui_add_rule_logged_in('dashboard/spaces/<space_id>', methods=['PUT', 'DELETE'],
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
+                            enforce_trial=False)
+    def update_dashboard_space(self, space_id):
+        """
+        PUT an updated name for an existing Dashboard Space
+        DELETE an existing Dashboard Space
+
+        :param space_id: The ObjectId of the existing space
+        :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
+        """
+        if request.method == 'PUT':
+            space_data = dict(self.get_request_data_as_object())
+            update_result = self.__dashboard_spaces_collection.update_one({
+                '_id': ObjectId(space_id)
+            }, {
+                '$set': space_data
+            })
+            if not update_result or update_result.modified_count == 0:
+                return return_error('Could not update the requested Dashboard Space', 400)
+            return ''
+
+        if request.method == 'DELETE':
+            delete_result = self.__dashboard_spaces_collection.delete_one({
+                '_id': ObjectId(space_id)
+            })
+            if not delete_result or delete_result.deleted_count == 0:
+                return return_error('Could not remove the requested Dashboard Space', 400)
+            return ''
+
+    @gui_add_rule_logged_in('dashboard/spaces/<space_id>/panels', methods=['POST'],
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
+                            enforce_trial=False)
+    def add_dashboard_space_panel(self, space_id):
+        """
+        POST a new Dashboard Panel configuration, attached to requested space
+
+        :param space_id: The ObjectId of the space for adding the panel to
+        :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
+        """
         dashboard_data = dict(self.get_request_data_as_object())
         if not dashboard_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
         if not dashboard_data.get('config'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
+        dashboard_data['space'] = ObjectId(space_id)
         dashboard_data['user_id'] = get_connected_user_id()
-        update_result = self.__dashboard_collection.replace_one(
-            {
-                'name': dashboard_data['name']
-            }, dashboard_data, upsert=True)
+        update_result = self.__dashboard_collection.replace_one({
+            'name': dashboard_data['name']
+        }, dashboard_data, upsert=True)
         if not update_result.upserted_id and not update_result.modified_count:
             return return_error('Error saving dashboard chart', 400)
         return str(update_result.upserted_id)
+
+    @gui_add_rule_logged_in('dashboard/panels/<panel_id>', methods=['DELETE'],
+                            required_permissions={Permission(PermissionType.Dashboard,
+                                                             PermissionLevel.ReadWrite)})
+    def remove_dashboard_panel(self, panel_id):
+        """
+        DELETE an existing Dashboard Panel, by its id
+        :return: ObjectId of the Panel to delete
+        """
+        update_result = self.__dashboard_collection.update_one(
+            {'_id': ObjectId(panel_id)}, {'$set': {'archived': True}})
+        if not update_result.modified_count:
+            return return_error(f'No dashboard by the id {panel_id} found or updated', 400)
+        return ''
 
     def __clear_dashboard_cache(self, clear_slow=False):
         """
@@ -3406,6 +3499,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if self._fetch_chart_compare == handler_by_metric[dashboard_metric]:
                 del config['entity']
         dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
+        dashboard['space'] = str(dashboard['space'])
         return gui_helpers.beautify_db_entry(dashboard)
 
     @rev_cached(ttl=3600 * 4, key_func=lambda self, dashboard: dashboard['_id'])
@@ -3422,7 +3516,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         return self.__generate_dashboard_uncached(dashboard)
 
-    def _get_dashboard(self, skip=0, limit=0, uncached: bool = False):
+    def _get_dashboard(self, uncached: bool = False):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
         fetch devices_db with their view. Amount of results is mapped to each views' name, under 'data' key,
@@ -3434,8 +3528,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         logger.debug('Getting dashboard')
-        for dashboard in self.__dashboard_collection.find(filter=filter_archived(), skip=skip,
-                                                          limit=limit):
+        for dashboard in self.__dashboard_collection.find(filter=filter_archived()):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
@@ -3451,6 +3544,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                         yield self.__generate_dashboard(dashboard)
                     else:
                         yield self.__generate_dashboard_fast(dashboard)
+
                 except Exception:
                     # Since there is no data, not adding this chart to the list
                     logger.exception(f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]})')
@@ -4010,20 +4104,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 points[item['_id'].strftime('%m/%d/%Y')] = item.get('count', 0)
         return points
 
-    @gui_add_rule_logged_in('dashboard/<dashboard_id>', methods=['DELETE'],
-                            required_permissions={Permission(PermissionType.Dashboard,
-                                                             PermissionLevel.ReadWrite)})
-    def remove_dashboard(self, dashboard_id):
-        """
-        Fetches data, according to definition saved for the dashboard named by given name
-        :return:
-        """
-        update_result = self.__dashboard_collection.update_one(
-            {'_id': ObjectId(dashboard_id)}, {'$set': {'archived': True}})
-        if not update_result.modified_count:
-            return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
-        return ''
-
     @rev_cached(ttl=3, key_func=lambda self: 1)
     def __lifecycle(self):
         is_running = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME). \
@@ -4432,7 +4512,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         time_period = exec_report_data.get('period')
         current_date = datetime.now()
         next_run_time = None
-        new_interval_triggger = None
 
         if time_period == 'weekly':
             # Next beginning of the work week (monday for most of the world).

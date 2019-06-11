@@ -73,6 +73,7 @@
         display: flex;
         justify-content: flex-end;
         margin-bottom: 8px;
+        overflow: hidden;
 
         .md-datepicker {
             margin-bottom: 0;

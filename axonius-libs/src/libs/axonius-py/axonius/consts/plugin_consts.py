@@ -62,7 +62,6 @@ MAX_WORKERS = 'max_workers'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
-DASHBOARD_COLLECTION = 'dashboard'
 VERSION_COLLECTION = 'version'
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
 MAINTENANCE_TYPE = 'maintenance'

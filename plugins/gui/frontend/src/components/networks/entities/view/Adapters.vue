@@ -6,7 +6,7 @@
         :id="item.id"
         :key="i"
         :selected="!i"
-        :outdated="item.outdated"
+        :disabled="item.outdated"
         :title="item.pretty_name || item.plugin_name"
         :logo="`adapters/${item.plugin_name}`"
       >

@@ -70,9 +70,8 @@
             }
 
             > .title {
-                flex: 1 0 auto;
                 font-size: 16px;
-                width: 280px;
+                width: calc(100% - 18px);
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 overflow: hidden;
