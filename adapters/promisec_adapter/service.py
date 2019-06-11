@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string, is_domain_valid
@@ -13,14 +14,12 @@ from promisec_adapter import consts
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class PromisecAdapter(AdapterBase):
+class PromisecAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         threats_found = Field(int, 'Threats Found')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
-        # I keep the convention until we refactor all the sql adapters.
-        self.devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
 
     def _get_client_id(self, client_config):
         return client_config[consts.PROMISEC_HOST]
@@ -34,7 +33,7 @@ class PromisecAdapter(AdapterBase):
                                                                     consts.DEFAULT_PROMISEC_DATABASE),
                                          server=client_config[consts.PROMISEC_HOST],
                                          port=client_config.get(consts.PROMISEC_PORT, consts.DEFAULT_PROMISEC_PORT),
-                                         devices_paging=self.devices_fetched_at_a_time)
+                                         devices_paging=self.__devices_fetched_at_a_time)
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
@@ -48,6 +47,7 @@ class PromisecAdapter(AdapterBase):
             raise ClientConnectionException(get_exception_string())
 
     def _query_devices_by_client(self, client_name, client_data):
+        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         try:
             client_data.connect()
             yield from client_data.query(consts.PROMISEC_QUERY)
@@ -151,3 +151,27 @@ class PromisecAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'devices_fetched_at_a_time',
+                    'type': 'integer',
+                    'title': 'SQL pagination'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Promisec Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'devices_fetched_at_a_time': 1000
+        }
+
+    def _on_config_update(self, config):
+        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

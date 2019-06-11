@@ -58,3 +58,4 @@ class IBMTivoliTaddmConnection(RESTConnection):
                 yield from result
             except Exception:
                 logger.exception(f'Error fetching from position {position}')
+                break

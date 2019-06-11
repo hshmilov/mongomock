@@ -8,6 +8,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.devices.device_adapter import RegistryInfomation
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string, is_domain_valid
@@ -17,7 +18,7 @@ from lansweeper_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class LansweeperAdapter(AdapterBase):
+class LansweeperAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
@@ -30,9 +31,6 @@ class LansweeperAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
-        self.__devices_fetched_at_a_time = int(
-            self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME]
-        )
 
     @staticmethod
     def _get_client_id(client_config):
@@ -69,8 +67,8 @@ class LansweeperAdapter(AdapterBase):
             raise ClientConnectionException(get_exception_string())
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
+        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
 
             asset_processes_dict = dict()
@@ -404,3 +402,27 @@ class LansweeperAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'devices_fetched_at_a_time',
+                    'type': 'integer',
+                    'title': 'SQL pagination'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Lansweeper Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'devices_fetched_at_a_time': 1000
+        }
+
+    def _on_config_update(self, config):
+        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

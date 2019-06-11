@@ -234,7 +234,6 @@ axonius-libs/src/libs/axonius-py/axonius/thread_stopper.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/exceptions.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/ldap.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/ldap_connection.py
-axonius-libs/src/libs/axonius-py/axonius/clients/mssql/connection.py
 axonius-libs/src/libs/axonius-py/axonius/clients/rest/exception.py
 axonius-libs/src/libs/axonius-py/axonius/consts/adapter_consts.py
 axonius-libs/src/libs/axonius-py/axonius/consts/email_consts.py

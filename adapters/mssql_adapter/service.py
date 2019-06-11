@@ -6,6 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_exceptions import GetDevicesError
 from axonius.clients.mssql.connection import MSSQLConnection
+from axonius.mixins.configurable import Configurable
 from axonius.utils.parsing import normalize_var_name
 from axonius.fields import Field
 from axonius.devices.device_adapter import DeviceAdapter
@@ -18,13 +19,12 @@ from mssql_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class MssqlAdapter(AdapterBase):
+class MssqlAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-        self._devices_fetched_at_a_time = int(self.config['DEFAULT']['devices_fetched_at_a_time'])
 
     @staticmethod
     def _get_client_id(client_config):
@@ -39,7 +39,7 @@ class MssqlAdapter(AdapterBase):
             connection = MSSQLConnection(database=client_config.get('database'),
                                          server=client_config['domain'],
                                          port=int(client_config.get('port')),
-                                         devices_paging=self._devices_fetched_at_a_time)
+                                         devices_paging=self.__devices_fetched_at_a_time)
             connection.set_credentials(username=client_config['username'],
                                        password=client_config['password'])
             with connection:
@@ -54,8 +54,7 @@ class MssqlAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -66,6 +65,7 @@ class MssqlAdapter(AdapterBase):
         """
         connection, client_config = client_data
         table = client_config['table']
+        connection.set_devices_paging(self.__devices_fetched_at_a_time)
         with connection:
             yield from connection.query(f'Select * from {table}')
 
@@ -214,3 +214,27 @@ class MssqlAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'devices_fetched_at_a_time',
+                    'type': 'integer',
+                    'title': 'SQL pagination'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'SQL Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'devices_fetched_at_a_time': 1000
+        }
+
+    def _on_config_update(self, config):
+        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

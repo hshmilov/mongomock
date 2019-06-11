@@ -84,7 +84,6 @@ class SccmAdapter(AdapterBase, Configurable):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
-        self.devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
 
     def _get_client_id(self, client_config):
         return client_config[consts.SCCM_HOST]
@@ -98,7 +97,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 database=client_config[consts.SCCM_DATABASE],
                 server=client_config[consts.SCCM_HOST],
                 port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
-                devices_paging=self.devices_fetched_at_a_time,
+                devices_paging=self.__devices_fetched_at_a_time,
             )
             connection.set_credentials(username=client_config[consts.USER], password=client_config[consts.PASSWORD])
             with connection:
@@ -117,6 +116,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 raise ClientConnectionException(get_exception_string())
 
     def _query_devices_by_client(self, client_name, client_data):
+        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         try:
             client_data.connect()
 
@@ -573,6 +573,11 @@ class SccmAdapter(AdapterBase, Configurable):
                     'title': 'Exclude IPv6 addresses',
                     'type': 'bool'
                 },
+                {
+                    'name': 'devices_fetched_at_a_time',
+                    'type': 'integer',
+                    'title': 'SQL pagination'
+                }
             ],
             "required": [],
             "pretty_name": "SCCM Configuration",
@@ -583,7 +588,9 @@ class SccmAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'exclude_ipv6': False,
+            'devices_fetched_at_a_time': 1000
         }
 
     def _on_config_update(self, config):
         self.__exclude_ipv6 = config['exclude_ipv6']
+        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

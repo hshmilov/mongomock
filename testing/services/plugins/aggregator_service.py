@@ -46,8 +46,10 @@ class AggregatorService(PluginService):
             self._update_schema_version_9()
         if self.db_schema_version < 10:
             self._update_schema_version_10()
+        if self.db_schema_version < 11:
+            self._update_schema_version_11()
 
-        if self.db_schema_version != 10:
+        if self.db_schema_version != 11:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -467,6 +469,51 @@ class AggregatorService(PluginService):
         except Exception as e:
             print(f'Could not upgrade aggregator db to version 10. Details: {e}')
             traceback.print_exc()
+
+    def _update_schema_version_11(self):
+        try:
+            # Upgrade tanium id from {device_id} to {device_id}_{device_hostname}
+            print(f'Upgading tanium to new id-format..')
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'tanium_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.data.id': 1,
+                f'adapters.data.hostname': 1,
+            }):
+                all_taniums = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'tanium_adapter']
+                for tanium_adapter in all_taniums:
+                    tanium_data = tanium_adapter['data']
+                    tanium_current_hostname = tanium_data.get('hostname')
+                    tanium_current_id = tanium_data.get('id')
+                    if tanium_current_hostname and tanium_current_id.endswith(f'_{tanium_current_hostname}'):
+                        print(f'Found a valid Tanium record. Skipping upgrade process')
+                        self.db_schema_version = 11
+                        return
+                    if tanium_current_hostname and not tanium_current_id.endswith(f'_{tanium_current_hostname}'):
+                        tanium_new_id = f'{tanium_current_id}_{tanium_current_hostname}'
+                        to_fix.append(pymongo.operations.UpdateOne({
+                            '_id': entity['_id'],
+                            f'adapters.data.id': tanium_current_id
+                        }, {
+                            '$set': {
+                                'adapters.$.data.id': tanium_new_id
+                            }
+                        }))
+
+            if to_fix:
+                print(f'Upgrading Tanium ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Tanium upgrade: Nothing to fix. Moving on')
+
+            self.db_schema_version = 11
+        except Exception as e:
+            print(f'Could not upgrade aggregator db to version 11. Details: {e}')
+            raise
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):

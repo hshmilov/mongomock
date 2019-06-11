@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string, is_domain_valid
@@ -13,7 +14,7 @@ from symantec_ee_adapter import consts
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class SymantecEeAdapter(AdapterBase):
+class SymantecEeAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         decrypted_volumes = ListField(str, 'Decrypted Volumes')
@@ -24,8 +25,6 @@ class SymantecEeAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
-        # I keep the convention until we refactor all the sql adapters.
-        self.devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
 
     def _get_client_id(self, client_config):
         return client_config[consts.SYMANTEC_EE_HOST]
@@ -40,7 +39,7 @@ class SymantecEeAdapter(AdapterBase):
                                          server=client_config[consts.SYMANTEC_EE_HOST],
                                          port=client_config.get(consts.SYMANTEC_EE_PORT,
                                                                 consts.DEFAULT_SYMANTEC_EE_PORT),
-                                         devices_paging=self.devices_fetched_at_a_time)
+                                         devices_paging=self.__devices_fetched_at_a_time)
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
@@ -54,6 +53,7 @@ class SymantecEeAdapter(AdapterBase):
             raise ClientConnectionException(get_exception_string())
 
     def _query_devices_by_client(self, client_name, client_data):
+        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
             yield from client_data.query(consts.SYMANTEC_EE_QUERY)
 
@@ -162,3 +162,27 @@ class SymantecEeAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'devices_fetched_at_a_time',
+                    'type': 'integer',
+                    'title': 'SQL pagination'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Symantec Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'devices_fetched_at_a_time': 1000
+        }
+
+    def _on_config_update(self, config):
+        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

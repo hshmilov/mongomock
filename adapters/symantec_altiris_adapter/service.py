@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
@@ -16,7 +17,7 @@ from symantec_altiris_adapter import consts
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class SymantecAltirisAdapter(AdapterBase):
+class SymantecAltirisAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         is_local = Field(bool, 'Is Local')
@@ -24,7 +25,6 @@ class SymantecAltirisAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
-        self.devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
 
     def _get_client_id(self, client_config):
         return client_config[consts.ALTIRIS_HOST]
@@ -41,7 +41,7 @@ class SymantecAltirisAdapter(AdapterBase):
                                                                     consts.DEFAULT_ALTIRIS_DATABASE),
                                          server=server,
                                          port=client_config.get(consts.ALTIRIS_PORT, consts.DEFAULT_ALTIRIS_PORT),
-                                         devices_paging=self.devices_fetched_at_a_time, tds_version='7.3')
+                                         devices_paging=self.__devices_fetched_at_a_time, tds_version='7.3')
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
@@ -53,7 +53,8 @@ class SymantecAltirisAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 
-    def _query_devices_by_client(self, client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data: MSSQLConnection):
+        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
 
             inventory_dict = dict()
@@ -206,3 +207,27 @@ class SymantecAltirisAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'devices_fetched_at_a_time',
+                    'type': 'integer',
+                    'title': 'SQL pagination'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Symantec Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'devices_fetched_at_a_time': 1000
+        }
+
+    def _on_config_update(self, config):
+        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']

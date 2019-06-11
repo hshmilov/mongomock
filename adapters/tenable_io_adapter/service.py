@@ -142,13 +142,13 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 },
                 {
                     'name': 'access_key',
-                    'title': 'Access API Key (instead of user/password)',
+                    'title': 'Access API Key',
                     'type': 'string',
                     'format': 'password'
                 },
                 {
                     'name': 'secret_key',
-                    'title': 'Secret API key (instead of user/password)',
+                    'title': 'Secret API key',
                     'type': 'string',
                     'format': 'password'
                 },
