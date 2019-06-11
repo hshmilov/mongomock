@@ -17,7 +17,11 @@ def run_tasks(action):
         for task in TASKS_DIR.glob('*_task.py'):
             cmd = f'{PYRUN_PATH_HOST} {task} {action}'
             print(cmd)
-            subprocess.call(shlex.split(cmd))
+            try:
+                subprocess.call(shlex.split(cmd))
+            except Exception as exc:
+                print(f'{exc}')
+                raise
 
 
 def main():
