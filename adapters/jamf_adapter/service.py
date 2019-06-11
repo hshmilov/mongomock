@@ -97,7 +97,8 @@ class JamfAdapter(AdapterBase, Configurable):
                                        self.__should_fetch_policies,
                                        self.__num_of_simultaneous_devices,
                                        self.__should_not_keepalive,
-                                       self.__threads_time_sleep
+                                       self.__threads_time_sleep,
+                                       self.__fetch_mobile_devices
                                        )
 
     def _clients_schema(self):
@@ -506,13 +507,19 @@ class JamfAdapter(AdapterBase, Configurable):
                     'name': 'threads_time_sleep',
                     'type': 'number',
                     'title': 'Seconds to sleep before sending https requests'
+                },
+                {
+                    'name': 'fetch_mobile_devices',
+                    'title': 'Fetch Mobile Devices',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'fetch_department',
                 'should_fetch_policies',
                 'num_of_threads',
-                'should_not_keepalive'
+                'should_not_keepalive',
+                'fetch_mobile_devices'
             ],
             "pretty_name": "Jamf Configuration",
             "type": "array"
@@ -525,7 +532,8 @@ class JamfAdapter(AdapterBase, Configurable):
             'should_fetch_policies': consts.DEFAULT_SHOULD_FETCH_POLICIES,
             'num_of_threads': consts.DEFAULT_NUM_OF_THREADS,
             'should_not_keepalive': consts.DEFAULT_SHOULD_NOT_KEEPALIVE,
-            'threads_time_sleep': consts.DEFAULT_THREADS_TIME_SLEEP
+            'threads_time_sleep': consts.DEFAULT_THREADS_TIME_SLEEP,
+            'fetch_mobile_devices': True
         }
 
     def _on_config_update(self, config):
@@ -535,3 +543,5 @@ class JamfAdapter(AdapterBase, Configurable):
         self.__num_of_simultaneous_devices = config.get('num_of_threads', consts.DEFAULT_NUM_OF_THREADS)
         self.__should_not_keepalive = config.get('should_not_keepalive', consts.DEFAULT_SHOULD_NOT_KEEPALIVE)
         self.__threads_time_sleep = config.get('threads_time_sleep', consts.DEFAULT_THREADS_TIME_SLEEP)
+        self.__fetch_mobile_devices = config.get('fetch_mobile_devices') \
+            if config.get('fetch_mobile_devices') is not None else True

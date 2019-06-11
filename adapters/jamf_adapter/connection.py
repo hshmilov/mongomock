@@ -240,6 +240,8 @@ class JamfConnection(object):
                 if should_fetch_department:
                     # Trying to add the department of local users
                     self.get_users_department(device_details)
+                if device_number == 1:
+                    logger.info(f'Total number is {num_of_devices}')
                 if device_number % print_modulo == 0:
                     logger.info(f"Got {device_number} devices out of {num_of_devices}.")
                 device_list.append(device_details)
@@ -313,7 +315,8 @@ class JamfConnection(object):
                     should_fetch_policies,
                     num_of_simultaneous_devices,
                     should_not_keepalive,
-                    threads_time_sleep
+                    threads_time_sleep,
+                    fetch_mobile_devices
                     ):
         """ Returns a list of all agents
         :return: the response
@@ -341,10 +344,11 @@ class JamfConnection(object):
         except Exception:
             logger.exception(f'Problem with computers')
         try:
-            mobile_devices = self.threaded_get_devices(
-                url=consts.MOBILE_DEVICE_URL,
-                device_list_name=consts.MOBILE_DEVICE_LIST_NAME,
-                device_type=consts.MOBILE_DEVICE_TYPE)
-            yield from mobile_devices
+            if fetch_mobile_devices:
+                mobile_devices = self.threaded_get_devices(
+                    url=consts.MOBILE_DEVICE_URL,
+                    device_list_name=consts.MOBILE_DEVICE_LIST_NAME,
+                    device_type=consts.MOBILE_DEVICE_TYPE)
+                yield from mobile_devices
         except Exception:
             logger.exception(f'Problem with mobiles')
