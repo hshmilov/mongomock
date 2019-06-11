@@ -1,5 +1,7 @@
 import time
 
+from json.decoder import JSONDecodeError
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.shodan.consts import DEFAULT_DOMAIN
 
@@ -15,6 +17,20 @@ class ShodanConnection(RESTConnection):
         # According to Shodan documentation you can't make more than 1 requrests per second
         time.sleep(1)
         return self._get(f'host/{ip}?key={self._apikey}')
+
+    def get_ip_info2(self, ip):
+        time.sleep(1)
+        response = self._get(f'host/{ip}?key={self._apikey}',
+                             raise_for_status=False,
+                             use_json_in_response=False,
+                             return_response_raw=True)
+        if response.status_code != 200:
+            try:
+                if 'error' in response.json():
+                    return response.json()
+            except JSONDecodeError as e:
+                pass
+        return self._handle_response(response)
 
     def get_cidr_info(self, cidr):
         time.sleep(1)

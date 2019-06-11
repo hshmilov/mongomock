@@ -18,6 +18,7 @@ from axonius.utils.parsing import (
     format_subnet,
     get_manufacturer_from_mac,
     normalize_mac,
+    replace_large_ints,
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -604,6 +605,10 @@ class DeviceAdapter(SmartJsonClass):
             Use only this function because it also fixes '.' in the keys such that it will work on MongoDB.
         """
         assert isinstance(raw_data, dict)
+        try:
+            raw_data = replace_large_ints(raw_data)
+        except Exception as e:
+            logger.exception('Failed to replace raw data large ints')
         raw_data = escape_dict(raw_data)
         self._raw_data = raw_data
         self._dict['raw'] = self._raw_data

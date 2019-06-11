@@ -7,7 +7,7 @@ from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.plugin_base import EntityType
 from axonius.types.correlation import CorrelationReason, CorrelationResult
 from axonius.utils.gui_helpers import find_entity_field
-from axonius.utils.parsing import remove_large_ints
+from axonius.utils.datetime import parse_date
 from axonius.clients.shodan.connection import ShodanConnection
 from axonius.devices.device_adapter import ShodanVuln
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -75,8 +75,8 @@ class ShodanExecutionMixIn(Triggerable):
         return ips
 
     @staticmethod
-    def _get_enrichment_client_id(id_):
-        return 'shodanenrichment_' + id_
+    def _get_enrichment_client_id(id_, ip):
+        return '_'.join(('shodanenrichment', id_, ip))
 
     @staticmethod
     def _parse_shodan_data(shodan_info):
@@ -144,8 +144,8 @@ class ShodanExecutionMixIn(Triggerable):
 
     def _handle_ip(self, device, ip, connection):
         try:
-            client_id = self._get_enrichment_client_id(device.internal_axon_id)
-            result = connection.get_ip_info(ip)
+            client_id = self._get_enrichment_client_id(device.internal_axon_id, ip)
+            result = connection.get_ip_info2(ip)
             if 'error' in result:
                 logger.info(f'error for fetching ip {ip}: error {result["error"]}')
                 return False
@@ -160,9 +160,11 @@ class ShodanExecutionMixIn(Triggerable):
             hostnames = result.get('hostnames')
             if hostnames and isinstance(hostnames, list):
                 new_device.hostname = hostnames[0]
+            last_update = result.get('last_update')
+            if last_update:
+                new_device.last_seen = parse_date(last_update)
             new_device.add_nic(None, [ip])
             new_device.set_shodan_data(**data)
-            result = remove_large_ints(result, 'shodan_raw_data')
             new_device.set_raw(result)
 
             # Here we create a new device adapter tab out of cycle
@@ -189,7 +191,7 @@ class ShodanExecutionMixIn(Triggerable):
                 json = {'success': False, 'value': 'Shodan Error: Missing Public IPs'}
                 return (device.internal_axon_id, json)
 
-            if not any(self._handle_ip(device, ip, connection) for ip in ips):
+            if not any([self._handle_ip(device, ip, connection) for ip in ips]):
                 return (device.internal_axon_id, {'success': False, 'value': 'Shodan Enrichment - no results'})
 
             return (device.internal_axon_id, {'success': True, 'value': 'Shodan Enrichment success'})

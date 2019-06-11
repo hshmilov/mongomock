@@ -1312,108 +1312,112 @@ class PluginBase(Configurable, Feature):
             Insert data (devices/users/...) into the DB
             :return:
             """
-            correlates = parsed_to_insert['data'].get('correlates')
-            if correlates == IGNORE_DEVICE:
-                # special case: this is a device we shouldn't handle
-                self._save_parsed_in_db(parsed_to_insert, db_type='ignored_scanner_devices')
-                return
-            _to_insert_identity = parsed_to_insert['data']['id'], parsed_to_insert[PLUGIN_UNIQUE_NAME]
+            try:
+                correlates = parsed_to_insert['data'].get('correlates')
+                if correlates == IGNORE_DEVICE:
+                    # special case: this is a device we shouldn't handle
+                    self._save_parsed_in_db(parsed_to_insert, db_type='ignored_scanner_devices')
+                    return
+                _to_insert_identity = parsed_to_insert['data']['id'], parsed_to_insert[PLUGIN_UNIQUE_NAME]
 
-            if correlates:
-                to_lock = [_to_insert_identity, correlates]
-            else:
-                to_lock = [_to_insert_identity]
+                if correlates:
+                    to_lock = [_to_insert_identity, correlates]
+                else:
+                    to_lock = [_to_insert_identity]
 
-            with multilocker.get_lock(to_lock):
-                array_filters = None
+                with multilocker.get_lock(to_lock):
+                    array_filters = None
 
-                if self._is_last_seen_prioritized:
-                    last_seen_from_data = data_to_update.get(f'adapters.$.data.{LAST_SEEN_FIELD}')
-                    if last_seen_from_data:
-                        array_filters = [
-                            {
-                                f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
-                                'i.data.id': parsed_to_insert['data']['id'],
-                                f'i.data.{LAST_SEEN_FIELD}': {
-                                    '$lte': last_seen_from_data
-                                }
-                            }
-                        ]
-                    else:
-                        array_filters = [{
-                            f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
-                            'i.data.id': parsed_to_insert['data']['id'],
-                            '$or': [
+                    if self._is_last_seen_prioritized:
+                        last_seen_from_data = data_to_update.get(f'adapters.$.data.{LAST_SEEN_FIELD}')
+                        if last_seen_from_data:
+                            array_filters = [
                                 {
+                                    f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                                    'i.data.id': parsed_to_insert['data']['id'],
                                     f'i.data.{LAST_SEEN_FIELD}': {
-                                        '$exists': False
+                                        '$lte': last_seen_from_data
                                     }
-                                },
-                                {
-                                    f'i.data.{LAST_SEEN_FIELD}': None
                                 }
                             ]
-                        }]
+                        else:
+                            array_filters = [{
+                                f'i.{PLUGIN_UNIQUE_NAME}': parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                                'i.data.id': parsed_to_insert['data']['id'],
+                                '$or': [
+                                    {
+                                        f'i.data.{LAST_SEEN_FIELD}': {
+                                            '$exists': False
+                                        }
+                                    },
+                                    {
+                                        f'i.data.{LAST_SEEN_FIELD}': None
+                                    }
+                                ]
+                            }]
 
-                    # updating the saving query to adhere to array_filter semantics
-                    data_to_update = {
-                        k.replace('adapters.$', 'adapters.$[i]'): v
-                        for k, v
-                        in data_to_update.items()
-                    }
-
-                # trying to update the device if it is already in the DB
-                update_result = db_to_use.update_one({
-                    'adapters': {
-                        '$elemMatch': {
-                            PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
-                            'data.id': parsed_to_insert['data']['id']
+                        # updating the saving query to adhere to array_filter semantics
+                        data_to_update = {
+                            k.replace('adapters.$', 'adapters.$[i]'): v
+                            for k, v
+                            in data_to_update.items()
                         }
-                    }
-                }, {
-                    "$set": data_to_update
-                }, array_filters=array_filters)
 
-                if update_result.matched_count > 0 and update_result.modified_count == 0:
-                    # This means that a device is found but already has a newer instance in the DB,
-                    # so the device is discarded
-                    logger.debug(f'Dropping {data_to_update} due to oldness')
-                    return
+                    # trying to update the device if it is already in the DB
+                    update_result = db_to_use.update_one({
+                        'adapters': {
+                            '$elemMatch': {
+                                PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                                'data.id': parsed_to_insert['data']['id']
+                            }
+                        }
+                    }, {
+                        "$set": data_to_update
+                    }, array_filters=array_filters)
 
-                if update_result.modified_count == 0:
-                    # if it's not in the db
-                    if correlates:
-                        # for scanner adapters this is case B - see "scanner_adapter_base.py"
-                        # we need to add this device to the list of adapters in another device
-                        correlate_plugin_unique_name, correlated_id = correlates
-                        update_result = db_to_use.update_one({
-                            'adapters': {
-                                '$elemMatch': {
-                                    PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
-                                    'data.id': correlated_id
+                    if update_result.matched_count > 0 and update_result.modified_count == 0:
+                        # This means that a device is found but already has a newer instance in the DB,
+                        # so the device is discarded
+                        logger.debug(f'Dropping {data_to_update} due to oldness')
+                        return
+
+                    if update_result.modified_count == 0:
+                        # if it's not in the db
+                        if correlates:
+                            # for scanner adapters this is case B - see "scanner_adapter_base.py"
+                            # we need to add this device to the list of adapters in another device
+                            correlate_plugin_unique_name, correlated_id = correlates
+                            update_result = db_to_use.update_one({
+                                'adapters': {
+                                    '$elemMatch': {
+                                        PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
+                                        'data.id': correlated_id
+                                    }
                                 }
-                            }
-                        }, {
-                            "$addToSet": {
-                                "adapters": parsed_to_insert
-                            },
-                            '$inc': {
+                            }, {
+                                "$addToSet": {
+                                    "adapters": parsed_to_insert
+                                },
+                                '$inc': {
+                                    ADAPTERS_LIST_LENGTH: 1
+                                }
+                            })
+                            if update_result.modified_count == 0:
+                                logger.error("No devices update for case B for scanner device "
+                                             f"{parsed_to_insert['data']['id']} from "
+                                             f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
+                        else:
+                            # this is regular first-seen device, make its own value
+                            db_to_use.insert_one({
+                                "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
+                                "accurate_for_datetime": datetime.now(),
+                                "adapters": [parsed_to_insert],
+                                "tags": [],
                                 ADAPTERS_LIST_LENGTH: 1
-                            }
-                        })
-                        if update_result.modified_count == 0:
-                            logger.error("No devices update for case B for scanner device "
-                                         f"{parsed_to_insert['data']['id']} from "
-                                         f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
-                    else:
-                        # this is regular first-seen device, make its own value
-                        db_to_use.insert_one({
-                            "internal_axon_id": get_preferred_internal_axon_id_from_dict(parsed_to_insert, entity_type),
-                            "accurate_for_datetime": datetime.now(),
-                            "adapters": [parsed_to_insert],
-                            "tags": [],
-                            ADAPTERS_LIST_LENGTH: 1
-                        })
+                            })
+            except Exception as e:
+                logger.critical(f'insert_data_to_db failed, exception: {str(e)}')
+                raise
 
         if should_log_info is True:
             logger.info(f"Starting to fetch data (devices/users) for {client_name}")
