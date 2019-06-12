@@ -6,6 +6,7 @@ import subprocess
 import json
 import functools
 import datetime
+import socket
 from enum import Enum, auto
 from typing import Dict, Tuple
 
@@ -313,6 +314,10 @@ class AwsAdapter(AdapterBase, Configurable):
 
         # SSM specific fields
         ssm_data = Field(SSMInfo, 'SSM Information')
+
+        # ELB specific fields
+        elb_last_public_ip_address = Field(
+            str, 'ELB Last Public Ip Address', converter=format_ip, json_format=JsonStringFormat.ip)
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -1647,9 +1652,10 @@ class AwsAdapter(AdapterBase, Configurable):
                             try:
                                 ips = lb_raw.get('ips')
                                 lb_scheme = lb_raw.get('scheme')
+                                elb_dns = lb_raw.get('dns')
                                 device.add_aws_load_balancer(
                                     name=lb_raw.get('name'),
-                                    dns=lb_raw.get('dns'),
+                                    dns=elb_dns,
                                     scheme=lb_scheme,
                                     type=lb_raw.get('type'),
                                     lb_protocol=lb_raw.get('lb_protocol'),
@@ -1663,6 +1669,15 @@ class AwsAdapter(AdapterBase, Configurable):
                                     if lb_scheme == 'internet-facing':
                                         for ip_elb in ips:
                                             device.add_public_ip(ip_elb)
+
+                                if self.__parse_elb_ips:
+                                    try:
+                                        ip = socket.gethostbyname(elb_dns)
+                                        if ip:
+                                            device.add_nic(name='ELB', ips=[ip])
+                                            device.elb_last_public_ip_address = ip
+                                    except Exception:
+                                        logger.exception(f'Could not parse ELB ip for dns {elb_dns}')
                             except Exception:
                                 logger.exception(f'Error parsing lb: {lb_raw}')
                     except Exception:
@@ -1953,9 +1968,10 @@ class AwsAdapter(AdapterBase, Configurable):
                                             for lb_raw in elb_by_ip[private_ip[0]]:
                                                 ips = lb_raw.get('ips')
                                                 lb_scheme = lb_raw.get('scheme')
+                                                elb_dns = lb_raw.get('dns')
                                                 device.add_aws_load_balancer(
                                                     name=lb_raw.get('name'),
-                                                    dns=lb_raw.get('dns'),
+                                                    dns=elb_dns,
                                                     scheme=lb_scheme,
                                                     type=lb_raw.get('type'),
                                                     lb_protocol=lb_raw.get('lb_protocol'),
@@ -1969,6 +1985,15 @@ class AwsAdapter(AdapterBase, Configurable):
                                                     if lb_scheme == 'internet-facing':
                                                         for ip_elb in ips:
                                                             device.add_public_ip(ip_elb)
+
+                                                if self.__parse_elb_ips:
+                                                    try:
+                                                        ip = socket.gethostbyname(elb_dns)
+                                                        if ip:
+                                                            device.add_nic(name='ELB', ips=[ip])
+                                                            device.elb_last_public_ip_address = ip
+                                                    except Exception:
+                                                        logger.exception(f'Could not parse ELB ip for dns {elb_dns}')
                                     except Exception:
                                         logger.exception(f'Error parsing lb for Fargate: {lb_raw}')
                             except Exception:
@@ -2258,6 +2283,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_load_balancers = config.get('fetch_load_balancers') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
+        self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
 
@@ -2296,6 +2322,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'parse_elb_ips',
+                    'title': 'Assign ELB IPs to associated devices',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -2314,6 +2345,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_load_balancers',
                 'fetch_ssm',
                 'fetch_nat',
+                'parse_elb_ips',
                 'verbose_auth_notifications'
             ],
             "pretty_name": "AWS Configuration",
@@ -2329,6 +2361,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_load_balancers': False,
             'fetch_ssm': False,
             'fetch_nat': False,
+            'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None
         }
