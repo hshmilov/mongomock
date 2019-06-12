@@ -32,7 +32,6 @@ class TestReport(TestBase):
         self.reports_page.fill_report_name('test2')
         assert self.reports_page.get_error_text() == ''
         self.reports_page.click_save()
-        self.reports_page.wait_for_report_is_saved_toaster()
 
     def test_add_saved_query(self):
         self.reports_page.get_to_new_report_page()
@@ -218,7 +217,6 @@ class TestReport(TestBase):
             self.reports_page.fill_email_subject(new_subject)
             self.reports_page.select_frequency(ReportFrequency.monthly)
             self.reports_page.click_save()
-            self.reports_page.wait_for_report_is_saved_toaster()
             self.reports_page.wait_for_table_to_load()
             self.reports_page.wait_for_spinner_to_end()
             self.reports_page.click_report(self.TEST_REPORT_EDIT)
@@ -278,8 +276,12 @@ class TestReport(TestBase):
         self.reports_page.create_report(report_name='test3', add_dashboard=True)
         self.reports_page.create_report(report_name='test4', add_dashboard=True)
         self.reports_page.create_report(report_name='test5', add_dashboard=True)
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_spinner_to_end()
 
         assert self.reports_page.get_report_count() == 5
+        self.reports_page.wait_for_spinner_to_end()
+
         self.reports_page.click_select_report(1)
         self.reports_page.click_select_report(3)
         self.reports_page.click_remove_reports()
@@ -294,8 +296,11 @@ class TestReport(TestBase):
         self.reports_page.create_report(report_name='test3', add_dashboard=True)
         self.reports_page.create_report(report_name='test4', add_dashboard=True)
         self.reports_page.create_report(report_name='test5', add_dashboard=True)
+        self.reports_page.wait_for_spinner_to_end()
 
         assert self.reports_page.get_report_count() == 5
+        self.reports_page.wait_for_spinner_to_end()
+
         self.reports_page.click_select_all_reports()
         self.reports_page.click_select_report(1)
         self.reports_page.click_select_report(3)

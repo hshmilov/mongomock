@@ -480,8 +480,9 @@
         let self = this
         this.saveReport(this.report).then(
                 () => {
-                  self.message = 'Report is saved and being generated in the background'
-                  setTimeout(() => self.exit(), 2500)
+                  // self.message = 'Report is saved and being generated in the background'
+                    self.message = ''
+                    self.exit()
                 }
         ).catch((error) => {
           if (error.response.status === 400)
