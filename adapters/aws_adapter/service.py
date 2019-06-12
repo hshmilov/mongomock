@@ -1646,10 +1646,11 @@ class AwsAdapter(AdapterBase, Configurable):
                         for lb_raw in associated_lbs:
                             try:
                                 ips = lb_raw.get('ips')
+                                lb_scheme = lb_raw.get('scheme')
                                 device.add_aws_load_balancer(
                                     name=lb_raw.get('name'),
                                     dns=lb_raw.get('dns'),
-                                    scheme=lb_raw.get('scheme'),
+                                    scheme=lb_scheme,
                                     type=lb_raw.get('type'),
                                     lb_protocol=lb_raw.get('lb_protocol'),
                                     lb_port=lb_raw.get('lb_port'),
@@ -1659,8 +1660,9 @@ class AwsAdapter(AdapterBase, Configurable):
                                 )
                                 if ips:
                                     device.add_nic(ips=ips)
-                                    for ip_elb in ips:
-                                        device.add_public_ip(ip_elb)
+                                    if lb_scheme == 'internet-facing':
+                                        for ip_elb in ips:
+                                            device.add_public_ip(ip_elb)
                             except Exception:
                                 logger.exception(f'Error parsing lb: {lb_raw}')
                     except Exception:
@@ -1950,10 +1952,11 @@ class AwsAdapter(AdapterBase, Configurable):
                                         if private_ip and private_ip[0] in elb_by_ip:
                                             for lb_raw in elb_by_ip[private_ip[0]]:
                                                 ips = lb_raw.get('ips')
+                                                lb_scheme = lb_raw.get('scheme')
                                                 device.add_aws_load_balancer(
                                                     name=lb_raw.get('name'),
                                                     dns=lb_raw.get('dns'),
-                                                    scheme=lb_raw.get('scheme'),
+                                                    scheme=lb_scheme,
                                                     type=lb_raw.get('type'),
                                                     lb_protocol=lb_raw.get('lb_protocol'),
                                                     lb_port=lb_raw.get('lb_port'),
@@ -1963,6 +1966,9 @@ class AwsAdapter(AdapterBase, Configurable):
                                                 )
                                                 if ips:
                                                     device.add_nic(ips=ips)
+                                                    if lb_scheme == 'internet-facing':
+                                                        for ip_elb in ips:
+                                                            device.add_public_ip(ip_elb)
                                     except Exception:
                                         logger.exception(f'Error parsing lb for Fargate: {lb_raw}')
                             except Exception:
