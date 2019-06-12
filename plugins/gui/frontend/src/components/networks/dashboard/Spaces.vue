@@ -13,6 +13,8 @@
         :title="personalSpace.name"
       >
         <x-panels
+          slot-scope="{ active }"
+          v-if="active"
           :panels="personalSpace.panels"
           @add="() => addNewPanel(personalSpace.uuid)"
         />
@@ -24,6 +26,8 @@
         :editable="!isReadOnly"
       >
         <x-default-space
+          slot-scope="{ active }"
+          v-if="active"
           :panels="defaultSpace.panels"
           @add="() => addNewPanel(defaultSpace.uuid)"
         />
@@ -37,6 +41,8 @@
         :removable="!isReadOnly"
       >
         <x-panels
+          slot-scope="{ active }"
+          v-if="active"
           :panels="space.panels"
           @add="() => addNewPanel(space.uuid)"
         />

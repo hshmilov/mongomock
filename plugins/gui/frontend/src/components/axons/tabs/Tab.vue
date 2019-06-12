@@ -5,7 +5,7 @@
     class="x-tab"
     role="tabpanel"
   >
-    <slot />
+    <slot :active="isActive" />
   </div>
 </template>
 
