@@ -4402,9 +4402,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                          attachment_filename=report_path)
 
     def _get_existing_executive_report(self, name):
-        report = self._get_collection('reports').find_one({'filename': 'most_recent_{}'.format(name)})
+        report = self._get_collection('reports').find_one({'filename': f'most_recent_{name}'})
         if not report:
-            self.generate_new_reports_offline()
+            raise Exception('The report is being generated or '
+                            'there was a problem with generating the report')
 
         uuid = report['uuid']
         report_path = f'/tmp/axonius-{name}_{datetime.now()}.pdf'
