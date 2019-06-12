@@ -355,35 +355,38 @@ class ReportGenerator:
         queries.insert(0, queries_data[0])
         portions = [{'portion': item['value'], 'title': item['name'], 'remainder': False} for item in queries]
 
-        colours = [GREY_COLOUR, '#15C59E', '#15ACB2', '#1593C5', '#B932BB', '#8A32BB', '#5A32BB']
+        colours = ['#15C59E', '#15ACB2', '#1593C5', '#B932BB', '#8A32BB', '#5A32BB']
         slices = []
         legend_lines = ''
         for i, slice_def in enumerate(self._calculate_pie_slices(portions)):
             portion_value = slice_def['portion']
+            line_class = ''
+            title = slice_def['title']
+            legend_colour = 'url(#intersection)' if queries[i].get('intersection') else colours[i % len(colours)]
+            if i == 0:
+                if portion_value == 0:
+                    continue
+                legend_colour = GREY_COLOUR
+                title = 'Other'
             parameters = {'path': slice_def['path'],
-                          'colour': 'url(#intersection)' if queries[i].get('intersection') else colours[
-                              i % len(colours)]}
+                          'colour': legend_colour}
             if i >= 0:
                 parameters['text'] = f'{round(portion_value * 100)}%'
                 parameters['x'] = slice_def['text_x']
                 parameters['y'] = slice_def['text_y']
             slices.append(self.templates['pie_slice'].render(parameters))
-            legend_colour = parameters['colour']
-            line_class = ''
-            if legend_colour == GREY_COLOUR:
-                line_class = 'no-list-type'
             if queries[i].get('intersection'):
                 line_class = 'multi-colored'
             legend_lines += self.templates['pie_legend_line'].render({
                 'color': '' if queries[i].get('intersection') else f'color:{legend_colour}',
-                'title': slice_def['title'],
+                'title': title,
                 'class': line_class
             })
 
         if not slices:
             return ''
         return self.templates['pie'].render({
-            'defs': self.templates['pie_gradient'].render({'colour1': colours[1], 'colour2': colours[3]}),
+            'defs': self.templates['pie_gradient'].render({'colour1': colours[0], 'colour2': colours[2]}),
             'content': '\n'.join(slices)
         }), self.templates['pie_legend'].render({'legend_lines': legend_lines})
 
@@ -420,7 +423,7 @@ class ReportGenerator:
             portion = slice_def['portion']
             if slice_def.get('remainder'):
                 current_colour = GREY_COLOUR
-                title = f'excluding {", ".join(titles)}'
+                title = f'Excluding {", ".join(titles)}'
             else:
                 current_colour = colours[int(floor(portion * 3.9))]
             slices.append(self.templates['pie_slice'].render({

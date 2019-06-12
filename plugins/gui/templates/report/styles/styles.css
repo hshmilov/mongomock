@@ -337,8 +337,8 @@ a {
 }
 .histogram .item {
     position: relative;
-    margin-bottom: 4px;
-    line-height: 24px;
+    margin-bottom: 0px;
+    line-height: 20px;
 }
 .histogram .item-bar {
     line-height: 24px;
