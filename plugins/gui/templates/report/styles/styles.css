@@ -292,7 +292,7 @@ a {
     float: left;
 }
 .discovery-charts .card h3 {
-    height: 24px;
+    height: 20px;
 }
 .card:nth-child(odd) {
     margin-right: 12px;
@@ -305,7 +305,20 @@ a {
     list-style-type: square;
     text-align: left;
 }
+.card .legend span {
+    color: #1D222C;
+}
+.card .legend .no-list-type {
+    list-style-type: none;
+}
+.card .legend .no-list-type span{
+    color: #ADADAD;;
+}
 .card .legend .multi-colored{
+    list-style-type: none;
+}
+.card .legend .no-list-type::before{
+    margin-left: -17px;
     list-style-type: none;
 }
 .card .legend .multi-colored::before{

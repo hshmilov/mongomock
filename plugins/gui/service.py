@@ -22,6 +22,7 @@ from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.cron import CronTrigger
 from bson import ObjectId
+from dateutil import tz
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
 from flask import (after_this_request, has_request_context, jsonify,
@@ -4274,80 +4275,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         return list(get_adapters_data())
 
-    def _get_saved_views_data(self, include_all_saved_views=True, saved_queries=None):
-        """
-        For each entity in system, fetch all saved views.
-        For each view, fetch first page of entities - filtered, projected, sorted_endpoint according to it's definition.
-
-        :return: Lists of the view names along with the list of results and list of field headers, with pretty names.
-        """
-
-        def _get_field_titles(entity):
-            current_entity_fields = gui_helpers.entity_fields(entity)
-            name_to_title = {}
-            for field in current_entity_fields['generic']:
-                name_to_title[field['name']] = field['title']
-            for type in current_entity_fields['specific']:
-                for field in current_entity_fields['specific'][type]:
-                    name_to_title[field['name']] = field['title']
-            return name_to_title
-
-        logger.info('Getting views data')
-        views_data = []
-        query_per_entity = {}
-        for saved_query in saved_queries:
-            entity = saved_query['entity']
-            name = saved_query['name']
-            if entity not in query_per_entity:
-                query_per_entity[entity] = []
-            query_per_entity[entity].append(name)
-        saved_views_filter = None
-        if include_all_saved_views:
-            saved_views_filter = filter_archived({
-                'query_type': 'saved',
-                '$or': [
-                    {
-                        'predefined': False
-                    },
-                    {
-                        'predefined': {
-                            '$exists': False
-                        }
-                    }
-                ]
-            })
-        for entity in EntityType:
-            field_to_title = _get_field_titles(entity)
-            # Fetch only saved views that were added by user, excluding out-of-the-box queries
-            if query_per_entity.get(entity.name.lower()) and not include_all_saved_views:
-                saved_views_filter = filter_by_name(query_per_entity[entity.name.lower()])
-
-            if not saved_views_filter:
-                continue
-
-            saved_views = self.gui_dbs.entity_query_views_db_map[entity].find(saved_views_filter)
-            for view_doc in saved_views:
-                try:
-                    view = view_doc.get('view')
-                    if view:
-                        filter_query = view.get('query', {}).get('filter', '')
-                        log_metric(logger, 'query.report', filter_query)
-                        field_list = view.get('fields', [])
-                        views_data.append({
-                            'name': view_doc.get('name'), 'entity': entity.value,
-                            'fields': [{field_to_title.get(field, field): field} for field in field_list],
-                            'data': list(gui_helpers.get_entities(limit=view.get('pageSize', 20),
-                                                                  skip=0,
-                                                                  view_filter=parse_filter(filter_query),
-                                                                  sort=gui_helpers.get_sort(view),
-                                                                  projection={field: 1 for field in field_list},
-                                                                  entity_type=entity,
-                                                                  default_sort=self._system_settings['defaultSort']))
-                        })
-                except Exception:
-                    logger.exception('Problem with View {} ViewDoc {}'.format(view_doc.get('name'), str(view_doc)))
-        return views_data
-
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clear_dashboard_cache':
             self.__clear_dashboard_cache(clear_slow=post_json is not None and post_json.get('clear_slow') is True)
@@ -4382,7 +4309,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def _generate_and_save_report(self, report):
         # generate_report() renders the report html
-        report_html = self.generate_report(report)
+        generated_date = datetime.now(tz.tzlocal())
+        report_html = self.generate_report(generated_date, report)
 
         exec_report_generate_pdf_thread_id = EXEC_REPORT_GENERATE_PDF_THREAD_ID.format(report['name'])
         exec_report_generate_pdf_job = self._job_scheduler.get_job(exec_report_generate_pdf_thread_id)
@@ -4390,7 +4318,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if exec_report_generate_pdf_job is None:
             self._job_scheduler.add_job(func=self._convert_to_pdf_and_save_report,
                                         kwargs={'report': report,
-                                                'report_html': report_html},
+                                                'report_html': report_html,
+                                                'generated_date': generated_date},
                                         trigger='date',
                                         next_run_time=datetime.now(),
                                         name=exec_report_generate_pdf_thread_id,
@@ -4403,7 +4332,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             self._job_scheduler.reschedule_job(exec_report_generate_pdf_thread_id)
             self._job_scheduler.start()
 
-    def _convert_to_pdf_and_save_report(self, report, report_html):
+    def _convert_to_pdf_and_save_report(self, report, report_html, generated_date):
         # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
         with io.BytesIO() as report_data:
             report_html.write_pdf(report_data)
@@ -4417,7 +4346,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 {'filename': filename},
                 {'uuid': uuid, 'filename': filename, 'time': datetime.now()}, True
             )
-            report[report_consts.LAST_GENERATED_FIELD] = datetime.now()
+            report[report_consts.LAST_GENERATED_FIELD] = generated_date
             self._upsert_report_config(report['name'], report, False)
 
     def _upload_report(self, report, report_metadata):
@@ -4484,7 +4413,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             open(report_path, 'wb').write(report_content.read())
             return report_path
 
-    def generate_report(self, report=None):
+    def generate_report(self, generated_date, report=None):
         """
         Generates the report and returns html.
         :return: the generated report file path.
@@ -4501,7 +4430,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return ReportGenerator(report,
                                generator_params,
                                'gui/templates/report/',
-                               host=server_name).render_html(datetime.now())
+                               host=server_name).render_html(generated_date)
 
     @gui_add_rule_logged_in('test_exec_report', methods=['POST'],
                             required_permissions={Permission(PermissionType.Reports,

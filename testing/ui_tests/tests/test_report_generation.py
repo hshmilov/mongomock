@@ -153,7 +153,7 @@ class TestReportGeneration(TestBase):
 
             dashboard_chart_page = doc.pages[3]
 
-            assert dashboard_chart_page.extractText().count('Managed Devices') == 1
+            assert dashboard_chart_page.extractText().count('Managed Devices') == 2
 
     def _extract_report_pdf_doc(self, report_name):
         self.reports_page.switch_to_page()

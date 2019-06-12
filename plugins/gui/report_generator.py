@@ -112,12 +112,9 @@ class ReportGenerator:
     def render_html(self, current_time):
         sections = []
 
-        time = current_time.strftime('%c')
-        timezone = current_time.strftime('%Z')
-
         report_cover = self.templates['cover'].render({
             'title': self.report['name'],
-            'generated_date': f'{time} {timezone}'
+            'generated_date': f'{current_time.strftime("%c")} {current_time.strftime("%Z")}'
         })
 
         toc_lines = []
@@ -155,8 +152,7 @@ class ReportGenerator:
             logger.info(f'Report Generator, Views Section: Added views data section')
 
         toc_lines_html = '\n'.join([self.templates['toc_line'].render({'title': line}) for line in toc_lines])
-        toc_html = self.templates['toc'].render({'content': toc_lines_html})
-        sections.insert(0, toc_html)
+        sections.insert(0, self.templates['toc'].render({'content': toc_lines_html}))
         # Join all sections as the content of the report
         html_data = self.templates['report'].render(
             {'cover': report_cover, 'date': current_time.strftime('%d/%m/%Y'), 'content': '\n'.join(sections)})
@@ -373,10 +369,15 @@ class ReportGenerator:
                 parameters['y'] = slice_def['text_y']
             slices.append(self.templates['pie_slice'].render(parameters))
             legend_colour = parameters['colour']
+            line_class = ''
+            if legend_colour == GREY_COLOUR:
+                line_class = 'no-list-type'
+            if queries[i].get('intersection'):
+                line_class = 'multi-colored'
             legend_lines += self.templates['pie_legend_line'].render({
                 'color': '' if queries[i].get('intersection') else f'color:{legend_colour}',
                 'title': slice_def['title'],
-                'class': 'multi-colored' if queries[i].get('intersection') else ''
+                'class': line_class
             })
 
         if not slices:
@@ -396,20 +397,30 @@ class ReportGenerator:
         :return:
         """
         portions = []
+        remainder = None
         for chart_row in chart_data:
-            portions.append({
+            portion = {
                 'portion': chart_row['value'],
                 'title': chart_row['name'],
                 'remainder': chart_row.get('remainder')
-            })
+            }
+            if chart_row.get('remainder'):
+                remainder = portion
+            else:
+                portions.append(portion)
+        if remainder:
+            portions.append(remainder)
         colours = ['#D0011B', '#F6A623', '#4796E4', '#0FBC18']
         slice_defs = self._calculate_pie_slices(portions)
         legend_lines = ''
         slices = []
+        titles = []
         for slice_def in slice_defs:
+            title = slice_def['title']
             portion = slice_def['portion']
             if slice_def.get('remainder'):
                 current_colour = GREY_COLOUR
+                title = f'excluding {", ".join(titles)}'
             else:
                 current_colour = colours[int(floor(portion * 3.9))]
             slices.append(self.templates['pie_slice'].render({
@@ -417,10 +428,12 @@ class ReportGenerator:
                 'text': f'{round(portion * 100)}%' if portion else '',
                 'x': slice_def['text_x'], 'y': slice_def['text_y']
             }))
+
             legend_lines += self.templates['pie_legend_line'].render({
                 'color': f'color:{current_colour}',
-                'title': slice_def['title']
+                'title': title
             })
+            titles.append(title)
         return self.templates['pie'].render({'content': '\n'.join(slices)}), \
             self.templates['pie_legend'].render({'legend_lines': legend_lines})
 
@@ -528,7 +541,8 @@ class ReportGenerator:
                     if field.get('Adapters'):
                         value = self._create_adapters_cell(value)
                     else:
-                        canonized_value = [str(x) for x in value]
+                        canonized_value = [x.strftime('%Y-%m-%d %H:%M:%S') if isinstance(x, datetime) else str(x)
+                                           for x in value]
                         value = ', '.join(canonized_value)
                 if isinstance(value, datetime):
                     value = value.strftime('%Y-%m-%d %H:%M:%S')
