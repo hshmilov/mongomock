@@ -421,6 +421,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if check_fetch_time:
             self.__last_fetch_time = current_time
         if client_name:
+            devices_count = 0
+            users_count = 0
             try:
                 devices_count = self._save_data_from_plugin(
                     client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
