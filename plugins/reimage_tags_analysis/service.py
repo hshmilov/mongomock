@@ -16,6 +16,8 @@ from axonius.utils.axonius_query_language import parse_filter
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+BAD_MANUFACTURERS_LIST = ['vmware', 'paloalto', 'fortinet', 'checkpoint', 'aruba', 'juniper', 'arista', 'private']
+
 
 class ReimageTagsAnalysisService(Triggerable, PluginBase):
     def __init__(self, *args, **kwargs):
@@ -103,6 +105,16 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
                 f'adapters.data.id': True
             })
 
+    @staticmethod
+    def __check_bad_manufacturer(mac_manufacturer):
+        if not mac_manufacturer:
+            return False
+        mac_manufacturer = mac_manufacturer.lower()
+        for bad_manufacturer in BAD_MANUFACTURERS_LIST:
+            if bad_manufacturer in mac_manufacturer:
+                return False
+        return True
+
     def __get_devices_by_macs(self) -> DefaultDict[str, List[Tuple[datetime, dict]]]:
         """
         Returns a dict between mac to list of associated adapter devices and their max_last_seen
@@ -124,7 +136,8 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
 
                 for ni in adapter_device['data'].get('network_interfaces') or []:
                     mac = ni.get('mac')
-                    if mac:
+                    mac_manufacturer = ni.get('manufacturer')
+                    if mac and mac_manufacturer and self.__check_bad_manufacturer(mac_manufacturer):
                         macs[mac].append((max_last_seen, adapter_device))
         return macs
 

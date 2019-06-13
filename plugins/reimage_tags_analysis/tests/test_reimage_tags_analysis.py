@@ -45,6 +45,8 @@ MAC_A = 'AA:AA:AA:AA:AA:AA'
 UNIQUE_NAME_A = 'UNIQUE_A'
 ID_A = 'ID_A'
 HOSTNAME_A = 'HOSTNAME_A'
+MANUFACTURER_A = 'Intel'
+MANUFACTURER_B = 'Vmware'
 
 MAC_B = 'BB:BB:BB:BB:BB:BB'
 UNIQUE_NAME_B = 'UNIQUE_B'
@@ -58,7 +60,7 @@ old_threshold = now - timedelta(days=8)
 new_threshold = now - timedelta(days=1)
 
 
-def _create_adapter(plugin_unique_name, id_, mac, hostname, threshold, adapter_properties=None):
+def _create_adapter(plugin_unique_name, id_, mac, hostname, threshold, manufacturer, adapter_properties=None):
     if adapter_properties is None:
         adapter_properties = ['Agent']
     return {
@@ -67,7 +69,8 @@ def _create_adapter(plugin_unique_name, id_, mac, hostname, threshold, adapter_p
             'id': id_,
             'network_interfaces': [
                 {
-                    'mac': mac
+                    'mac': mac,
+                    'manufacturer': manufacturer
                 }
             ],
             'hostname': hostname,
@@ -81,10 +84,10 @@ def test_basic_case():
     # Just one adapter being reimaged
     result = perform_test([
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold, MANUFACTURER_A,)]
         },
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold, MANUFACTURER_A,)]
         }
     ])
     assert len(result) == 1
@@ -100,10 +103,24 @@ def test_ignore_non_agent():
     # Make sure it verifies the existence of agent
     result = perform_test([
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold, adapter_properties=[])]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold, MANUFACTURER_A,
+                                         adapter_properties=[])]
         },
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold, MANUFACTURER_A,)]
+        }
+    ])
+    assert len(result) == 0
+
+
+def test_verifies_bad_manufacturer():
+    # Make sure it doesn't accept vmware manufacturer
+    result = perform_test([
+        {
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold, MANUFACTURER_B,)]
+        },
+        {
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold, MANUFACTURER_B,)]
         }
     ])
     assert len(result) == 0
@@ -113,10 +130,10 @@ def test_verifies_times_old():
     # Make sure it doesn't just accept all old dates
     result = perform_test([
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold, MANUFACTURER_A,)]
         },
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, old_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, old_threshold, MANUFACTURER_A,)]
         }
     ])
     assert len(result) == 0
@@ -126,10 +143,10 @@ def test_verifies_times_new():
     # Make sure it doesn't just accept all old dates
     result = perform_test([
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, new_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, new_threshold, MANUFACTURER_A,)]
         },
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold, MANUFACTURER_A,)]
         }
     ])
     assert len(result) == 0
@@ -139,11 +156,11 @@ def test_multihostnames():
     # Just one adapter being reimaged
     result = perform_test([
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_A, MAC_A, HOSTNAME_A, old_threshold, MANUFACTURER_A,)]
         },
         {
-            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold),
-                         _create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_C, new_threshold)]
+            'adapters': [_create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_B, new_threshold, MANUFACTURER_A,),
+                         _create_adapter(UNIQUE_NAME_A, ID_B, MAC_A, HOSTNAME_C, new_threshold, MANUFACTURER_A,)]
         }
     ])
     assert len(result) == 2
