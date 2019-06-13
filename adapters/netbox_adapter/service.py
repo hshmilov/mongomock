@@ -1,3 +1,4 @@
+# pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -6,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.parsing import normalize_var_name
 from netbox_adapter.connection import NetboxConnection
 from netbox_adapter.client_id import get_client_id
@@ -17,7 +18,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class NetboxAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        device_site = Field(str, 'Site')
+        device_display_name = Field(str, 'Display Name')
+        device_status = Field(str, 'Status')
+        device_type = Field(str, 'Type')
+        device_role = Field(str, 'Role')
+        device_rack = Field(str, 'Rack')
+        device_cluster = Field(str, 'Cluster')
+        device_comments = Field(str, 'Comments')
+        device_tags = ListField(str, 'Netbox Tags')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -100,8 +109,68 @@ class NetboxAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
-            device.name = device_raw.get('name')
+            device.id = str(device_id) + '_' + (str(device_raw.get('name')) or '')
+            device.name = str(device_raw.get('name'))
+            device.device_serial = device_raw.get('serial')
+            device.device_display_name = device_raw.get('display_name')
+            try:
+                device.device_site = (device_raw.get('site') or {}).get('name')
+            except Exception:
+                logger.exception(f'Could not get site')
+
+            try:
+                device.device_type = (device_raw.get('device_type') or {}).get('display_name')
+                device.device_manufacturer = (device_raw.get('device_type') or {}).get('manufacturer').get('name')
+            except Exception:
+                logger.exception(f'Could not get type')
+
+            try:
+                device.device_role = (device_raw.get('device_role') or {}).get('name')
+            except Exception:
+                logger.exception(f'Could not get role')
+
+            try:
+                device.device_cluster = (device_raw.get('cluster') or {}).get('name')
+            except Exception:
+                logger.exception(f'Could not get cluster')
+
+            try:
+                device.device_status = (device_raw.get('status') or {}).get('label')
+            except Exception:
+                logger.exception(f'Could not get status')
+
+            try:
+                device.device_comments = device_raw.get('comments')
+            except Exception:
+                logger.exception(f'Could not get comments')
+
+            try:
+                device.device_rack = (device_raw.get('rack') or {}).get('display_name')
+            except Exception:
+                logger.exception(f'Could not get rack')
+
+            try:
+                device.device_tags = device_raw.get('tags')
+            except Exception:
+                logger.exception(f'Could not get tags')
+
+            ips = []
+
+            for ip_field in ['primary_ip', 'primary_ip4', 'primary_ip6']:
+                try:
+                    ip = device_raw.get(ip_field)
+                    if isinstance(ip, str):
+                        if '/' not in ip:
+                            ips.append(ip)
+                        else:
+                            ip, subnet = ip.split('/')
+                            if str(subnet) == '32':
+                                ips.append(ip)
+                except Exception:
+                    logger.exception(f'Could not get ip {ip_field}')
+
+            device.add_nic(ips=ips)
+
             for attribute_raw, attribute_raw_value in device_raw.items():
                 try:
                     normalized_column_name = 'netbox_' + normalize_var_name(attribute_raw)
