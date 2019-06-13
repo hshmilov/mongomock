@@ -262,7 +262,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         for raw_device_data in iter(devices_raw_data):
             try:
                 device = self.create_device(raw_device_data)
-                yield device
+                if device:
+                    yield device
             except Exception:
                 logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
 
