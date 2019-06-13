@@ -17,18 +17,18 @@ class NetboxConnection(RESTConnection):
 
     def _connect(self):
         self._get('dcim/devices/',
-                  url_parmas={'limit': DEVICE_PER_PAGE})
+                  url_params={'limit': DEVICE_PER_PAGE})
 
     def get_device_list(self):
         response = self._get('dcim/devices/',
-                             url_parmas={'limit': DEVICE_PER_PAGE})
+                             url_params={'limit': DEVICE_PER_PAGE})
         yield from response.get('results')
         count = response.get('count')
         offset = DEVICE_PER_PAGE
         while offset < min(count, MAX_NUMBER_OF_DEVICES):
             try:
                 response = self._get('dcim/devices/',
-                                     url_parmas={'limit': DEVICE_PER_PAGE,
+                                     url_params={'limit': DEVICE_PER_PAGE,
                                                  'offset': offset})
                 yield from response.get('results')
                 offset += DEVICE_PER_PAGE

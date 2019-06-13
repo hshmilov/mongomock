@@ -98,6 +98,7 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
             projection={
                 '_id': False,
                 'adapters.data.network_interfaces.mac': True,
+                'adapters.data.network_interfaces.manufacturer': True,
                 'adapters.data.hostname': True,
                 'adapters.data.last_seen': True,
                 'adapters.data.adapter_properties': True,
