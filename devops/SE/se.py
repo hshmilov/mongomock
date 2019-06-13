@@ -4,6 +4,7 @@ System engineering common tasks.
 import sys
 
 from axonius.consts.plugin_subtype import PluginSubtype
+from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
 from services.plugins.reports_service import ReportsService
 from testing.services.plugins.aggregator_service import AggregatorService
 from testing.services.plugins.core_service import CoreService
@@ -21,6 +22,7 @@ def usage():
     {name} cd - run clean devices (clean db)
     {name} rr - run reports
     {name} sa - run static analysis
+    {name} rta - run reimage tags analysis 
     '''
 
 
@@ -43,6 +45,7 @@ def main():
     scu = StaticUsersCorrelatorService()
     rr = ReportsService()
     sa = StaticAnalysisService()
+    rta = ReimageTagsAnalysisService()
 
     def get_all_running_adapters_and_scanners():
         result = dict()
@@ -83,6 +86,10 @@ def main():
     elif component == 'sa':
         print('Running Static Analysis (Blocking)...')
         sa.trigger_execute(True)
+
+    elif component == 'rta':
+        print(f'Running Reimage Tags Analysis (Blocking)...')
+        rta.trigger_execute(True)
 
     else:
         print(usage())
