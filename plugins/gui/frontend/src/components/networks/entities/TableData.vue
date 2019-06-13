@@ -173,8 +173,11 @@
         this.expandData = !this.expandData
         if (this.expandData) {
           this.$nextTick(() => {
-            this.position.top = Boolean(this.$refs.popup.getBoundingClientRect().bottom > window.innerHeight - 80)
-            this.position.left = Boolean(this.$refs.popup.getBoundingClientRect().right > window.innerWidth - 24)
+            let boundingBox = this.$refs.popup.getBoundingClientRect()
+            this.position = {
+              top: this.position.top || Boolean(boundingBox.bottom > window.innerHeight - 80),
+              left: this.position.left || Boolean(boundingBox.right > window.innerWidth - 24)
+            }
           })
         }
       }
