@@ -106,8 +106,7 @@
         viewBasic: true,
         fieldsEditor: {active: false},
         toastMessage: '',
-        error: '',
-        doTour: true
+        error: ''
       }
     },
     computed: {
@@ -157,10 +156,11 @@
         return (this.fields.specific.gui || this.fields.generic)
       },
     },
-    updated() {
-      if (this.doTour && this.module === 'devices') {
-        this.changeState({ name: 'adaptersData'})
-        this.doTour = false
+    mounted() {
+      if (this.module === 'devices') {
+        this.$nextTick(() => {
+          this.changeState({ name: 'adaptersData'})
+        })
       }
     },
     methods: {

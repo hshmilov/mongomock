@@ -85,7 +85,8 @@
                         this.position = {top, left: align.left - selfWidth + 'px'}
                     }
                 } else {
-                    let left = (align.left + align.width / 2 - selfWidth / 2) + 'px'
+                    let currentWidth = Math.min(selfWidth / 2, window.innerWidth - align.left)
+                    let left = (align.left + align.width / 2 - currentWidth) + 'px'
                     if (this.currentState.align === 'bottom') {
                         this.position = {top: (align.top + align.height) + 'px', left}
                     } else {
