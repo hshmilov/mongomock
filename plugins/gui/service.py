@@ -4335,15 +4335,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             report_data.seek(0)
             # Uploads the report to the db and returns a uuid to retrieve it
             uuid = self._upload_report(report_data, report)
-            logger.info(f'Report was saved to the db {uuid}')
+            logger.info(f'Report was saved to the grif fs db uuid: {uuid}')
             # Stores the uuid in the db in the "reports" collection
-            filename = 'most_recent_{}'.format(report['name'])
+            name = report['name']
+            filename = 'most_recent_{}'.format(name)
             self._get_collection('reports').replace_one(
                 {'filename': filename},
                 {'uuid': uuid, 'filename': filename, 'time': datetime.now()}, True
             )
+            logger.info(f'Report was saved to the mongo db to "reports" collection filename: {filename}')
+
             report[report_consts.LAST_GENERATED_FIELD] = generated_date
-            self._upsert_report_config(report['name'], report, False)
+            self._upsert_report_config(name, report, False)
+            logger.info(f'Report was saved to the mongo db to "report_configs" collection name: {name}')
 
     def _upload_report(self, report, report_metadata):
         """
@@ -4399,10 +4403,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     def _get_existing_executive_report(self, name):
         report = self._get_collection('reports').find_one({'filename': f'most_recent_{name}'})
+        logger.info(f'exporting report "{name}"')
         if not report:
+            logger.info(f'exporting report "{name}" failed - most recent report was not found')
             raise Exception('The report is being generated or '
                             'there was a problem with generating the report')
 
+        logger.info(f'exporting report "{name}" succeeded. most recent report found')
         uuid = report['uuid']
         report_path = f'/tmp/axonius-{name}_{datetime.now()}.pdf'
         db_connection = self._get_db_connection()
