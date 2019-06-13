@@ -230,7 +230,9 @@ class Triggerable(Feature, ABC):
             logger.debug(message)
         else:
             logger.info(message)
-        res = self._trigger(job_name, blocking, priority, request.get_json(silent=True), timeout)
+        res = self._trigger(job_name, blocking, priority,
+                            self.get_request_data_as_object(prefer_none=True),
+                            timeout)
         return normalize_triggerable_request_result(res)
 
     @add_rule('wait/<job_name>', methods=['GET'])

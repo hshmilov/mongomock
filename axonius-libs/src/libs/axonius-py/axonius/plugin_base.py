@@ -824,8 +824,10 @@ class PluginBase(Configurable, Feature):
         """
         return request.data
 
-    def get_request_data_as_object(self):
+    def get_request_data_as_object(self, prefer_none: bool = False):
         """ Get data from HTTP request as python object.
+
+        :param prefer_none: The old behavior of request.get_json(silent=True) was to return None on failure, mimic it
 
         :return: The contest of the post request as a python object (An output of the json.loads function)
         """
@@ -837,7 +839,10 @@ class PluginBase(Configurable, Feature):
             data = json.loads(decoded_data, object_hook=json_util.object_hook)
             return data
         else:
-            return {}
+            if prefer_none:
+                return None
+            else:
+                return {}
 
     def get_caller_plugin_name(self):
         """
