@@ -58,7 +58,7 @@
     }
 </script>
 
-<style>
+<style lang="scss">
     .x-line {
         height: 240px;
     }

@@ -102,8 +102,6 @@
     data () {
       return {
         dashboard: { ...dashboard },
-        message: '',
-        advanceState: false,
         configValid: false
       }
     },
@@ -135,13 +133,11 @@
         return ['summary']
       },
       isDisabled () {
-        if (!this.dashboard.name) return true
-        if (this.dashboards.spaces.data.some(e => e.name === this.dashboard.name)) {
-          this.message = 'A Chart With That Name Already Exists, Please Choose A Different Name.'
-          return true
-        }
-        if (!this.dashboard.metric || !this.dashboard.view) return true
-        return !this.configValid
+        return (!this.dashboard.name || !this.dashboard.metric || !this.dashboard.view || !this.configValid)
+      },
+      message () {
+        if (!this.isDisabled) return ''
+        return 'Missing required configuration'
       }
     },
     watch: {
@@ -160,7 +156,6 @@
         saveDashboard: SAVE_DASHBOARD_PANEL
       }),
       nameDashboard () {
-        this.message = ''
         this.changeState({name: 'wizardSave'})
       },
       saveNewDashboard () {
@@ -171,9 +166,9 @@
           if (response.status === 200 && response.data) {
             this.updateState({
               name: 'dashboardChart',
-              id: this.dashboard.name.split(' ').join('_').toLowerCase()
+              id: response.data
             })
-            this.advanceState = true
+            this.$nextTick(this.nextWizardState)
           }
         })
       },
@@ -182,12 +177,6 @@
       },
       nextWizardState () {
         this.nextState('dashboardWizard')
-      }
-    },
-    updated () {
-      if (this.advanceState) {
-        this.nextWizardState()
-        this.advanceState = false
       }
     }
   }

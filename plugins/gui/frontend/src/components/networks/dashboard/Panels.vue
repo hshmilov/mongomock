@@ -3,8 +3,8 @@
     <slot name="pre" />
     <x-card
       v-for="(chart, chartInd) in processedPanels"
-      :id="getId(chart.name)"
-      :key="chart.name"
+      :id="chart.uuid"
+      :key="chart.uuid"
       :title="chart.name"
       :removable="!isReadOnly"
       @remove="removeDashboard(chart.uuid)"
@@ -21,7 +21,6 @@
       </div>
       <component
         :is="`x-${chart.view}`"
-        :id="getId(chart.name) + '_view'"
         :data="chart.data"
         @click-one="runChartFilter(chartInd, $event)"
       />
@@ -127,9 +126,6 @@
       }),
       addNewPanel() {
         this.$emit('add')
-      },
-      getId (name) {
-        return name.split(' ').join('_').toLowerCase()
       },
       clearDate (cardId) {
         this.cardToDate = { ...this.cardToDate, [cardId]: null }

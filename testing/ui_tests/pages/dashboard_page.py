@@ -3,6 +3,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 from ui_tests.pages.page import Page
 from services.axon_service import TimeoutException
+from axonius.utils.wait import wait_until
 
 
 class DashboardPage(Page):
@@ -14,12 +15,12 @@ class DashboardPage(Page):
     DEVICE_DISCOVERY = 'Device Discovery'
     USER_DISCOVERY = 'User Discovery'
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
-    UNCOVERED_PIE_SLICE_CSS = 'svg > g#managed_device_coverage_view_0 > text.scaling'
-    COVERED_PIE_SLICE_CSS = 'svg > g#managed_device_coverage_view_1 > text.scaling'
-    INTERSECTION_PIE_INTERSECTION_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(4) > text'
-    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(2)'
-    SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(3)'
-    SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = '{id} > div.x-pie > svg > g:nth-child(1)'
+    UNCOVERED_PIE_SLICE_CSS = 'svg > g.slice-0 > text.scaling'
+    COVERED_PIE_SLICE_CSS = 'svg > g.slice-1 > text.scaling'
+    INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g:nth-child(4) > text'
+    SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g:nth-child(2)'
+    SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g:nth-child(3)'
+    SYMMETRIC_DIFFERENCE_FROM_SECOND_QUERY_SLICE_CSS = 'svg > g:nth-child(1)'
     NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
@@ -30,8 +31,8 @@ class DashboardPage(Page):
     CHART_FIELD_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
-    SUMMARY_CARD_TEXT_CSS = '{id} > div.x-summary > div.summary'
-    CARD_CLOSE_BTN_CSS = '{id} > div.header > button.remove'
+    SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
+    CARD_CLOSE_BTN_CSS = 'div.header > .x-button.remove'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
 
     SPACES_XPATH = '//div[@class=\'x-spaces\']'
@@ -39,6 +40,8 @@ class DashboardPage(Page):
     SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
     SPACE_HEADER_CSS = '.x-spaces .x-tabs .header-tab:nth-child({tab_index})'
     NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
+    PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[@class=\'x-card\' ' \
+        'and .//text()=\'{panel_name}\']'
 
     @property
     def root_page_css(self):
@@ -59,7 +62,8 @@ class DashboardPage(Page):
             f'{self.CONGRATULATIONS}\nhaving all your assets visible in one place.'
 
     def find_managed_device_coverage_card(self):
-        return self.driver.find_element_by_id(self.get_card_id_from_title(self.MANAGED_DEVICE_COVERAGE))
+        return self.driver.find_element_by_xpath(
+            self.PANEL_BY_NAME_XPATH.format(panel_name=self.MANAGED_DEVICE_COVERAGE))
 
     def find_system_lifecycle_card(self):
         return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')
@@ -152,15 +156,15 @@ class DashboardPage(Page):
         return True
 
     def get_summary_card_text(self, card_title):
-        card_id_css = self.get_card_id_css_from_title(card_title)
-        return self.wait_for_element_present_by_css(self.SUMMARY_CARD_TEXT_CSS.format(id=card_id_css))
+        return self.wait_for_element_present_by_css(self.SUMMARY_CARD_TEXT_CSS,
+                                                    element=self.driver.find_element_by_xpath(
+                                                        self.PANEL_BY_NAME_XPATH.format(panel_name=card_title)))
 
     def get_card(self, card_title):
-        card_id_css = self.get_card_id_css_from_title(card_title)
-        return self.wait_for_element_present_by_css(card_id_css)
+        return self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
 
     def get_all_cards(self):
-        return self.driver.find_elements_by_css_selector('div.x-card')
+        return self.driver.find_elements_by_css_selector('.x-tab.active div.x-card')
 
     def click_segmentation_pie_card(self, card_title):
         card = self.get_card(card_title)
@@ -168,9 +172,9 @@ class DashboardPage(Page):
         pie.find_element_by_css_selector('svg').click()
 
     def remove_card(self, card_title):
-        card_close_button_css = self.CARD_CLOSE_BTN_CSS.format(id=self.get_card_id_css_from_title(card_title))
-        self.driver.find_element_by_css_selector(card_close_button_css).click()
-        self.wait_for_element_absent_by_css(card_close_button_css)
+        self.driver.find_element_by_xpath(self.PANEL_BY_NAME_XPATH.format(
+            panel_name=card_title)).find_element_by_css_selector(self.CARD_CLOSE_BTN_CSS).click()
+        wait_until(lambda: self.is_missing_panel(card_title))
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -182,47 +186,27 @@ class DashboardPage(Page):
         return int(pie.find_element_by_css_selector(self.COVERED_PIE_SLICE_CSS).text.rstrip('%'))
 
     def click_uncovered_pie_slice(self):
-        card_id = self.get_card_id_from_title(self.MANAGED_DEVICE_COVERAGE)
-        self.click_pie_slice(self.UNCOVERED_PIE_SLICE_CSS, card_id)
+        self.click_pie_slice(self.UNCOVERED_PIE_SLICE_CSS, self.MANAGED_DEVICE_COVERAGE)
 
     def click_covered_pie_slice(self):
-        card_id = self.get_card_id_from_title(self.MANAGED_DEVICE_COVERAGE)
-        self.click_pie_slice(self.COVERED_PIE_SLICE_CSS, card_id)
+        self.click_pie_slice(self.COVERED_PIE_SLICE_CSS, self.MANAGED_DEVICE_COVERAGE)
 
     def click_intersection_pie_slice(self, card_title):
-        card_id = self.get_card_id_from_title(card_title)
-        card_id_css = self.get_card_id_css_from_title(card_title)
-        self.click_pie_slice(self.INTERSECTION_PIE_INTERSECTION_SLICE_CSS.format(id=card_id_css), card_id)
+        self.click_pie_slice(self.INTERSECTION_PIE_INTERSECTION_SLICE_CSS, card_title)
 
     def click_symmetric_difference_base_query_pie_slice(self, card_title):
-        card_id = self.get_card_id_from_title(card_title)
-        card_id_css = self.get_card_id_css_from_title(card_title)
-        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS.format(id=card_id_css), card_id)
+        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS, card_title)
 
     def click_symmetric_difference_first_query_pie_slice(self, card_title):
-        card_id = self.get_card_id_from_title(card_title)
-        card_id_css = self.get_card_id_css_from_title(card_title)
-        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS.format(id=card_id_css), card_id)
+        self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title)
 
-    def click_pie_slice(self, slice_css, card_id):
-        self.wait_for_element_present_by_id(card_id)
-        card = self.driver.find_element_by_id(card_id)
-        pie = self.get_pie_chart_from_card(card)
-        pie.find_element_by_css_selector(slice_css).click()
+    def click_pie_slice(self, slice_css, card_title):
+        card = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css).click()
 
     @staticmethod
     def get_title_from_card(card):
         return card.find_element_by_css_selector('div.header > div.title').text.title()
-
-    @staticmethod
-    def get_card_id_from_title(card_title):
-        id_string = '_'.join(card_title.lower().split(' '))
-        return id_string
-
-    @staticmethod
-    def get_card_id_css_from_title(card_title):
-        id_string = '_'.join(card_title.split(' ')).lower()
-        return f'#{id_string}'
 
     @staticmethod
     def get_pie_chart_from_card(card):
@@ -326,6 +310,8 @@ class DashboardPage(Page):
         space_header = self.find_space_header(index)
         ActionChains(self.driver).move_to_element(space_header).perform()
         space_header.find_element_by_css_selector('.x-button.link').click()
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.click_button('Remove Space')
         self.wait_for_element_absent_by_css(self.SPACE_HEADER_CSS.format(tab_index=index))
 
     def is_missing_space(self, space_name):
@@ -338,7 +324,7 @@ class DashboardPage(Page):
 
     def is_missing_panel(self, panel_name):
         try:
-            self.driver.find_element_by_css_selector(f'.x-tab.active {self.get_card_id_css_from_title(panel_name)}')
+            self.driver.find_element_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=panel_name))
         except NoSuchElementException:
             # Good, it is missing
             return True

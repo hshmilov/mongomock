@@ -17,7 +17,11 @@
           v-if="tab.logo"
           :logo="tab.logo"
         >{{ tab.title }}</x-title>
-        <div v-else>{{ tab.title }}</div>
+        <div
+          v-else
+          class="text"
+          :title="tab.title"
+        >{{ tab.title }}</div>
         <x-button
           v-if="tab.removable"
           link
@@ -45,7 +49,20 @@
           id="rename_tab"
           type="text"
           v-model="tabToRename.name"
+          @keydown.enter="confirmRenameTab"
         />
+      </div>
+    </x-modal>
+    <x-modal
+      v-if="tabToRemove"
+      size="lg"
+      :approve-text="removeText"
+      @confirm="confirmRemoveTab"
+      @close="cancelRemoveTab"
+    >
+      <div slot="body">
+        <slot name="remove_confirm" />
+        <div>Do you want to continue?</div>
       </div>
     </x-modal>
   </div>
@@ -69,12 +86,17 @@
       extendable: {
         type: Boolean,
         default: false
+      },
+      removeText: {
+        type: String,
+        default: 'Remove'
       }
     },
     data () {
       return {
         tabs: [],
-        tabToRename: {id: '', name: ''}
+        tabToRename: {id: '', name: ''},
+        tabToRemove: null
       }
     },
     computed: {
@@ -120,10 +142,17 @@
         this.tabToRename = {id: '', name: ''}
       },
       removeTab (tab) {
-        this.$emit('remove', tab.id)
-        if (tab.isActive && this.tabs.length) {
+        this.tabToRemove = tab
+      },
+      confirmRemoveTab () {
+        this.$emit('remove', this.tabToRemove.id)
+        if (this.tabToRemove.isActive && this.tabs.length) {
           this.selectTab(this.tabs[0].id)
         }
+        this.cancelRemoveTab()
+      },
+      cancelRemoveTab () {
+        this.tabToRemove = null
       }
     }
   }
@@ -145,6 +174,12 @@
                 display: flex;
                 white-space: nowrap;
                 cursor: pointer;
+
+                .text {
+                  max-width: 240px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                }
 
                 img {
                     margin-right: 4px;

@@ -1,5 +1,5 @@
 <template>
-    <div class="x-pie" :id="id" :class="{disabled: readOnly}">
+    <div class="x-pie" :class="{disabled: readOnly}">
         <svg viewBox="-1 -1 2 2" @mouseout="inHover = -1">
             <defs>
                 <linearGradient id="intersection-1-2">
@@ -12,7 +12,7 @@
                 </linearGradient>
             </defs>
             <g v-for="slice, index in slices" @click="onClick(index)" @mouseover="onHover($event, index)"
-               :id="getId(index)">
+               :class="`slice-${index}`">
                 <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
                 <text v-if="showPercentageText(slice.value)" class="scaling" text-anchor="middle"
                       :x="slice.middle.x" :y="slice.middle.y">{{Math.round(slice.value * 100)}}%
@@ -42,7 +42,7 @@
     export default {
         name: 'x-pie',
         props: {
-            data: {required: true}, id: {}, forceText: {default: false}, readOnly: {default: false}
+            data: {required: true}, forceText: {default: false}, readOnly: {default: false}
         },
         computed: {
             processedData() {
@@ -116,11 +116,6 @@
                 if (!this.$refs || !this.$refs.tooltip) return
                 this.$refs.tooltip.style.top = event.clientY + 10 + 'px'
                 this.$refs.tooltip.style.left = event.clientX + 10 + 'px'
-            },
-            getId(name) {
-                if (!this.id) return undefined
-
-                return `${this.id}_${name}`
             },
             showPercentageText(val) {
                 return (this.forceText && val > 0) || val > 0.04

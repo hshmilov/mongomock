@@ -3420,13 +3420,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         if request.method == 'PUT':
             space_data = dict(self.get_request_data_as_object())
-            update_result = self.__dashboard_spaces_collection.update_one({
+            self.__dashboard_spaces_collection.update_one({
                 '_id': ObjectId(space_id)
             }, {
                 '$set': space_data
             })
-            if not update_result or update_result.modified_count == 0:
-                return return_error('Could not update the requested Dashboard Space', 400)
             return ''
 
         if request.method == 'DELETE':
@@ -3454,12 +3452,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
         dashboard_data['space'] = ObjectId(space_id)
         dashboard_data['user_id'] = get_connected_user_id()
-        update_result = self.__dashboard_collection.replace_one({
-            'name': dashboard_data['name']
-        }, dashboard_data, upsert=True)
-        if not update_result.upserted_id and not update_result.modified_count:
+        insert_result = self.__dashboard_collection.insert_one(dashboard_data)
+        if not insert_result or not insert_result.inserted_id:
             return return_error('Error saving dashboard chart', 400)
-        return str(update_result.upserted_id)
+        return str(insert_result.inserted_id)
 
     @gui_add_rule_logged_in('dashboard/panels/<panel_id>', methods=['DELETE'],
                             required_permissions={Permission(PermissionType.Dashboard,

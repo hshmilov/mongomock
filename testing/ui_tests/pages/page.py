@@ -319,12 +319,12 @@ class Page:
     def wait_for_element_present(self,
                                  by,
                                  value,
-                                 element=None,
+                                 parent=None,
                                  retries=RETRY_WAIT_FOR_ELEMENT,
                                  interval=SLEEP_INTERVAL):
         for _ in range(retries):
             try:
-                element = self.find_element(by, value, element)
+                element = self.find_element(by, value, parent)
                 if element:
                     return element
             except NoSuchElementException:

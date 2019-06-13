@@ -3,22 +3,12 @@
     <x-tabs
       v-if="spaces.length"
       :extendable="!isReadOnly"
+      remove-text="Remove Space"
       @add="addNewSpace"
       @rename="renameSpace"
       @remove="removeSpace"
       ref="tabs"
     >
-      <x-tab
-        :id="personalSpace.uuid"
-        :title="personalSpace.name"
-      >
-        <x-panels
-          slot-scope="{ active }"
-          v-if="active"
-          :panels="personalSpace.panels"
-          @add="() => addNewPanel(personalSpace.uuid)"
-        />
-      </x-tab>
       <x-tab
         :id="defaultSpace.uuid"
         :title="defaultSpace.name"
@@ -30,6 +20,17 @@
           v-if="active"
           :panels="defaultSpace.panels"
           @add="() => addNewPanel(defaultSpace.uuid)"
+        />
+      </x-tab>
+      <x-tab
+        :id="personalSpace.uuid"
+        :title="personalSpace.name"
+      >
+        <x-panels
+          slot-scope="{ active }"
+          v-if="active"
+          :panels="personalSpace.panels"
+          @add="() => addNewPanel(personalSpace.uuid)"
         />
       </x-tab>
       <x-tab
@@ -47,6 +48,11 @@
           @add="() => addNewPanel(space.uuid)"
         />
       </x-tab>
+      <div slot="remove_confirm">
+        <div>This space will be completely removed from the system and</div>
+        <div>no other user will be able to use it.</div>
+        <div>Removing the space is an irreversible action.</div>
+      </div>
     </x-tabs>
     <x-wizard
       v-if="wizard.active"
@@ -131,6 +137,7 @@
         this.saveSpace(this.newSpaceName).then(spaceId => {
           this.$nextTick(() => {
             this.$refs.tabs.renameTabById(spaceId)
+            this.$refs.tabs.selectTab(spaceId)
           })
         })
       }
