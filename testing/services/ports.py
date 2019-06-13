@@ -165,6 +165,7 @@ DOCKER_PORTS = {
     'endgame-adapter':                  9962,
     'censys-adapter':                   9963,
     'paloalto-cortex-adapter':          9964,
+    'netbox-adapter':                   9965,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
