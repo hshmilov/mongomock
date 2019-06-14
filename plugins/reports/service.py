@@ -416,7 +416,7 @@ class ReportsService(Triggerable, PluginBase):
         :return: A set of triggered trigger reasons.
         """
         if (not conditions.new_entities and not conditions.previous_entities
-                and conditions.above is None and conditions.below is None):
+                and not conditions.above and not conditions.below):
             return [TriggeredReason.every_discovery]
 
         triggered = set()
