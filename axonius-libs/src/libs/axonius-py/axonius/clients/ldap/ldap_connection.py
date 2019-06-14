@@ -32,6 +32,7 @@ DEFAULT_LDAP_RECIEVE_TIMEOUT = 120
 DEFAULT_WAIT_TIME_BETWEEN_RETRIES_IN_MS = 10 * 1000  # 10 seconds
 LDAP_MAX_TRIES = 5
 AD_GC_PORT = 3268
+AD_GC_PORT_ENCRYPTED = 3269
 
 
 def connect_to_server(
@@ -62,7 +63,13 @@ def connect_to_server(
     :return: The successfully binded connection
     :raises: ldap3.core.exceptions.LDAPException
     """
-    port = AD_GC_PORT if connect_with_gc_mode else None
+    if connect_with_gc_mode:
+        if use_ssl != SSLState.Unencrypted:
+            port = AD_GC_PORT_ENCRYPTED
+        else:
+            port = AD_GC_PORT
+    else:
+        port = None
     if use_ssl != SSLState.Unencrypted:
         validation = ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE
         tls = ldap3.Tls(
