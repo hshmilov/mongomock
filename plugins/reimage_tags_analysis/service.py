@@ -16,7 +16,8 @@ from axonius.utils.axonius_query_language import parse_filter
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-BAD_MANUFACTURERS_LIST = ['vmware', 'paloalto', 'fortinet', 'checkpoint', 'aruba', 'juniper', 'arista', 'private']
+BAD_MANUFACTURERS_LIST = ['vmware', 'paloalto', 'fortinet', 'checkpoint', 'aruba', 'juniper', 'arista', 'private',
+                          'qualcom', 'broadcom']
 
 
 class ReimageTagsAnalysisService(Triggerable, PluginBase):

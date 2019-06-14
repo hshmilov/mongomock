@@ -62,8 +62,10 @@ class GuiService(PluginService):
             self._update_schema_version_11()
         if self.db_schema_version < 12:
             self._update_schema_version_12()
+        if self.db_schema_version < 13:
+            self._update_schema_version_13()
 
-        if self.db_schema_version != 12:
+        if self.db_schema_version != 13:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_schema_version_1(self):
@@ -433,6 +435,11 @@ class GuiService(PluginService):
             self.db_schema_version = 12
         except Exception as e:
             print(f'Exception while upgrading gui db to version 12. Details: {e}')
+
+    def _update_schema_version_13(self):
+        print('Upgrade to schema 13')
+        self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
+        self.db_schema_version = 13
 
     def _update_default_locked_actions(self, new_actions):
         """
