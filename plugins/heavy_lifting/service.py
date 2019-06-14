@@ -1,6 +1,6 @@
 import logging
 
-from flask import Response
+from flask import Response, jsonify
 
 from axonius.entities import EntityType
 from axonius.utils import gui_helpers
@@ -30,5 +30,7 @@ class HeavyLiftingService(PluginBase):
     def tag_entities(self):
         kwargs = dict(self.get_request_data_as_object())
         kwargs['entity'] = EntityType(kwargs['entity'])
-
-        return self.add_many_labels_to_entity(**kwargs)
+        result = self.add_many_labels_to_entity(**kwargs)
+        if kwargs.get('with_results'):
+            return jsonify(result)
+        return ''

@@ -2257,8 +2257,7 @@ class PluginBase(Configurable, Feature):
                     except Exception:
                         logger.exception(f'Problem adding label: {label} with identity: {specific_identity}')
 
-        result = list(perform_many_tags())
-        return result
+        return list(perform_many_tags())
 
     def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True,
                             additional_data=None) -> List[dict]:
