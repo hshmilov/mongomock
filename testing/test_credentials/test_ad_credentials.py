@@ -44,4 +44,4 @@ NONEXISTEN_AD_DEVICE_IP = '10.0.2.65'
 PM_DEVICE_WINDOWS_SERVER_2008_NO_INTERNET_ADDRESS = "10.0.239.1"
 PM_DEVICE_WINDOWS_SERVER_2012_HEBREW_WITH_INTERNET_ADDRESS = "10.0.2.254"
 
-TEST_BINARY_LOCATION = "/home/axonius/uploaded_files/test_binary.exe"
+TEST_BINARY_LOCATION = "/home/axonius/shared_readonly_files/test_binary.exe"

@@ -1,16 +1,21 @@
 import functools
+import os
 import time
 import logging
 import traceback
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Iterable, Tuple
 
+from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from promise import Promise
 
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule
-from axonius.utils.files import get_local_config_file, get_random_uploaded_path_name
+from axonius.utils.datetime import parse_date
+from axonius.utils.files import get_local_config_file, get_random_uploaded_path_name, get_all_uploaded_files
 from axonius.utils.parsing import get_exception_string
 from axonius.entities import AxoniusDevice
 
@@ -18,12 +23,48 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 MAX_TRIES_FOR_EXECUTION_REQUEST = 3
 SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS = 120
+FILE_DELETION_THRESHOLD_IN_MINUTES = 60 * 6    # Delete files older than 6 hours
+FILE_DELETION_JOB_SCHEDULE_IN_MINUTES = 60 * 2  # Run a delete-cycle each 2 hours
+FILE_DELETION_JOB_ID = 'files-deletion-job'
 
 
 class DeviceControlService(Triggerable, PluginBase):
     def __init__(self, *args, **kargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=DEVICE_CONTROL_PLUGIN_NAME, *args, **kargs)
+
+        self._job_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(1)})
+        self._job_scheduler.add_job(func=self.delete_uploaded_files_job,
+                                    trigger=IntervalTrigger(minutes=FILE_DELETION_JOB_SCHEDULE_IN_MINUTES),
+                                    next_run_time=datetime.now(),
+                                    name=FILE_DELETION_JOB_ID,
+                                    id=FILE_DELETION_JOB_ID,
+                                    max_instances=1)
+        self._job_scheduler.start()
+        logger.info(f'initialized scheduler')
+
+    @staticmethod
+    def delete_uploaded_files_job():
+        """
+        Deletes old files from the uploaded_files folder.
+        :return:
+        """
+        try:
+            for file in get_all_uploaded_files():
+                try:
+                    file_date_ctime = time.ctime(os.path.getctime(file))
+                    file_date = parse_date(file_date_ctime)
+                    if not file_date:
+                        logger.critical(f'Did not parse file date {file_date_ctime} for file {file}')
+                    total_minutes_passed = (parse_date(datetime.now()) - file_date).total_seconds() / 60
+                    if total_minutes_passed > FILE_DELETION_THRESHOLD_IN_MINUTES:
+                        os.remove(file)
+                        logger.info(f'Uploaded-files-deletion-job: successfully removed {file} which '
+                                    f'was {total_minutes_passed} minutes old)')
+                except Exception:
+                    logger.critical(f'Error handling uploaded file {file}', exc_info=True)
+        except Exception:
+            logger.critical(f'Error in uploaded files deletion job', exc_info=True)
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name != 'execute':

@@ -37,3 +37,8 @@ def get_random_uploaded_path_name(filename_suffix):
     filename = f'{time.time()}_{filename_suffix}'
     full_path = os.path.join(UPLOADED_FILES_DIR, filename)
     return full_path
+
+
+def get_all_uploaded_files():
+    return [os.path.join(UPLOADED_FILES_DIR, file_path) for file_path in os.listdir(UPLOADED_FILES_DIR)
+            if os.path.isfile(os.path.join(UPLOADED_FILES_DIR, file_path))]

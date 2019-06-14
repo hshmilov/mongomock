@@ -20,7 +20,7 @@ WMI_SMB_RUNNER_LOCATION = os.path.abspath(
                  "axonius", "utils", "wmi_smb_runner", "wmi_smb_runner.py"))
 
 TEST_BINARY_LOCATION = os.path.abspath(
-    os.path.join(ROOT_DIR, "uploaded_files", "test_binary.exe"))
+    os.path.join(ROOT_DIR, "shared_readonly_files", "test_binary.exe"))
 
 SHARED_READONLY_FILES_LOCATION = os.path.abspath(os.path.join(ROOT_DIR, 'shared_readonly_files'))
 AXPM_LOCATION = os.path.join(SHARED_READONLY_FILES_LOCATION, 'AXPM', 'AXPM.exe')
