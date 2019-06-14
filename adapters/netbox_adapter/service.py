@@ -43,6 +43,7 @@ class NetboxAdapter(AdapterBase):
     def get_connection(client_config):
         connection = NetboxConnection(domain=client_config['domain'],
                                       verify_ssl=client_config['verify_ssl'],
+                                      token=client_config.get('token'),
                                       https_proxy=client_config.get('https_proxy'))
         with connection:
             pass
@@ -83,6 +84,12 @@ class NetboxAdapter(AdapterBase):
                     'name': 'domain',
                     'title': 'Netbox Domain',
                     'type': 'string'
+                },
+                {
+                    'name': 'token',
+                    'title': 'Authentication Token',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
                     'name': 'verify_ssl',

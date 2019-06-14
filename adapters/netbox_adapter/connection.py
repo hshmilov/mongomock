@@ -9,11 +9,14 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class NetboxConnection(RESTConnection):
     """ rest client for Netbox adapter """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, token=None, **kwargs):
         super().__init__(*args, url_base_prefix='api',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+
+        if token:
+            self._permanent_headers['Authorization'] = f'Token {token}'
 
     def _connect(self):
         self._get('dcim/devices/',
