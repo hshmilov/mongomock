@@ -36,12 +36,12 @@ class CiscoPrimeException(Exception):
 
 
 class CiscoPrimeClient:
-    def __init__(self, url, username, password):
+    def __init__(self, url, username, password, wireless_vlan_exclude_list=None):
         url = RESTConnection.build_url(url).strip('/')
         self._url = url
         self._username = username
         self._password = password
-
+        self.wireless_vlan_exclude_list = wireless_vlan_exclude_list.split(',') if wireless_vlan_exclude_list else []
         self._sess = None
 
     @staticmethod
@@ -212,6 +212,10 @@ class CiscoPrimeClient:
             for entity in response['entity']:
                 # validate that the device contains inventory
                 device = entity.get('inventoryDetailsDTO', '')
+                if device.get('vlanName') in self.wireless_vlan_exclude_list:
+                    continue
+                if device.get('vlan') in self.wireless_vlan_exclude_list:
+                    continue
                 if device:
                     yield 'cisco', device
 
