@@ -70,6 +70,7 @@ def connect_to_server(
             port = AD_GC_PORT
     else:
         port = None
+    logger.info(f'Connecting to server {server_address}, port is {str(port)} and ssl state is {str(use_ssl)}')
     if use_ssl != SSLState.Unencrypted:
         validation = ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE
         tls = ldap3.Tls(

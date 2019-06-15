@@ -7,7 +7,8 @@ from axonius.clients.shodan.consts import DEFAULT_DOMAIN
 
 
 class ShodanConnection(RESTConnection):
-    def __init__(self, *args, domain_prefered=DEFAULT_DOMAIN, **kwargs):
+    def __init__(self, *args, domain_prefered=None, **kwargs):
+        domain_prefered = domain_prefered if domain_prefered else DEFAULT_DOMAIN
         super().__init__(*args, url_base_prefix='shodan', domain=domain_prefered,
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
