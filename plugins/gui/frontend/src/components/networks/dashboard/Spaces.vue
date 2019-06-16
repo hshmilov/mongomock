@@ -90,7 +90,8 @@
         wizard: {
           active: false,
           space: ''
-        }
+        },
+        processing: false
       }
     },
     computed: {
@@ -134,10 +135,13 @@
         this.wizard.active = false
       },
       addNewSpace () {
+        if (this.processing) return
+        this.processing = true
         this.saveSpace(this.newSpaceName).then(spaceId => {
           this.$nextTick(() => {
             this.$refs.tabs.renameTabById(spaceId)
             this.$refs.tabs.selectTab(spaceId)
+            this.processing = false
           })
         })
       }

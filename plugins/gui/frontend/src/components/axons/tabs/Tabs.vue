@@ -40,6 +40,7 @@
     <x-modal
       v-if="tabToRename.id"
       size="md"
+      :disabled="disableConfirmRename"
       @confirm="confirmRenameTab"
       @close="cancelRenameTab"
     >
@@ -102,6 +103,9 @@
     computed: {
       validTabs () {
         return this.tabs.filter(tab => tab.id !== undefined)
+      },
+      disableConfirmRename () {
+        return Boolean(!this.tabToRename.name)
       }
     },
     created () {
@@ -132,6 +136,7 @@
         this.renameTab(this.validTabs.find(tab => tab.id === tabId))
       },
       confirmRenameTab () {
+        if (!this.tabToRename.name) return
         this.$emit('rename', {
           id: this.tabToRename.id,
           name: this.tabToRename.name
