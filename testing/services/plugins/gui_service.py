@@ -438,8 +438,27 @@ class GuiService(PluginService):
 
     def _update_schema_version_13(self):
         print('Upgrade to schema 13')
-        self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
-        self.db_schema_version = 13
+        try:
+            self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
+            dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+            dashboard_spaces_collection.insert_many([{
+                'name': DASHBOARD_SPACE_DEFAULT,
+                'type': DASHBOARD_SPACE_TYPE_DEFAULT
+            }, {
+                'name': DASHBOARD_SPACE_PERSONAL,
+                'type': DASHBOARD_SPACE_TYPE_PERSONAL
+            }])
+            default_id = dashboard_spaces_collection.find_one({
+                'name': DASHBOARD_SPACE_DEFAULT
+            })['_id']
+            self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many({}, {
+                '$set': {
+                    'space': default_id
+                }
+            })
+            self.db_schema_version = 13
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 13. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
