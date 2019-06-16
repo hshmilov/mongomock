@@ -261,7 +261,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlate_hostname_only_host_adapter(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname-only')
         filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
-        filtered_adapters_list = filter(lambda x: not x.get(NORMALIZED_MACS) or not get_normalized_ip(x),
+        # pylint: disable=line-too-long
+        filtered_adapters_list = filter(lambda x: not x.get(NORMALIZED_MACS) or not get_normalized_ip(x) or not is_only_host_adapter_not_localhost(x),
                                         filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
