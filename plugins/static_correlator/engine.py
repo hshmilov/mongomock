@@ -88,6 +88,14 @@ def get_domain_for_correlation(adapter_device):
     return None
 
 
+def domain_do_not_contradict(adapter_device1, adapter_device2):
+    domain1 = get_domain_for_correlation(adapter_device1)
+    domain2 = get_domain_for_correlation(adapter_device2)
+    if not domain1 or not domain2:
+        return True
+    return domain1 in domain2 or domain2 in domain1
+
+
 def compare_domain_for_correlation(adapter_device1, adapter_device2):
     domain1 = get_domain_for_correlation(adapter_device1)
     domain2 = get_domain_for_correlation(adapter_device2)
@@ -422,8 +430,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_ad_name_or_azure_display_name],
                                       [compare_ad_name_or_azure_display_name],
-                                      [],
-                                      [],
+                                      [is_from_ad],
+                                      [domain_do_not_contradict],
                                       {'Reason': 'They have the same display name'},
                                       CorrelationReason.StaticAnalysis)
 
