@@ -1,7 +1,7 @@
 export const pluginMeta = {
     netbox_adapter: {
         title: 'NetBox',
-        description: ' NetBox is an open source web application designed to help manage and document computer networks.'
+        description: ' NetBox is an open source web application to help manage and document computer networks.'
     },
     paloalto_cortex_adapter: {
         title: 'Palo Alto Networks Cortex',
