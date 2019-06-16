@@ -126,9 +126,6 @@
         selection: { ids: [] }
       }
     },
-    mounted() {
-      this.fetchDataFields({ module: this.module })
-    },
     methods: {
       ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
       ...mapActions({

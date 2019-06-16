@@ -238,8 +238,11 @@
       const updateLifecycle = () => {
         this.fetchLifecycle().then(() => {
           if (this._isDestroyed) return
-          if (!this.isExpired && ((this.researchStatusLocal !== 'done' && this.researchStatus === 'done')
-            || (this.researchStatusLocal === '' && this.researchStatus === 'running'))) {
+          if (this.expired) return
+          if ((this.researchStatusLocal !== '' &&
+                  this.researchStatusLocal !== 'done' &&
+                  this.researchStatus === 'done')
+            || (this.researchStatusLocal === '' && this.researchStatus === 'running')) {
             entities.forEach(entity => {
               if (this.entityRestricted(entity.title)) return
               this.fetchDataFields({ module: entity.name })
