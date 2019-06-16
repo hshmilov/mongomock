@@ -1,6 +1,7 @@
 import json_log_formatter
 from datetime import datetime
 import inspect
+import traceback
 from flask import has_request_context, session
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
@@ -22,6 +23,12 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                 formatted = self.formatException(record.exc_info).split('\n')
                 extra['exc_info'] = "\n".join(formatted[:-1])
                 extra['exception_message'] = formatted[-1]
+                try:
+                    # Sometimes, just the stack trace isn't enough, since the message is generated in a try/except
+                    # which we have no idea how we got into. so we print the full call stack
+                    extra['full_callstack'] = ''.join(traceback.format_stack())
+                except Exception:
+                    pass
             extra[PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
             current_time = datetime.utcfromtimestamp(record.created)
             extra['@timestamp'] = current_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'

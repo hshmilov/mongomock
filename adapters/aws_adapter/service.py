@@ -1,3 +1,4 @@
+import itertools
 import logging
 import os
 import re
@@ -8,7 +9,7 @@ import functools
 import datetime
 import socket
 from enum import Enum, auto
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import boto3
 import kubernetes
@@ -231,11 +232,13 @@ class AWSLoadBalancer(SmartJsonClass):
     dns = Field(str, 'DNS')
     scheme = Field(str, 'Scheme', enum=['internet-facing', 'internal'])
     type = Field(str, 'Type', enum=['classic', 'network', 'application'])
+    subnets = ListField(str, 'Subnets')
     lb_protocol = Field(str, 'LB Protocol')
     instance_protocol = Field(str, 'Instance Protocol')
     lb_port = Field(int, 'LB Port')
     instance_port = Field(int, 'Instance Port')
-    ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    ips = ListField(str, 'External IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    last_ip_by_dns_query = Field(str, 'Last IP by DNS Query', converter=format_ip, json_format=JsonStringFormat.ip)
 
 
 class SSMComplianceSummary(SmartJsonClass):
@@ -286,8 +289,8 @@ class AwsAdapter(AdapterBase, Configurable):
         aws_availability_zone = Field(str, 'Availability Zone')
         aws_device_type = Field(
             str,
-            'Device Type (EC2/ECS/EKS/Managed/NAT)',
-            enum=['EC2', 'ECS', 'EKS', 'Managed', 'NAT']
+            'Device Type (EC2/ECS/EKS/ELB/Managed/NAT)',
+            enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT']
         )
         security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
@@ -314,10 +317,6 @@ class AwsAdapter(AdapterBase, Configurable):
 
         # SSM specific fields
         ssm_data = Field(SSMInfo, 'SSM Information')
-
-        # ELB specific fields
-        elb_last_public_ip_address = Field(
-            str, 'ELB Last Public Ip Address', converter=format_ip, json_format=JsonStringFormat.ip)
 
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
@@ -1127,6 +1126,7 @@ class AwsAdapter(AdapterBase, Configurable):
         # and one that maps between ip's and a list of load balancers that point to them.
         raw_data['elb_by_iid'] = {}
         raw_data['elb_by_ip'] = {}
+        raw_data['all_elbs'] = []
         if client_data.get('elbv1') is not None and self.__fetch_load_balancers is True:
             try:
                 elbv1_client_data = client_data.get('elbv1')
@@ -1144,10 +1144,26 @@ class AwsAdapter(AdapterBase, Configurable):
 
                         elb_dict['name'] = elb_name
                         elb_dict['type'] = 'classic'    # this is elbv1
-                        if elb_raw.get('DNSName'):
-                            elb_dict['dns'] = elb_raw.get('DNSName')
+                        elb_dns_name = elb_raw.get('DNSName')
+                        if elb_dns_name:
+                            elb_dict['dns'] = elb_dns_name
+                            if self.__parse_elb_ips:
+                                try:
+                                    ip = socket.gethostbyname(elb_dns_name)
+                                    if ip:
+                                        elb_dict['last_ip_by_dns_query'] = ip
+                                except Exception:
+                                    logger.exception(f'Could not parse ELB ip for dns {elb_dict}')
                         if elb_raw.get('Scheme'):
                             elb_dict['scheme'] = elb_raw.get('Scheme').lower()
+                        if elb_raw.get('Subnets'):
+                            elb_dict['subnets'] = elb_raw.get('Subnets')
+                        if elb_raw.get('VPCId'):
+                            elb_dict['vpcid'] = elb_raw.get('VPCId')
+                        if elb_raw.get('SecurityGroups'):
+                            elb_dict['security_groups'] = elb_raw.get('SecurityGroups')
+
+                        raw_data['all_elbs'].append(elb_dict)
 
                         # Get the listeners, i.e. source and dest port
                         for listener_raw in (elb_raw.get('ListenerDescriptions') or []):
@@ -1201,20 +1217,36 @@ class AwsAdapter(AdapterBase, Configurable):
                         elbv2_data = dict()
                         if elbv2_raw_data.get('LoadBalancerName'):
                             elbv2_data['name'] = elbv2_raw_data.get('LoadBalancerName')
-                        if elbv2_raw_data.get('DNSName'):
-                            elbv2_data['dns'] = elbv2_raw_data.get('DNSName')
+                        elb_dns_name = elbv2_raw_data.get('DNSName')
+                        if elb_dns_name:
+                            elbv2_data['dns'] = elb_dns_name
+                            if self.__parse_elb_ips:
+                                try:
+                                    ip = socket.gethostbyname(elb_dns_name)
+                                    if ip:
+                                        elbv2_data['last_ip_by_dns_query'] = ip
+                                except Exception:
+                                    logger.exception(f'Could not parse ELB ip for dns {elb_dns_name}')
                         if elbv2_raw_data.get('Scheme'):
                             elbv2_data['scheme'] = elbv2_raw_data.get('Scheme').lower()
                         if elbv2_raw_data.get('Type'):
                             elbv2_data['type'] = elbv2_raw_data.get('Type').lower()
+                        if elbv2_raw_data.get('VpcId'):
+                            elbv2_data['vpcid'] = elbv2_raw_data.get('VpcId')
+                        if elbv2_raw_data.get('SecurityGroups'):
+                            elbv2_raw_data['security_groups'] = elbv2_raw_data.get('SecurityGroups')
+                        elbv2_data['subnets'] = []
                         ip_addresses = []
                         for az_raw in elbv2_raw_data.get('AvailabilityZones') or []:
+                            if az_raw.get('SubnetId'):
+                                elbv2_data['subnets'].append(az_raw.get('SubnetId'))
                             for lba_raw in az_raw.get('LoadBalancerAddresses') or []:
                                 if lba_raw.get('IpAddress'):
                                     ip_addresses.append(lba_raw.get('IpAddress'))
                         if ip_addresses:
                             elbv2_data['ips'] = ip_addresses
                         all_elbv2_lbs_by_arn[elbv2_arn] = elbv2_data
+                        raw_data['all_elbs'].append(elbv2_data)
 
                 logger.debug(f'ELBV2: Found {len(all_elbv2_lbs_by_arn)} elbs. Moving to target groups')
                 tg_count = 0
@@ -1375,6 +1407,84 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem parsing data from source {aws_source}')
 
+    @staticmethod
+    def __make_ip_rules_list(ip_pemissions_list):
+        ip_rules = []
+        if not isinstance(ip_pemissions_list, list):
+            return None
+        for ip_pemission in ip_pemissions_list:
+            if not isinstance(ip_pemission, dict):
+                continue
+            from_port = int(ip_pemission.get('FromPort')) \
+                if ip_pemission.get('FromPort') is not None else None
+            to_port = int(ip_pemission.get('ToPort')) \
+                if ip_pemission.get('ToPort') is not None else None
+            ip_protocol = str(ip_pemission.get('IpProtocol')) \
+                if ip_pemission.get('IpProtocol') else None
+            if ip_protocol == '-1':
+                ip_protocol = 'Any'
+            ip_ranges_raw = ip_pemission.get('IpRanges') or []
+            ip_ranges_raw_v6 = ip_pemission.get('Ipv6Ranges') or []
+            ip_ranges_raw += ip_ranges_raw_v6
+            ip_ranges = []
+            for ip_range_raw in ip_ranges_raw:
+                ip_ranges.append((ip_range_raw.get('CidrIp') or '') +
+                                 (ip_range_raw.get('CidrIpv6') or '') +
+                                 '_Description:' + (ip_range_raw.get('Description') or ''))
+            ip_rules.append(AWSIPRule(from_port=from_port,
+                                      to_port=to_port,
+                                      ip_protocol=ip_protocol,
+                                      ip_ranges=ip_ranges))
+        return ip_rules
+
+    @staticmethod
+    def __add_generic_firewall_rules(device: MyDeviceAdapter, group_name: str, source: str,
+                                     direction: str, rule_list: List[AWSIPRule]):
+        for rule in rule_list:
+            try:
+                from_port = rule.from_port
+            except Exception:
+                from_port = None
+
+            try:
+                to_port = rule.to_port
+            except Exception:
+                to_port = None
+
+            try:
+                protocol = rule.ip_protocol
+            except Exception:
+                protocol = None
+
+            try:
+                targets = []
+                raw_targets = rule.ip_ranges
+                for raw_target in raw_targets:
+                    if '_Description:' in raw_target:
+                        cidr, desc = raw_target.split('_Description:')
+                        final_string = cidr
+                        if desc:
+                            final_string += f' ({desc})'
+
+                        targets.append(final_string)
+                    else:
+                        targets.append(raw_target)
+            except Exception:
+                logger.exception('Problem parsing raw targets')
+                targets = []
+
+            for target in targets:
+                device.add_firewall_rule(
+                    name=group_name,
+                    source=source,
+                    type='Allow',
+                    direction=direction,
+                    target=target,
+                    protocol=protocol,
+                    from_port=from_port,
+                    to_port=to_port
+                )
+
     def _parse_raw_data_inner_regular(self, devices_raw_data, aws_source):
         aws_region = devices_raw_data.get('region')
         account_tag = devices_raw_data.get('account_tag')
@@ -1384,6 +1494,7 @@ class AwsAdapter(AdapterBase, Configurable):
         instance_profiles_dict = devices_raw_data.get('instance_profiles') or {}
         elb_by_ip = devices_raw_data.get('elb_by_ip') or {}
         elb_by_iid = devices_raw_data.get('elb_by_iid') or {}
+        all_elbs = devices_raw_data.get('all_elbs') or []
         nat_gateways = devices_raw_data.get('nat') or {}
 
         ec2_id_to_ips = dict()
@@ -1426,40 +1537,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     except Exception:
                         logger.exception(f'Problem getting monitoring state for {device_raw}')
                     try:
-                        for security_group in device_raw.get('SecurityGroups'):
-                            def __make_ip_rules_list(ip_pemissions_list):
-                                ip_rules = []
-                                if not isinstance(ip_pemissions_list, list):
-                                    return None
-                                for ip_pemission in ip_pemissions_list:
-                                    if not isinstance(ip_pemission, dict):
-                                        continue
-                                    from_port = int(ip_pemission.get('FromPort')) \
-                                        if ip_pemission.get('FromPort') is not None else None
-                                    to_port = int(ip_pemission.get('ToPort')) \
-                                        if ip_pemission.get('ToPort') is not None else None
-                                    ip_protocol = str(ip_pemission.get('IpProtocol')) \
-                                        if ip_pemission.get('IpProtocol') else None
-                                    if ip_protocol == '-1':
-                                        ip_protocol = 'Any'
-                                    ip_ranges_raw = ip_pemission.get('IpRanges') or []
-                                    ip_ranges_raw_v6 = ip_pemission.get('Ipv6Ranges') or []
-                                    ip_ranges_raw += ip_ranges_raw_v6
-                                    ip_ranges = []
-                                    for ip_range_raw in ip_ranges_raw:
-                                        ip_ranges.append((ip_range_raw.get('CidrIp') or '') +
-                                                         (ip_range_raw.get('CidrIpv6') or '') +
-                                                         '_Description:' + (ip_range_raw.get('Description') or ''))
-                                    ip_rules.append(AWSIPRule(from_port=from_port,
-                                                              to_port=to_port,
-                                                              ip_protocol=ip_protocol,
-                                                              ip_ranges=ip_ranges))
-                                return ip_rules
-
+                        for security_group in (device_raw.get('SecurityGroups') or []):
                             security_group_raw = security_group_dict.get(security_group.get('GroupId'))
                             if security_group_raw and isinstance(security_group_raw, dict):
-                                outbound_rules = __make_ip_rules_list(security_group_raw.get('IpPermissionsEgress'))
-                                inbound_rules = __make_ip_rules_list(security_group_raw.get('IpPermissions'))
+                                outbound_rules = self.__make_ip_rules_list(
+                                    security_group_raw.get('IpPermissionsEgress'))
+                                inbound_rules = self.__make_ip_rules_list(security_group_raw.get('IpPermissions'))
                                 device.add_aws_security_group(name=security_group.get('GroupName'),
                                                               outbound=outbound_rules,
                                                               inbound=inbound_rules)
@@ -1467,50 +1550,13 @@ class AwsAdapter(AdapterBase, Configurable):
                                 try:
                                     all_rules_lists = [(outbound_rules, 'EGRESS'), (inbound_rules, 'INGRESS')]
                                     for rule_list, direction in all_rules_lists:
-                                        for rule in rule_list:
-                                            try:
-                                                from_port = rule.from_port
-                                            except Exception:
-                                                from_port = None
-
-                                            try:
-                                                to_port = rule.to_port
-                                            except Exception:
-                                                to_port = None
-
-                                            try:
-                                                protocol = rule.ip_protocol
-                                            except Exception:
-                                                protocol = None
-
-                                            try:
-                                                targets = []
-                                                raw_targets = rule.ip_ranges
-                                                for raw_target in raw_targets:
-                                                    if '_Description:' in raw_target:
-                                                        cidr, desc = raw_target.split('_Description:')
-                                                        final_string = cidr
-                                                        if desc:
-                                                            final_string += f' ({desc})'
-
-                                                        targets.append(final_string)
-                                                    else:
-                                                        targets.append(raw_target)
-                                            except Exception:
-                                                logger.exception('Problem parsing raw targets')
-                                                targets = []
-
-                                            for target in targets:
-                                                device.add_firewall_rule(
-                                                    name=security_group_raw.get('GroupName'),
-                                                    source='AWS Instance Security Group',
-                                                    type='Allow',
-                                                    direction=direction,
-                                                    target=target,
-                                                    protocol=protocol,
-                                                    from_port=from_port,
-                                                    to_port=to_port
-                                                )
+                                        self.__add_generic_firewall_rules(
+                                            device,
+                                            security_group_raw.get('GroupName'),
+                                            'AWS Instance Security Group',
+                                            direction,
+                                            rule_list
+                                        )
                                 except Exception:
                                     logger.exception(f'Could not add generic firewall rules')
                             else:
@@ -1662,22 +1708,9 @@ class AwsAdapter(AdapterBase, Configurable):
                                     lb_port=lb_raw.get('lb_port'),
                                     instance_protocol=lb_raw.get('instance_protocol'),
                                     instance_port=lb_raw.get('instance_port'),
-                                    ips=ips
+                                    ips=ips,
+                                    last_ip_by_dns_query=lb_raw.get('last_ip_by_dns_query')
                                 )
-                                if ips:
-                                    device.add_nic(ips=ips)
-                                    if lb_scheme == 'internet-facing':
-                                        for ip_elb in ips:
-                                            device.add_public_ip(ip_elb)
-
-                                if self.__parse_elb_ips:
-                                    try:
-                                        ip = socket.gethostbyname(elb_dns)
-                                        if ip:
-                                            device.add_nic(name='ELB', ips=[ip])
-                                            device.elb_last_public_ip_address = ip
-                                    except Exception:
-                                        logger.exception(f'Could not parse ELB ip for dns {elb_dns}')
                             except Exception:
                                 logger.exception(f'Error parsing lb: {lb_raw}')
                     except Exception:
@@ -1978,22 +2011,9 @@ class AwsAdapter(AdapterBase, Configurable):
                                                     lb_port=lb_raw.get('lb_port'),
                                                     instance_protocol=lb_raw.get('instance_protocol'),
                                                     instance_port=lb_raw.get('instance_port'),
-                                                    ips=ips
+                                                    ips=ips,
+                                                    last_ip_by_dns_query=lb_raw.get('last_ip_by_dns_query')
                                                 )
-                                                if ips:
-                                                    device.add_nic(ips=ips)
-                                                    if lb_scheme == 'internet-facing':
-                                                        for ip_elb in ips:
-                                                            device.add_public_ip(ip_elb)
-
-                                                if self.__parse_elb_ips:
-                                                    try:
-                                                        ip = socket.gethostbyname(elb_dns)
-                                                        if ip:
-                                                            device.add_nic(name='ELB', ips=[ip])
-                                                            device.elb_last_public_ip_address = ip
-                                                    except Exception:
-                                                        logger.exception(f'Could not parse ELB ip for dns {elb_dns}')
                                     except Exception:
                                         logger.exception(f'Error parsing lb for Fargate: {lb_raw}')
                             except Exception:
@@ -2069,6 +2089,71 @@ class AwsAdapter(AdapterBase, Configurable):
                     yield device
         except Exception:
             logger.exception(f'Problem parsing nat gateways')
+
+        # Parse ELB's
+        try:
+            for elb_raw in all_elbs:
+                device = self._new_device_adapter()
+                device.id = elb_raw['name']
+                device.name = elb_raw['name']
+                device.aws_device_type = 'ELB'
+                ips = elb_raw.get('ips') or []
+                last_ip_by_dns_query = elb_raw.get('last_ip_by_dns_query')
+                lb_scheme = elb_raw.get('scheme')
+                elb_dns = elb_raw.get('dns')
+                subnets = []
+                for subnet_id in (elb_raw.get('subnets') or []):
+                    subnet_name = (subnets_by_id.get(subnet_id) or {}).get('name')
+                    if subnet_name:
+                        subnets.append(f'{subnet_id} ({subnet_name})')
+                    else:
+                        subnets.append(subnet_id)
+                device.add_aws_load_balancer(
+                    name=elb_raw.get('name'),
+                    dns=elb_dns,
+                    scheme=lb_scheme,
+                    type=elb_raw.get('type'),
+                    ips=ips,
+                    last_ip_by_dns_query=last_ip_by_dns_query,
+                    subnets=subnets
+                )
+                device.vpc_id = elb_raw.get('vpcid')
+                device.vpc_name = vpcs_by_id.get(elb_raw.get('vpcid'))
+                if last_ip_by_dns_query:
+                    ips.append(last_ip_by_dns_query)
+
+                device.add_nic(ips=ips)
+
+                try:
+                    for security_group in (elb_raw.get('security_groups') or []):
+                        security_group_raw = security_group_dict.get(security_group)
+                        if security_group_raw and isinstance(security_group_raw, dict):
+                            outbound_rules = self.__make_ip_rules_list(security_group_raw.get('IpPermissionsEgress'))
+                            inbound_rules = self.__make_ip_rules_list(security_group_raw.get('IpPermissions'))
+                            device.add_aws_security_group(name=security_group_raw.get('GroupName'),
+                                                          outbound=outbound_rules,
+                                                          inbound=inbound_rules)
+
+                            try:
+                                all_rules_lists = [(outbound_rules, 'EGRESS'), (inbound_rules, 'INGRESS')]
+                                for rule_list, direction in all_rules_lists:
+                                    self.__add_generic_firewall_rules(
+                                        device,
+                                        security_group_raw.get('GroupName'),
+                                        'AWS ELB Security Group',
+                                        direction,
+                                        rule_list
+                                    )
+                            except Exception:
+                                logger.exception(f'Could not add generic firewall rules')
+                        else:
+                            device.add_aws_security_group(name=security_group_raw.get('GroupName'))
+                except Exception:
+                    logger.exception(f'Problem getting security groups at {device_raw}')
+                device.set_raw(elb_raw)
+                yield device
+        except Exception:
+            logger.exception(f'Failure adding ELBs')
 
     def _parse_raw_data_inner_ssm(self, device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict]], aws_source):
 
