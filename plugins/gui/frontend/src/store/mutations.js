@@ -343,4 +343,15 @@ export const updateCustomData = (state, payload) => {
 	}
 }
 
+export const SHOW_TOASTER_MESSAGE = 'SHOW_TOASTER_MESSAGE'
+export const showToasterMessage = ( state, { message, timeout }) => {
+	state.toast.message = message
+	if(timeout !== undefined) {
+		state.toast.timeout = timeout
+	}
+}
 
+export const REMOVE_TOASTER = 'REMOVE_TOASTER'
+export const removeToaster = (state) => {
+	state.toast.message = ''
+}

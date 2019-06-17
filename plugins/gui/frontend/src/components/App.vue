@@ -12,6 +12,11 @@
             <router-view/>
             <x-top-bar class="print-exclude" @access-violation="notifyAccess" />
             <x-tour-state />
+            <x-toast
+                    v-if="toastMessage"
+                    :timeout="toastData.toastTimeout"
+                    v-model="toastMessage"
+            />
             <x-access-modal v-model="blockedComponent" />
         </template>
         <template v-else>
@@ -26,11 +31,13 @@
     import xLogin from './networks/system/Login.vue'
 	import xTourState from './networks/onboard/TourState.vue'
     import xAccessModal from './neurons/popover/AccessModal.vue'
+    import xToast from './axons/popover/Toast.vue'
     import {GET_USER} from '../store/modules/auth'
     import {IS_EXPIRED} from '../store/getters'
     import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG, FETCH_SYSTEM_EXPIRED} from '../store/actions'
     import {FETCH_CONSTANTS} from '../store/modules/constants'
-    import {UPDATE_WINDOW_WIDTH} from '../store/mutations'
+    import {UPDATE_WINDOW_WIDTH, SHOW_TOASTER_MESSAGE} from '../store/mutations'
+
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { entities } from '../constants/entities'
 
@@ -40,7 +47,12 @@
 	export default {
         name: 'app',
         components: {
-            xLogin, xTopBar, xSideBar, xTourState, xAccessModal
+            xLogin, xTopBar, xSideBar, xTourState, xAccessModal, xToast
+        },
+        data() {
+            return {
+                blockedComponent: ''
+            }
         },
         computed: {
             ...mapState({
@@ -52,17 +64,24 @@
                 },
                 userPermissions(state) {
                     return state.auth.currentUser.data.permissions
+                },
+                toastData(state) {
+                    return state.toast
                 }
             }),
             ...mapGetters({
                 isExpired: IS_EXPIRED
-            })
+            }),
+            toastMessage: {
+                get() {
+                    return this.toastData.message;
+                },
+                set(value){
+                    this.showToasterMessage(value)
+                }
+            }
+
 		},
-        data() {
-             return {
-                 blockedComponent: ''
-             }
-        },
         watch: {
         	userName(newUserName) {
                 if (newUserName) {
@@ -73,7 +92,7 @@
             }
         },
         methods: {
-            ...mapMutations({ updateWindowWidth: UPDATE_WINDOW_WIDTH }),
+            ...mapMutations({ updateWindowWidth: UPDATE_WINDOW_WIDTH, showToasterMessage: SHOW_TOASTER_MESSAGE }),
             ...mapActions({
                 getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchExpired: FETCH_SYSTEM_EXPIRED,
                 fetchConstants: FETCH_CONSTANTS, fetchDataFields: FETCH_DATA_FIELDS,

@@ -186,12 +186,6 @@
         </div>
       </div>
     </x-box>
-    <x-toast
-      v-if="message"
-      :value="message"
-      :timeout="toastTimeout"
-      @done="removeToast"
-    />
   </x-page>
 </template>
 
@@ -205,9 +199,9 @@
   import xSelect from '../axons/inputs/Select.vue'
   import viewsMixin from '../../mixins/views'
   import xArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue'
-  import xToast from '../axons/popover/Toast.vue'
   import configMixin from '../../mixins/config'
   import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+  import {SHOW_TOASTER_MESSAGE, REMOVE_TOASTER} from '../../store/mutations'
 
   import { mapState, mapMutations, mapActions } from 'vuex'
   import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
@@ -217,7 +211,7 @@
 
   export default {
     name: 'XReport',
-    components: { xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, xToast, PulseLoader },
+    components: { xPage, xBox, xButton, xSelect, xCheckbox, xSelectSymbol, xArrayEdit, PulseLoader },
     mixins: [viewsMixin, configMixin],
     props: {
       readOnly: Boolean
@@ -240,8 +234,7 @@
         downloading: false,
         queryValidity: false,
         scheduleValidity: false,
-        toastTimeout: 5000,
-        message: null,
+        toastTimeout: 2500,
         validity: {
           fields: [], error: ''
         },
@@ -392,11 +385,13 @@
     },
     methods: {
       ...mapMutations({
-        tour: CHANGE_TOUR_STATE
+        tour: CHANGE_TOUR_STATE, showToasterMessage: SHOW_TOASTER_MESSAGE,
+        removeToaster: REMOVE_TOASTER
       }),
       ...mapActions({
         fetchReport: FETCH_REPORT, saveReport: SAVE_REPORT,
         runReport: RUN_REPORT, downloadReport: DOWNLOAD_REPORT
+
       }),
       initData () {
         if (this.reportData && this.reportData.name) {
@@ -430,7 +425,7 @@
           this.downloading = false
         }).catch((error) => {
           this.downloading = false
-          this.message = error.response.data.message
+          this.showToaster(error.response.data.message, this.toastTimeout)
         })
       },
       onAddScheduling () {
@@ -465,9 +460,9 @@
         this.saveReport(this.report).then(() => {
           setTimeout(() => {
             self.runReport(this.report).then(() => {
-              this.message = 'Email is being sent'
+              this.showToaster('Email is being sent', this.toastTimeout)
               setTimeout(() => {
-                self.message = 'Email sent successfully'
+                this.showToaster('Email sent successfully', this.toastTimeout)
               })
             }).catch((error) => {
               this.validity.error = error.response.data.message
@@ -476,19 +471,17 @@
         })
       },
       saveExit () {
-        this.message = 'Saving the report...'
-        let self = this
+        this.showToaster('Saving the report...', this.toastTimeout)
         this.saveReport(this.report).then(
                 () => {
-                  // self.message = 'Report is saved and being generated in the background'
-                    self.message = ''
-                    self.exit()
+                  this.showToaster('Report is saved and being generated in the background', this.toastTimeout)
+                  this.exit()
                 }
         ).catch((error) => {
           if (error.response.status === 400)
             this.validity.fields.push('name')
           this.validity.error = error.response.data
-          this.message = ''
+          this.removeToaster()
         })
       },
       exit () {
@@ -554,9 +547,6 @@
         })
         this.queryValidity = result
       },
-      removeToast () {
-        this.message = ''
-      },
       onValidate (field) {
         let validityChanged = false
         this.validity.fields = this.validity.fields.filter(x => x.name !== field.name)
@@ -579,6 +569,10 @@
         if (validityChanged) {
           this.$forceUpdate()
         }
+      },
+      showToaster(message, timeout = 2500){
+        this.showToasterMessage({message: message, timeout: timeout})
+
       }
     }
   }

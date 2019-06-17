@@ -240,9 +240,7 @@ class ReportsPage(EntitiesPage):
             self.select_frequency(period)
         self.click_save()
         if wait_for_toaster:
-            # temporary - until there report is saved toaster will be back
-            self.wait_for_table_to_load()
-            self.wait_for_spinner_to_end()
+            self.wait_for_report_is_saved_toaster()
 
     def wait_for_report_is_saved_toaster(self):
         self.wait_for_toaster(self.REPORT_IS_SAVED_TOASTER)

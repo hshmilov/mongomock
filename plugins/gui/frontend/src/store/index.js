@@ -54,7 +54,9 @@ import {
   UPDATE_REMOVED_DATA_NOTE, updateRemovedDataNote,
   UPDATE_SYSTEM_CONFIG, updateSystemConfig,
   UPDATE_SYSTEM_EXPIRED, updateSystemExpired,
-  UPDATE_CUSTOM_DATA, updateCustomData
+  UPDATE_CUSTOM_DATA, updateCustomData,
+  SHOW_TOASTER_MESSAGE, showToasterMessage,
+  REMOVE_TOASTER, removeToaster
 } from './mutations'
 import {
   GET_DATA_FIELDS_BY_PLUGIN, getDataFieldsByPlugin,
@@ -93,7 +95,8 @@ export default new Vuex.Store({
     },
     configuration: { fetching: false, data: null, error: '' },
     staticConfiguration: { medicalConfig: ENV.medical },
-    expired: { fetching: false, data: false, error: '' }
+    expired: { fetching: false, data: false, error: '' },
+    toast: { message: '', timeout: 3000 }
   },
   getters: {
     [GET_DATA_FIELDS_BY_PLUGIN]: getDataFieldsByPlugin,
@@ -128,7 +131,9 @@ export default new Vuex.Store({
     [UPDATE_REMOVED_DATA_NOTE]: updateRemovedDataNote,
     [UPDATE_SYSTEM_CONFIG]: updateSystemConfig,
     [UPDATE_SYSTEM_EXPIRED]: updateSystemExpired,
-    [UPDATE_CUSTOM_DATA]: updateCustomData
+    [UPDATE_CUSTOM_DATA]: updateCustomData,
+    [SHOW_TOASTER_MESSAGE]: showToasterMessage,
+    [REMOVE_TOASTER]: removeToaster
   },
   actions: {
     [REQUEST_API]: requestApi,

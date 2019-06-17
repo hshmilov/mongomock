@@ -43,12 +43,16 @@
       value () {
         this.left = ''
         clearTimeout(this.timer)
-        this.timer = setTimeout(() => this.$emit('input', ''), this.timeout)
+        this.timer = setTimeout(() => {
+          this.clearToast()
+        }, this.timeout)
       }
     },
     mounted () {
       if (this.timed) {
-        this.timer = setTimeout(() => this.$emit('input', ''), this.timeout)
+        this.timer = setTimeout(() => {
+          this.clearToast()
+        }, this.timeout)
       }
       this.left = this.getLeftPos()
     },
@@ -60,6 +64,9 @@
     methods: {
       getLeftPos () {
         return `calc(50vw - ${this.$el.offsetWidth / 2}px)`
+      },
+      clearToast( ){
+          this.$emit('input', '')
       }
     }
   }
