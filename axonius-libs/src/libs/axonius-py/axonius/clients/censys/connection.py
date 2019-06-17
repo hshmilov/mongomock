@@ -90,10 +90,10 @@ class CensysConnection(RESTConnection):
         elif self.search_type == 'websites':
             result_id_key = 'domain'
         else:
-            logger.info(f'Error querying devices due to invalid search_type {self.search_type}')
+            logger.error(f'Error querying devices due to invalid search_type {self.search_type}')
 
         for result in search_results:
             try:
                 yield self._get_view_details(result.get(result_id_key))
             except Exception:
-                logger.info(f'Problem getting information for search result: {result}')
+                logger.exception(f'Problem getting information for search result: {result}')

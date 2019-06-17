@@ -79,7 +79,8 @@ class CensysAdapter(ScannerAdapterBase):
         try:
             # Credential check is done automatically via _connect in connection.py
             with CensysConnection(username=client_config['api_id'], password=client_config['api_secret'],
-                                  domain_preferred=client_config.get('domain'), free_tier=client_config['free_tier'],
+                                  domain_preferred=client_config.get('domain'),
+                                  free_tier=not client_config.get('is_paid_tier'),
                                   search_type=client_config['search_type'],
                                   https_proxy=client_config.get('https_proxy'),) as connection:
 
@@ -127,8 +128,8 @@ class CensysAdapter(ScannerAdapterBase):
                     'default': 'censys.io'
                 },
                 {
-                    'name': 'free_tier',
-                    'title': 'Free Tier',
+                    'name': 'is_paid_tier',
+                    'title': 'Is Paid Tier',
                     'type': 'bool'
                 },
                 {
@@ -165,7 +166,7 @@ class CensysAdapter(ScannerAdapterBase):
                 'api_secret',
                 'search_type',
                 'search_query',
-                'free_tier'
+                'is_paid_tier'
             ],
             'type': 'array'
         }
@@ -194,6 +195,7 @@ class CensysAdapter(ScannerAdapterBase):
 
             if ipv4_ip:
                 device.name = ipv4_ip
+                device.add_nic(ips=[ipv4_ip])
                 device.add_public_ip(ipv4_ip)
                 device.location = CensysLocation(
                     continent=device_raw.get('location').get('continent'),
