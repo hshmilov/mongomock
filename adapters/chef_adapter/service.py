@@ -163,7 +163,7 @@ class ChefAdapter(AdapterBase):
                 except Exception as e:
                     logger.warning(f"Problem with adding software on chef pachages to Chef client {e}")
                 dmi = device_raw_automatic.get('dmi') or {}
-                systeminfo = dmi.get('system')
+                systeminfo = dmi.get('system') or {}
                 device.device_manufacturer = systeminfo.get('manufacturer')
                 device.device_model = systeminfo.get('product_name')
                 device.device_model_family = systeminfo.get('family')
