@@ -117,12 +117,6 @@ SPECIFIC_DATA = 'specific_data'
 ADAPTERS_DATA = 'adapters_data'
 PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 
-######################
-# reports consts     #
-######################
-
-REPORTS_DELETED = 'reports_deleted'
-
 
 class FeatureFlagsNames:
     TrialEnd = 'trial_end'

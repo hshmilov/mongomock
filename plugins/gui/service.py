@@ -50,7 +50,7 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        PREDEFINED_ROLE_READONLY,
                                        PREDEFINED_ROLE_RESTRICTED,
                                        PROXY_ERROR_MESSAGE, RANGE_UNIT_DAYS,
-                                       REPORTS_DELETED, ROLES_COLLECTION,
+                                       ROLES_COLLECTION,
                                        SIGNUP_TEST_COMPANY_NAME,
                                        SIGNUP_TEST_CREDS, SPECIFIC_DATA,
                                        TEMP_MAINTENANCE_THREAD_ID,
@@ -398,9 +398,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         # Start exec reports scheduler
         self.exec_report_locks = {}
 
-        self._client_insertion_threadpool = LoggedThreadPoolExecutor(max_workers=20)  # Only for client insertion
+        self._client_insertion_threadpool = LoggedThreadPoolExecutor(max_workers=10)  # Only for client insertion
 
-        self._job_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(1)})
+        self._job_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(20)})
         current_exec_reports_setting = self._get_exec_report_settings(self.reports_config_collection)
         for current_exec_report_setting in current_exec_reports_setting:
             self._schedule_exec_report(current_exec_report_setting)
@@ -574,40 +574,46 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         logger.info(f'Added view {name} id: {result.upserted_id}')
         return result.upserted_id
 
-    def _upsert_report_config(self, name, report, clear_generated_report):
-
-        existed_report = self.reports_config_collection.find_one({'name': name})
-
+    def _upsert_report_config(self, name, report, clear_generated_report) -> ObjectId:
         new_report = {**report}
 
         if clear_generated_report:
             new_report[report_consts.LAST_GENERATED_FIELD] = None
 
-        result = self.reports_config_collection.replace_one({'name': name},
-                                                            new_report, upsert=True)
-        if existed_report is not None and not existed_report.get('archived'):
-            logger.info(f'Updated report {name} id: {result.upserted_id}')
-        else:
-            logger.info(f'Added report {name} id: {result.upserted_id}')
-        return result
+        result = self.reports_config_collection.find_one_and_replace({
+            'name': name,
+            'archived': {
+                '$ne': True
+            }
+        }, replacement=new_report, projection={
+            '_id': True
+        }, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
+        return result['_id']
 
     def _delete_report_configs(self, reports):
         reports_collection = self.reports_config_collection
         reports['ids'] = [ObjectId(id) for id in reports['ids']]
         ids = self.get_selected_ids(reports_collection, reports, {})
         for report_id in ids:
-            existed_report = reports_collection.find_one({'_id': ObjectId(report_id)})
-            if existed_report is None or existed_report.get('archived'):
+            existed_report = reports_collection.find_one_and_delete({
+                'archived': {
+                    '$ne': True
+                },
+                '_id': ObjectId(report_id)
+            }, projection={
+                'name': 1
+            })
+
+            if existed_report is None:
                 logger.info(f'Report with id {report_id} does not exists')
-                return
+                return return_error('Report does not exist')
             name = existed_report['name']
-            reports_collection.delete_one({'name': name, '_id': ObjectId(report_id)})
             exec_report_thread_id = EXEC_REPORT_THREAD_ID.format(name)
             exec_report_job = self._job_scheduler.get_job(exec_report_thread_id)
             if exec_report_job:
-                self._job_scheduler.remove_job(exec_report_job.id)
+                exec_report_job.remove()
             logger.info(f'Deleted report {name} id: {report_id}')
-        return REPORTS_DELETED
+        return ''
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data,
                                 hide_empty=False, space_id=None):
@@ -1769,8 +1775,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return result
 
     def _generate_and_schedule_report(self, report):
-        generateReportThreadPool = LoggedThreadPoolExecutor(max_workers=1)
-        generateReportThreadPool.submit(self._generate_and_save_report, report)
+        run_and_forget(lambda: self._generate_and_save_report(report))
         if report.get('period'):
             self._schedule_exec_report(report)
 
@@ -1804,7 +1809,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             report_to_add['last_updated'] = datetime.now()
             upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
             self._generate_and_schedule_report(report_to_add)
-            report_to_add['uuid'] = str(upsert_result.upserted_id)
+            report_to_add['uuid'] = str(upsert_result)
             return jsonify(report_to_add), 201
 
         # Handle remaining method - DELETE
@@ -1839,11 +1844,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         report_to_update = request.get_json(silent=True)
         report_to_update['last_updated'] = datetime.now()
 
-        response = self._upsert_report_config(report_to_update['name'], report_to_update, True)
+        self._upsert_report_config(report_to_update['name'], report_to_update, True)
         self._generate_and_schedule_report(report_to_update)
-
-        if response is None:
-            return return_error('No response whether report was updated')
 
         return jsonify(report_to_update), 200
 
@@ -4322,32 +4324,40 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                         id=exec_report_generate_pdf_thread_id,
                                         max_instances=1,
                                         coalesce=True)
-            self._job_scheduler.start()
         else:
-            exec_report_generate_pdf_job.modify(next_run_time=datetime.now())
-            self._job_scheduler.reschedule_job(exec_report_generate_pdf_thread_id)
-            self._job_scheduler.start()
+            self._job_scheduler.reschedule_job(exec_report_generate_pdf_thread_id, next_run_time=datetime.now())
 
     def _convert_to_pdf_and_save_report(self, report, report_html, generated_date):
         # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
-        with io.BytesIO() as report_data:
-            report_html.write_pdf(report_data)
-            report_data.seek(0)
-            # Uploads the report to the db and returns a uuid to retrieve it
-            uuid = self._upload_report(report_data, report)
-            logger.info(f'Report was saved to the grif fs db uuid: {uuid}')
-            # Stores the uuid in the db in the "reports" collection
-            name = report['name']
-            filename = 'most_recent_{}'.format(name)
-            self._get_collection('reports').replace_one(
-                {'filename': filename},
-                {'uuid': uuid, 'filename': filename, 'time': datetime.now()}, True
-            )
-            logger.info(f'Report was saved to the mongo db to "reports" collection filename: {filename}')
+        name = report['name']
+        try:
+            with io.BytesIO() as report_data:
+                report_html.write_pdf(report_data)
+                report_data.seek(0)
+                # Uploads the report to the db and returns a uuid to retrieve it
+                uuid = self._upload_report(report_data, report)
+                logger.info(f'Report was saved to the grif fs db uuid: {uuid}')
+                # Stores the uuid in the db in the "reports" collection
 
-            report[report_consts.LAST_GENERATED_FIELD] = generated_date
-            self._upsert_report_config(name, report, False)
-            logger.info(f'Report was saved to the mongo db to "report_configs" collection name: {name}')
+                filename = 'most_recent_{}'.format(name)
+                self._get_collection('reports').replace_one(
+                    {
+                        'filename': filename
+                    },
+                    {
+                        'uuid': uuid,
+                        'filename': filename,
+                        'time': datetime.now()
+                    },
+                    upsert=True
+                )
+                logger.info(f'Report was saved to the mongo db to "reports" collection filename: {filename}')
+
+                report[report_consts.LAST_GENERATED_FIELD] = generated_date
+                self._upsert_report_config(name, report, False)
+                logger.info(f'Report was saved to the mongo db to "report_configs" collection name: {name}')
+        except Exception:
+            logger.exception(f'Exception with report {name}')
 
     def _upload_report(self, report, report_metadata):
         """
@@ -4374,15 +4384,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         report_collection = self._get_collection('reports')
-        if report_collection != None:
-            most_recent_report = report_collection.find_one({'filename': report_name})
-            if most_recent_report != None:
-                uuid = most_recent_report.get('uuid')
-                if uuid != None:
-                    logger.info(f'DELETE: {uuid}')
-                    db_connection = self._get_db_connection()
-                    fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
-                    fs.delete(ObjectId(uuid))
+        most_recent_report = report_collection.find_one({'filename': report_name})
+        if most_recent_report is not None:
+            uuid = most_recent_report.get('uuid')
+            if uuid is not None:
+                logger.info(f'DELETE: {uuid}')
+                fs = gridfs.GridFS(self._get_db_connection()[GUI_PLUGIN_NAME])
+                fs.delete(ObjectId(uuid))
 
     @gui_add_rule_logged_in('export_report/<report_name>', required_permissions={Permission(PermissionType.Dashboard,
                                                                                             PermissionLevel.ReadOnly)})
