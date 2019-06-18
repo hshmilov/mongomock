@@ -335,7 +335,5 @@ class TestDashboard(TestBase):
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=READ_ONLY_USERNAME, password=NEW_PASSWORD)
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.find_space_header(2).click()
-        assert self.dashboard_page.is_missing_panel(self.PERSONAL_SPACE_PANEL_NAME)
-        self.dashboard_page.assert_plus_button_disabled_in_card(self.dashboard_page.find_new_chart_card())
+        assert self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_missing_add_space()

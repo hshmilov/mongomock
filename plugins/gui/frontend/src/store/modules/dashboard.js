@@ -24,6 +24,8 @@ export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
 export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE'
 export const UPDATE_DASHBOARD_FIRST_USE = 'UPDATE_DASHBOARD_FIRST_USE'
 
+export const SET_CURRENT_SPACE = 'SET_CURRENT_SPACE'
+
 export const dashboard = {
 	state: {
 		lifecycle: { data: {}, fetching: false, error: '' },
@@ -32,6 +34,7 @@ export const dashboard = {
 			users: {data: {}, fetching: false, error: '' }
 		},
 		spaces: { data: [], fetching: false, error: '' },
+		currentSpace: '',
 		firstUse: { data: null, fetching: false, error: '' }
 	},
 	mutations: {
@@ -89,6 +92,8 @@ export const dashboard = {
 			if (payload.data !== undefined) {
 				state.firstUse.data = payload.data
 			}
+		}, [ SET_CURRENT_SPACE ] (state, spaceId) {
+			state.currentSpace = spaceId
 		}
 	},
 	actions: {

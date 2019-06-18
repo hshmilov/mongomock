@@ -111,6 +111,11 @@
     created () {
       this.tabs = this.$children
     },
+    mounted () {
+      if (this.$route.hash) {
+        this.selectTab(this.$route.hash.slice(1))
+      }
+    },
     updated () {
       this.$emit('updated')
     },

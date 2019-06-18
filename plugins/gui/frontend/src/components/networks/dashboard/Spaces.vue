@@ -7,12 +7,13 @@
       @add="addNewSpace"
       @rename="renameSpace"
       @remove="removeSpace"
+      @click="selectSpace"
       ref="tabs"
     >
       <x-tab
         :id="defaultSpace.uuid"
         :title="defaultSpace.name"
-        :selected="true"
+        :selected="currentSpace === defaultSpace.uuid"
         :editable="!isReadOnly"
       >
         <x-default-space
@@ -23,8 +24,10 @@
         />
       </x-tab>
       <x-tab
+        v-if="!isReadOnly"
         :id="personalSpace.uuid"
         :title="personalSpace.name"
+        :selected="currentSpace === personalSpace.uuid"
       >
         <x-panels
           slot-scope="{ active }"
@@ -38,6 +41,7 @@
         :id="space.uuid"
         :key="space.uuid"
         :title="space.name"
+        :selected="currentSpace === space.uuid"
         :editable="!isReadOnly"
         :removable="!isReadOnly"
       >
@@ -69,9 +73,10 @@
   import xPanels from './Panels.vue'
   import xWizard from '../../networks/dashboard/Wizard.vue'
 
-  import {mapState, mapActions} from 'vuex'
+  import {mapState, mapMutations, mapActions} from 'vuex'
   import {
-    SAVE_DASHBOARD_SPACE, CHANGE_DASHBOARD_SPACE, REMOVE_DASHBOARD_SPACE
+    SAVE_DASHBOARD_SPACE, CHANGE_DASHBOARD_SPACE, REMOVE_DASHBOARD_SPACE,
+    SET_CURRENT_SPACE
   } from '../../../store/modules/dashboard'
 
   export default {
@@ -100,6 +105,9 @@
           let user = state.auth.currentUser.data
           if (!user || !user.permissions) return true
           return user.permissions.Dashboard === 'ReadOnly'
+        },
+        currentSpace (state) {
+          return state.dashboard.currentSpace || this.defaultSpace.uuid
         }
       }),
       defaultSpace() {
@@ -122,6 +130,9 @@
       }
     },
     methods: {
+      ...mapMutations({
+        selectSpace: SET_CURRENT_SPACE
+      }),
       ...mapActions({
         saveSpace: SAVE_DASHBOARD_SPACE,
         renameSpace: CHANGE_DASHBOARD_SPACE,

@@ -229,11 +229,6 @@
         }
       })
     },
-    mounted () {
-      if (this.$route.hash) {
-        this.$refs.tabs.selectTab(this.$route.hash.slice(1))
-      }
-    },
     methods: {
       ...mapMutations({
         changePluginConfig: CHANGE_PLUGIN_CONFIG,
