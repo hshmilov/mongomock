@@ -61,7 +61,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                 return connection, cidr_list
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                client_config['domain'], str(e))
+                client_config.get('domain'), str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 

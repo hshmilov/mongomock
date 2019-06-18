@@ -33,15 +33,20 @@ class SendCsvToS3(ActionTypeAlert):
                     'format': 'password'
                 },
                 {
+                    'name': 'use_attached_iam_role',
+                    'title': 'Use attached IAM role',
+                    'description': 'Use the IAM role attached to this instance instead of using the credentials',
+                    'type': 'bool'
+                },
+                {
                     'name': 's3_bucket',
                     'title': 'S3 Bucket',
                     'type': 'string',
-                },
+                }
             ],
             'required': [
-                'access_key_id',
-                'secret_access_key',
-                's3_bucket'
+                's3_bucket',
+                'use_attached_iam_role',
             ],
             'type': 'array'
         }
@@ -51,7 +56,8 @@ class SendCsvToS3(ActionTypeAlert):
         return {
             'access_key_id': None,
             'secret_access_key': None,
-            's3_bucket': None
+            's3_bucket': None,
+            'use_attached_iam_role': False
         }
 
     def _run(self) -> AlertActionResult:
@@ -76,11 +82,15 @@ class SendCsvToS3(ActionTypeAlert):
 
             csv_data = io.BytesIO(csv_string.getvalue().encode('utf-8'))
 
+            aws_access_key_id = None if self._config.get('use_attached_iam_role') else \
+                self._config.get('access_key_id')
+            aws_secret_access_key = None if self._config.get('use_attached_iam_role') else \
+                self._config.get('secret_access_key')
             # Write to s3
             s3_client = boto3.client(
                 's3',
-                aws_access_key_id=self._config.get('access_key_id'),
-                aws_secret_access_key=self._config.get('secret_access_key')
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key
             )
             csv_name = 'axonius_csv_' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(' ', '-') + '.csv'
             s3_client.upload_fileobj(csv_data, self._config.get('s3_bucket'), csv_name)
