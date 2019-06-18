@@ -314,6 +314,9 @@ a {
 .card .legend .no-list-type span{
     color: #ADADAD;;
 }
+.card .legend .rest {
+    list-style-type: none;
+}
 .card .legend .multi-colored{
     list-style-type: none;
 }
