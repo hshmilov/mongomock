@@ -205,12 +205,14 @@
         return this.data.map(item => item[this.idField])
       },
       pageData () {
-        let pageId = 0
-        this.pageLinkNumbers.forEach((number, index) => {
-          if (number === this.view.page) {
-            pageId = index
-          }
-        })
+        let pageId = this.view.page
+        if (!this.staticData) {
+          this.pageLinkNumbers.forEach((number, index) => {
+            if (number === this.view.page) {
+              pageId = index
+            }
+          })
+        }
         return this.data.slice(pageId * this.view.pageSize, (pageId + 1) * this.view.pageSize)
       },
       pageIds () {
