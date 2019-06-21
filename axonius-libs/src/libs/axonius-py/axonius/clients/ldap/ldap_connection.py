@@ -73,10 +73,11 @@ def connect_to_server(
     logger.info(f'Connecting to server {server_address}, port is {str(port)} and ssl state is {str(use_ssl)}')
     if use_ssl != SSLState.Unencrypted:
         validation = ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE
+        is_verified = (use_ssl == SSLState.Verified)
         tls = ldap3.Tls(
-            local_private_key_file=private_key_file.name if private_key_file else None,
-            local_certificate_file=cert_file.name if cert_file else None,
-            ca_certs_file=ca_file.name if ca_file else None,
+            local_private_key_file=private_key_file.name if (private_key_file and is_verified) else None,
+            local_certificate_file=cert_file.name if (cert_file and is_verified) else None,
+            ca_certs_file=ca_file.name if (ca_file and is_verified) else None,
             validate=validation)
         ldap_server = ldap3.Server(
             server_address, connect_timeout=ldap_connection_timeout, use_ssl=True, tls=tls, port=port
