@@ -7,15 +7,12 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PL
     AXONIUS_SETTINGS_DIR_NAME
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
+from services.updatable_service import UpdatablePluginMixin
 
 
-class CoreService(PluginService):
+class CoreService(PluginService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('core')
-
-    @property
-    def get_max_uwsgi_threads(self) -> int:
-        return 1500  # core serves as a proxy
 
     def _migrate_db(self):
         super()._migrate_db()

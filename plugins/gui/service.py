@@ -1471,7 +1471,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if data_from_db_for_unchanged:
             client_to_test = refill_passwords_fields(client_to_test, data_from_db_for_unchanged['client_config'])
         # adding client to specific adapter
-        response = self.request_remote_plugin('client_test', adapter_unique_name, method='post', json=client_to_test)
+        response = self.request_remote_plugin('client_test', adapter_unique_name, method='post',
+                                              json=client_to_test)
+        if response.status_code != 200:
+            logger.error(f'Error in client adding: {response.status_code}, {response.text}')
         return response.text, response.status_code
 
     def _query_client_for_devices(self, adapter_unique_name, clients, data_from_db_for_unchanged=None):
@@ -1480,12 +1483,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         if data_from_db_for_unchanged:
             clients = refill_passwords_fields(clients, data_from_db_for_unchanged['client_config'])
         # adding client to specific adapter
-        response = self.request_remote_plugin('clients', adapter_unique_name, method='put',
-                                              json=clients)
+        response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=clients)
         self._adapters.clean_cache()
         if response.status_code == 200:
             self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
                                                      response.json()['client_id'], clients)
+        else:
+            logger.error(f'Error in client adding: {response.status_code}, {response.text}')
         return response.text, response.status_code
 
     def _fetch_after_clients_thread(self, adapter_unique_name, client_id, client_to_add):
@@ -2036,14 +2040,14 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         self.enforcements_saved_actions_collection.delete_many(all_actions_query)
 
         self.__process_enforcement_actions(enforcement_to_update[ACTIONS_FIELD])
-        response = self.request_remote_plugin(f'reports/{enforcement_id}', 'reports', method='post',
+        response = self.request_remote_plugin(f'reports/{enforcement_id}', REPORTS_PLUGIN_NAME, method='post',
                                               json=enforcement_to_update)
         if response is None:
             return return_error('No response whether enforcement was updated')
 
         for trigger in enforcement_to_update['triggers']:
             trigger_res = self.request_remote_plugin(f'reports/{enforcement_id}/{trigger.get("id", trigger["name"])}',
-                                                     'reports', method='post', json=trigger)
+                                                     REPORTS_PLUGIN_NAME, method='post', json=trigger)
             if trigger_res is None or trigger_res.status_code == 500:
                 logger.error(f'Failed to save trigger {trigger["name"]}')
 
@@ -2062,7 +2066,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'name': 1,
             TRIGGERS_FIELD: 1
         })
-        response = self._trigger_remote_plugin('reports', 'run', data={
+        response = self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', data={
             'report_name': enforcement['name'],
             'configuration_name': enforcement[TRIGGERS_FIELD][0]['name'],
             'manual': True
@@ -2071,7 +2075,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @rev_cached(ttl=3600)
     def _get_actions_from_reports_plugin(self) -> dict:
-        response = self.request_remote_plugin('reports/actions', 'reports', method='get')
+        response = self.request_remote_plugin('reports/actions', REPORTS_PLUGIN_NAME,
+                                              method='get', raise_on_network_error=True)
         response.raise_for_status()
         return response.json()
 
@@ -2208,7 +2213,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 }
 
             def clear_saved_action_passwords(action):
-                response = self.request_remote_plugin('reports/actions', 'reports', method='get')
+                response = self.request_remote_plugin('reports/actions', REPORTS_PLUGIN_NAME, method='get')
                 if not response:
                     return
                 clear_passwords_fields(action['config'], response.json()[action['action_name']]['schema'])

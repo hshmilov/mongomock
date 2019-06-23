@@ -13,8 +13,7 @@ from pymongo.collection import Collection
 
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
-from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
-                                          VERSION_COLLECTION)
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, WEAVE_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
@@ -259,25 +258,8 @@ class PluginService(WeaveService):
         response.raise_for_status()
 
     @property
-    def __version_collection(self):
-        return self.db.get_collection(self.plugin_name, VERSION_COLLECTION)
-
-    @property
     def self_database(self):
         return self.db.client[self.unique_name]
-
-    @property
-    def db_schema_version(self):
-        res = self.__version_collection.find_one({'name': 'schema'})
-        if not res:
-            return 0
-        return res.get('version', 0)
-
-    @db_schema_version.setter
-    def db_schema_version(self, val):
-        self.__version_collection.replace_one({'name': 'schema'},
-                                              {'name': 'schema', 'version': val},
-                                              upsert=True)
 
     def get_file_content_from_db(self, uuid):
         oid = ObjectId(uuid)

@@ -8,7 +8,7 @@ from typing import Tuple, Iterable
 
 from promise import Promise
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, GENERAL_INFO_PLUGIN_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
@@ -67,7 +67,8 @@ class GeneralInfoService(Triggerable, PluginBase):
         pass
 
     def __init__(self, *args, **kargs):
-        super().__init__(get_local_config_file(__file__), *args, **kargs)
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=GENERAL_INFO_PLUGIN_NAME, *args, **kargs)
 
         self._execution_manager_lock = threading.Lock()  # This is not an RLock. it can be acquired only once.
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests

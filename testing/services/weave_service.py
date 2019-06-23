@@ -31,7 +31,7 @@ def is_weave_up():
 
 def get_dns_search_list():
     """
-    Get's all the configured dns search list from /etc/resolv.conf and appends them to a list.
+    Gets all the configured dns search list from /etc/resolv.conf and appends them to a list.
     Also handles case of multiple "search" lines in /etc/resolv.conf
     :return: A list of dns suffixes.
     """

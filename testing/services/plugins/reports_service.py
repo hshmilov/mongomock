@@ -2,32 +2,38 @@ from datetime import datetime
 
 import dateutil
 from bson import ObjectId
+from pymongo.database import Database
 
 from services.plugin_service import PluginService
+from services.updatable_service import UpdatablePluginMixin
+from axonius.consts import plugin_consts
 from axonius.consts.report_consts import ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, \
     ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, LAST_UPDATE_FIELD, \
     LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD
 
 
-class ReportsService(PluginService):
+class ReportsService(PluginService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('reports')
 
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 1:
-            self._update_to_schema(1, self.__update_schema_version_1)
+            self._update_nonsingleton_to_schema(1, self.__update_schema_version_1)
 
         if self.db_schema_version < 2:
-            self._update_to_schema(2, self.__update_schema_version_2)
+            self._update_nonsingleton_to_schema(2, self.__update_schema_version_2)
 
         if self.db_schema_version < 3:
-            self._update_to_schema(3, self.__update_schema_version_3)
+            self._update_nonsingleton_to_schema(3, self.__update_schema_version_3)
 
         if self.db_schema_version < 4:
-            self._update_to_schema(4, self.__update_schema_version_4)
+            self._update_nonsingleton_to_schema(4, self.__update_schema_version_4)
 
-        if self.db_schema_version != 4:
+        if self.db_schema_version < 5:
+            self._update_nonsingleton_to_schema(5, self.__update_schema_version_5)
+
+        if self.db_schema_version != 5:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
@@ -219,15 +225,14 @@ class ReportsService(PluginService):
                         }
                     })
 
-    def _update_to_schema(self, version, to_call):
-        print(f'upgrade to schema {version}')
-        try:
-            db = self.db.client
-            for x in [x for x in db.database_names() if x.startswith('reports_')]:
-                to_call(db=db[x])
-            self.db_schema_version = version
-        except Exception as e:
-            print(f'Could not upgrade reports db to version {version}. Details: {e}')
+    def __update_schema_version_5(self, specific_reports_db: Database):
+        # Change reports to be a single instance, so we rename all collections over
+        admin_db = self.db.client['admin']
+        for collection_name in specific_reports_db.list_collection_names():
+            admin_db.command({
+                'renameCollection': f'{specific_reports_db.name}.{collection_name}',
+                'to': f'{plugin_consts.REPORTS_PLUGIN_NAME}.{collection_name}'
+            })
 
     def _request_watches(self, method, *vargs, **kwargs):
         return getattr(self, method)('reports', api_key=self.api_key, *vargs, **kwargs)

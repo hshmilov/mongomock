@@ -4,9 +4,9 @@ import string
 import subprocess
 import shlex
 
+from axonius.consts.system_consts import NODE_MARKER_PATH
 from scripts.instances.instances_consts import MASTER_ADDR_HOST_PATH, ENCRYPTION_KEY_HOST_PATH, AXONIUS_SETTINGS_PATH, \
     SUBNET_IP_RANGE
-from axonius.consts.system_consts import NODE_MARKER_PATH
 
 
 def update_weave_connection_params(weave_encryption_key, master_ip):

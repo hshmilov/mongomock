@@ -12,7 +12,7 @@ from axonius.adapter_base import AdapterBase
 
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION, \
     STATIC_CORRELATOR_PLUGIN_NAME, CORE_UNIQUE_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME, STATIC_ANALYSIS_PLUGIN_NAME, \
-    GENERAL_INFO_PLUGIN_NAME
+    GENERAL_INFO_PLUGIN_NAME, REPORTS_PLUGIN_NAME
 from axonius.consts.scheduler_consts import SchedulerState
 
 from axonius.plugin_exceptions import PhaseExecutionException
@@ -232,7 +232,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             try:
                 # this is important and is described at https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
-                self.request_remote_plugin('wait/execute', 'reports')
+                self.request_remote_plugin('wait/execute', REPORTS_PLUGIN_NAME)
             except Exception as e:
                 logger.exception(f'Failed waiting for alerts before cycle {e}')
 
@@ -350,7 +350,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     plugins_to_call = [STATIC_CORRELATOR_PLUGIN_NAME]
 
                     if self.__constant_alerts:
-                        plugins_to_call.append('reports')
+                        plugins_to_call.append(REPORTS_PLUGIN_NAME)
 
                     for plugin_unique_name in plugins_to_call:
                         logger.debug(f'Executing plugin {plugin_unique_name}')

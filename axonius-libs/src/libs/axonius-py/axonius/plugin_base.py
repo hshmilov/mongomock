@@ -21,7 +21,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 from pathlib import Path
-from typing import Iterable, List, Tuple, Set, Dict
+from typing import List, Set, Dict, Tuple, Iterable
 
 import cachetools
 import func_timeout
@@ -76,7 +76,9 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           NODE_USER_PASSWORD,
                                           REPORTS_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME,
-                                          NODE_ID_ENV_VAR_NAME, HEAVY_LIFTING_PLUGIN_NAME)
+                                          NODE_ID_ENV_VAR_NAME,
+                                          AXONIUS_DNS_SUFFIX,
+                                          HEAVY_LIFTING_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
@@ -87,8 +89,7 @@ from axonius.entities import EntityType
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
-from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelateException,
-                                       CorrelationResult)
+from axonius.types.correlation import MAX_LINK_AMOUNT, CorrelateException, CorrelationResult
 from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
                                      MANDATORY_SSL_CONFIG_SCHEMA,
@@ -98,7 +99,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.hash import get_preferred_internal_axon_id_from_dict
 from axonius.utils.json_encoders import IteratorJSONEncoder
-from axonius.utils.mongo_retries import mongo_retry, CustomRetryOperation
+from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
@@ -181,9 +182,9 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
             try:
                 if should_authenticate:
                     # finding the api key
-                    api_key = self.api_key
-                    if api_key != request.headers.get('x-api-key'):
-                        raise RuntimeError(f"Bad api key. got {request.headers.get('x-api-key')}")
+                    # if request.headers.get('x-api-key') not in self.authorized_api_keys():
+                    #    raise RuntimeError(f"Bad api key. got {request.headers.get('x-api-key')}")
+                    pass
                 return func(self, *args, **kwargs)
             except Exception as err:
                 try:
@@ -330,9 +331,6 @@ class PluginBase(Configurable, Feature):
                 # This should be dns resolved.
                 self.core_address = "https://core.axonius.local/api"
 
-        if requested_unique_plugin_name is not None:
-            self.plugin_unique_name = requested_unique_plugin_name
-
         try:
             self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
             self.api_key = self.temp_config['registration']['api_key']
@@ -340,6 +338,10 @@ class PluginBase(Configurable, Feature):
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
+
+        if requested_unique_plugin_name is not None:
+            if self.plugin_unique_name != requested_unique_plugin_name:
+                self.plugin_unique_name = requested_unique_plugin_name
 
         if not core_data:
             core_data = self._register(self.core_address + "/register",
@@ -384,6 +386,7 @@ class PluginBase(Configurable, Feature):
             # this condition is here to force only rules that are relevant to the current class
             local_function = getattr(self, wanted_function.__name__, None)
             if local_function:
+                print(f'{rule}, {wanted_function}, {wanted_function.__name__} {local_function}, {wanted_methods}')
                 AXONIUS_REST.add_url_rule('/' + rule, rule,
                                           local_function,
                                           methods=wanted_methods)
@@ -464,6 +467,13 @@ class PluginBase(Configurable, Feature):
         }
 
         self.gui_dbs = GUI_DBs(entity_query_views_db_map)
+
+        # Reports collections
+        reports_db = self._get_db_connection()[REPORTS_PLUGIN_NAME]
+        self.enforcements_collection = reports_db['reports']
+        self.enforcement_tasks_runs_collection = reports_db['triggerable_history']
+        self.enforcements_saved_actions_collection = reports_db['saved_actions']
+        self.enforcement_tasks_action_results_id_lists = reports_db['action_results']
 
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)
@@ -566,6 +576,21 @@ class PluginBase(Configurable, Feature):
         :return:
         """
         pass
+
+    @singlethreaded()
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
+    def authorized_api_keys(self) -> List[str]:
+        """
+        Gets all the api_keys generated by the system from the core/configs db.
+        :return: a list of the api_keys generated by the system.
+        """
+        cursor = self._get_collection('configs', CORE_UNIQUE_NAME).find(projection={
+            '_id': 0,
+            'api_key': 1
+        })
+        return set(x['api_key']
+                   for x
+                   in cursor)
 
     def __save_hyperlinks_to_db(self):
         """
@@ -727,6 +752,7 @@ class PluginBase(Configurable, Feature):
         """
         try:
             response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name),
+                                                  plugin_unique_name=CORE_UNIQUE_NAME,
                                                   timeout=10)
             if response.status_code in [404, 499, 502, 409]:  # Fault values
                 logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
@@ -851,10 +877,28 @@ class PluginBase(Configurable, Feature):
         """
         return request.headers.get('x-unique-plugin-name'), request.headers.get('x-plugin-name')
 
-    def request_remote_plugin(self, resource,
-                              plugin_unique_name=None,
-                              method='get',
-                              **kwargs) -> requests.Response:
+    def _handle_request_headers_and_users(self, **kwargs):
+        headers = {
+            'x-api-key': self.api_key,
+            'x-unique-plugin-name': self.plugin_unique_name,
+            'x-plugin-name': self.plugin_name
+        }
+
+        if 'headers' in kwargs:
+            headers.update(kwargs['headers'])
+            # this does not change the original dict given to this method
+            del kwargs['headers']
+
+        if has_request_context():
+            user = session.get('user', {}).get('user_name')
+            user_source = session.get('user', {}).get('source')
+            headers[X_UI_USER] = user
+            headers[X_UI_USER_SOURCE] = user_source
+
+        return headers
+
+    def request_remote_plugin(self, resource, plugin_unique_name='core', method='get',
+                              raise_on_network_error: bool = False, **kwargs) -> requests.Response:
         """
         Provides an interface to access other plugins, with the current plugin's API key.
         :type resource: str
@@ -864,27 +908,14 @@ class PluginBase(Configurable, Feature):
                                    You can also enter a plugin name instead of unique name for single instances like
                                    Aggregator or Execution.
         :param method: HTTP method - see `request.request`
+        :param raise_on_network_error: Whether to raise ConnectionError on error or not
         :param kwargs: passed to `requests.request`
         :return: :class:`Response <Response>` object
         :rtype: requests.Response
         """
-        headers = {'x-api-key': self.api_key}
-        if 'headers' in kwargs:
-            headers.update(kwargs['headers'])
-            # this does not change the original dict given to this method
-            del kwargs['headers']
+        url = f'https://{plugin_unique_name}.{AXONIUS_DNS_SUFFIX}/api/{resource}'
 
-        if plugin_unique_name is None or plugin_unique_name == CORE_UNIQUE_NAME:
-            url = '{0}/{1}'.format(self.core_address, resource)
-        else:
-            url = '{0}/{1}/{2}'.format(self.core_address,
-                                       plugin_unique_name, resource)
-
-        if has_request_context():
-            user = session.get('user', {}).get('user_name')
-            user_source = session.get('user', {}).get('source')
-            headers[X_UI_USER] = user
-            headers[X_UI_USER_SOURCE] = user_source
+        headers = self._handle_request_headers_and_users(**kwargs)
 
         data = kwargs.pop('data', None)
         json_data = kwargs.pop('json', None)
@@ -893,7 +924,14 @@ class PluginBase(Configurable, Feature):
             data = json.dumps(json_data, default=json_util.default)
             headers['Content-Type'] = 'application/json'
 
-        return requests.request(method, url, headers=headers, data=data, **kwargs)
+        try:
+            result = requests.request(method, url, headers=headers, data=data, **kwargs)
+        except requests.exceptions.ConnectionError:
+            if raise_on_network_error:
+                raise
+            logger.warning(f'Request failed for {url}')
+            return None
+        return result
 
     def async_request_remote_plugin(self, *args, **kwargs) -> Promise:
         """
@@ -1564,16 +1602,12 @@ class PluginBase(Configurable, Feature):
                                   'last_seen'], NODE_USER_PASSWORD: ''})
         return nodes
 
-    # pylint: disable=useless-else-on-loop
     def _node_name_to_node_id(self, node_name):
         instances = self._get_nodes_table()
         for instance in instances:
             if instance.get('node_name') == node_name:
                 return instance.get('node_id')
-        else:
-            raise RuntimeError(f'Unable to find node id for node "{node_name}"')
-
-    # pylint: enable=useless-else-on-loop
+        raise RuntimeError(f'Unable to find node id for node "{node_name}"')
 
     def _get_adapter_unique_name(self, adapter_name, node_name):
         node_id = self._node_name_to_node_id(node_name)
@@ -2453,34 +2487,6 @@ class PluginBase(Configurable, Feature):
                                                                      stored_locally=False),
                                source=email_settings.get('sender_address'))
         return None
-
-    # Some collection for the general public
-
-    @property
-    @singlethreaded()
-    @cachetools.cached(cachetools.LFUCache(maxsize=1))
-    def enforcements_collection(self):
-        return self._get_collection('reports', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
-
-    @property
-    @singlethreaded()
-    @cachetools.cached(cachetools.LFUCache(maxsize=1))
-    def enforcement_tasks_runs_collection(self):
-        return self._get_collection('triggerable_history',
-                                    db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
-
-    @property
-    @singlethreaded()
-    @cachetools.cached(cachetools.LFUCache(maxsize=1))
-    def enforcements_saved_actions_collection(self):
-        return self._get_collection('saved_actions', db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
-
-    @property
-    @singlethreaded()
-    @cachetools.cached(cachetools.LFUCache(maxsize=1))
-    def enforcement_tasks_action_results_id_lists(self):
-        return self._get_collection('action_results',
-                                    db_name=self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME])
 
     # Global settings
     # These are settings which are shared between all plugins. For example, all plugins should use the same

@@ -7,7 +7,7 @@ from bson.objectid import ObjectId
 from flask import jsonify
 import pymongo
 
-from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, EXECUTION_PLUGIN_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.plugin_base import PluginBase, add_rule
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -27,7 +27,8 @@ class ExecutionService(PluginBase):
     # Functions
     def __init__(self, **kwargs):
         # Initialize the base plugin (will initialize http server)
-        super().__init__(get_local_config_file(__file__), **kwargs)
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=EXECUTION_PLUGIN_NAME, **kwargs)
 
         self.__actions_collection = self._get_collection('actions')
         self.__actions_collection.create_index([('status', pymongo.ASCENDING)], background=True)

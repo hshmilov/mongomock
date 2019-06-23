@@ -18,15 +18,15 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           MAINTENANCE_TYPE,
                                           GUI_SYSTEM_CONFIG_COLLECTION)
 from axonius.entities import EntityType
-
 from axonius.utils.gui_helpers import PermissionLevel, PermissionType
 from gui.gui_logic.filter_utils import filter_archived
 from services.plugin_service import PluginService
+from services.updatable_service import UpdatablePluginMixin
 
 MAINTENANCE_FILTER = {'type': MAINTENANCE_TYPE}
 
 
-class GuiService(PluginService):
+class GuiService(PluginService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('gui')
         self._session = requests.Session()

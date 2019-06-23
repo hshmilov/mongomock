@@ -90,7 +90,7 @@ class OidcData:
 
 def fetch_jwk_for(id_token):
     """
-    Get's the JSON web key from the given ID token;
+    Gets the JSON web key from the given ID token;
     >>this is code from Okta's example on how to implement Okta in flask<<
     """
     if id_token is None:

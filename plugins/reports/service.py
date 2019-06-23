@@ -6,6 +6,7 @@ from multiprocessing.pool import ThreadPool
 from typing import List, Iterable, Tuple
 
 from enum import Enum
+
 from bson import json_util
 from bson.objectid import ObjectId
 import pymongo
@@ -13,6 +14,7 @@ from pymongo.results import DeleteResult, UpdateResult
 from flask import jsonify, request
 from dataclasses import dataclass
 
+from axonius.consts import plugin_consts
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.entities import EntityType
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
@@ -69,7 +71,8 @@ class ReportsService(Triggerable, PluginBase):
         """ This service is responsible for alerting users in several ways and cases when a
                         report query result changes. """
 
-        super().__init__(get_local_config_file(__file__), *args, **kwargs)
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=plugin_consts.REPORTS_PLUGIN_NAME, *args, **kwargs)
         self.__reports_collection = self._get_collection('reports')
         self.__reports_collection.create_index([('name', pymongo.DESCENDING)], unique=True)
         self.__saved_actions_collection = self._get_collection('saved_actions')

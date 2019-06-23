@@ -1,11 +1,11 @@
 import requests
 from retrying import retry
 from axonius.consts.scheduler_consts import Phases, SchedulerState
-
 from services.plugin_service import PluginService, API_KEY_HEADER
+from services.updatable_service import UpdatablePluginMixin
 
 
-class SystemSchedulerService(PluginService):
+class SystemSchedulerService(PluginService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('system-scheduler')
 

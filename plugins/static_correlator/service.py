@@ -2,7 +2,7 @@ import logging
 from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, STATIC_CORRELATOR_PLUGIN_NAME
 from axonius.correlator_base import CorrelatorBase
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, OS_FIELD
 from axonius.entities import EntityType
@@ -15,7 +15,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class StaticCorrelatorService(CorrelatorBase):
     def __init__(self, *args, **kwargs):
-        super().__init__(get_local_config_file(__file__), *args, **kwargs)
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=STATIC_CORRELATOR_PLUGIN_NAME, *args, **kwargs)
 
         self._correlation_engine = StaticCorrelatorEngine()
 

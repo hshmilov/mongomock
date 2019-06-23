@@ -1,15 +1,15 @@
 from axonius.correlator_base import CorrelatorBase
 from axonius.entities import EntityType
 from axonius.utils.files import get_local_config_file
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, STATIC_USERS_CORRELATOR_PLUGIN_NAME
 
 from static_users_correlator.engine import StaticUserCorrelatorEngine
 
 
 class StaticUsersCorrelatorService(CorrelatorBase):
     def __init__(self, *args, **kwargs):
-        super().__init__(get_local_config_file(__file__), *args, **kwargs)
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=STATIC_USERS_CORRELATOR_PLUGIN_NAME, *args, **kwargs)
 
         self._correlation_engine = StaticUserCorrelatorEngine()
 
