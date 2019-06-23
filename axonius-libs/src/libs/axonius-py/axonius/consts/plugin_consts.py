@@ -33,6 +33,7 @@ EXECUTION_PLUGIN_NAME = 'execution'
 ACTIVE_DIRECTORY_PLUGIN_NAME = 'active_directory_adapter'
 LINUX_SSH_PLUGIN_NAME = 'linux_ssh_adapter'
 SHODAN_PLUGIN_NAME = 'shodan_adapter'
+HAVEIBEENPWNED_PLUGIN_NAME = 'haveibeenpwned_adapter'
 
 # FIELDS #
 ADAPTERS_LIST_LENGTH = 'adapter_list_length'

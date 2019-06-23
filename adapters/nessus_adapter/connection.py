@@ -236,3 +236,12 @@ class NessusConnection(object):
         except requests.HTTPError as e:
             raise NessusRequestError("GET {0} failed. Details: {1}".format(name, str(e)))
         return response.json()
+
+    def get_plugin_data(self, plugin_id):
+        try:
+            plugin_raw_data = self._get(f'plugins/plugin/{plugin_id}')
+            if isinstance(plugin_raw_data.get('attributes'), list):
+                return plugin_raw_data.get('attributes')
+        except Exception:
+            logger.exception(f'Problem getting plugin data for {plugin_id}')
+        return None

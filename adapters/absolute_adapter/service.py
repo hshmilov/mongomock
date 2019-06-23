@@ -24,6 +24,7 @@ class AbsoluteAdapter(AdapterBase):
         device_origin = Field(str, 'Origin')
         device_src = Field(str, 'Device Src')
         policy_group_name = Field(str, 'Policy Group Name')
+        full_hostname = Field(str, 'Full Hostname')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -122,7 +123,8 @@ class AbsoluteAdapter(AdapterBase):
                     logger.warning(f'Bad device with no id {device_raw}')
                     continue
                 device.id = device_id + '_' + (device_raw.get('fullSystemName') or '')
-                hostname = device_raw.get('fullSystemName') or device_raw.get('systemName')
+                hostname = device_raw.get('systemName')
+                device.full_hostname = device_raw.get('fullSystemName')
                 if hostname and hostname.lower().endswith('.local'):
                     hostname = hostname[:-len('.local')]
                 if hostname and hostname.lower().endswith('.workgroup'):

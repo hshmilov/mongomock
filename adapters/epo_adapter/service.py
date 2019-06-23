@@ -216,7 +216,8 @@ class EpoAdapter(AdapterBase):
                         device_raw.get('EPOLeafNode.Tags') or '').split(',') if epo_tag.strip()]
             except Exception:
                 logger.exception("Couldn't set some epo info")
-            device.set_raw(device_raw)
+            if len(str(device_raw)) < 1000000:
+                device.set_raw(device_raw)
             yield device
 
     def _query_devices_by_client(self, client_name, client_data):

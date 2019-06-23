@@ -92,6 +92,7 @@ class NmapAdapter(ScannerAdapterBase):
         if nmap_data_bytes is None:
             raise Exception('Bad Nmap, could not parse the data')
         encoding = chardet.detect(nmap_data_bytes)['encoding']  # detect decoding automatically
+        encoding = encoding or 'utf-8'
         nmap_data = nmap_data_bytes.decode(encoding)
         nmap_xml = ET.fromstring(nmap_data)
         if not 'nmaprun' in nmap_xml.tag:
@@ -175,7 +176,7 @@ class NmapAdapter(ScannerAdapterBase):
         for xml_elem in host_xml:
             try:
                 if xml_elem.tag == 'elem':
-                    if xml_elem.attrib.get('key') == 'server':
+                    if xml_elem.attrib.get('key') == 'server' and xml_elem.text:
                         device.hostname = xml_elem.text.strip('\\x00')
                         device.id += '_' + xml_elem.text.strip('\\x00')
                     elif xml_elem.attrib.get('key') == 'domain':
@@ -191,7 +192,8 @@ class NmapAdapter(ScannerAdapterBase):
             try:
                 if xml_elem.tag == 'table' and xml_elem.attrib.get('key') == 'mac':
                     for xml_inner_elem in xml_elem:
-                        if xml_inner_elem.tag == 'elem' and xml_inner_elem.attrib.get('key') == 'address':
+                        if xml_inner_elem.tag == 'elem' and xml_inner_elem.attrib.get('key') == 'address'\
+                                and xml_inner_elem.text != '<unknown>':
                             device.add_nic(mac=xml_inner_elem.text)
                             device.id += '_' + xml_inner_elem.text
                 elif xml_elem.tag == 'elem' and xml_elem.attrib.get('key') == 'server_name':

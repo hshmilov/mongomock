@@ -121,7 +121,7 @@ class MssqlAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=R0912,R0915,R0914
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         first_time = True
         fields = {}
@@ -152,10 +152,12 @@ class MssqlAdapter(AdapterBase, Configurable):
                 device.device_model = vals.get('model')
                 device.domain = vals.get('domain')
                 try:
-                    last_seen = parse_date(vals.get('last_seen'))
+                    last_seen = None
+                    if isinstance(vals.get('last_seen'), str):
+                        last_seen = parse_date(vals.get('last_seen'))
                     if last_seen:
                         device.last_seen = last_seen
-                    else:
+                    elif isinstance(vals.get('last_seen'), int):
                         device.last_seen = datetime.datetime.fromtimestamp(vals.get('last_seen'))
                 except Exception:
                     logger.exception(f'Problem adding last seen')
@@ -166,10 +168,13 @@ class MssqlAdapter(AdapterBase, Configurable):
                 # OS is a special case, instead of getting the first found column we take all of them and combine them
                 if 'os' in fields:
                     try:
-                        os_raw = '_'.join([device_raw.get(os_column) for os_column in fields['os']])
+                        os_raw = ''
+                        for os_column in fields['os']:
+                            if device_raw.get(os_column) and isinstance(device_raw.get(os_column), str):
+                                os_raw += device_raw.get(os_column) + ' '
                         device.figure_os(os_raw)
                     except Exception:
-                        logger.error(f'Can not parse os {os_raw}')
+                        logger.error(f'Can not parse os ')
 
                 try:
                     device.os.kernel_version = vals.get('kernel')
@@ -186,8 +191,10 @@ class MssqlAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem setting cpu')
                 try:
-                    ips = (vals.get('ip') or '').split(',')
-                    ips = [ip.strip() for ip in ips if ip.strip()]
+                    ips = None
+                    if isinstance(vals.get('ip'), str):
+                        ips = (vals.get('ip') or '').split(',')
+                        ips = [ip.strip() for ip in ips if ip.strip()]
                     device.add_ips_and_macs(macs=macs, ips=ips)
                 except Exception:
                     logger.exception(f'Problem getting nic and ips for {device_raw}')

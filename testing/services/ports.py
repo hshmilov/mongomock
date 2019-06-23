@@ -166,6 +166,9 @@ DOCKER_PORTS = {
     'censys-adapter':                   9963,
     'paloalto-cortex-adapter':          9964,
     'netbox-adapter':                   9965,
+    'haveibeenpwned-adapter':           9966,
+    'jumpcloud-adapter':                9967,
+    'cycognito-adapter':                9968,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

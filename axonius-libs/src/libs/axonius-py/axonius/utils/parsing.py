@@ -337,7 +337,7 @@ def is_domain_valid(domain):
     :return: e.g. Whether domain exist and has a valid value which is not a local value
     """
     domain = (domain or '').strip().lower()
-    if domain and not 'workgroup' in domain and not 'local' in domain and \
+    if domain and not 'workgroup' in domain and not 'local' == domain and \
             not 'n/a' in domain:
         return True
     return False

@@ -62,12 +62,16 @@ class BluecatConnection(RESTConnection):
         networks_ids = list(networks_ids)
         for network_id in networks_ids:
             try:
+                if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
+                    self._refresh_token()
                 response = self._get(f'getEntities?parentId={network_id}&type=IP4Address'
                                      f'&start=0&count={DEVICE_PER_PAGE}')
                 for device_raw in response:
                     try:
                         host_id = device_raw.get('id')
                         if host_id:
+                            if (datetime.datetime.now() - self._token_time) > datetime.timedelta(minutes=5):
+                                self._refresh_token()
                             dns_name_raw = self._get(f'getLinkedEntities?entityId={host_id}&type=HostRecord&'
                                                      f'start=0&count={DEVICE_PER_PAGE}')
                             if isinstance(dns_name_raw, list) and len(dns_name_raw) > 0:

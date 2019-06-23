@@ -298,6 +298,7 @@ class AwsAdapter(AdapterBase, Configurable):
         aws_tags = ListField(AWSTagKeyValue, 'AWS Tags')
         instance_type = Field(str, 'Instance Type')
         key_name = Field(str, 'Key Name')
+        private_dns_name = Field(str, 'Private Dns Name')
         monitoring_state = Field(str, 'Monitoring State')
         launch_time = Field(datetime.datetime, 'Launch Time')
         image_id = Field(str, 'AMI (Image) ID')
@@ -1532,6 +1533,7 @@ class AwsAdapter(AdapterBase, Configurable):
                                      else device_raw.get('Platform'))
                     device_id = device_raw['InstanceId']
                     device.id = device_id
+                    device.private_dns_name = device_raw.get('PrivateDnsName')
                     try:
                         device.monitoring_state = (device_raw.get('Monitoring') or {}).get('State')
                     except Exception:

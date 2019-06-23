@@ -1,5 +1,6 @@
+import datetime
 import logging
-
+import ipaddress
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -42,6 +43,13 @@ class JamfProfile(SmartJsonClass):
     uuid = Field(str, "Profile UUID")
 
 
+class JamfCertificate(SmartJsonClass):
+    common_name = Field(str, 'Common Name')
+    identity = Field(str, 'Identity')
+    name = Field(str, 'Name')
+    expiration_time = Field(datetime.datetime, 'Expiration Time')
+
+
 class JamfAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
@@ -56,6 +64,8 @@ class JamfAdapter(AdapterBase, Configurable):
         disable_automatic_login = Field(str, 'Disable Automatic Login')
         alternative_mac = Field(str, 'Alternative MAC Address')
         common_users = ListField(str, 'Common Users')
+        tenant_tag = Field(str, 'Tenant Tag')
+        certificates = ListField(JamfCertificate, 'Certificates')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -77,7 +87,7 @@ class JamfAdapter(AdapterBase, Configurable):
             connection.set_credentials(username=client_config[consts.USERNAME],
                                        password=client_config[consts.PASSWORD])
             connection.connect()
-            return connection
+            return connection, client_config.get('tenant_tag')
         except JamfException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Jamf_Domain'], str(e))
@@ -93,13 +103,14 @@ class JamfAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the Jamf Server
         """
-        return client_data.get_devices(self.__fetch_department,
-                                       self.__should_fetch_policies,
-                                       self.__num_of_simultaneous_devices,
-                                       self.__should_not_keepalive,
-                                       self.__threads_time_sleep,
-                                       self.__fetch_mobile_devices
-                                       )
+        connection, tenant_tag = client_data
+        return connection.get_devices(self.__fetch_department,
+                                      self.__should_fetch_policies,
+                                      self.__num_of_simultaneous_devices,
+                                      self.__should_not_keepalive,
+                                      self.__threads_time_sleep,
+                                      self.__fetch_mobile_devices
+                                      ), tenant_tag
 
     def _clients_schema(self):
         """
@@ -134,6 +145,11 @@ class JamfAdapter(AdapterBase, Configurable):
                     "name": consts.HTTPS_PROXY,
                     "title": "Https Proxy",
                     "type": "string"
+                },
+                {
+                    'name': 'tenant_tag',
+                    'title': 'Tenant Tag',
+                    'type': 'string'
                 }
             ],
             "required": [
@@ -145,17 +161,30 @@ class JamfAdapter(AdapterBase, Configurable):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        devices_data, tenant_tag = devices_raw_data
+        for device_raw in devices_data:
             try:
                 device = self._new_device_adapter()
                 general_info = device_raw['general']
-
+                device.tenant_tag = tenant_tag
                 udid = general_info.get('udid')
                 if not udid:
                     logger.error(f"Error! got a device with no id: {device_raw}")
                     continue
                 device.id = udid + '_' + (general_info.get('name') or '')
-
+                try:
+                    if device_raw.get('certificates') and isinstance(device_raw.get('certificates'), dict):
+                        certificates_raw = device_raw.get('certificates').get('certificate')
+                        if isinstance(certificates_raw, list) and certificates_raw:
+                            for certificate_raw in certificates_raw:
+                                expiration_time = parse_date(certificate_raw.get('expires_utc'))
+                                certificate_obj = JamfCertificate(name=certificate_raw.get('name'),
+                                                                  common_name=certificate_raw.get('common_name'),
+                                                                  identity=certificate_raw.get('identity'),
+                                                                  expiration_time=expiration_time)
+                                device.certificates.append(certificate_obj)
+                except Exception:
+                    logger.exception(f'Probelm with certificates')
                 device.name = general_info.get('name')
                 try:
                     jamf_location_raw = device_raw.get('location')
@@ -191,8 +220,12 @@ class JamfAdapter(AdapterBase, Configurable):
                         host_no_spaces_list[1] = ''.join(char for char in host_no_spaces_list[1] if char.isalnum())
                     hostname = '-'.join(host_no_spaces_list).split(".")[0]
                     device.hostname = hostname
-                if general_info.get('ip_address'):
-                    device.add_public_ip(general_info.get('ip_address'))
+                try:
+                    if general_info.get('ip_address') \
+                            and not ipaddress.ip_address(general_info.get('ip_address')).is_private:
+                        device.add_public_ip(general_info.get('ip_address'))
+                except Exception:
+                    logger.exception(f'Problem adding public ip to Jamf')
                 try:
                     site = general_info.get('site')
                     if site:

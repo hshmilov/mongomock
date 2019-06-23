@@ -15,6 +15,7 @@ from cisco_meraki_adapter.consts import DEVICE_TYPE, CLIENT_TYPE, MDM_TYPE
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+# pylint: disable=too-many-instance-attributes
 class AssociatedDeviceAdapter(SmartJsonClass):
     switch_port = Field(str, 'Switch Port')
     associated_device = Field(str, 'Associated Device')
@@ -24,6 +25,9 @@ class AssociatedDeviceAdapter(SmartJsonClass):
     name = Field(str, 'Name')
     notes = Field(str, 'Notes')
     tags = Field(str, 'Tags')
+    wan1_ip = Field(str, 'Wan1 IP')
+    wan2_ip = Field(str, 'Wan2 IP')
+    lan_ip = Field(str, 'Lan IP')
 
 
 class CiscoMerakiAdapter(AdapterBase):
@@ -171,7 +175,8 @@ class CiscoMerakiAdapter(AdapterBase):
             device.associated_devices = []
             found_regular_vlan = False
             found_exclude_vlan = False
-            for associated_device, switch_port, address, network_name, vlan, name, notes, tags in \
+            for associated_device, switch_port, address, network_name, vlan, name, notes,\
+                tags, wan1_ip, wan2_ip, lan_ip in \
                     client_raw['associated_devices']:
                 try:
                     associated_device_object = AssociatedDeviceAdapter()
@@ -188,6 +193,9 @@ class CiscoMerakiAdapter(AdapterBase):
                     associated_device_object.name = name
                     associated_device_object.notes = notes
                     associated_device_object.tags = tags
+                    associated_device_object.wan1_ip = wan1_ip
+                    associated_device_object.wan2_ip = wan2_ip
+                    associated_device_object.lan_ip = lan_ip
                     device.associated_devices.append(associated_device_object)
 
                     connected_device = DeviceAdapterNeighbor()
@@ -234,8 +242,8 @@ class CiscoMerakiAdapter(AdapterBase):
                 ip_addresses.append(device_raw.get('lanIp'))
             if device_raw.get('wan1Ip'):
                 ip_addresses.append(device_raw.get('wan1Ip'))
-            if device_raw.get('wan12p'):
-                ip_addresses.append(device_raw.get('wan12p'))
+            if device_raw.get('wan2Ip'):
+                ip_addresses.append(device_raw.get('wan2Ip'))
             if not ip_addresses:
                 ip_addresses = None
             if mac_address or ip_addresses:
@@ -279,7 +287,8 @@ class CiscoMerakiAdapter(AdapterBase):
                 (client_raw.get('associated_device'), client_raw.get('switchport'),
                  client_raw.get('address'), client_raw.get('network_name'),
                  client_raw.get('vlan'), client_raw.get('name'),
-                 client_raw.get('notes'), client_raw.get('tags')))
+                 client_raw.get('notes'), client_raw.get('tags'),
+                 client_raw.get('wan1Ip'), client_raw.get('wan2Ip'), client_raw.get('lanIp')))
         except Exception:
             logger.exception(f'Problem with fetching CiscoMeraki Client {client_raw}')
 

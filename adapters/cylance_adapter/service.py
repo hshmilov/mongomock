@@ -25,6 +25,7 @@ class CylanceAdapter(AdapterBase):
         policy_id = Field(str, 'Policy ID')
         policy_name = Field(str, 'Policy Name')
         policies_details = ListField(str, 'Policies Details')
+        tenant_tag = Field(str, 'Tenant Tag')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -45,7 +46,7 @@ class CylanceAdapter(AdapterBase):
                                            tid=client_config['tid'], https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass  # check that the connection credentials are valid
-            return connection
+            return connection, client_config.get('tenant_tag')
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -62,8 +63,10 @@ class CylanceAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Cylance Server
         """
-        with client_data:
-            yield from client_data.get_device_list()
+        connection, tenant_tag = client_data
+        with connection:
+            for device_raw in connection.get_device_list():
+                yield device_raw, tenant_tag
 
     @staticmethod
     def _clients_schema():
@@ -99,6 +102,11 @@ class CylanceAdapter(AdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'tenant_tag',
+                    'title': 'Tenant Tag',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -111,7 +119,7 @@ class CylanceAdapter(AdapterBase):
         }
 
     # pylint: disable=R1702,R0912,R0915
-    def _create_device(self, device_raw, policies_dict):
+    def _create_device(self, device_raw, policies_dict, tenant_tag):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('id')
@@ -119,6 +127,7 @@ class CylanceAdapter(AdapterBase):
                 logger.warning(f'No id of device {device_raw}')
                 return None
             device.id = device_id + (device_raw.get('host_name') or '')
+            device.tenant_tag = tenant_tag
             device.figure_os((device_raw.get('operatingSystem') or '') + ' ' + (device_raw.get('os_version') or ''))
             hostname = device_raw.get('host_name') or ''
             if not hostname and not device_raw.get('agent_version') and device_raw.get('state') == 'Offline':
@@ -194,8 +203,9 @@ class CylanceAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, policies_dict in devices_raw_data:
-            device = self._create_device(device_raw, policies_dict)
+        for device_raw_data, tenant_tag in devices_raw_data:
+            device_raw, policies_dict = device_raw_data
+            device = self._create_device(device_raw, policies_dict, tenant_tag)
             if device:
                 yield device
 

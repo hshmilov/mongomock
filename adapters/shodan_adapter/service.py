@@ -43,6 +43,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                     raise ClientConnectionException('Please Enter CIDR CSV File or CIDR list')
                 csv_data_bytes = self._grab_file_contents(client_config['csv'])
                 encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+                encoding = encoding or 'utf-8'
                 csv_data = csv_data_bytes.decode(encoding)
                 csv_data = make_dict_from_csv(csv_data)
                 if 'CIDR' not in csv_data.fieldnames:

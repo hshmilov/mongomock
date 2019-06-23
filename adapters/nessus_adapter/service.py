@@ -27,6 +27,16 @@ class NessusVulnerability(SmartJsonClass):
     severity = Field(str, "Severity")
     severity_index = Field(str, "Severity Index")
     vuln_index = Field(str, "Vulnerability Index")
+    cpe = Field(str, 'Cpe')
+    cve = Field(str, 'CVE')
+    cvss_base_score = Field(float, 'CVSS Base Score')
+    exploit_available = Field(bool, 'Exploit Available')
+    synopsis = Field(str, 'Synopsis')
+    solution = Field(str, 'Solution')
+    see_also = Field(str, 'See Also')
+    description = Field(str, 'Description')
+    plugin_type = Field(str, 'Plugin Type')
+    family_name = Field(str, 'Plugin Family Name')
 
 
 class NessusAdapter(ScannerAdapterBase):
@@ -85,6 +95,7 @@ class NessusAdapter(ScannerAdapterBase):
         try:
             client_data.connect()
             device_dict = {}
+            plugin_data_dict = dict()
             devices_count = 0
             # Get all scans for client
             for scan in client_data.get_scans():
@@ -105,6 +116,19 @@ class NessusAdapter(ScannerAdapterBase):
                                                                         open_session=open_session)
                             if not host_details:
                                 continue
+
+                            vulnerabilities_raw = host_details.get("vulnerabilities", [])
+                            for vulnerability_raw in vulnerabilities_raw:
+                                try:
+                                    plugin_id = vulnerability_raw.get("plugin_id")
+                                    if plugin_id in plugin_data_dict:
+                                        vulnerability_raw['plugin_data'] = plugin_data_dict[plugin_id]
+                                    else:
+                                        plugin_data = client_data.get_plugin_data(plugin_id)
+                                        vulnerability_raw['plugin_data'] = plugin_data
+                                        plugin_data_dict[plugin_id] = plugin_data
+                                except Exception:
+                                    logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
 
                             host_id = host.get('host_id')
                             if host_id not in device_dict:
@@ -223,6 +247,36 @@ class NessusAdapter(ScannerAdapterBase):
                         new_vulnerability.severity = str(vulnerability_raw.get("severity"))
                         new_vulnerability.severity_index = str(vulnerability_raw.get("severity_index"))
                         new_vulnerability.vuln_index = str(vulnerability_raw.get("vuln_index"))
+                        try:
+                            plugin_data = vulnerability_raw.get('plugin_data') or []
+                            for attribute_plugin in plugin_data:
+                                try:
+                                    if attribute_plugin.get('attribute_name') == 'cpe':
+                                        new_vulnerability.cpe = attribute_plugin.get('attribute_value')
+                                    elif attribute_plugin.get('attribute_name') == 'cve':
+                                        new_vulnerability.cve = attribute_plugin.get('attribute_value')
+                                    elif attribute_plugin.get('attribute_name') == 'cvss_base_score':
+                                        new_vulnerability.cvss_base_score = float(
+                                            attribute_plugin.get('attribute_value'))
+                                    elif attribute_plugin.get('attribute_name') == 'exploit_available':
+                                        new_vulnerability.exploit_available = attribute_plugin.get(
+                                            'attribute_value').lower() == 'true'
+                                    elif attribute_plugin.get('attribute_name') == 'synopsis':
+                                        new_vulnerability.synopsis = attribute_plugin.get('attribute_value')
+                                    elif attribute_plugin.get('attribute_name') == 'see_also':
+                                        new_vulnerability.see_also = attribute_plugin.get('attribute_value')
+                                    elif attribute_plugin.get('attribute_name') == 'description':
+                                        new_vulnerability.description = attribute_plugin.get('attribute_value')
+                                    elif attribute_plugin.get('attribute_name') == 'plugin_type':
+                                        new_vulnerability.plugin_type = attribute_plugin.get('attribute_value')
+                                    elif attribute_plugin.get('attribute_name') == 'fname':
+                                        new_vulnerability.family_name = attribute_plugin.get('attribute_value')
+                                    elif attribute_plugin.get('attribute_name') == 'solution':
+                                        new_vulnerability.solution = attribute_plugin.get('attribute_value')
+                                except Exception:
+                                    logger.exception(f'Problem with attribute {attribute_plugin}')
+                        except Exception:
+                            logger.exception(f'Problem with plugin data {plugin_data}')
                         device.vulnerabilities.append(new_vulnerability)
                     except Exception:
                         logger.exception(f"Problem adding vulnerability {vulnerability_raw}")

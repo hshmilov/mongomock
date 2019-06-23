@@ -52,6 +52,30 @@ DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 
 
+def get_private_dns_name(adapter_device):
+    return adapter_device['data'].get('private_dns_name')
+
+
+def get_prefix_private_dns_or_hostname(adapter_device):
+    private_dns = get_private_dns_name(adapter_device)
+    if private_dns:
+        private_dns = private_dns.lower()
+        return private_dns.split('.')[0]
+    hostname = get_hostname(adapter_device)
+    if hostname:
+        hostname = hostname.lower()
+        return hostname.split('.')[0]
+    return None
+
+
+def compare_hostname_or_private_dns(adapter_device1, adapter_device2):
+    private_dns_or_hostname1 = get_prefix_private_dns_or_hostname(adapter_device1)
+    private_dns_or_hostname2 = get_prefix_private_dns_or_hostname(adapter_device2)
+    if not private_dns_or_hostname1 or not private_dns_or_hostname2:
+        return False
+    return private_dns_or_hostname1 == private_dns_or_hostname2
+
+
 def force_mac_adapters(adapter_device):
     return adapter_device.get('plugin_name') in ['sentinelone_adapter', 'carbonblack_defense_adapter']
 
@@ -306,6 +330,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They are the same nessus id no scan'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_private_dns_hostname_prefix(self, adapters_to_correlate):
+        logger.info('Starting to correlate on private dns hostname prefix')
+        filtered_adapters_list = filter(get_prefix_private_dns_or_hostname, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_prefix_private_dns_or_hostname],
+                                      [compare_hostname_or_private_dns],
+                                      [get_private_dns_name],
+                                      [ips_do_not_contradict_or_mac_intersection],
+                                      {'Reason': 'They are the same nprivate dns hostname prefix'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_cloud_instances(self, adapters_to_correlate):
         logger.info('Starting to correlate on Cloud Instances')
         filtered_adapters_list = filter(get_cloud_data, adapters_to_correlate)
@@ -335,7 +370,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname_or_serial],
                                       [compare_hostname_serial],
-                                      [lambda x: x.get('plugin_name') == 'airwatch_adapter'],
+                                      [lambda x: x.get('plugin_name') in ['airwatch_adapter', 'jumpcloud_adapter']],
                                       [asset_hostnames_do_not_contradict, ips_do_not_contradict_or_mac_intersection],
                                       {'Reason': 'Hostname or serials are equal'},
                                       CorrelationReason.StaticAnalysis)

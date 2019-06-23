@@ -107,7 +107,7 @@ from axonius.utils import gui_helpers
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity,
                                                   parse_filter)
 from axonius.utils.datetime import next_weekday, time_from_now
-from axonius.utils.files import create_temp_file, get_local_config_file
+from axonius.utils.files import get_local_config_file
 from axonius.utils.gui_helpers import (Permission, PermissionLevel,
                                        PermissionType, ReadOnlyJustForGet,
                                        add_labels_to_entities,
@@ -2795,12 +2795,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             try:
                 conn = LdapConnection(ldap_login['dc_address'], f'{domain}\\{user_name}', password,
                                       use_ssl=SSLState[ldap_login['use_ssl']],
-                                      ca_file_data=create_temp_file(self._grab_file_contents(
-                                          ldap_login['private_key'])) if ldap_login['private_key'] else None,
-                                      cert_file=create_temp_file(self._grab_file_contents(
-                                          ldap_login['cert_file'])) if ldap_login['cert_file'] else None,
-                                      private_key=create_temp_file(self._grab_file_contents(
-                                          ldap_login['ca_file'])) if ldap_login['ca_file'] else None)
+                                      ca_file_data=self._grab_file_contents(
+                                          ldap_login['private_key']) if ldap_login['private_key'] else None,
+                                      cert_file=self._grab_file_contents(
+                                          ldap_login['cert_file']) if ldap_login['cert_file'] else None,
+                                      private_key=self._grab_file_contents(
+                                          ldap_login['ca_file']) if ldap_login['ca_file'] else None)
             except LdapException:
                 logger.exception('Failed login')
                 return return_error('Failed logging into AD')

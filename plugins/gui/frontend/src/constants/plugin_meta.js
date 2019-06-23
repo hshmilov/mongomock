@@ -1,4 +1,16 @@
 export const pluginMeta = {
+    cycognito_adapter: {
+        title: 'CyCognito CyCAST Platform',
+        description: 'CyCognito CyCAST Platform is a fully automated, cloud-based security testing service that simulates attackers\' reconnaissance techniques to find organization\'s security blind spots.'
+    },
+    jumpcloud_adapter: {
+        title: 'JumpCloud',
+        description: 'JumpCloud is a Directory-as-a-Service (DaaS) solution to authenticate, authorize, and manage users, devices, and applications via a common directory in the cloud.'
+    },
+    haveibeenpwned_adapter: {
+        title: 'Have I Been Pwned',
+        description: 'Have I Been Pwned is a website to check if email accounts have been compromised in a data breach.'
+    },
     netbox_adapter: {
         title: 'NetBox',
         description: ' NetBox is an open source web application to help manage and document computer networks.'

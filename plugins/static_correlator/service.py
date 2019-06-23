@@ -75,7 +75,8 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'ad_name': '$$adapter.data.ad_name',
                                 'azure_display_name': '$$adapter.data.azure_display_name',
                                 'last_used_users': '$$adapter.data.last_used_users',
-                                'nessus_no_scan_id': '$$adapter.data.nessus_no_scan_id'
+                                'nessus_no_scan_id': '$$adapter.data.nessus_no_scan_id',
+                                'private_dns_name': '$$adapter.data.private_dns_name'
                             }
                         }
                     }

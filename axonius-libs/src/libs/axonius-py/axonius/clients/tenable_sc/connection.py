@@ -81,8 +81,8 @@ class TenableSecurityScannerConnection(RESTConnection):
         for ip in ips:
             if ip not in ips_raw:
                 ips_raw.append(ip)
-        self._patch('asset',
-                    body_params={'definedIPs': ','.join(ips_raw), 'id': asset_id})
+        self._patch(f'asset/{asset_id}',
+                    body_params={'definedIPs': ','.join(ips_raw)})
         return True
 
     def create_asset_with_ips(self, tenable_sc_dict):

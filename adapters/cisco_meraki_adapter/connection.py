@@ -56,6 +56,9 @@ class CiscoMerakiConnection(RESTConnection):
                     client_raw['network_name'] = device_raw.get('network_name')
                     client_raw['notes'] = device_raw.get('notes')
                     client_raw['tags'] = device_raw.get('tags')
+                    client_raw['wan1Ip'] = device_raw.get('wan1Ip')
+                    client_raw['wan2Ip'] = device_raw.get('wan2Ip')
+                    client_raw['lanIp'] = device_raw.get('lanIp')
                     yield client_raw, CLIENT_TYPE
             except Exception:
                 logger.exception(f'Problem with device {device_raw}')

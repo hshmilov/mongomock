@@ -20,6 +20,9 @@ export const actionsMeta = {
     shodan_enrichment: {
         title: 'Enrich Device Data by Shodan'
     },
+    haveibeenpwned_enrichment: {
+        title: 'Enrich User Data by Have I Been Pwned'
+    },
     carbonblack_isolate: {
         title: 'Isolate in Carbon Black CB Response'
     },
@@ -148,7 +151,7 @@ export const actionsMeta = {
     },
     enrich_device_data: {
         title: 'Enrich Device Data',
-        items: ['shodan_enrichment'],
+        items: ['shodan_enrichment', 'haveibeenpwned_enrichment'],
     },
     notify: {
         title: 'Notify',

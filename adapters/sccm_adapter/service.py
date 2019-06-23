@@ -75,6 +75,9 @@ class SccmAdapter(AdapterBase, Configurable):
         owner = Field(str, 'Owner')
         department = Field(str, 'Department')
         purpose = Field(str, 'Purpose')
+        tpm_is_activated = Field(bool, 'TPM Is Activated')
+        tpm_is_enabled = Field(bool, 'TPM Is Enabled')
+        tpm_is_owned = Field(bool, 'TPM Is Owned')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -120,6 +123,16 @@ class SccmAdapter(AdapterBase, Configurable):
         try:
             client_data.connect()
 
+            tpm_dict = dict()
+            try:
+                for tpm_data in client_data.query(consts.TPM_QUERY):
+                    asset_id = tpm_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    tpm_dict[asset_id] = tpm_data
+            except Exception:
+                logger.exception(f'Problem getting tpm')
+
             owner_dict = dict()
             try:
                 for owner_data in client_data.query(consts.OWNER_QUERY):
@@ -128,7 +141,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                     owner_dict[asset_id] = owner_data
             except Exception:
-                logger.exception(f'Problem getting chasis')
+                logger.exception(f'Problem getting owner')
 
             asset_encryption_dict = dict()
             try:
@@ -267,12 +280,14 @@ class SccmAdapter(AdapterBase, Configurable):
                 for device_raw in client_data.query(consts.SCCM_QUERY.format('')):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, \
                         asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict, owner_dict
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
+                        asset_vm_dict, owner_dict, tpm_dict
             else:
                 for device_raw in client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))):
                     yield device_raw, asset_software_dict, asset_patch_dict, asset_program_dict, asset_bios_dict, \
                         asset_users_dict, asset_top_dict, asset_malware_dict, \
-                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict, asset_vm_dict, owner_dict
+                        asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
+                        asset_vm_dict, owner_dict, tpm_dict
         finally:
             client_data.logout()
 
@@ -304,6 +319,7 @@ class SccmAdapter(AdapterBase, Configurable):
             asset_encryption_dict,
             asset_vm_dict,
             owner_dict,
+            tpm_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -451,6 +467,14 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting vm data dor {device_raw}')
 
+                try:
+                    if isinstance(tpm_dict.get(device_raw.get('ResourceID')), dict):
+                        tpm_data = tpm_dict.get(device_raw.get('ResourceID'))
+                        device.tpm_is_activated = tpm_data.get('IsActivated_InitialValue0') == 1
+                        device.tpm_is_enabled = tpm_data.get('IsEnabled_InitialValue0') == 1
+                        device.tpm_is_owned = tpm_data.get('IsOwned_InitialValue0') == 1
+                except Exception:
+                    logger.exception(f'Problem getting tpm data dor {device_raw}')
                 try:
                     if isinstance(owner_dict.get(device_raw.get('ResourceID')), dict):
                         owner_data = owner_dict.get(device_raw.get('ResourceID'))
