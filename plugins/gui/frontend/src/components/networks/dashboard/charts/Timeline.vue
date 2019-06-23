@@ -40,8 +40,7 @@
     import xDateEdit from '../../../neurons/schema/types/string/DateEdit.vue'
     import chartMixin from './chart'
 
-    import {mapState, mapActions} from 'vuex'
-    import {FETCH_FIRST_HISTORICAL_DATE} from '../../../../store/modules/constants'
+    import {mapState} from 'vuex'
 
     const dashboardView = {name: '', entity: ''}
     export default {
@@ -119,9 +118,6 @@
             }
         },
         methods: {
-            ...mapActions({
-                fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE
-            }),
             validateNumber(keyEvent) {
                 keyEvent = (keyEvent) ? keyEvent : window.event
                 let charCode = (keyEvent.which) ? keyEvent.which : keyEvent.keyCode
@@ -155,9 +151,6 @@
                 }
                 return date <= this.config.timeframe.from || isFuture
             }
-        },
-        created() {
-            this.fetchFirstHistoricalDate()
         }
     }
 </script>

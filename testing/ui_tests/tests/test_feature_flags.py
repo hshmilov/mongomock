@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
@@ -108,6 +110,8 @@ class TestFeatureFlags(TestBase):
         self.settings_page.fill_trial_expiration_by_remainder(days_remaining)
         self.settings_page.save_and_wait_for_toaster()
         self.login_page.logout()
+        time.sleep(6)
+        self.login_page.refresh()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=self.username, password=self.password)
 

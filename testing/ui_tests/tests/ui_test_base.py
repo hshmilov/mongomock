@@ -341,3 +341,4 @@ class TestBase:
         self.axonius_system.db.get_historical_entity_db_view(entity_type).drop()
         self.base_page.run_discovery()
         self._create_history(entity_type)
+        self.base_page.refresh()

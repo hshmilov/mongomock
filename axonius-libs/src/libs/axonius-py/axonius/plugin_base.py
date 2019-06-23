@@ -2569,6 +2569,8 @@ class PluginBase(Configurable, Feature):
         except Exception:
             logger.exception('Failed setting up syslog handler, no syslog handler has been set up')
 
+    @singlethreaded()
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5))
     def trial_expired(self):
         """
         Check whether system has a trial expiration that has passed

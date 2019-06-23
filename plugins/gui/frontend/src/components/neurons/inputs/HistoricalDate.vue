@@ -7,9 +7,7 @@
 
 <script>
     import xDateEdit from '../schema/types/string/DateEdit.vue'
-    import {mapState, mapGetters, mapActions} from 'vuex'
-    import {FETCH_FIRST_HISTORICAL_DATE, FETCH_ALLOWED_DATES} from '../../../store/modules/constants'
-    import {IS_EXPIRED} from '../../../store/getters'
+    import {mapState, mapActions} from 'vuex'
 
     export default {
         name: 'x-historical-date',
@@ -36,17 +34,11 @@
                     return state.constants.allowedDates[this.module]
                 }
             }),
-            ...mapGetters({
-                isExpired: IS_EXPIRED
-            }),
             currentDate() {
                 return new Date()
             }
         },
         methods: {
-            ...mapActions({
-                fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE, fetchAllowedDates: FETCH_ALLOWED_DATES
-            }),
             isDateUnavailable(date) {
                 if (date < this.firstHistoricalDate || date > this.currentDate) return true
 
@@ -58,12 +50,6 @@
                 this.$emit('input', historical)
             }
         },
-        mounted() {
-            if (!this.isExpired) {
-                this.fetchFirstHistoricalDate()
-                this.fetchAllowedDates()
-            }
-        }
     }
 </script>
 

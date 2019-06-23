@@ -11,6 +11,7 @@ class TestHistory(TestBase):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         day_to_user_count = self._create_history(EntityType.Users, self.users_page.FIELD_USERNAME_NAME)
+        self.users_page.refresh()
         self.users_page.switch_to_page()
         tester = self.axonius_system.gui.log_tester
         for day in range(1, 30):
@@ -27,6 +28,7 @@ class TestHistory(TestBase):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         day_to_device_count = self._create_history(EntityType.Devices, self.devices_page.FIELD_HOSTNAME_NAME)
+        self.devices_page.refresh()
         self.devices_page.switch_to_page()
         tester = self.axonius_system.gui.log_tester
         for day in range(1, 30):

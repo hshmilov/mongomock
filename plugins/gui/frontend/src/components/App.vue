@@ -35,9 +35,8 @@
     import {GET_USER} from '../store/modules/auth'
     import {IS_EXPIRED} from '../store/getters'
     import {FETCH_DATA_FIELDS, FETCH_SYSTEM_CONFIG, FETCH_SYSTEM_EXPIRED} from '../store/actions'
-    import {FETCH_CONSTANTS} from '../store/modules/constants'
+    import {FETCH_CONSTANTS, FETCH_FIRST_HISTORICAL_DATE, FETCH_ALLOWED_DATES} from '../store/modules/constants'
     import {UPDATE_WINDOW_WIDTH, SHOW_TOASTER_MESSAGE} from '../store/mutations'
-
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { entities } from '../constants/entities'
 
@@ -94,8 +93,13 @@
         methods: {
             ...mapMutations({ updateWindowWidth: UPDATE_WINDOW_WIDTH, showToasterMessage: SHOW_TOASTER_MESSAGE }),
             ...mapActions({
-                getUser: GET_USER, fetchConfig: FETCH_SYSTEM_CONFIG, fetchExpired: FETCH_SYSTEM_EXPIRED,
-                fetchConstants: FETCH_CONSTANTS, fetchDataFields: FETCH_DATA_FIELDS,
+                getUser: GET_USER,
+                fetchConfig: FETCH_SYSTEM_CONFIG,
+                fetchExpired: FETCH_SYSTEM_EXPIRED,
+                fetchConstants: FETCH_CONSTANTS,
+                fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE,
+                fetchAllowedDates: FETCH_ALLOWED_DATES,
+                fetchDataFields: FETCH_DATA_FIELDS,
             }),
             fetchGlobalData() {
                 this.fetchConstants()
@@ -105,6 +109,8 @@
                         this.fetchDataFields({module: entity.name})
                     })
 				    this.fetchConfig()
+                    this.fetchFirstHistoricalDate()
+                    this.fetchAllowedDates()
                 }
             },
             notifyAccess(name) {
