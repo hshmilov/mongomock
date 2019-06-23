@@ -44,7 +44,7 @@ class ShodanExecutionMixIn(Triggerable):
         return config
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
-        if job_name != 'execute':
+        if job_name != 'enrich':
             return super()._triggered(job_name, post_json, run_identifier, *args)
 
         logger.info('Shodan was Triggered.')
@@ -56,11 +56,14 @@ class ShodanExecutionMixIn(Triggerable):
             logger.debug(f'Bad config {client_config}')
             return {'status': 'error', 'message': f'Argument Error: Please specify a valid apikey'}
 
-        devices = [list(result)[0] for result in [self.devices.get(internal_axon_id=id_) for id_ in internal_axon_ids]]
         with ShodanConnection(apikey=client_config['apikey'],
                               domain_prefered=client_config.get('domain'),
                               https_proxy=client_config.get('https_proxy')) as connection:
-            results = dict(self._handle_device(device, connection) for device in devices)
+            results = {}
+            for id_ in internal_axon_ids:
+                device = list(self.devices.get(internal_axon_id=id_))[0]
+                internal_axon_id, result = self._handle_device(device, connection)
+                results[internal_axon_id] = result
         logger.info('Shodan Trigger end.')
         return results
 

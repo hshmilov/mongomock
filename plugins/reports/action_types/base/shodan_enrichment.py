@@ -54,6 +54,7 @@ class ShodanEnrichment(ActionTypeBase):
 
         action_result = self._plugin_base._trigger_remote_plugin(
             SHODAN_PLUGIN_NAME,
+            job_name='enrich',
             priority=True,
             blocking=True,
             data=action_data
