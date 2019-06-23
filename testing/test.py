@@ -501,7 +501,8 @@ def main():
 
                 return {
                     'ui_' + test_module.split('.py')[0]:
-                        f'python3 -u ./testing/run_ui_tests.py {extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
+                        'python3 -u ./testing/run_ui_tests.py '
+                        f'{extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
                 }
 
