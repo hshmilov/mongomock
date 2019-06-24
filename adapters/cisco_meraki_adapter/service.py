@@ -28,6 +28,7 @@ class AssociatedDeviceAdapter(SmartJsonClass):
     wan1_ip = Field(str, 'Wan1 IP')
     wan2_ip = Field(str, 'Wan2 IP')
     lan_ip = Field(str, 'Lan IP')
+    public_ip = Field(str, 'Public IP')
 
 
 class CiscoMerakiAdapter(AdapterBase):
@@ -40,6 +41,7 @@ class CiscoMerakiAdapter(AdapterBase):
         lng = Field(str, 'Lng')
         lat = Field(str, 'Lat')
         notes = Field(str, 'Notes')
+        device_status = Field(str, 'Device Status')
         cisco_tags = ListField(str, 'Cisco Tags')
         address = Field(str, 'Address')
         dns_name = Field(str, 'DNS Name')
@@ -176,7 +178,7 @@ class CiscoMerakiAdapter(AdapterBase):
             found_regular_vlan = False
             found_exclude_vlan = False
             for associated_device, switch_port, address, network_name, vlan, name, notes,\
-                tags, wan1_ip, wan2_ip, lan_ip in \
+                tags, wan1_ip, wan2_ip, lan_ip, public_ip in \
                     client_raw['associated_devices']:
                 try:
                     associated_device_object = AssociatedDeviceAdapter()
@@ -196,6 +198,7 @@ class CiscoMerakiAdapter(AdapterBase):
                     associated_device_object.wan1_ip = wan1_ip
                     associated_device_object.wan2_ip = wan2_ip
                     associated_device_object.lan_ip = lan_ip
+                    associated_device_object.public_ip = public_ip
                     device.associated_devices.append(associated_device_object)
 
                     connected_device = DeviceAdapterNeighbor()
@@ -257,6 +260,12 @@ class CiscoMerakiAdapter(AdapterBase):
             if device_raw.get('tags') and isinstance(device_raw.get('tags'), str):
                 device.cisco_tags = device_raw.get('tags').split(',')
             device.adapter_properties = [AdapterProperty.Network.name, AdapterProperty.Manager.name]
+            try:
+                device_status = device_raw.get('device_status')
+                device.add_public_ip(device_status.get('publicIp'))
+                device.device_status = device_status.get('status')
+            except Exception:
+                logger.exception('Problem with status')
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -288,7 +297,8 @@ class CiscoMerakiAdapter(AdapterBase):
                  client_raw.get('address'), client_raw.get('network_name'),
                  client_raw.get('vlan'), client_raw.get('name'),
                  client_raw.get('notes'), client_raw.get('tags'),
-                 client_raw.get('wan1Ip'), client_raw.get('wan2Ip'), client_raw.get('lanIp')))
+                 client_raw.get('wan1Ip'), client_raw.get('wan2Ip'), client_raw.get('lanIp'),
+                 client_raw.get('public_ip')))
         except Exception:
             logger.exception(f'Problem with fetching CiscoMeraki Client {client_raw}')
 

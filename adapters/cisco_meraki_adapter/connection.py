@@ -40,10 +40,14 @@ class CiscoMerakiConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem getting devices in network {network_raw}')
 
-    def _get_devices_and_clients(self, networks_raw):
+    def _get_devices_and_clients(self, networks_raw, serial_statuses_dict):
         devices_raw = self._get_devices(networks_raw)
         for device_raw in devices_raw:
             try:
+                device_status = {}
+                if device_raw.get('serial') and serial_statuses_dict.get(device_raw.get('serial')):
+                    device_status = serial_statuses_dict.get(device_raw.get('serial'))
+                device_raw['device_status'] = device_status
                 yield device_raw, DEVICE_TYPE
                 if not device_raw.get('serial'):
                     continue
@@ -59,6 +63,7 @@ class CiscoMerakiConnection(RESTConnection):
                     client_raw['wan1Ip'] = device_raw.get('wan1Ip')
                     client_raw['wan2Ip'] = device_raw.get('wan2Ip')
                     client_raw['lanIp'] = device_raw.get('lanIp')
+                    client_raw['public_ip'] = device_status.get('publicIp')
                     yield client_raw, CLIENT_TYPE
             except Exception:
                 logger.exception(f'Problem with device {device_raw}')
@@ -86,9 +91,22 @@ class CiscoMerakiConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem getting devices in network {network_raw}')
 
+    def _get_device_statuses(self, organizations):
+        serial_statuses_dict = dict()
+        for organization in organizations:
+            try:
+                device_statuses = self._get(f'organizations/{organization}/deviceStatuses')
+                for device_status in device_statuses:
+                    if isinstance(device_status, dict) and device_status.get('serial'):
+                        serial_statuses_dict[device_status.get('serial')] = device_status
+            except Exception:
+                logger.exception(f'Problem with organization {organization}')
+        return serial_statuses_dict
+
     def get_device_list(self):
         organizations = [str(organization_raw['id']) for organization_raw in self._get('organizations')
                          if organization_raw.get('id')]
+        serial_statuses_dict = self._get_device_statuses(organizations)
         networks_raw = list(self._get_networks(organizations))
-        yield from self._get_devices_and_clients(networks_raw)
+        yield from self._get_devices_and_clients(networks_raw, serial_statuses_dict)
         yield from self._get_mdm_devices(networks_raw)
