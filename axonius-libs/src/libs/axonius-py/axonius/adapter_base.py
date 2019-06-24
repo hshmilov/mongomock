@@ -123,9 +123,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def _send_reset_to_ec(self):
         """ Function for notifying the EC that this Adapted has been reset.
         """
-        self.request_remote_plugin('action_update/adapter_action_reset?unique_name={0}'.format(self.plugin_unique_name),
-                                   plugin_unique_name='execution',
-                                   method='POST')
+        try:
+            self.request_remote_plugin(
+                'action_update/adapter_action_reset?unique_name={0}'.format(self.plugin_unique_name),
+                plugin_unique_name='execution',
+                method='POST')
+        except Exception:
+            logger.warning('Failed sending reset to EC')
 
     def _prepare_parsed_clients_config(self, blocking=True):
         configured_clients = self._get_clients_config()

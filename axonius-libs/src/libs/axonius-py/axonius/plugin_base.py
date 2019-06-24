@@ -947,7 +947,7 @@ class PluginBase(Configurable, Feature):
                                          args=args,
                                          kwargs=kwargs))
 
-    def get_available_plugins_from_core_uncached(self) -> list:
+    def get_available_plugins_from_core_uncached(self) -> Dict[str, dict]:
         """
         Uncached version for get_available_plugins_from_core
         """
@@ -955,7 +955,7 @@ class PluginBase(Configurable, Feature):
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10))
-    def get_available_plugins_from_core(self) -> list:
+    def get_available_plugins_from_core(self) -> Dict[str, dict]:
         """
         Gets all running plugins from core by querying core/register
         """
@@ -991,7 +991,8 @@ class PluginBase(Configurable, Feature):
                 res = self.request_remote_plugin(f'trigger/{job_name}?blocking={blocking}&priority={priority}'
                                                  f'&timeout={timeout}',
                                                  plugin_name, method='post',
-                                                 json=data)
+                                                 json=data,
+                                                 raise_on_network_error=True)
                 if res.status_code == 408:  # timeout:
                     logger.info(f'Timeout on {plugin_name}, {job_name}')
                     if stop_on_timeout:
@@ -1000,7 +1001,8 @@ class PluginBase(Configurable, Feature):
                 return res
             except Exception:
                 logger.exception(f'Trigger failed on {plugin_name}, {job_name}, {data}')
-                raise
+                if blocking:
+                    raise
 
         if not blocking:
             run_and_forget(inner)
