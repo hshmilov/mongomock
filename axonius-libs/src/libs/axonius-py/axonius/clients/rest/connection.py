@@ -15,13 +15,15 @@ from axonius.async.utils import async_request
 from axonius.clients.rest import consts
 from axonius.clients.rest.exception import RESTException, RESTAlreadyConnected, \
     RESTConnectionError, RESTNotConnected, RESTRequestException
+from axonius.logging.metric_helper import log_metric
 from axonius.utils.json import from_json
+from axonius.utils.network.docker_network import has_addr_collision, COLLISION_MESSAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
 ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE = 50
 MAX_REQUESTS_PER_MINUTE = 1000
+
 
 # pylint: disable=R0902
 
@@ -101,7 +103,16 @@ class RESTConnection(ABC):
         if hasattr(self, 'session') and self._is_connected:
             self.close()
 
+    def check_for_collision_safe(self):
+        try:
+            collision, msg = has_addr_collision(self._domain)
+            if collision:
+                log_metric(logger, metric_name=COLLISION_MESSAGE, metric_value=self.__class__.__name__, msg=msg)
+        except Exception:
+            logger.exception(f'failed to check for collision')
+
     def connect(self):
+        self.check_for_collision_safe()
         self._validate_no_connection()
         self._session = requests.Session()
         return self._connect()
@@ -383,12 +394,12 @@ class RESTConnection(ABC):
                         if list_of_requests[request_id_absolute].get('return_response_raw', False) is True:
                             yield response_object
                         elif list_of_requests[request_id_absolute].get('use_json_in_response', True) is True:
-                            yield from_json(answer_text)    # from_json also handles datetime with json.loads doesn't
+                            yield from_json(answer_text)  # from_json also handles datetime with json.loads doesn't
                         else:
                             yield answer_text
                     except aiohttp.ClientResponseError as e:
                         try:
-                            rp = from_json(answer_text)     # from_json also handles datetime with json.loads doesn't
+                            rp = from_json(answer_text)  # from_json also handles datetime with json.loads doesn't
                         except Exception:
                             rp = str(answer_text)
                         error_on = list_of_requests[request_id_absolute]['name']
@@ -399,7 +410,7 @@ class RESTConnection(ABC):
                         yield e
                 else:
                     msg = f'Got an async response which is not exception or ClientResponse. ' \
-                          f'This should never happen! response is {raw_answer}'
+                        f'This should never happen! response is {raw_answer}'
                     logger.error(msg)
                     yield ValueError(msg)
 
