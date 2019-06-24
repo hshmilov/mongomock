@@ -87,14 +87,12 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
         :return:
         """
         return self.devices_db.find(
-            parse_filter('((specific_data.data.network_interfaces.manufacturer == exists(true) and not '
-                         'specific_data.data.network_interfaces.manufacturer == type(10)) and '
-                         'specific_data.data.network_interfaces.manufacturer != "") and '  # mac manufacturer exists
-                         '((specific_data.data.hostname == exists(true) and not '
-                         'specific_data.data.hostname == type(10)) and '
-                         'specific_data.data.hostname != "") and '  # hostname exists
-                         '(specific_data.data.last_seen == exists(true) and not '
-                         'specific_data.data.last_seen == type(10)) and '  # last_seen exists
+            parse_filter('(specific_data.data.network_interfaces.manufacturer == ({"$exists":true,"$ne":""}))'
+                         ' and '  # mac manufacturer exists
+                         '(specific_data.data.hostname == ({"$exists":true,"$ne":""}))'
+                         ' and '  # hostname exists
+                         '(specific_data.data.last_seen == ({"$exists":true,"$ne":null}))'
+                         ' and '  # last_seen exists
                          f'specific_data.data.adapter_properties == "{AdapterProperty.Agent.name}"'),  # Agent
             projection={
                 '_id': False,

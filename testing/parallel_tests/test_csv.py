@@ -32,8 +32,8 @@ class TestCsvAdapter(AdapterTestBase):
     def test_csv_fields(self):
         def get_devices(adapter_name):
             res = gui_service.get_devices(params={
-                'filter':
-                    f"((adapters_data.csv_adapter.id == exists(true) and not adapters_data.csv_adapter.id == type(10)) and adapters_data.csv_adapter.id != '')"}).json()
+                'filter': '(adapters_data.csv_adapter.id == ({"$exists":true,"$ne":""}))'
+            }).json()
             return res
 
         gui_service = self.axonius_system.gui

@@ -150,12 +150,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
         with self.__nvd_lock:
             devices_with_cves_and_no_software = list(self.devices_db.find(
                 parse_filter(
-                    'not ((specific_data.data.installed_software.name == exists(true) and '
-                    'not specific_data.data.installed_software.name == type(10)) and '
-                    'specific_data.data.installed_software.name != \'\') and '
-                    '((specific_data.data.software_cves.cve_id == exists(true) and '
-                    'not specific_data.data.software_cves.cve_id == type(10)) and '
-                    'specific_data.data.software_cves.cve_id != \'\')'),
+                    'not ((specific_data.data.installed_software.name == ({"$exists":true,"$ne":""}))) and '
+                    '(specific_data.data.software_cves.cve_id == ({"$exists":true,"$ne":""}))'),
                 projection={
                     '_id': False,
                     'internal_axon_id': True

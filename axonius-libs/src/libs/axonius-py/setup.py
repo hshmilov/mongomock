@@ -7,6 +7,7 @@ from setuptools import setup
 setup(
     name="Axonius",
     packages=["axonius", "axonius.mixins", "axonius.consts", "axonius.devices", "axonius.utils", "axonius.users",
+              "axonius.pql",
               "axonius.logging", "axonius.types", "axonius.clients",
               "axonius.clients.service_now",
               "axonius.clients.fresh_service",

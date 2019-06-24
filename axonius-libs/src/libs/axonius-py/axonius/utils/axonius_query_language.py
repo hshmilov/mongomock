@@ -6,12 +6,12 @@ from collections import defaultdict
 
 from typing import List
 from bson.json_util import default
-import pql
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_chunked import read_chunked
+import axonius.pql
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -314,7 +314,7 @@ def parse_filter(filter_str: str, history_date=None):
                                                                       int(index_in_condition),
                                                                       entities_returned_type)
     filter_str = process_filter(filter_str, history_date)
-    res = translate_filter_not(pql.find(filter_str)) if filter_str else {}
+    res = translate_filter_not(axonius.pql.find(filter_str)) if filter_str else {}
     post_process_filter(res, include_outdated)
     convert_to_main_db(res)
     res = {
@@ -353,7 +353,7 @@ def process_filter(filter_str, history_date):
 
     matches = re.findall(re.compile(r'match\s*\((\[.*?\])\)'), filter_str)
     for match in matches:
-        filter_str = filter_str.replace(match, json.dumps(pql.find(match[1:-1]), default=default_iso_date))
+        filter_str = filter_str.replace(match, json.dumps(axonius.pql.find(match[1:-1]), default=default_iso_date))
 
     matches = re.findall(re.compile(r'({"\$date": (.*?)})'), filter_str)
     for match in matches:
@@ -495,5 +495,5 @@ def parse_filter_non_entities(filter_str: str, history_date=None):
 
     filter_str = filter_str.strip()
     filter_str = process_filter(filter_str, history_date)
-    res = translate_filter_not(pql.find(filter_str)) if filter_str else {}
+    res = translate_filter_not(axonius.pql.find(filter_str)) if filter_str else {}
     return res

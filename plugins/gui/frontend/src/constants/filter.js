@@ -18,9 +18,9 @@ export const expression = {
     nested: []
 }
 
-const exists = '({field} == exists(true) and not {field} == type(10))'
-const exists_str = `(${exists} and {field} != '')`
-const exists_array = `(${exists} and {field} != [])`
+const exists = '({field} == ({"$exists":true,"$ne":null}))'
+const exists_str = '({field} == ({"$exists":true,"$ne": ""}))'
+const exists_array = '({field} == ({"$exists":true,"$ne":[]}))'
 const equals = '{field} == "{val}"'
 const contains = '{field} == regex("{val}", "i")'
 const numerical = {

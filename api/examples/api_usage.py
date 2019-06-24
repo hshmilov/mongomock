@@ -171,9 +171,7 @@ class RESTExample:
              'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'])
 
         # Get all devices that have some ip
-        filter_ = '((specific_data.data.network_interfaces.ips == exists(true) and not ' \
-                  'specific_data.data.network_interfaces.ips == type(10)) and ' \
-                  'specific_data.data.network_interfaces.ips != "")'
+        filter_ = '(specific_data.data.network_interfaces.ips == ({"$exists":true,"$ne":""}))'
 
         # The request would look like this
         status_code, devices = self._client.get_devices(skip=0, limit=50, fields=fields, filter_=filter_)

@@ -475,3 +475,6 @@ testing/test_helpers/parallel_runner.py
 testing/test_helpers/qcore_fake_pump.py
 testing/test_helpers/user_helper.py
 testing/test_helpers/utils.py
+axonius-libs/src/libs/axonius-py/axonius/pql/__init__.py
+axonius-libs/src/libs/axonius-py/axonius/pql/aggregation.py
+axonius-libs/src/libs/axonius-py/axonius/pql/matching.py
