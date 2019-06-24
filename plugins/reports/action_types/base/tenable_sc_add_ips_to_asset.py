@@ -21,12 +21,12 @@ class TenableScAddIPsToAsset(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use Tenable SC Adapter',
+                    'title': 'Use Tenable.sc Adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'Tenable SC Domain',
+                    'title': 'Tenable.sc Domain',
                     'type': 'string'
                 },
                 {
@@ -62,11 +62,11 @@ class TenableScAddIPsToAsset(ActionTypeBase):
                 },
                 {
                     'name': 'use_public_ips',
-                    'title': 'Use Public IPS',
+                    'title': 'Use Public IPs',
                     'type': 'bool'},
                 {
                     'name': 'use_private_ips',
-                    'title': 'Use Private IPS',
+                    'title': 'Use Private IPs',
                     'type': 'bool'
                 },
                 {

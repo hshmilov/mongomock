@@ -20,23 +20,23 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use Tenable IO Adapter',
+                    'title': 'Use Tenable.io Adapter',
                     'type': 'bool'
                 },
                 {
                     'name': 'domain',
-                    'title': 'TenableIO Domain',
+                    'title': 'Tenable.io Domain',
                     'type': 'string'
                 },
                 {
                     'name': 'access_key',
-                    'title': 'Access API Key (instead of user/password)',
+                    'title': 'Access API Key',
                     'type': 'string',
                     'format': 'password'
                 },
                 {
                     'name': 'secret_key',
-                    'title': 'Secret API key (instead of user/password)',
+                    'title': 'Secret API key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -57,16 +57,16 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
                 },
                 {
                     'name': 'create_new_asset',
-                    'title': 'Create New Asset',
+                    'title': 'Create New Target Group',
                     'type': 'bool'
                 },
                 {
                     'name': 'use_public_ips',
-                    'title': 'Use Public IPS',
+                    'title': 'Use Public IPs',
                     'type': 'bool'},
                 {
                     'name': 'use_private_ips',
-                    'title': 'Use Private IPS',
+                    'title': 'Use Private IPs',
                     'type': 'bool'
                 },
                 {
