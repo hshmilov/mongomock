@@ -149,7 +149,7 @@
       <li class="nav-item">
         <a
           class="item-link"
-          @click="initTourState"
+          @click="startTourOnClick"
         >
           <svg-icon
             name="action/help"
@@ -268,11 +268,17 @@
         fetchDataFields: FETCH_DATA_FIELDS
 
       }),
+      startTourOnClick(){
+        this.$ga.event('tour', 'start', '', 1)
+        this.initTourState()
+      },
       startResearchNow () {
+        this.$ga.event('research', 'start-now', '', 1)
         this.researchStatusLocal = 'starting'
         this.startResearch().catch(() => this.researchStatusLocal = '')
       },
       stopResearchNow () {
+        this.$ga.event('research', 'stop-now', '', 1)
         this.researchStatusLocal = 'stopping'
         this.stopResearch().catch(() => this.researchStatusLocal = 'running')
       },

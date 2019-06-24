@@ -4796,6 +4796,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             if not customer or customer in [SIGNUP_TEST_CREDS[Signup.CompanyField], SIGNUP_TEST_COMPANY_NAME]:
                 return
 
+            if has_request_context():
+                user = session.get('user')
+                if user is None:
+                    return
+                user = dict(user)
+                user_name = user.get('user_name')
+                source = user.get('source')
+
+                if user_name == AXONIUS_USER_NAME and source == 'internal':
+                    return
+
             # referrer
             values['tid'] = 'UA-137924837-1'
             values['dr'] = f'https://{customer}'

@@ -3,7 +3,7 @@
         <div class="state-tip" :class="alignClass">
             <div class="header">
                 <div class="remove">
-                    <div @click="stopTour">x</div>
+                    <div @click="stopTourOnClick">x</div>
                 </div>
                 <div class="title">{{currentState.title || '&nbsp;'}}</div>
             </div>
@@ -63,6 +63,10 @@
         },
         methods: {
             ...mapMutations({stopTour: STOP_TOUR, changeState: CHANGE_TOUR_STATE}),
+            stopTourOnClick(){
+                this.$ga.event('tour', 'stop', '', 1)
+                this.stopTour()
+            },
             calcPosition() {
                 let selfHeight = this.$el.offsetHeight
                 let selfWidth = this.$el.offsetWidth

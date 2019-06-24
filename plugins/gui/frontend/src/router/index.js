@@ -87,6 +87,7 @@ if (ENV.medical) {
         {
             path: '/devices/:id',
             component: Device,
+            name: 'Device',
         },
         {
             path: '/devices/query/saved',
@@ -100,7 +101,8 @@ if (ENV.medical) {
         },
         {
             path: '/users/:id',
-            component: User
+            component: User,
+            name: 'User'
         },
         {
             path: '/users/query/saved',
@@ -114,7 +116,8 @@ if (ENV.medical) {
         },
         {
             path: '/adapters/:id',
-            component: Adapter
+            component: Adapter,
+            name:'Adapter'
         },
         {
             path: '/enforcements/tasks',
@@ -123,7 +126,8 @@ if (ENV.medical) {
         },
         {
             path: '/enforcements/tasks/:id',
-            component: Task
+            component: Task,
+            name: 'Task'
         },
         {
             path: '/enforcements',
@@ -132,7 +136,8 @@ if (ENV.medical) {
         },
         {
             path: '/enforcements/:id',
-            component: Enforcement
+            component: Enforcement,
+            name: 'Enforcement'
         },
         {
             path: '/settings',
@@ -146,7 +151,8 @@ if (ENV.medical) {
         },
         {
             path: '/notifications/:id',
-            component: Notification
+            component: Notification,
+            name: 'Notification'
         },
         {
             path: '/reports',
@@ -155,7 +161,8 @@ if (ENV.medical) {
         },
         {
             path: '/reports/:id',
-            component: Report
+            component: Report,
+            name: 'Report'
         },
         {
             path: '/account',
