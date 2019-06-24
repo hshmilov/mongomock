@@ -52,7 +52,7 @@ export const pluginMeta = {
         description: 'CA Service Management is an IT service management (ITSM) solution that offers incident management and IT asset management.'
     },
     zscaler_adapter: {
-        title: 'Zscaler Adapter - BETA',
+        title: 'Zscaler Web Security - BETA',
         description: 'Zscaler Web Security, part of the Zscaler Cloud Security Platform, is a secure Internet and web gateway delivered as a service, stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more.'
     },
     alertlogic_adapter: {

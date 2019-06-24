@@ -12,7 +12,7 @@
                 <div class="x-grid">
                     <label>API Key:</label>
                     <div>{{apiKey['api_key']}}</div>
-                    <label>API secret:</label>
+                    <label>API Secret:</label>
                     <div>{{apiKey['api_secret']}}</div>
                 </div>
             </x-tab>

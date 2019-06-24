@@ -2793,7 +2793,7 @@ class PluginBase(Configurable, Feature):
                         },
                         {
                             'name': ADAPTERS_ERRORS_MAIL_ADDRESS,
-                            'title': 'Adapters Errors Mail Address',
+                            'title': 'Adapters Errors Email Address',
                             'type': 'string'
                         }
                     ],

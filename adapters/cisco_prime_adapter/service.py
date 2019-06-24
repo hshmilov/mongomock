@@ -150,7 +150,7 @@ class CiscoPrimeAdapter(AdapterBase):
                  'type': 'string', 'description': 'Cisco Prime Infrastructure url'},
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
-                {'name': 'wireless_vlan_exclude_list', 'title': 'Wireless Vlan Exclude List', 'type': 'string'}
+                {'name': 'wireless_vlan_exclude_list', 'title': 'Wireless VLAN Exclude List', 'type': 'string'}
             ],
             'required': ['url', 'username', 'password'],
             'type': 'array',

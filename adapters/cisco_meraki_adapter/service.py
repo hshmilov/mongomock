@@ -131,7 +131,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 },
                 {
                     'name': 'vlan_exclude_list',
-                    'title': 'Vlan Exclude List',
+                    'title': 'VLAN Exclude List',
                     'type': 'string'
                 },
                 {
