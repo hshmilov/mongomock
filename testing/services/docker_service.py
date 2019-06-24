@@ -39,6 +39,8 @@ class DockerService(AxonService):
 
         self.log_dir = str(LOGS_PATH_HOST / self.container_name)
         self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'uploaded_files'))
+        if not os.path.exists(self.uploaded_files_dir):
+            os.mkdir(self.uploaded_files_dir)
         self.shared_readonly_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'shared_readonly_files'))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
         self.package_name = os.path.basename(self.service_dir)

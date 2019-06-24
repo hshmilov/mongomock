@@ -10,7 +10,7 @@ from cachetools import keys
 from dataclasses import dataclass, field
 
 from axonius.entities import EntityType
-from axonius.plugin_base import PluginBase
+from axonius.utils.get_plugin_base_instance import plugin_base_instance
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -94,7 +94,7 @@ class CachedEntry:
         if not self.event.wait(900):
             logger.error(f'Timeout on {self}!')
             self.job.modify(next_run_time=datetime.now())
-            PluginBase.Instance.cached_operation_scheduler.wakeup()
+            plugin_base_instance().cached_operation_scheduler.wakeup()
             return self.func(*self.args, **self.kwargs)
 
         self.last_accessed = datetime.now()
@@ -163,7 +163,7 @@ class RevCached:
             return
 
         for name, value in self.__initial_values.items():
-            value.job = PluginBase.Instance.cached_operation_scheduler.add_job(
+            value.job = plugin_base_instance().cached_operation_scheduler.add_job(
                 func=self.__warm_cache,
                 args=[value],
                 trigger=IntervalTrigger(
@@ -172,11 +172,11 @@ class RevCached:
                 max_instances=1)
 
         if self.__remove_from_cache_ttl:
-            PluginBase.Instance.cached_operation_scheduler.add_job(func=self.__clean_unused_values,
-                                                                   trigger=IntervalTrigger(
-                                                                       seconds=self.__remove_from_cache_ttl / 2),
-                                                                   name=f'{self.__func.__name__}_clean',
-                                                                   max_instances=1)
+            plugin_base_instance().cached_operation_scheduler.add_job(func=self.__clean_unused_values,
+                                                                      trigger=IntervalTrigger(
+                                                                          seconds=self.__remove_from_cache_ttl / 2),
+                                                                      name=f'{self.__func.__name__}_clean',
+                                                                      max_instances=1)
 
         self.__initialized = True
 
@@ -235,7 +235,7 @@ class RevCached:
 
             cache_entry = CachedEntry(args, kwargs, datetime.now(), key, self.__func)
             self.__warm_cache(cache_entry)
-            cache_entry.job = PluginBase.Instance.cached_operation_scheduler.add_job(
+            cache_entry.job = plugin_base_instance().cached_operation_scheduler.add_job(
                 func=self.__warm_cache,
                 args=[cache_entry],
                 trigger=IntervalTrigger(
@@ -251,7 +251,7 @@ class RevCached:
         """
         for cached_entry in dict(self.__initial_values).values():
             cached_entry.job.modify(next_run_time=datetime.now())
-        PluginBase.Instance.cached_operation_scheduler.wakeup()
+        plugin_base_instance().cached_operation_scheduler.wakeup()
 
     def sync_clean_cache(self):
         """
