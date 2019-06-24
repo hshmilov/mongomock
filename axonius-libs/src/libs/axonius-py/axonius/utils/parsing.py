@@ -14,12 +14,11 @@ import sys
 from types import FunctionType
 from typing import Callable, NewType, List
 
-import dateutil.parser
 import pytz
 
 import axonius
 from axonius.entities import EntityType
-from axonius.utils.datetime import is_date_real, parse_date
+from axonius.utils.datetime import is_date_real, parse_date, _parse_unix_timestamp
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -504,16 +503,7 @@ def format_ip_raw(value):
 
 
 def parse_unix_timestamp(unix_timestamp):
-    try:
-        return datetime.datetime.utcfromtimestamp(unix_timestamp)
-    except Exception:
-        # This must be unix timestamp with milliseconds, we continue to the next line.
-        pass
-    try:
-        return datetime.datetime.utcfromtimestamp(unix_timestamp / 1000)
-    except Exception:
-        logger.exception(f'problem parsing unix timestamp {unix_timestamp}')
-        return None
+    return _parse_unix_timestamp(unix_timestamp)
 
 
 def is_hostname_valid(hostname):

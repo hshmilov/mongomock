@@ -1,4 +1,5 @@
 import datetime
+import ipaddress
 import logging
 import typing
 import copy
@@ -552,6 +553,13 @@ class DeviceAdapter(SmartJsonClass):
         self._raw_data = {}  # will hold any extra raw fields that are associated with this device.
 
     def add_public_ip(self, ip):
+        try:
+            if ipaddress.ip_address(ip).is_private:
+                logger.warning(f'add_public_ip: got {ip} which is private, bypassing')
+                return
+        except Exception:
+            logger.exception(f'Error: could not parse ip {ip}')
+            return
         try:
             self.public_ips.append(ip)
             self.public_ips_raw.append(ip)

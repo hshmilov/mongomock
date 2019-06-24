@@ -1,6 +1,10 @@
+import logging
+
 from datetime import timedelta, datetime, timezone
 
 import dateutil
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def next_weekday(current_day, weekday):
@@ -37,11 +41,28 @@ def is_date_real(datetime_to_parse):
         datetime_to_parse.replace(tzinfo=None) != datetime(1970, 1, 1)
 
 
+def _parse_unix_timestamp(unix_timestamp):
+    try:
+        return datetime.datetime.utcfromtimestamp(unix_timestamp)
+    except Exception:
+        # This must be unix timestamp with milliseconds, we continue to the next line.
+        pass
+    try:
+        return datetime.datetime.utcfromtimestamp(unix_timestamp / 1000)
+    except Exception:
+        logger.exception(f'problem parsing unix timestamp {unix_timestamp}')
+        return None
+
+
 def parse_date(datetime_to_parse):
     """
     Parses date and returns it as UTC
     """
     try:
+        if isinstance(datetime_to_parse, int):
+            datetime_from_int = _parse_unix_timestamp(datetime_to_parse)
+            if datetime_from_int:
+                return datetime_from_int
         if isinstance(datetime_to_parse, datetime):
             # sometimes that happens too
             return datetime_to_parse.astimezone(timezone.utc)
