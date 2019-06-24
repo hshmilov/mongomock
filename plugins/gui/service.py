@@ -61,7 +61,7 @@ from axonius.consts.gui_consts import (ADAPTERS_DATA, ENCRYPTION_KEY_PATH,
                                        FeatureFlagsNames, ResearchStatus,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_CUSTOM,
-                                       Signup, PROXY_DATA_PATH)
+                                       Signup, PROXY_DATA_PATH, DASHBOARD_LIFECYCLE_ENDPOINT)
 from axonius.consts.metric_consts import ApiMetric, Query, SystemMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
@@ -186,7 +186,19 @@ def session_connection(func, required_permissions: Iterable[Permission], enforce
             if method != 'GET':
                 log_metric(logger, ApiMetric.REQUEST_PATH, cleanpath, method=request.method)
 
-        return func(self, *args, **kwargs)
+        now = time.time()
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            if has_request_context():
+                # don't change these consts since we monitor this our alerts systems
+                if request.args.get('is_refresh') != '1' and DASHBOARD_LIFECYCLE_ENDPOINT not in request.path:
+                    cleanpath = remove_ids(request.path)
+                    delay_seconds = time.time() - now
+                    log_metric(logger, SystemMetric.TIMED_ENDPOINT,
+                               metric_value=delay_seconds,
+                               endpoint=cleanpath,
+                               method=request.method)
 
     return wrapper
 
@@ -1031,7 +1043,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     # DEVICE #
     ##########
 
-    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_helpers.paginated()
     @gui_helpers.filtered_entities()
@@ -1114,14 +1125,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def enforce_device(self, mongo_filter):
         return self._enforce_entity(EntityType.Devices, mongo_filter)
 
-    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_add_rule_logged_in('devices/<device_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
     def device_generic(self, device_id, history: datetime):
         return jsonify(get_entity_data(EntityType.Devices, device_id, history))
 
-    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
     @gui_add_rule_logged_in('devices/<device_id>/<field_name>/csv', methods=['GET'],
@@ -1144,7 +1153,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         output.headers['Content-type'] = 'text/csv'
         return output
 
-    @gui_helpers.timed_endpoint()
     @gui_add_rule_logged_in('devices/<device_id>/tasks', methods=['GET'],
                             required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
     def device_tasks(self, device_id):
@@ -1196,7 +1204,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     # USER #
     #########
 
-    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_helpers.paginated()
     @gui_helpers.filtered_entities()
@@ -1277,14 +1284,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def user_labels(self, mongo_filter):
         return self._entity_labels(self.users_db, self.users, mongo_filter)
 
-    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_add_rule_logged_in('users/<user_id>', methods=['GET'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
     def user_generic(self, user_id, history: datetime):
         return jsonify(get_entity_data(EntityType.Users, user_id, history))
 
-    @gui_helpers.timed_endpoint()
     @gui_helpers.historical()
     @gui_helpers.sorted_endpoint()
     @gui_add_rule_logged_in('users/<user_id>/<field_name>/csv', methods=['GET'],
@@ -1307,7 +1312,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         output.headers['Content-type'] = 'text/csv'
         return output
 
-    @gui_helpers.timed_endpoint()
     @gui_add_rule_logged_in('users/<user_id>/tasks', methods=['GET'],
                             required_permissions={Permission(PermissionType.Users, PermissionLevel.ReadOnly)})
     def user_tasks(self, user_id):
@@ -4163,7 +4167,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             'status': nice_state.name
         }
 
-    @gui_add_rule_logged_in('dashboard/lifecycle', methods=['GET'],
+    @gui_add_rule_logged_in(DASHBOARD_LIFECYCLE_ENDPOINT, methods=['GET'],
                             required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
                             enforce_trial=False)
     def get_system_lifecycle(self):
