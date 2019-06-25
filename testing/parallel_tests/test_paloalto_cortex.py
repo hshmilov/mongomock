@@ -1,10 +1,13 @@
 # pylint: disable=unused-import
 import pytest
+from flaky import flaky
 
-from services.adapters.paloalto_cortex_service import PaloaltoCortexService, paloalto_cortex_fixture
-from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_paloalto_cortex_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
 from paloalto_cortex_adapter.client_id import get_client_id
+from services.adapters.paloalto_cortex_service import (PaloaltoCortexService,
+                                                       paloalto_cortex_fixture)
+from test_credentials.test_paloalto_cortex_credentials import (CLIENT_DETAILS,
+                                                               SOME_DEVICE_ID)
+from test_helpers.adapter_test_base import AdapterTestBase
 
 
 class TestPaloaltoCortexAdapter(AdapterTestBase):
@@ -35,3 +38,7 @@ class TestPaloaltoCortexAdapter(AdapterTestBase):
     @pytest.mark.skip('Its a cloud instance so no test check reachability')
     def test_check_reachability(self):
         pass
+
+    @flaky(max_runs=2)
+    def test_fetch_devices(self):
+        super().test_fetch_devices()
