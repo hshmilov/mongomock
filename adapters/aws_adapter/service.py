@@ -948,7 +948,7 @@ class AwsAdapter(AdapterBase, Configurable):
                         for nat_gateways_page in get_paginated_next_token_api(ec2_client_data.describe_nat_gateways):
                             nat_gateways.extend(nat_gateways_page.get('NatGateways') or [])
                 except Exception:
-                    logger.exceptionf('Problem getting NAT Gateways')
+                    logger.exception('Problem getting NAT Gateways')
 
                 raw_data['ec2'] = reservations
                 raw_data['vpcs'] = described_vpcs
