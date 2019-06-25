@@ -107,7 +107,7 @@ class RESTConnection(ABC):
         try:
             collision, msg = has_addr_collision(self._domain)
             if collision:
-                log_metric(logger, metric_name=COLLISION_MESSAGE, metric_value=self.__class__.__name__, msg=msg)
+                log_metric(logger, metric_name=COLLISION_MESSAGE, metric_value=msg)
         except Exception:
             logger.exception(f'failed to check for collision')
 
