@@ -16,9 +16,8 @@ from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
-from scripts.instances.instances_consts import SUBNET_IP_RANGE
 from scripts.instances.network_utils import (get_encryption_key,
-                                             restore_master_connection)
+                                             restore_master_connection, get_weave_subnet_ip_range)
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugins.aggregator_service import AggregatorService
@@ -84,6 +83,8 @@ class AxoniusService:
         if cls.get_is_network_exists():
             return
 
+        subnet_ip_range = get_weave_subnet_ip_range()
+
         if 'linux' in sys.platform.lower():
             # Getting network encryption key.
             if NODE_MARKER_PATH.is_file():
@@ -94,14 +95,14 @@ class AxoniusService:
                 encryption_key = get_encryption_key()
                 print(f'Creating weave network')
                 weave_launch_command = [WEAVE_PATH, 'launch',
-                                        f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', SUBNET_IP_RANGE,
+                                        f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', subnet_ip_range,
                                         '--password',
                                         encryption_key.strip()]
 
                 subprocess.check_call(weave_launch_command)
         else:
             print(f'Creating regular axonius network')
-            subprocess.check_call(['docker', 'network', 'create', f'--subnet={SUBNET_IP_RANGE}', cls._NETWORK_NAME],
+            subprocess.check_call(['docker', 'network', 'create', f'--subnet={subnet_ip_range}', cls._NETWORK_NAME],
                                   stdout=subprocess.PIPE)
 
     @classmethod
@@ -389,8 +390,8 @@ class AxoniusService:
             system_config=None
     ):
         all_services_to_start = [self.get_adapter(name) for name in sorted(adapter_names)] + \
-            [self.get_plugin(name) for name in sorted(plugin_names)] + \
-            [self.get_standalone_service(name) for name in sorted(standalone_services_names)]
+                                [self.get_plugin(name) for name in sorted(plugin_names)] + \
+                                [self.get_standalone_service(name) for name in sorted(standalone_services_names)]
 
         if allow_restart:
             for service in all_services_to_start:

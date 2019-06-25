@@ -21,7 +21,7 @@ from install import (TEMPORAL_PATH,
                      set_special_permissions)
 from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
-from scripts.instances.instances_consts import SUBNET_IP_RANGE
+from scripts.instances.network_utils import get_weave_subnet_ip_range
 from utils import AXONIUS_DEPLOYMENT_PATH, print_state, current_file_system_path, VENV_WRAPPER, run_as_root
 
 
@@ -54,7 +54,7 @@ def reset_weave_network_on_bad_ip_allocation():
     try:
         report = subprocess.check_output('weave report'.split())
         report = json.loads(report)
-        if report['IPAM']['Range'] != SUBNET_IP_RANGE:
+        if report['IPAM']['Range'] != get_weave_subnet_ip_range():
             print('Resetting weave network.')
             subprocess.check_call('weave reset'.split())
         else:

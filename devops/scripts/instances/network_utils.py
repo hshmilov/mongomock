@@ -5,8 +5,24 @@ import subprocess
 import shlex
 
 from axonius.consts.system_consts import NODE_MARKER_PATH
-from scripts.instances.instances_consts import MASTER_ADDR_HOST_PATH, ENCRYPTION_KEY_HOST_PATH, AXONIUS_SETTINGS_PATH, \
-    SUBNET_IP_RANGE
+from conf_tools import get_customer_conf_json
+from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
+                                                ENCRYPTION_KEY_HOST_PATH,
+                                                AXONIUS_SETTINGS_PATH,
+                                                WEAVE_NETWORK_SUBNET_KEY)
+
+DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
+
+
+def get_weave_subnet_ip_range():
+    conf = get_customer_conf_json()
+
+    weave_subet = conf.get('weave-network-subnet', DEFAULT_WEAVE_SUBNET_IP_RANGE)
+
+    if WEAVE_NETWORK_SUBNET_KEY in conf:
+        print(f'Found custom weave network ip range: {weave_subet}')
+
+    return weave_subet
 
 
 def update_weave_connection_params(weave_encryption_key, master_ip):
@@ -51,9 +67,10 @@ def run_proxy_socat():
 
 
 def connect_to_master(master_ip, weave_pass):
+    subnet_ip_range = get_weave_subnet_ip_range()
     subprocess.check_call(shlex.split(f'weave reset --force'))
     subprocess.check_call(shlex.split(
-        f'weave launch --dns-domain=axonius.local --ipalloc-range {SUBNET_IP_RANGE} --password {weave_pass}'))
+        f'weave launch --dns-domain=axonius.local --ipalloc-range {subnet_ip_range} --password {weave_pass}'))
     subprocess.check_call(shlex.split(f'weave connect {master_ip}'))
     run_tunnler()
     run_proxy_socat()

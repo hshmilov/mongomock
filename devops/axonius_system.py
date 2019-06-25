@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
 import sys
 
+from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
 from services.axonius_service import get_service
 import subprocess
@@ -201,13 +201,6 @@ def process_exclude_from_config(exclude):
     if NODE_MARKER_PATH.exists():
         conf_exclude = ExcludeHelper(NODE_CONF_PATH).process_exclude(conf_exclude)
     return set(conf_exclude).union(exclude)
-
-
-def get_customer_conf_json():
-    try:
-        return json.loads(CUSTOMER_CONF_PATH.read_text())
-    except FileNotFoundError:
-        return dict()
 
 
 def is_demo_instance():
