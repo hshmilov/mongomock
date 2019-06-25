@@ -650,6 +650,10 @@ class AwsAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem querying source {source_name}')
 
     def _query_devices_by_client_by_source_ssm(self, client_data):
+        extra_data = dict()
+        extra_data['account_tag'] = client_data.get('account_tag')
+        extra_data['region'] = client_data.get('region')
+
         if client_data.get('ssm') is not None and self.__fetch_ssm is True:
             try:
                 all_instances = dict()
@@ -746,7 +750,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     # Get compliance summaries
                     raw_instance['compliance_summary'] = resource_id_to_compliance_summaries.get(iid)
 
-                    yield raw_instance, patch_groups_to_patch_baseline
+                    yield raw_instance, patch_groups_to_patch_baseline, extra_data
             except Exception:
                 logger.exception(f'Problem fetching data for ssm')
 
@@ -2099,6 +2103,9 @@ class AwsAdapter(AdapterBase, Configurable):
                 device.id = elb_raw['name']
                 device.name = elb_raw['name']
                 device.aws_device_type = 'ELB'
+                device.aws_source = aws_source
+                device.aws_region = aws_region
+                device.account_tag = account_tag
                 ips = elb_raw.get('ips') or []
                 last_ip_by_dns_query = elb_raw.get('last_ip_by_dns_query')
                 lb_scheme = elb_raw.get('scheme')
@@ -2157,18 +2164,26 @@ class AwsAdapter(AdapterBase, Configurable):
         except Exception:
             logger.exception(f'Failure adding ELBs')
 
-    def _parse_raw_data_inner_ssm(self, device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict]], aws_source):
-
-        device_raw_data, patch_group_to_patch_baseline_mapping = device_raw_data_all
+    def _parse_raw_data_inner_ssm(
+            self,
+            device_raw_data_all: Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, str]],
+            aws_source
+    ):
+        device_raw_data, patch_group_to_patch_baseline_mapping, extra_data = device_raw_data_all
         basic_data = device_raw_data.get('basic_data')
         if not basic_data:
             logger.warning('Wierd device, no basic data!')
             return None
+
         device = self._new_device_adapter()
         device.id = 'ssm-' + basic_data['InstanceId']
         device.aws_source = aws_source
         device.cloud_provider = 'AWS'
         device.cloud_id = basic_data['InstanceId']
+        if extra_data.get('region'):
+            device.aws_region = extra_data.get('region')
+        if extra_data.get('account_tag'):
+            device.account_tag = extra_data.get('account_tag')
 
         # Parse ssm data
         ssm_data = SSMInfo()
