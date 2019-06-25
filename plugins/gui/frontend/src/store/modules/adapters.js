@@ -79,17 +79,20 @@ export const adapters = {
 			state.currentAdapter = state.adapterList.data.find(adapter => adapter.id === adapterId)
 		},
 		[ UPDATE_ADAPTER_SERVER ] (state, payload) {
-			if (!payload.uuid) {
-                Object.values(state.currentAdapter).filter(field => (field.clients && field.node_id === payload.client_config.instanceName))[0].clients.push(payload)
+			if (!payload.uuid && !payload.uuidToSwap) {
+				Object.values(state.currentAdapter).find(adapter =>
+					adapter.clients && adapter.node_id === payload.client_config.instanceName).clients.splice(0, 0, payload)
 				return
 			}
-            Object.values(state.currentAdapter).filter(field => (field.clients)).forEach((adapter) => {
-                adapter.clients.forEach((client) => {
-                    if (client.uuid === payload.uuid) {
-                        client = payload
-                    }
-                })
-            })
+			Object.values(state.currentAdapter).forEach(adapter => {
+				if (!adapter.clients) return
+				adapter.clients = adapter.clients.map(client => {
+					if (client.uuid === payload.uuidToSwap || client.uuid === payload.uuid) {
+						return { ...client, ...payload }
+					}
+					return client
+				})
+			})
 		},
 		[ REMOVE_SERVER ] (state, serverId) {
 			Object.values(state.currentAdapter).filter(field => (field.clients)).forEach((adapter) => {
@@ -138,6 +141,14 @@ export const adapters = {
 				rule: rule,
 				method: 'PUT',
 				data: payload.serverData
+			}).then(response => {
+				commit(UPDATE_ADAPTER_SERVER, {
+					uuidToSwap: (payload.uuid !== 'new') ? payload.uuid: '',
+					uuid: response.data.id,
+					status: response.data.status,
+					client_config: payload.serverData
+				})
+				return response
 			})
 		},
         [ TEST_ADAPTER_SERVER ] ({dispatch}, payload) {

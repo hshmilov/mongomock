@@ -50,14 +50,14 @@ export const onboarding = {
 					content: 'Fill in all required fields, then click to connect the server.',
 				},
 				'successServer': {
-					id: 'status_server', title: 'SERVER CONNECTED', align: 'bottom', emphasize: false,
+					title: 'SERVER CONNECTED', align: 'bottom', emphasize: false,
 					content: 'The green checkmark icon indicates that the server was added and Axonius was able connect to it.',
 					actions: [
 						{ title: 'Next', state: 'backAdapters' }
 					]
 				},
 				'errorServer': {
-					id: 'status_server', title: 'PROBLEM WITH CREDENTIALS', align: 'bottom',
+					title: 'PROBLEM WITH CREDENTIALS', align: 'bottom',
 					content: 'The red exclamation icon indicates that a connection to the server could not be established.\nClick to view the error and try again.',
 				},
 				'backAdapters': {

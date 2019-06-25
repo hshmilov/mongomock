@@ -243,19 +243,23 @@
                     serverData: {...this.serverModal.serverData, instanceName: this.serverModal.instanceName},
                     uuid: this.serverModal.uuid
                 }).then((updateRes) => {
-                    this.fetchAdapters().then(() => {
-                        if (this.selectedServers.includes('')) {
-                            this.selectedServers.push(updateRes.data.id)
-                            this.selectedServers = this.selectedServers.filter(selected => selected !== '')
-                        }
-                        document.getElementById(updateRes.data.id).children[2].id = 'status_server'
-                        this.changeState({name: `${updateRes.data.status}Server`})
-                        if (updateRes.data.status === 'error') {
-                            this.message = 'Problem connecting. Review error and try again.'
-                        } else {
-                            this.message = 'Connection established. Data collection initiated...'
-                        }
+                    if (this.selectedServers.includes('')) {
+                        this.selectedServers.push(updateRes.data.id)
+                        this.selectedServers = this.selectedServers.filter(selected => selected !== '')
+                    }
+                    if (updateRes.data.status === 'error') {
+                        this.message = 'Problem connecting. Review error and try again.'
+                    } else {
+                        this.message = 'Connection established. Data collection initiated...'
+                    }
+                  ((data) => {
+                    this.$nextTick(() => {
+                      this.changeState({
+                        name: `${data.status}Server`,
+                        id: data.id
+                      })
                     })
+                  })(updateRes.data)
                 }).catch((error)=>{
                     this.message = error.response.data.message
                 })
