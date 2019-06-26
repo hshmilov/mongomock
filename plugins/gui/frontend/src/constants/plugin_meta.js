@@ -1,7 +1,7 @@
 export const pluginMeta = {
     cycognito_adapter: {
         title: 'CyCognito CyCAST Platform',
-        description: 'CyCognito CyCAST Platform is a fully automated, cloud-based security testing service that simulates attackers\' reconnaissance techniques to find organization\'s security blind spots.'
+        description: 'CyCognito CyCAST Platform is an automated, cloud-based security testing service that simulates attackers\' reconnaissance techniques to find organizations\' security blind spots.'
     },
     jumpcloud_adapter: {
         title: 'JumpCloud',
@@ -37,7 +37,7 @@ export const pluginMeta = {
     },
     rumble_adapter: {
         title: 'Rumble Network Discovery',
-        description: 'Rumble is a cloud-based network discovery platform that identifies and monitors network-connected IT assets.'
+        description: 'Rumble Network Discovery is a cloud-based network discovery platform that identifies and monitors network-connected IT assets.'
     },
     office_scan_adapter: {
         title: 'Trend Micro Apex One (formerly OfficeScan) - BETA',
