@@ -26,6 +26,7 @@ class ReportsPage(EntitiesPage):
     EMAIL_BOX_CSS = 'input.md-input__inner.md-chips-input__inner'
     EMAIL_BOX_RECIPIENTS = 'Recipients'
     EDIT_REPORT_XPATH = '//div[@title=\'{report_name}\']'
+    REPORT_GENERATED_XPATH = '//div[@title=\'{report_name}\']/parent::td/following::td/following::td//div'
     EMAIL_SUBJECT_ID = 'mailSubject'
     SELECT_VIEW_ENTITY_ELEMENT_CSS = '.saved-query .x-select-symbol'
     SELECT_VIEW_ENTITY_CSS = '.saved-query .x-select-symbol .x-select-trigger'
@@ -150,6 +151,10 @@ class ReportsPage(EntitiesPage):
 
     def is_generated(self):
         return 'Last generated' in self.driver.find_element_by_css_selector(self.REPORT_TITLE_CSS).text
+
+    def get_report_generated_date(self, report_name):
+        self.refresh()
+        return self.driver.find_element_by_xpath(self.REPORT_GENERATED_XPATH.format(report_name=report_name)).text
 
     def get_save_button(self):
         return self.driver.find_element_by_id(self.SAVE_BUTTON_ID)

@@ -6,7 +6,7 @@
       { title: name }]"
   >
     <x-box>
-      <div v-if="loading || viewsLoading" class="v-spinner-bg" />
+      <div v-if="loading" class="v-spinner-bg" />
       <pulse-loader
         :loading="loading"
         color="#FF7D46"
