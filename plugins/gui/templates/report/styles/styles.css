@@ -294,6 +294,12 @@ a {
 .discovery-charts .card h3 {
     height: 20px;
 }
+.discovery-charts h3 .dot {
+    margin-left: 2px;
+    height: 6px;
+    width: 6px;
+}
+
 .card:nth-child(odd) {
     margin-right: 12px;
 }

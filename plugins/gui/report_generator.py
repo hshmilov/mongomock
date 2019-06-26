@@ -37,6 +37,7 @@ class ReportGenerator:
         self.report = report
         self.report_params = report_params
         self.report_data = self.get_report_data(self.report)
+        self.spaces = self.report_params.get('spaces')
         self.template_path = template_path
         self.output_path = output_path
         self.host = host
@@ -227,45 +228,70 @@ class ReportGenerator:
             logger.info(
                 f'Report Generator, Summary Section: Added {len(self.report_data["covered_devices"])} Coverage Panels')
 
+        spaces_charts = {}
+
         if self.report_data.get('custom_charts'):
-            charts_added = 0
-            for i, custom_chart in enumerate(self.report_data['custom_charts']):
-                title = custom_chart.get('name', f'Custom Chart {i}')
-                try:
-                    chart_data = custom_chart.get('data')
-                    chart_value = None
-                    if chart_data and chart_data[0] and isinstance(chart_data[0], dict) \
-                            and chart_data[0].get('value'):
-                        chart_value = chart_data[0]['value']
-                    if not custom_chart.get('metric') or not chart_data \
-                            or (custom_chart.get('hide_empty') and chart_data and chart_value in [0, 1]):
-                        continue
-                    content = None
-                    if custom_chart['view'] == ChartViews.histogram.name:
-                        content = self._create_query_histogram(custom_chart['data'])
-                    elif custom_chart['view'] == ChartViews.pie.name:
-                        content = self._create_pie_chart(chart_data, content, custom_chart)
-                    elif custom_chart['view'] == ChartViews.summary.name:
-                        content = self._create_summary_chart(custom_chart['data'])
-                    if not content:
-                        continue
-                    charts_added += 1
-                    if charts_added == 5:
-                        summary_content.append(self.templates['card_break'].render())
-                        charts_added = 0
-                    summary_content.append(self.templates['card'].render({'title': title,
-                                                                          'content': content}))
-                except Exception:
-                    logger.exception(f'Problem adding pie chart to reports with title: {title}')
-            logger.info(f'Report Generator, Summary Section: Added {charts_added} Custom Panels')
+            spaces_charts = self.render_custom_charts()
+        spaces_content = self.render_spaces(self.spaces, spaces_charts)
+        if len(spaces_content) == 0:
+            return None
         return self.templates['section'].render({
             'title': 'Dashboard Charts',
-            'content': self.templates['report_charts'].render({
-                'link_start': f'<a href="https://{self.host}" class="c-blue">',
-                'title': 'View full Dashboard',
+            'content': '\n'.join(spaces_content)})
+
+    def render_custom_charts(self):
+        spaces_charts = {}
+        for i, custom_chart in enumerate(self.report_data['custom_charts']):
+            title = custom_chart.get('name', f'Custom Chart {i}')
+            try:
+                chart_data = custom_chart.get('data')
+                chart_value = None
+                if chart_data and chart_data[0] and isinstance(chart_data[0], dict) \
+                        and chart_data[0].get('value'):
+                    chart_value = chart_data[0]['value']
+                if not custom_chart.get('metric') or not chart_data \
+                        or (custom_chart.get('hide_empty') and chart_data and chart_value in [0, 1]):
+                    continue
+                content = None
+                if custom_chart['view'] == ChartViews.histogram.name:
+                    content = self._create_query_histogram(custom_chart['data'])
+                elif custom_chart['view'] == ChartViews.pie.name:
+                    content = self._create_pie_chart(chart_data, content, custom_chart)
+                elif custom_chart['view'] == ChartViews.summary.name:
+                    content = self._create_summary_chart(custom_chart['data'])
+                if not content:
+                    continue
+                current_space = custom_chart['space']
+                if not spaces_charts.get(current_space):
+                    spaces_charts[current_space] = []
+                current_space_charts = spaces_charts[current_space]
+                current_space_charts.append(self.templates['card'].render({'title': title,
+                                                                           'content': content}))
+            except Exception:
+                logger.exception(f'Problem adding pie chart to reports with title: {title}')
+        logger.info('Report Generator, Summary Section: Added Custom Panels')
+        return spaces_charts
+
+    def render_spaces(self, spaces, spaces_charts):
+        spaces_content = []
+        filtered_spaces = list(filter(lambda space: spaces_charts.get(str(space['_id'])), spaces))
+        for i, space in enumerate(filtered_spaces):
+            space_id = str(space['_id'])
+            charts_content = []
+            for j, chart_content in enumerate(spaces_charts[space_id]):
+                if j > 0 and j % 4 == 0:
+                    charts_content.append(self.templates['card_break'].render())
+                charts_content.append(chart_content)
+            spaces_content.append(self.templates['report_charts'].render({
+                'title': space['name'],
+                'link_start': f'<a href="https://{self.host}#{space_id}" class="c-blue">',
+                'link_title': 'View full Dashboard',
                 'link_end': '</a>',
-                'content': '\n'.join(summary_content)
-            })})
+                'content': '\n'.join(charts_content)
+            }))
+            if i != len(filtered_spaces) - 1:
+                spaces_content.append('<div class="before-break"></div>')
+        return spaces_content
 
     def _create_pie_chart(self, chart_data, content, custom_chart):
         query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
@@ -614,7 +640,7 @@ class ReportGenerator:
             query_per_entity[entity].append(name)
         saved_views_filter = None
         if include_all_saved_views:
-            saved_views_filter = gui_helpers.filter_archived({
+            saved_views_filter = filter_utils.filter_archived({
                 'query_type': 'saved',
                 '$or': [
                     {

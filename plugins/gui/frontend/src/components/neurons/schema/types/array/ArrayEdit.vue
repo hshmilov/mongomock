@@ -46,7 +46,7 @@
       <md-field>
         <md-select
           v-model="data"
-          placeholder="Select..."
+          :placeholder="placeholder"
           multiple
         >
           <md-option
@@ -95,6 +95,10 @@
       readOnly: {
         type: Boolean,
         default: false
+      },
+      placeholder: {
+        type: String,
+        default: 'Select...'
       }
     },
     data () {

@@ -41,6 +41,8 @@ class ReportsPage(EntitiesPage):
     ERROR_TEXT_CSS = '.error-text'
     BEFORE_SAVE_MESSAGE = 'Saving the report...'
     REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
+    SPACES_LABEL = 'Dashboard spaces'
+    SPACES_VALUE_ELEMENTS = '.dashboard-spaces .md-selected .md-list-item-text'
 
     @property
     def url(self):
@@ -222,8 +224,16 @@ class ReportsPage(EntitiesPage):
     def click_report_download(self):
         self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID).click()
 
+    def click_spaces_select(self):
+        self.find_element_following_label(self.SPACES_LABEL).click()
+
+    def get_spaces(self):
+        element = self.find_element_following_label(self.SPACES_LABEL)
+        return [elm.get_attribute('value')
+                for elm in element.find_elements_by_css_selector('.md-select .md-input.md-select-value')]
+
     def create_report(self, report_name, add_dashboard=True, queries=None, add_scheduling=False, email_subject=None,
-                      emails=None, period=ReportFrequency.daily, wait_for_toaster=True):
+                      emails=None, period=ReportFrequency.daily, wait_for_toaster=True, spaces=None):
         self.switch_to_page()
         self.wait_for_table_to_load()
         self.click_new_report()
@@ -231,6 +241,10 @@ class ReportsPage(EntitiesPage):
         self.fill_report_name(report_name)
         if add_dashboard:
             self.click_include_dashboard()
+            if spaces:
+                self.click_spaces_select()
+                for space in spaces:
+                    self.find_element_by_text(space).click()
         if queries:
             self.click_include_queries()
             for index, query in enumerate(queries):

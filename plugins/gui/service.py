@@ -3537,7 +3537,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         return self.__generate_dashboard_uncached(dashboard)
 
-    def _get_dashboard(self, uncached: bool = False):
+    def _get_dashboard(self, uncached: bool = False, space_ids: list = None):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
         fetch devices_db with their view. Amount of results is mapped to each views' name, under 'data' key,
@@ -3546,10 +3546,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         POST Save a new dashboard chart definition, given it has a name and at least one query attached
 
         If 'uncached' is True, then this will return a non cached version
+        If 'space_ids' is List[str] and has more then 0 space ids then fetch only these dashboard spaces
+
         :return:
         """
         logger.debug('Getting dashboard')
-        for dashboard in self.__dashboard_collection.find(filter=filter_archived()):
+        spaces_filter = {}
+        if space_ids and len(space_ids) > 0:
+            spaces_filter = {
+                'space': {
+                    '$in': [ObjectId(space_id) for space_id in space_ids]
+                }
+            }
+        for dashboard in self.__dashboard_collection.find(filter=filter_archived(spaces_filter)):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
@@ -4434,17 +4443,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             open(report_path, 'wb').write(report_content.read())
             return report_path
 
-    def generate_report(self, generated_date, report=None):
+    def generate_report(self, generated_date, report):
         """
         Generates the report and returns html.
         :return: the generated report file path.
         """
         logger.info('Starting to generate report')
         generator_params = {}
-        generator_params['dashboard'] = self._get_dashboard()
+        space_ids = report['spaces'] or []
+        generator_params['dashboard'] = self._get_dashboard(space_ids=space_ids)
         generator_params['adapters'] = self._get_adapter_data(report['adapters']) if report.get('adapters') else None
         generator_params['default_sort'] = self._system_settings['defaultSort']
         generator_params['saved_view_count_func'] = self._get_entity_count
+        generator_params['spaces'] = self.__dashboard_spaces_collection.find(filter_archived())
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
         server_name = system_config.get('server_name', 'localhost')
         logger.info(f'All data for report gathered - about to generate for server {server_name}')

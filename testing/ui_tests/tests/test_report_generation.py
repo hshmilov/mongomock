@@ -20,6 +20,9 @@ class TestReportGeneration(TestBase):
     DATA_QUERY = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
     DATA_QUERY1 = 'specific_data.data.name == regex(\'avigdor\', \'i\')'
     DATA_QUERY2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
+    TEST_REPORT_SPACES = 'test report spaces'
+    TEST_DASHBOARD_SPACE = 'test space'
+    CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
 
     def test_empty_report(self):
         self.reports_page.create_report(report_name=self.EMPTY_REPORT_NAME)
@@ -188,6 +191,35 @@ class TestReportGeneration(TestBase):
 
                 wait_until(lambda: self._new_generated_date(f'{self.REPORT_NAME}_{i}', current_date),
                            total_timeout=60 * 3, interval=2)
+
+    def test_spaces_in_pdf(self):
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        with stress.contextmanager(take_ownership=True), stress_scanner.contextmanager(
+                take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
+            self.dashboard_page.switch_to_page()
+
+            self.base_page.run_discovery()
+            self.dashboard_page.refresh()
+
+            # Add new space and name it
+            self.dashboard_page.add_new_space(self.TEST_DASHBOARD_SPACE)
+            self.dashboard_page.find_space_header(3).click()
+            self.dashboard_page.add_segmentation_card('Devices', 'OS: Type', self.CUSTOM_SPACE_PANEL_NAME)
+
+            self.reports_page.create_report(report_name=self.TEST_REPORT_SPACES, add_dashboard=True,
+                                            spaces=[self.TEST_DASHBOARD_SPACE])
+
+            self.reports_page.click_report(self.TEST_REPORT_SPACES)
+            assert self.reports_page.get_spaces()[0] == self.TEST_DASHBOARD_SPACE
+
+            doc = self._extract_report_pdf_doc(self.TEST_REPORT_SPACES)
+            texts = [page.extractText() for page in doc.pages]
+            text = ' '.join(texts)
+            assert self.TEST_REPORT_SPACES in text
 
     def _new_generated_date(self, report_name, current_date):
         generated_date_str = self.reports_page.get_report_generated_date(report_name)

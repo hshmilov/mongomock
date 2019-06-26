@@ -42,6 +42,18 @@
             label="Include dashboard charts"
             class="item"
           />
+          <div
+            v-if="report.include_dashboard"
+            class="dashboard-spaces"
+          >
+            <x-array-edit
+              ref="spaces_ref"
+              v-model="report.spaces"
+              :schema="spacesSchema"
+              :read-only="isReadOnly"
+              placeholder="Select spaces (or empty for all)"
+            />
+          </div>
           <x-checkbox
             v-model="report.include_saved_views"
             value="IncludeSavedViews"
@@ -208,6 +220,7 @@
   import {
     FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT
   } from '../../store/modules/reports'
+  import { FETCH_DASHBOARD_SPACES } from '../../store/modules/dashboard'
 
   export default {
     name: 'XReport',
@@ -220,6 +233,7 @@
       return {
         report: {
           include_dashboard: false,
+          spaces: [],
           include_saved_views: false,
           views: [{ entity: '', name: '' }],
           recipients: [],
@@ -246,20 +260,25 @@
     computed: {
 
       ...mapState({
-        reportData (state) {
+        reportData(state) {
           return state.reports.current.data
         },
-        reportFetching (state) {
+        reportFetching(state) {
           return state.reports.current.fetching
         },
-        isReadOnly (state) {
+        isReadOnly(state) {
           let user = state.auth.currentUser.data
           if (!user || !user.permissions) return true
           return user.permissions.Reports === 'ReadOnly'
         },
-        disableDownloadReport () {
+        disableDownloadReport() {
           return this.downloading
-        }
+        },
+        dashboard_spaces(state) {
+          return state.dashboard.spaces.data.filter(space => space.type !== 'personal').map((space) => {
+            return {name: space.uuid, title: space.name}
+          })
+        },
       }),
       id () {
         return this.$route.params.id
@@ -329,6 +348,18 @@
         }
         return this.validity.error;
       },
+      spacesSchema(){
+        return {
+          name: 'spaces_config', title: 'Dashboard spaces:',
+          items: {
+            'title': '',
+            'name': 'uuid',
+            'type': 'string',
+            'enum': this.dashboard_spaces
+          },
+          'type': 'array'
+        }
+      },
       mailSchema () {
         return {
           name: 'mail_config', title: '',
@@ -367,15 +398,20 @@
       }
     },
     created () {
-      if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
-        this.loading = true
-        this.fetchReport(this.id).then(() => {
+      this.loading = true
+      this.fetchDashboard().then( () => {
+        if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
+          this.loading = true
+          this.fetchReport(this.id).then(() => {
+            this.initData()
+            this.loading = false
+          })
+        } else {
           this.initData()
           this.loading = false
-        })
-      } else {
-        this.initData()
-      }
+        }
+      })
+
     },
     mounted () {
       if (this.$refs.name) {
@@ -390,8 +426,8 @@
       }),
       ...mapActions({
         fetchReport: FETCH_REPORT, saveReport: SAVE_REPORT,
-        runReport: RUN_REPORT, downloadReport: DOWNLOAD_REPORT
-
+        runReport: RUN_REPORT, downloadReport: DOWNLOAD_REPORT,
+        fetchDashboard: FETCH_DASHBOARD_SPACES
       }),
       initData () {
         if (this.reportData && this.reportData.name) {
@@ -399,7 +435,19 @@
           if (this.report.views.length == 0) {
             this.report.views.push({ entity: '', name: '' })
           }
-
+          if(!this.report.spaces){
+           this.report.spaces = []
+          }
+          if(this.report.spaces.length > 0){
+            let validDashboardSpaces = this.dashboard_spaces.reduce((map, space) => {
+              map[space.name] = space.title;
+              return map;
+            }, {})
+            this.report.spaces = this.report.spaces.filter(space => validDashboardSpaces[space])
+            if(this.report.spaces.length === 0){
+              this.report.include_dashboard = false;
+            }
+          }
           if (this.report.last_generated == null) {
             this.isLatestReport = false
           } else {
@@ -675,6 +723,24 @@
             padding-bottom: 12px;
         }
 
+      .dashboard-spaces {
+          margin-left: 24px;
+
+          .x-array-edit {
+            display: grid;
+
+            grid-template-columns: 120px auto;
+
+            .md-field {
+              min-height: 24px;
+              line-height: 24px;
+              margin-bottom: 12px;
+              padding-top: 0;
+              margin-top: 0;
+            }
+          }
+      }
+
         .saved-queries {
             display: grid;
             grid-template-columns: 1fr;
@@ -694,6 +760,7 @@
                     flex: 1 0 auto;
                 }
             }
+
             .md-switch {
                 margin: 4px 0;
             }
