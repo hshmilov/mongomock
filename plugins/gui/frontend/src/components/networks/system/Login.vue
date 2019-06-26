@@ -96,7 +96,7 @@
         justify-content: center;
       }
 
-      .body {
+      > .body {
         background-color: white;
         flex: 1 0 auto;
         padding: 48px;
@@ -122,11 +122,6 @@
               margin-bottom: 12px;
             }
           }
-        }
-
-        .x-button {
-          width: 100%;
-          margin-top: 8px;
         }
 
       }

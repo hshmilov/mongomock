@@ -63,5 +63,11 @@
 </script>
 
 <style lang="scss">
+  .x-login-form {
 
+    .x-button {
+      width: 100%;
+      margin-top: 8px;
+    }
+  }
 </style>

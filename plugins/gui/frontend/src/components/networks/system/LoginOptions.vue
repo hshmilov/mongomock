@@ -29,9 +29,10 @@
     </div>
     <x-modal
       v-if="ldapData.active"
+      size="md"
       @close="toggleLdapLogin"
     >
-      <div slot="body" class="show-space">
+      <div slot="body">
         <h2>Login with LDAP</h2>
         <x-form
           v-model="ldapData.credentials"
