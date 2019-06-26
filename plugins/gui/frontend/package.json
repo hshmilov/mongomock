@@ -21,7 +21,7 @@
     "vue": "2.6.6",
     "vue-analytics": "5.16.4",
     "vue-google-charts": "0.3.2",
-    "vue-json-tree-view": "2.1.4",
+    "vue-json-component": "0.3.0",
     "vue-material": "1.0.0-beta-10.2",
     "vue-multiple-select": "1.0.2",
     "vue-router": "3.0.2",

@@ -98,7 +98,7 @@ class EntitiesPage(Page):
     NOTES_SEARCH_BY_TEXT = 'div[title={note_text}]'
 
     CONFIG_ADVANCED_TEXT = 'View advanced'
-    ADVANCED_VIEW_RAW_FIELD = '"raw":'
+    ADVANCED_VIEW_RAW_FIELD = 'raw:'
     CONFIG_BASIC_TEXT = 'View basic'
 
     ID_FIELD = 'ID'

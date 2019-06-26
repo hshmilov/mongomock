@@ -22,9 +22,6 @@ import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'
 Vue.use(svgicon, {tagName: 'svg-icon'})
 
-import TreeView from 'vue-json-tree-view'
-Vue.use(TreeView)
-
 import VmSelect from 'vue-multiple-select'
 Vue.use(VmSelect)
 

@@ -205,9 +205,10 @@
         },
         permissionLevels (state) {
           if (!state.constants.constants.permission_levels) return []
-          return _.map(state.constants.constants.permission_levels, (a, b) => {
+          return Object.keys(state.constants.constants.permission_levels).map(name => {
             return {
-              title: a, name: b
+              name,
+              title: state.constants.constants.permission_levels[name]
             }
           })
         },

@@ -130,7 +130,7 @@ class TestDevicesTable(TestEntitiesTable):
 
         self.check_toggle_advanced_basic(self.devices_page, self.devices_page.JSON_ADAPTER_FILTER,
                                          self.devices_page.ADVANCED_VIEW_RAW_FIELD, self.devices_page.FIELD_ASSET_NAME)
-        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.AD_ADAPTER_FILTER, '"cn":',
+        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.AD_ADAPTER_FILTER, 'cn:',
                                          self.devices_page.FIELD_HOSTNAME_TITLE)
 
     def test_table_grey_out(self):

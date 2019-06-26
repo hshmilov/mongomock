@@ -54,15 +54,21 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
         if item.get('name') == 'Notes' and item.get('data'):
             item['data'] = [{**note, **{'user_id': str(note['user_id'])}} for note in item['data']]
 
-    # Filter bytes fields from raw data
+    def _filter_long_data(data):
+        new_data = {}
+        for k, v in data.items():
+            if isinstance(v, dict):
+                new_data[k] = _filter_long_data(v)
+            elif isinstance(v, str) and len(v) > 128:
+                new_data[k] = f'{v[:128]}...'
+            elif not isinstance(v, bytes):
+                new_data[k] = v
+        return new_data
+
     for specific in entity['specific_data']:
         if not specific.get('data') or not specific['data'].get('raw'):
             continue
-        new_raw = {}
-        for k, v in specific['data']['raw'].items():
-            if not isinstance(v, bytes):
-                new_raw[k] = v
-        specific['data']['raw'] = new_raw
+        specific['data']['raw'] = _filter_long_data(specific['data']['raw'])
 
     def _is_table(schema):
         return schema['type'] == 'array' and schema.get('format', '') == 'table'

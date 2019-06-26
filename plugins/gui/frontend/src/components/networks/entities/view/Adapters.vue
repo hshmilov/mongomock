@@ -29,10 +29,11 @@
           :data="item"
           :schema="adapterSchema(item.plugin_name)"
         />
-        <tree-view
+        <json-view
           v-else
           :data="item.data.raw"
-          :options="{rootObjectKey: 'raw', maxDepth: 1}"
+          root-key="raw"
+          :max-depth="6"
         />
       </x-tab>
     </x-tabs>
@@ -68,6 +69,7 @@
   import xModal from '../../../axons/popover/Modal.vue'
   import xCustomFields from './CustomFields.vue'
   import xToast from '../../../axons/popover/Toast.vue'
+  import { JSONView } from "vue-json-component"
 
   import {mapState, mapMutations, mapActions} from 'vuex'
   import {SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS} from '../../../../store/actions'
@@ -85,7 +87,8 @@
     name: 'XEntityAdapters',
     components: {
       xTabs, xTab, xList, xButton,
-      xModal, xCustomFields, xToast
+      xModal, xCustomFields, xToast,
+      'json-view': JSONView
     },
     props: {
       entityId: {
@@ -237,5 +240,15 @@
 </script>
 
 <style lang="scss">
-
+  .x-entity-adapters {
+    .json-view-item {
+      .data-key {
+        padding: 2px;
+      }
+      .chevron-arrow {
+        border-right-width: 2px;
+        border-bottom-width: 2px;
+      }
+    }
+  }
 </style>
