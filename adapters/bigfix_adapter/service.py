@@ -61,7 +61,9 @@ class BigfixAdapter(AdapterBase):
         """
         try:
             client_data.connect()
-            yield from client_data.get_device_list()
+            installed_software_dict = client_data.get_software_per_device_list()
+            for device_raw in client_data.get_device_list():
+                yield device_raw, installed_software_dict
         finally:
             client_data.close()
 
@@ -111,7 +113,7 @@ class BigfixAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw_xml in devices_raw_data:
+        for device_raw_xml, computer_id_to_installed_software in devices_raw_data:
             try:
                 device_raw = dict()
                 for xml_property in ET.fromstring(device_raw_xml)[0]:
@@ -127,7 +129,8 @@ class BigfixAdapter(AdapterBase):
                 if not device_raw.get('ID'):
                     continue
                 else:
-                    device.id = str(device_raw.get('ID'))
+                    device_id = device_raw.get('ID')
+                    device.id = str(device_id)
                 dns_name = device_raw.get('DNS Name')
                 computer_name = device_raw.get('Computer Name')
 
@@ -193,6 +196,23 @@ class BigfixAdapter(AdapterBase):
                             logger.exception(f'Problem adding key {key_name}')
                 except Exception:
                     logger.exception(f'Problem adding fields to {device_raw}')
+
+                try:
+                    for installed_software in computer_id_to_installed_software.get(str(device_id)) or []:
+                        try:
+                            try:
+                                name, version = installed_software.split('|')
+                            except ValueError:
+                                name = installed_software
+                                version = ''
+                            device.add_installed_software(
+                                name=name.strip(),
+                                version=version.strip()
+                            )
+                        except Exception:
+                            logger.exception(f'Problem adding installed software {installed_software}')
+                except Exception:
+                    logger.exception(f'Problem adding installed software list')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
