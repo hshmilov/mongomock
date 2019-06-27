@@ -249,16 +249,13 @@ class ReportGenerator:
                 if chart_data and chart_data[0] and isinstance(chart_data[0], dict) \
                         and chart_data[0].get('value'):
                     chart_value = chart_data[0]['value']
-                if not custom_chart.get('metric') or not chart_data \
-                        or (custom_chart.get('hide_empty') and chart_data and chart_value in [0, 1]):
+                # check if chart is valid
+                if not custom_chart.get('metric') or not chart_data:
                     continue
-                content = None
-                if custom_chart['view'] == ChartViews.histogram.name:
-                    content = self._create_query_histogram(custom_chart['data'])
-                elif custom_chart['view'] == ChartViews.pie.name:
-                    content = self._create_pie_chart(chart_data, content, custom_chart)
-                elif custom_chart['view'] == ChartViews.summary.name:
-                    content = self._create_summary_chart(custom_chart['data'])
+                # check if this chart should be hidden
+                if custom_chart.get('hide_empty') and chart_data and (not chart_value or chart_value in [0, 1]):
+                    continue
+                content = self._render_chart_content(chart_data, custom_chart)
                 if not content:
                     continue
                 current_space = custom_chart['space']
@@ -293,14 +290,26 @@ class ReportGenerator:
                 spaces_content.append('<div class="before-break"></div>')
         return spaces_content
 
-    def _create_pie_chart(self, chart_data, content, custom_chart):
+    def _render_chart_content(self, chart_data, custom_chart):
+        if custom_chart['view'] == ChartViews.histogram.name:
+            return self._create_query_histogram(custom_chart['data'])
+        if custom_chart['view'] == ChartViews.pie.name:
+            return self._create_pie_chart(chart_data, custom_chart)
+        if custom_chart['view'] == ChartViews.summary.name:
+            return self._create_summary_chart(custom_chart['data'])
+        return []
+
+    def _create_pie_chart(self, chart_data, custom_chart):
         query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
         # Create a coverage chart if there is only 2 portions of the data
         if len(custom_chart['data']) == 2:
             byte_string, legend = self._create_coverage_pie(chart_data)
         else:
             byte_string, legend = self._create_query_pie(chart_data)
-        if byte_string != '':
+        content = ''
+        if legend == '':
+            content = byte_string
+        elif byte_string != '' and legend != '':
             svg2png(bytestring=byte_string, write_to=query_pie_filename)
             content = f'<img src="{query_pie_filename}">{legend}'
         return content
@@ -386,6 +395,8 @@ class ReportGenerator:
         legend_lines = ''
         legend_count = 0
         non_in_legend_count = 0
+        if len(portions) == 1 and portions[0]['portion'] == 0:
+            portions = []
         for i, slice_def in enumerate(self._calculate_pie_slices(portions)):
             portion_value = slice_def['portion']
             line_class = ''
@@ -420,7 +431,7 @@ class ReportGenerator:
                 'title': f'+{non_in_legend_count}'
             })
         if not slices:
-            return ''
+            return 'NO DATA FOUND', ''
         return self.templates['pie'].render({
             'defs': self.templates['pie_gradient'].render({'colour1': colours[0], 'colour2': colours[2]}),
             'content': '\n'.join(slices)
