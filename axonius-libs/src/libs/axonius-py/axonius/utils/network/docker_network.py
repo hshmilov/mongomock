@@ -47,4 +47,4 @@ def has_addr_collision(domain):
         logger.exception(f'failed to check collision for domain {domain} {netifaces.interfaces()} {e}')
         raise
 
-    return False
+    return False, 'No collision'

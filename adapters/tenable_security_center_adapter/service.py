@@ -105,7 +105,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(self.__fetch_top_n_installed_software)
 
     def _clients_schema(self):
         return {
@@ -172,6 +172,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         except Exception:
             logger.warning(f'Got an invalid ip address list: {ip_list_raw}, not inserting ips')
 
+        for software in raw_device_data.get('software') or []:
+            try:
+                device.add_installed_software(name=software)
+            except Exception as e:
+                logger.exception(f'Failed to add installed software {software}')
         device.add_nic(mac=raw_device_data.get('macAddress'), ips=ips)
 
         netbios_name = raw_device_data.get('netbiosName')
@@ -279,10 +284,16 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'name': 'drop_only_ip_devices',
                     'title': 'Drop Devices With Only IP',
                     'type': 'bool'
+                },
+                {
+                    'name': 'fetch_top_n_installed_software',
+                    'title': 'Fetch Top N Installed Software',
+                    'type': 'integer',
                 }
             ],
             "required": [
                 'drop_only_ip_devices',
+                'fetch_top_n_installed_software',
             ],
             "pretty_name": "Tenable.sc Configuration",
             "type": "array"
@@ -291,8 +302,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'drop_only_ip_devices': False
+            'drop_only_ip_devices': False,
+            'fetch_top_n_installed_software': 0
         }
 
     def _on_config_update(self, config):
         self.__drop_only_ip_devices = config['drop_only_ip_devices']
+        self.__fetch_top_n_installed_software = config['fetch_top_n_installed_software']

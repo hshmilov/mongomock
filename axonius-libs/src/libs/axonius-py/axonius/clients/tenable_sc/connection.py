@@ -34,9 +34,14 @@ class TenableSecurityScannerConnection(RESTConnection):
         else:
             raise RESTException('No user name or password')
 
-    # pylint: disable=W0221
-    def _do_request(self, *args, **kwargs):
-        resp = super()._do_request(*args, **kwargs)
+    def _handle_response(self, response, raise_for_status=True, use_json_in_response=True, return_response_raw=False):
+        resp = super()._handle_response(response=response,
+                                        raise_for_status=raise_for_status,
+                                        use_json_in_response=use_json_in_response,
+                                        return_response_raw=return_response_raw)
+
+        if not use_json_in_response:
+            return resp
 
         try:
             if str(resp['error_code']) != '0':
@@ -93,52 +98,167 @@ class TenableSecurityScannerConnection(RESTConnection):
         self._post('asset', body_params={'definedIPs': ','.join(ips), 'name': asset_name, 'type': 'static'})
         return True
 
-    def get_device_list(self):
+    def _get_device_list(self):
         repositories = self._get('repository')
         repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
         for repository_id in repositories_ids:
             try:
-                yield from self.get_device_list_from_analysis(repository_id, 'vuln', 'cumulative',
-                                                              'sumip', 'vuln')
+                yield from self.do_analysis(repository_id=repository_id,
+                                            analysis_type='vuln',
+                                            source_type='cumulative',
+                                            query_tool='sumip',
+                                            query_type='vuln')
             except Exception:
                 logger.exception(f'Problem with repository {repository_id}')
 
-    def get_device_list_from_analysis(self, repository_id, analysis_type, source_type, query_tool, query_type):
-        start_offest = 0
-        end_offset = consts.DEVICE_PER_PAGE
-        # This API is half documented. Ofri got this API after playing with the instance
-        response = self._post('analysis', body_params={'type': analysis_type,
-                                                       'sourceType': source_type,
-                                                       'query': {'tool': query_tool,
-                                                                 'type': query_type,
-                                                                 'startOffset': start_offest,
-                                                                 'endOffset': end_offset,
-                                                                 'filters': [{
-                                                                     'filterName': 'repository', 'id': 'repository',
-                                                                     'isPredefined': True, 'operator': '=',
-                                                                     'type': query_type,
-                                                                     'value': [{'id': repository_id}]
-                                                                 }]}})
-        start_offest += consts.DEVICE_PER_PAGE
-        end_offset += consts.DEVICE_PER_PAGE
-        yield from response['results']
-        total_records = response['totalRecords']
-        records_returned = response['returnedRecords']
-        logger.info(f'Got {records_returned} out of {total_records} at the first page')
-        while int(start_offest) < int(consts.MAX_RECORDS):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, top_n_software=0):
+        if not top_n_software:
+            yield from self._get_device_list()
+            return
+
+        logger.info(f'Fetching top {top_n_software} installed software')
+        device_list = self._get_device_list()
+        software_mapping = self._get_software_device_mapping(top_n_software)
+
+        for device in device_list:
+            device['software'] = []
+            for software, devices in software_mapping.items():
+                if self._software_id(device) in devices:
+                    device['software'].append(software)
+            yield device
+    # pylint: enable=arguments-differ
+
+    def _get_software_list(self, top_n):
+        repositories = self._get('repository')
+        repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
+        for repository_id in repositories_ids:
             try:
-                response = self._post('analysis', body_params={'type': analysis_type,
-                                                               'sourceType': source_type,
-                                                               'query': {'tool': query_tool,
-                                                                         'type': query_type,
-                                                                         'startOffset': start_offest,
-                                                                         'endOffset': end_offset}})
-                yield from response['results']
-                records_returned = response['returnedRecords']
-                logger.info(f'Got {records_returned} out of {total_records} at offset {start_offest}')
-                if records_returned != consts.DEVICE_PER_PAGE:
-                    break
+                yield from self.do_analysis(repository_id,
+                                            'vuln',
+                                            'cumulative',
+                                            'listsoftware',
+                                            'vuln',
+                                            count=top_n)
             except Exception:
-                logger.exception(f'Problems at offset {start_offest}')
-            start_offest += consts.DEVICE_PER_PAGE
-            end_offset += consts.DEVICE_PER_PAGE
+                logger.exception(f'Problem with repository {repository_id}')
+
+    def _get_devices_by_software(self, software_name):
+        repositories = self._get('repository')
+        repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
+        filter_ = {
+            'filterName': 'pluginText',
+            'id': 'pluginText',
+            'isPredefined': True,
+            'operator': '=',
+            'type': 'vuln',
+            'value': software_name,
+        }
+        for repository_id in repositories_ids:
+            try:
+                yield from self.do_analysis(repository_id=repository_id,
+                                            analysis_type='vuln',
+                                            source_type='cumulative',
+                                            query_tool='sumip',
+                                            query_type='vuln',
+                                            extra_filter=filter_)
+            except Exception:
+                logger.exception(f'Problem with repository {repository_id}')
+
+    @staticmethod
+    def _software_id(device):
+        uuid = device.get('uuid')
+        biosGUID = device.get('biosGUID')
+
+        if not any([uuid, biosGUID]):
+            return None
+        return '_'.join([uuid, biosGUID])
+
+    def _get_software_device_mapping(self, top_n):
+        result = {}
+        software_list = self._get_software_list(top_n)
+        software_list = set(filter(None, [device.get('name') for device in software_list]))
+        for software in software_list:
+            try:
+                devices = self._get_devices_by_software(software)
+                result[software] = list(filter(None, [(self._software_id(device)) for device in devices]))
+            except Exception:
+                logger.exception(f'Failed to fetch device list for software {software}')
+        return result
+
+    def do_analysis(self,
+                    repository_id,
+                    analysis_type,
+                    source_type,
+                    query_tool,
+                    query_type,
+                    extra_filter=None,
+                    count=int(consts.MAX_RECORDS)):
+
+        # This API is half documented. Ofri got this API after playing with the instance
+
+        start_offset = 0
+        end_offset = 0
+        total_records_got = 0
+        exception_count = 0
+
+        while True:
+            try:
+                start_offset = end_offset
+                end_offset += min([consts.DEVICE_PER_PAGE, (count - start_offset)])
+
+                if start_offset >= count:
+                    break
+
+                if exception_count > consts.MAX_EXCEPTION_THRESHOLD:
+                    logger.info(f'Too many exception giving up on repo {repository_id}')
+                    break
+
+                body_params = {'type': analysis_type,
+                               'sourceType': source_type,
+                               'query': {'tool': query_tool,
+                                         'type': query_type,
+                                         'startOffset': start_offset,
+                                         'endOffset': end_offset,
+                                         'filters': [{
+                                             'filterName': 'repository', 'id': 'repository',
+                                             'isPredefined': True, 'operator': '=',
+                                             'type': query_type,
+                                             'value': [{'id': repository_id}]
+                                         }]}}
+                if extra_filter:
+                    body_params['query']['filters'].append(extra_filter)
+
+                response = self._post('analysis',
+                                      body_params=body_params,
+                                      raise_for_status=False,
+                                      return_response_raw=True,
+                                      use_json_in_response=False)
+
+                if response.status_code == 403:
+                    logger.warning(f'{repository_id}: Permission problem for repo giving up')
+                    break
+
+                response = self._handle_response(response)
+
+                total_records = response['totalRecords']  # WARNING: BUG: total records number might be wrong!
+                records = response['results']
+                records_returned = len(records)
+                total_records_got += records_returned
+
+                yield from records
+
+                logger.info(f'{repository_id}: Got {total_records_got} out of {total_records} at offset {start_offset}')
+
+                # if we got less records then requested -> this is the last page and we should break
+                if records_returned < (end_offset - start_offset):
+                    break
+
+                if total_records_got >= count:
+                    break
+
+                exception_count = 0
+            except Exception:
+                logger.exception(f'Problems at offset {start_offset} moving on exception_count = {exception_count}')
+                exception_count += 1
+                continue
