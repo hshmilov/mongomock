@@ -129,7 +129,9 @@ class RESTExample:
                               cls.add_and_delete_users_labels,
                               cls.get_adapters,
                               cls.check_connectivity,
-                              cls.add_and_delete_client)
+                              cls.add_and_delete_client,
+                              cls.get_devices_fields,
+                              cls.get_users_fields,)
 
         examples_functions = {function.__name__ for function in examples_functions}
         all_examples_functions = set(filter(lambda x: 'get_examples' not in x and not x.startswith('__'),
@@ -193,6 +195,20 @@ class RESTExample:
 
         # we should get the same device
         assert device_example['internal_axon_id'] == device['internal_axon_id']
+
+    def get_devices_fields(self):
+        status_code, fields = self._client.get_devices_fields()
+        assert status_code == 200, 'unable to fetch fields for devices'
+        assert 'generic' in fields, 'missing generic key in fields'
+        assert 'schema' in fields, 'missing schema key in fields'
+        assert 'specific' in fields, 'missing specific key in fields'
+
+    def get_users_fields(self):
+        status_code, fields = self._client.get_users_fields()
+        assert status_code == 200, 'unable to fetch fields for users'
+        assert 'generic' in fields, 'missing generic key in fields'
+        assert 'schema' in fields, 'missing schema key in fields'
+        assert 'specific' in fields, 'missing specific key in fields'
 
     def get_devices_views(self):
         # https://localhost/api/devices/views?limit=1000&skip=0&filter=query_type==%27saved%27

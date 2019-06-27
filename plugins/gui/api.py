@@ -156,6 +156,15 @@ class API:
     def api_devices_count(self, mongo_filter):
         return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Devices]))
 
+    @api_add_rule(
+        f'devices/fields',
+        required_permissions={
+            Permission(PermissionType.Devices, PermissionLevel.ReadOnly)
+        }
+    )
+    def api_devices_fields(self):
+        return jsonify(gui_helpers.entity_fields(EntityType.Devices))
+
     @api_add_rule(f'devices/<device_id>', required_permissions={Permission(PermissionType.Devices,
                                                                            PermissionLevel.ReadOnly)})
     def api_device_by_id(self, device_id):
@@ -197,6 +206,15 @@ class API:
                                                                    PermissionLevel.ReadOnly)})
     def api_users_count(self, mongo_filter):
         return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Users]))
+
+    @api_add_rule(
+        f'users/fields',
+        required_permissions={
+            Permission(PermissionType.Users, PermissionLevel.ReadOnly)
+        }
+    )
+    def api_users_fields(self):
+        return jsonify(gui_helpers.entity_fields(EntityType.Users))
 
     @api_add_rule(f'users/<user_id>', required_permissions={Permission(PermissionType.Users,
                                                                        PermissionLevel.ReadOnly)})

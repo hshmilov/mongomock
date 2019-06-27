@@ -60,6 +60,12 @@ class RESTClient:
 
         return self.do_request('get', '/devices/count', params=params)
 
+    def get_devices_fields(self):
+        return self.do_request('get', '/devices/fields')
+
+    def get_users_fields(self):
+        return self.do_request('get', '/users/fields')
+
     def get_device_by_id(self, device_id: str):
         return self.do_request('get', f'/devices/{device_id}')
 

@@ -34,7 +34,7 @@ paths:
       produces:
         - application/json
       responses:
-        '200': 
+        '200':
           description: >-
             Returns json containing the active adapters.
   /adapters/{adapter_name}/clients:
@@ -179,6 +179,18 @@ paths:
       responses:
         '200':
           description: Returns the number of Devices that adhere to the given filter
+  /devices/fields:
+    get:
+      tags:
+        - Devices
+      summary: Get all fields for devices
+      description: Fields are the columns that can be selected in queries.
+      operationId: getDevicesFields
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns the fields for all devices
   '/devices/{device_id}':
     get:
       tags:
@@ -312,6 +324,18 @@ paths:
       responses:
         '200':
           description: Returns the number of Users that adhere to the given filter
+  /users/fields:
+    get:
+      tags:
+        - Users
+      summary: Get all fields for users
+      description: Fields are the columns that can be selected in queries.
+      operationId: getUsersFields
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns the fields for all users
   '/users/{user_id}':
     get:
       tags:
