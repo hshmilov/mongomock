@@ -3,7 +3,7 @@
     <div class="x-search-insights">
       <x-search-input
         v-model="searchValue"
-        placeholder="Search by Host Name, User Name, MAC or IP..."
+        placeholder="Search by Host Name, User Name, Manufacturer Serial, MAC or IP..."
         :disabled="entitiesRestricted"
         @keydown.enter.native="onClick"
         @click.native="notifyAccess"
@@ -56,7 +56,7 @@
       entitiesFields () {
         return {
           devices: [
-            'adapters', 'specific_data.data.hostname', 'specific_data.data.name',
+            'adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.device_serial',
             'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac',
             'specific_data.data.last_used_users', 'labels'
           ], users: [
