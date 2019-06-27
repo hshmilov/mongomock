@@ -101,6 +101,7 @@ class BluecatAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
+                device_state = None
                 device = self._new_device_adapter()
                 device_id = device_raw.get('id')
                 if device_id is None:
@@ -122,7 +123,8 @@ class BluecatAdapter(AdapterBase):
                             elif property_raw[0] == 'macAddress':
                                 mac = property_raw[1]
                             elif property_raw[0] == 'state':
-                                device.device_state = property_raw[1]
+                                device_state = property_raw[1]
+                                device.device_state = device_state
                             elif property_raw[0] == 'comments':
                                 device.device_comments = property_raw[1]
                             elif property_raw[0] == 'locationCode':
@@ -134,6 +136,8 @@ class BluecatAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Problem getting properties for {device_raw}')
                 device.set_raw(device_raw)
+                if device_state == 'RESERVED':
+                    continue
                 yield device
             except Exception:
                 logger.exception(f'Problem with fetching Bluecat Device for {device_raw}')

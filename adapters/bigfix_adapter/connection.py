@@ -11,10 +11,9 @@ class BigfixConnection(RESTConnection):
 
     def _connect(self):
 
-        if self._username is not None and self._password is not None:
-            self._get('computers', do_basic_auth=True, use_json_in_response=False)
-        else:
+        if not self._username or not self._password:
             raise RESTException('No user name or password')
+        self._get('computers', do_basic_auth=True, use_json_in_response=False)
 
     def get_device_list(self):
         xml_computers = ET.fromstring(self._get('computers', use_json_in_response=False))

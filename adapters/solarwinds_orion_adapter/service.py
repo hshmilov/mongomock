@@ -302,7 +302,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_ipam': True
+            'fetch_ipam': False
         }
 
     def _on_config_update(self, config):

@@ -145,7 +145,10 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 snow_asset = snow_alm_asset_table_dict.get((device_raw.get('asset') or {}).get('value'))
                 if snow_asset:
                     try:
-                        device.install_status = INSTALL_STATUS_DICT.get(snow_asset.get('install_status'))
+                        install_status = INSTALL_STATUS_DICT.get(snow_asset.get('install_status'))
+                        device.install_status = install_status
+                        if self.__exclude_disposed_devices and install_status == 'Disposed':
+                            return None
                     except Exception:
                         logger.exception(f'Problem getting install status for {device_raw}')
                     device.u_loaner = snow_asset.get('u_loaner')
@@ -456,11 +459,18 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'fetch_ips',
                     'type': 'bool',
                     'title': 'Should Fetch IPs'
+                },
+                {
+                    'name': 'exclude_disposed_devices',
+                    'title': 'Exclude Disposed Devices',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'fetch_users',
-                'fetch_ips'
+                'fetch_ips',
+                'exclude_disposed_devices',
+                'fetch_users_info_for_devices'
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -471,10 +481,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         return {
             'fetch_users': True,
             'fetch_ips': True,
-            'fetch_users_info_for_devices': True
+            'fetch_users_info_for_devices': True,
+            'exclude_disposed_devices': False
         }
 
     def _on_config_update(self, config):
         self.__fetch_users = config['fetch_users']
         self.__fetch_ips = config['fetch_ips']
         self.__fetch_users_info_for_devices = config['fetch_users_info_for_devices']
+        self.__exclude_disposed_devices = config['exclude_disposed_devices']

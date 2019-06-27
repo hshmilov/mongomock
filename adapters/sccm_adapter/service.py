@@ -351,8 +351,8 @@ class SccmAdapter(AdapterBase, Configurable):
                                     is_encrypted = True
                                 elif str(drive_enc_data.get('ProtectionStatus0')) == '0':
                                     is_encrypted = False
-
-                                device.add_hd(path=drive_enc_data.get('DriveLetter0'), is_encrypted=is_encrypted)
+                                if drive_enc_data.get('DriveLetter0'):
+                                    device.add_hd(path=drive_enc_data.get('DriveLetter0'), is_encrypted=is_encrypted)
                             except Exception:
                                 logger.exception(f'Problem getting enc data for {drive_enc_data}')
                 except Exception:

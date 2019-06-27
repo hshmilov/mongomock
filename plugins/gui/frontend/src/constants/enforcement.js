@@ -172,6 +172,6 @@ export const postCondition = 'post'
 
 export const actionCategories = [
     'deploy_software', 'run_command', 'isolate_edr', 'scan_va','enrich_device_data',
-    'patch_device', 'block_fw', 'create_cmdb_computer', 'manage_directory',
+    'block_fw', 'create_cmdb_computer', 'manage_directory',
     'notify', 'create_incident', 'axonius'
 ]

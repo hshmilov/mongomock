@@ -76,7 +76,8 @@ class CiscoMerakiAdapter(AdapterBase):
                                            https_proxy=client_config.get('https_proxy'))
         with connection:
             pass
-        return connection, client_config.get('vlan_exclude_list')
+        # pylint: disable=line-too-long
+        return connection, client_config.get('vlan_exclude_list'), (client_config.get('exclude_no_vlan_clients') or False)
 
     def _connect_client(self, client_config):
         try:
@@ -97,11 +98,13 @@ class CiscoMerakiAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the CiscoMeraki Server
         """
-        connection, vlan_exclude_list = client_data
+        connection, vlan_exclude_list, exclude_no_vlan_clients = client_data
         if not vlan_exclude_list:
             vlan_exclude_list = []
         else:
             vlan_exclude_list = vlan_exclude_list.split(',')
+        if exclude_no_vlan_clients:
+            vlan_exclude_list.append(None)
         with connection:
             for deivce_raw, device_type in connection.get_device_list():
                 yield deivce_raw, device_type, vlan_exclude_list
@@ -135,6 +138,11 @@ class CiscoMerakiAdapter(AdapterBase):
                     'name': 'vlan_exclude_list',
                     'title': 'VLAN Exclude List',
                     'type': 'string'
+                },
+                {
+                    'name': 'exclude_no_vlan_clients',
+                    'title': 'Exclude No VLAN Clients',
+                    'type': 'bool'
                 },
                 {
                     'name': 'https_proxy',
@@ -192,6 +200,9 @@ class CiscoMerakiAdapter(AdapterBase):
                             found_exclude_vlan = True
                         else:
                             found_regular_vlan = True
+                    else:
+                        if None in vlan_exclude_list:
+                            found_exclude_vlan = True
                     associated_device_object.name = name
                     associated_device_object.notes = notes
                     associated_device_object.tags = tags

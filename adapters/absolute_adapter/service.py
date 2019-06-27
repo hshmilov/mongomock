@@ -8,7 +8,7 @@ from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import is_domain_valid
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from absolute_adapter.connection import AbsoluteConnection
 from absolute_adapter.client_id import get_client_id
 
@@ -25,6 +25,7 @@ class AbsoluteAdapter(AdapterBase):
         device_src = Field(str, 'Device Src')
         policy_group_name = Field(str, 'Policy Group Name')
         full_hostname = Field(str, 'Full Hostname')
+        macs_no_ip = ListField(str, 'MAC addresses with No IP')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -206,8 +207,10 @@ class AbsoluteAdapter(AdapterBase):
                         else:
                             if mac.startswith('0x'):
                                 mac = mac[2:]
-                        if ips or mac:
+                        if ips and mac:
                             device.add_nic(mac, ips, speed=str(nic_raw.get('speed')) if nic_raw.get('speed') else None)
+                        elif mac:
+                            device.macs_no_ip.append(mac)
                     except Exception:
                         logger.exception(f'Problem adding nic to {device_raw} nic {nic_raw}')
                 try:

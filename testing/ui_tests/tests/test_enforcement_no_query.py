@@ -212,7 +212,7 @@ class TestEnforcementNoQuery(TestBase):
         self.enforcements_page.wait_for_action_library()
         self.enforcements_page.fill_action_library_search('de')
         assert self.enforcements_page.get_action_categories() == [ActionCategory.Deploy, ActionCategory.Isolate,
-                                                                  ActionCategory.Enrichment, ActionCategory.Patch,
+                                                                  ActionCategory.Enrichment,
                                                                   ActionCategory.Block, ActionCategory.ManageAD,
                                                                   ActionCategory.Incident]
         assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [
