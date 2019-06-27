@@ -80,9 +80,12 @@ export default {
 		empty (data) {
 			if (data === undefined || data == null || data === '') { return true }
 			if (typeof data !== 'object') { return false }
+			let dataToCheck = Array.isArray(data)? data : Object.values(data)
 			let hasValue = false
-			Object.values(data).forEach((value) => {
-				if (value) { hasValue = true }
+			dataToCheck.forEach((value) => {
+				if (value !== undefined && value !== null && value !== '') {
+					hasValue = true
+				}
 			})
 			return !hasValue
 		},
