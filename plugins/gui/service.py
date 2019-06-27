@@ -2637,13 +2637,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             source = user.get('source')
             if user_name != AXONIUS_USER_NAME:
                 self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
-            beautiful_user = beautify_user_entry(user)
-            oidc_data: OidcData = session.get('oidc_data')
-
-            if oidc_data:
-                beautiful_user['oidc_data'] = oidc_data.beautify()
-
-            return jsonify(beautiful_user), 200
+            return jsonify(beautify_user_entry(user)), 200
 
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
@@ -3380,34 +3374,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def all_historical_dates(self):
         return jsonify(all_historical_dates())
 
-    @gui_add_rule_logged_in('dashboard/spaces', methods=['POST', 'GET'],
+    @gui_add_rule_logged_in('dashboards', methods=['POST', 'GET'],
                             required_permissions={Permission(PermissionType.Dashboard, ReadOnlyJustForGet)},
                             enforce_trial=False)
-    def get_dashboard_data(self):
+    def get_dashboards(self):
         """
-        GET all the saved spaces and the list of panels attached to them.
-            For the space with type 'personal', screen out those created by a different user from the one logged in.
+        GET all the saved spaces.
 
         POST a new space that will have the type 'custom'
 
         :return:
         """
         if request.method == 'GET':
-            space_to_panels = defaultdict(list)
-            for panel in self._get_dashboard():
-                space_to_panels[str(panel['space'])].append(panel)
-
-            def _get_space_panels(space_id, space_name):
-                panels = space_to_panels.get(str(space_id), [])
-                if space_name != DASHBOARD_SPACE_PERSONAL:
-                    return panels
-                return [panel for panel in panels if panel['user_id'] == get_connected_user_id()]
-
             return jsonify([{
                 'uuid': str(space['_id']),
                 'name': space['name'],
                 'type': space['type'],
-                'panels': _get_space_panels(space['_id'], space['name'])
             } for space in self.__dashboard_spaces_collection.find(filter_archived())])
 
         # Handle 'POST' request method - save new custom dashboard space
@@ -3418,7 +3400,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return return_error(f'Could not create a new space named {space_data["name"]}')
         return str(insert_result.inserted_id)
 
-    @gui_add_rule_logged_in('dashboard/spaces/<space_id>', methods=['PUT', 'DELETE'],
+    @gui_add_rule_logged_in('dashboards/<space_id>', methods=['PUT', 'DELETE'],
                             required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
                             enforce_trial=False)
     def update_dashboard_space(self, space_id):
@@ -3446,7 +3428,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 return return_error('Could not remove the requested Dashboard Space', 400)
             return ''
 
-    @gui_add_rule_logged_in('dashboard/spaces/<space_id>/panels', methods=['POST'],
+    @gui_add_rule_logged_in('dashboards/<space_id>/panels', methods=['POST'],
                             required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadWrite)},
                             enforce_trial=False)
     def add_dashboard_space_panel(self, space_id):
@@ -3468,7 +3450,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             return return_error('Error saving dashboard chart', 400)
         return str(insert_result.inserted_id)
 
-    @gui_add_rule_logged_in('dashboard/panels/<panel_id>', methods=['DELETE'],
+    @gui_helpers.paginated()
+    @gui_add_rule_logged_in('dashboards/panels', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Dashboard, PermissionLevel.ReadOnly)},
+                            enforce_trial=False)
+    def get_dashboard_data(self, skip, limit):
+        """
+        Return charts data for the requested page.
+        Charts attached to the Personal dashboard and a different user the connected one, are excluded
+
+        """
+        return jsonify(self._get_dashboard(skip, limit))
+
+    @gui_add_rule_logged_in('dashboards/panels/<panel_id>', methods=['DELETE'],
                             required_permissions={Permission(PermissionType.Dashboard,
                                                              PermissionLevel.ReadWrite)})
     def remove_dashboard_panel(self, panel_id):
@@ -3537,7 +3531,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         """
         return self.__generate_dashboard_uncached(dashboard)
 
-    def _get_dashboard(self, uncached: bool = False, space_ids: list = None):
+    def _get_dashboard(self, skip=0, limit=0, uncached: bool = False,
+                       space_ids: list = None, exclude_personal=False):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
         fetch devices_db with their view. Amount of results is mapped to each views' name, under 'data' key,
@@ -3551,19 +3546,31 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         :return:
         """
         logger.debug('Getting dashboard')
-        spaces_filter = {}
-        if space_ids and len(space_ids) > 0:
-            spaces_filter = {
-                'space': {
-                    '$in': [ObjectId(space_id) for space_id in space_ids]
-                }
+        personal_id = self.__dashboard_spaces_collection.find_one({'name': DASHBOARD_SPACE_PERSONAL}, {'_id': 1})['_id']
+        filter_spaces = {
+            'space': {
+                '$in': [ObjectId(space_id) for space_id in space_ids]
+            } if space_ids else {
+                '$ne': personal_id
             }
-        for dashboard in self.__dashboard_collection.find(filter=filter_archived(spaces_filter)):
+        }
+        if not exclude_personal:
+            filter_spaces = {
+                '$or': [{
+                    'space': personal_id,
+                    'user_id': {
+                        '$in': ['*', get_connected_user_id()]
+                    }
+                }, filter_spaces]
+            }
+        for dashboard in self.__dashboard_collection.find(
+                filter=filter_archived(filter_spaces), skip=skip, limit=limit):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('config'):
                 logger.info(f'No config found for dashboard {dashboard.get("name")}')
             else:
+                dashboard['space'] = str(dashboard['space'])
                 # Let's fetch and execute them query filters, depending on the chart's type
                 try:
                     dashboard_metric = ChartMetrics[dashboard['metric']]
@@ -4451,7 +4458,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         logger.info('Starting to generate report')
         generator_params = {}
         space_ids = report['spaces'] or []
-        generator_params['dashboard'] = self._get_dashboard(space_ids=space_ids)
+        generator_params['dashboard'] = self._get_dashboard(space_ids=space_ids, exclude_personal=True)
         generator_params['adapters'] = self._get_adapter_data(report['adapters']) if report.get('adapters') else None
         generator_params['default_sort'] = self._system_settings['defaultSort']
         generator_params['saved_view_count_func'] = self._get_entity_count

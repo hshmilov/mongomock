@@ -19,7 +19,7 @@
   import xSpaces from '../networks/dashboard/Spaces.vue'
 
   import {
-    FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_FIRST_USE
+    FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE
   } from '../../store/modules/dashboard'
   import { IS_EXPIRED } from '../../store/getters'
   import { FETCH_DATA_VIEWS, SAVE_VIEW } from '../../store/actions'
@@ -38,7 +38,18 @@
           return state.dashboard
         },
         spaces (state) {
-          return state.dashboard.spaces.data
+          let spaceToPanels = {}
+          state.dashboard.panels.data.forEach(panel => {
+            if (!spaceToPanels[panel.space]) {
+              spaceToPanels[panel.space] = []
+            }
+            spaceToPanels[panel.space].push(panel)
+          })
+          return state.dashboard.spaces.data.map(space => {
+            return { ...space,
+              'panels': spaceToPanels[space.uuid] || []
+            }
+          })
         },
         devicesView (state) {
           return state.devices.view
@@ -70,7 +81,7 @@
       const getDashboardData = () => {
         return Promise.all([
           this.fetchDiscoveryData({ module: 'devices' }), this.fetchDiscoveryData({ module: 'users' }),
-          this.fetchDashboard()
+          this.fetchSpaces(), this.fetchPanels()
         ]).then(() => {
           if (this._isDestroyed) return
           this.timer = setTimeout(getDashboardData, 30000)
@@ -116,7 +127,8 @@
       ...mapActions({
         fetchDiscoveryData: FETCH_DISCOVERY_DATA,
         fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
-        fetchDashboard: FETCH_DASHBOARD_SPACES,
+        fetchSpaces: FETCH_DASHBOARD_SPACES,
+        fetchPanels: FETCH_DASHBOARD_PANELS,
         fetchViews: FETCH_DATA_VIEWS, saveView: SAVE_VIEW
       }),
       onClickInsights () {

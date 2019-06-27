@@ -8,6 +8,8 @@ export const UPDATE_DISCOVERY_DATA = 'UPDATE_DISCOVERY_DATA'
 
 export const FETCH_DASHBOARD_SPACES = 'FETCH_DASHBOARD_SPACES'
 export const UPDATE_DASHBOARD_SPACES = 'UPDATE_DASHBOARD_SPACES'
+export const FETCH_DASHBOARD_PANELS = 'FETCH_DASHBOARD_PANELS'
+export const UPDATE_DASHBOARD_PANELS = 'UPDATE_DASHBOARD_PANELS'
 export const SAVE_DASHBOARD_SPACE = 'SAVE_DASHBOARD_SPACE'
 export const UPDATE_ADDED_SPACE = 'UPDATE_ADDED_SPACE'
 export const CHANGE_DASHBOARD_SPACE = 'CHANGE_DASHBOARD_SPACE'
@@ -34,6 +36,7 @@ export const dashboard = {
 			users: {data: {}, fetching: false, error: '' }
 		},
 		spaces: { data: [], fetching: false, error: '' },
+		panels: { data: [], fetching: false, error: '' },
 		currentSpace: '',
 		firstUse: { data: null, fetching: false, error: '' }
 	},
@@ -65,6 +68,25 @@ export const dashboard = {
 			}
 			state.spaces.data = payload.data
 		},
+		[ UPDATE_DASHBOARD_PANELS ] (state, payload) {
+			state.panels.fetching = payload.fetching
+			state.panels.error = payload.error
+			if (!payload.data) {
+				return
+			}
+			if (!state.panels.data.length) {
+				state.panels.data = payload.data
+			} else {
+				payload.data.forEach((item, index) => {
+					if (payload.skip + index < state.panels.data.length) {
+						state.panels.data[payload.skip + index] = item
+					} else {
+						state.panels.data.push(item)
+					}
+				})
+				state.panels.data = [ ...state.panels.data ]
+			}
+		},
 		[ UPDATE_ADDED_SPACE ] (state, payload) {
 			state.spaces.data.push(payload)
 		},
@@ -79,12 +101,7 @@ export const dashboard = {
 			state.spaces.data = state.spaces.data.filter(space => space.uuid !== spaceId)
 		},
 		[ UPDATE_REMOVED_PANEL ] (state, dashboardId) {
-			state.spaces.data = state.spaces.data.map(space => {
-				return {
-					...space,
-					panels: space.panels.filter(dashboard => dashboard.uuid !== dashboardId)
-				}
-			})
+			state.panels.data = state.panels.data.filter(panel => panel.uuid !== dashboardId)
 		},
 		[ UPDATE_DASHBOARD_FIRST_USE] (state, payload) {
             state.firstUse.fetching = payload.fetching
@@ -92,7 +109,8 @@ export const dashboard = {
 			if (payload.data !== undefined) {
 				state.firstUse.data = payload.data
 			}
-		}, [ SET_CURRENT_SPACE ] (state, spaceId) {
+		},
+		[ SET_CURRENT_SPACE ] (state, spaceId) {
 			state.currentSpace = spaceId
 		}
 	},
@@ -113,14 +131,36 @@ export const dashboard = {
 		},
 		[ FETCH_DASHBOARD_SPACES ] ({dispatch}, payload) {
 			return dispatch(REQUEST_API, {
-				rule: 'dashboard/spaces',
+				rule: 'dashboards',
 				type: UPDATE_DASHBOARD_SPACES,
 				payload
 			})
 		},
+		[ FETCH_DASHBOARD_PANELS ] ({dispatch}, payload) {
+			if (!payload) {
+				payload = {}
+			}
+			if (!payload.skip) {
+				payload.skip = 0
+			}
+			if (!payload.limit) {
+				payload.limit = 2
+			}
+			return dispatch(REQUEST_API, {
+				rule: `dashboards/panels?skip=${payload.skip}&limit=${payload.limit}`,
+				type: UPDATE_DASHBOARD_PANELS,
+				payload
+			}).then(response => {
+				if (response.data && response.data.length === payload.limit) {
+					dispatch(FETCH_DASHBOARD_PANELS, { ...payload,
+						skip: payload.skip + payload.limit
+					})
+				}
+			})
+		},
 		[ SAVE_DASHBOARD_SPACE ] ({dispatch, commit}, name) {
 			return dispatch(REQUEST_API, {
-				rule: 'dashboard/spaces',
+				rule: 'dashboards',
 				method: 'POST',
 				data: {
 					name
@@ -137,7 +177,7 @@ export const dashboard = {
 		},
 		[ CHANGE_DASHBOARD_SPACE ] ({dispatch, commit}, payload) {
 			return dispatch(REQUEST_API, {
-				rule: `dashboard/spaces/${payload.id}`,
+				rule: `dashboards/${payload.id}`,
 				method: 'PUT',
 				data: {
 					name: payload.name
@@ -150,7 +190,7 @@ export const dashboard = {
 		},
 		[ REMOVE_DASHBOARD_SPACE ] ({dispatch, commit}, spaceId) {
 			return dispatch(REQUEST_API, {
-				rule: `dashboard/spaces/${spaceId}`,
+				rule: `dashboards/${spaceId}`,
 				method: 'DELETE'
 			}).then(response => {
 				if (response.status === 200) {
@@ -160,12 +200,12 @@ export const dashboard = {
 		},
 		[ SAVE_DASHBOARD_PANEL ] ({dispatch}, payload) {
 			return dispatch(REQUEST_API, {
-				rule: `dashboard/spaces/${payload.space}/panels`,
+				rule: `dashboards/${payload.space}/panels`,
 				method: 'POST',
 				data: payload.data
 			}).then(response => {
 				if (response.status === 200 && response.data) {
-					dispatch(FETCH_DASHBOARD_SPACES)
+					dispatch(FETCH_DASHBOARD_PANELS)
 				}
 				return response
 			})
@@ -173,7 +213,7 @@ export const dashboard = {
 		[ REMOVE_DASHBOARD_PANEL ] ({dispatch, commit}, panelId) {
 			if (!panelId) return
 			return dispatch(REQUEST_API, {
-				rule: `dashboard/panels/${panelId}`,
+				rule: `dashboards/panels/${panelId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response.status === 200) {
