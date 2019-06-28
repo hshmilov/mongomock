@@ -36,7 +36,8 @@
                   class="logo md-image"
                   :src="require(`Logos/adapters/${logo}.png`)"
                   height="20"
-                  :alt="title"
+                  :alt="logo"
+                  :title="logo"
                 >{{ title }}<div
                   v-if="onClickCol"
                   :class="`sort ${sortClass(name)}`"

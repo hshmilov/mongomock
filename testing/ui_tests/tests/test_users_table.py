@@ -1,10 +1,12 @@
 from datetime import datetime
 import pytz
+import pytest
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from test_credentials.json_file_credentials import USER_NAME_UNICODE
 
 from axonius.utils.parsing import parse_date_with_timezone
+from testing.services.plugins.static_analysis_service import StaticAnalysisService
 
 
 class TestUsersTable(TestEntitiesTable):
@@ -14,6 +16,7 @@ class TestUsersTable(TestEntitiesTable):
     ADMIN_COLUMN = 'Is Admin'
     LAST_SEEN_COLUMN = 'Last Seen In Domain'
     ADAPTERS_COLUMN = 'Adapters'
+    ACCOUNT_DISABLED_COLUMN = 'Account Disabled'
     QUERY_FILTER_USERNAME = 'specific_data.data.username%20%3D%3D%20regex(%22m%22)'
     QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
                    'data.domain,specific_data.data.last_seen,specific_data.data.is_admin,labels'
@@ -73,7 +76,9 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.switch_to_page()
         self.users_page.select_columns([self.MAIL_COLUMN, self.DOMAIN_COLUMN])
         assert len(self.users_page.get_column_data(self.MAIL_COLUMN))
-        assert not len(self.users_page.get_column_data(self.DOMAIN_COLUMN))
+        with pytest.raises(ValueError):
+            # The coloumn is expected to be gone, therefore this throws an exception
+            self.users_page.get_column_data(self.DOMAIN_COLUMN)
 
     def test_user_save_query(self):
         self.settings_page.switch_to_page()
@@ -133,6 +138,7 @@ class TestUsersTable(TestEntitiesTable):
         assert f'{last_seens[2]}, {last_seens[1]}' == last_seens[0]
 
         assert self.users_page.get_column_data_count_true(self.ADMIN_COLUMN)[0] == 2
+        assert self.users_page.get_column_data_count_false(self.ADMIN_COLUMN)[0] == 2
 
         adapters = self.users_page.get_column_data_titles(self.ADAPTERS_COLUMN)
         assert len(adapters) == 3
@@ -175,3 +181,18 @@ class TestUsersTable(TestEntitiesTable):
         assert last_seens[-2] == last_seens[0]
         self._check_last_seen(2, last_seens)
         assert last_seens[-3] == 'Days'
+
+    def test_user_bool_consistency(self):
+        self.settings_page.switch_to_page()
+        with StaticAnalysisService().contextmanager(take_ownership=True):
+            self.base_page.run_discovery()
+            self.users_page.switch_to_page()
+            self.users_page.query_user_name_contains('Administrator')
+            self.users_page.open_edit_columns()
+            self.users_page.select_column_name(self.ACCOUNT_DISABLED_COLUMN)
+            self.users_page.select_column_adapter(self.users_page.VALUE_ADAPTERS_AD)
+            self.users_page.select_column_name(self.ACCOUNT_DISABLED_COLUMN)
+            self.users_page.close_edit_columns()
+            self.users_page.wait_for_table_to_load()
+            assert self.users_page.get_column_data_count_false(self.ACCOUNT_DISABLED_COLUMN)[0] == 1
+            assert self.users_page.get_column_data_count_false(self.ACCOUNT_DISABLED_COLUMN, generic_col=False)[0] == 1

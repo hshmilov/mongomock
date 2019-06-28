@@ -1,18 +1,16 @@
 <template>
   <div class="x-boolean-view">
-    <template v-if="typeof processedData !== 'boolean'" />
-    <component
-      :is="hyperlink? 'a' : 'div'"
-      v-else
-      :href="hyperlinkHref"
-      @click="onClickLink"
-    >
-      <div
-        v-if="processedData"
-        class="checkmark"
-      />
-      <x-cross v-else />
-    </component>
+    <template v-for="(item, i) in processedData">
+      <component
+        :is="hyperlink? 'a' : 'div'"
+        :key="i"
+        :href="hyperlinkHref"
+        :class="{item: true, checkmark: item}"
+        @click="onClickLink"
+      >
+        <x-cross v-if="!item" />
+      </component>
+    </template>
   </div>
 </template>
 
@@ -28,12 +26,9 @@
     computed: {
       processedData () {
         if (Array.isArray(this.value)) {
-          if (!this.value.length) return ''
-          return this.value.reduce((current, accumulator) => {
-            return current || accumulator
-          }, true)
+          return this.value
         }
-        return this.value
+        return [this.value]
       }
     }
   }
@@ -52,6 +47,10 @@
             border-bottom: 1px solid;
             border-right: 1px solid;
             margin-left: 4px;
+        }
+
+        .item {
+          margin-right: 8px;
         }
     }
 </style>

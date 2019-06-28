@@ -631,7 +631,6 @@ def find_entity_field(entity_data, field_path):
                 :param value:   Value for testing if exists in the list
                 :return: True, if value is new to the children list and False otherwise
                 """
-
                 def same_string(x, y):
                     if not isinstance(x, str):
                         return False
@@ -645,7 +644,7 @@ def find_entity_field(entity_data, field_path):
                         return (x and x in y) or (y and y in x) or (x == y)
                     return x == y
 
-                if not value:
+                if value is None:
                     return False
 
                 if isinstance(value, str):
@@ -668,7 +667,7 @@ def find_entity_field(entity_data, field_path):
                 if add:
                     children = children + add
 
-            elif new_instance(child_value) and child_value:
+            elif new_instance(child_value):
                 # Check if value found can be added to children
                 children.append(child_value)
 
@@ -700,7 +699,7 @@ def parse_entity_fields(entity_data, fields, include_details=False):
                          for item in entity_data['adapters_data'][value]]
     for field_path in fields:
         val = find_entity_field(entity_data, field_path)
-        if val is not None and ((type(val) != str and type(val) != list) or len(val)):
+        if val is not None and (type(val) not in [str, list] or len(val)):
             field_to_value[field_path] = val
         if not include_details:
             continue

@@ -4,6 +4,7 @@ import time
 import requests
 from retrying import retry
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
@@ -65,6 +66,7 @@ class EntitiesPage(Page):
     VALUE_ADAPTERS_JSON = 'JSON File'
     VALUE_ADAPTERS_AD = 'Microsoft Active Directory (AD)'
     TABLE_HEADER_CELLS_CSS = '.data-title'
+    TABLE_HEADER_CELLS_XPATH = '//div[contains(@class, \'data-title\') and child::img[contains(@class, \'logo\')]]'
     TABLE_HEADER_SORT_XPATH = '//th//div[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]/div'
     TABLE_DATA_POS_XPATH = '//tr[@id]/td[position()={data_position}]'
     TABLE_DATA_TITLE_POS_XPATH = '//tr[@id]/td[position()={data_position}]//' \
@@ -333,13 +335,23 @@ class EntitiesPage(Page):
         # Return the position of given col_name in list of column headers, 1-based
         if not parent:
             parent = self.driver
+        return [element.text.strip() for element
+                in parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
 
-        try:
-            return [element.text.strip() for element in
-                    parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)].index(col_name) + 1
-        except ValueError:
-            # Unfortunately col_name is not in the composed list
-            return 0
+    def count_specific_column(self, col_name, parent=None):
+        # Return the position of given col_name in list of column headers, 1-based
+        if not parent:
+            parent = self.driver
+
+        elements = parent.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
+        for index, element in enumerate(elements, start=1):
+            try:
+                element.find_element_by_tag_name('img')
+            except NoSuchElementException:
+                if element.text.strip() == col_name:
+                    return index
+        # This coloumn title was not found
+        raise ValueError
 
     def get_note_by_text(self, note_text):
         return self.driver.find_element_by_css_selector(self.NOTES_SEARCH_BY_TEXT.format(note_text=note_text))
@@ -353,15 +365,11 @@ class EntitiesPage(Page):
             parent = self.driver
 
         col_position = self.count_sort_column(col_name, parent)
-        if not col_position:
-            return []
         return [el.text.strip() for el in self.find_elements_by_xpath(
             self.TABLE_DATA_POS_XPATH.format(data_position=col_position), element=parent)]
 
     def get_column_data_titles(self, col_name):
         col_position = self.count_sort_column(col_name)
-        if not col_position:
-            return []
         return [el.get_attribute('title') for el in self.find_elements_by_xpath(
             self.TABLE_DATA_TITLE_POS_XPATH.format(data_position=col_position)) if el.get_attribute('title')]
 
@@ -413,6 +421,12 @@ class EntitiesPage(Page):
 
     def select_column_name(self, col_name):
         self.driver.find_element_by_xpath(self.CHECKBOX_XPATH_TEMPLATE.format(label_text=col_name)).click()
+
+    def select_column_adapter(self, adapter_title):
+        self.select_option(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS,
+                           self.DROPDOWN_TEXT_BOX_CSS,
+                           self.DROPDOWN_SELECTED_OPTION_CSS,
+                           adapter_title)
 
     def close_edit_columns(self):
         self.click_button('Done')
@@ -721,12 +735,17 @@ class EntitiesPage(Page):
         self.driver.find_element_by_css_selector(self.TABLE_CELL_EXPAND_CSS.format(
             row_index=row_index, cell_index=cell_index)).click()
 
-    def get_column_data_count_true(self, col_name):
-        col_position = self.count_sort_column(col_name)
-        if not col_position:
-            return []
-        return [len(el.find_elements_by_css_selector('.x-boolean-view .checkmark')) for el in
+    def get_coloumn_data_count_bool(self, col_name, count_true=False, generic_col=True):
+        count_class = 'checkmark' if count_true else 'x-cross'
+        col_position = self.count_sort_column(col_name) if generic_col else self.count_specific_column(col_name)
+        return [len(el.find_elements_by_css_selector(f'.x-boolean-view .{count_class}')) for el in
                 self.driver.find_elements_by_xpath(self.TABLE_DATA_POS_XPATH.format(data_position=col_position))]
+
+    def get_column_data_count_true(self, col_name, generic_col=True):
+        return self.get_coloumn_data_count_bool(col_name, True, generic_col)
+
+    def get_column_data_count_false(self, col_name, generic_col=True):
+        return self.get_coloumn_data_count_bool(col_name, generic_col=generic_col)
 
     def wait_close_column_details_popup(self):
         self.wait_for_element_absent_by_css('.details-table-container .popup .content .table')

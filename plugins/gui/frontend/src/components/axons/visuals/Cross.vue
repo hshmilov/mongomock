@@ -14,11 +14,12 @@
 <style lang="scss">
     .x-cross {
         position: relative;
-        height: 20px;
+        height: 16px;
+        width: 16px;
 
         .first, .second {
             width: 2px;
-            height: 20px;
+            height: 16px;
             border-left: 1px solid;
             position: absolute;
             top: 0;
