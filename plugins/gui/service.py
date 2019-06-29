@@ -1906,7 +1906,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
         if enforcement_to_add[TRIGGERS_FIELD] and not enforcement_to_add[TRIGGERS_FIELD][0].get('name'):
             enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
-        response = self.request_remote_plugin('reports', REPORTS_PLUGIN_NAME, method='put', json=enforcement_to_add)
+        response = self.request_remote_plugin('reports', REPORTS_PLUGIN_NAME, method='put', json=enforcement_to_add,
+                                              raise_on_network_error=True)
         return response.text, response.status_code
 
     def delete_enforcement(self, enforcement_selection):
