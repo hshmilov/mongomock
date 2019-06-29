@@ -28,6 +28,9 @@ class MobileironAdapter(AdapterBase, Configurable):
         current_phone_number = Field(str, 'Current phone number')
         user_first_name = Field(str, 'User First Name')
         user_last_name = Field(str, 'User Last Name')
+        device_encrypted = Field(bool, 'Device Encrypted')
+        device_is_compromised = Field(bool, 'Device Is Compromised')
+        health_data_bit_locker_status = Field(str, 'Bitlocker Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -169,7 +172,10 @@ class MobileironAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting more users data')
                 try:
-                    device.last_seen = parse_date(device_raw.get('common.miclient_last_connected_at'))
+                    last_seen = parse_date(device_raw.get('common.miclient_last_connected_at'))
+                    if self.__exclude_no_last_seen_devices and not last_seen:
+                        continue
+                    device.last_seen = last_seen
                 except Exception:
                     logger.exception(f'Problem adding last seen to {device_raw}')
                 device.imei = device_raw.get('common.imei')
@@ -177,6 +183,9 @@ class MobileironAdapter(AdapterBase, Configurable):
                 device.user_email = device_raw.get('user.email_address')
                 device.current_phone_number = device_raw.get('common.current_phone_number')
                 device.imsi = device_raw.get('common.imsi')
+                device.device_encrypted = bool(device_raw.get('common.device_encrypted'))
+                device.device_is_compromised = bool(device_raw.get('common.device_is_compromised'))
+                device.health_data_bit_locker_status = device_raw.get('windows_phone.health_data_bit_locker_status')
                 try:
                     if device_raw.get('appInventory') and isinstance(device_raw.get('appInventory'), list):
                         for app in device_raw.get('appInventory'):
@@ -204,10 +213,16 @@ class MobileironAdapter(AdapterBase, Configurable):
                     'name': 'fetch_apps',
                     'title': 'Fetch Applications',
                     'type': 'bool'
+                },
+                {
+                    'name': 'exclude_no_last_seen_devices',
+                    'title': 'Exclude No Last Seen Devices',
+                    'type': 'bool'
                 }
             ],
             'required': [
-                'fetch_apps'
+                'fetch_apps',
+                'exclude_no_last_seen_devices'
             ],
             'pretty_name': 'Mobileiron Configuration',
             'type': 'array'
@@ -216,8 +231,10 @@ class MobileironAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_apps': True
+            'fetch_apps': True,
+            'exclude_no_last_seen_devices': False
         }
 
     def _on_config_update(self, config):
         self.__fetch_apps = config['fetch_apps']
+        self.__exclude_no_last_seen_devices = config['exclude_no_last_seen_devices']

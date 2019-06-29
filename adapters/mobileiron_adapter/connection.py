@@ -44,7 +44,9 @@ class MobileironConnection(RESTConnection):
         fields = 'common.id,common.uuid,ios.DeviceNamem,common.platform,common.ip_address,' \
                  'common.wifi_mac_address,common.client_version,common.model,android.security_patch,' \
                  'user.user_id,common.miclient_last_connected_at,common.imei,common.storage_capacity,' \
-                 'user.email_address,common.current_phone_number,common.imsi'
+                 'user.email_address,common.current_phone_number,' \
+                 'common.imsi,common.device_encrypted,common.device_is_compromised,common.device_admin_enabled' \
+                 'windows_phone.win10_antivirus_status,windows_phone.health_data_bit_locker_status'
         offset = 0
         while offset < min(count, MAX_DEVICES_COUNT):
             try:

@@ -1,6 +1,7 @@
 import ipaddress
 import json
 import logging
+from urllib3.util.url import parse_url
 
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -221,7 +222,7 @@ class EpoAdapter(AdapterBase):
             yield device
 
     def _query_devices_by_client(self, client_name, client_data):
-        mc = client(client_data[EPO_HOST], client_data[EPO_PORT],
+        mc = client(parse_url(client_data[EPO_HOST]).host, client_data[EPO_PORT],
                     client_data[USER], client_data[PASS])
 
         try:
@@ -253,7 +254,7 @@ class EpoAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            client(client_config[EPO_HOST], client_config[EPO_PORT],
+            client(parse_url(client_config[EPO_HOST]).host, client_config[EPO_PORT],
                    client_config[USER], client_config[PASS])
         except Exception as e:
             message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))

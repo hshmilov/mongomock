@@ -38,24 +38,26 @@ class PaloaltoPanoramaConnection(RESTConnection):
 
     # pylint: disable=R0912
     def get_device_list(self):
-        xml_response = ET.fromstring(self._get('', use_json_in_response=False,
-                                               url_params={'key': self._apikey,
-                                                           'type': 'op',
-                                                           'cmd': GET_ALL_DEVICES_XML}))
-        if 'response' not in xml_response.tag or xml_response.attrib['status'] != 'success' or 'result' \
-                not in xml_response[0].tag or 'devices' not in xml_response[0][0].tag:
-            error_msg = xml_response.attrib['status']
-            raise RESTException(f'Got bad request response {error_msg}')
-        devices_xml = xml_response[0][0]
         serial_targets = []
-        for device_entry_xml in devices_xml:
-            device_raw_dict = dict()
-            for xml_property in device_entry_xml:
-                device_raw_dict[xml_property.tag] = xml_property.text
-            if device_raw_dict.get('serial'):
-                serial_targets.append(device_raw_dict.get('serial'))
-            yield device_raw_dict, FIREWALL_DEVICE_TYPE, None
-
+        try:
+            xml_response = ET.fromstring(self._get('', use_json_in_response=False,
+                                                   url_params={'key': self._apikey,
+                                                               'type': 'op',
+                                                               'cmd': GET_ALL_DEVICES_XML}))
+            if 'response' not in xml_response.tag or xml_response.attrib['status'] != 'success' or 'result' \
+                    not in xml_response[0].tag or 'devices' not in xml_response[0][0].tag:
+                error_msg = xml_response.attrib['status']
+                raise RESTException(f'Got bad request response {error_msg}')
+            devices_xml = xml_response[0][0]
+            for device_entry_xml in devices_xml:
+                device_raw_dict = dict()
+                for xml_property in device_entry_xml:
+                    device_raw_dict[xml_property.tag] = xml_property.text
+                if device_raw_dict.get('serial'):
+                    serial_targets.append(device_raw_dict.get('serial'))
+                yield device_raw_dict, FIREWALL_DEVICE_TYPE, None
+        except Exception:
+            logger.exception(f'Problem getting serials')
         serial_targets.append(None)
         for target in serial_targets:
             try:
