@@ -1225,47 +1225,47 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             "items": [
                 {
                     "name": "last_seen_threshold_hours",
-                    "title": "Old device last seen field threshold hours",
+                    "title": "Do not fetch device if not seen by source in X hours",
                     "type": "number"
                 },
                 {
                     "name": "last_fetched_threshold_hours",
-                    "title": "Old device last fetched threshold hours",
+                    "title": "Delete device if not fetched from source in X hours",
                     "type": "number"
                 },
                 {
                     "name": "user_last_seen_threshold_hours",
-                    "title": "Old user last seen field threshold hours",
+                    "title": "Do not fetch user if not seen in X hours",
                     "type": "number"
                 },
                 {
                     "name": "user_last_fetched_threshold_hours",
-                    "title": "Old user last fetched threshold hours",
+                    "title": "Delete user if not fetched from source in X hours",
                     "type": "number",
                 },
                 {
                     "name": "minimum_time_until_next_fetch",
-                    "title": "Minimum number of hours until next entities fetch",
+                    "title": "Minimum hours to wait before next discovery cycle for this adapter",
                     "type": "number",
                 },
                 {
                     "name": "connect_client_timeout",
-                    "title": "Amount of seconds to allow before connection failure",
+                    "title": "Adapter server connection timeout in seconds",
                     "type": "number",
                 },
                 {
                     "name": "fetching_timeout",
-                    "title": "Timeout for fetching in seconds, on a per entity basis",
+                    "title": "Entity fetching timeout in seconds",
                     "type": "number",
                 },
                 {
                     "name": "last_seen_prioritized",
-                    "title": "Discard data if last seen is older than the last seen saved",
+                    "title": "Discard entity data if 'Last Seen' fetched is older than 'Last Seen' saved",
                     "type": "bool",
                 },
                 {
                     "name": "realtime_adapter",
-                    "title": "Run as a Real Time adapter",
+                    "title": "Run as a real-time adapter",
                     "type": "bool",
                 }
             ],
