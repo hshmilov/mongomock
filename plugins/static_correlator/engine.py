@@ -91,6 +91,14 @@ def not_solarwinds_node(adapter_device):
     return True
 
 
+def not_lansweeper_assetname_no_hostname(adapter_device):
+    if adapter_device.get('plugin_name') == 'lansweeper_adapter' \
+            and adapter_device['data'].get('name')\
+            and not adapter_device['data'].get('hostname'):
+        return False
+    return True
+
+
 def _refresh_domain_to_dns_dict():
     try:
         global DOMAIN_TO_DNS_DICT
@@ -190,6 +198,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on MAC')
         mac_indexed = {}
         filtered_adapters_list = filter(not_solarwinds_node, adapters_to_correlate)
+        filtered_adapters_list = filter(not_lansweeper_assetname_no_hostname, filtered_adapters_list)
         for adapter in filtered_adapters_list:
             # Don't add to the MAC comparisons devices that haven't seen for more than 30 days
             if is_old_device(adapter, number_of_days=5) and adapter.get('plugin_name') not in ALLOW_OLD_MAC_LIST:
