@@ -1,6 +1,8 @@
 import ipaddress
+import json
 import logging
 import socket
+import subprocess
 
 from urllib3.util.url import parse_url
 
@@ -48,3 +50,10 @@ def has_addr_collision(domain):
         raise
 
     return False, 'No collision'
+
+
+def read_weave_network_range():
+    report = subprocess.check_output('weave report'.split())
+    report = json.loads(report)
+    weave_netrowk_range = report['IPAM']['Range']
+    return weave_netrowk_range

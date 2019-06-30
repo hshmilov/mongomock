@@ -6,6 +6,8 @@ import subprocess
 import zipfile
 
 from axonius.consts.system_consts import PYRUN_PATH_HOST
+from axonius.utils.network.docker_network import read_weave_network_range
+from conf_tools import get_customer_conf_json
 from install import (TEMPORAL_PATH,
                      AXONIUS_SETTINGS_PATH,
                      INSTANCE_CONNECT_USER_NAME,
@@ -26,6 +28,7 @@ from utils import AXONIUS_DEPLOYMENT_PATH, print_state, current_file_system_path
 
 
 def after_venv_activation(first_time, root_pass):
+    print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     if not first_time:
         stop_old(keep_diag=True, keep_tunnel=True)
     setup_host()
@@ -52,9 +55,8 @@ def after_venv_activation(first_time, root_pass):
 
 def reset_weave_network_on_bad_ip_allocation():
     try:
-        report = subprocess.check_output('weave report'.split())
-        report = json.loads(report)
-        if report['IPAM']['Range'] != get_weave_subnet_ip_range():
+        weave_netrowk_range = read_weave_network_range()
+        if weave_netrowk_range != get_weave_subnet_ip_range():
             print('Resetting weave network.')
             subprocess.check_call('weave reset'.split())
         else:

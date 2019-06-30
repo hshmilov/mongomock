@@ -8,7 +8,7 @@ from axonius.consts.system_consts import NODE_MARKER_PATH
 from conf_tools import get_customer_conf_json
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
-                                                AXONIUS_SETTINGS_PATH,
+                                                AXONIUS_SETTINGS_HOST_PATH,
                                                 WEAVE_NETWORK_SUBNET_KEY)
 
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
@@ -17,12 +17,14 @@ DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
 def get_weave_subnet_ip_range():
     conf = get_customer_conf_json()
 
-    weave_subet = conf.get('weave-network-subnet', DEFAULT_WEAVE_SUBNET_IP_RANGE)
+    weave_subnet = conf.get(WEAVE_NETWORK_SUBNET_KEY, DEFAULT_WEAVE_SUBNET_IP_RANGE)
 
     if WEAVE_NETWORK_SUBNET_KEY in conf:
-        print(f'Found custom weave network ip range: {weave_subet}')
+        print(f'Found custom weave network ip range: {weave_subnet}')
+    else:
+        print(f'Using default weave ip range {weave_subnet}')
 
-    return weave_subet
+    return weave_subnet
 
 
 def update_weave_connection_params(weave_encryption_key, master_ip):
@@ -84,7 +86,7 @@ def get_encryption_key():
         encryption_key = ''.join(random.SystemRandom().choices(string.ascii_uppercase +
                                                                string.ascii_lowercase + string.digits, k=32))
 
-        AXONIUS_SETTINGS_PATH.mkdir(exist_ok=True)
+        AXONIUS_SETTINGS_HOST_PATH.mkdir(exist_ok=True)
         ENCRYPTION_KEY_HOST_PATH.write_text(encryption_key)
         ENCRYPTION_KEY_HOST_PATH.chmod(0o646)
         return encryption_key

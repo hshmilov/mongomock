@@ -7,7 +7,7 @@ from urllib3 import ProxyManager
 
 from axonius.consts import plugin_consts
 from axonius.consts.system_consts import NODE_MARKER_PATH
-from scripts.instances.instances_consts import (AXONIUS_SETTINGS_PATH,
+from scripts.instances.instances_consts import (AXONIUS_SETTINGS_HOST_PATH,
                                                 PROXY_DATA_HOST_PATH)
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
@@ -97,7 +97,7 @@ class MasterProxyService(WeaveService):
     def volumes_override(self):
 
         return [f'{self.service_dir}/{CONF_FILE}:/etc/tinyproxy/tinyproxy.conf',
-                f'{AXONIUS_SETTINGS_PATH}:{plugin_consts.AXONIUS_SETTINGS_PATH}']
+                f'{AXONIUS_SETTINGS_HOST_PATH}:{plugin_consts.AXONIUS_SETTINGS_PATH}']
 
     def get_main_file(self):
         return ''
