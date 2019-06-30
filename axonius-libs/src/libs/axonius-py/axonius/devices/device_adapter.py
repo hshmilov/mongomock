@@ -22,6 +22,8 @@ from axonius.utils.parsing import (
     replace_large_ints,
 )
 
+MAX_SIZE_OF_MONGO_DOCUMENT = (1024**2) * 10
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -361,6 +363,12 @@ class ShodanData(SmartJsonClass):
     http_security_text_hash = Field(str, 'HTTP Security Text')
 
 
+class DeviceOpenPort(SmartJsonClass):
+    protocol = Field(str, 'Protocol', enum=['TCP', 'UDP'])
+    port_id = Field(int, 'Port ID')
+    service_name = Field(str, 'Service Name')
+
+
 class DeviceSwapFile(SmartJsonClass):
     """ A Definition for a key-value tag """
 
@@ -427,6 +435,7 @@ class DeviceAdapter(SmartJsonClass):
         description='Number representation of the Public IP, useful for filtering by range',
         converter=format_ip_raw,
     )
+    open_ports = ListField(DeviceOpenPort, 'Open Ports', json_format=JsonArrayFormat.table)
     network_interfaces = ListField(
         DeviceAdapterNetworkInterface, 'Network Interfaces', json_format=JsonArrayFormat.table
     )
@@ -617,7 +626,16 @@ class DeviceAdapter(SmartJsonClass):
             raw_data = replace_large_ints(raw_data)
         except Exception as e:
             logger.exception('Failed to replace raw data large ints')
+            return
         raw_data = escape_dict(raw_data)
+        try:
+            data_size = len(str(raw_data))
+            if data_size > MAX_SIZE_OF_MONGO_DOCUMENT:
+                logger.error(f'Size of raw data is too large: {data_size} MB')
+                return
+        except Exception:
+            logger.exception('Failed to ascertain size of raw data')
+            return
         self._raw_data = raw_data
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
@@ -896,6 +914,32 @@ class DeviceAdapter(SmartJsonClass):
 
     def set_shodan_data(self, **kwargs):
         self.shodan_data = ShodanData(**kwargs)
+
+    def add_open_port(self, protocol=None, port_id=None, service_name=None):
+        if port_id:
+            try:
+                port_id = int(port_id)
+                if port_id > 0xffff or port_id < 0:
+                    logger.error(f'Invalid port id given {port_id}')
+                    return
+            except Exception:
+                logger.error(f'Invalid port id given {port_id}')
+                return
+        if protocol:
+            try:
+                protocol = protocol.upper()
+            except Exception:
+                logger.exception(f'Error converting protocol {protocol}')
+        if service_name and not isinstance(service_name, str):
+            logger.error(f'Invalid service name {service_name}')
+            return
+        if not any([protocol, port_id, service_name]):
+            logger.debug('Skipping empty port')
+            return
+        open_port = DeviceOpenPort(protocol=protocol,
+                                   port_id=port_id,
+                                   service_name=service_name)
+        self.open_ports.append(open_port)
 
     def add_swap_file(self, name, size_in_gb):
         self.swap_files.append(DeviceSwapFile(name=name, size_in_gb=size_in_gb))

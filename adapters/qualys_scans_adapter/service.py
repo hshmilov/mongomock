@@ -37,7 +37,7 @@ class QualysAgentPort(SmartJsonClass):
 class QualysScansAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         qualys_agent_vulns = ListField(QualysAgentVuln, 'Vulnerabilities')
-        qualys_agnet_ports = ListField(QualysAgentPort, 'Open Ports')
+        qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
         agent_version = Field(str, 'Qualys agent version')
         agent_status = Field(str, 'Agent Status')
         qualys_tags = ListField(str, 'Qualys Tags')
@@ -250,6 +250,14 @@ class QualysScansAdapter(ScannerAdapterBase):
                         )
                     except Exception:
                         logger.exception(f'Problem with port {port_raw}')
+                    try:
+                        device.add_open_port(
+                            protocol=(port_raw.get('HostAssetOpenPort') or {}).get('protocol'),
+                            port_id=int(port_raw.get('HostAssetOpenPort') or {}).get('port'),
+                            service_name=(port_raw.get('HostAssetOpenPort') or {}).get('serviceName')
+                        )
+                    except Exception:
+                        logger.exception(f'Failed to add open port {port_raw}')
             except Exception:
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
 

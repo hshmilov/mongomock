@@ -11,8 +11,10 @@ from axonius.utils.files import get_local_config_file
 from axonius.clients.shodan.connection import ShodanConnection
 from axonius.clients.shodan.consts import DEFAULT_DOMAIN
 from axonius.utils.parsing import make_dict_from_csv
+from axonius.utils.parsing import remove_large_ints
 from shodan_adapter.client_id import get_client_id
 from shodan_adapter.execution import ShodanExecutionMixIn
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -34,7 +36,8 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            with ShodanConnection(apikey=client_config['apikey'], domain_prefered=client_config.get('domain'),
+            with ShodanConnection(apikey=client_config['apikey'],
+                                  domain_prefered=client_config.get('domain'),
                                   https_proxy=client_config.get('https_proxy')) as connection:
                 if client_config.get('cidr'):
                     connection.get_cidr_info(client_config['cidr'].split(',')[0])
@@ -142,6 +145,8 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                     'description': 'The binary contents of the csv',
                     'type': 'file'
                 },
+
+
             ],
             'required': [
                 'apikey'
@@ -213,6 +218,12 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                             country_name = (device_raw.get('country_name') or {}).get('country_name')
                         if device_raw.get('port'):
                             ports.append(device_raw.get('port'))
+                            try:
+                                device.add_open_port(port_id=device_raw.get('port'),
+                                                     protocol=device_raw.get('transport'),
+                                                     service_name=(device_raw.get('_shodan') or {}).get('module'))
+                            except Exception:
+                                logger.exception(f'Could not add port for device')
                         if device_raw.get('cpe') and isinstance(device_raw.get('cpe'), list):
                             for cpe_data in device_raw.get('cpe'):
                                 if cpe_data and isinstance(cpe_data, str):
@@ -244,6 +255,11 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                                            http_server=http_server,
                                            http_site_map=http_site_map,
                                            http_security_text_hash=http_security_text_hash)
+                    try:
+                        device_raw_list = remove_large_ints(device_raw_list, 'shodan_raw_data')
+                        device.set_raw({'data': device_raw_list})
+                    except Exception:
+                        logger.exception('Problem setting raw data')
                     yield device
                 except Exception:
                     logger.exception(f'Problem with fetching Shodan Device for {ip_str}')

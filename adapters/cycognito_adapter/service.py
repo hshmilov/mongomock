@@ -24,7 +24,6 @@ class PortInformation(SmartJsonClass):
 class CycognitoAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        open_ports = ListField(PortInformation, 'Open Ports')
         at_risk = Field(bool, 'At Risk')
         severe_issues_count = Field(int, 'Severe Issues Count')
         domain_names = ListField(str, 'Domain Names')
@@ -146,11 +145,10 @@ class CycognitoAdapter(ScannerAdapterBase):
             if isinstance(open_ports_raw, list) and open_ports_raw:
                 for open_port_raw in open_ports_raw:
                     try:
-                        port_number = open_port_raw.get('port')
-                        port_protocol = open_port_raw.get('protocol')
-                        device.open_ports.append(PortInformation(port_number=port_number, port_protocol=port_protocol))
+                        device.add_open_port(protocol=open_port_raw.get('protocol'),
+                                             port_id=open_port_raw.get('port'))
                     except Exception:
-                        logger.exception(f'Problem adding open port {open_port_raw}')
+                        logger.exception(f'Problem adding device open port {open_port_raw}')
             device.at_risk = bool(device_raw.get('at-risk'))
             device.set_raw(device_raw)
             return device

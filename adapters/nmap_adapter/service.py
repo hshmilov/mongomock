@@ -15,6 +15,7 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
+from axonius.utils.xml2json_parser import Xml2Json
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -226,9 +227,21 @@ class NmapAdapter(ScannerAdapterBase):
                                 device.add_nic(ips=xml_property.attrib.get('addr').split(','))
                                 device.id = xml_property.attrib.get('addr')
                         elif xml_property.tag == 'ports':
-                            for xml_port in xml_property:
-                                if xml_port.tag == 'port':
-                                    self._add_port_info(device, xml_port)
+                            try:
+                                for xml_port in xml_property:
+                                    if xml_port.tag == 'port':
+                                        self._add_port_info(device, xml_port)
+                                        for xml_port_property in xml_port:
+                                            try:
+                                                if xml_port_property.tag == 'service':
+                                                    service_name_ = (xml_port_property.attrib.get('name'))
+                                                    device.add_open_port(protocol=xml_port.attrib.get('protocol'),
+                                                                         port_id=xml_port.attrib.get('portid'),
+                                                                         service_name=service_name_)
+                                            except Exception:
+                                                logger.exception(f'Could not add port for xml_port {xml_port}')
+                            except Exception:
+                                logger.exception(f'Could not add port for xml property {xml_property}')
                         elif xml_property.tag == 'hostscript':
                             for xml_script in xml_property:
                                 if xml_script.tag == 'script' and xml_script.attrib.get('id') == 'smb-os-discovery':
@@ -237,6 +250,10 @@ class NmapAdapter(ScannerAdapterBase):
                                     self._parse_nbstat(device, xml_script)
                     except Exception:
                         logger.exception(f'Problem with property')
+                try:
+                    device.set_raw(Xml2Json(xml_device_raw).result)
+                except Exception:
+                    logger.exception(f'Problem setting raw xml device')
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device')

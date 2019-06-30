@@ -156,7 +156,6 @@ class ShodanExecutionMixIn(Triggerable):
             data = self._parse_shodan_data(result)
             if not data:
                 return False
-
             new_device = self._new_device_adapter()
             new_device.id = client_id
             new_device.add_public_ip(ip)
@@ -169,6 +168,13 @@ class ShodanExecutionMixIn(Triggerable):
             new_device.add_nic(None, [ip])
             new_device.set_shodan_data(**data)
             new_device.set_raw(result)
+            for data_item in result.get('data') or []:
+                try:
+                    new_device.add_open_port(port_id=data_item.get('port'),
+                                             protocol=data_item.get('transport'),
+                                             service_name=(data_item.get('_shodan') or {}).get('module'))
+                except Exception:
+                    logger.exception(f'Failed to add open port')
 
             # Here we create a new device adapter tab out of cycle
             self._save_data_from_plugin(client_id,

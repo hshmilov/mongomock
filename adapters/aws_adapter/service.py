@@ -1504,7 +1504,6 @@ class AwsAdapter(AdapterBase, Configurable):
 
         ec2_id_to_ips = dict()
         private_ips_to_ec2 = dict()
-
         # Checks whether devices_raw_data contains EC2 data
         if devices_raw_data.get('ec2') is not None:
             ec2_devices_raw_data = devices_raw_data.get('ec2')
@@ -1630,6 +1629,13 @@ class AwsAdapter(AdapterBase, Configurable):
                                                         http_security_text_hash = http_info.get('securitytxt_hash')
                                             except Exception:
                                                 logger.exception(f'problem with shodan data raw {shoda_data_raw}')
+                                            try:
+                                                device.add_open_port(protocol=shoda_data_raw.get('transport'),
+                                                                     port_id=shoda_data_raw.get('port'),
+                                                                     service_name=(shoda_data_raw.get('_shodan')
+                                                                                   or {}).get('module'))
+                                            except Exception:
+                                                logger.exception('Failed to add open port with Shodan data')
                                         if not cpe:
                                             cpe = None
                                         device.set_shodan_data(city=shodan_info.get('city'),
@@ -1817,11 +1823,9 @@ class AwsAdapter(AdapterBase, Configurable):
             # clusters contains a list of cluster dicts, each one of them
             # contains the raw data of the cluster, its services, its instances, and its tasks.
             # we start with parsing the instances, then tasks.
-
             clusters = devices_raw_data.get('ecs') or []
             for cluster_raw in clusters:
                 cluster_data, container_instances, services, all_tasks = cluster_raw
-
                 for task_raw in all_tasks:
                     launch_type = task_raw.get('launchType')
                     if not launch_type:

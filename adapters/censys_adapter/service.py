@@ -193,6 +193,13 @@ class CensysAdapter(ScannerAdapterBase):
             if device_raw.get('ports'):
                 device.ports = list(CensysPort(port=p) for p in device_raw.get('ports'))
 
+            for port_and_service in device_raw.get('protocols') or []:
+                try:
+                    split_info = port_and_service.split('/', 1)
+                    device.add_open_port(port_id=int(split_info[0]), service_name=split_info[1])
+                except Exception:
+                    logger.exception(f'Failed to add port for device {str(device_raw.get("protocols"))}')
+
             if ipv4_ip:
                 device.name = ipv4_ip
                 device.add_nic(ips=[ipv4_ip])
@@ -226,7 +233,6 @@ class CensysAdapter(ScannerAdapterBase):
             else:
                 logger.exception(f'Problem with fetching Censys Device for {device_raw}, no primary key present.')
                 return None
-
             device.set_raw(device_raw)
             return device
         except Exception:
