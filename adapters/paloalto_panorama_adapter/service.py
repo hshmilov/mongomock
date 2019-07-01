@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -219,7 +220,14 @@ class PaloaltoPanoramaAdapter(AdapterBase):
                 logger.warning(f'Bad device with no mac {device_raw_dict}')
                 return None
             device.id = mac
+            hostname = None
             ip = device_raw_dict.get('ip')
+            try:
+                str(ipaddress.ip_address(ip))
+            except Exception:
+                ip = None
+                hostname = ip
+            device.hostname = hostname
             device.pa_target = target
             if ip:
                 ips = [ip]

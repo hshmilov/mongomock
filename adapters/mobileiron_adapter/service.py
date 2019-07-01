@@ -173,6 +173,8 @@ class MobileironAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting more users data')
                 try:
                     last_seen = parse_date(device_raw.get('common.miclient_last_connected_at'))
+                    if not last_seen:
+                        last_seen = parse_date(device_raw.get('common.last_connected_at'))
                     if self.__exclude_no_last_seen_devices and not last_seen:
                         continue
                     device.last_seen = last_seen
