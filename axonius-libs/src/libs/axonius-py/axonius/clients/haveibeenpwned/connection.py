@@ -1,3 +1,4 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -17,6 +18,7 @@ class HaveibeenpwnedConnection(RESTConnection):
                          **kwargs)
 
     def get_breach_account_info(self, email):
+        time.sleep(2)
         return self._get(f'breachedaccount/{email}')
 
     def _connect(self):
