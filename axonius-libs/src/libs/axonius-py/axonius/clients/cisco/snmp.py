@@ -141,7 +141,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
             error = data[0]
             data = data[3]
             if error:
-                logger.error(f'{oid_name} returned error: {error}')
+                logger.warning(f'{oid_name} returned error: {error}')
                 return None
             if isinstance(data[0][1], NoSuchInstance):
                 return None

@@ -227,7 +227,7 @@ class CsvAdapter(AdapterBase):
 
                 device_id = str(vals.get('id', '')) or vals.get('serial') or mac_as_id or vals.get('hostname')
                 if not device_id:
-                    logger.error(f'can not get device id for {device_raw}, continuing')
+                    logger.warning(f'can not get device id for {device_raw}, continuing')
                     continue
 
                 device.id = file_name + '_' + device_id
@@ -300,7 +300,8 @@ class CsvAdapter(AdapterBase):
 
                             device[normalized_column_name] = column_value
                         except Exception:
-                            logger.exception(f'Could not parse column {column_name} with value {column_value}')
+                            logger.warning(f'Could not parse column {column_name} with value {column_value}',
+                                           stack_info=True)
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device: {str(device_raw)}')
