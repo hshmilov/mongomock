@@ -32,6 +32,7 @@ DEFAULT_LIMIT = 10
 MAX_CHARS = 10 ** 9
 SSH_CHANNEL_TIMEOUT = 60 * 35
 NODE_NAME = 'node_1'
+NODE_HOSTNAME = 'node-test-hostname'
 NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
 NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'

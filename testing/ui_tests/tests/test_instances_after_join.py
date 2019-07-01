@@ -8,7 +8,7 @@ from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raise
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_ad_credentials import ad_client1_details
-from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME
+from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME
 
 
 class TestInstancesAfterNodeJoin(TestInstancesBase):
@@ -20,6 +20,8 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.wait_for_spinner_to_end()
         self.base_page.run_discovery()
+
+        self.change_node_hostname()
 
         self.join_node()
 
@@ -33,7 +35,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
     def check_node_restart(self):
         self._delete_nexpose_adapter_and_data()
-        self._instances[0].ssh('sudo reboot')
+        self._instances[0].ssh('echo \'{self._instances[0].ssh_pass}\' | sudo -S reboot')
         time.sleep(5)
         self._instances[0].wait_for_ssh()
         self._add_nexpose_adadpter_and_discover_devices()
@@ -90,3 +92,10 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         # by test and not by export it is not subjected to a restart and the adapters_unique_name of it stay "_0".
         node_maker_password = self.instances_page.get_node_password(NODE_NAME)
         self.connect_node_maker(self._instances[0], node_maker_password)
+
+    def change_node_hostname(self):
+        self._instances[0].ssh(f'echo \'{self._instances[0].ssh_pass}\' | sudo -S hostname {NODE_HOSTNAME}')
+        self._instances[0].ssh(
+            f'echo \'{self._instances[0].ssh_pass}\' | sudo -S echo "{NODE_HOSTNAME}" > /etc/hostname')
+        self._instances[0].sshc.close()
+        self._instances[0].wait_for_ssh()
