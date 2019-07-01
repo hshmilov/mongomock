@@ -301,7 +301,7 @@ class CsvAdapter(AdapterBase):
                             device[normalized_column_name] = column_value
                         except Exception:
                             logger.warning(f'Could not parse column {column_name} with value {column_value}',
-                                           stack_info=True)
+                                           exc_info=True)
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device: {str(device_raw)}')

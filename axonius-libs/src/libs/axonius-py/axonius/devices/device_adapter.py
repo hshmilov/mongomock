@@ -655,7 +655,7 @@ class DeviceAdapter(SmartJsonClass):
             except TypeError:
                 if logger is None:
                     raise
-                logger.warning(f'Invalid ips: {repr(ips)}', stack_info=True)
+                logger.warning(f'Invalid ips: {repr(ips)}', exc_info=True)
             else:
                 for ip in ips_iter:
                     try:
@@ -665,14 +665,14 @@ class DeviceAdapter(SmartJsonClass):
                     except (ValueError, TypeError):
                         if logger is None:
                             raise
-                        logger.warning(f'Invalid ip: {repr(ip)}', stack_info=True)
+                        logger.warning(f'Invalid ip: {repr(ip)}', exc_info=True)
         if subnets is not None:
             try:
                 subnets_iter = iter(subnets)
             except TypeError:
                 if logger is None:
                     raise
-                logger.warning(f'Invalid subnets: {repr(subnets)}', stack_info=True)
+                logger.warning(f'Invalid subnets: {repr(subnets)}', exc_info=True)
             else:
                 for subnet in subnets_iter:
                     try:
@@ -682,7 +682,7 @@ class DeviceAdapter(SmartJsonClass):
                     except (ValueError, TypeError):
                         if logger is None:
                             raise
-                        logger.warning(f'Invalid subnet: {repr(subnet)}', stack_info=True)
+                        logger.warning(f'Invalid subnet: {repr(subnet)}', exc_info=True)
         return obj
 
     def add_ips_and_macs(self, macs=None, ips=None):
@@ -720,22 +720,22 @@ class DeviceAdapter(SmartJsonClass):
         if macs and len(macs) == 1:
             try:
                 self.add_nic(macs[0], ips)
-            except Exception as e:
-                logger.warning(f'Failed to add macs and ips {macs} {ips} {e}', stack_info=True)
+            except Exception:
+                logger.warning(f'Failed to add macs and ips {macs} {ips}', exc_info=True)
             return
 
         # multiple mac, assume different interfaces
         for mac in macs:
             try:
                 self.add_nic(mac=mac)
-            except Exception as e:
-                logger.warning(f'Failed to add mac {mac} {e}', stack_info=True)
+            except Exception:
+                logger.warning(f'Failed to add mac {mac}', exc_info=True)
 
         for ip in ips:
             try:
                 self.add_nic(ips=[ip])
-            except Exception as e:
-                logger.warning(f'Failed to add ip {ip} {e}', stack_info=True)
+            except Exception:
+                logger.warning(f'Failed to add ip {ip}', exc_info=True)
 
     def add_nic(
         self,
@@ -774,73 +774,73 @@ class DeviceAdapter(SmartJsonClass):
         if name is not None:
             try:
                 nic.name = name
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.warning(f'Invalid name: {repr(name)} {e}', stack_info=True)
+                logger.warning(f'Invalid name: {repr(name)}', exc_info=True)
 
         if port is not None:
             try:
                 nic.port = port
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.warning(f'Invalid port: {repr(port)} {e}', stack_info=True)
+                logger.warning(f'Invalid port: {repr(port)}', exc_info=True)
         if mtu is not None:
             try:
                 nic.mtu = int(mtu)
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.warning(f'Invalid mtu: {repr(mtu)} {e}', stack_info=True)
+                logger.warning(f'Invalid mtu: {repr(mtu)}', exc_info=True)
 
         if speed is not None:
             try:
                 nic.speed = speed
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.warning(f'Invalid speed: {repr(speed)} {e}', stack_info=True)
+                logger.warning(f'Invalid speed: {repr(speed)}', exc_info=True)
 
         if operational_status is not None:
             try:
                 nic.operational_status = operational_status
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.warning(f'Invalid operational_status: {repr(operational_status)} {e}', stack_info=True)
+                logger.warning(f'Invalid operational_status: {repr(operational_status)}', exc_info=True)
 
         if admin_status is not None:
             try:
                 nic.admin_status = admin_status
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.warning(f'Invalid admin_status: {repr(admin_status)} {e}', stack_info=True)
+                logger.warning(f'Invalid admin_status: {repr(admin_status)}', exc_info=True)
 
         if port_type is not None:
             try:
                 nic.port_type = port_type
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.warning(f'Invalid port_type: {repr(port_type)} {e}', stack_info=True)
+                logger.warning(f'Invalid port_type: {repr(port_type)}', exc_info=True)
 
         if vlans is not None:
             try:
                 nic.vlan_list = vlans
-            except Exception as e:
+            except Exception:
                 if logger is None:
                     raise
-                logger.warning(f'Invalid vlans: {repr(vlans)} {e}', stack_info=True)
+                logger.warning(f'Invalid vlans: {repr(vlans)}', exc_info=True)
 
         if gateway is not None:
             try:
                 nic.gateway = gateway
-            except Exception as e:
+            except Exception:
                 if logger is None:
                     raise
-                logger.warning(f'Invalid gateway: {repr(vlans)} as {e}', stack_info=True)
+                logger.warning(f'Invalid gateway: {repr(vlans)}', exc_info=True)
 
         self.network_interfaces.append(nic)
 
