@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 
 import psutil
 import pymongo
@@ -40,6 +41,54 @@ class MongoService(WeaveService):
     def configure_replica_set(self):
         self.run_command_in_container("mongo /docker-entrypoint-initdb.d/configure_replica_set.js")
 
+    def deprecate_a_leftover_db(self, plugin_unique_name: str):
+        admin_db = self.client['admin']
+        for collection_name in self.client[plugin_unique_name].list_collection_names():
+            admin_db.command({
+                'renameCollection': f'{plugin_unique_name}.{collection_name}',
+                'to': f'DEPRECATED_{plugin_unique_name}.{collection_name}'
+            })
+
+        doc = self.client['core']['configs'].find_one_and_delete({
+            'plugin_unique_name': plugin_unique_name
+        })
+        if doc:
+            self.client['core']['configs_deprecated'].insert_one(doc)
+
+    def clean_old_databases(self):
+        registered_plugins = list(self.client['core']['configs'].find({}))
+
+        # finding duplicates in the core configs
+
+        by_plugin_name = defaultdict(list)
+        for x in registered_plugins:
+            by_plugin_name[x['plugin_name']].append(x)
+
+        # Plugins that we're updating to become a singleton
+        plugins_in_question = ['reports', 'general_info', 'execution',
+                               'static_correlator', 'static_users_correlator', 'device_control']
+
+        for x in plugins_in_question:
+            instances = by_plugin_name[x]
+            if len(instances) > 1:
+                unique_names = {plugin['plugin_unique_name'] for plugin in instances}
+                print(f'Found duplications ({len(unique_names)}): {x}: ' + ', '.join(unique_names))
+
+                last_seen = max(instances, key=lambda x: x['last_seen'])
+                leftover_dbs = [
+                    x['plugin_unique_name']
+                    for x
+                    in instances
+                    if x['plugin_unique_name'] != last_seen['plugin_unique_name']
+                ]
+
+                print(f'{last_seen["plugin_unique_name"]} is the newest, olds are all others: ' +
+                      ', '.join(leftover_dbs))
+
+                for leftover in leftover_dbs:
+                    print(f'Deprecating {leftover}')
+                    self.deprecate_a_leftover_db(leftover)
+
     def start(self, mode='',
               allow_restart=False,
               rebuild=False,
@@ -55,6 +104,10 @@ class MongoService(WeaveService):
         # accessing it without specifying a replicaSet will work.
         # This might be solved by using a more sophisticated docker setup, but it will do for now.
         time.sleep(10)
+
+        self.connect()
+        self.clean_old_databases()
+
         print("Finished setting up mongo")
 
     @property
