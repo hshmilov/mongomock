@@ -1225,22 +1225,22 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             "items": [
                 {
                     "name": "last_seen_threshold_hours",
-                    "title": "Do not fetch device if not seen by source in X hours",
+                    "title": "Do not fetch device if not seen by source in last X hours",
                     "type": "number"
                 },
                 {
                     "name": "last_fetched_threshold_hours",
-                    "title": "Delete device if not fetched from source in X hours",
+                    "title": "Delete device if not fetched from source in last X hours",
                     "type": "number"
                 },
                 {
                     "name": "user_last_seen_threshold_hours",
-                    "title": "Do not fetch user if not seen in X hours",
+                    "title": "Do not fetch user if not seen in last X hours",
                     "type": "number"
                 },
                 {
                     "name": "user_last_fetched_threshold_hours",
-                    "title": "Delete user if not fetched from source in X hours",
+                    "title": "Delete user if not fetched from source in last X hours",
                     "type": "number",
                 },
                 {
