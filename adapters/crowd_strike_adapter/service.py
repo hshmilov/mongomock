@@ -103,7 +103,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 'domain',
                 'username',
                 'apikey',
-                'veirfy_ssl'
+                'verify_ssl'
             ],
             'type': 'array'
         }

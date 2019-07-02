@@ -2646,7 +2646,8 @@ class PluginBase(Configurable, Feature):
                         {
                             'name': PROXY_PASSW,
                             'title': 'Proxy password',
-                            'type': 'string'
+                            'type': 'string',
+                            'format': 'password'
                         },
                         {
                             'name': PROXY_VERIFY,
