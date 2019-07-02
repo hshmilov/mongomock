@@ -43,6 +43,7 @@ class ReportsPage(EntitiesPage):
     REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
     SPACES_LABEL = 'Dashboard spaces'
     SPACES_VALUE_ELEMENTS = '.dashboard-spaces .md-selected .md-list-item-text'
+    SEND_EMAIL_BUTTON_TEXT = 'Send Email'
 
     @property
     def url(self):
@@ -135,8 +136,18 @@ class ReportsPage(EntitiesPage):
         elements = self.find_chips_values_by_label(self.EMAIL_BOX_RECIPIENTS)
         return [element.text for element in elements]
 
+    def find_send_email_button(self):
+        return self.find_element_by_text(self.SEND_EMAIL_BUTTON_TEXT)
+
+    def is_send_email_button_exists(self):
+        try:
+            self.find_send_email_button()
+            return True
+        except NoSuchElementException:
+            return False
+
     def click_send_email(self):
-        self.find_element_by_text('Send Email').click()
+        self.find_send_email_button().click()
 
     def assert_screen_is_restricted(self):
         self.switch_to_page_allowing_failure()

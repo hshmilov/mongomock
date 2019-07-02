@@ -50,35 +50,44 @@ class TestReport(TestBase):
         assert self.reports_page.get_queries_count() == 2
 
     def test_add_scheduling(self):
-        smtp_service = SMTPService()
-        smtp_service.take_process_ownership()
+        self.settings_page.add_email_server(EmailSettings.host, EmailSettings.port)
 
-        with smtp_service.contextmanager():
-            self.settings_page.add_email_server(EmailSettings.host, EmailSettings.port)
+        self.reports_page.get_to_new_report_page()
+        report_name = 'test_scheduling'
+        self.reports_page.fill_report_name(report_name)
+        self.reports_page.click_include_dashboard()
+        self.reports_page.click_add_scheduling()
+        self.reports_page.fill_email_subject(report_name)
 
-            self.reports_page.get_to_new_report_page()
-            report_name = 'test_scheduling'
-            self.reports_page.fill_report_name(report_name)
-            self.reports_page.click_include_dashboard()
-            self.reports_page.click_add_scheduling()
-            self.reports_page.fill_email_subject(report_name)
+        self.reports_page.fill_email('test.axonius.com')
+        assert self.reports_page.is_custom_error('\'Recipients\' items are not all properly formed')
+        emails_str = 'test1@axonius.com,test2@axonius.com;test3@axonius.com'
+        self.reports_page.edit_email(emails_str)
+        assert self.reports_page.get_emails() == re.compile('[,;]').split(emails_str)
+        recipient = generate_random_valid_email()
+        self.reports_page.fill_email(recipient)
 
-            self.reports_page.fill_email('test.axonius.com')
-            assert self.reports_page.is_custom_error('\'Recipients\' items are not all properly formed')
-            emails_str = 'test1@axonius.com,test2@axonius.com;test3@axonius.com'
-            self.reports_page.edit_email(emails_str)
-            assert self.reports_page.get_emails() == re.compile('[,;]').split(emails_str)
-            recipient = generate_random_valid_email()
-            self.reports_page.fill_email(recipient)
+        self.reports_page.select_frequency(ReportFrequency.daily)
+        self.reports_page.click_save()
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_report_generation(report_name)
+        self.reports_page.click_report(report_name)
+        self.reports_page.wait_for_spinner_to_end()
+        assert self.reports_page.is_frequency_set(ReportFrequency.daily)
+        assert self.reports_page.is_generated()
+        assert self.reports_page.find_send_email_button()
 
-            self.reports_page.select_frequency(ReportFrequency.daily)
-            self.reports_page.click_save()
-            self.reports_page.wait_for_table_to_load()
-            self.reports_page.wait_for_report_generation(report_name)
-            self.reports_page.click_report(report_name)
-            self.reports_page.wait_for_spinner_to_end()
-            assert self.reports_page.is_frequency_set(ReportFrequency.daily)
-            assert self.reports_page.is_generated()
+        self.reports_page.click_add_scheduling()
+        assert self.reports_page.is_send_email_button_exists()
+
+        self.reports_page.click_save()
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_report_generation(report_name)
+        self.reports_page.click_report(report_name)
+        self.reports_page.wait_for_spinner_to_end()
+
+        assert not self.reports_page.is_send_email_button_exists()
+
         self.settings_page.remove_email_server()
 
     def test_save_disabled(self):

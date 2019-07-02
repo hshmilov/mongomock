@@ -12,7 +12,7 @@
         color="#FF7D46"
       />
       <div class="page-content main">
-        <div class="report-title">The report will be generated as a PDF file, every Discovery Cycle<span v-if="isLatestReport">, {{ last_generated }}</span></div>
+        <div class="report-title">The report will be generated as a PDF file, every Discovery Cycle<span v-if="isLatestReport">, {{ lastGenerated }}</span></div>
         <div class="item">
           <label class="report-name-label">Report Name</label>
           <input
@@ -261,7 +261,8 @@
         validity: {
           fields: [], error: ''
         },
-        last_generated: null,
+        lastGenerated: null,
+        canSendEmail: false,
         isLatestReport: false,
         loading: false
       }
@@ -301,16 +302,10 @@
         return !this.report.name || !this.trigger || !this.trigger.view || !this.trigger.view.name || !this.mainAction.name
       },
       hideTestNow () {
-        if (!this.valid) {
-          return true
-        }
-        if (!this.report.add_scheduling) {
-          return true
-        }
         if (!this.report.last_generated) {
           return true
         }
-        if (!this.validateEmail) {
+        else if (!this.canSendEmail) {
           return true
         }
         return false
@@ -441,7 +436,7 @@
       initData () {
         if (this.reportData && this.reportData.name) {
           this.report = this.reportData ? { ...this.reportData } : {}
-          if (this.report.views.length == 0) {
+          if (this.report.views.length === 0) {
             this.report.views.push({ entity: '', name: '' })
           }
           if(!this.report.spaces){
@@ -460,12 +455,15 @@
           if (this.report.last_generated == null) {
             this.isLatestReport = false
           } else {
+            if(this.report.add_scheduling && this.report.mail_properties.emailList.length > 0){
+              this.canSendEmail = true;
+            }
             let dateTime = new Date(this.report.last_generated)
             if (dateTime) {
               dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
               let dateParts = dateTime.toISOString().split('T')
               dateParts[1] = dateParts[1].split('.')[0]
-              this.last_generated = 'Last generated: ' + dateParts.join(' ')
+              this.lastGenerated = 'Last generated: ' + dateParts.join(' ')
               this.isLatestReport = true
             } else {
               this.isLatestReport = false
@@ -478,7 +476,7 @@
       startDownload () {
         if (this.disableDownloadReport) return
         this.downloading = true
-        this.downloadReport(this.report.name).then((response) => {
+        this.downloadReport(this.report.name).then(() => {
           this.downloading = false
         }).catch((error) => {
           this.downloading = false
@@ -574,16 +572,10 @@
         return views
       },
       onNameChanged(){
-        if(this.validity.error && this.validity.fields.length == 1 && this.validity.fields[0] === 'name'){
+        if(this.validity.error && this.validity.fields.length === 1 && this.validity.fields[0] === 'name'){
           this.validity.error = ''
           this.validity.fields.pop()
         }
-      },
-      validateEmail () {
-        if (this.report.mail_properties.mailSubject && this.report.mail_properties.emailList.length > 0) {
-          return true
-        }
-        return false
       },
       validateSavedQueries () {
         let result = true
@@ -659,8 +651,8 @@
             }
 
             .inner-content {
-                padding-top: 0px;
-                padding-bottom: 0px;
+                padding-top: 0;
+                padding-bottom: 0;
 
             }
 
