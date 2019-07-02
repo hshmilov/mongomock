@@ -94,7 +94,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 if mac_address or ip_addresses:
                     device.add_nic(mac_address, ip_addresses)
             except Exception:
-                logger.exception(f'Problem getting NIC at {device_raw}')
+                logger.warning(f'Problem getting NIC at {device_raw}', exc_info=True)
             device.figure_os(
                 (device_raw.get('os') or '') + ' ' + (device_raw.get('os_address_width') or '') + ' ' +
                 (device_raw.get('os_domain') or '') +
@@ -106,7 +106,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device_model = model_number.get('value')
                     device.device_model = device_model
             except Exception:
-                logger.exception(f'Problem getting model at {device_raw}')
+                logger.warning(f'Problem getting model at {device_raw}', exc_info=True)
             try:
                 device_serial = device_raw.get('serial_number')
                 if (device_serial or '').startswith('VMware'):
@@ -119,20 +119,20 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                             'Instance']):
                     device.device_serial = device_serial
             except Exception:
-                logger.exception(f'Problem getting serial at {device_raw}')
+                logger.warning(f'Problem getting serial at {device_raw}', exc_info=True)
             # pylint: disable=R1714
             try:
                 ram_mb = device_raw.get('ram', '')
                 if ram_mb != '' and ram_mb != '-1' and ram_mb != -1:
                     device.total_physical_memory = int(ram_mb) / 1024.0
             except Exception:
-                logger.exception(f'Problem getting ram at {device_raw}')
+                logger.warning(f'Problem getting ram at {device_raw}', exc_info=True)
             try:
                 host_name = device_raw.get('host_name') or device_raw.get('fqdn')
                 if host_name and name and name.lower() in host_name.lower():
                     device.hostname = host_name
             except Exception:
-                logger.exception(f'Problem getting hostname in {device_raw}')
+                logger.warning(f'Problem getting hostname in {device_raw}', exc_info=True)
             device.description = device_raw.get('short_description')
             try:
                 snow_department = snow_department_table_dict.get(
@@ -140,7 +140,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 if snow_department:
                     device.snow_department = snow_department.get('name')
             except Exception:
-                logger.exception(f'Problem adding assigned_to to {device_raw}')
+                logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
             try:
                 snow_asset = snow_alm_asset_table_dict.get((device_raw.get('asset') or {}).get('value'))
                 if snow_asset:
@@ -150,32 +150,32 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         if self.__exclude_disposed_devices and install_status == 'Disposed':
                             return None
                     except Exception:
-                        logger.exception(f'Problem getting install status for {device_raw}')
+                        logger.warning(f'Problem getting install status for {device_raw}', exc_info=True)
                     device.u_loaner = snow_asset.get('u_loaner')
                     device.u_shared = snow_asset.get('u_shared')
                     try:
                         device.first_deployed = parse_date(snow_asset.get('u_first_deployed'))
                     except Exception:
-                        logger.exception(f'Problem getting first deployed at {device_raw}')
+                        logger.warning(f'Problem getting first deployed at {device_raw}', exc_info=True)
                     device.u_altiris_status = snow_asset.get('u_altiris_status')
                     device.u_casper_status = snow_asset.get('u_casper_status')
                     try:
                         device.substatus = snow_asset.get('substatus')
                     except Exception:
-                        logger.exception(f'Problem adding hardware status to {device_raw}')
+                        logger.warning(f'Problem adding hardware status to {device_raw}', exc_info=True)
                     try:
                         device.purchase_date = parse_date(snow_asset.get('purchase_date'))
                     except Exception:
-                        logger.exception(f'Problem adding purchase date to {device_raw}')
+                        logger.warning(f'Problem adding purchase date to {device_raw}', exc_info=True)
                     try:
                         snow_location = snow_location_table_dict.get(
                             (snow_asset.get('location') or {}).get('value'))
                         if snow_location:
                             device.snow_location = snow_location.get('name')
                     except Exception:
-                        logger.exception(f'Problem adding assigned_to to {device_raw}')
+                        logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
             except Exception:
-                logger.exception(f'Problem at asset table information {device_raw}')
+                logger.warning(f'Problem at asset table information {device_raw}', exc_info=True)
 
             try:
                 assigned_to = users_table_dict.get((device_raw.get('assigned_to') or {}).get('value'))
@@ -273,7 +273,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
-            logger.exception(message)
+            logger.warning(message, exc_info=True)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -409,14 +409,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 try:
                     user.user_manager = (user_raw.get('manager_full') or {}).get('name')
                 except Exception:
-                    logger.exception(f'Problem getting manager for {user_raw}')
+                    logger.warning(f'Problem getting manager for {user_raw}', exc_info=True)
                 user.snow_source = user_raw.get('source')
                 user.snow_roles = user_raw.get('roles')
                 user.user_telephone_number = user_raw.get('phone')
                 user.set_raw(user_raw)
                 yield user
             except Exception:
-                logger.exception(f'Problem getting user {user_raw}')
+                logger.warning(f'Problem getting user {user_raw}', exc_info=True)
 
     def _parse_raw_data(self, devices_raw_data):
         for table_devices_data in devices_raw_data:

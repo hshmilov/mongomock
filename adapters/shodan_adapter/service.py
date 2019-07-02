@@ -66,7 +66,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config.get('domain'), str(e))
-            logger.exception(message)
+            logger.warning(message, exc_info=True)
             raise ClientConnectionException(message)
 
     @staticmethod
@@ -190,7 +190,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                                                         if vuln_data.get('cvss') is not None
                                                         else None))
                             except Exception:
-                                logger.exception(f'Problem adding vuln name {vuln_name}')
+                                logger.warning(f'Problem adding vuln name {vuln_name}', exc_info=True)
                         if not hostname:
                             hostname = device_raw.get('hostnames')[0] if isinstance(device_raw.get('hostnames'), list) \
                                 and len(device_raw.get('hostnames')) > 0 else None
@@ -223,7 +223,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                                                      protocol=device_raw.get('transport'),
                                                      service_name=(device_raw.get('_shodan') or {}).get('module'))
                             except Exception:
-                                logger.exception(f'Could not add port for device')
+                                logger.warning(f'Could not add port for device', exc_info=True)
                         if device_raw.get('cpe') and isinstance(device_raw.get('cpe'), list):
                             for cpe_data in device_raw.get('cpe'):
                                 if cpe_data and isinstance(cpe_data, str):
@@ -259,10 +259,10 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                         device_raw_list = remove_large_ints(device_raw_list, 'shodan_raw_data')
                         device.set_raw({'data': device_raw_list})
                     except Exception:
-                        logger.exception('Problem setting raw data')
+                        logger.warning('Problem setting raw data', exc_info=True)
                     yield device
                 except Exception:
-                    logger.exception(f'Problem with fetching Shodan Device for {ip_str}')
+                    logger.warning(f'Problem with fetching Shodan Device for {ip_str}', exc_info=True)
 
     @classmethod
     def adapter_properties(cls):

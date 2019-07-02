@@ -30,7 +30,7 @@ class MobileironAdapter(AdapterBase, Configurable):
         user_last_name = Field(str, 'User Last Name')
         device_encrypted = Field(bool, 'Device Encrypted')
         device_is_compromised = Field(bool, 'Device Is Compromised')
-        health_data_bit_locker_status = Field(str, 'Bitlocker Status')
+        health_data_bit_locker_status = Field(bool, 'Bitlocker Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -187,7 +187,9 @@ class MobileironAdapter(AdapterBase, Configurable):
                 device.imsi = device_raw.get('common.imsi')
                 device.device_encrypted = bool(device_raw.get('common.device_encrypted'))
                 device.device_is_compromised = bool(device_raw.get('common.device_is_compromised'))
-                device.health_data_bit_locker_status = device_raw.get('windows_phone.health_data_bit_locker_status')
+                health_data_bit_locker_status = device_raw.get('windows_phone.health_data_bit_locker_status')
+                if isinstance(health_data_bit_locker_status, str):
+                    device.health_data_bit_locker_status = health_data_bit_locker_status == '1'
                 try:
                     if device_raw.get('appInventory') and isinstance(device_raw.get('appInventory'), list):
                         for app in device_raw.get('appInventory'):
