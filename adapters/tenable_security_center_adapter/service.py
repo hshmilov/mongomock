@@ -293,7 +293,6 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             ],
             "required": [
                 'drop_only_ip_devices',
-                'fetch_top_n_installed_software',
             ],
             "pretty_name": "Tenable.sc Configuration",
             "type": "array"
@@ -308,4 +307,4 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
 
     def _on_config_update(self, config):
         self.__drop_only_ip_devices = config['drop_only_ip_devices']
-        self.__fetch_top_n_installed_software = config['fetch_top_n_installed_software']
+        self.__fetch_top_n_installed_software = config.get('fetch_top_n_installed_software') or 0
