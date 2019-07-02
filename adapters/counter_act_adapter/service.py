@@ -18,6 +18,7 @@ class CounterActAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         online_status = Field(str, 'Online Status')
+        ca_open_ports = ListField(str, 'Counter Act Open Ports')
         agent_version = Field(str, 'Agent Version')
         av_install = ListField(str, 'AV Installed')
         ad_disply_name = Field(str, 'AD Display Name')
@@ -135,9 +136,13 @@ class CounterActAdapter(AdapterBase):
                                 if field_raw_name == 'online':
                                     device.online_status = field_raw_data.get('value')
                                 elif field_raw_name == 'openports':
-                                    for field in field_raw_data or []:
+                                    device.ca_open_ports = [field_raw.get('value') for field_raw in field_raw_data
+                                                            if str(field_raw.get('value')) != 'None']
+                                    for port_field in field_raw_data or []:
                                         try:
-                                            device.add_open_port(port_id=field.get('value'))
+                                            port_data = port_field.get('value')
+                                            port_data_list = port_data.split('/')
+                                            device.add_open_port(port_id=port_data_list[0], protocol=port_data_list[1])
                                         except Exception:
                                             logger.exception(f'Failed to add open port')
                                 elif field_raw_name == 'comp_application':
