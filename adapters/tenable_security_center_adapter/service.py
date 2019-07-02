@@ -6,6 +6,7 @@ from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapterSoftwareCVE
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import add_rule, return_error
@@ -105,7 +106,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
-            yield from client_data.get_device_list(self.__fetch_top_n_installed_software)
+            yield from client_data.get_device_list(self.__fetch_top_n_installed_software, self.__fetch_vulnerabilities)
 
     def _clients_schema(self):
         return {
@@ -219,6 +220,24 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         device.policy_name = raw_device_data.get('policyName')
         device.mcafee_guid = raw_device_data.get('mcafeeGUID')
 
+        for vulnerability in raw_device_data.get('vulnerabilities') or []:
+            try:
+                if vulnerability.get('cve'):
+                    cpes_list = list(filter(None, (vulnerability.get('cpe') or '').split('<br/>')))
+                    cves_list = list(filter(None, (vulnerability.get('cve') or '').split(',')))
+                    cvss_v2 = vulnerability.get('baseScore')
+                    cvss_v3 = vulnerability.get('cvssV3BaseScore')
+                    for cve in cves_list:
+                        try:
+                            device.add_vulnerable_software(cve_id=cve,
+                                                           cve_severity=cvss_v3,
+                                                           cve_severity_v2=cvss_v2,
+                                                           cpe=cpes_list)
+                        except Exception:
+                            logger.exception(f'Problem adding CVE {cve}')
+            except Exception:
+                logger.exception(f'Problem adding vulnerability {vulnerability}')
+
         last_auth_run = raw_device_data.get('lastAuthRun')
         if last_auth_run is not None and last_auth_run != '':
             try:
@@ -289,10 +308,16 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_top_n_installed_software',
                     'title': 'Fetch Top N Installed Software',
                     'type': 'integer',
+                },
+                {
+                    'name': 'fetch_vulnerabilities',
+                    'title': 'Fetch Vulnerabilities',
+                    'type': 'bool'
                 }
             ],
             "required": [
                 'drop_only_ip_devices',
+                'fetch_vulnerabilities'
             ],
             "pretty_name": "Tenable.sc Configuration",
             "type": "array"
@@ -302,9 +327,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'drop_only_ip_devices': False,
-            'fetch_top_n_installed_software': 0
+            'fetch_top_n_installed_software': 0,
+            'fetch_vulnerabilities': False
         }
 
     def _on_config_update(self, config):
         self.__drop_only_ip_devices = config['drop_only_ip_devices']
+        self.__fetch_vulnerabilities = config['fetch_vulnerabilities']
         self.__fetch_top_n_installed_software = config.get('fetch_top_n_installed_software') or 0

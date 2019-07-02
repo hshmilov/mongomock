@@ -279,7 +279,7 @@ class NessusAdapter(ScannerAdapterBase):
                             logger.exception(f'Problem with plugin data {plugin_data}')
                         device.vulnerabilities.append(new_vulnerability)
                     except Exception:
-                        logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
+                        logger.exception(f'Problem adding vulnerability data {vulnerability_raw}')
                 if not device_id:
                     logger.warning(f'Bad device with no id {device_raw}')
                     continue

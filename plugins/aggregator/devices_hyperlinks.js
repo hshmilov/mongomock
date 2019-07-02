@@ -41,5 +41,11 @@
             'type': 'link',
             'href': 'https://www.google.com/search?q=' + value
         }
+    },
+    'software_cves.cve_id': function (value) {
+        return {
+            'type': 'link',
+            'href': 'https://www.google.com/search?q=' + value
+        }
     }
 }

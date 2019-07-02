@@ -190,7 +190,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                                                         if vuln_data.get('cvss') is not None
                                                         else None))
                             except Exception:
-                                logger.warning(f'Problem adding vuln name {vuln_name}', exc_info=True)
+                                logger.exception(f'Problem adding vulnerability for {vuln_name}')
                         if not hostname:
                             hostname = device_raw.get('hostnames')[0] if isinstance(device_raw.get('hostnames'), list) \
                                 and len(device_raw.get('hostnames')) > 0 else None

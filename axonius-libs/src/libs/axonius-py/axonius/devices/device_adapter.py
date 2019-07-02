@@ -323,9 +323,12 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     software_name = Field(str, "Software Name")
     software_version = Field(str, "Software Version")
     cve_id = Field(str, "CVE ID")
+    cpe = ListField(str, "CPE")
+    cve_severity = Field(float, "CVE Severity (Metric V3)")
+    cve_severity_v2 = Field(float, "CVE Severity (Metric V2)")
     cve_description = Field(str, "CVE Description")
+    cve_synopsis = Field(str, "CVE Synopsis")
     cve_references = ListField(str, "CVE References")
-    cve_severity = Field(str, "CVE Severity (Metric V3)")
 
 
 class ShareData(SmartJsonClass):
@@ -910,8 +913,26 @@ class DeviceAdapter(SmartJsonClass):
 
         self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))
 
-    def add_vulnerable_software(self, **kwargs):
-        self.software_cves.append(DeviceAdapterSoftwareCVE(**kwargs))
+    def add_vulnerable_software(self, cve_severity=None, cve_severity_v2=None, **kwargs):
+        if not cve_severity:
+            cve_severity = None
+        else:
+            try:
+                cve_severity = float(cve_severity)
+            except Exception:
+                logger.exception(f'Invalid CVE Severity (Metric V3) {cve_severity}')
+                cve_severity = None
+        if not cve_severity_v2:
+            cve_severity_v2 = None
+        else:
+            try:
+                cve_severity_v2 = float(cve_severity_v2)
+            except Exception:
+                logger.exception(f'Invalid CVE Severity (Metric V2) {cve_severity_v2}')
+                cve_severity_v2 = None
+        self.software_cves.append(DeviceAdapterSoftwareCVE(cve_severity=cve_severity,
+                                                           cve_severity_v2=cve_severity_v2,
+                                                           **kwargs))
 
     def add_key_value_tag(self, key, value):
         self.tags.append(DeviceTagKeyValue(tag_key=key, tag_value=value))
@@ -935,7 +956,6 @@ class DeviceAdapter(SmartJsonClass):
             except Exception:
                 logger.exception(f'Error converting protocol {protocol}')
         if service_name and not isinstance(service_name, str):
-            logger.error(f'Invalid service name {service_name}')
             return
         if not any([protocol, port_id, service_name]):
             logger.debug('Skipping empty port')

@@ -1,5 +1,7 @@
 import logging
 
+from collections import defaultdict
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.tenable_sc import consts
@@ -112,22 +114,65 @@ class TenableSecurityScannerConnection(RESTConnection):
                 logger.exception(f'Problem with repository {repository_id}')
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, top_n_software=0):
-        if not top_n_software:
-            yield from self._get_device_list()
-            return
-
-        logger.info(f'Fetching top {top_n_software} installed software')
+    def get_device_list(self, top_n_software=0, fetch_vulnerabilities=False):
         device_list = self._get_device_list()
-        software_mapping = self._get_software_device_mapping(top_n_software)
+
+        if fetch_vulnerabilities:
+            logger.info(f'Fetching vulnerabilities')
+            vuln_mapping = self._get_vuln_mapping()
+
+        if top_n_software:
+            logger.info(f'Fetching top {top_n_software} installed software')
+            software_mapping = self._get_software_device_mapping(top_n_software)
 
         for device in device_list:
-            device['software'] = []
-            for software, devices in software_mapping.items():
-                if self._software_id(device) in devices:
-                    device['software'].append(software)
+            if top_n_software:
+                device['software'] = []
+                for software, devices in software_mapping.items():
+                    if self._software_id(device) in devices:
+                        device['software'].append(software)
+            if fetch_vulnerabilities:
+                device['vulnerabilities'] = vuln_mapping.get(self._vuln_id(device)) or []
             yield device
     # pylint: enable=arguments-differ
+
+    def _get_vuln_list(self):
+        repositories = self._get('repository')
+        repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
+        filter_ = {'filterName': 'severity',
+                   'id': 'severity',
+                   'isPredefined': True,
+                   'operator': '=',
+                   'type': 'vuln',
+                   'value': '2,3,1,4'}
+        for repository_id in repositories_ids:
+            try:
+                yield from self.do_analysis(repository_id=repository_id,
+                                            analysis_type='vuln',
+                                            source_type='cumulative',
+                                            query_tool='vulndetails',
+                                            query_type='vuln',
+                                            extra_filter=filter_)
+            except Exception:
+                logger.exception(f'Problem with repository {repository_id}')
+
+    def _get_vuln_mapping(self):
+        result = defaultdict(list)
+        vuln_list = self._get_vuln_list() or []
+        for vuln in vuln_list:
+            vuln_id = self._vuln_id(vuln)
+            if vuln_id:
+                result[vuln_id].append(vuln)
+        return dict(result)
+
+    @staticmethod
+    def _vuln_id(device):
+        ip = device.get('ip')
+        mac = device.get('macAddress')
+        netbios = device.get('netbiosName')
+        if not any([ip, mac, netbios]):
+            return None
+        return '_'.join([ip, mac, netbios])
 
     def _get_software_list(self, top_n):
         repositories = self._get('repository')
