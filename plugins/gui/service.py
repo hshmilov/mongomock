@@ -4020,7 +4020,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         for item in results:
             field_values = gui_helpers.find_entity_field(convert_db_entity_to_view_entity(item, ignore_errors=True),
                                                          field_name)
-            if not field_values:
+            if not field_values or (isinstance(field_values, list) and all(not val for val in field_values)):
                 continue
             if ChartFuncs[func] == ChartFuncs.count:
                 count += 1

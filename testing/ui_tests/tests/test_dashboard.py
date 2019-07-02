@@ -145,7 +145,6 @@ class TestDashboard(TestBase):
         self.dashboard_page.remove_card(self.TEST_SUMMARY_TITLE_DEVICES)
 
         self.dashboard_page.add_summary_card('Users', 'Logon Count', 'Count', self.TEST_SUMMARY_TITLE_USERS)
-        self.dashboard_page.wait_for_spinner_to_end()
         summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_USERS)
         result_count = int(summary_chart.text)
         summary_chart.click()
