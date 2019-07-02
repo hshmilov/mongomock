@@ -46,8 +46,7 @@ class ZscalerAdapter(AdapterBase, Configurable):
                                        verify_ssl=client_config['verify_ssl'],
                                        https_proxy=client_config.get('https_proxy'),
                                        username=client_config['username'],
-                                       password=client_config['password'],
-                                       apikey=client_config['apikey'])
+                                       password=client_config['password'])
         with connection:
             pass
         return connection
@@ -111,12 +110,6 @@ class ZscalerAdapter(AdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
-                    'name': 'apikey',
-                    'title': 'API Key',
-                    'type': 'string',
-                    'format': 'password',
-                },
-                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -131,7 +124,6 @@ class ZscalerAdapter(AdapterBase, Configurable):
                 'domain',
                 'username',
                 'password',
-                'apikey',
                 'verify_ssl'
             ],
             'type': 'array'

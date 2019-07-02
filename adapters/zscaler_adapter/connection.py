@@ -55,7 +55,7 @@ class ZscalerConnection(RESTConnection):
         self._session_headers.update({'auth-token': self._session.cookies['mobile-token'][1:-1]})
 
     def _connect(self):
-        if not self._username or not self._password or not self._apikey:
+        if not self._username or not self._password:
             raise RESTException('No username or password')
 
         self._apikey = 'jj7tg80fEGao'
