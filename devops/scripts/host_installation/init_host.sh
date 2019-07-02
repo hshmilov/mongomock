@@ -77,6 +77,8 @@ sudo dpkg --add-architecture i386
 _wait_for_apt update
 echo "Upgrading..."
 _wait_for_apt upgrade -yq -f
+echo "Upgrading Kernel..."
+_wait_for_apt upgrade -yq -f linux-generic
 echo "Done upgrading"
 _wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
