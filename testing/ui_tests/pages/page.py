@@ -620,16 +620,21 @@ class Page:
     def __upload_file_on_element(element, file_path):
         element.send_keys(file_path)
 
-    def upload_file_on_element(self, element, file_content, is_bytes=False):
-        with NamedTemporaryFile(delete=False, prefix=TEMP_FILE_PREFIX) as temp_file:
+    def upload_file_on_element(self, element, file_content, is_bytes=False, prefix=None):
+        if not prefix:
+            prefix = TEMP_FILE_PREFIX
+        else:
+            prefix += TEMP_FILE_PREFIX
+        with NamedTemporaryFile(delete=False, prefix=prefix) as temp_file:
             temp_file.write(file_content if is_bytes else bytes(file_content, 'ascii'))
             temp_file.file.flush()
             Page.__upload_file_on_element(element, temp_file.name)
             self.wait_for_uploading_file(temp_file.name.split('/')[-1])
+            return temp_file.name.split('/')[-1]
 
-    def upload_file_by_id(self, input_id, file_content, is_bytes=False):
+    def upload_file_by_id(self, input_id, file_content, is_bytes=False, prefix=None):
         element = self.driver.find_element_by_id(input_id)
-        self.upload_file_on_element(element, file_content, is_bytes)
+        return self.upload_file_on_element(element, file_content, is_bytes, prefix)
 
     def close_dropdown(self):
         self.driver.find_element_by_css_selector(self.DROPDOWN_OVERLAY_CSS).click()

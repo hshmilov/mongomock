@@ -1,4 +1,5 @@
 import re
+import time
 
 import pytest
 from selenium.common.exceptions import NoSuchElementException
@@ -58,6 +59,7 @@ class DevicesPage(EntitiesPage):
     TAGGING_X_DEVICE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
+    ENFORCEMENT_DIALOG_DROPDOWN_CSS = 'div.x-select-trigger'
 
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
 
@@ -83,6 +85,21 @@ class DevicesPage(EntitiesPage):
         message = self.TAGGING_X_DEVICE_XPATH.format(message=self.TAGGING_X_DEVICE_MESSAGE.format(number=number))
         self.wait_for_element_present_by_xpath(message)
         self.wait_for_element_absent_by_xpath(message)
+
+    def open_enforce_dialog(self):
+        self.click_button('Actions', partial_class=True, should_scroll_into_view=False)
+        self.click_actions_enforce_button()
+
+    def enforce_action_on_query(self, query, action):
+        self.run_filter_query(query)
+        self.select_all_current_page_rows_checkbox()
+        self.open_enforce_dialog()
+        self.select_option_without_search(
+            self.ENFORCEMENT_DIALOG_DROPDOWN_CSS,
+            self.DROPDOWN_SELECTED_OPTION_CSS, action
+        )
+        self.click_button('Run')
+        time.sleep(1.5)  # wait for run to fade away
 
     def open_tag_dialog(self):
         self.click_button('Actions', partial_class=True, should_scroll_into_view=False)

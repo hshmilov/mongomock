@@ -227,13 +227,14 @@ def test_axr():
 
 def test_wmi():
     commands = [
-        {"type": "shell", "args": ["dir"]},
+        {"type": "shell", "args": ["dir .."]},
         {"type": "query", "args": ["select SID from Win32_Account"]},
         {"type": "method", "args": ["StdRegProv", "EnumKey", 2147483649, ""]},
         {"type": "execbinary", "args": [TEST_BINARY_LOCATION, "\"hello, world\""]},
         {"type": "query", "args": ["select * from Win32_DeviceGuard",
                                    "//./root/Microsoft/Windows/DeviceGuard"]},
-        {'type': 'shell', 'args': ['forfiles /p axonius /m axonius_* /D -1 /C "cmd /c echo @path"']}
+        {'type': 'shell', 'args': ['forfiles /p .. /m axonius_* /D -1 /C "cmd /c echo @path"']},
+        {'type': 'shell', 'args': ['forfiles /m axonius_* /D -1 /C "cmd /c echo @path"']}
         # {"type": "putfile", "args": ["c:\\a.txt", "abcdefgh"]},
         # {"type": "getfile", "args": ["c:\\a.txt"]},
         # {"type": "deletefile", "args": ["c:\\a.txt"]},
@@ -259,6 +260,7 @@ def test_wmi():
     assert "hello, world" in response[3]["data"]
     assert response[4]["data"][0]["AvailableSecurityProperties"] == [3]
     assert 'ERROR: No files found with the specified search criteria.' in response[5]['data']
+    assert 'ERROR: No files found with the specified search criteria.' in response[6]['data']
 
 
 def test_executable_exes_signature():

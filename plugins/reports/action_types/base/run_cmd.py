@@ -22,7 +22,7 @@ class RunCmd(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use credentials from Active Directory',
+                    'title': 'Use stored credentials from the Active Directory adapter',
                     'type': 'bool'
                 },
                 {
@@ -40,6 +40,24 @@ class RunCmd(ActionTypeBase):
                     'name': 'params',
                     'title': 'Command line parameters',
                     'type': 'string'
+                },
+                {
+                    'name': 'extra_files',
+                    'title': 'Files to deploy',
+                    'type': 'array',
+                    'items':
+                        {
+                            'name': 'file',
+                            'title': 'File',
+                            'type': 'file',
+                            'items': [
+                                {
+                                    'name': 'file',
+                                    'title': 'File',
+                                    'type': 'file'
+                                }
+                            ]
+                        }
                 }
             ],
             'required': [
@@ -74,10 +92,12 @@ class RunCmd(ActionTypeBase):
                 'password': self._config.get('wmi_password')
             }
 
+        logger.info(f'Executing run_cmd for {len(self._internal_axon_ids)} devices')
         action_data = {
             'internal_axon_ids': self._internal_axon_ids,
             'action_type': 'shell',
             'action_name': self._action_saved_name,
+            'extra_files': self._config.get('extra_files') or [],
             'command': self._config['params'],
             'custom_credentials': credentials
         }

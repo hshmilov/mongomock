@@ -2200,7 +2200,7 @@ class AwsAdapter(AdapterBase, Configurable):
         except Exception:
             logger.exception(f'Problem parsing if ssm agent is latest version')
 
-        device.figure_os(basic_data.get('PlatformName') + ' ' + basic_data.get('PlatformVersion'))
+        device.figure_os((basic_data.get('PlatformName') or '') + ' ' + (basic_data.get('PlatformVersion') or ''))
         ssm_data.activation_id = basic_data.get('ActivationId')
         ssm_data.registration_date = parse_date(basic_data.get('RegistrationDate'))
         resource_type = basic_data.get('ResourceType') or ''
@@ -2289,16 +2289,14 @@ class AwsAdapter(AdapterBase, Configurable):
                     ipv4_raw = network_interface.get('IPV4')
                     ipv6_raw = network_interface.get('IPV6')
                     if ipv4_raw:
-                        if isinstance(ipv4_raw, list):
-                            ips.extend(ipv4_raw)
-                        elif isinstance(ipv4_raw, str):
-                            ips.append(ipv4_raw)
+                        if isinstance(ipv4_raw, str):
+                            ipv4_raw = [ipv4.strip() for ipv4 in ipv4_raw.split(',')]
+                        ips.extend(ipv4_raw)
 
                     if ipv6_raw:
-                        if isinstance(ipv6_raw, list):
-                            ips.extend(ipv6_raw)
-                        elif isinstance(ipv6_raw, str):
-                            ips.append(ipv6_raw)
+                        if isinstance(ipv6_raw, str):
+                            ipv6_raw = [ipv6.strip() for ipv6 in ipv6_raw.split(',')]
+                        ips.extend(ipv6_raw)
                     device.add_nic(
                         mac=network_interface.get('MacAddress'),
                         ips=ips,
@@ -2429,7 +2427,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'parse_elb_ips',
-                    'title': 'Assign ELB IPs to associated devices',
+                    'title': 'Fetch ELB IP using current DNS',
                     'type': 'bool'
                 },
                 {

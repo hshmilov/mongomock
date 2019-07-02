@@ -22,7 +22,7 @@ class RunExecutable(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use credentials from Active Directory',
+                    'title': 'Use stored credentials from the Active Directory adapter',
                     'type': 'bool'
                 },
                 {
@@ -80,6 +80,7 @@ class RunExecutable(ActionTypeBase):
                 'password': self._config.get('wmi_password')
             }
 
+        logger.info(f'Executing run_executable for {len(self._internal_axon_ids)} devices')
         action_data = {
             'internal_axon_ids': self._internal_axon_ids,
             'action_type': 'deploy',

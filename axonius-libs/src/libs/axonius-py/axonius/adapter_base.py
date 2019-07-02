@@ -783,7 +783,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def execute_binary(self, device_data, binary_file_path, binary_params):
         raise RuntimeError("Not implemented yet")
 
-    def execute_shell(self, device_data, shell_commands):
+    def execute_shell(self, device_data, extra_files, shell_commands):
         raise RuntimeError("Not implemented yet")
 
     def execute_axr(self, device_data, axr_commands):

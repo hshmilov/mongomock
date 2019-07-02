@@ -19,7 +19,7 @@ class RunWMIScan(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use credentials from Active Directory',
+                    'title': 'Use stored credentials from the Active Directory adapter',
                     'type': 'bool'
                 },
                 {

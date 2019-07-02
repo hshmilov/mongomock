@@ -1,6 +1,7 @@
 import os
 import time
 from enum import Enum
+from typing import List, Tuple
 
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
 from ui_tests.pages.entities_page import EntitiesPage
@@ -33,6 +34,7 @@ class Action(Enum):
     tag = 'Add Tag'
     run_executable_windows = 'Deploy on Windows Device'
     run_wmi_scan = 'Run WMI Scan'
+    run_windows_shell_command = 'Run Windows Shell Command'
     run_linux_ssh_scan = 'Run Linux SSH Scan'
     shodan_enrichment = 'Enrich Device Data by Shodan'
     scan_with_qualys = 'Add to Qualys Cloud Platform'
@@ -95,6 +97,9 @@ class EnforcementsPage(EntitiesPage):
     TASK_RESULT_FAILURE_CSS = TASK_RESULT_CSS.format(child_count=3)
 
     TABLE_SEARCH_INPUT = '.x-search-input .input-value'
+
+    FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'first-seperator'
+    SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'second-seperator'
 
     @property
     def url(self):
@@ -262,7 +267,7 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
         # Appearance animation time
         time.sleep(0.6)
-        self.find_checkbox_with_label_before('Use credentials from Active Directory').click()
+        self.find_checkbox_with_label_before('Use stored credentials from the Active Directory adapter').click()
         self.fill_action_name(name)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
@@ -301,11 +306,44 @@ class EnforcementsPage(EntitiesPage):
         # Appearance animation time
         time.sleep(0.6)
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.find_checkbox_with_label_before('Use credentials from Active Directory').click()
+        self.find_checkbox_with_label_before('Use stored credentials from the Active Directory adapter').click()
         exe_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '../../../shared_readonly_files/test_binary.exe'))
         self.upload_file_by_id('executable', open(exe_path, 'rb').read(), is_bytes=True)
         time.sleep(2)
+        self.click_button(self.SAVE_BUTTON)
+        self.wait_for_element_present_by_text(name)
+
+    def add_run_windows_command(self, name, files: List[Tuple[str, bytes]] = None):
+        self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
+        self.wait_for_action_library()
+        self.find_element_by_text(ActionCategory.Run).click()
+        # Opening animation time
+        time.sleep(0.2)
+        self.find_element_by_text(Action.run_windows_shell_command.value).click()
+        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
+        # Appearance animation time
+        time.sleep(0.6)
+        self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
+        self.find_checkbox_with_label_before('Use stored credentials from the Active Directory adapter').click()
+        param_line = f'dir && echo {self.FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR}'
+        files = files or []
+        for file_num, file_data in enumerate(files):
+            file_prefix, file_contents = file_data
+            self.click_button('+', button_class='x-button light')
+            file_name = self.upload_file_by_id(
+                str(file_num),
+                file_contents,
+                is_bytes=isinstance(file_contents, bytes),
+                prefix=file_prefix
+            )
+            if param_line:
+                param_line += ' && '
+            param_line += f'type {file_name} && del {file_name}'
+        if param_line:
+            param_line += ' && '
+        param_line += f'echo done && echo {self.SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR} && dir'
+        self.fill_text_field_by_element_id('params', param_line)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
@@ -376,14 +414,17 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text('You do not have permission to access the Enforcements screen')
         self.click_ok_button()
 
-    def create_basic_enforcement(self, enforcement_name, enforcement_view, schedule=True, enforce_added=False,
-                                 save=True):
+    def create_basic_empty_enforcement(self, enforcement_name):
         self.switch_to_page()
         # for some reason, this switch_to_page doesn't work from here sometimes
         time.sleep(1)
         self.switch_to_page()
         self.click_new_enforcement()
         self.fill_enforcement_name(enforcement_name)
+
+    def create_basic_enforcement(self, enforcement_name, enforcement_view, schedule=True, enforce_added=False,
+                                 save=True):
+        self.create_basic_empty_enforcement(enforcement_name)
         self.select_trigger()
         if enforce_added:
             self.check_new_entities()

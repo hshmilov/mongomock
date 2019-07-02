@@ -182,6 +182,9 @@ class WmiSmbRunner(object):
         :param share: a share to get the file from, e.g. ADMIN$.
         :return: the file
         """
+        assert filepath
+        if '\\' not in filepath:
+            filepath = '{0}\\{1}'.format(FILES_DIRECTORY, filepath)
 
         # Normalize filepath
         filepath = ntpath.normpath(filepath)    # also replaces / with \
@@ -225,6 +228,9 @@ class WmiSmbRunner(object):
         :param share: the share (optional).
         :return:
         """
+        assert filepath
+        if '\\' not in filepath:
+            filepath = '{0}\\{1}'.format(FILES_DIRECTORY, filepath)
 
         # Normalize filepath
         filepath = ntpath.normpath(filepath)  # also replaces / with \
@@ -267,6 +273,16 @@ class WmiSmbRunner(object):
                     else:
                         raise
 
+    def putfilefromdisk(self, file_path_local, file_name):
+        """
+        Uploads a file by a file path
+        :return:
+        """
+
+        with open(file_path_local, "rb") as f:
+            binary_file = f.read()
+        self.putfile(file_name, binary_file)
+
     def deletefile(self, filepath, share=DEFAULT_SHARE):
         """
         Deletes a file.
@@ -274,6 +290,9 @@ class WmiSmbRunner(object):
         :param share: a share to get the file from, e.g. ADMIN$.
         :return: the file
         """
+        assert filepath
+        if '\\' not in filepath:
+            filepath = '{0}\\{1}'.format(FILES_DIRECTORY, filepath)
 
         # Normalize filepath
         filepath = ntpath.normpath(filepath)  # also replaces / with \
@@ -364,6 +383,7 @@ class WmiSmbRunner(object):
                                                                        get_global_counter(),
                                                                        str(time.time()), )
 
+        # Do not put quote in the following line. quote line is used specially by execshell
         command_to_run = r"{0} {1} 1> \\127.0.0.1\{2}\{3} 2>&1".format(
             binary_path, binary_params, DEFAULT_SHARE, output_filename)
 
@@ -441,7 +461,16 @@ class WmiSmbRunner(object):
         :return str: the output.
         """
 
-        return self._exec_generic("cmd.exe", "/Q /c {0}".format(shell_command),
+        # We run commands by running cmd.exe /q /s /c "cmd.exe /q /s /c "[commands]""
+        # because we want to make it possible for commands be a number of chained commands (e.g. echo 1 && echo 2)
+        # but redirection has to work only on one process so we force the whole chain of commands be one process.
+        #
+        # from cmd.exe /?:
+        #  ..... Otherwise, old behavior is to see if the first character is a quote character and if so, strip the
+        #  leading character and remove the last quote character on the command line, preserving any text after
+        #  the last quote character.
+
+        return self._exec_generic("cmd.exe", "/q /s /c \"cmd.exe /q /s /c \"{0}\"\"".format(shell_command),
                                   optional_output_name=optional_output_name,
                                   optional_working_directory=optional_working_directory)
 
@@ -461,11 +490,9 @@ class WmiSmbRunner(object):
         try:
             with open(binary_file_path, "rb") as f:
                 binary_file = f.read()
-            binary_path = "{0}\\axonius_binary_{1}_{2}.exe".format(FILES_DIRECTORY,
-                                                                   get_global_counter(),
-                                                                   str(time.time()))
+            binary_path = "axonius_binary_{0}_{1}.exe".format(get_global_counter(), str(time.time()))
             self.putfile(binary_path, binary_file)
-            return self._exec_generic("cmd.exe", "/Q /c {0} {1}".format(binary_path, binary_params))
+            return self._exec_generic("cmd.exe", "/Q /c \"{0} {1}\"".format(binary_path, binary_params))
         finally:
             self._trydeletefile(binary_path)
 
@@ -532,9 +559,7 @@ class WmiSmbRunner(object):
 
         with open(AXR_BINARY_LOCATION, "rb") as f:
             exe_binary_file = f.read()
-            exe_binary_path = "{0}\\axonius_axr_{1}_{2}.exe".format(FILES_DIRECTORY,
-                                                                    get_global_counter(),
-                                                                    str(time.time()), )
+            exe_binary_path = "axonius_axr_{0}_{1}.exe".format(get_global_counter(), str(time.time()), )
 
         with open(AXR_CONFIG_BINARY_LOCATION, "rb") as f:
             config_binary_file = f.read()
@@ -569,13 +594,11 @@ class WmiSmbRunner(object):
 
         with open(exe_filepath, "rb") as f:
             exe_binary_file = f.read()
-            exe_binary_path = "{0}\\axonius_pm_{1}_{2}.exe".format(FILES_DIRECTORY,
-                                                                   get_global_counter(),
-                                                                   str(time.time()), )
+            exe_binary_path = "axonius_pm_{0}_{1}.exe".format(get_global_counter(), str(time.time()), )
 
         with open(wsusscn2_file_path, "rb") as f:
             wsusscn2_binary_file = f.read()
-            wsusscn2_binary_path = "{0}\\axonius_wsusscn2.cab".format(FILES_DIRECTORY)
+            wsusscn2_binary_path = "axonius_wsusscn2.cab"
 
         try:
             # Transfer both files
@@ -664,7 +687,7 @@ class WmiSmbRunner(object):
         # of deleting filse from the customer!
         if WmiSmbRunner.default_working_directory is None:
             try:
-                WmiSmbRunner.default_working_directory = self.__get_default_working_directory()
+                WmiSmbRunner.default_working_directory = self.__get_default_working_directory() + '\\' + FILES_DIRECTORY
             except Exception as e:
                 raise ValueError(
                     "Unexpected error occured: coludn't find the physical path of {0}: {1}".format(
@@ -851,6 +874,9 @@ def run_command(w, command_type, command_args):
         elif command_type == "putfile":
             result = w.putfile(*command_args)
 
+        elif command_type == "putfilefromdisk":
+            result = w.putfilefromdisk(*command_args)
+
         elif command_type == "deletefile":
             result = w.deletefile(*command_args)
 
@@ -907,7 +933,7 @@ if __name__ == '__main__':
 
         # We currently do not support in creating more than 1 rpc object. This is due to impacket
         # not implementing it, and also not being able to run thread safely.
-        # the only soltuion as i see it right now is to run commands not in parallel, and this is super slow.
+        # the only solution as i see it right now is to run commands not in parallel, and this is super slow.
         # that is why if we want to run different types of rpc's we should run this binary a couple of times.
         assert number_of_different_rpc_objects(commands) < 2
 

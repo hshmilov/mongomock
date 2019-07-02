@@ -73,9 +73,9 @@ class TestBase:
             self.port = 443
         elif pytest.config.option.host_hub:
             self.local_browser = False
-            self.port = os.environ.get('PUBLIC_HTTPS_PORT') or 443
-            remote_hub = f'http://{DOCKER_NETWORK_DEFAULT_GATEWAY}:4444/wd/hub'
-            self.base_url = f'https://{DOCKER_NETWORK_DEFAULT_GATEWAY}:{self.port}'
+            self.port = 443
+            remote_hub = f'http://{os.environ["REMOTE_HUB_ADDR"]}:4444/wd/hub'
+            self.base_url = f'https://{os.environ["LOCAL_EXTERNAL_ADDR"]}'
             logger.info(f'Base Url: {self.base_url}')
             logger.info(f'Connecting to the remote hub {remote_hub}..')
             self.driver = webdriver.Remote(
@@ -204,6 +204,7 @@ class TestBase:
         self.axonius_system.get_enforcements_db().delete_many({})
         self.axonius_system.get_actions_db().delete_many({})
         self.axonius_system.get_tasks_db().delete_many({})
+        self.axonius_system.get_tasks_running_id_db().delete_many({})
         self.axonius_system.get_notifications_db().delete_many({})
         self.axonius_system.get_reports_config_db().delete_many({})
 

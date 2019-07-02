@@ -214,6 +214,9 @@ class AxoniusService:
     def get_tasks_db(self):
         return self.db.get_collection(self.reports.unique_name, 'triggerable_history')
 
+    def get_tasks_running_id_db(self):
+        return self.db.get_collection(self.reports.unique_name, 'running_id')
+
     def get_notifications_db(self):
         return self.db.get_collection(self.core.unique_name, 'notifications')
 

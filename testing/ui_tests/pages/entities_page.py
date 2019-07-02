@@ -57,7 +57,8 @@ class EntitiesPage(Page):
     TABLE_CELL_CSS = 'tbody .x-row.clickable td:nth-child({cell_index})'
     TABLE_CELL_EXPAND_CSS = 'tbody .x-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
     TABLE_DATA_ROWS_XPATH = '//tr[@id]'
-    TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-entity-general\')]//div[contains(@class, \'x-tab active\')]'\
+    TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
+    TABLE_FIELD_ROWS_XPATH = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]'\
                              '//div[@class=\'table-container\']//tr[@class=\'x-row\']'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/div[@class=\'table-container\']/table/thead/tr'
@@ -74,6 +75,7 @@ class EntitiesPage(Page):
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
     TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
+    TABLE_ACTIONS_ENFORCE_CSS = 'div.content.w-sm > div > div:nth-child(5) > div.item-content'
     TABLE_ACTION_ITEM_XPATH = '//div[@class=\'actions\']//div[@class=\'item-content\' and text()=\'{action}\']'
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_ID = 'saveName'
@@ -92,6 +94,8 @@ class EntitiesPage(Page):
     CUSTOM_DATA_TAB_CSS = 'li#gui_unique'
     GENERAL_DATA_TAB_TITLE = 'General Data'
     ADAPTERS_DATA_TAB_TITLE = 'Adapters Data'
+    ENFORCEMENT_DATA_TAB_TITLE = 'Enforcement Tasks'
+    EXTENDED_DATA_TAB_TITLE = 'Extended Data'
 
     NOTES_CREATED_TOASTER = 'New note was created'
     NOTES_EDITED_TOASTER = 'Existing note was edited'
@@ -383,6 +387,9 @@ class EntitiesPage(Page):
         return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]
                 for data_row in self.find_elements_by_xpath(self.TABLE_FIELD_ROWS_XPATH)]
 
+    def get_all_custom_data(self):
+        return [data.text for data in self.find_elements_by_xpath(self.TABLE_SCHEMA_CUSTOM)]
+
     def select_all_current_page_rows_checkbox(self):
         self.driver.find_element_by_css_selector(self.TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS).click()
 
@@ -456,6 +463,9 @@ class EntitiesPage(Page):
     def click_actions_tag_button(self):
         self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_TAG_CSS).click()
 
+    def click_actions_enforce_button(self):
+        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_ENFORCE_CSS).click()
+
     def open_edit_tags(self):
         self.click_button('Edit Tags', partial_class=True)
 
@@ -494,6 +504,12 @@ class EntitiesPage(Page):
 
     def approve_remove_selected(self):
         self.find_element_by_text(self.DELETE_BUTTON).click()
+
+    def click_enforcement_tasks_tab(self):
+        self.click_tab(self.ENFORCEMENT_DATA_TAB_TITLE)
+
+    def click_extended_data_tasks_tab(self):
+        self.click_tab(self.EXTENDED_DATA_TAB_TITLE)
 
     def click_general_tab(self):
         self.click_tab(self.GENERAL_DATA_TAB_TITLE)

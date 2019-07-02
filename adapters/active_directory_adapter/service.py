@@ -9,7 +9,7 @@ import threading
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
@@ -243,14 +243,20 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
     def _test_reachability(self, client_config):
         try:
+            client_config = client_config.copy()
+            # We want to trigger a bad-password exception. This exception means that the connection itself worked.
+            client_config['password'] = 'axonius-connectivity-test'
             conn = self._get_ldap_connection(client_config)
             conn.disconnect()
-        except LdapException as e:
-            if 'invalid server address' in str(e):
-                return False
-        except Exception:
             return True
-        return True
+        except LdapException as e:
+            if 'ldapinvalidcredentialsresult' in str(e).lower():
+                return True
+            else:
+                return False
+        except Exception as e:
+            logger.exception(f'Exception while checking connectivity: {str(e)}')
+            return False
 
     def _get_ldap_connection(self, dc_details):
         return LdapConnection(dc_details['dc_name'],
@@ -301,8 +307,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 all_domains[dc_details['dc_name'].lower()] = dc_details
             return all_domains
         except LdapException as e:
-            if "socket connection error while opening: timed out" in str(e):
+            if "socket connection error while opening: timed out" in str(e).lower():
                 additional_msg = "connection timed out"
+            elif 'invalid server address' in str(e).lower():
+                additional_message = 'Invalid server address'
             elif 'ldapinvalidcredentialsresult' in str(e).lower():
                 additional_msg = 'Invalid credentials'
             else:
@@ -1558,12 +1566,18 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
 
-    def execute_shell(self, device_data, shell_commands, custom_credentials=None):
+    def execute_shell(self,
+                      device_data,
+                      shell_commands,
+                      extra_files: Optional[dict] = None,
+                      custom_credentials: Optional[dict] = None):
         """
         Shell commands is a dict of which keys are operation systems and values are lists of cmd commands.
         The commands will be run *in parallel* and not consequently.
         :param device_data: the device data
         :param shell_commands: e.g. {"Windows": ["dir", "ping google.com"]}
+        :param extra_files: extra files to upload (a list of paths)
+        :param custom_credentials: a dict of custom credentials to use, in format {'username': '', 'password': ''}
         :return:
         """
 
@@ -1571,10 +1585,18 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         if shell_command_windows is None:
             return {"result": 'Failure', "product": 'No Windows command supplied'}
 
-        commands_list = []
-        for command in shell_command_windows:
-            commands_list.append({"type": "shell", "args": [command]})
+        # Since wmi_smb_runner runs commands in parallel we first have to upload files then run commands.
+        upload_files_commands_list = []
+        for file_name, file_path in (extra_files or {}).items():
+            file_name = file_name.split('/')[-1].split('\\')[-1]
+            upload_files_commands_list.append({'type': 'putfilefromdisk', 'args': [file_path, file_name]})
 
+        if upload_files_commands_list:
+            res = self.execute_wmi_smb(device_data, upload_files_commands_list, custom_credentials=custom_credentials)
+            if res.get('result') != 'Success':
+                return res
+
+        commands_list = [{"type": "shell", "args": [command]} for command in shell_command_windows]
         return self.execute_wmi_smb(device_data, commands_list, custom_credentials=custom_credentials)
 
     def supported_execution_features(self):

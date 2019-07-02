@@ -77,7 +77,9 @@ class DeviceControlService(Triggerable, PluginBase):
             data = p.value
 
             if p.is_fulfilled:
-                output = data['output']['product'][0]
+                # In case we have a couple of commands sent, we always get the output of the last command which
+                # represents the shell command.
+                output = data['output']['product'][-1]
                 success = output['status'] == 'ok'
                 promises_results[internal_axon_id] = {
                     'success': success,
@@ -130,6 +132,7 @@ class DeviceControlService(Triggerable, PluginBase):
 
             if action_type == 'shell':
                 action_params['command'] = request_content['command']
+                action_params['extra_files'] = request_content.get('extra_files') or []
             elif action_type == 'deploy':
                 action_params['binary'] = request_content['binary']
                 # Optional parameters
@@ -183,12 +186,23 @@ class DeviceControlService(Triggerable, PluginBase):
         time.sleep(sleep_time)
 
         if action_type == 'shell':
+            extra_files_raw = action_params.get('extra_files')
+            extra_files = {}
+            if extra_files_raw:
+                for file_raw in extra_files_raw:
+                    binary_arr = self._grab_file_contents(file_raw)
+                    assert isinstance(binary_arr, bytes)
+                    random_filepath = get_random_uploaded_path_name('device_control_shell_extra_file')
+                    with open(random_filepath, 'wb') as binary_file:
+                        binary_file.write(binary_arr)
+                    extra_files[file_raw['filename']] = random_filepath
             p = device.request_action(
                 'execute_shell',
                 {
                     'shell_commands': {
-                        os: [action_params['command']] for os in ['Windows', 'Linux', 'Mac', 'iOS', 'Android']
+                        os_name: [action_params['command']] for os_name in ['Windows', 'Linux', 'Mac', 'iOS', 'Android']
                     },
+                    'extra_files': extra_files,
                     'custom_credentials': credentials
                 }
             )
@@ -236,7 +250,9 @@ class DeviceControlService(Triggerable, PluginBase):
         """
         logger.info('got into run shell success.')
         try:
-            output = data['output']['product'][0]
+            # In case we have a couple of commands sent, we always get the output of the last command which
+            # represents the shell command.
+            output = data['output']['product'][-1]
             if output['status'] != 'ok':
                 # Its actually a failure!
                 return self.run_action_failure(
