@@ -146,7 +146,8 @@ export const adapters = {
 					uuidToSwap: (payload.uuid !== 'new') ? payload.uuid: '',
 					uuid: response.data.id,
 					status: response.data.status,
-					client_config: payload.serverData
+					client_config: payload.serverData,
+					error: response.data.error
 				})
 				return response
 			})
