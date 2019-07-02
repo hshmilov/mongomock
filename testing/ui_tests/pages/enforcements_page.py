@@ -101,6 +101,8 @@ class EnforcementsPage(EntitiesPage):
     FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'first-seperator'
     SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'second-seperator'
 
+    USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL = 'Use stored credentials from the Active Directory adapter'
+
     @property
     def url(self):
         return f'{self.base_url}/enforcements'
@@ -131,6 +133,11 @@ class EnforcementsPage(EntitiesPage):
     def wait_for_action_library(self):
         self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
         # Appearance animation time
+        time.sleep(1)
+
+    def wait_for_action_config(self):
+        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
+        # Appearance animation time
         time.sleep(0.6)
 
     def add_send_email(self):
@@ -142,9 +149,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(Action.send_emails.value).click()
 
     def tag_entities(self, name, tag, new=False):
-        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_config()
         if new:
             self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         self.fill_text_field_by_element_id('tag_name', tag)
@@ -183,9 +188,7 @@ class EnforcementsPage(EntitiesPage):
         # Opening animation time
         time.sleep(0.2)
         self.find_element_by_text(action_type).click()
-        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_config()
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
@@ -250,9 +253,7 @@ class EnforcementsPage(EntitiesPage):
         # Opening animation time
         time.sleep(0.2)
         self.find_element_by_text(Action.create_notification.value).click()
-        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_config()
         self.fill_action_name(name)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
@@ -264,10 +265,8 @@ class EnforcementsPage(EntitiesPage):
         # Opening animation time
         time.sleep(0.2)
         self.find_element_by_text(Action.run_wmi_scan.value).click()
-        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
-        self.find_checkbox_with_label_before('Use stored credentials from the Active Directory adapter').click()
+        self.wait_for_action_config()
+        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
         self.fill_action_name(name)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
@@ -285,9 +284,7 @@ class EnforcementsPage(EntitiesPage):
         # Opening animation time
         time.sleep(0.2)
         self.find_element_by_text(Action.notify_syslog.value).click()
-        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_config()
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         self.select_option_without_search(
             f'{self.ACTION_CONF_CONTAINER_CSS} .x-dropdown.x-select', self.DROPDOWN_SELECTED_OPTION_CSS, severity
@@ -302,11 +299,9 @@ class EnforcementsPage(EntitiesPage):
         # Opening animation time
         time.sleep(0.2)
         self.find_element_by_text(Action.run_executable_windows.value).click()
-        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_config()
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.find_checkbox_with_label_before('Use stored credentials from the Active Directory adapter').click()
+        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
         exe_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '../../../shared_readonly_files/test_binary.exe'))
         self.upload_file_by_id('executable', open(exe_path, 'rb').read(), is_bytes=True)
@@ -325,7 +320,7 @@ class EnforcementsPage(EntitiesPage):
         # Appearance animation time
         time.sleep(0.6)
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.find_checkbox_with_label_before('Use stored credentials from the Active Directory adapter').click()
+        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
         param_line = f'dir && echo {self.FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR}'
         files = files or []
         for file_num, file_data in enumerate(files):
@@ -505,9 +500,14 @@ class EnforcementsPage(EntitiesPage):
         self.create_run_wmi_enforcement()
 
     def add_deploying_consequences(self, enforcement_name, success_tag_name, failure_tag_name, failure_isolate_name):
+        self.switch_to_page()
+        self.refresh()
+        self.wait_for_table_to_load()
         self.edit_enforcement(enforcement_name)
+        self.wait_for_action_config()
         self.add_tag_entities(name=success_tag_name, tag='Specially Deployed', action_cond=self.SUCCESS_ACTIONS_TEXT)
         self.add_cb_isolate(name=failure_isolate_name, action_cond=self.FAILURE_ACTIONS_TEXT)
+        self.wait_for_action_config()
         self.add_tag_entities(
             name=failure_tag_name, tag='Missing Special Deploy', action_cond=self.FAILURE_ACTIONS_TEXT
         )
@@ -558,9 +558,7 @@ class EnforcementsPage(EntitiesPage):
         self.key_down_enter(self.driver.find_element_by_css_selector(self.TABLE_SEARCH_INPUT))
 
     def fill_send_email_config(self, name, recipient=None, body=None):
-        self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
+        self.wait_for_action_config()
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
         if recipient:
             self.fill_text_field_by_css_selector('.md-input', recipient, context=self.find_field_by_label('Recipients'))

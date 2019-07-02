@@ -1,11 +1,11 @@
 import logging
-import copy
 
-from axonius.plugin_base import PluginBase
+from axonius.clients.linux_ssh.consts import ACTION_SCHEMA, BASE_DEFAULTS_SCHEMA
 from axonius.consts.plugin_consts import LINUX_SSH_PLUGIN_NAME
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
-from axonius.clients.linux_ssh.consts import ACTION_SCHEMA, INSTANCE, DEFAULT_INSTANCE
-from reports.action_types.action_type_base import ActionTypeBase, generic_fail
+from reports.action_types.action_type_base import (ActionTypeBase,
+                                                   add_node_selection,
+                                                   generic_fail, add_node_default)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -21,23 +21,16 @@ class RunLinuxSSHScan(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        plugin_base = PluginBase.Instance
-        schema = copy.deepcopy(ACTION_SCHEMA)
-        node_names = [instance['node_name'] for instance in plugin_base._get_nodes_table()]
-        for item in schema['items']:
-            if item['name'] == INSTANCE:
-                item['enum'] = node_names
-                break
-        return schema
+        return add_node_selection(ACTION_SCHEMA, LINUX_SSH_PLUGIN_NAME)
 
     @staticmethod
     def default_config() -> dict:
-        return {}
+        return add_node_default(BASE_DEFAULTS_SCHEMA, LINUX_SSH_PLUGIN_NAME)
 
-    def _trigger_linux_adapter(self, node_name):
+    def _trigger_linux_adapter(self, node_id):
         action_data = {'internal_axon_ids': self._internal_axon_ids, 'client_config': self._config}
 
-        adapter_unique_name = self._plugin_base._get_adapter_unique_name(LINUX_SSH_PLUGIN_NAME, node_name)
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(LINUX_SSH_PLUGIN_NAME, node_id)
         action_result = self._plugin_base._trigger_remote_plugin(
             adapter_unique_name, priority=True, blocking=True, data=action_data
         )
@@ -54,8 +47,8 @@ class RunLinuxSSHScan(ActionTypeBase):
         return generic_fail(internal_axon_ids=self._internal_axon_ids, reason=reason)
 
     def __run(self) -> EntitiesResult:
-        node_name = self._config.get(INSTANCE) or DEFAULT_INSTANCE
-        action_result = self._trigger_linux_adapter(node_name)
+        node_id = self.action_node_id
+        action_result = self._trigger_linux_adapter(node_id)
         return [self.prettify_output(k, v) for k, v in action_result.items()]
 
     def _run(self) -> EntitiesResult:

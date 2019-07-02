@@ -1,9 +1,16 @@
+import time
 from datetime import datetime
 
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+
 from axonius.utils.parsing import normalize_timezone_date
+from axonius.utils.wait import wait_until
+from services.adapters.carbonblack_response_service import \
+    CarbonblackResponseService
 from services.plugins.device_control_service import DeviceControlService
+from testing.test_credentials.test_ad_credentials import (NONEXISTEN_AD_DEVICE_IP,
+                                                          WMI_QUERIES_DEVICE)
 from ui_tests.tests.ui_test_base import TestBase
-from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, NONEXISTEN_AD_DEVICE_IP
 
 ENFORCEMENT_NAME = 'Special enforcement name'
 ENFORCEMENT_QUERY = 'Run WMI task'
@@ -26,24 +33,32 @@ class TestTasks(TestBase):
     FIELD_COMPLETED = 'Completed'
     FIELD_STATUS = 'Status'
 
-    def test_tasks_table_content(self):
-        self.devices_page.switch_to_page()
-        self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
-        self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_QUERY)
-        self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
-                                                          FAILURE_TAG_NAME, FAILURE_ISOLATE_NAME)
-        self.base_page.run_discovery()
-        self.enforcements_page.refresh()
-        self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.click_tasks_button()
-        self.enforcements_page.wait_for_table_to_load()
-
+    def _check_enforcement_data(self):
         # Check Enforcement's Task details in table
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_NAME)
         assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data(self.FIELD_MAIN_ACTION)
         assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data(self.FIELD_QUERY_NAME)
         assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
             self.enforcements_page.get_column_data(self.FIELD_COMPLETED)[0])
+
+    def test_tasks_table_content(self):
+        with CarbonblackResponseService().contextmanager(take_ownership=True):
+            self.devices_page.switch_to_page()
+            self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
+            self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_QUERY)
+            wait_until(lambda: self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
+                                                                                 FAILURE_TAG_NAME,
+                                                                                 FAILURE_ISOLATE_NAME),
+                       tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
+                       check_return_value=False)
+            self.base_page.run_discovery()
+            self.enforcements_page.refresh()
+            self.enforcements_page.wait_for_table_to_load()
+            self.enforcements_page.click_tasks_button()
+            self.enforcements_page.wait_for_table_to_load()
+
+            wait_until(self._check_enforcement_data, check_return_value=False,
+                       tolerated_exceptions_list=[StaleElementReferenceException])
 
     def _check_action_result(self, result_element, entities_count, action_name=ENFORCEMENT_NAME):
         assert result_element.text == str(entities_count)
@@ -132,13 +147,31 @@ class TestTasks(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         assert len(self.enforcements_page.get_column_data(self.FIELD_NAME)) == 0
 
+    def _test_specific_task(self, success_count, failure_count, action_name=ENFORCEMENT_NAME):
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.refresh()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_row()  # raises StaleElementReferenceException
+        # After specific task page finishes loading it jumps back to show data about the main action.
+        # So this sleeps make sure that we don't select an action just to be shown
+        # again the main action task info after the pages "OnLoad".
+        time.sleep(2)
+        self.enforcements_page.select_task_action(action_name)
+        self._check_action_results(success_count, failure_count, action_name)
+
     def test_task_results(self):
-        with DeviceControlService().contextmanager(take_ownership=True):
+        with DeviceControlService().contextmanager(take_ownership=True), CarbonblackResponseService().contextmanager(
+                take_ownership=True):
             self.devices_page.switch_to_page()
             self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
             self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_QUERY)
-            self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
-                                                              FAILURE_TAG_NAME, FAILURE_ISOLATE_NAME)
+            wait_until(lambda: self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
+                                                                                 FAILURE_TAG_NAME,
+                                                                                 FAILURE_ISOLATE_NAME),
+                       tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
+                       check_return_value=False)
 
             self.base_page.run_discovery()
 
@@ -147,10 +180,17 @@ class TestTasks(TestBase):
             self.enforcements_page.wait_for_table_to_load()
             self.enforcements_page.click_row()
 
-            self._check_action_results(1, 1)
-            self._check_action_results(1, 0, SUCCESS_TAG_NAME)
-            self._check_action_results(1, 0, FAILURE_TAG_NAME)
-            self._check_action_results(0, 1, FAILURE_ISOLATE_NAME)
+            wait_until(lambda: self._test_specific_task(1, 1), tolerated_exceptions_list=[AssertionError],
+                       check_return_value=False)
+            wait_until(lambda: self._test_specific_task(1, 0, SUCCESS_TAG_NAME),
+                       tolerated_exceptions_list=[AssertionError],
+                       check_return_value=False)
+            wait_until(lambda: self._test_specific_task(1, 0, FAILURE_TAG_NAME),
+                       tolerated_exceptions_list=[AssertionError],
+                       check_return_value=False)
+            wait_until(lambda: self._test_specific_task(0, 1, FAILURE_ISOLATE_NAME),
+                       tolerated_exceptions_list=[AssertionError],
+                       check_return_value=False)
 
     def test_enforcement_tasks(self):
         self.devices_page.switch_to_page()

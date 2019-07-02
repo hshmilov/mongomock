@@ -3,7 +3,6 @@ import copy
 DEFAULT_NETWORK_TIMEOUT = 30
 DEFAULT_PORT = 22
 DEFAULT_POOL_SIZE = 6
-DEFAULT_INSTANCE = 'Master'
 
 
 HOSTNAME = 'host_name'
@@ -12,13 +11,12 @@ PASSWORD = 'password'
 PORT = 'port'
 PRIVATE_KEY = 'private_key'
 IS_SUDOER = 'is_sudoer'
-INSTANCE = 'instance'
 PASSPHRASE = 'passphrase'
 
 BASE_SCHEMA = {
     'items': [
         {'name': USERNAME, 'title': 'User Name', 'type': 'string'},
-        {'name': PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password', 'default': ''},
+        {'name': PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
         {
             'name': PRIVATE_KEY,
             'title': 'Private Key',
@@ -36,7 +34,6 @@ BASE_SCHEMA = {
             'name': PORT,
             'title': 'SSH Port',
             'type': 'integer',
-            'default': DEFAULT_PORT,
             'description': 'Protocol Port',
         },
         {
@@ -46,17 +43,24 @@ BASE_SCHEMA = {
                 'Use sudo to execute privileged commands. If left unchecked, privileged commands may fail.'
             ),
             'type': 'bool',
-            'default': True,
         },
     ],
     'required': [USERNAME, IS_SUDOER],
     'type': 'array',
 }
 
+BASE_DEFAULTS_SCHEMA = {PORT: DEFAULT_PORT,
+                        IS_SUDOER: True,
+                        PASSWORD: ''}
+
 ACTION_SCHEMA = copy.deepcopy(BASE_SCHEMA)
-INSTANCE_ITEM = {'name': INSTANCE, 'title': 'Instance Name', 'type': 'string', 'default': DEFAULT_INSTANCE}
-ACTION_SCHEMA['items'].append(INSTANCE_ITEM)
 
 ADAPTER_SCHEMA = copy.deepcopy(BASE_SCHEMA)
+
+# Setting up defaults for adapter_schema
+for current_item in ADAPTER_SCHEMA['items']:
+    if current_item['name'] in BASE_DEFAULTS_SCHEMA:
+        current_item['default'] = BASE_DEFAULTS_SCHEMA[current_item['name']]
+
 ADAPTER_SCHEMA['items'].insert(0, {'name': HOSTNAME, 'title': 'Host Name', 'type': 'string'})
 ADAPTER_SCHEMA['required'].insert(0, HOSTNAME)

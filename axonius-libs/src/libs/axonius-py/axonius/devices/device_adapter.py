@@ -627,7 +627,7 @@ class DeviceAdapter(SmartJsonClass):
         assert isinstance(raw_data, dict)
         try:
             raw_data = replace_large_ints(raw_data)
-        except Exception as e:
+        except Exception:
             logger.exception('Failed to replace raw data large ints')
             return
         raw_data = escape_dict(raw_data)

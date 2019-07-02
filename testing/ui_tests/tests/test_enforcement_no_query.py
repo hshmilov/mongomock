@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pytest
 from selenium.common.exceptions import NoSuchElementException
+from services.adapters.carbonblack_response_service import CarbonblackResponseService
 
 from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until
@@ -160,16 +161,20 @@ class TestEnforcementNoQuery(TestBase):
         """
         Test an Enforcement containing a Main action as well as success, failure and post actions
         """
-        self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
-        self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
-                                                          FAILURE_TAG_NAME, FAILURE_ISOLATE_NAME)
-        self.enforcements_page.edit_enforcement(ENFORCEMENT_NAME)
-        self.enforcements_page.add_push_notification(POST_PUSH_NAME, self.enforcements_page.POST_ACTIONS_TEXT)
-        self.enforcements_page.click_save_button()
-        self.enforcements_page.wait_for_table_to_load()
+        with CarbonblackResponseService().contextmanager(take_ownership=True):
+            self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, COMMON_ENFORCEMENT_QUERY)
+            wait_until(lambda: self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
+                                                                                 FAILURE_TAG_NAME,
+                                                                                 FAILURE_ISOLATE_NAME),
+                       tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
+                       check_return_value=False)
+            self.enforcements_page.edit_enforcement(ENFORCEMENT_NAME)
+            self.enforcements_page.add_push_notification(POST_PUSH_NAME, self.enforcements_page.POST_ACTIONS_TEXT)
+            self.enforcements_page.click_save_button()
+            self.enforcements_page.wait_for_table_to_load()
 
-        self.base_page.run_discovery()
-        self.notification_page.verify_amount_of_notifications(1)
+            self.base_page.run_discovery()
+            self.notification_page.verify_amount_of_notifications(1)
 
     def test_run_added_entities(self):
         self.devices_page.switch_to_page()

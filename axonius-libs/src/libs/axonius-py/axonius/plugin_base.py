@@ -1607,21 +1607,12 @@ class PluginBase(Configurable, Feature):
                                   'last_seen'], NODE_USER_PASSWORD: ''})
         return nodes
 
-    def _node_name_to_node_id(self, node_name):
-        instances = self._get_nodes_table()
-        for instance in instances:
-            if instance.get('node_name') == node_name:
-                return instance.get('node_id')
-        raise RuntimeError(f'Unable to find node id for node "{node_name}"')
-
-    def _get_adapter_unique_name(self, adapter_name, node_name):
-        node_id = self._node_name_to_node_id(node_name)
-
-        response = self.request_remote_plugin(
-            f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}')
+    def _get_adapter_unique_name(self, adapter_name: str, node_id: str) -> str:
+        response = self.request_remote_plugin(f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}')  # .json().get(
+        # 'plugin_unique_name')
 
         if response.status_code != 200 or not response.text:
-            raise RuntimeError(f'Unable to find adapter for instance "{node_name}"')
+            raise RuntimeError(f'Unable to find adapter for instance "{node_id}"')
 
         return response.json().get(PLUGIN_UNIQUE_NAME)
 

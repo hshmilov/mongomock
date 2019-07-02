@@ -24,7 +24,7 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           PLUGIN_UNIQUE_NAME,
                                           HEAVY_LIFTING_PLUGIN_NAME,
                                           NODE_ID_PATH,
-                                          NODE_ID_ENV_VAR_NAME)
+                                          NODE_ID_ENV_VAR_NAME, PLUGIN_NAME)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -499,14 +499,14 @@ class CoreService(PluginBase, Configurable):
 
     def _get_online_plugins(self):
         online_devices = dict()
-        for plugin_name, plugin in self.online_plugins.items():
-            online_devices[plugin_name] = {
+        for plugin_unique_name, plugin in self.online_plugins.items():
+            online_devices[plugin_unique_name] = {
                 'plugin_type': plugin['plugin_type'],
                 'plugin_subtype': plugin['plugin_subtype'],
                 PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
-                'plugin_name': plugin['plugin_name'],
+                PLUGIN_NAME: plugin[PLUGIN_NAME],
                 'supported_features': plugin['supported_features'],
-                'node_id': plugin['node_id']
+                NODE_ID: plugin[NODE_ID]
             }
 
         return online_devices

@@ -3,7 +3,7 @@ import logging
 from axonius.consts.plugin_consts import SHODAN_PLUGIN_NAME
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 from axonius.clients.shodan.consts import DEFAULT_DOMAIN
-from reports.action_types.action_type_base import ActionTypeBase, generic_fail
+from reports.action_types.action_type_base import ActionTypeBase, generic_fail, add_node_selection, add_node_default
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -19,7 +19,7 @@ class ShodanEnrichment(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return {
+        schema = {
             'items': [
                 {
                     'name': 'domain',
@@ -44,16 +44,18 @@ class ShodanEnrichment(ActionTypeBase):
             ],
             'type': 'array'
         }
+        return add_node_selection(schema, SHODAN_PLUGIN_NAME)
 
     @staticmethod
     def default_config() -> dict:
-        return {'domain': DEFAULT_DOMAIN}
+        return add_node_default({'domain': DEFAULT_DOMAIN}, SHODAN_PLUGIN_NAME)
 
     def _trigger_shodan_adapter(self):
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(SHODAN_PLUGIN_NAME, self.action_node_id)
         action_data = {'internal_axon_ids': self._internal_axon_ids, 'client_config': self._config}
 
         action_result = self._plugin_base._trigger_remote_plugin(
-            SHODAN_PLUGIN_NAME,
+            adapter_unique_name,
             job_name='enrich',
             priority=True,
             blocking=True,

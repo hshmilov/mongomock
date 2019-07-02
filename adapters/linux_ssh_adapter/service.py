@@ -11,8 +11,7 @@ from axonius.clients.linux_ssh.consts import (DEFAULT_NETWORK_TIMEOUT,
                                               DEFAULT_POOL_SIZE, DEFAULT_PORT,
                                               HOSTNAME, IS_SUDOER, PASSWORD,
                                               PORT, PRIVATE_KEY, ADAPTER_SCHEMA,
-                                              USERNAME, INSTANCE, DEFAULT_INSTANCE,
-                                              PASSPHRASE)
+                                              USERNAME, PASSPHRASE)
 from axonius.clients.linux_ssh.data import LinuxDeviceAdapter
 from axonius.clients.linux_ssh.ppk import ppkraw_to_openssh
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
@@ -48,8 +47,6 @@ class LinuxSshAdapter(LinuxSshExectionMixIn, AdapterBase, Configurable):
             client_config[PASSWORD] = ''
         if IS_SUDOER not in client_config:
             client_config[IS_SUDOER] = True
-        if INSTANCE not in client_config:
-            client_config[INSTANCE] = DEFAULT_INSTANCE
         if not client_config.get(PASSPHRASE):
             client_config[PASSPHRASE] = None
         key = client_config.get(PRIVATE_KEY)

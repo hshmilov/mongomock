@@ -2,9 +2,13 @@ import logging
 
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 from axonius.clients.service_now.connection import ServiceNowConnection
-from reports.action_types.action_type_base import ActionTypeBase
+from reports.action_types.action_type_base import ActionTypeBase, add_node_selection, add_node_default
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+ADAPTER_NAME = 'service_now_adapter'
+
+# pylint: disable=W0212
 
 
 class ServiceNowComputerAction(ActionTypeBase):
@@ -14,7 +18,7 @@ class ServiceNowComputerAction(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return {
+        schema = {
             'items': [
                 {
                     'name': 'use_adapter',
@@ -53,21 +57,23 @@ class ServiceNowComputerAction(ActionTypeBase):
             ],
             'type': 'array'
         }
+        return add_node_selection(schema, ADAPTER_NAME)
 
     @staticmethod
     def default_config() -> dict:
-        return {
+        return add_node_default({
             'use_adapter': False,
             'domain': None,
             'username': None,
             'password': None,
             'https_proxy': None,
             'verify_ssl': True
-        }
+        }, ADAPTER_NAME)
 
     def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                      manufacturer=None, os_type=None, serial_number=None,
                                      to_correlate_plugin_unique_name=None, to_correlate_device_id=None):
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
         if not name:
             return None
@@ -87,7 +93,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                                           'device_id': to_correlate_device_id}}
 
         if self._config['use_adapter'] is True:
-            response = self._plugin_base.request_remote_plugin('create_computer', 'service_now_adapter', 'post',
+            response = self._plugin_base.request_remote_plugin('create_computer', adapter_unique_name, 'post',
                                                                json=request_json)
             return response.text
         try:
@@ -137,7 +143,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                 to_correlate_device_id = None
                 found_snow = False
                 for from_adapter in entry['adapters']:
-                    if from_adapter.get('plugin_name') == 'service_now_adapter':
+                    if from_adapter.get('plugin_name') == ADAPTER_NAME:
                         found_snow = True
                         break
                     data_from_adapter = from_adapter['data']

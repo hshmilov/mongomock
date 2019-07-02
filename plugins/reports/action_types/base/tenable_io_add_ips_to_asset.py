@@ -1,12 +1,15 @@
 import logging
 
-from axonius.types.enforcement_classes import EntitiesResult
-from axonius.plugin_base import PluginBase
 from axonius.clients.tenable_io.connection import TenableIoConnection
-from reports.action_types.action_type_base import ActionTypeBase, generic_fail
+from axonius.types.enforcement_classes import EntitiesResult
+from reports.action_types.action_type_base import (ActionTypeBase,
+                                                   add_node_selection,
+                                                   generic_fail, add_node_default)
 from reports.action_types.base.ips_scans_utils import get_ips_from_view
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+ADAPTER_NAME = 'tenable_io_adapter'
 
 
 class TenableIoAddIPsToTargetGroup(ActionTypeBase):
@@ -16,7 +19,7 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
 
     @staticmethod
     def config_schema() -> dict:
-        return {
+        schema = {
             'items': [
                 {
                     'name': 'use_adapter',
@@ -86,10 +89,11 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             ],
             'type': 'array'
         }
+        return add_node_selection(schema, ADAPTER_NAME)
 
     @staticmethod
     def default_config() -> dict:
-        return {
+        return add_node_default({
             'target_group_name': None,
             'create_new_asset': False,
             'use_private_ips': True,
@@ -101,10 +105,11 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
             'domain': None,
             'https_proxy': None,
             'override_ips': False
-        }
+        }, ADAPTER_NAME)
 
-    # pylint: disable=R0912,R0914,R0915,R1702
+    # pylint: disable=R0912,R0914,R0915,R1702,W0212
     def _run(self) -> EntitiesResult:
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         current_result = self._get_entities_from_view({
             'adapters.data.network_interfaces.ips': 1,
             'internal_axon_id': 1
@@ -118,8 +123,8 @@ class TenableIoAddIPsToTargetGroup(ActionTypeBase):
         action_name = 'create_target_group_with_ips' if create_new_asset else 'add_ips_to_target_group'
         tenable_io_dict = {'ips': list(ips), 'target_group_name': target_group_name, 'override': override}
         if self._config['use_adapter'] is True:
-            response = PluginBase.Instance.request_remote_plugin(action_name, 'tenable_io_adapter',
-                                                                 'post', json=tenable_io_dict)
+            response = self._plugin_base.request_remote_plugin(action_name, adapter_unique_name,
+                                                               'post', json=tenable_io_dict)
             if response.status_code == 200:
                 return results
             if response.status_code == 500:
