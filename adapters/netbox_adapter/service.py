@@ -82,7 +82,7 @@ class NetboxAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Netbox Domain',
+                    'title': 'NetBox Domain',
                     'type': 'string'
                 },
                 {

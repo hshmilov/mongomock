@@ -86,7 +86,7 @@ class CycognitoAdapter(ScannerAdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Cycognito Domain',
+                    'title': 'CyCognito Domain',
                     'type': 'string',
                     'default': DEFAULT_DOMAIN
                 },

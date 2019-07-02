@@ -50,7 +50,7 @@ class ActionCategory:
     Run = 'Run Command'
     Notify = 'Notify'
     Isolate = 'Execute Endpoint Security Agent Action'
-    Enrichment = 'Enrich Device Data'
+    Enrichment = 'Enrich Device and User Data'
     Utils = 'Axonius Utilities'
     Scan = 'Add Device to VA Scan'
     Patch = 'Patch Device'

@@ -81,7 +81,7 @@ class SentineloneAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Sentinel One Domain',
+                    'title': 'SentinelOne Domain',
                     'type': 'string'
                 },
                 {

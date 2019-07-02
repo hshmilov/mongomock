@@ -130,7 +130,7 @@ class NmapAdapter(ScannerAdapterBase):
                 },
                 {
                     'name': 'nmap_share_username',
-                    'title': 'Nmap Share Username',
+                    'title': 'Nmap Share User Name',
                     'type': 'string'
                 },
                 {

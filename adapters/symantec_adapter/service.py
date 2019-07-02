@@ -73,13 +73,13 @@ class SymantecAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Symantec Endpoint Management Address',
+                    'title': 'Symantec Endpoint Protection Domain',
                     'type': 'string'
                 },
                 {
                     'name': 'port',
                     'title': 'Port',
-                    'description': 'Symantec Endpoint Management Port (Default is 8446)',
+                    'description': 'Symantec Endpoint Protection Port (Default is 8446)',
                     'type': 'integer',
                     'format': 'port'
                 },

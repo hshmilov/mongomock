@@ -89,7 +89,7 @@ class DattoRmmAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'DattoRmm Domain',
+                    'title': 'Datto RMM Domain',
                     'type': 'string'
                 },
                 {

@@ -100,7 +100,7 @@ class CaCmdbAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'CaCmdb Domain',
+                    'title': 'CA CMDB Domain',
                     'type': 'string'
                 },
                 {

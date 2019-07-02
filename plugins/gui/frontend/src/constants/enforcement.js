@@ -18,10 +18,10 @@ export const actionsMeta = {
         title: 'Run Linux SSH Scan'
     },
     shodan_enrichment: {
-        title: 'Enrich Device Data by Shodan'
+        title: 'Enrich Device Data from Shodan'
     },
     haveibeenpwned_enrichment: {
-        title: 'Enrich User Data by Have I Been Pwned'
+        title: 'Enrich User Data from Have I Been Pwned'
     },
     carbonblack_isolate: {
         title: 'Isolate in Carbon Black CB Response'
@@ -150,7 +150,7 @@ export const actionsMeta = {
         items: ['create_service_now_incident', 'create_service_now_incident_per_entity', 'create_jira_incident', 'create_sysaid_incident']
     },
     enrich_device_data: {
-        title: 'Enrich Device Data',
+        title: 'Enrich Device and User Data',
         items: ['shodan_enrichment', 'haveibeenpwned_enrichment'],
     },
     notify: {

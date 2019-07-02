@@ -84,7 +84,7 @@ class AlertlogicAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Alertlogic Domain',
+                    'title': 'Alert Logic Domain',
                     'type': 'string',
                     'default': DEFAULT_DOMAIN
                 },

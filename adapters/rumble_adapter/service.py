@@ -82,7 +82,7 @@ class RumbleAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Rumble Domain',
+                    'title': 'Rumble Network Discovery Domain',
                     'type': 'string',
                     'default': DEFAULT_RUMBLE_DOMAIN
                 },

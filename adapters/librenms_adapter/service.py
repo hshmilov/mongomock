@@ -77,7 +77,7 @@ class LibrenmsAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Librenms Domain',
+                    'title': 'LibreNMS Domain',
                     'type': 'string',
                     'default': DEFAULT_DOMAIN
                 },
