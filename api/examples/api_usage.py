@@ -108,13 +108,18 @@ class RESTExample:
     def get_examples(cls):
         examples_functions = (cls.get_devices1,
                               cls.get_devices2,
+                              cls.get_devices_using_get,
+                              cls.get_devices_huge_filter,
                               cls.get_devices_with_query,
                               cls.get_devices_count,
+                              cls.get_devices_count_using_get,
                               cls.get_device_by_id,
                               cls.get_devices_views,
                               cls.create_and_delete_device_view,
                               cls.get_users,
+                              cls.get_users_using_get,
                               cls.get_users_count,
+                              cls.get_users_count_using_get,
                               cls.get_user_by_id,
                               cls.get_users_views,
                               cls.create_and_delete_user_view,
@@ -163,6 +168,30 @@ class RESTExample:
 
         # The request would look like this
         # https://localhost/api/V1/devices?skip=0&limit=50&fields=adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.os.type,specific_data.data.network_interfaces.ips,specific_data.data.network_interfaces.mac,labels&filter=adapters%20==%20%22active_directory_adapter%22%20and%20adapters%20==%20%22nexpose_adapter%22
+        status_code, devices = self._client.get_devices(skip=0, limit=50, fields=fields, filter_=filter_)
+        assert status_code == 200, 'failed to get devices'
+
+    def get_devices_using_get(self):
+        # This will tell the api to bring these specific fields.
+        fields = ','.join(
+            ['adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.os.type',
+             'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'])
+
+        filter_ = 'adapters == "active_directory_adapter" and adapters == "nexpose_adapter"'
+
+        status_code, devices = self._client.get_devices(
+            skip=0, limit=50, fields=fields, filter_=filter_, use_post=False)
+        assert status_code == 200, 'failed to get devices'
+
+    def get_devices_huge_filter(self):
+        # This will tell the api to bring these specific fields.
+        fields = ','.join(
+            ['adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.os.type',
+             'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'])
+
+        macs = ['00:11:22:33:44:55'] * 10000
+        macs = ' '.join([f'\'{mac}\'' for mac in macs])
+        filter_ = f'not specific_data.data.network_interfaces.mac in [{macs}]'
         status_code, devices = self._client.get_devices(skip=0, limit=50, fields=fields, filter_=filter_)
         assert status_code == 200, 'failed to get devices'
 
@@ -259,6 +288,24 @@ class RESTExample:
         # https://localhost/api/V1/users?skip=0&limit=20&fields=specific_data.data.image,specific_data.data.username,specific_data.data.domain,specific_data.data.last_seen,specific_data.data.is_admin&filter=specific_data.data.is_local%20==%20false
 
         status_code, users = self._client.get_users(skip, limit, fields, filter_)
+        assert status_code == 200, 'Failed to fetch client'
+
+    def get_users_using_get(self):
+        skip = 0
+        limit = 20
+
+        # This will tell the api to bring these specific fields.
+        fields = ','.join(
+            ['specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
+             'specific_data.data.last_seen', 'specific_data.data.is_admin'])
+
+        filter_ = 'specific_data.data.is_local == false'
+
+        # This a url encoded filter that brings all the not local users.
+        # specific_data.data.is_local%20==%20false
+        # https://localhost/api/V1/users?skip=0&limit=20&fields=specific_data.data.image,specific_data.data.username,specific_data.data.domain,specific_data.data.last_seen,specific_data.data.is_admin&filter=specific_data.data.is_local%20==%20false
+
+        status_code, users = self._client.get_users(skip, limit, fields, filter_, use_post=False)
         assert status_code == 200, 'Failed to fetch client'
 
     def get_user_by_id(self):
@@ -411,8 +458,18 @@ class RESTExample:
         assert status_code == 200
         assert isinstance(count, int)
 
+    def get_devices_count_using_get(self):
+        status_code, count = self._client.get_devices_count('adapters == \"active_directory_adapter\"', use_post=False)
+        assert status_code == 200
+        assert isinstance(count, int)
+
     def get_users_count(self):
         status_code, count = self._client.get_users_count()
+        assert status_code == 200
+        assert isinstance(count, int)
+
+    def get_users_count_using_get(self):
+        status_code, count = self._client.get_users_count(use_post=False)
         assert status_code == 200
         assert isinstance(count, int)
 

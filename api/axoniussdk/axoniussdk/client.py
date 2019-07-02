@@ -41,7 +41,8 @@ class RESTClient:
 
         return (resp.status_code, data)
 
-    def get_devices(self, skip: int, limit: int, fields: str = None, filter_: str = None):
+    def get_devices(self, skip: int, limit: int, fields: str = None, filter_: str = None, use_post=True):
+        endpoint = '/devices'
         params = {}
         params['skip'] = skip
         params['limit'] = limit
@@ -51,14 +52,20 @@ class RESTClient:
         if filter_:
             params['filter'] = filter_
 
-        return self.do_request('get', '/devices', params=params)
+        if use_post:
+            return self.do_request('post', endpoint, json=params)
+        return self.do_request('get', endpoint, params=params)
 
-    def get_devices_count(self, filter_: str = None):
+    def get_devices_count(self, filter_: str = None, use_post=True):
+        endpoint = '/devices/count'
+
         params = {}
         if filter_:
             params['filter'] = filter_
 
-        return self.do_request('get', '/devices/count', params=params)
+        if use_post:
+            return self.do_request('post', endpoint, json=params)
+        return self.do_request('get', endpoint, params=params)
 
     def get_devices_fields(self):
         return self.do_request('get', '/devices/fields')
@@ -88,7 +95,8 @@ class RESTClient:
         # Deletes all listed device views (by ID).
         return self.do_request('delete', '/devices/views', json={'ids': device_ids})
 
-    def get_users(self, skip: str, limit: str, fields=None, filter_=None):
+    def get_users(self, skip: str, limit: str, fields=None, filter_=None, use_post=True):
+        endpoint = '/users'
         params = {}
         params['skip'] = skip
         params['limit'] = limit
@@ -97,13 +105,18 @@ class RESTClient:
             params['fields'] = fields
         if filter_:
             params['filter'] = filter_
-        return self.do_request('get', '/users', params=params)
+        if use_post:
+            return self.do_request('post', endpoint, json=params)
+        return self.do_request('get', endpoint, params=params)
 
-    def get_users_count(self, filter_: str = None):
+    def get_users_count(self, filter_: str = None, use_post=True):
+        endpoint = '/users/count'
         params = {}
         if filter_:
             params['filter'] = filter_
 
+        if use_post:
+            return self.do_request('post', endpoint, json=params)
         return self.do_request('get', '/users/count', params=params)
 
     def get_user_by_id(self, user_id: str):

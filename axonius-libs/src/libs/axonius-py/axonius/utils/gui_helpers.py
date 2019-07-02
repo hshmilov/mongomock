@@ -171,8 +171,11 @@ def filtered_entities():
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
             try:
-                filter_expr = request.args.get('filter', '')
-                history_date = request.args.get('history')
+                content = {}
+                if request.method == 'POST':
+                    content = self.get_request_data_as_object()
+                filter_expr = content.get('filter') or request.args.get('filter', '')
+                history_date = content.get('history') or request.args.get('history')
                 filter_obj = parse_filter(filter_expr, history_date)
             except Exception as e:
                 logger.exception('Failed in mongo filter')
@@ -195,8 +198,11 @@ def sorted_endpoint():
         def actual_wrapper(self, *args, **kwargs):
             sort_obj = {}
             try:
-                sort_param = request.args.get('sort')
-                desc_param = request.args.get('desc')
+                content = {}
+                if request.method == 'POST':
+                    content = self.get_request_data_as_object()
+                sort_param = content.get('sort') or request.args.get('sort')
+                desc_param = content.get('desc') or request.args.get('desc')
                 if sort_param:
                     logger.info(f'Parsing sort: {sort_param}')
                     direction = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
@@ -231,17 +237,19 @@ def projected():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
+            content = {}
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
             mongo_projection = None
-            field_names = request.args.get('fields')
+            field_names = content.get('fields') or request.args.get('fields')
             if field_names:
                 try:
                     mongo_projection = {}
                     for field_part in field_names.split(','):
                         mongo_projection[field_part] = 1
                 except json.JSONDecodeError:
-                    pass
+                    logger.exception(f'Failed to decode mongo projection {mongo_projection}')
             return func(self, mongo_projection=mongo_projection, *args, **kwargs)
-
         return actual_wrapper
 
     return wrap
@@ -255,12 +263,23 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
             # it's fine to raise here - an exception will be nicely JSONly displayed by add_rule
-            limit = request.args.get('limit', limit_max, int)
+            content = {}
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+            try:
+                limit = int(content.get('limit'))
+            except TypeError:
+                limit = None
+            limit = limit or request.args.get('limit', limit_max, int)
             if limit < 0:
                 raise ValueError('Limit must not be negative')
             if limit > limit_max:
                 limit = limit_max
-            skip = int(request.args.get('skip', 0, int))
+            try:
+                skip = int(content.get('skip'))
+            except TypeError:
+                skip = None
+            skip = skip or int(request.args.get('skip', 0, int))
             if skip < 0:
                 raise ValueError('start must not be negative')
             return func(self, limit=limit, skip=skip, *args, **kwargs)
@@ -315,7 +334,10 @@ def historical():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            history = request.args.get('history', None)
+            content = {}
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+            history = content.get('history') or request.args.get('history', None)
             if history:
                 try:
                     history = dateutil.parser.parse(history)

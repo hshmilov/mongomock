@@ -42,12 +42,3 @@ def test_api(axonius_system):
         callback = getattr(client, name)
         callback()
         logging.info('\n\n')
-
-
-def test_big_queries(axonius_system):
-    client = RESTClient('https://127.0.0.1',
-                        auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
-                        verify=False)
-    data = 'a' * (30 * 1024)
-    status, _ = client.get_devices_count(filter_=f'specific_data.data.hostname == "{data}"')
-    assert status == 200

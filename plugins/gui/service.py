@@ -1048,7 +1048,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('devices', methods=['GET', 'DELETE'],
+    @gui_add_rule_logged_in('devices', methods=['GET', 'POST', 'DELETE'],
                             required_permissions={Permission(PermissionType.Devices,
                                                              ReadOnlyJustForGet)})
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
@@ -1067,22 +1067,27 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('devices/csv', required_permissions={Permission(PermissionType.Devices,
-                                                                            PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('devices/csv', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadOnly)})
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         return get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history,
                                                  EntityType.Devices, self._system_settings.get('defaultSort'))
 
     @gui_helpers.filtered_entities()
     @gui_helpers.historical()
-    @gui_add_rule_logged_in('devices/count', required_permissions={Permission(PermissionType.Devices,
-                                                                              PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('devices/count', methods=['GET', 'POST'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadOnly)})
     def get_devices_count(self, mongo_filter, history: datetime):
-        quick = request.args.get('quick') == 'True'
+        content = self.get_request_data_as_object()
+        quick = content.get('quick') or request.args.get('quick')
+        quick = quick == 'True'
         return str(self._get_entity_count(EntityType.Devices, mongo_filter, history, quick))
 
     @gui_add_rule_logged_in('devices/fields',
-                            required_permissions={Permission(PermissionType.Devices, PermissionLevel.ReadOnly)})
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadOnly)})
     def device_fields(self):
         return jsonify(gui_helpers.entity_fields(EntityType.Devices))
 
@@ -1099,10 +1104,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter, mongo_sort))
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in('devices/views/count', required_permissions={Permission(PermissionType.Devices,
-                                                                                    PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('devices/views/count', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Devices,
+                                                             PermissionLevel.ReadOnly)})
     def get_devices_views_count(self, mongo_filter):
-        quick = request.args.get('quick') == 'True'
+        content = self.get_request_data_as_object()
+        quick = content.get('quick') or request.args.get('quick')
+        quick = quick == 'True'
         return str(get_views_count(EntityType.Devices, mongo_filter, quick=quick))
 
     @gui_helpers.filtered_entities()
@@ -1209,8 +1217,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('users', methods=['GET', 'DELETE'], required_permissions={Permission(PermissionType.Users,
-                                                                                                 ReadOnlyJustForGet)})
+    @gui_add_rule_logged_in('users', methods=['GET', 'POST', 'DELETE'], required_permissions={Permission(PermissionType.Users,
+                                                                                                         ReadOnlyJustForGet)})
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         if request.method == 'DELETE':
             return self.__delete_entities_by_internal_axon_id(
@@ -1227,8 +1235,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @gui_add_rule_logged_in('users/csv', required_permissions={Permission(PermissionType.Users,
-                                                                          PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('users/csv', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             PermissionLevel.ReadOnly)})
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection, history: datetime):
         # Deleting image from the CSV (we dont need this base64 blob in the csv)
         if 'specific_data.data.image' in mongo_projection:
@@ -1239,10 +1248,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
 
     @gui_helpers.historical()
     @gui_helpers.filtered_entities()
-    @gui_add_rule_logged_in('users/count', required_permissions={Permission(PermissionType.Users,
-                                                                            PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('users/count', methods=['GET', 'POST'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             PermissionLevel.ReadOnly)})
     def get_users_count(self, mongo_filter, history: datetime):
-        quick = request.args.get('quick') == 'True'
+        content = self.get_request_data_as_object()
+        quick = content.get('quick') or request.args.get('quick')
+        quick = quick == 'True'
         return self._get_entity_count(EntityType.Users, mongo_filter, history, quick)
 
     @gui_add_rule_logged_in('users/fields', required_permissions={
@@ -1271,10 +1283,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter, mongo_sort))
 
     @gui_helpers.filtered()
-    @gui_add_rule_logged_in('users/views/count', required_permissions={Permission(PermissionType.Users,
-                                                                                  PermissionLevel.ReadOnly)})
+    @gui_add_rule_logged_in('users/views/count', methods=['GET'],
+                            required_permissions={Permission(PermissionType.Users,
+                                                             PermissionLevel.ReadOnly)})
     def get_users_views_count(self, mongo_filter):
-        quick = request.args.get('quick') == 'True'
+        content = self.get_request_data_as_object()
+        quick = content.get('quick') or request.args.get('quick')
+        quick = quick == 'True'
         return str(get_views_count(EntityType.Users, mongo_filter, quick=quick))
 
     @gui_helpers.filtered_entities()

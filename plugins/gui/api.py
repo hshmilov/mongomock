@@ -133,8 +133,9 @@ class API:
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @api_add_rule(f'devices', required_permissions={Permission(PermissionType.Devices,
-                                                               PermissionLevel.ReadOnly)})
+    @api_add_rule(f'devices', methods=['GET', 'POST'],
+                  required_permissions={Permission(PermissionType.Devices,
+                                                   PermissionLevel.ReadOnly)})
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         devices_collection = self._entity_db_map[EntityType.Devices]
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
@@ -151,8 +152,9 @@ class API:
         return jsonify(return_doc)
 
     @gui_helpers.filtered_entities()
-    @api_add_rule(f'devices/count', required_permissions={Permission(PermissionType.Devices,
-                                                                     PermissionLevel.ReadOnly)})
+    @api_add_rule(f'devices/count', methods=['GET', 'POST'],
+                  required_permissions={Permission(PermissionType.Devices,
+                                                   PermissionLevel.ReadOnly)})
     def api_devices_count(self, mongo_filter):
         return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Devices]))
 
@@ -185,8 +187,9 @@ class API:
     @gui_helpers.filtered_entities()
     @gui_helpers.sorted_endpoint()
     @gui_helpers.projected()
-    @api_add_rule(f'users', required_permissions={Permission(PermissionType.Users,
-                                                             PermissionLevel.ReadOnly)})
+    @api_add_rule(f'users', methods=['GET', 'POST'],
+                  required_permissions={Permission(PermissionType.Users,
+                                                   PermissionLevel.ReadOnly)})
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         users_collection = self._entity_db_map[EntityType.Users]
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
@@ -202,8 +205,9 @@ class API:
         return jsonify(return_doc)
 
     @gui_helpers.filtered_entities()
-    @api_add_rule(f'users/count', required_permissions={Permission(PermissionType.Users,
-                                                                   PermissionLevel.ReadOnly)})
+    @api_add_rule(f'users/count', methods=['GET', 'POST'],
+                  required_permissions={Permission(PermissionType.Users,
+                                                   PermissionLevel.ReadOnly)})
     def api_users_count(self, mongo_filter):
         return str(gui_helpers.get_entities_count(mongo_filter, self._entity_db_map[EntityType.Users]))
 

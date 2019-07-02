@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === 'development') {
 	host = 'https://127.0.0.1'
 }
 export const currentHost = host
-
+export const MAX_GET_SIZE = 2000
 export const REQUEST_API = 'REQUEST_API'
 export const requestApi = ({commit}, payload) => {
 	if (!payload.rule) return
@@ -81,77 +81,130 @@ export const getModule = (state, payload) => {
 
 export const FETCH_DATA_COUNT = 'FETCH_DATA_COUNT'
 export const fetchDataCount = ({state, dispatch}, payload) => {
+    let path = payload.endpoint || payload.module
 	let module = getModule(state, payload)
     if (!module) return
 	const view = module.view
 
-	let params = []
+    module.count.data = undefined
 
-	if (view.query && view.query.filter) {
-		params.push(`filter=${encodeURIComponent(view.query.filter)}`)
-	}
-	if (view.historical) {
-		params.push(`history=${encodeURIComponent(view.historical)}`)
-	}
+    // For now we support only /users and /devices 'big queries'
+    if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) { 
+        dispatch(REQUEST_API, {
+            rule: `${path}/count`,
+            type: UPDATE_DATA_COUNT,
+            method: 'POST',
+            data: {
+                filter: view.query.filter,
+                history: view.historical,
+            },
+            payload
+        })
 
-	module.count.data = undefined
+        dispatch(REQUEST_API, {
+            rule: `${path}/count`,
+            type: UPDATE_DATA_COUNT_QUICK,
+            method: 'POST',
+            data: {
+                filter: view.query.filter,
+                history: view.historical,
+                quick: true
+            },
+            payload
+        })
+    } else {
+        let params = []
 
-	dispatch(REQUEST_API, {
-		rule: `${payload.endpoint || payload.module}/count?${params.join('&')}`,
-		type: UPDATE_DATA_COUNT,
-		payload
-	})
+        if (view.query && view.query.filter) {
+            params.push(`filter=${encodeURIComponent(view.query.filter)}`)
+        }
+        if (view.historical) {
+            params.push(`history=${encodeURIComponent(view.historical)}`)
+        }
 
-	params.push('quick=True')
-	dispatch(REQUEST_API, {
-		rule: `${payload.endpoint || payload.module}/count?${params.join('&')}`,
-		type: UPDATE_DATA_COUNT_QUICK,
-		payload
-	})
+        dispatch(REQUEST_API, {
+            rule: `${path}/count?${params.join('&')}`,
+            type: UPDATE_DATA_COUNT,
+            payload
+        })
+
+        params.push('quick=True')
+        dispatch(REQUEST_API, {
+            rule: `${path}/count?${params.join('&')}`,
+            type: UPDATE_DATA_COUNT_QUICK,
+            payload
+        })
+    }
 }
 
-const createContentRequest = (state, payload) => {
+const createPostContentRequest = (state, payload) => {
 	let module = getModule(state, payload)
 	if (!module) return ''
 	const view = module.view
 
-	let params = []
+	let params = Object()
+
 	if (payload.skip !== undefined) {
-		params.push(`skip=${payload.skip}`)
+		params['skip'] = payload.skip
 	}
 	if (payload.limit !== undefined) {
-		params.push(`limit=${payload.limit}`)
+		params['limit'] = payload.limit
 	}
 	if (view.fields && view.fields.length) {
-		params.push(`fields=${view.fields}`)
+        // fields is array, we want to foramt it as string
+        // so we are using ${}
+		params['fields'] = `${view.fields}`
 	}
 	if (view.query && view.query.filter) {
-		params.push(`filter=${encodeURIComponent(view.query.filter)}`)
+		params['filter'] = view.query.filter
 	}
 	if (view.historical) {
-		params.push(`history=${encodeURIComponent(view.historical)}`)
+		params['history'] = view.historical
 	}
 	// TODO: Not passing expressions because it might reach max URL size
 	// if (view.query.expressions) {
 	// 	params.push(`expressions=${encodeURI(JSON.stringify(view.query.expressions))}`)
 	// }
+
 	if (view.sort && view.sort.field) {
-		params.push(`sort=${view.sort.field}`)
-		params.push(`desc=${view.sort.desc? '1' : '0'}`)
+		params['sort'] = view.sort.field
+		params['desc'] = view.sort.desc? '1' : '0'
 	}
 	if (payload.isRefresh) {
-		params.push('is_refresh=1')
+		params['is_refresh'] = 1
 	}
-	return params.join('&')
+	return params
+}
+
+const createContentRequest = (state, payload) => {
+    let params = createPostContentRequest(state, payload)
+    let queryString = Object.keys(params).map(key => key + '=' + encodeURIComponent(params[key])).join('&')
+    return queryString
 }
 
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
 export const fetchDataContent = ({state, dispatch}, payload) => {
+	let module = getModule(state, payload)
+    let path = payload.endpoint || payload.module
+	if (!module) return 
+	const view = module.view
+
 	if (!payload.skip) {
 		dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint})
 	}
+
+    if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) { 
+        return dispatch(REQUEST_API, {
+            rule: path,
+            type: UPDATE_DATA_CONTENT,
+            method: 'POST',
+            data: createPostContentRequest(state, payload),
+            payload
+        })
+    }
+
 	return dispatch(REQUEST_API, {
-		rule: `${payload.endpoint || payload.module}?${createContentRequest(state, payload)}`,
+		rule: `${path}?${createContentRequest(state, payload)}`,
 		type: UPDATE_DATA_CONTENT,
 		payload
 	})
