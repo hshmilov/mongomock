@@ -391,7 +391,7 @@ class CoreService(PluginBase, Configurable):
                         logger.warn("Pluging {} restarted".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
                     else:
-                        if node_id == self.node_id:
+                        if node_id == duplicated['node_id']:
                             logger.warn(f"Already have instance of {plugin_unique_name}, trying to check if alive")
                             if self._check_plugin_online(plugin_unique_name):
                                 # There is already a running plugin with the same name
