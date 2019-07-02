@@ -1,5 +1,5 @@
 from pymongo.collection import Collection
-from axonius.consts.plugin_consts import PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -13,13 +13,13 @@ class TestLeftovers(TestBase):
 
         # verify that the leftover is gone
         assert configs_collection.count_documents({
-            PLUGIN_NAME: 'reports_1234'
-        }, limit=1) == 0
+            PLUGIN_UNIQUE_NAME: 'reports_1234'
+        }) == 0
 
         # verify that the leftover was safely moved
         assert deprecated_configs_collection.count_documents({
-            PLUGIN_NAME: 'reports_1234'
-        }, limit=1) == 1
+            PLUGIN_UNIQUE_NAME: 'reports_1234'
+        }) == 1
 
         # verify that only the singleton remains
         assert configs_collection.count_documents({

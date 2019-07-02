@@ -17,7 +17,7 @@ class TestLeftovers(TestBase):
         })
         assert reports_config is not None
         reports_config[PLUGIN_UNIQUE_NAME] = 'reports_1234'
-        reports_config.insert_one(reports_config)
+        configs_collection.insert_one(reports_config)
 
         db['reports_1234']['stuff_collection'].insert_one({
             'test': 'test'
