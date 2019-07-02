@@ -67,6 +67,14 @@
             class="item"
           >
             <div class="saved-queries">
+              <x-checkbox
+                v-if="report.add_scheduling"
+                v-model="report.send_csv_attachments"
+                value="IncludeCsv"
+                :read-only="isReadOnly"
+                label=" Attach CSV with queries results to email"
+                class="item"
+              />
               <div
                 v-for="(view, i) in report.views"
                 :key="i"
@@ -233,6 +241,7 @@
       return {
         report: {
           include_dashboard: false,
+          send_csv_attachments: true,
           spaces: [],
           include_saved_views: false,
           views: [{ entity: '', name: '' }],
@@ -503,20 +512,17 @@
         })
         this.$forceUpdate()
       },
-      runNow () {
+      runNow() {
         let self = this
-        this.saveReport(this.report).then(() => {
+        self.runReport(this.report).then(() => {
+          this.showToaster('Email is being sent', this.toastTimeout)
           setTimeout(() => {
-            self.runReport(this.report).then(() => {
-              this.showToaster('Email is being sent', this.toastTimeout)
-              setTimeout(() => {
-                this.showToaster('Email sent successfully', this.toastTimeout)
-              })
-            }).catch((error) => {
-              this.validity.error = error.response.data.message
-            })
-          }, 2000)
+            this.showToaster('Email sent successfully', this.toastTimeout)
+          })
+        }).catch((error) => {
+          this.validity.error = error.response.data.message
         })
+
       },
       saveExit () {
         this.showToaster('Saving the report...', this.toastTimeout)
@@ -746,9 +752,10 @@
             grid-template-columns: 1fr;
             grid-gap: 12px 24px;
             align-items: center;
+            margin-left: 24px;
             .saved-query {
                 flex: 1 0 auto;
-                margin-left: 24px;
+
                 display: flex;
                 .x-select-symbol {
                     width: 60px;

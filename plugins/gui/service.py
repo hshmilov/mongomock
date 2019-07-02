@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, Tuple, List
 
 import gridfs
 import ldap3
@@ -4349,7 +4349,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
     def _generate_and_save_report(self, report):
         # generate_report() renders the report html
         generated_date = datetime.now(tz.tzlocal())
-        report_html = self.generate_report(generated_date, report)
+        report_html, attachments = self.generate_report(generated_date, report)
 
         exec_report_generate_pdf_thread_id = EXEC_REPORT_GENERATE_PDF_THREAD_ID.format(report['name'])
         exec_report_generate_pdf_job = self._job_scheduler.get_job(exec_report_generate_pdf_thread_id)
@@ -4358,7 +4358,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
             self._job_scheduler.add_job(func=self._convert_to_pdf_and_save_report,
                                         kwargs={'report': report,
                                                 'report_html': report_html,
-                                                'generated_date': generated_date},
+                                                'generated_date': generated_date,
+                                                'attachments': attachments},
                                         trigger='date',
                                         next_run_time=datetime.now(),
                                         name=exec_report_generate_pdf_thread_id,
@@ -4368,7 +4369,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         else:
             self._job_scheduler.reschedule_job(exec_report_generate_pdf_thread_id, next_run_time=datetime.now())
 
-    def _convert_to_pdf_and_save_report(self, report, report_html, generated_date):
+    def _convert_to_pdf_and_save_report(self, report, report_html, generated_date, attachments):
         # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
         name = report['name']
         try:
@@ -4380,6 +4381,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                 logger.info(f'Report was saved to the grif fs db uuid: {uuid}')
                 # Stores the uuid in the db in the "reports" collection
 
+                attachment_uuids = []
+                for attachment in attachments:
+                    attachment_uuid = self._upload_attachment(attachment)
+                    attachment_uuids.append(attachment_uuid)
+
                 filename = 'most_recent_{}'.format(name)
                 self._get_collection('reports').replace_one(
                     {
@@ -4388,7 +4394,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                     {
                         'uuid': uuid,
                         'filename': filename,
-                        'time': datetime.now()
+                        'time': datetime.now(),
+                        'attachments': attachment_uuids
                     },
                     upsert=True
                 )
@@ -4400,7 +4407,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         except Exception:
             logger.exception(f'Exception with report {name}')
 
-    def _upload_report(self, report, report_metadata):
+    def _upload_report(self, report, report_metadata) -> str:
         """
         Uploads the latest report PDF to the db
         :param report: report data
@@ -4419,6 +4426,23 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         logger.info('Report successfully placed in the db')
         return str(written_file_id)
 
+    def _upload_attachment(self, attachment_path: str) -> str:
+        """
+        Uploads an attachment for a report to the db
+        :param attachment_path: attachment path
+        :return: the attachment object id
+        """
+        if not attachment_path:
+            return return_error('Attachment must exist', 401)
+
+        db_connection = self._get_db_connection()
+        fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
+        with open(attachment_path, 'r') as attachment_file:
+            written_file_id = fs.put(attachment_file.read(), encoding='UTF-8',
+                                     filename=os.path.basename(attachment_path))
+        logger.info('Attachment successfully placed in the db')
+        return str(written_file_id)
+
     def _delete_last_report(self, report_name):
         """
         Deletes the last version of the report pdf to avoid having too many saved versions
@@ -4427,10 +4451,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         report_collection = self._get_collection('reports')
         most_recent_report = report_collection.find_one({'filename': report_name})
         if most_recent_report is not None:
+            fs = gridfs.GridFS(self._get_db_connection()[GUI_PLUGIN_NAME])
+            attachments = most_recent_report.get('attachments')
+            if attachments is not None:
+                for attachment_uuid in attachments:
+                    logger.info(f'DELETE attachment: {attachment_uuid}')
+                    fs.delete(ObjectId(attachment_uuid))
             uuid = most_recent_report.get('uuid')
             if uuid is not None:
                 logger.info(f'DELETE: {uuid}')
-                fs = gridfs.GridFS(self._get_db_connection()[GUI_PLUGIN_NAME])
                 fs.delete(ObjectId(uuid))
 
     @gui_add_rule_logged_in('export_report/<report_name>', required_permissions={Permission(PermissionType.Dashboard,
@@ -4446,11 +4475,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
         :return:
         """
-        report_path = self._get_existing_executive_report(report_name)
+        report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report_name)
         return send_file(report_path, mimetype='application/pdf', as_attachment=True,
                          attachment_filename=report_path)
 
-    def _get_existing_executive_report(self, name):
+    def _get_existing_executive_report_and_attachments(self, name) -> Tuple[str, List[str]]:
+        """
+        Opens the report pdf and attachment csv's from the db,
+        save them in a temp files and return their path
+        :param name: a report name string
+        :return: A tuple of the report pdf path and a list of attachments paths
+         """
         report = self._get_collection('reports').find_one({'filename': f'most_recent_{name}'})
         logger.info(f'exporting report "{name}"')
         if not report:
@@ -4462,9 +4497,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         uuid = report['uuid']
         report_path = f'/tmp/axonius-{name}_{datetime.now()}.pdf'
         db_connection = self._get_db_connection()
-        with gridfs.GridFS(db_connection[GUI_PLUGIN_NAME]).get(ObjectId(uuid)) as report_content:
+
+        attachments_paths = []
+        gridfs_connection = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
+        for attachment_uuid in report.get('attachments'):
+            try:
+                with gridfs_connection.get(ObjectId(attachment_uuid)) as attachment_content:
+                    attachment_path = f'/tmp/{attachment_content.name}'
+                    with open(attachment_path, 'wb') as output_file:
+                        for chunk in iter(attachment_content.readchunk, b''):
+                            output_file.write(chunk)
+                    attachments_paths.append(attachment_path)
+            except Exception:
+                logger.error(f'failed to retrieve attachment {attachment_uuid}')
+        with gridfs_connection.get(ObjectId(uuid)) as report_content:
             open(report_path, 'wb').write(report_content.read())
-            return report_path
+            return report_path, attachments_paths
 
     def generate_report(self, generated_date, report):
         """
@@ -4571,7 +4619,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
         lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
         self.exec_report_locks[report_name] = lock
         with lock:
-            report_path = self._get_existing_executive_report(report_name)
+            report_path, attachments_paths = self._get_existing_executive_report_and_attachments(report_name)
             if self.mail_sender:
                 try:
                     mail_properties = report['mail_properties']
@@ -4583,6 +4631,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, API):
                                                            cc_recipients=mail_properties.get('emailListCC', []))
                         with open(report_path, 'rb') as report_file:
                             email.add_pdf(EXEC_REPORT_FILE_NAME.format(report_name), bytes(report_file.read()))
+                        for attachment_path in attachments_paths:
+                            with open(attachment_path, 'rb') as attachment_file:
+                                email.add_pdf(os.path.basename(attachment_path), bytes(attachment_file.read()))
                         email.send(EXEC_REPORT_EMAIL_CONTENT)
                         report[report_consts.LAST_TRIGGERED_FIELD] = datetime.now()
                         self._upsert_report_config(report_name, report, False)

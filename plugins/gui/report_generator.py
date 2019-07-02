@@ -16,6 +16,7 @@ from axonius.utils import gui_helpers
 from axonius.utils.axonius_query_language import parse_filter
 from gui.gui_logic import filter_utils
 from gui.gui_logic.dashboard_data import adapter_data
+from gui.gui_logic.generate_csv import get_csv_file_from_heavy_lifting_plugin
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -35,13 +36,14 @@ class ReportGenerator:
         :param output_path:
         """
         self.report = report
+        self.output_path = output_path
         self.report_params = report_params
         self.report_data = self.get_report_data(self.report)
         self.spaces = self.report_params.get('spaces')
         self.template_path = template_path
-        self.output_path = output_path
         self.host = host
         self.env = Environment(loader=FileSystemLoader('.'))
+        self.attachments = []
 
         self.templates = {
             'report': self._get_template('axonius_report'),
@@ -80,13 +82,15 @@ class ReportGenerator:
         include_all_saved_views = report['include_all_saved_views'] if report.get('include_all_saved_views') else False
         include_saved_views = report['include_saved_views'] if report.get('include_saved_views') else False
         dashboard = list(self.report_params.get('dashboard')) if self.report_params.get('dashboard') else []
+        attach_views_csvs = report.get('send_csv_attachments') and report.get('add_scheduling')
         report_data = {
             'include_dashboard': include_dashboard,
             'adapter_devices': adapter_data.call_uncached(EntityType.Devices) if include_dashboard else None,
             'adapter_users': adapter_data.call_uncached(EntityType.Users) if include_dashboard else None,
             'custom_charts': dashboard if include_dashboard else None,
             'views_data':
-                self._get_saved_views_data(include_all_saved_views, saved_views) if include_saved_views else None
+                self._get_saved_views_data(include_all_saved_views,
+                                           saved_views, attach_views_csvs) if include_saved_views else None
         }
         if not include_saved_views:
             log_metric(logger, 'query.report', None)
@@ -164,8 +168,8 @@ class ReportGenerator:
             logger.info(f'Report Generator: HTML created and saved to ${temp_html_filename}')
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
-
-        return HTML(string=html_data, base_url=self.template_path).render(stylesheets=[css], font_config=font_config)
+        return HTML(string=html_data, base_url=self.template_path).render(stylesheets=[css], font_config=font_config), \
+            self.attachments
 
     def _get_template(self, template_name):
         """
@@ -613,6 +617,8 @@ class ReportGenerator:
             'total_count': view_data['count'],
             'content': table
         }
+        if view_data.get('csv'):
+            self.attachments.append(view_data['csv'])
         if view_data.get('entity'):
             render_params['link_start'] = f'<a href="https://{self.host}/{view_data["entity"]}' \
                                           f'?view={view_data["name"]}" class="c-blue">'
@@ -633,7 +639,7 @@ class ReportGenerator:
         value = '<br>'.join(canonized_value)
         return value
 
-    def _get_saved_views_data(self, include_all_saved_views=True, saved_queries=None):
+    def _get_saved_views_data(self, include_all_saved_views=True, saved_queries=None, attach_views_csvs=False):
         """
         For each entity in system, fetch all saved views.
         For each view, fetch first page of entities - filtered, projected, sorted_endpoint according to it's definition.
@@ -682,20 +688,31 @@ class ReportGenerator:
                     if view:
                         filter_query = view.get('query', {}).get('filter', '')
                         log_metric(logger, 'query.report', filter_query)
-                        field_list = view.get('fields', [])
                         count = self.report_params['saved_view_count_func'](
                             entity, parse_filter(filter_query), None, False)
+                        projection = {field: 1 for field in view.get('fields', [])}
                         views_data[entity.name].append({
                             'name': view_doc.get('name'), 'entity': entity.value,
-                            'fields': [{field_to_title.get(field, field): field} for field in field_list],
-                            'data': list(gui_helpers.get_entities(limit=view.get('pageSize', 20),
+                            'fields': [{field_to_title.get(field, field): field} for field in view.get('fields', [])],
+                            'data': list(gui_helpers.get_entities(limit=view.get('pageSize',
+                                                                                 20 if not attach_views_csvs else 5),
                                                                   skip=0,
                                                                   view_filter=parse_filter(filter_query),
                                                                   sort=gui_helpers.get_sort(view),
-                                                                  projection={field: 1 for field in field_list},
+                                                                  projection=projection,
                                                                   entity_type=entity,
                                                                   default_sort=self.report_params['default_sort'])),
-                            'count': count
+                            'count': count,
+                            'csv':
+                                get_csv_file_from_heavy_lifting_plugin(self.output_path,
+                                                                       view_doc.get('name'),
+                                                                       parse_filter(filter_query),
+                                                                       gui_helpers.get_sort(view),
+                                                                       projection,
+                                                                       None,
+                                                                       entity,
+                                                                       self.report_params['default_sort'])
+                                if attach_views_csvs else None
                         })
                 except Exception:
                     logger.exception(f'Problem with View {view_doc["name"]} ViewDoc {str(view_doc)}')
